@@ -1,513 +1,2460 @@
-File name = /Users/roryhill/Pictures/_ThumbTest/HEIC IPhone.heic
+Run macdeployqt on Winnow.app to add frameworks
+/Users/roryhill/Qt/6.4.1/macos/bin/macdeployqt packages/com.rh.bin/data/Winnow.app
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtMultimediaWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtMultimediaWidgets"
+ Binary path "/Versions/A/QtMultimediaWidgets"
+ Version "A"
+ Install name "@rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+ Deployed install name "@rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimediaWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A"
 
---------------------------------------------------------  IFD0  --------------------------------------------------------
-IFDOffset  Hex: 12   Dec: 18   Tag count: 12
-Num    Offset   /   hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
- 10       140        8C  34665  8769        4         1         234   ExifIFDOffset
- 11       152        98  34853  8825        4         1        2226   GPSIFDOffset
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtWidgets"
+ Binary path "/Versions/A/QtWidgets"
+ Version "A"
+ Install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Deployed install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework/Versions/A"
 
-File name = /Users/roryhill/Pictures/_ThumbTest/CR2.CR2
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtMultimedia.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework"
+ Binary directory "Versions/A"
+ Binary name "QtMultimedia"
+ Binary path "/Versions/A/QtMultimedia"
+ Version "A"
+ Install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Deployed install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework/Versions/A"
 
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
- 16       210        D2  34665  8769        4         1         446   ExifIFDOffset
- 17       222        DE  34853  8825        4         1       27210   GPSIFDOffset
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-File name = /Users/roryhill/Pictures/_test0/HEIC IPhone.heic
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
---------------------------------------------------------  IFD0  --------------------------------------------------------
-IFDOffset  Hex: 157A   Dec: 5498   Tag count: 12   Big Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      5500      157C    271   10F        2         6         158   Make
-  1      5512      1588    272   110        2        14         164   Model
-  2      5524      1594    282   11A        5         1         178   XResolution
-  3      5536      15A0    283   11B        5         1         186   YResolution
-  4      5548      15AC    296   128        3         1           2   ResolutionUnit
-  5      5560      15B8    305   131        2         5         194   Software
-  6      5572      15C4    306   132        2        20         200   ModifyDate
-  7      5584      15D0    316   13C        2        14         220   HostComputer
-  8      5596      15DC    322   142        4         1         512   TileWidth
-  9      5608      15E8    323   143        4         1         512   TileLength
- 10      5620      15F4  34665  8769        4         1         234   ExifIFDOffset
- 11      5632      1600  34853  8825        4         1        2226   GPSIFDOffset
-         5644      160C    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Versions/A/QtConcurrent (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtConcurrent.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework"
+ Binary directory "Versions/A"
+ Binary name "QtConcurrent"
+ Binary path "/Versions/A/QtConcurrent"
+ Version "A"
+ Install name "@rpath/QtConcurrent.framework/Versions/A/QtConcurrent"
+ Deployed install name "@rpath/QtConcurrent.framework/Versions/A/QtConcurrent"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Versions/A/QtConcurrent"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtConcurrent.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtConcurrent.framework/Versions/A"
 
-------------------------------------------------------  IFD Exif  ------------------------------------------------------
-IFDOffset  Hex: 165C   Dec: 5724   Tag count: 37   Big Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      5726      165E  33434  829A        5         1         684   ExposureTime
-  1      5738      166A  33437  829D        5         1         692   FNumber
-  2      5750      1676  34850  8822        3         1           2   ExposureProgram
-  3      5762      1682  34855  8827        3         1         250   ISO
-  4      5774      168E  36864  9000        7         4   808596274   ExifVersion
-  5      5786      169A  36867  9003        2        20         700   DateTimeOriginal
-  6      5798      16A6  36868  9004        2        20         720   CreateDate
-  7      5810      16B2  36880  9010        2         7         740   OffsetTime
-  8      5822      16BE  36881  9011        2         7         748   OffsetTimeOriginal
-  9      5834      16CA  36882  9012        2         7         756   OffsetTimeDigitized
- 10      5846      16D6  37121  9101        7         4    16909056   ComponentsConfiguration
- 11      5858      16E2  37377  9201       10         1         764   ShutterSpeedValue
- 12      5870      16EE  37378  9202        5         1         772   ApertureValue
- 13      5882      16FA  37379  9203       10         1         780   BrightnessValue
- 14      5894      1706  37380  9204       10         1         788   ExposureCompensation
- 15      5906      1712  37383  9207        3         1           5   MeteringMode
- 16      5918      171E  37385  9209        3         1          24   Flash
- 17      5930      172A  37386  920A        5         1         796   FocalLength
- 18      5942      1736  37396  9214        3         4         804   SubjectArea
- 19      5954      1742  37500  927C        7      1328         812   MakerNotes
- 20      5966      174E  37521  9291        2         4   842479872   SubSecTimeOriginal
- 21      5978      175A  37522  9292        2         4   842479872   SubSecTimeDigitized
- 22      5990      1766  40960  A000        7         4   808529968   FlashpixVersion
- 23      6002      1772  40961  A001        3         1       65535   ColorSpace
- 24      6014      177E  40962  A002        4         1        4032   ExifImageWidth
- 25      6026      178A  40963  A003        4         1        3024   ExifImageHeight
- 26      6038      1796  41495  A217        3         1           2   SensingMethod
- 27      6050      17A2  41729  A301        7         1    16777216   SceneType
- 28      6062      17AE  41985  A401        3         1           8   CustomRendered
- 29      6074      17BA  41986  A402        3         1           0   ExposureMode
- 30      6086      17C6  41987  A403        3         1           0   WhiteBalance
- 31      6098      17D2  41989  A405        3         1          26   FocalLengthIn35mmFormat
- 32      6110      17DE  41990  A406        3         1           0   SceneCaptureType
- 33      6122      17EA  42034  A432        5         4        2140   LensInfo
- 34      6134      17F6  42035  A433        2         6        2172   LensMake
- 35      6146      1802  42036  A434        2        48        2178   LensModel
- 36      6158      180E  42080  A460        3         1           2   Undefined tag
-         6170      181A    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-------------------------------------------------------  IFD GPS  ------------------------------------------------------
-IFDOffset  Hex: 1E24   Dec: 7716   Tag count: 13   Big Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      7718      1E26      1     1        2         2          78   GPSLatitudeRef
-  1      7730      1E32      2     2        5         3        2388   GPSLatitude
-  2      7742      1E3E      3     3        2         2          87   GPSLongitudeRef
-  3      7754      1E4A      4     4        5         3        2412   GPSLongitude
-  4      7766      1E56      5     5        1         1           0   GPSAltitudeRef
-  5      7778      1E62      6     6        5         1        2436   GPSAltitude
-  6      7790      1E6E     12     C        2         2          75   GPSSpeedRef
-  7      7802      1E7A     13     D        5         1        2444   GPSSpeed
-  8      7814      1E86     16    10        2         2          84   GPSImgDirectionRef
-  9      7826      1E92     17    11        5         1        2452   GPSImgDirection
- 10      7838      1E9E     23    17        2         2          84   GPSDestBearingRef
- 11      7850      1EAA     24    18        5         1        2460   GPSDestBearing
- 12      7862      1EB6     31    1F        5         1        2468   GPSHPositioningError
-GPSLatitude = 49 15 21.3 (49/1 15/1 2130/100)
-GPSLongitude = 123 4 35.45 (123/1 4/1 3545/100)
+Log:
+Log: Deploying Qt frameworks found inside: QList("/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow")
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimediaWidgets.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/QtMultimediaWidgets"
+Log:  points to "Versions/Current/QtMultimediaWidgets"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log:  to "@rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtMultimedia.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework"
+ Binary directory "Versions/A"
+ Binary name "QtMultimedia"
+ Binary path "/Versions/A/QtMultimedia"
+ Version "A"
+ Install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Deployed install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework/Versions/A"
 
-file:///Users/roryhill/Pictures/_ThumbTest/CR2.CR2
-------------------------------------------------------  IFD GPS  ------------------------------------------------------
-IFDOffset  Hex: 6A4A   Dec: 27210   Tag count: 16   Little Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0     27212      6A4C      0     0        1         4         770   GPSVersionID
-  1     27224      6A58      1     1        2         2          78   GPSLatitudeRef
-  2     27236      6A64      2     2        5         3       27588   GPSLatitude
-  3     27248      6A70      3     3        2         2          87   GPSLongitudeRef
-  4     27260      6A7C      4     4        5         3       27612   GPSLongitude
-  5     27272      6A88      5     5        1         1           0   GPSAltitudeRef
-  6     27284      6A94      6     6        5         1       27636   GPSAltitude
-  7     27296      6AA0      7     7        5         3       27644   GPSTimeStamp
-  8     27308      6AAC      8     8        2         3       13362   GPSSatellites
-  9     27320      6AB8      9     9        2         2          65   GPSStatus
- 10     27332      6AC4     10     A        2         2          51   GPSMeasureMode
- 11     27344      6AD0     11     B        5         1       28128   GPSDOP
- 12     27356      6ADC     16    10        2         2          77   GPSImgDirectionRef
- 13     27368      6AE8     17    11        5         1       28152   GPSImgDirection
- 14     27380      6AF4     18    12        2         7       28160   GPSMapDatum
- 15     27392      6B00     29    1D        2        11       28992   GPSDateStamp
-        27404      6B0C    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-49°21'0.414" N 124°29'44.262" W
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
--------------------------------------
-Translated Report (Full Report Below)
--------------------------------------
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtWidgets"
+ Binary path "/Versions/A/QtWidgets"
+ Version "A"
+ Install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Deployed install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework/Versions/A"
 
-Process:               Winnet [98439]
-Path:                  /Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet
-Identifier:            roryhill.zenfolio.com.Winnet
-Version:               ???
-Code Type:             ARM-64 (Native)
-Parent Process:        Adobe Lightroom Classic [447]
-Responsible:           Adobe Lightroom Classic [447]
-User ID:               501
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-Date/Time:             2022-11-22 17:37:23.3137 -0800
-OS Version:            macOS 12.5.1 (21G83)
-Report Version:        12
-Anonymous UUID:        870841C9-0A4F-F9F5-A80F-CD30AA6675B8
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtMultimedia.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework"
+ Binary directory "Versions/A"
+ Binary name "QtMultimedia"
+ Binary path "/Versions/A/QtMultimedia"
+ Version "A"
+ Install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Deployed install name "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtMultimedia.framework/Versions/A"
 
-Time Awake Since Boot: 620000 seconds
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-System Integrity Protection: enabled
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtWidgets"
+ Binary path "/Versions/A/QtWidgets"
+ Version "A"
+ Install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Deployed install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework/Versions/A"
 
-Crashed Thread:        0
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-Exception Type:        EXC_CRASH (SIGABRT)
-Exception Codes:       0x0000000000000000, 0x0000000000000000
-Exception Note:        EXC_CORPSE_NOTIFY
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Termination Reason:    Namespace DYLD, Code 1 Library missing
-Library not loaded: '@rpath/QtWidgets.framework/Versions/A/QtWidgets'
-Referenced from: '/Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet'
-Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)
-(terminated at launch; ignore backtrace)
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/QtWidgets"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/QtWidgets"
+Log:  points to "Versions/Current/QtWidgets"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log:  to "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-Thread 0 Crashed:
-0   dyld                          	       0x102b83e98 __abort_with_payload + 8
-1   dyld                          	       0x102b8b024 abort_with_payload_wrapper_internal + 104
-2   dyld                          	       0x102b8b058 abort_with_payload + 16
-3   dyld                          	       0x102b42a28 dyld4::halt(char const*) + 580
-4   dyld                          	       0x102b3dfb8 dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*) + 3644
-5   dyld                          	       0x102b3d06c start + 488
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-Thread 0 crashed with ARM Thread State (64-bit):
-    x0: 0x0000000000000006   x1: 0x0000000000000001   x2: 0x000000016d4867f8   x3: 0x00000000000000a1
-    x4: 0x000000016d4863f8   x5: 0x0000000000000000   x6: 0x0073746567646957   x7: 0x00000000000002e0
-    x8: 0x0000000000000020   x9: 0x0000000000000009  x10: 0x000000016d486452  x11: 0x00000000000000b6
-   x12: 0x0000000000000000  x13: 0x0000000000000039  x14: 0x000000023dca94f6  x15: 0x0000000000000000
-   x16: 0x0000000000000209  x17: 0x0000000102b3b14c  x18: 0x0000000000000000  x19: 0x0000000000000000
-   x20: 0x000000016d4863f8  x21: 0x00000000000000a1  x22: 0x000000016d4867f8  x23: 0x0000000000000001
-   x24: 0x0000000000000006  x25: 0x000000016d4863f8  x26: 0x0000000000000400  x27: 0x00000000000001cd
-   x28: 0x0000000000000319   fp: 0x000000016d4863c0   lr: 0x0000000102b8b024
-    sp: 0x000000016d486380   pc: 0x0000000102b83e98 cpsr: 0x00001000
-   far: 0x0000000102aa4000  esr: 0x56000080  Address size fault
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Binary Images:
-       0x102b38000 -        0x102b97fff dyld (*) <75627683-a780-32ad-ae34-cf86dd23a26b> /usr/lib/dyld
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtMultimedia.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/QtMultimedia"
+Log:  points to "Versions/Current/QtMultimedia"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log:  to "@rpath/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/QtMultimedia"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtMultimedia.framework/Versions/A/QtMultimedia (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-External Modification Summary:
-  Calls made by other processes targeting this process:
-    task_for_pid: 0
-    thread_create: 0
-    thread_set_state: 0
-  Calls made by this process:
-    task_for_pid: 0
-    thread_create: 0
-    thread_set_state: 0
-  Calls made by all processes on this machine:
-    task_for_pid: 16
-    thread_create: 0
-    thread_set_state: 1209
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-VM Region Summary:
-ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)
-Writable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-                                VIRTUAL   REGION
-REGION TYPE                        SIZE    COUNT (non-coalesced)
-===========                     =======  =======
-STACK GUARD                       56.0M        1
-Stack                             8176K        1
-VM_ALLOCATE                         16K        1
-__DATA                              32K        2
-__DATA_CONST                       112K        2
-__LINKEDIT                         240K        2
-__TEXT                             496K        2
-dyld private memory               1024K        1
-===========                     =======  =======
-TOTAL                             65.9M       12
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
------------
-Full Report
------------
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/QtGui"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/QtGui"
+Log:  points to "Versions/Current/QtGui"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/QtGui"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtDBus.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework"
+ Binary directory "Versions/A"
+ Binary name "QtDBus"
+ Binary path "/Versions/A/QtDBus"
+ Version "A"
+ Install name "@rpath/QtDBus.framework/Versions/A/QtDBus"
+ Deployed install name "@rpath/QtDBus.framework/Versions/A/QtDBus"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtDBus.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtDBus.framework/Versions/A"
 
-{"app_name":"Winnet","timestamp":"2022-11-22 17:37:23.00 -0800","app_version":"","slice_uuid":"d079100f-ffdf-3365-beb8-448c4bde38b2","build_version":"","platform":1,"bundleID":"roryhill.zenfolio.com.Winnet","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 12.5.1 (21G83)","incident_id":"B88D1204-ADC9-49DE-A00C-DB3461EFBD25","name":"Winnet"}
-{
-  "uptime" : 620000,
-  "procLaunch" : "2022-11-22 17:37:23.3045 -0800",
-  "procRole" : "Unspecified",
-  "version" : 2,
-  "userID" : 501,
-  "deployVersion" : 210,
-  "modelCode" : "Mac13,2",
-  "procStartAbsTime" : 15076287462809,
-  "coalitionID" : 417,
-  "osVersion" : {
-    "train" : "macOS 12.5.1",
-    "build" : "21G83",
-    "releaseType" : "User"
-  },
-  "captureTime" : "2022-11-22 17:37:23.3137 -0800",
-  "incident" : "B88D1204-ADC9-49DE-A00C-DB3461EFBD25",
-  "bug_type" : "309",
-  "pid" : 98439,
-  "procExitAbsTime" : 15076287676481,
-  "translated" : false,
-  "cpuType" : "ARM-64",
-  "procName" : "Winnet",
-  "procPath" : "\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet",
-  "bundleInfo" : {"CFBundleIdentifier":"roryhill.zenfolio.com.Winnet"},
-  "storeInfo" : {"deviceIdentifierForVendor":"F499C978-B402-5AF2-8FA4-E2BAB8F837FC","thirdParty":true},
-  "parentProc" : "Adobe Lightroom Classic",
-  "parentPid" : 447,
-  "coalitionName" : "com.adobe.LightroomClassicCC7",
-  "crashReporterKey" : "870841C9-0A4F-F9F5-A80F-CD30AA6675B8",
-  "responsiblePid" : 447,
-  "responsibleProc" : "Adobe Lightroom Classic",
-  "sip" : "enabled",
-  "isCorpse" : 1,
-  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"},
-  "termination" : {"code":1,"flags":518,"namespace":"DYLD","indicator":"Library missing","details":["(terminated at launch; ignore backtrace)"],"reasons":["Library not loaded: '@rpath\/QtWidgets.framework\/Versions\/A\/QtWidgets'","Referenced from: '\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet'","Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)"]},
-  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":1209,"task_for_pid":16},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
-  "faultingThread" : 0,
-  "threads" : [{"triggered":true,"id":7009070,"threadState":{"x":[{"value":6},{"value":1},{"value":6128429048},{"value":161},{"value":6128428024},{"value":0},{"value":32497601196878167},{"value":736},{"value":32},{"value":9},{"value":6128428114},{"value":182},{"value":0},{"value":57},{"value":9626621174},{"value":0},{"value":521},{"value":4340298060,"symbolLocation":392,"symbol":"__simple_bprintf"},{"value":0},{"value":0},{"value":6128428024},{"value":161},{"value":6128429048},{"value":1},{"value":6},{"value":6128428024},{"value":1024},{"value":461},{"value":793}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4340625444},"cpsr":{"value":4096},"fp":{"value":6128427968},"sp":{"value":6128427904},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":4340596376,"matchesCrashFrame":1},"far":{"value":4339679232}},"frames":[{"imageOffset":310936,"symbol":"__abort_with_payload","symbolLocation":8,"imageIndex":0},{"imageOffset":340004,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":104,"imageIndex":0},{"imageOffset":340056,"symbol":"abort_with_payload","symbolLocation":16,"imageIndex":0},{"imageOffset":43560,"symbol":"dyld4::halt(char const*)","symbolLocation":580,"imageIndex":0},{"imageOffset":24504,"symbol":"dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*)","symbolLocation":3644,"imageIndex":0},{"imageOffset":20588,"symbol":"start","symbolLocation":488,"imageIndex":0}]}],
-  "usedImages" : [
-  {
-    "source" : "P",
-    "arch" : "arm64e",
-    "base" : 4340285440,
-    "size" : 393216,
-    "uuid" : "75627683-a780-32ad-ae34-cf86dd23a26b",
-    "path" : "\/usr\/lib\/dyld",
-    "name" : "dyld"
-  }
-],
-  "sharedCache" : {
-  "base" : 6540640256,
-  "size" : 3144712192,
-  "uuid" : "f8ab76fb-504c-32dd-a5db-15a1f2f028f8"
-},
-  "vmSummary" : "ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)\nWritable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \nVM_ALLOCATE                         16K        1 \n__DATA                              32K        2 \n__DATA_CONST                       112K        2 \n__LINKEDIT                         240K        2 \n__TEXT                             496K        2 \ndyld private memory               1024K        1 \n===========                     =======  ======= \nTOTAL                             65.9M       12 \n",
-  "legacyInfo" : {
-  "threadTriggered" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-  }
-},
-  "trialInfo" : {
-  "rollouts" : [
-    {
-      "rolloutId" : "60da5e84ab0ca017dace9abf",
-      "factorPackIds" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtDBus.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework"
+ Binary directory "Versions/A"
+ Binary name "QtDBus"
+ Binary path "/Versions/A/QtDBus"
+ Version "A"
+ Install name "@rpath/QtDBus.framework/Versions/A/QtDBus"
+ Deployed install name "@rpath/QtDBus.framework/Versions/A/QtDBus"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtDBus.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtDBus.framework/Versions/A"
 
-      },
-      "deploymentId" : 240000008
-    },
-    {
-      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
-      "factorPackIds" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-      },
-      "deploymentId" : 240000021
-    }
-  ],
-  "experiments" : [
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/QtNetwork"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/QtNetwork"
+Log:  points to "Versions/Current/QtNetwork"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-  ]
-}
-}
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
--------------------------------------
-Translated Report (Full Report Below)
--------------------------------------
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtConcurrent.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/QtConcurrent"
+Log:  points to "Versions/Current/QtConcurrent"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log:  to "@rpath/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/QtConcurrent"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtConcurrent.framework/Versions/A/QtConcurrent (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Process:               Winnet [98439]
-Path:                  /Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet
-Identifier:            roryhill.zenfolio.com.Winnet
-Version:               ???
-Code Type:             ARM-64 (Native)
-Parent Process:        Adobe Lightroom Classic [447]
-Responsible:           Adobe Lightroom Classic [447]
-User ID:               501
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Date/Time:             2022-11-22 17:37:23.3137 -0800
-OS Version:            macOS 12.5.1 (21G83)
-Report Version:        12
-Anonymous UUID:        870841C9-0A4F-F9F5-A80F-CD30AA6675B8
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/QtCore"
+Log:  points to "Versions/Current/QtCore"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Versions/A/QtDBus"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtDBus.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/QtDBus"
+Log:  points to "Versions/Current/QtDBus"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  change reference "@rpath/QtDBus.framework/Versions/A/QtDBus"
+Log:  to "@rpath/QtDBus.framework/Versions/A/QtDBus"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtDBus.framework/Versions/A/QtDBus (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Time Awake Since Boot: 620000 seconds
+Log: Using install_name_tool:
+Log:  change rpaths in "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"
+Log:  using QList("-delete_rpath", "/Users/roryhill/Qt/6.4.1/macos/lib")
+Log:
+Log: Deploying plugins from "/Users/roryhill/Qt/6.4.1/macos/plugins"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/platforms/libqcocoa.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-System Integrity Protection: enabled
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Crashed Thread:        0
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-Exception Type:        EXC_CRASH (SIGABRT)
-Exception Codes:       0x0000000000000000, 0x0000000000000000
-Exception Note:        EXC_CORPSE_NOTIFY
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Termination Reason:    Namespace DYLD, Code 1 Library missing
-Library not loaded: '@rpath/QtWidgets.framework/Versions/A/QtWidgets'
-Referenced from: '/Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet'
-Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)
-(terminated at launch; ignore backtrace)
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/platforms/libqcocoa.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/styles/libqmacstyle.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtWidgets"
+ Binary path "/Versions/A/QtWidgets"
+ Version "A"
+ Install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Deployed install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework/Versions/A"
 
-Thread 0 Crashed:
-0   dyld                          	       0x102b83e98 __abort_with_payload + 8
-1   dyld                          	       0x102b8b024 abort_with_payload_wrapper_internal + 104
-2   dyld                          	       0x102b8b058 abort_with_payload + 16
-3   dyld                          	       0x102b42a28 dyld4::halt(char const*) + 580
-4   dyld                          	       0x102b3dfb8 dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*) + 3644
-5   dyld                          	       0x102b3d06c start + 488
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Thread 0 crashed with ARM Thread State (64-bit):
-    x0: 0x0000000000000006   x1: 0x0000000000000001   x2: 0x000000016d4867f8   x3: 0x00000000000000a1
-    x4: 0x000000016d4863f8   x5: 0x0000000000000000   x6: 0x0073746567646957   x7: 0x00000000000002e0
-    x8: 0x0000000000000020   x9: 0x0000000000000009  x10: 0x000000016d486452  x11: 0x00000000000000b6
-   x12: 0x0000000000000000  x13: 0x0000000000000039  x14: 0x000000023dca94f6  x15: 0x0000000000000000
-   x16: 0x0000000000000209  x17: 0x0000000102b3b14c  x18: 0x0000000000000000  x19: 0x0000000000000000
-   x20: 0x000000016d4863f8  x21: 0x00000000000000a1  x22: 0x000000016d4867f8  x23: 0x0000000000000001
-   x24: 0x0000000000000006  x25: 0x000000016d4863f8  x26: 0x0000000000000400  x27: 0x00000000000001cd
-   x28: 0x0000000000000319   fp: 0x000000016d4863c0   lr: 0x0000000102b8b024
-    sp: 0x000000016d486380   pc: 0x0000000102b83e98 cpsr: 0x00001000
-   far: 0x0000000102aa4000  esr: 0x56000080  Address size fault
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtWidgets.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework"
+ Binary directory "Versions/A"
+ Binary name "QtWidgets"
+ Binary path "/Versions/A/QtWidgets"
+ Version "A"
+ Install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Deployed install name "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtWidgets.framework/Versions/A/QtWidgets"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtWidgets.framework/Versions/A"
 
-Binary Images:
-       0x102b38000 -        0x102b97fff dyld (*) <75627683-a780-32ad-ae34-cf86dd23a26b> /usr/lib/dyld
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
 
-External Modification Summary:
-  Calls made by other processes targeting this process:
-    task_for_pid: 0
-    thread_create: 0
-    thread_set_state: 0
-  Calls made by this process:
-    task_for_pid: 0
-    thread_create: 0
-    thread_set_state: 0
-  Calls made by all processes on this machine:
-    task_for_pid: 16
-    thread_create: 0
-    thread_set_state: 1209
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-VM Region Summary:
-ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)
-Writable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log:  to "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log:  to "@rpath/QtWidgets.framework/Versions/A/QtWidgets"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/styles/libqmacstyle.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/tls/libqcertonlybackend.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-                                VIRTUAL   REGION
-REGION TYPE                        SIZE    COUNT (non-coalesced)
-===========                     =======  =======
-STACK GUARD                       56.0M        1
-Stack                             8176K        1
-VM_ALLOCATE                         16K        1
-__DATA                              32K        2
-__DATA_CONST                       112K        2
-__LINKEDIT                         240K        2
-__TEXT                             496K        2
-dyld private memory               1024K        1
-===========                     =======  =======
-TOTAL                             65.9M       12
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
------------
-Full Report
------------
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqcertonlybackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/tls/libqopensslbackend.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-{"app_name":"Winnet","timestamp":"2022-11-22 17:37:23.00 -0800","app_version":"","slice_uuid":"d079100f-ffdf-3365-beb8-448c4bde38b2","build_version":"","platform":1,"bundleID":"roryhill.zenfolio.com.Winnet","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 12.5.1 (21G83)","incident_id":"B88D1204-ADC9-49DE-A00C-DB3461EFBD25","name":"Winnet"}
-{
-  "uptime" : 620000,
-  "procLaunch" : "2022-11-22 17:37:23.3045 -0800",
-  "procRole" : "Unspecified",
-  "version" : 2,
-  "userID" : 501,
-  "deployVersion" : 210,
-  "modelCode" : "Mac13,2",
-  "procStartAbsTime" : 15076287462809,
-  "coalitionID" : 417,
-  "osVersion" : {
-    "train" : "macOS 12.5.1",
-    "build" : "21G83",
-    "releaseType" : "User"
-  },
-  "captureTime" : "2022-11-22 17:37:23.3137 -0800",
-  "incident" : "B88D1204-ADC9-49DE-A00C-DB3461EFBD25",
-  "bug_type" : "309",
-  "pid" : 98439,
-  "procExitAbsTime" : 15076287676481,
-  "translated" : false,
-  "cpuType" : "ARM-64",
-  "procName" : "Winnet",
-  "procPath" : "\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet",
-  "bundleInfo" : {"CFBundleIdentifier":"roryhill.zenfolio.com.Winnet"},
-  "storeInfo" : {"deviceIdentifierForVendor":"F499C978-B402-5AF2-8FA4-E2BAB8F837FC","thirdParty":true},
-  "parentProc" : "Adobe Lightroom Classic",
-  "parentPid" : 447,
-  "coalitionName" : "com.adobe.LightroomClassicCC7",
-  "crashReporterKey" : "870841C9-0A4F-F9F5-A80F-CD30AA6675B8",
-  "responsiblePid" : 447,
-  "responsibleProc" : "Adobe Lightroom Classic",
-  "sip" : "enabled",
-  "isCorpse" : 1,
-  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"},
-  "termination" : {"code":1,"flags":518,"namespace":"DYLD","indicator":"Library missing","details":["(terminated at launch; ignore backtrace)"],"reasons":["Library not loaded: '@rpath\/QtWidgets.framework\/Versions\/A\/QtWidgets'","Referenced from: '\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet'","Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)"]},
-  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":1209,"task_for_pid":16},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
-  "faultingThread" : 0,
-  "threads" : [{"triggered":true,"id":7009070,"threadState":{"x":[{"value":6},{"value":1},{"value":6128429048},{"value":161},{"value":6128428024},{"value":0},{"value":32497601196878167},{"value":736},{"value":32},{"value":9},{"value":6128428114},{"value":182},{"value":0},{"value":57},{"value":9626621174},{"value":0},{"value":521},{"value":4340298060,"symbolLocation":392,"symbol":"__simple_bprintf"},{"value":0},{"value":0},{"value":6128428024},{"value":161},{"value":6128429048},{"value":1},{"value":6},{"value":6128428024},{"value":1024},{"value":461},{"value":793}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4340625444},"cpsr":{"value":4096},"fp":{"value":6128427968},"sp":{"value":6128427904},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":4340596376,"matchesCrashFrame":1},"far":{"value":4339679232}},"frames":[{"imageOffset":310936,"symbol":"__abort_with_payload","symbolLocation":8,"imageIndex":0},{"imageOffset":340004,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":104,"imageIndex":0},{"imageOffset":340056,"symbol":"abort_with_payload","symbolLocation":16,"imageIndex":0},{"imageOffset":43560,"symbol":"dyld4::halt(char const*)","symbolLocation":580,"imageIndex":0},{"imageOffset":24504,"symbol":"dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*)","symbolLocation":3644,"imageIndex":0},{"imageOffset":20588,"symbol":"start","symbolLocation":488,"imageIndex":0}]}],
-  "usedImages" : [
-  {
-    "source" : "P",
-    "arch" : "arm64e",
-    "base" : 4340285440,
-    "size" : 393216,
-    "uuid" : "75627683-a780-32ad-ae34-cf86dd23a26b",
-    "path" : "\/usr\/lib\/dyld",
-    "name" : "dyld"
-  }
-],
-  "sharedCache" : {
-  "base" : 6540640256,
-  "size" : 3144712192,
-  "uuid" : "f8ab76fb-504c-32dd-a5db-15a1f2f028f8"
-},
-  "vmSummary" : "ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)\nWritable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \nVM_ALLOCATE                         16K        1 \n__DATA                              32K        2 \n__DATA_CONST                       112K        2 \n__LINKEDIT                         240K        2 \n__TEXT                             496K        2 \ndyld private memory               1024K        1 \n===========                     =======  ======= \nTOTAL                             65.9M       12 \n",
-  "legacyInfo" : {
-  "threadTriggered" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-  }
-},
-  "trialInfo" : {
-  "rollouts" : [
-    {
-      "rolloutId" : "60da5e84ab0ca017dace9abf",
-      "factorPackIds" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-      },
-      "deploymentId" : 240000008
-    },
-    {
-      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
-      "factorPackIds" : {
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-      },
-      "deploymentId" : 240000021
-    }
-  ],
-  "experiments" : [
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/tls/libqsecuretransportbackend.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
 
-  ]
-}
-}
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
 
-Model: Mac13,2, BootROM 7459.141.1, proc 20:16:4 processors, 128 GB, SMC
-Graphics: Apple M1 Ultra, Apple M1 Ultra, Built-In
-Display: BenQ SW320, 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition), Main, MirrorOff, Online
-Display: DELL SE3223Q, 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition), MirrorOff, Online
-Display: DELL U3011, 2560 x 1600, MirrorOff, Online
-Memory Module: LPDDR5
-AirPort: Wi-Fi, wl0: Apr  6 2022 06:12:09 version 20.90.45.0.8.7.118 FWID 01-13a89935
-Bluetooth: Version (null), 0 services, 0 devices, 0 incoming serial ports
-Network Service: Ethernet, Ethernet, en0
-Network Service: Wi-Fi, AirPort, en1
-USB Device: USB31Bus
-USB Device: d2 Professional
-USB Device: USB31Bus
-USB Device: USB3.1 Hub
-USB Device: USB_3_0 Reader
-USB Device: ASM236X series
-USB Device: USB2.0 Hub
-USB Device: hub_device
-USB Device: hub_device
-USB Device: Ultra Fast Media Reader
-USB Device: USB31Bus
-USB Device: USB31Bus
-USB Device: USB31Bus
-USB Device: USB31Bus
-USB Device: USB31Bus
-USB Device: C460 Series
-Thunderbolt Bus: Mac Studio, Apple Inc.
-Thunderbolt Bus: Mac Studio, Apple Inc.
-Thunderbolt Bus: Mac Studio, Apple Inc.
-Thunderbolt Bus: Mac Studio, Apple Inc.
-Thunderbolt Bus: Mac Studio, Apple Inc.
-Thunderbolt Bus: Mac Studio, Apple Inc.
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtNetwork.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework"
+ Binary directory "Versions/A"
+ Binary name "QtNetwork"
+ Binary path "/Versions/A/QtNetwork"
+ Version "A"
+ Install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Deployed install name "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtNetwork.framework/Versions/A/QtNetwork"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtNetwork.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log:  change reference "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log:  to "@rpath/QtNetwork.framework/Versions/A/QtNetwork"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/tls/libqsecuretransportbackend.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqgif.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqgif.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqicns.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqicns.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqico.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqico.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqjpeg.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqjpeg.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqmacheif.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacheif.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqmacjp2.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqmacjp2.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqtga.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtga.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqtiff.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqtiff.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqwbmp.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwbmp.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/imageformats/libqwebp.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib")
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/imageformats/libqwebp.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/plugins/iconengines/libqsvgicon.dylib"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtSvg.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework"
+ Binary directory "Versions/A"
+ Binary name "QtSvg"
+ Binary path "/Versions/A/QtSvg"
+ Version "A"
+ Install name "@rpath/QtSvg.framework/Versions/A/QtSvg"
+ Deployed install name "@rpath/QtSvg.framework/Versions/A/QtSvg"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtSvg.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtSvg.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtSvg.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework"
+ Binary directory "Versions/A"
+ Binary name "QtSvg"
+ Binary path "/Versions/A/QtSvg"
+ Version "A"
+ Install name "@rpath/QtSvg.framework/Versions/A/QtSvg"
+ Deployed install name "@rpath/QtSvg.framework/Versions/A/QtSvg"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtSvg.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtSvg.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log:
+Log: Deploying Qt frameworks found inside: QList("packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib")
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Versions/A/QtSvg"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/QtSvg"
+Log: copy: "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Resources" "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/Resources"
+Log:  copied: "/Users/roryhill/Qt/6.4.1/macos/lib/QtSvg.framework/Resources/Info.plist"
+Log:  to "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/Resources/Info.plist"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/QtSvg"
+Log:  points to "Versions/Current/QtSvg"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Resources"
+Log:  points to "Versions/Current/Resources"
+Log:  symlink "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/Current"
+Log:  points to "A"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtSvg.framework/Versions/A/QtSvg"
+Log:  to "@rpath/QtSvg.framework/Versions/A/QtSvg"
+Log: Using strip:
+Log:  stripped "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/QtSvg"
+Log: Using otool:
+Log:  inspecting "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/QtSvg"
+Log: Could not parse otool output line: "packages/com.rh.bin/data/Winnow.app/Contents/Frameworks/QtSvg.framework/Versions/A/QtSvg (architecture arm64):"
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtGui.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework"
+ Binary directory "Versions/A"
+ Binary name "QtGui"
+ Binary path "/Versions/A/QtGui"
+ Version "A"
+ Install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Deployed install name "@rpath/QtGui.framework/Versions/A/QtGui"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtGui.framework/Versions/A/QtGui"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtGui.framework/Versions/A"
+
+Log: Using otool:
+Log:  inspecting "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+Log: Could not parse otool output line: "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore (architecture arm64):"
+Log: Adding framework:
+Log: Framework name "QtCore.framework"
+ Framework directory "/Users/roryhill/Qt/6.4.1/macos/lib/"
+ Framework path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework"
+ Binary directory "Versions/A"
+ Binary name "QtCore"
+ Binary path "/Versions/A/QtCore"
+ Version "A"
+ Install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Deployed install name "@rpath/QtCore.framework/Versions/A/QtCore"
+ Source file Path "/Users/roryhill/Qt/6.4.1/macos/lib/QtCore.framework/Versions/A/QtCore"
+ Framework Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework"
+ Binary Destination Directory (relative to bundle) "Contents/Frameworks/QtCore.framework/Versions/A"
+
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtSvg.framework/Versions/A/QtSvg"
+Log:  to "@rpath/QtSvg.framework/Versions/A/QtSvg"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtGui.framework/Versions/A/QtGui"
+Log:  to "@rpath/QtGui.framework/Versions/A/QtGui"
+Log: Using install_name_tool:
+Log:  in "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns/iconengines/libqsvgicon.dylib"
+Log:  change reference "@rpath/QtCore.framework/Versions/A/QtCore"
+Log:  to "@rpath/QtCore.framework/Versions/A/QtCore"
+Log: Created configuration file: "packages/com.rh.bin/data/Winnow.app/Contents/Resources/qt.conf"
+Log: This file sets the plugin search path to "packages/com.rh.bin/data/Winnow.app/Contents/PlugIns"
+Log: Using strip:
+Log:  stripped "/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data/Winnow.app/Contents/MacOS/Winnow"

@@ -157,6 +157,7 @@ namespace G
     extern bool useImageCache;
     extern bool useImageView;
     extern bool useInfoView;
+    extern bool useMultimedia;
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;

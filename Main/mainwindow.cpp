@@ -401,6 +401,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
+
+
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
 
@@ -647,7 +649,7 @@ void MW::keyPressEvent(QKeyEvent *event)
     if (event->key() == Qt::Key_Return) {
         if (G::mode == "Loupe") {
             if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
-                videoView->playOrPause();
+                if (G::useMultimedia) videoView->playOrPause();
             }
         }
         else {
@@ -759,7 +761,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     bool isVideoMode = centralLayout->currentIndex() == VideoTab;
     if (isVideoMode) {
         if (event->key() == Qt::Key_Space) {
-            videoView->playOrPause();
+            if (G::useMultimedia) videoView->playOrPause();
         }
     }
 
@@ -1255,18 +1257,17 @@ void MW::handleStartupArgs(const QString &args)
        arg[3+] = path to each image being exported to be embellished
 
     else
-       arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
-       directory to open in Winnow.
+       arg[1+] = path to each image to view in Winnow. Only arg[1] is used to
+       determine the directory to open in Winnow.
 
-    Winnets are small executables that act like photoshop droplets. They reside
-    in QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets
-    and Mac::/Users/user/Library/Application Support/Winnow/Winnets). They send
-    a list of files and a template name to Winnow to be embellished. For
-    example, in order for Winnow to embellish a series of files that have been
-    exported from lightroom, Winnow needs to know which embellish template to
-    use. Instead of sending the files directly to Winnow, thay are sent to an
-    intermediary program (a Winnet) that is named after the template. The
-    Winnet (ie Zen2048) receives the list of files, inserts the strings
+    Winnets are small executables that act like photoshop droplets. They reside in
+    QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets and
+    Mac::/Users/user/Library/Application Support/Winnow/Winnets). They send a list of
+    files and a template name to Winnow to be embellished. For example, in order for
+    Winnow to embellish a series of files that have been exported from lightroom, Winnow
+    needs to know which embellish template to use. Instead of sending the files directly
+    to Winnow, thay are sent to an intermediary program (a Winnet) that is named after
+    the template. The Winnet (ie Zen2048) receives the list of files, inserts the strings
     "Embellish" and the template name "Zen2048" and then resends to Winnow.
 */
     if (G::isLogger) G::log("MW::handleStartupArgs", args);
@@ -1831,11 +1832,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // update loupe view
     if (G::useImageView) {
-        videoView->stop();
+        if (G::useMultimedia) videoView->stop();
         bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
         if (isVideo) {
-            videoView->load(fPath);
-            if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
+            if (G::useMultimedia) {
+                videoView->load(fPath);
+                if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
+            }
         }
         else {
             if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {

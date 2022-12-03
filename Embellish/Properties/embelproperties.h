@@ -2,6 +2,7 @@
 #define EMBELPROPERTIES_H
 
 #include <QtWidgets>
+#include <filesystem>
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "PropertyEditor/propertyeditor.h"
@@ -170,7 +171,7 @@ private:
     QString uniqueTileName(QString name);
     QString uniqueGraphicName(QString name);
     QString uniqueTokenName(QString name);
-    void syncWinnets();
+    void syncWinnets(QString src);
 
     void addTemplateHeader();
     void addTemplateItems();

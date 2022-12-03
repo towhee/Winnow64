@@ -44,7 +44,7 @@ QT += widgets
 QT += multimedia
 QT += multimediawidgets
 QT += concurrent
-QT += network
+#QT += network
 
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
