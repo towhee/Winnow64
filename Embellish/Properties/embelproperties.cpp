@@ -986,6 +986,7 @@ void EmbelProperties::copyTemplate()
     templateListEditor->refresh(templateList);
     templateName = copyName;
     templateListEditor->setValue(templateName);
+    syncWinnets("EmbelProperties::copyTemplate");
 }
 
 bool EmbelProperties::saveTemplateToFile()
@@ -1557,7 +1558,7 @@ void EmbelProperties::syncWinnets(QString src)
 #ifdef Q_OS_WIN
     ext = ".exe";
     dirFilter << "*.exe";
-    winnetPath = executableDirPath + "/Winnet.exe;
+    winnetPath = executableDirPath + "/Winnet.exe";
     // make sure Qt5Core.dll exists
     QString dllPath = appDataWinnetsPath + "/Qt5Core.dll";
     if (!QFile(dllPath).exists()) {
