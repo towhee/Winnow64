@@ -501,6 +501,8 @@ void MW::createTableView()
 void MW::createVideoView()
 {
     if (G::isLogger) G::log("MW::createVideoView");
+    if (!G::useMultimedia) return;
+
     videoView = new VideoView(this, thumbView);
 
     // back and forward mouse buttons toggle pick

@@ -38,6 +38,7 @@ namespace G
     bool useImageCache = true;
     bool useImageView = true;
     bool useInfoView = true;
+    bool useMultimedia = true;
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
     bool tryConcurrentLoading = true;   // show/hide option to use concurrent MetaRead
