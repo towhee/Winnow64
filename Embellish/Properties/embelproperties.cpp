@@ -1573,7 +1573,7 @@ void EmbelProperties::syncWinnets(QString src)
     // make sure Frameworks folder exists
     dir.setPath(appDataWinnetsPath + "/Frameworks");
     if (!dir.exists())
-        dir.mkdir(appDataWinnetsPath + "Frameworks");
+        dir.mkdir(appDataWinnetsPath + "/Frameworks");
     // make sure QtCore.framework exists
     QString dstPath = appDataWinnetsPath + "/Frameworks/QtCore.framework";
     if (!QFile(dstPath).exists()) {
