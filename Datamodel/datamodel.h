@@ -71,7 +71,7 @@ public:
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
     int rowFromPath(QString fPath);
-    void refreshRowFromPath();
+    void refreshRowFromPathHash();
     void saveSelection();
     void recoverSelection();
     bool getSelection(QStringList &list);
@@ -139,7 +139,7 @@ public slots:
     void selectAll();
     void selectFirst();
     void selectLast();
-    void select(QModelIndex idx);
+    void select(QModelIndex sfIdx);
     void select(int sfRow);
     void select(QString &fPath);
 //    void selectNext();

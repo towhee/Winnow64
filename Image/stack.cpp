@@ -116,7 +116,7 @@ QString Stack::mean()
             }
         }
         G::popUp->setProgress(i+1);
-//        qApp->processEvents();
+        qApp->processEvents();
     }
 
     if (!abort) {

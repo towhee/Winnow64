@@ -331,6 +331,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
     }
     if (missingThumbnailCount == 0) {
         G::popUp->showPopup("No jpg with missing thumbnails");
+        qDebug() << "No missing thumbnails";
         return;
     }
 

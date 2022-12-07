@@ -28,7 +28,7 @@ public:
 
     void exportImages(const QStringList &srcList, bool isRemote = false);
     QString exportRemoteFiles(QString templateName, QStringList &pathList);
-    void exportImage(const QString &fPath);
+    bool exportImage(const QString &fPath);
     QString exportSubfolderPath(QString folderPath = "", bool allowOverride = false);
 
     bool exportingEmbellishedImages = false;

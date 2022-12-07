@@ -1,13 +1,15 @@
 #include "coloranalysis.h"
 #include "Effects/effects.h"
 
-ColorAnalysis::ColorAnalysis(QObject */*parent*/)/* : fPath(fPath)*/
+ColorAnalysis::ColorAnalysis(QObject *)
 {
 
 }
 
 void ColorAnalysis::process(QStringList &fPathList)
 {
+    if (G::isLogger) G::log("ColorAnalysis::process");
+
     int count = fPathList.length();
     G::isRunningColorAnalysis = true;
     G::popUp->setProgressVisible(true);
@@ -28,7 +30,7 @@ void ColorAnalysis::process(QStringList &fPathList)
         QImage img(fPathList.at(f));
         effects.hueCount(img, hues);
         G::popUp->setProgress(f+1);
-//        qApp->processEvents();
+        qApp->processEvents();
         if (abort) return;
         for (int i = 0; i < hues.size(); i++) {
             rpt << QString::number(i).rightJustified(3);

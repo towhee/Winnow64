@@ -16,7 +16,6 @@ public slots:
     void abortHueReport();
 
 private:
-//    QString &fPath;
     bool abort = false;
 };
 

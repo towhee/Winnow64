@@ -45,6 +45,9 @@ public:
     int stu;    // side to use for relative measures
     QString src;
 
+    // set true when called from EmbelExport (see explanation in EmBel::build)
+    bool isRemote = false;
+
 public slots:
     void build(QString fPath = "", QString src = "");
     void clear();
@@ -65,9 +68,6 @@ private:
     DataModel *dm;
     ImageCacheData *icd;
     QString fPath;
-
-    // set true when called from EmbelExport (see explanation in EmBel::build)
-    bool isRemote = false;
 
     enum zLevel {
         ZBorder,

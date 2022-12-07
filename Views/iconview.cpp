@@ -935,7 +935,11 @@ void IconView::select(QModelIndex idx)
         G::isNewSelection = true;
         selectionModel()->clearSelection();
         setCurrentIndex(idx);
+        dm->select(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
+    }
+    else {
+        qWarning() << "IconView::select(QModelIndex idx)" << "WARNING" << "invalid index" << idx;
     }
 }
 

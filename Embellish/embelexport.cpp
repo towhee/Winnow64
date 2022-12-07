@@ -53,26 +53,38 @@ bool EmbelExport::loadImage(QString fPath)
 /*
     Read the image file, extract metadata, apply ICC profile and convert to
     QGraphicsPixmapItem.
+
+    If Winnow has been launched remotely via a winnet then no folder has been loaded so
+    no point in looking for an existing QImage or loading metadata.
 */
     if (G::isLogger) G::log("EmbelExport::loadImage");
     QImage image;
-    if (icd->imCache.find(fPath, image)) {
-        pmItem->setPixmap(QPixmap::fromImage(image));
-        return true;
-    }
-    // check metadata loaded for image
-    int dmRow = dm->fPathRow[fPath];
-    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-        QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "EmbelExport::")) {
-            metadata->m.row = dmRow;
-            metadata->m.instance = dm->instance;
-            dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
+
+    if (!embellish->isRemote) {
+        if (icd->imCache.find(fPath, image)) {
+            pmItem->setPixmap(QPixmap::fromImage(image));
+            return true;
         }
-        else return false;
+        // check metadata loaded for image
+        int dmRow = dm->fPathRow[fPath];
+        if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+            QFileInfo fileInfo(fPath);
+            if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "EmbelExport::")) {
+                metadata->m.row = dmRow;
+                metadata->m.instance = dm->instance;
+                dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
+            }
+            else {
+                return false;
+            }
+        }
     }
     // load QImage
     QImage im(fPath);
+    // confirm load was successful
+    if (im.isNull()) {
+        return false;
+    }
     // color manage if available
     #ifdef Q_OS_WIN
     QString ext = metadata->m.type.toLower();
@@ -130,10 +142,16 @@ bool EmbelExport::isValidExportFolder()
 {
     if (G::isLogger) G::log("EmbelExport::isValidExportFolder");
     if (embelProperties->saveMethod == "Subfolder") {
-        if (embelProperties->exportSubfolder == "") return false;
+        if (embelProperties->exportSubfolder == "") {
+            Utilities::log("EmbelExport::isValidExportFolder", "Embellish export subfolder not defined");
+            return false;
+        }
     }
     else {
-        if (embelProperties->exportFolderPath == "") return false;
+        if (embelProperties->exportFolderPath == "") {
+            Utilities::log("EmbelExport::isValidExportFolder", "Embellish export folder not defined");
+            return false;
+        }
     }
     return true;
 }
@@ -164,7 +182,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     embellish->setRemote(true);
 
 //    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
-    Utilities::log("EmbelExport::exportRemoteFiles", pathList.at(0));
+    Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));
 
     exportImages(pathList, true);
 
@@ -176,6 +194,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
 //    QFileInfo info(fPath);
 //    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
 
+    Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
     return lastFileExportedPath;
 }
 
@@ -232,6 +251,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     G::popUp->showPopup(txt, 0, true, 1);
     exportingEmbellishedImages = true;
 
+    // iterate list of files, embellish and transfer metadata, ICC and insert thumbnail
     ExifTool et;
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
@@ -240,21 +260,26 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image
-        exportImage(src);
-        QString dst = lastFileExportedPath;
-        QString dstThumb = lastFileExportedThumbPath;
-        thumbList << dstThumb;
-        // copy all metadata tags from src to dst
-        et.copyAllTags(src, dst);
-        // copy ICC from src to dst
-        et.copyICC(src, dst);
-        // add thumbnail to dst
-        et.addThumb(dstThumb, dst);
+        if (exportImage(src)) {
+            QString dst = lastFileExportedPath;
+            QString dstThumb = lastFileExportedThumbPath;
+            thumbList << dstThumb;
+            // copy all metadata tags from src to dst
+            et.copyAllTags(src, dst);
+            // copy ICC from src to dst
+            et.copyICC(src, dst);
+            // add thumbnail to dst
+            et.addThumb(dstThumb, dst);
+
+            QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
+            Utilities::log("EmbelExport::exportImages", msg);
+        }
     }
     et.close();
     exportingEmbellishedImages = false;
 
     // delete the thumbnail files
+    Utilities::log("EmbelExport::exportImages", "Delete thumbnail files");
     for (int i = 0; i < thumbList.length(); ++i) {
         QFile::remove(thumbList.at(i));
     }
@@ -262,6 +287,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     G::popUp->setProgressVisible(false);
     G::popUp->end();
     G::isProcessingExportedImages = false;
+    Utilities::log("EmbelExport::exportImages", "Delete embellish");
     delete embellish;
 
     if (abort) {
@@ -289,7 +315,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     //*/
 }
 
-void EmbelExport::exportImage(const QString &fPath)
+bool EmbelExport::exportImage(const QString &fPath)
 {
 /*
     The image file is read and embellished.  The resulting graphics scene is copied to a new
@@ -297,6 +323,7 @@ void EmbelExport::exportImage(const QString &fPath)
     and saved to ":/thumb.jpg" in the export folder.
 */
     if (G::isLogger) G::log("EmbelExport::exportImage");
+
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -313,6 +340,9 @@ void EmbelExport::exportImage(const QString &fPath)
     // Check if destination image file already exists
     if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
 
+    QString msg = "src = " + fPath + " dst = " + exportPath;
+    Utilities::log("EmbelExport::exportImage", msg);
+
     // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {
         // embellish
@@ -320,8 +350,9 @@ void EmbelExport::exportImage(const QString &fPath)
         setSceneRect(scene->itemsBoundingRect());
     }
     else {
-        QString msg = "Failed to loadImage(fPath)";
+        msg = "Failed to load Image " + fPath;
         Utilities::log("EmbelExport::exportImage", msg);
+        return false;
     }
 
     // Create QImage with the exact size of the scene
@@ -339,17 +370,22 @@ void EmbelExport::exportImage(const QString &fPath)
     if (extension == "PNG") wasSaved = image.save(exportPath, "PNG", 100);
     if (extension == "TIF") wasSaved = image.save(exportPath, "TIF");
 
-    QString msg = exportPath + (wasSaved ? " true" : " false")
+    msg = exportPath
+            + (wasSaved ? " saved" : " failed")
             + " Image width: " + QString::number(image.width());
     Utilities::log("EmbelExport::exportImage", msg);
 
-    // add thumbnail
-    QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
-    lastFileExportedThumbPath = exportThumbPath;
-    thumb.save(lastFileExportedThumbPath, "JPG", 60);
-//    thumb.save(":/thumb.jpg", "JPG", 60);
+    if (wasSaved) {
+        // add thumbnail
+        QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
+        lastFileExportedThumbPath = exportThumbPath;
+        thumb.save(lastFileExportedThumbPath, "JPG", 60);
+    //    thumb.save(":/thumb.jpg", "JPG", 60);
 
-    lastFileExportedPath = exportPath;
+        lastFileExportedPath = exportPath;
+    }
+
+    return wasSaved;
 }
 
 void EmbelExport::abortEmbelExport()
