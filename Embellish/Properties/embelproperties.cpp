@@ -1611,7 +1611,6 @@ void EmbelProperties::syncWinnets(QString src)
 
     // remove if existing Winnet is not in templateList
     for (int i = okToChange.length() - 1; i >= 0; i--) {
-        qDebug() << i << okToChange.at(i);
         if (!templateList.contains(okToChange.at(i))) {
             QString fPath = appDataWinnetsPath + "/" + okToChange.at(i) + ext;
             // windows executable is a file

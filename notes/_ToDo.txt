@@ -1,6 +1,20 @@
+WHAT'S NEW
+- Delete last images in folder, not scrolling to next selected
+- Press key End not always scrolling
+- Play video (loading video thumbnails is slow)
+- Mouse wheel sensitivity preference
+- Icon/Thumbnail numbering (Menu: View > Show icon number)
+- Drag and drop files within Winnow
+- Copy path to selected image
+- Read GPS coord
+- Read keywords
+- Filter by keywords
+- Read Olympus serial number
+- Esc cancels more processes including background ingest
+- Filter header text red if part of filtration criteria
+- A lot of minor bug fixes
+
 BUGS / TO DO
-- Winnet not creating embellish export image on mac
-- Winnets crashing on mac
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - HEIC metadata on mac
@@ -71,6 +85,11 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- F2 search requires two presses
+- Remember last folder not working
+- Mean stack not adding thumbnail for generated images
+- Winnet not creating embellish export image on mac
+- Winnets crashing on mac
 - Iphone heic infoview not showing GPS info
 - Drag copy file to another folder - folder count not incrementing in bookmarks
 - Open with external app not counting number of selected files correctly
@@ -134,6 +153,7 @@ DONE/FIXED
 - Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference
 - Play video
+
 - Release 1.32
 - Made export embellished images independent of embellish editor
 - Added concurrent loading folder option

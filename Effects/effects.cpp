@@ -567,7 +567,7 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
     imageToVector2D(img, s);
     hues.fill(0);
     for (int y = 0; y < img.height(); ++y) {
-        for (int x = 0; x < img.width(); ++ x) {
+        for (int x = 0; x < img.width(); ++x) {
             QColor rgb(s[y][x]);
             QColor hsl = rgb.toHsl();
             int hue = hsl.hslHue();

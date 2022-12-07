@@ -329,6 +329,8 @@ void DataModel::insert(QString fPath)
     addFileDataForRow(row, insertFile);
     // read and add metadata
     readMetadataForItem(row, instance);
+    // update fPathRow hash
+    refreshRowFromPathHash();
 }
 
 void DataModel::remove(QString fPath)
@@ -360,6 +362,11 @@ void DataModel::remove(QString fPath)
             fileInfoList.removeAt(i);
             break;
         }
+    }
+
+    // remove from fPathRow hash
+    if (fPathRow.contains(fPath)) {
+        fPathRow.remove(fPath);
     }
 }
 
@@ -1589,7 +1596,7 @@ int DataModel::rowFromPath(QString fPath)
     else return -1;
 }
 
-void DataModel::refreshRowFromPath()
+void DataModel::refreshRowFromPathHash()
 {
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
@@ -1739,6 +1746,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
                           << currentFolderPath;
     if (!fPathRow.contains(fPath)) {
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Not in fPathrow";
+        Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     int dmRow = fPathRow[fPath];
@@ -1847,15 +1855,15 @@ void DataModel::select(int row)
     select(sf->index(row,0));
 }
 
-void DataModel::select(QModelIndex idx)
+void DataModel::select(QModelIndex sfIdx)
 {
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::select QModelIndex");
     if (isDebug) qDebug() << "DataModel::select QModelIndex" << "instance =" << instance
-                          << "idx =" << idx
+                          << "idx =" << sfIdx
                           << currentFolderPath;
-    if (idx.isValid()) {
-        selectionModel->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    if (sfIdx.isValid()) {
+        selectionModel->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     }
 }
 

@@ -442,7 +442,7 @@ void MW::createActions()
     addAction(copyImageAction);
     connect(copyImageAction, &QAction::triggered, imageView, &ImageView::copyImage);
 
-    searchTextEditAction = new QAction(tr("Edit search text"), this);
+    searchTextEditAction = new QAction(tr("Search for ..."), this);
     searchTextEditAction->setObjectName("searchTextEdit");
     searchTextEditAction->setShortcutVisibleInContextMenu(true);
     addAction(searchTextEditAction);
@@ -1822,15 +1822,18 @@ void MW::createMenus()
 //    metadataActions->append(metadataDockLockAction);
     metadataActions->append(metadataFixedSizeAction);
 
-    // Open with Menu (used in thumbview context menu)
+    // append group actions for thumbView context menu
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
     openWithGroupAct->setMenu(openWithMenu);
+    QAction *embelExportGroupAct = new QAction(tr("Embellish export..."), this);
+    embelExportGroupAct->setMenu(embelExportMenu);
 
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
+    thumbViewActions->append(embelExportGroupAct);
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);

@@ -895,6 +895,16 @@ void MW::updateColorClassLog(QString fPath, QString label)
     setting->endGroup();
 }
 
+void MW::searchTextEdit2()
+{
+    if (G::isLogger) G::log("MW::searchTextEdit2");
+     // Goto item and edit
+    filters->scrollToItem(filters->search);
+    filters->expandItem(filters->search);
+    filters->editItem(filters->searchTrue, 0);
+//    filters->update();
+    return;
+}
 void MW::searchTextEdit()
 {
     if (G::isLogger) G::log("MW::searchTextEdit");
@@ -909,10 +919,8 @@ void MW::searchTextEdit()
     // set menu status for filterDock in window menu
     filterDockVisibleAction->setChecked(true);
 
-    // Goto item and edit
-    filters->scrollToItem(filters->search);
-    filters->expandItem(filters->search);
-    filters->editItem(filters->searchTrue, 0);
+    // edit search text after this function returns
+    QTimer::singleShot(100, this, SLOT(searchTextEdit2()));
     return;
 }
 

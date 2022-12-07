@@ -341,7 +341,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
     if (argList.length() > 1) isStartupArgs = true;
-    Utilities::log("MW::MW", QString::number(argList.length()) + " arguments");
+//    Utilities::log("MW::MW", QString::number(argList.length()) + " arguments");
 
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
@@ -1273,6 +1273,9 @@ void MW::handleStartupArgs(const QString &args)
     if (G::isLogger) G::log("MW::handleStartupArgs", args);
 
     if (args.length() < 2) return;
+
+    stop("MW::handleStartupArgs");
+
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
@@ -1282,13 +1285,10 @@ void MW::handleStartupArgs(const QString &args)
     for (QString s : argList) a += s + "\n";
     QMessageBox::information(this, "MW::handleStartupArgs", a);
     //*/
-    Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-    Utilities::log("MW::handleStartupArgs", args);
-
-    /* log
-    Utilities::log("MW::handleStartupArgs", QString::number(argList.length()) + " arguments");
-    Utilities::log("MW::handleStartupArgs", args);
-    //*/
+    if (argList.length() > 1) {
+        Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        Utilities::log("MW::handleStartupArgs", argList.join(" | "));
+    }
 
     QStringList pathList;
     QString templateName;
@@ -1404,8 +1404,10 @@ void MW::handleStartupArgs(const QString &args)
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
-        // export get the location for the embellished files
+        // export get the location for the last embellished file
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
+        Utilities::log("MW::handleStartupArgs", "lastFileExportedThumbPath = " + fPath);
+
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
 //        fsTree->getFolderImageCount(fDir, true, "MW::handleStartupArgs");
@@ -1415,6 +1417,7 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->refreshModel();
         folderAndFileSelectionChange(fPath, "handleStartupArgs");
     }
+
     // startup not triggered by embellish winnet
     else {
         QFileInfo f(argList.at(1));
@@ -1422,7 +1425,10 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->select(f.dir().path());
 //        selectionChange();
         folderSelectionChange();
+         Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
+
+    Utilities::log("MW::handleStartupArgs", "done");
     return;
 }
 
@@ -1543,6 +1549,7 @@ void MW::folderSelectionChange()
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 //    qDebug() << " ";
 //    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
+    Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1783,6 +1790,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     dm->currentSfIdx = dm->sf->index(current.row(), 0);
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
+    // select
+    dm->select(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1955,6 +1964,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     if (!fsTree->select(folder)) {
         qWarning() << "WARNING" << "MW::folderAndFileSelectionChange" << "fsTree failed to select" << fPath;
+        Utilities::log("MW::folderAndFileSelectionChange", "fsTree failed to select " + fPath);
         return;
     }
 
@@ -1965,6 +1975,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
+    Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     folderSelectionChange();
 
 //    if (dm->proxyIndexFromPath(fPath).isValid()) {
@@ -2549,14 +2560,17 @@ void MW::loadImageCacheForNewFolder()
     the file to select in the new folder; otherwise the first file in dm->sf will be
     selected. */
     QString fPath = folderAndFileChangePath;
+    Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         dm->select(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
+        Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
     else {
         dm->selectFirst();
         dm->currentSfIdx = dm->sf->index(0,0);
+        Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to first image");
     }
 }
 
@@ -4129,7 +4143,6 @@ void MW::writeSettings()
     setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
-    setting->setValue("lastDir", G::currRootFolder);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
 
@@ -5672,10 +5685,10 @@ void MW::deleteFiles(QStringList paths)
     }
 
     // refresh datamodel fPathRow hash
-    dm->refreshRowFromPath();
+//    dm->refreshRowFromPathHash();
 
     // cleanup G::rowsWithIcon
-    metaReadThread->cleanupIcons();
+    if (!G::isLinearLoading) metaReadThread->cleanupIcons();
 
     // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);
@@ -5685,7 +5698,9 @@ void MW::deleteFiles(QStringList paths)
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    thumbView->setCurrentIndex(sfIdx);
+    thumbView->select(sfIdx);
+//    thumbView->setCurrentIndex(sfIdx);
+//    dm->select(sfIdx);
     fileSelectionChange(sfIdx, sfIdx, "MW::deleteFiles");
 }
 
@@ -6009,14 +6024,12 @@ void MW::generateMeanStack()
     QString fPath = meanStack->mean();
     if (fPath != "") {
         dm->insert(fPath);
+        int sfRow = dm->rowFromPath(fPath);
+        metadataCacheThread->loadIcon(sfRow);
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
+        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        fileSelectionChange(idx, idx, "MW::generateMeanStack");
         dm->select(fPath);
-//        if (G::mode == "Grid") {
-//            gridView->selectThumb(fPath);
-//        }
-//        else {
-//            thumbView->selectThumb(fPath);
-//        }
     }
 }
 

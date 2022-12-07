@@ -46,9 +46,12 @@ int ExifTool::close()
     closeArgs += "-stay_open\n";
     closeArgs += "False\n";
     process.write(closeArgs);
-    if (!process.waitForFinished(30000))
-        /*qDebug() << "ExifTool::close" << "ExifTool exit code =" << process.exitCode();
-    else*/ qWarning("ExifTool::copyAll process.waitForFinished failed");
+    if (!process.waitForFinished(30000)) {
+        // qDebug() << "ExifTool::close" << "ExifTool exit code =" << process.exitCode();
+        qWarning() << "WARNING" << "ExifTool::close"  << "process.waitForFinished failed";
+        Utilities::log("ExifTool::close", "process.waitForFinished failed");
+        return -1;
+    }
 
     return process.exitCode();
 }
