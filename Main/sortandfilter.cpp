@@ -130,7 +130,7 @@ void MW::filterChange(QString source)
     QApplication::restoreOverrideCursor();
 
     qDebug() << "MW::filterChange" << "Calling fileSelectionChange";
-    fileSelectionChange(idx, idx, "MW::filterChange");
+    fileSelectionChange(idx, idx, true, "MW::filterChange");
     source = "";    // suppress compiler warning
 
     // force refresh thumbnails
@@ -511,7 +511,7 @@ void MW::sortChange(QString source)
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
     qDebug() << "MW::sortChange" << "Calling fileSelectionChange";
-    fileSelectionChange(idx, idx, "MW::sortChange");
+    fileSelectionChange(idx, idx, true, "MW::sortChange");
 
     scrollToCurrentRow();
     G::popUp->end();

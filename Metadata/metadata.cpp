@@ -823,7 +823,7 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
-    qDebug() << "Metadata::parseHEIF";
+//    qDebug() << "Metadata::parseHEIF";
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;

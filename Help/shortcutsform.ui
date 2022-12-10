@@ -853,7 +853,7 @@
          <string>Files Panel</string>
         </property>
         <property name="text">
-         <string>Alt + F3</string>
+         <string>Shift + F3</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -864,7 +864,7 @@
          <string>Favourites Panel</string>
         </property>
         <property name="text">
-         <string>Alt + F4</string>
+         <string>Shift + F4</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -875,7 +875,7 @@
          <string>Filters Panel</string>
         </property>
         <property name="text">
-         <string>Alt + F5</string>
+         <string>Shift + F5</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -886,7 +886,7 @@
          <string>Metadata Panel</string>
         </property>
         <property name="text">
-         <string>Alt + F6</string>
+         <string>Shift + F6</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -897,7 +897,7 @@
          <string>Thumbnails Panel</string>
         </property>
         <property name="text">
-         <string>Alt + F7</string>
+         <string>Shift + F7</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -908,7 +908,7 @@
          <string>Application Menu</string>
         </property>
         <property name="text">
-         <string>Alt + F9</string>
+         <string>Shift + F9</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>
@@ -919,7 +919,7 @@
          <string>Application Statusbar</string>
         </property>
         <property name="text">
-         <string>Alt + F10</string>
+         <string>Shift + F10</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>

@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QStyleOptionViewItem>
 #include <QFont>
+#include "Datamodel/datamodel.h"
 #include "Cache/cachedata.h"
 #include "Main/global.h"
 
@@ -16,6 +17,7 @@ public:
     IconViewDelegate(QObject *parent,
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,
+                     DataModel *dm,
                      ImageCacheData *icd,
                      QItemSelectionModel *selectionModel
                      );
@@ -61,6 +63,7 @@ public slots:
 
 private:
     QObject parent;
+    DataModel *dm;
     ImageCacheData *icd;
     QItemSelectionModel *selectionModel;
     bool &isRatingBadgeVisible;

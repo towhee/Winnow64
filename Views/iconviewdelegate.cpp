@@ -84,6 +84,7 @@ IconView thumbDock Anatomy
 IconViewDelegate::IconViewDelegate(QObject *parent,
                                    bool &isRatingBadgeVisible,
                                    bool &isIconNumberVisible,
+                                   DataModel *dm,
                                    ImageCacheData *icd,
                                    QItemSelectionModel *selectionModel
                                    )
@@ -91,6 +92,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
           isIconNumberVisible(isIconNumberVisible)
 {
     parent->isWidgetType();         // suppress compiler warning
+    this->dm = dm;
     this->icd = icd;
     fPad = 4;
     tPad = 4;         // allow small gap between thumb and outer border
@@ -285,7 +287,7 @@ void IconViewDelegate::setCurrentIndex(QModelIndex current)
 
 void IconViewDelegate::setCurrentRow(int row)
 {
-    currentRow = row;
+    currentRow = row;               // not used
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
@@ -344,8 +346,8 @@ void IconViewDelegate::paint(QPainter *painter,
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
-    bool isSelected = option.state.testFlag(QStyle::State_Selected);
-//    bool isSelected2 = selectionModel->isSelected(sfIdx0);
+//    bool isSelected = option.state.testFlag(QStyle::State_Selected);
+    bool isSelected = dm->isSelected(row);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
@@ -378,6 +380,9 @@ void IconViewDelegate::paint(QPainter *painter,
 
     /*
     qDebug() << "IconViewDelegate::paint "
+             << "row =" << row
+             << "currentRow =" << currentRow
+             << "selected =" << isSelected
              << "cellRect =" << cellRect
 //             << "frameRect =" << frameRect
              << "thumbRect =" << thumbRect
@@ -427,7 +432,7 @@ void IconViewDelegate::paint(QPainter *painter,
 //             */
 
     // current index item
-    if (row == currentRow) {
+    if (row == dm->currentSfRow) {
         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
         painter->setPen(currentPen);
         painter->drawRoundedRect(currRect, 8, 8);
