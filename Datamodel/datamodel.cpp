@@ -1864,6 +1864,64 @@ void DataModel::select(QModelIndex sfIdx)
                           << currentFolderPath;
     if (sfIdx.isValid()) {
         selectionModel->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        emit currentChanged(sfIdx, QModelIndex(), true, "DataModel::select");
+    }
+}
+
+QModelIndex DataModel::getNearestSelectedIndex(int sfRow)
+{
+    lastFunction = "";
+    if (G::isLogger) G::log("DataModel::select QModelIndex");
+    int frwd = sfRow;
+    int back = frwd;
+    int rowCount = sf->rowCount();
+    QModelIndex idx;
+    while (back >= 0 || frwd < rowCount) {
+        if (back >= 0) idx = sf->index(back, 0);
+        if (selectionModel->selectedIndexes().contains(idx)) return idx;
+        if (frwd < rowCount) idx = sf->index(frwd, 0);
+        if (selectionModel->selectedIndexes().contains(idx)) return idx;
+        --back;
+        ++frwd;
+    }
+    // not found, return invalid index
+    return QModelIndex();
+}
+
+void DataModel::invertSelection()
+{
+    lastFunction = "";
+    if (G::isLogger) G::log("DataModel::select QModelIndex");
+    QItemSelection toggleSelection;
+    QModelIndex firstIndex = sf->index(0, 0);
+    QModelIndex lastIndex = sf->index(sf->rowCount() - 1, 0);
+    toggleSelection.select(firstIndex, lastIndex);
+    selectionModel->select(toggleSelection, QItemSelectionModel::Toggle);
+    QModelIndex idx = getNearestSelectedIndex(currentSfRow);
+    // MW::fileSelectionChange (updates DataModel current indexes, rows)
+    if (idx.isValid()) emit currentChanged(idx);
+}
+
+void DataModel::toggleRowSelection(int sfRow)
+{
+    lastFunction = "";
+    if (G::isLogger) G::log("DataModel::select QModelIndex");
+    QModelIndex idx = sf->index(sfRow, 0);
+    if (isSelected(sfRow)) {
+        // deselect
+        if (selectionModel->selectedRows().count() > 1) {
+            selectionModel->select(idx, QItemSelectionModel::Deselect  | QItemSelectionModel::Rows);
+            if (idx == currentSfIdx) {
+                // just deselected current index, move current index to nearest selected
+                idx = getNearestSelectedIndex(sfRow);
+                // MW::fileSelectionChange (updates DataModel current indexes, rows)
+                if (idx.isValid()) emit currentChanged(idx);
+            }
+        }
+    }
+    else {
+        // select
+        selectionModel->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
     }
 }
 

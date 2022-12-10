@@ -119,7 +119,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2022-12-05_0095_Zen2048.JPG";
-    folderAndFileSelectionChange(fPath, "test");
+    qDebug() << dm->selectionModel->selectedRows().count();
 }
 

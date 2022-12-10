@@ -151,6 +151,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     iconViewDelegate = new IconViewDelegate(this,
                                             m2->isRatingBadgeVisible,
                                             m2->isIconNumberVisible,
+                                            dm,
                                             icd,
                                             dm->selectionModel
                                             );
@@ -742,7 +743,9 @@ int IconView::getNearestPick()
 
 QModelIndex IconView::getNearestSelection(int row)
 {
-    /* Returns the model index of the closest selected item */
+/*
+    Returns the model index of the closest selected item to row.
+*/
     if (G::isLogger) G::log("IconView::getNearestSelection");
 
     int frwd = row;
@@ -757,7 +760,31 @@ QModelIndex IconView::getNearestSelection(int row)
         --back;
         ++frwd;
     }
-    return idx;
+    // not found, return seed row
+    return dm->sf->index(row, 0);
+}
+
+QModelIndex IconView::getNearestUnselection(int row)
+{
+/*
+    Returns the model index of the closest unselected item to row.
+*/
+    if (G::isLogger) G::log("IconView::getNearestUnselection");
+
+    int frwd = row;
+    int back = frwd;
+    int rowCount = dm->sf->rowCount();
+    QModelIndex idx;
+    while (back >= 0 || frwd < rowCount) {
+        if (back >= 0) idx = dm->sf->index(back, 0);
+        if (!selectedIndexes().contains(idx)) return idx;
+        if (frwd < rowCount) idx = dm->sf->index(frwd, 0);
+        if (!selectedIndexes().contains(idx)) return idx;
+        --back;
+        ++frwd;
+    }
+    // not found, return seed row
+    return dm->sf->index(row, 0);
 }
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
@@ -769,127 +796,16 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 
-void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
-{
-/*
-    The selection change has already occurred when selectionChanged is
-    signalled, and the current index has been changed to the most recent
-    selected or deselected item.
+//void IconView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
+//{
+//    qDebug() << "IconView::currentChanged" << current << previous;
+////    if (current.isValid()) {
+////        iconViewDelegate->currentRow = current.row();
+////        update();
+////    }
+//}
 
-    However, we do not want to change the current index for a deselect in a
-    muli-selection, and the current index is reset to its prior item. Since
-    MW::fileSelectionChange has not been called dm->currentRow and
-    dm->currentSfIdx contain the prior current row and index. The current index
-    is reset using the QItemSelectionModel::NoUpdate flag to prevent another
-    selectionChange being triggered.
 
-    If the only item selected is deselected then the item is reselected as the
-    current index must always be selected.
-
-    If there is a new selection without cmd/ctrl then it is the new current
-    index and MW::fileSelectionChange is signalled.
-
-    For some reason the selectionModel rowCount is not up-to-date and the
-    selection is updated after the MW::fileSelectionChange occurs, hence update
-    the status bar from here.
-*/
-    if (G::isLogger) G::log("IconView::selectionChanged");
-    if (!G::isInitializing) {
-        // selection behavior
-        bool anchorCurrent = true;
-        // select or deselect change
-        bool isSelected = !selected.isEmpty();
-        bool isDeselected = !deselected.isEmpty();
-        // changed row
-        int deselectedRow = -1;
-        int selectedRow = -1;
-        if (isDeselected) deselectedRow = deselected.at(0).indexes().at(0).row();
-        if (isSelected) selectedRow = selected.at(0).indexes().at(0).row();
-        // prior current: current in datamodel before MW::fileSelectionChange called
-        QModelIndex currentSfIdx = dm->currentSfIdx;
-        int currentSfRow = dm->currentSfRow;
-        qint64 selectedRowsCount = selectionModel()->selectedRows().count();
-        // is change row also prior current row
-        bool isCurrent = false;
-        if (deselectedRow == currentSfRow) isCurrent = true;
-        if (selectedRow == currentSfRow) isCurrent = true;
-
-        QString type = "";
-        if (!modifiers && selectedRowsCount)
-            type = "Change current";
-        else if (!selectedRowsCount && isDeselected)
-            type = "UniSelection, Deselect current";
-        else if (isDeselected && isCurrent && selectedRowsCount)
-            type = "MultiSelection, Deselect current";
-        else if (isDeselected && !isCurrent && selectedRowsCount)
-            type = "MultiSelection, Deselect non-current";
-        else if (anchorCurrent && isSelected && selectedRowsCount > 1)
-            type = "MultiSelect, Change, AnchorCurrent";
-        else
-            type = "Other";
-
-        /*  Debugging
-        qDebug() << "\n"
-                 << "IconView::selectionChanged: "
-                 << "\n  type                 =" << type
-                 << "\n  modifiers            =" << modifiers
-                 << "\n  anchorCurrent        =" << anchorCurrent
-                 << "\n  isSelected           =" << isSelected
-                 << "\n  isDeselected         =" << isDeselected
-                 << "\n  isCurrent            =" << isCurrent
-                 << "\n  selectedRow          =" << selectedRow
-                 << "\n  deselectedRow        =" << deselectedRow
-                 << "\n  currentRow           =" << currentIdxRow
-                 << "\n  currentSfRow         =" << currentSfRow
-                 << "\n  nearest selected row =" << getNearestSelection(deselectedRow).row()
-                 << "\n  selectedRowsCount    =" << selectedRowsCount
-                    ;
-        //*/
-
-        // Change current
-        if (type == "Change current") {
-            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
-        }
-
-        // UniSelection, Deselect current: reselect deselection if no selection remaining
-        else if (!selectedRowsCount && isDeselected) {
-            selectionModel()->select(currentIndex(), QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        }
-
-        // MultiSelection, Deselect current: reset current to nearest next selected row
-        else if (isDeselected && isCurrent && selectedRowsCount) {
-            QModelIndex idx = getNearestSelection(deselectedRow);
-            selectionModel()->setCurrentIndex(idx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(idx, QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
-        }
-
-        // MultiSelection, Deselect non-current: reset current index to before
-        else if (isDeselected && !isCurrent && selectedRowsCount) {
-            selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
-        }
-
-        // MultiSelect, Change, AnchorCurrent: reset current to before
-        else if (anchorCurrent && isSelected && selectedRowsCount > 1) {
-            QListView::selectionChanged(selected, deselected);
-            selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
-        }
-
-        else {
-            // update the View
-            QListView::selectionChanged(selected, deselected);
-            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged");
-        }
-
-        // refresh
-        refreshThumbs();
-
-        // update status bar
-        QString s = "";
-        if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
-        emit updateStatus(true, s, "IconView::selectionChanged");
-    }
-}
 
 int IconView::getSelectedCount()
 {
@@ -924,42 +840,6 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-void IconView::select(QModelIndex idx)
-{
-/*
-    Used for thumbnail navigation (left, right, up, down etc)
-*/
-    if (G::isLogger || G::isFlowLogger) G::log("IconView::select", QString::number(idx.row()));
-    if (idx.isValid()) {
-        qDebug() << "IconView::select" << "row =" << idx.row();
-        G::isNewSelection = true;
-        selectionModel()->clearSelection();
-        setCurrentIndex(idx);
-        dm->select(idx);
-        scrollTo(idx, ScrollHint::PositionAtCenter);
-    }
-    else {
-        qWarning() << "IconView::select(QModelIndex idx)" << "WARNING" << "invalid index" << idx;
-    }
-}
-
-//void IconView::selectThumb(int row)
-//{
-//    if (G::isLogger) G::log("IconView::selectThumb");
-////    qDebug() << "IconView::selectThumb" << "row =" << row;
-//    // some operations assign row = -1 if not found
-//    if (row < 0) return;
-//    setFocus();
-//    QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
-//    selectThumb(idx);
-//}
-
-//void IconView::selectThumb(QString &fPath)
-//{
-//    if (G::isLogger) G::log("IconView::selectThumb");
-//    dm->select(dm->proxyIndexFromPath(fPath));
-//}
-
 void IconView::selectNext()
 {
     if (G::isLogger) G::log("IconView::selectNext");
@@ -981,13 +861,15 @@ void IconView::selectUp()
     if (G::isLogger) G::log("IconView::selectUp");
     if (G::mode == "Table" || !isWrapping()) selectPrev();
     else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
+    dm->select(currentIndex());
 }
 
 void IconView::selectDown()
 {
     if (G::isLogger) G::log("IconView::selectDown");
-//    if (G::mode == "Table" || !isWrapping()) selectNext();
-    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+    if (G::mode == "Table" || !isWrapping()) selectNext();
+    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+    dm->select(currentIndex());
 }
 
 void IconView::selectPageUp()
@@ -995,6 +877,7 @@ void IconView::selectPageUp()
     if (G::isLogger) G::log("IconView::selectPageUp");
 //    if (G::mode == "Table" || !isWrapping()) selectPrev();
     /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
+    dm->select(currentIndex());
 }
 
 void IconView::selectPageDown()
@@ -1002,6 +885,7 @@ void IconView::selectPageDown()
     if (G::isLogger) G::log("IconView::selectPageDown");
     if (G::mode == "Table" || !isWrapping()) selectNext();
     else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
+    dm->select(currentIndex());
 }
 
 void IconView::selectFirst()
@@ -1374,6 +1258,16 @@ void IconView::updateLayout()
     QListView::event(&event);
 }
 
+void IconView::updateView()
+{
+/*
+    Force the view delegate to update.  Also scroll to current.
+*/
+    if (G::isLogger) G::log("IconView::scrollDown");
+    update();
+    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
+}
+
 void IconView::scrollDown(int /*step*/)
 {
     if (G::isLogger) G::log("IconView::scrollDown");
@@ -1689,18 +1583,27 @@ void IconView::mousePressEvent(QMouseEvent *event)
     if (G::isLogger) G::log("IconView::mousePressEvent");
 
     // is this a grid or a thumb view
-    if (G::mode == "Grid") G::fileSelectionChangeSource =  "GridMouseClick";
+//    if (G::mode == "Grid") G::fileSelectionChangeSource =  "GridMouseClick";
+//    else G::fileSelectionChangeSource =  "ThumbMouseClick";
+    if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
     else G::fileSelectionChangeSource =  "ThumbMouseClick";
 
     QModelIndex currPosIdx = indexAt(event->pos());
-    QModelIndex prevCurrIdx = currentIndex();
+    int row = currPosIdx.row();
 
-    // record modifier
+    // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();
 
-    // trigger IconView::selectionChanged which invokes MW::fileSelectionChange if no modifiers
-    QListView::mousePressEvent(event);
-//    if (modifiers) setCurrentIndex(prevCurrIdx);
+    // check attempt to deselect only selected item (must always be one selected)
+    bool isCtrlMod = modifiers & Qt::ControlModifier;
+    if (isCtrlMod) {
+        dm->toggleRowSelection(row);
+        // update IconView delegate in case currentIndex changes
+        updateView();
+    }
+    else {
+        QListView::mousePressEvent(event);
+    }
 
     // is start tab currently visible
     if (m2->centralLayout->currentIndex() == m2->StartTab)
@@ -1729,7 +1632,10 @@ void IconView::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         // unmodified click or touch
         if (!modifiers) {
-//        if (event->modifiers() == Qt::NoModifier) {
+            // trigger fileSelectionChange
+            QString src = "IconView::mousePressEvent " + objectName();
+            emit fileSelectionChange(currentIndex(), QModelIndex(), true, src);
+
             // reqd for thumb resizing
             isLeftMouseBtnPressed = true;
             /* Capture the percent coordinates of the mouse click within the thumbnail
@@ -2015,14 +1921,11 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 void IconView::invertSelection()
 {
 /*
-    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
+    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct.
 */
     if (G::isLogger) G::log("IconView::invertSelection");
-    QItemSelection toggleSelection;
-    QModelIndex firstIndex = dm->sf->index(0, 0);
-    QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
-    toggleSelection.select(firstIndex, lastIndex);
-    selectionModel()->select(toggleSelection, QItemSelectionModel::Toggle);
+    dm->invertSelection();
+    updateView();
 }
 
 void IconView::copyThumbs()

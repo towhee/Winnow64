@@ -76,6 +76,9 @@ public:
     void recoverSelection();
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
+    QModelIndex getNearestSelectedIndex(int sfRow);
+    void invertSelection();
+    void toggleRowSelection(int sfRow);
     bool isSelected(int row);
 
     QMutex mutex;
@@ -119,6 +122,10 @@ signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateStatus(bool keepBase, QString s, QString source);
+    void currentChanged(QModelIndex idx,
+                        QModelIndex idx2 = QModelIndex(),
+                        bool clearSelection = false,
+                        QString src = "DataModel::currentChanged") ;
 
 public slots:
 //    void unfilteredItemSearchCount();

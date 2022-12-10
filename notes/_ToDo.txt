@@ -1,6 +1,4 @@
 WHAT'S NEW
-- Delete last images in folder, not scrolling to next selected
-- Press key End not always scrolling
 - Play video (loading video thumbnails is slow)
 - Mouse wheel sensitivity preference
 - Icon/Thumbnail numbering (Menu: View > Show icon number)
@@ -85,6 +83,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Delete last images in folder, not scrolling to next selected
+- Press key End not always scrolling
 - F2 search requires two presses
 - Remember last folder not working
 - Mean stack not adding thumbnail for generated images

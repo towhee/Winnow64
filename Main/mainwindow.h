@@ -355,7 +355,7 @@ public slots:
     void watchCurrentFolder();
     void selectionChange();
     void folderSelectionChange();
-    void fileSelectionChange(QModelIndex current, QModelIndex, QString src);
+    void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     bool reset(QString src = "");
     void nullFiltration();

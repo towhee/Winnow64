@@ -1710,7 +1710,7 @@ void MW::folderSelectionChange()
 //    G::stop = false;
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
 {
 /*
     Triggered when file selection changes (folder change selects new image, so it also
@@ -1791,7 +1791,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
     // select
-    dm->select(current);
+    if (clearSelection) dm->select(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1982,7 +1982,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 //        thumbView->selectThumb(fPath);
 //        gridView->selectThumb(fPath);
 //        dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
-//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::folderAndFileSelectionChange");
+//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, true, "MW::folderAndFileSelectionChange");
 //    }
 
     return;
@@ -5698,10 +5698,7 @@ void MW::deleteFiles(QStringList paths)
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    thumbView->select(sfIdx);
-//    thumbView->setCurrentIndex(sfIdx);
-//    dm->select(sfIdx);
-    fileSelectionChange(sfIdx, sfIdx, "MW::deleteFiles");
+    dm->select(sfIdx);
 }
 
 void MW::deleteFolder()
@@ -6028,7 +6025,7 @@ void MW::generateMeanStack()
         metadataCacheThread->loadIcon(sfRow);
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
-        fileSelectionChange(idx, idx, "MW::generateMeanStack");
+        fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
         dm->select(fPath);
     }
 }

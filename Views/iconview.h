@@ -45,6 +45,7 @@ public:
                     QPoint mousePos = QPoint(-1, -1));
 
     void updateLayout();
+    void updateView();
 //    bool waitUntilOkToScroll();
     bool okToScroll();
 
@@ -96,8 +97,6 @@ public slots:
     int justifyMargin();
     void justify(JustifyAction action);
     void rejustify();
-//    void resizeRejustify();
-//    void thumbsFit(Qt::DockWidgetArea area);
     void bestAspect();
     void thumbsFitTopOrBottom();
     void invertSelection();                         //in use
@@ -115,7 +114,6 @@ public slots:
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
              int _labelFontSize, bool _showThumbLabels, int _badgeSize);
     void reportThumbs();
-    void select(QModelIndex idx);
     void selectNext();
     void selectPrev();
     void selectUp();
@@ -131,7 +129,6 @@ public slots:
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
-    void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected) override;
 
 protected:
     void startDrag(Qt::DropActions) override;
@@ -162,6 +159,7 @@ private:
     uint getRandomRow();                         //not used? Seems handy
 
     QModelIndex getNearestSelection(int row);
+    QModelIndex getNearestUnselection(int row);
     int getNearestPick();
     int getNextPick();
     int getPrevPick();
@@ -186,10 +184,14 @@ private:
     int assignedIconWidth;
     bool skipResize;
 
+    // used when invert selection
+    bool selectionInverted = false;
+    QModelIndex newCurrentIndex;
+
 signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void fileSelectionChange(QModelIndex current, QModelIndex previous, QString src);
+    void fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src);
     void togglePick();
     void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
     void displayLoupe();

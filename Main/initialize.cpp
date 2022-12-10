@@ -157,6 +157,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
+    connect(dm, &DataModel::currentChanged, this, &MW::fileSelectionChange);
     connect(this, &MW::setValue, dm, &DataModel::setValue);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
 
