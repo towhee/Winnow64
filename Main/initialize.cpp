@@ -452,6 +452,8 @@ void MW::createGridView()
         gridView->visibleCells = (width() / 200) * (height() / 200);
     }
 
+    // trigger fileSelectionChange
+    connect(gridView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
     // double mouse click fires displayLoupe
     connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
     // update metadata and icons if not loaded for new images when scroll

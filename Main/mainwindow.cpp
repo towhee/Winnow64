@@ -5132,7 +5132,7 @@ void MW::ingest()
     bool combinedIncludeJpg;   // req'd by backgroundIngest
     int seqStart = 1;          // req'd by backgroundIngest
 
-    if (thumbView->isPick()) {
+    if (dm->isPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   combinedIncludeJpg,
@@ -5578,10 +5578,56 @@ void MW::saveAsFile()
     saveAsDlg->exec();
 }
 
-void MW::copy()
+void MW::copyFiles()
 {
     if (G::isLogger) G::log("MW::copy");
-    thumbView->copyThumbs();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+   if (selection.isEmpty()) return;
+
+   int n = selection.count();
+   QClipboard *clipboard = QGuiApplication::clipboard();
+   QMimeData *mimeData = new QMimeData;
+   QList<QUrl> urls;
+   for (int i = 0; i < n; ++i) {
+       QString fPath = selection.at(i).data(G::PathRole).toString();
+       urls << QUrl::fromLocalFile(fPath);
+       qDebug() << "IconView::copyFiles" << fPath;
+   }
+   mimeData->setUrls(urls);
+   clipboard->setMimeData(mimeData);
+
+   QString nPaths;
+   if (n == 1) nPaths = "1 file";
+   else nPaths = QString::number(n) + " files";
+   QString msg = "Copied " + nPaths + " to the clipboard";
+   G::popUp->showPopup(msg, 1500);
+}
+
+void MW::copyFolderPathFromContext()
+{
+    if (G::isLogger) G::log("MW::copyFolderPathFromContext");
+    QApplication::clipboard()->setText(mouseOverFolderPath);
+    QString msg = "Copied " + mouseOverFolderPath + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
+}
+
+void MW::copyImagePathFromContext()
+{
+    if (G::isLogger) G::log("MW::copyImagePathFromContext");
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    int n = selection.count();
+    QString paths;
+    for (int i = 0; i < n; ++i) {
+        paths += selection.at(i).data(G::PathRole).toString();
+        if (i < n - 1) paths += "\n";
+    }
+    QApplication::clipboard()->setText(paths);
+
+    QString nPaths;
+    if (n == 1) nPaths = "1 path";
+    else nPaths = QString::number(n) + " paths";
+    QString msg = "Copied " + nPaths + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
 }
 
 void MW::deleteSelectedFiles()
@@ -5820,23 +5866,6 @@ void MW::openUsbFolder()
     else {
         setWindowTitle(winnowWithVersion);
     }
-}
-
-void MW::copyFolderPathFromContext()
-{
-    if (G::isLogger) G::log("MW::copyFolderPathFromContext");
-    QApplication::clipboard()->setText(mouseOverFolderPath);
-    QString msg = "Copied " + mouseOverFolderPath + " to the clipboard";
-    G::popUp->showPopup(msg, 1500);
-}
-
-void MW::copyImagePathFromContext()
-{
-    if (G::isLogger) G::log("MW::copyImagePathFromContext");
-    QString path = mouseOverIdx.data(G::PathRole).toString();
-    QApplication::clipboard()->setText(path);
-    QString msg = "Copied " + path + " to the clipboard";
-    G::popUp->showPopup(msg, 1500);
 }
 
 void MW::revealLogFile()

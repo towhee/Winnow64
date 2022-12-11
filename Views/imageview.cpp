@@ -1164,6 +1164,7 @@ void ImageView::exportImage()
 void ImageView::copyImage()
 {
     if (G::isLogger) G::log("ImageView::copyImage");
+    qDebug() << "ImageView::copyImage";
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
         QImage image;

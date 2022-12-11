@@ -188,8 +188,7 @@ void MW::gridDisplay()
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
     G::wait(100);
-//    gridView->waitUntilOkToScroll();
-     gridView->scrollToRow(scrollRow, "MW::gridDisplay");
+    gridView->scrollToRow(scrollRow, "MW::gridDisplay");
     updateIconRange(-1);
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();

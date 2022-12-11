@@ -43,15 +43,15 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     /* Possible status info
 
-QString fName = idx.data(Qt::EditRole).toString();
-QString fPath = idx.data(G::PathRole).toString();
-QString shootingInfo = metadata->getShootingInfo(fPath);
-QString err = metadata->getErr(fPath);
-QString magnify = "🔎🔍";
-QString fileSym = "📁📂📗🕎📷🎨👍";
-QString camera = "📈📌🔈📎🔗🔑🧾🛈";
-//    https://www.vertex42.com/ExcelTips/unicode-symbols.html
-QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞";
+    QString fName = idx.data(Qt::EditRole).toString();
+    QString fPath = idx.data(G::PathRole).toString();
+    QString shootingInfo = metadata->getShootingInfo(fPath);
+    QString err = metadata->getErr(fPath);
+    QString magnify = "🔎🔍";
+    QString fileSym = "📁📂📗🕎📷🎨👍";
+    QString camera = "📈📌🔈📎🔗🔑🧾🛈";
+    //    https://www.vertex42.com/ExcelTips/unicode-symbols.html
+    QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞";
 //        */
 
     // update G::availableMemory
