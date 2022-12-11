@@ -165,7 +165,7 @@ void MW::createActions()
     addAction(copyFolderPathFromContextAction);
     connect(copyFolderPathFromContextAction, &QAction::triggered, this, &MW::copyFolderPathFromContext);
 
-    copyImagePathFromContextAction = new QAction("Copy path", this);
+    copyImagePathFromContextAction = new QAction("Copy path(s)", this);
     copyImagePathFromContextAction->setObjectName("copyPathFromContext");
     copyImagePathFromContextAction->setShortcutVisibleInContextMenu(true);
     addAction(copyImagePathFromContextAction);
@@ -428,12 +428,12 @@ void MW::createActions()
     addAction(deleteFSTreeFolderAction);
     connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
-    copyAction = new QAction(tr("Copy file(s)"), this);
-    copyAction->setObjectName("copyFiles");
-    copyAction->setShortcutVisibleInContextMenu(true);
-    copyAction->setShortcut(QKeySequence("Ctrl+C"));
-    addAction(copyAction);
-    connect(copyAction, &QAction::triggered, this, &MW::copy);
+    copyFilesAction = new QAction(tr("Copy file(s)"), this);
+    copyFilesAction->setObjectName("copyFiles");
+    copyFilesAction->setShortcutVisibleInContextMenu(true);
+    copyFilesAction->setShortcut(QKeySequence("Ctrl+C"));
+    addAction(copyFilesAction);
+    connect(copyFilesAction, &QAction::triggered, this, &MW::copyFiles);
 
     copyImageAction = new QAction(tr("Copy image"), this);
     copyImageAction->setObjectName("copyImage");
@@ -1478,7 +1478,7 @@ void MW::createMenus()
     if (G::isLogger) G::log("MW::createMenus");
     // Main Menu
 
-    // File Menu
+    // FILE MENU
 
     fileMenu = new QMenu(this);
     QAction *fileGroupAct = new QAction("File", this);
@@ -1520,7 +1520,7 @@ void MW::createMenus()
     fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(subFoldersAction);
-     fileMenu->addAction(addBookmarkAction);
+    fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
     fileMenu->addAction(saveAsFileAction);
     fileMenu->addSeparator();
@@ -1529,7 +1529,7 @@ void MW::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
-    // Edit Menu
+    // EDIT MENU
 
     editMenu = new QMenu(this);
     QAction *editGroupAct = new QAction("Edit", this);
@@ -1537,8 +1537,9 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    editMenu->addAction(copyFilesAction);
     editMenu->addAction(copyImageAction);
-    editMenu->addAction(copyAction);
+    editMenu->addAction(copyImagePathFromContextAction);
     editMenu->addAction(deleteAction);
     editMenu->addAction(deleteActiveFolderAction);
     editMenu->addSeparator();
@@ -1578,7 +1579,7 @@ void MW::createMenus()
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 //    editMenu->addAction(oldPrefAction);
 
-    // Go Menu
+    // GO MENU
 
     goMenu = new QMenu(this);
     QAction *goGroupAct = new QAction("Go", this);
@@ -1606,7 +1607,7 @@ void MW::createMenus()
     goMenu->addSeparator();
     goMenu->addAction(randomImageAction);
 
-    // Filter Menu
+    // FILTER MENU
 
     filterMenu = new QMenu(this);
     QAction *filterGroupAct = new QAction("Filter", this);
@@ -1636,7 +1637,7 @@ void MW::createMenus()
 //    filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(filterLastDayAction);
 
-    // Sort Menu
+    // SORT MENU
 
     sortMenu = new QMenu(this);
     QAction *sortGroupAct = new QAction("Sort", this);
@@ -1645,7 +1646,7 @@ void MW::createMenus()
     sortMenu->addSeparator();
     sortMenu->addAction(sortReverseAction);
 
-    // Embellish Menu
+    // EMBELLISH MENU
 
     embelMenu = new QMenu(this);
 //    /*
@@ -1667,7 +1668,7 @@ void MW::createMenus()
     connect(embelExportMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
 //    connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
 
-    // View Menu
+    // VIEW MENU
 
     viewMenu = new QMenu(this);
     QAction *viewGroupAct = new QAction("View", this);
@@ -1694,7 +1695,7 @@ void MW::createMenus()
 //    viewMenu->addAction(thumbsFitAction);
 //    viewMenu->addAction(showThumbLabelsAction);
 
-    // Window Menu
+    // WINDOW MENU
 
     windowMenu = new QMenu(this);
     QAction *windowGroupAct = new QAction("Window", this);
@@ -1724,7 +1725,7 @@ void MW::createMenus()
 #endif
     windowMenu->addAction(statusBarVisibleAction);
 
-    // Help Menu
+    // HELP MENU
 
     helpMenu = new QMenu(this);
     QAction *helpGroupAct = new QAction("Help", this);
@@ -1769,7 +1770,7 @@ void MW::createMenus()
     QAction *separatorAction5 = new QAction(this);
     separatorAction5->setSeparator(true);
 
-    // FSTree context menu
+    // FSTREE CONTEXT MENU
     fsTreeActions = new QList<QAction *>;
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
@@ -1799,7 +1800,7 @@ void MW::createMenus()
 //    favActions->append(deleteBookmarkFolderAction);
 //    favActions->append(separatorAction1);
 
-    // filters context menu
+    // FILTERS CONTEXT MENU
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(filterUpdateAction);
@@ -1811,7 +1812,7 @@ void MW::createMenus()
     filterActions->append(filterSoloAction);
 //    filterActions->append(separatorAction1);
 
-    // metadata context menu
+    // INFOVIEW CONTEXT MENU
     QList<QAction *> *metadataActions = new QList<QAction *>;
 //    metadataActions->append(infoView->copyInfoAction);
     metadataActions->append(copyInfoTextToClipboardAction);
@@ -1828,7 +1829,7 @@ void MW::createMenus()
     QAction *embelExportGroupAct = new QAction(tr("Embellish export..."), this);
     embelExportGroupAct->setMenu(embelExportMenu);
 
-    // thumbview context menu
+    // THUMBVIEW CONTEXT MENU
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(revealFileAction);
@@ -1847,6 +1848,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction3);
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(copyFilesAction);
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
@@ -1892,7 +1894,7 @@ void MW::createMenus()
 
 //    addMenuSeparator(imageView);
 
-    // main menu
+    // MAIN MENU
     menuBar()->addAction(fileGroupAct);
     menuBar()->addAction(editGroupAct);
     menuBar()->addMenu(goMenu);
@@ -1905,7 +1907,7 @@ void MW::createMenus()
     menuBar()->addAction(helpGroupAct);
     menuBar()->setVisible(true);
 
-    // main context menu
+    // MAIN CONTEXT MENU
     mainContextActions = new QList<QAction *>;
     mainContextActions->append(fileGroupAct);
     mainContextActions->append(editGroupAct);
@@ -2000,7 +2002,7 @@ void MW::enableSelectionDependentMenus()
         pickAction->setEnabled(true);
         filterPickAction->setEnabled(true);
         popPickHistoryAction->setEnabled(true);
-        copyAction->setEnabled(true);
+        copyFilesAction->setEnabled(true);
         rate0Action->setEnabled(true);
         rate1Action->setEnabled(true);
         rate2Action->setEnabled(true);
@@ -2059,7 +2061,7 @@ void MW::enableSelectionDependentMenus()
         pickAction->setEnabled(false);
         filterPickAction->setEnabled(false);
         popPickHistoryAction->setEnabled(false);
-        copyAction->setEnabled(false);
+        copyFilesAction->setEnabled(false);
         rate0Action->setEnabled(false);
         rate1Action->setEnabled(false);
         rate2Action->setEnabled(false);

@@ -1463,8 +1463,8 @@ void DataModel::setIconMax(const QPixmap &pm)
 
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::iconLoaded");
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::iconLoaded");
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
                           << "row =" << sfRow
@@ -1927,7 +1927,7 @@ void DataModel::toggleRowSelection(int sfRow)
 
 bool DataModel::isSelected(int row)
 {
-    if (G::isLogger) G::log("DataModel::isSelected");
+//    if (G::isLogger) G::log("DataModel::isSelected");
     return selectionModel->isSelected(sf->index(row, 0));
 }
 

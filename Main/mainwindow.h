@@ -611,8 +611,6 @@ private slots:
     void refreshCurrentFolder();
     void openUsbFolder();
     void saveAsFile();
-    void copyFolderPathFromContext();
-    void copyImagePathFromContext();
     void revealWinnets();
     void revealLogFile();
     void revealFile();
@@ -723,7 +721,7 @@ private:
     // Edit menu
     QAction *selectAllAction;
     QAction *invertSelectionAction;
-    QAction *copyAction;
+    QAction *copyFilesAction;
     QAction *copyImageAction;
     QAction *deleteAction;
     QAction *deleteAction1;
@@ -1179,7 +1177,9 @@ private:
     QString getSelectedPath();
     void wheelEvent(QWheelEvent *event) override;
 //    bool event(QEvent *event);
-    void copy();
+    void copyFiles();
+    void copyFolderPathFromContext();
+    void copyImagePathFromContext();
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();

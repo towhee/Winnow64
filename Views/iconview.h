@@ -46,33 +46,30 @@ public:
 
     void updateLayout();
     void updateView();
-//    bool waitUntilOkToScroll();
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
 //    void selectThumb(int row);
 //    void selectThumb(QString &fPath);
-    bool isThumb(int row);
-    void reportThumb();                             //debugging thumb roles
+//    bool isThumb(int row);
+//    void reportThumb();                             //debugging thumb roles
     QString diagnostics();
-    void move();
 
-    QFileInfoList getPicks();
-    bool isPick();
+    QFileInfoList getPicks();       // not being used.
     QSize getMinCellSize();
     QSize getMaxCellSize();
     QSize getCellSize();
     int getThumbSpaceWidth(int thumbSpaceHeight);
-    int getScrollThreshold(int thumbSpaceHeight);
-    QStringList getSelectedThumbsList();        //used by tags, might be useful
-    int getCurrentRow();
-    QString getCurrentFilePath();       //not used, but might be handy
-    int getSelectedCount();
+//    int getScrollThreshold(int thumbSpaceHeight);
+    QStringList getSelectedThumbsList();        //used by tags, might be useful, move to selection
+//    int getCurrentRow();
+    QString getCurrentFilePath();       // used by MW::updateStatus to check for instance clash.  Is this needed?
+    int getSelectedCount();             // used by MW::updateStatus - move to selection?
 
     void setThumbParameters();
 
-    int getHorizontalScrollBarOffset(int row);
-    int getVerticalScrollBarOffset(int row);
+    int getHorizontalScrollBarOffset(int row);  // not being used
+    int getVerticalScrollBarOffset(int row);    // not being used
     int getHorizontalScrollBarMax();
     int getVerticalScrollBarMax();
 
@@ -99,13 +96,13 @@ public slots:
     void rejustify();
     void bestAspect();
     void thumbsFitTopOrBottom();
-    void invertSelection();                         //in use
+    void invertSelection();         // move to selection class.
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
-    int getFirstVisible();
-    int getLastVisible();
+    int getFirstVisible();          // not being used
+    int getLastVisible();           // not being used
     void scannedViewportRange();
-    bool allPageIconsLoaded();
+    bool allPageIconsLoaded();      // not being used
     bool isRowVisible(int row);
     int getThumbsPerPage();
 
@@ -113,7 +110,8 @@ public slots:
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
              int _labelFontSize, bool _showThumbLabels, int _badgeSize);
-    void reportThumbs();
+
+    // move all select to selection class
     void selectNext();
     void selectPrev();
     void selectUp();
@@ -125,7 +123,7 @@ public slots:
     void selectRandom();
     void selectNextPick();
     void selectPrevPick();
-    void copyThumbs();
+
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
@@ -139,16 +137,12 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent* event) override;
-//    void enterEvent(QEvent *event);   // qt6.2
     void leaveEvent(QEvent *event) override;
-//    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
-//                           Qt::KeyboardModifiers modifiers);
-//    bool event(QEvent* event);      // key capture
 
 private:
     void initLoad();
     bool addFolderImageDataToModel();
-    bool isSelectedItem();          // call before getting row or index
+//    bool isSelectedItem();          // call before getting row or index
 
     bool isLast();
     bool isFirst();
@@ -158,11 +152,9 @@ private:
     int getLastRow();                           //not used? Seems handy
     uint getRandomRow();                         //not used? Seems handy
 
-    QModelIndex getNearestSelection(int row);
-    QModelIndex getNearestUnselection(int row);
-    int getNearestPick();
-    int getNextPick();
-    int getPrevPick();
+    int getNearestPick();       // not being used
+    int getNextPick();          // used by selectNextPick - move to selection
+    int getPrevPick();          // used by selectPrevPick - move to selection
 
     DataModel *dm;
     ImageCacheData *icd;
