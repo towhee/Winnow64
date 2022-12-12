@@ -59,6 +59,7 @@ bool EmbelExport::loadImage(QString fPath)
 */
     if (G::isLogger) G::log("EmbelExport::loadImage");
     QImage image;
+    int dmRow = dm->fPathRow[fPath];
 
     if (!embellish->isRemote) {
         if (icd->imCache.find(fPath, image)) {
@@ -66,7 +67,6 @@ bool EmbelExport::loadImage(QString fPath)
             return true;
         }
         // check metadata loaded for image
-        int dmRow = dm->fPathRow[fPath];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "EmbelExport::")) {
