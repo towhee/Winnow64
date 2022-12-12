@@ -15,6 +15,12 @@ SaveAsDlg::SaveAsDlg(QModelIndexList &selection,
                      dm(dm)
 {
     ui->setupUi(this);
+    ui->line2->setStyleSheet(
+        "QFrame {"
+            "border-color:" + G::disabledColor.name() + ";"
+            "border-width:0.5px;"
+            "border-style:inset;"
+        "}");
 
     QString fPath = selection.at(0).data(G::PathRole).toString();
     QFileInfo info(fPath);
@@ -57,7 +63,7 @@ void SaveAsDlg::on_saveBtn_clicked()
     for (int i = 0; i < selection.count(); ++i) {
         int progress = (i + 1) * 100 / (selection.count() + 1);
         ui->progressBar->setValue(progress);
-//        qApp->processEvents();
+        qApp->processEvents();
         QString fPath = selection.at(i).data(G::PathRole).toString();
         QFileInfo info(fPath);
         QString path =  ui->folderPath->text() + "/";

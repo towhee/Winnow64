@@ -4419,7 +4419,7 @@ bool MW::loadSettings()
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
         isRatingBadgeVisible = false;
-        isIconNumberVisible = false;
+        isIconNumberVisible = true;
 
         // datamodel
         G::maxIconSize = 256;
@@ -4511,9 +4511,10 @@ bool MW::loadSettings()
     // show/hide use of ConcurrentLoading for dev/release using G::tryConcurrentLoading
     if (G::tryConcurrentLoading) {
         if (setting->contains("tryConcurrentLoading"))
-            G::isLinearLoading = !setting->value("tryConcurrentLoading").toBool();
-        else
+//            G::isLinearLoading = !setting->value("tryConcurrentLoading").toBool(); // until fix
             G::isLinearLoading = true;
+        else
+        G::isLinearLoading = true;
     }
     else
         G::isLinearLoading = true;
@@ -4543,6 +4544,7 @@ bool MW::loadSettings()
     if (setting->contains("classificationBadgeInThumbDiameter")) classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
     if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
     if (setting->contains("isIconNumberVisible")) isIconNumberVisible = setting->value("isIconNumberVisible").toBool();
+    else isIconNumberVisible = true;
 
     // datamodel
     if (setting->contains("maxIconSize")) G::maxIconSize = setting->value("maxIconSize").toInt();
