@@ -7,13 +7,27 @@
     <x>0</x>
     <y>0</y>
     <width>513</width>
-    <height>183</height>
+    <height>266</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Save as</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>The preview will be saved with the same file name but a new extension in the current folder by default or you can select a new folder.  If there is a duplicate file name then _# will be appended to the name.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item>
     <spacer name="verticalSpacer_2">
      <property name="orientation">
@@ -119,7 +133,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QLabel" name="label">
+      <widget class="QPushButton" name="selectBtn">
        <property name="minimumSize">
         <size>
          <width>100</width>
@@ -133,7 +147,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Save to    </string>
+        <string>Pick Folder</string>
        </property>
       </widget>
      </item>
@@ -166,6 +180,19 @@
     </spacer>
    </item>
    <item>
+    <widget class="Line" name="line2">
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QProgressBar" name="progressBar">
      <property name="value">
       <number>24</number>
@@ -175,44 +202,12 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="selectBtn">
-       <property name="minimumSize">
-        <size>
-         <width>100</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>100</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Pick Folder</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer_3">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeType">
-        <enum>QSizePolicy::Preferred</enum>
+        <enum>QSizePolicy::Expanding</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -230,6 +225,12 @@
          <height>0</height>
         </size>
        </property>
+       <property name="maximumSize">
+        <size>
+         <width>100</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
         <string>Cancel</string>
        </property>
@@ -241,6 +242,12 @@
         <size>
          <width>100</width>
          <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>100</width>
+         <height>16777215</height>
         </size>
        </property>
        <property name="text">
