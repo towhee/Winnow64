@@ -123,7 +123,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
     if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
     if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
-    if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
+    if (column == G::PickColumn) return fm.boundingRect("===Pick===").width();
     if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
     if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
@@ -356,8 +356,9 @@ PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 
 QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
-    if (value == "reject") return "X";
-    return (value == "true") ? "✓" : "";
+//    if (value == "reject") return "X";
+//    return (value == "true") ? "✓" : "";
+    return value.toString();
 }
 
 SearchItemDelegate::SearchItemDelegate(QObject* parent): QStyledItemDelegate(parent)

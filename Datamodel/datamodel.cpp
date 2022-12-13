@@ -2062,7 +2062,7 @@ bool DataModel::isPick()
     if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < sf->rowCount(); ++row) {
         QModelIndex idx = sf->index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") return true;
+        if (idx.data(Qt::EditRole).toString() == "picked") return true;
     }
     return false;
 }

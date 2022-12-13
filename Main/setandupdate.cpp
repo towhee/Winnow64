@@ -397,15 +397,26 @@ void MW::setStatus(QString state)
 
 void MW::setIngested()
 {
+/*
+    Called after ingest to update the DataModel and the settings piclLog.
+    The pickLog is used to recover the picked/ingested values in the datamodel
+    after a crash recovery.
+*/
     if (G::isLogger) G::log("MW::setIngested");
+    setting->beginGroup("PickLog");
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
+        QString sKey = dm->sf->index(row, 0).data(G::PathRole).toString();
+        if (dm->sf->index(row, G::PickColumn).data().toString() == "picked") {
             emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
                             dm->instance, "MW::setIngested", Qt::EditRole);
             emit setValueSf(dm->sf->index(row, G::PickColumn), "false",
                             dm->instance, "MW::setIngested", Qt::EditRole);
+            // update pickLog
+            sKey.replace("/", "🔸");
+            setting->setValue(sKey, "ingested");
         }
     }
+    setting->endGroup();
 }
 
 void MW::toggleReject()

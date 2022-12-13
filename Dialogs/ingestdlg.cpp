@@ -250,7 +250,7 @@ void IngestDlg::getPicks()
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex pickIdx = dm->index(row, G::PickColumn);
         // only picks
-        if (pickIdx.data(Qt::EditRole).toString() == "true") {
+        if (pickIdx.data(Qt::EditRole).toString() == "picked") {
             QModelIndex idx = dm->index(row, 0);
             // only filtered
             if (dm->sf->mapFromSource(idx).isValid()) {

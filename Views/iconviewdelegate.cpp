@@ -346,7 +346,6 @@ void IconViewDelegate::paint(QPainter *painter,
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
-//    bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool isSelected = dm->isSelected(row);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
@@ -452,7 +451,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // picked item
     if (pickStatus != "false") {
-        if (pickStatus == "true") painter->setPen(pickPen);
+        if (pickStatus == "picked") painter->setPen(pickPen);
         else painter->setPen(rejectPen);
         painter->drawPath(iconPath);
     }

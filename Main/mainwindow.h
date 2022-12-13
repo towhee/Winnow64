@@ -127,8 +127,6 @@ public:
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
 
-    QWindow *thisWindow;
-
     // QSettings
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
@@ -1241,6 +1239,7 @@ private:
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;
+    bool testCrash = false;
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);
