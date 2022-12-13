@@ -429,8 +429,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<QVector<int>>();
 
     show();
-    if (setting->contains("WindowLocation"))
-        setGeometry(setting->value("WindowLocation").toRect());
 
     if (isStartupArgs) {
         handleStartupArgs(args);
@@ -455,15 +453,26 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         }
 
         if (setting->value("hasCrashed").toBool()) {
+//            QFileInfo info(lastFileIfCrash);
+//            QString lastFolder = QFileInfo(lastFileIfCrash).dir().path();
             int picks = pickLogCount();
             int ratings = ratingLogCount();
             int colors = colorClassLogCount();
+            QString picksRecoverable = " picks recoverable";
+            if (picks == 1) picksRecoverable = " pick recoverable";
+            QString ratingsRecoverable = " ratings recoverable";
+            if (picks == 1) ratingsRecoverable = " rating recoverable";
+            QString colorsRecoverable = " color labels recoverable";
+            if (picks == 1) colorsRecoverable = " color label recoverable";
             if (picks || ratings || colors) {
                 QString msg = "It appears Winnow did not close properly.  Do you want to "
-                     "recover the most recent picks and ratings?\n";
-                if (picks) msg += "\n" + QString::number(picks) + " picks recoverable";
-                if (ratings) msg += "\n" + QString::number(ratings) + " ratings recoverable";
-                if (colors) msg += "\n" + QString::number(colors) + " color labels recoverable";
+                              "recover the most recent picks, ratings and color categories?\n";
+                msg += "\nFolder: " + QFileInfo(lastFileIfCrash).dir().path();
+                msg += "\n";
+                if (picks) msg += "\n" + QString::number(picks) + picksRecoverable;
+                if (ratings) msg += "\n" + QString::number(ratings) + ratingsRecoverable;
+                if (colors) msg += "\n" + QString::number(colors) + colorsRecoverable;
+                msg += "\n";
                 int ret = QMessageBox::warning(this, "Recover Prior State", msg,
                                                QMessageBox::Yes | QMessageBox::No);
                 if (ret == QMessageBox::Yes) {
@@ -494,39 +503,40 @@ bool MW::isDevelopment()
 void MW::showEvent(QShowEvent *event)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
+//    QMainWindow::showEvent(event);
+//    return;
 
     QMainWindow::showEvent(event);
-
-    thisWindow = windowHandle();
-//    qDebug() << "MW::showEvent" << thisWindow;
-//    connect(thisWindow, &QWindow::visibilityChanged, this, &MW::prevSessionWindowLocation);
-
     getDisplayProfile();
 
     if (isSettings) {
-        // resotre internal geometry (scren location,
+        // restore internal geometry (scren location,
         restoreGeometry(setting->value("Geometry").toByteArray());
-        // run restoreGeometry second time if display has been scaled
+//        // run restoreGeometry second time if display has been scaled
         if (G::actDevicePixelRatio > 1.0)
             restoreGeometry(setting->value("Geometry").toByteArray());
+
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         /*
         // do not start with filterDock open
-//        if (filterDock->isVisible()) {
-//            folderDock->raise();
-//            folderDockVisibleAction->setChecked(true);
-//        }
+        if (filterDock->isVisible()) {
+            folderDock->raise();
+            folderDockVisibleAction->setChecked(true);
+        }
         //*/
         updateState();
         /*
         // if embel dock visible then set mode to embelView
-//        embelDockVisibilityChange();    // rgh not being used
+        embelDockVisibilityChange();    // rgh not being used
         //*/
     }
     else {
         defaultWorkspace();
     }
+
+//    QMainWindow::showEvent(event);
+//    getDisplayProfile();
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
@@ -554,8 +564,6 @@ void MW::showEvent(QShowEvent *event)
 //    embelTemplateChange(embelProperties->templateId);
 //    // size columns after show if device pixel ratio > 1
 //    embelProperties->resizeColumns();
-
-//    G::isInitializing = false;    // moved to MW::eventFilter  event->type() == QEvent::Expose && G::isInitializing
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -571,6 +579,7 @@ void MW::closeEvent(QCloseEvent *event)
         G::popUp->showPopup(msg, 0);
         while (G::isRunningBackgroundIngest) G::wait(100);
     }
+    if (testCrash) return;
 
     setCentralMessage("Closing Winnow ...");
     stop();
@@ -3521,13 +3530,6 @@ void MW::setPrefPage(int page)
     lastPrefPage = page;
 }
 
-//void MW::prevSessionWindowLocation(QWindow::Visibility visibility)
-//{
-//    if (G::isLogger) G::log("MW::prevSessionWindowLocation");
-//    qDebug() << "MW::prevSessionWindowLocation" << testR;
-//    window()->setGeometry(testR);
-//}
-
 void MW::updateDisplayResolution()
 {
     if (G::isLogger) G::log("MW::updateDisplayResolution");
@@ -4918,8 +4920,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
 void MW::updateState()
 {
 /*
-    Called when program starting or when a workspace is invoked. Based on the condition of
-    actions sets the visibility of all window components.
+    Called when program starting or when a workspace is invoked. Based on the condition
+    of actions sets the visibility of all window components.
 */
     if (G::isLogger) G::log("MW::updateState");
     // set flag so
@@ -5052,10 +5054,10 @@ void MW::ingest()
 
     1.  MW::ingest()
 
-        This function keeps track of the presSourceFolder and baseFolderDescription during
+        This function keeps track of the prevSourceFolder and baseFolderDescription during
         subsequent calls.  It uses this to effect the behavior of the IngestDlg, which is
-        called.  When IngestDlg closes persistent ingest data is saving in settings.  If the
-        isBackgroundIngest flag = true then a backgroundIngest instantiation of Ingest is
+        called.  When IngestDlg closes persistent ingest data is saved in settings.  If the
+        isBackgroundIngest flag == true then a backgroundIngest instantiation of Ingest is
         created and run.
 
     2.  IngestDlg
@@ -5207,7 +5209,10 @@ void MW::ingest()
         setting->setValue("ingestCount", G::ingestCount);
         setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
 
-        if (!okToIngest) return;
+        if (!okToIngest) {
+            qWarning() << "WARNING" << "MW::ingest" << "Not ok to ingest";
+            return;
+        }
 
         // start background ingest
         if (isBackgroundIngest) {
@@ -5245,7 +5250,7 @@ void MW::ingest()
             return;
         }
 
-        // set the ingested flags and clear the pick flags
+        // set the ingested flags, clear the pick flags and update pickLog
         setIngested();
 
         updateStatus(true, "", "MW::ingest");
