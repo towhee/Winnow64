@@ -417,6 +417,7 @@ void IngestDlg::ingest()
         if (i > 0 && pickList.at(i).baseName() != pickList.at(i-1).baseName())
             seqNum++;
 
+        qDebug() << "Ingest::ingest  pickList =" << pickList;
         // rename destination file based on the file naming template
         QString destBaseName =  parseTokenString(pickList.at(i), tokenString);
         QString suffix = fileInfo.suffix().toLower();
@@ -754,6 +755,8 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
 bool IngestDlg::isToken(QString tokenString, int pos)
 {
     if (G::isLogger) G::log("IngestDlg::isToken");
+    if (pos >= tokenString.length()) return false;
+//    qDebug() << "IngestDlg::isToken  tokenString =" << tokenString << pos;
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;     // Paragraph Separator
     if (ch == '{') return false;                // qt6.2 changed " to '
@@ -884,14 +887,16 @@ void IngestDlg::updateFolderPaths()
     // Auto folders
     if (isAuto) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
-                ? ui->descriptionLineEdit->text() : "";
-        /*
+                ? ui->descriptionLineEdit->text() + "/" : "";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription;
+//        /*
         qDebug() << "IngestDlg::"
-                 << "rootFolderPath =" << rootFolderPath
-                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
-                 << "baseFolderDescription =" << baseFolderDescription;
+                 << "\nrootFolderPath        =" << rootFolderPath
+                 << "\nfromRootToBaseFolder  =" << fromRootToBaseFolder
+                 << "\nbaseFolderDescription =" << baseFolderDescription
+                 << "\nfolderPath            =" << folderPath
+                    ;
                  // */
-        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
         drivePath = Utilities::getDrive(rootFolderPath);
@@ -981,7 +986,7 @@ void IngestDlg::buildFileNameSequence()
         dirPath = folderPath;
     }
 
-    if(fileCount == 1) {
+    if (fileCount == 1) {
         ui->folderPathLabel->setText(dirPath + fileName1);
         ui->folderPathLabel->setToolTip(dirPath + fileName1);
         ui->folderPathLabel_2->setText("");
@@ -995,7 +1000,7 @@ void IngestDlg::buildFileNameSequence()
     seqNum++;
     QString ext2 = "." + pickList.at(1).suffix().toUpper();
     QString fileName2 = parseTokenString(pickList.at(1), tokenString) + ext2;
-    if(fileCount == 2) {
+    if (fileCount == 2) {
         ui->folderPathLabel->setText(dirPath + fileName1);
         ui->folderPathLabel->setToolTip(dirPath + fileName1);
         ui->folderPathLabel_2->setText(dirPath + fileName2);
@@ -1009,7 +1014,7 @@ void IngestDlg::buildFileNameSequence()
     seqNum = seqStart + fileCount - 1;
     QString extN = "." + pickList.at(fileCount - 1).suffix().toUpper();
     QString fileNameN = parseTokenString(pickList.at(fileCount - 1), tokenString) + extN;
-    if(fileCount > 2) {
+    if (fileCount > 2) {
         ui->folderPathLabel->setText(dirPath + fileName1);
         ui->folderPathLabel->setToolTip(dirPath + fileName1);
         ui->folderPathLabel_2->setText(dirPath + fileName2);
@@ -1350,6 +1355,7 @@ void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesCB_currentTextChanged");
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
+    if (fromRootToBaseFolder.length() > 0) fromRootToBaseFolder += "/";
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
     updateFolderPaths();
     seqStart += getSequenceStart(folderPath);
@@ -1381,6 +1387,7 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
 
 */
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesBtn_clicked");
+    qDebug() << "IngestDlg::on_pathTemplatesBtn_clicked";
     // setup TokenDlg
     QMap<QString,QString> usingTokenMap;
     QString title = "Token Editor - Path from Root to Destination Folder";
@@ -1393,21 +1400,27 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
 
     // rebuild template list and set to same item as TokenDlg for user continuity
     ui->pathTemplatesCB->clear();
+    // for some reason ui->pathTemplatesCB->clear() prepends blank item to pathTemplatesMap
+    pathTemplatesMap.remove("");
     QMap<QString, QString>::iterator i;
     int row = 0;
     for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i) {
+        QVariant iKey = i.key();
+        if (i.key() == "") continue;
         ui->pathTemplatesCB->addItem(i.key());
         if (i.key() == currentKey) index = row;
         row++;
     }
+    int len = ui->pathTemplatesCB->count();
     ui->pathTemplatesCB->setCurrentIndex(index);
     on_pathTemplatesCB_currentTextChanged(currentKey);
 }
 
 void IngestDlg::on_pathTemplatesBtn_2_clicked()
 {
-/* Performs same function as button on primary tab - just here for convenience and to
-make the ui more intuitive
+/*
+    Performs same function as button on primary tab - just here for convenience and to
+    make the ui more intuitive
 */
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesBtn_2_clicked");
     on_pathTemplatesBtn_clicked();

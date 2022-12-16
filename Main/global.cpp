@@ -70,9 +70,9 @@ namespace G
     QColor tabWidgetBorderColor;        // define after app stylesheet defined
     QColor pushButtonBackgroundColor;   // define after app stylesheet defined
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
+    QColor appleBlue = QColor(21,113,211);
     QColor selectionColor = QColor(68,95,118);
     QColor mouseOverColor = QColor(40,54,66);
-    QColor appleBlue = QColor(21,113,211);
 
     QString css;                        // app stylesheet;
 

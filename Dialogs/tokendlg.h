@@ -2,6 +2,7 @@
 #define TOKENDLG_H
 
 #include <QtWidgets>
+#include "main/global.h"
 #include "renamedlg.h"
 
 /*****************************************************************************/
@@ -89,6 +90,7 @@ public slots:
     void updateExample(QString s);
     void updateTemplate();
     void updateUniqueFileNameWarning(bool);
+    virtual void reject() override;
 
 private slots:
     void on_okBtn_clicked();
@@ -97,6 +99,7 @@ private slots:
     void on_renameBtn_clicked();
     void on_templatesCB_currentIndexChanged(int row);
     void on_closeBtn_clicked();
+    void on_chkUseInLoupeView_checked(int state);
 
 private:
     Ui::TokenDlg *ui;
@@ -107,6 +110,7 @@ private:
     QString &currentKey;
     QString title;
     QStringList existingTemplates(int row = -1);
+    bool indexJustChanged;
 };
 
 #endif // TOKENDLG_H

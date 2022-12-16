@@ -49,6 +49,7 @@ QString WidgetCSS::css()
 
     halfFontSize = fontSize / 2;
 
+    // do not include frame(), it is inconsistent and screws up stuff, depending on order
     return
             widget() +
             mainWindow() +
@@ -124,11 +125,22 @@ QString WidgetCSS::dialog()
 QString WidgetCSS::frame()
 {
     /*HLine and VLine*/
+//    return
+//    "QFrame[frameShape=""4""],"
+//    "QFrame[frameShape=""5""]"
+//    "{"
+//        "border-width: 5;"
+//        "border-color: blue;"
+//        "color: green;"
+//        "background-color: red;"
+//        // cannot assign line color here: see https://stackoverflow.com/questions/14581498/qt-stylesheet-for-hline-vline-color
+//    "}";
     return
     "QFrame[frameShape=""4""],"
     "QFrame[frameShape=""5""]"
     "{"
         "border: none;"
+        "color: " + QColor(fm,fm,fm).name() + ";"
         "background: " + QColor(fm,fm,fm).name() + ";"
         // cannot assign line color here: see https://stackoverflow.com/questions/14581498/qt-stylesheet-for-hline-vline-color
     "}";
@@ -306,10 +318,10 @@ QString WidgetCSS::tabWidget()
 
     "QTabBar::tab {"
         "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
-        "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "background-color: " + QColor(l20,l20,l20).name() + ";"
+//        "background-color: " + QColor(l10,l10,l10).name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
-        "border-bottom-color:" + G::tabWidgetBorderColor.name() + ";"
-        "padding-top: 4px;"
+        "padding-top: 2px;"
         "padding-bottom: 3px;"
         "padding-left: 5px;"
         "padding-right: 5px;"
@@ -318,17 +330,9 @@ QString WidgetCSS::tabWidget()
     "QTabBar::tab:selected {"
         "color:" + G::textColor.name() + ";"
         "border-bottom: 0px;"
-        "border-color:" + G::tabWidgetBorderColor.name() + ";"
+        "background-color: " + G::selectionColor.name() + ";"
+//        "background-color: " + QColor(bg,bg,bg).name() + ";"
     " }"
-
-
-//    "QTabBar::tab:!selected {"
-////        "border-bottom: 0px;"
-////        "background-color: " + QColor(bg,bg,bg).name() + ";"
-////        "margin-top: 2px;"
-////        "border-bottom: 0px;"
-////        "border-color:" + borderColor.name() + ";"
-//   " }"
 
     "QTabBar::tab:disabled {"
         "color:" + disabledColor.name() + ";"
@@ -360,7 +364,8 @@ QString WidgetCSS::listWidget()
     return
     "QListWidget {"
         /*alternate-background-color: rgb(90,90,90);*/
-        "gridline-color: " + QColor(d10,d10,d10).name() + ";"
+        "background-color: " + QColor(d10,d10,d10).name() + ";"
+        "gridline-color: " + QColor(bg,bg,bg).name() + ";"
         "color: " + textColor.name() + ";"
         "selection-background-color: " + selectionColor.name() + ";"
         "border: 1px solid " + QColor(l10,l10,l10).name() + ";"
@@ -373,6 +378,7 @@ QString WidgetCSS::treeWidget()
     "QTreeWidget {"
 //        "background-color: " + QColor(bg,bg,bg).name() + ";"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
+        "selection-background-color: " + selectionColor.name() + ";"
         "border: 2px solid " + QColor(l10,l10,l10).name() + ";"
         "color: lightgray;"
     "}"
@@ -439,6 +445,7 @@ QString WidgetCSS::treeView()
 
     "QTreeView::item:selected {"
         "color: " + textColor.name() + ";"
+        "background-color: " + selectionColor.name() + ";"
     "}"
 
     "QTreeView::item:selected:!active {"
