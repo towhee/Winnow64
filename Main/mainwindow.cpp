@@ -579,7 +579,9 @@ void MW::closeEvent(QCloseEvent *event)
         G::popUp->showPopup(msg, 0);
         while (G::isRunningBackgroundIngest) G::wait(100);
     }
-    if (testCrash) return;
+
+    // for debugging crash test
+//    if (testCrash) return;
 
     setCentralMessage("Closing Winnow ...");
     stop();
@@ -5124,11 +5126,12 @@ void MW::ingest()
 
     static QString prevSourceFolder = "";
     static QString baseFolderDescription = "";
+    /*
     qDebug() << "MW::ingest"
              << "prevSourceFolder" << prevSourceFolder
              << "currentViewDirPath" << G::currRootFolder
              << "baseFolderDescription" << baseFolderDescription
-                ;
+                ;  //*/
     if (prevSourceFolder != G::currRootFolder) baseFolderDescription = "";
 
     QString folderPath;        // req'd by backgroundIngest

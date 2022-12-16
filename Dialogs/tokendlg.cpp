@@ -66,18 +66,19 @@ void TokenList::startDrag(Qt::DropActions /* supportedActions */)
    TokenEdit Class
 *******************************************************************************/
 
-/* TokenEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
-dragged text in insertFromMimeData and has a parse function to use the tokens
-to look up corresponding metadata.  The keys in exampleMap are the available
-tokens, while the values in exampleMap are example metadata to show an example
-result as the template string is constructed.
+/*
+    TokenEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
+    dragged text in insertFromMimeData and has a parse function to use the tokens
+    to look up corresponding metadata.  The keys in exampleMap are the available
+    tokens, while the values in exampleMap are example metadata to show an example
+    result as the template string is constructed.
 
-Some exampleMap items:
+    Some exampleMap items:
 
-    exampleMap["YYYY"] = "2018";
-    exampleMap["YY"] = "18";
-    exampleMap["MONTH"] = "JANUARY";
-    exampleMap["Month"] = "January";
+        exampleMap["YYYY"] = "2018";
+        exampleMap["YY"] = "18";
+        exampleMap["MONTH"] = "JANUARY";
+        exampleMap["Month"] = "January";
 
 */
 
@@ -97,8 +98,8 @@ TokenEdit::TokenEdit(QWidget *parent) :
 QString TokenEdit::parse()
 {
 /*
-Convert the token string into the metadata it represents. In this case, using
-the example values contained in exampleMap.
+    Convert the token string into the metadata it represents. In this case, using
+    the example values contained in exampleMap.
 */
     QString s;
     int i = 0;
@@ -121,11 +122,11 @@ the example values contained in exampleMap.
 bool TokenEdit::isToken(int pos)
 {
 /*
-Report if the text cursor is in a token.  If it is, set the token item, and the
-position of the start and end of the token.  This is used to select the token.
-When the token is selected the right and left arrow jump across the entire token
-instead of moving through each character in the token.  Delete and backspace
-removes the entire selection which removes the token.
+    Report if the text cursor is in a token.  If it is, set the token item, and the
+    position of the start and end of the token.  This is used to select the token.
+    When the token is selected the right and left arrow jump across the entire token
+    instead of moving through each character in the token.  Delete and backspace
+    removes the entire selection which removes the token.
 */
     QTextCursor cursor;
     QChar ch = textDoc->characterAt(pos);
@@ -170,7 +171,7 @@ removes the entire selection which removes the token.
 void TokenEdit::showEvent(QShowEvent *event)
 {
 /*
-These actions must be run after the dialog constructor is finished.
+    These actions must be run after the dialog constructor is finished.
 */
     tokenFormat.setForeground(QColor(Qt::white));
     setTextColor(Qt::white);
@@ -307,14 +308,18 @@ TokenDlg::TokenDlg(QStringList &tokens,
     this->title = title;
     setWindowTitle(title);
     setAcceptDrops(true);
+
     ui->templatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
     ui->templatesCB->setMaxCount(100);
 
     // minimum button size override G::css (widgetcss)
+    ui->okBtn->setStyleSheet("QPushButton {min-width: 120px;}");
     ui->renameBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->newBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->deleteBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->closeBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+
+    setStyleSheet(G::css);
 
     // Populate token list
     for (const auto &i : tokens)
@@ -343,7 +348,8 @@ TokenDlg::TokenDlg(QStringList &tokens,
             this, SLOT(updateUniqueFileNameWarning(bool)));
     connect(ui->tokenEdit, SIGNAL(textChanged()),
             this, SLOT(updateTemplate()));
-
+    connect(ui->chkUseInLoupeView, &QCheckBox::stateChanged, this,
+            &TokenDlg::on_chkUseInLoupeView_checked);
 }
 
 TokenDlg::~TokenDlg()
@@ -381,6 +387,7 @@ void TokenDlg::on_okBtn_clicked()
     templatesMap with newTemplatesMap.
 */
     if (G::isLogger) G::log("TokenDlg::on_okBtn_clicked");
+    qDebug() << "TokenDlg::on_okBtn_clicked";
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
         QString key = ui->templatesCB->itemText(i);
@@ -388,13 +395,15 @@ void TokenDlg::on_okBtn_clicked()
         newTemplatesMap[key] = templatesMap[oldKey];
     }
     templatesMap.swap(newTemplatesMap);
-    currentKey = ui->templatesCB->currentText();
+//    currentKey = ui->templatesCB->currentText();
 //    accept();
 }
 
 void TokenDlg::on_deleteBtn_clicked()
 {
     QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
+    qDebug() << "TokenDlg::on_deleteBtn_clicked";
+    return;
 
     // check to see if the token template is being used
     QString msg = "";
@@ -430,6 +439,7 @@ QStringList TokenDlg::existingTemplates(int row)
 void TokenDlg::on_newBtn_clicked()
 {
     QString newTemplate;
+    qDebug() << "TokenDlg::on_newBtn_clicked";
 
     QStringList existing = existingTemplates(-1);
     RenameDlg *nameDlg = new RenameDlg(newTemplate, existing,
@@ -455,6 +465,7 @@ void TokenDlg::on_renameBtn_clicked()
 /*
     As noted in on_okBtn_clicked, renaming the template changes the QMap key.
 */
+    qDebug() << "TokenDlg::on_renameBtn_clicked";
     // current name
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
@@ -486,12 +497,58 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
     Update tokenEdit with the template token string stored in templatesMap
 */
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
-    if (templatesMap.contains(key))
+    qDebug() << "TokenDlg::on_templatesCB_currentIndexChanged" << row << key << "current" << currentKey;
+    indexJustChanged = true;
+    if (templatesMap.contains(key)) {
         ui->tokenEdit->setText(templatesMap.value(key));
+        if (key == currentKey) {
+            ui->chkUseInLoupeView->setChecked(true);
+        }
+        else {
+            ui->chkUseInLoupeView->setChecked(false);
+        }
+    }
+    indexJustChanged = false;
 }
 
 void TokenDlg::on_closeBtn_clicked()
 {
+    qDebug() << "TokenDlg::on_closeBtn_clicked";
     on_okBtn_clicked();
     accept();
+}
+
+void TokenDlg::on_chkUseInLoupeView_checked(int state)
+{
+    qDebug() << "TokenDlg::on_chkUseInLoupeView_checked" << "state +" << state;
+    if (indexJustChanged) {
+        if (ui->chkUseInLoupeView->isChecked()) {
+            currentKey = ui->templatesCB->currentText();
+        }
+        else {
+            ui->chkUseInLoupeView->setChecked(true);
+        }
+    }
+    else {
+        if (ui->chkUseInLoupeView->isChecked()) {
+            currentKey = ui->templatesCB->currentText();
+        }
+        else {
+            ui->chkUseInLoupeView->setChecked(true);
+            QString msg = "Select another template and then click checkbox to make it<br>"
+                          "the one used for the loupe view overlay info.  PressESC to<br>"
+                          "close this message.";
+            G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+        }
+    }
+}
+
+void TokenDlg::reject()
+{
+    qDebug() << "TokenDlg::reject";
+    if (G::popUp->isVisible()) {
+        G::popUp->setVisible(false);
+        return;
+    }
+    QDialog::reject();
 }

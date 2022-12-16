@@ -1066,7 +1066,7 @@ void MW::createActions()
     addAction(infoVisibleAction);
     connect(infoVisibleAction, &QAction::triggered, this, &MW::setShootingInfoVisibility);
 
-    infoSelectAction = new QAction(tr("Token editor"), this);
+    infoSelectAction = new QAction(tr("Select or edit shooting info"), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
     if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());

@@ -39,8 +39,8 @@ InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
 void InfoString::usingToken()
 {
 /*
-    Creates a list of items using a token template.  This is used to prevent the user deleting
-    a token template that is in use.
+    Creates a list of items using a token template. This is used to prevent the user
+    deleting a token template that is in use.
 */
     usingTokenMap.clear();
     usingTokenMap[loupeInfoTemplate] = "Shooting info template (view menu)";
