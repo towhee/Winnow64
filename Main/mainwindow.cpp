@@ -1558,8 +1558,8 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-//    qDebug() << " ";
-//    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
+    qDebug() << " ";
+    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
     Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
@@ -3519,6 +3519,7 @@ void MW::setClassificationBadgeImageDiam(int d)
 void MW::setClassificationBadgeThumbDiam(int d)
 {
     if (G::isLogger) G::log("MW::setClassificationBadgeThumbDiam");
+    qDebug() << "MW::setClassificationBadgeThumbDiam";
     classificationBadgeInThumbDiameter = d;
     thumbView->badgeSize = d;
     gridView->badgeSize = d;
