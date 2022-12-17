@@ -87,6 +87,9 @@ void BookMarks::addBookmark(QString itemPath)
     dir->setPath(itemPath);
     item->setToolTip(1, itemPath);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
+    if (!QFileInfo::exists(itemPath)) {
+        item->setForeground(0, QBrush(QColor(Qt::darkRed)));
+    }
 }
 
 void BookMarks::update()

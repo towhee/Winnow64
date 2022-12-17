@@ -244,10 +244,18 @@ void IconView::setThumbParameters()
     possibly altered thumbnail dimensions.
 */
     if (G::isLogger) G::log("IconView::setThumbParameters", objectName());
+    if (G::isInitializing) return;
+        /*
+        qDebug() << "IconView::setThumbParameters" << objectName()
+                 << "iconWidth =" << iconWidth
+                 << "iconHeight =" << iconHeight
+                    ;
+                    //*/
+
     /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
        thumbView cells are taller than the dock then QIconview::visualRect is not calculated
        correctly, and scrolling does not work properly */
-    if(objectName() == "Thumbnails") {
+    if (objectName() == "Thumbnails") {
         if (!m2->thumbDock->isFloating())
             m2->setThumbDockHeight();
     }
@@ -255,18 +263,13 @@ void IconView::setThumbParameters()
     if (labelFontSize == 0) labelFontSize = 10;
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, labelChoice, badgeSize);
-    /*
-    qDebug() << "IconView::setThumbParameters"
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-                ;
-                //*/
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/
                                   int _labelFontSize, bool _showThumbLabels, int _badgeSize)
 {
     if (G::isLogger) G::log("IconView::setThumbParameters", objectName());
+
     iconWidth = _thumbWidth;
     iconHeight = _thumbHeight;
 //    iconPadding = _thumbPadding;
@@ -858,6 +861,7 @@ void IconView::thumbsEnlarge()
    "Thumbnails", which either resides in a dock or a floating window.
 */
     if (G::isLogger) G::log("IconView::thumbsEnlarge", objectName());
+
     if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
     if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
     if (iconWidth < G::maxIconSize && iconHeight < G::maxIconSize)
@@ -877,6 +881,7 @@ void IconView::thumbsShrink()
    "Thumbnails", which either resides in a dock or a floating window.
 */
     if (G::isLogger) G::log("IconView::thumbsShrink", objectName());
+
     if (iconWidth > ICON_MIN  && iconHeight > ICON_MIN) {
         iconWidth *= 0.9;
         iconHeight *= 0.9;
@@ -941,7 +946,8 @@ void IconView::rejustify()
              << "wCell =" << wCell
              << "tpr =" << tpr
              << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight;*/
+             << "iconHeight =" << iconHeight;
+    //*/
 
     skipResize = true;      // prevent feedback loop
 
@@ -975,6 +981,8 @@ void IconView::justify(JustifyAction action)
 
 */
     if (G::isLogger) G::log("IconView::justify", objectName());
+    qDebug() << "IconView::justify" << objectName();
+
     int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
@@ -1064,18 +1072,17 @@ void IconView::resizeEvent(QResizeEvent *event)
         if (isWrapping()) {
             QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
         }
-        else {
-            setThumbParameters();   // req'd to show/hide scrollbar in thumb dock
-        }
     }
     prevWidth = width();
+
+    setThumbParameters();           // req'd to show/hide scrollbar in thumb dock
 
     // return if grid view has not been opened yet
     if (m2->gridDisplayFirstOpen) return;
 
     if (isFitTopOrBottom) {
-        qDebug() << "IconView::resizeEvent"
-                 << "isFitTopOrBottom =" << isFitTopOrBottom;
+//        qDebug() << "IconView::resizeEvent"
+//                 << "isFitTopOrBottom =" << isFitTopOrBottom;
         // thumbDock isWrapping = false situation
         G::ignoreScrollSignal = true;
         scrollToRow(mid, "IconView::resizeEvent");
@@ -1113,14 +1120,17 @@ void IconView::bestAspect()
     if (G::iconHMax > G::iconWMax)
         iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
-//    qDebug() << "IconView::bestAspect" << objectName() << G::iconWMax << G::iconHMax << iconWidth << iconHeight;
-    setThumbParameters();
+     setThumbParameters();
 
     bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;
-    /*
-    qDebug() << "IconView::bestAspect"
+
+     /*
+    qDebug() << "IconView::bestAspect" << objectName()
              << "G::iconWMax =" << G::iconWMax
-             << "G::iconHMax =" << G::iconHMax;
+             << "G::iconHMax =" << G::iconHMax
+             << "iconWidth =" << iconWidth
+             << "iconHeight =" << iconHeight
+                ;
 //  */
 }
 
@@ -1132,7 +1142,7 @@ void IconView::thumbsFitTopOrBottom()
     and scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks
     and central widget) are resized.
 
-    For icon cell anatomy (see diagram at top of IconViewDelegate)
+    For icon cell anatomy (see diagram at top of iconviewdelegate.cpp)
 */
     if (G::isLogger) G::log("IconView::thumbsFitTopOrBottom", objectName());
 
@@ -1160,8 +1170,8 @@ void IconView::thumbsFitTopOrBottom()
     iconHeight = iconHeight > G::maxIconSize ? G::maxIconSize : iconHeight;
     iconHeight = iconHeight < ICON_MIN ? ICON_MIN : iconHeight;
     iconWidth = static_cast<int>(iconHeight / bestAspectRatio);
-    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom"
+//    /*
+    qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
              << "viewportHeight =" << newViewportHt
              << "bestAspectRatio =" << bestAspectRatio
              << "iconHeight =" << iconHeight
@@ -1633,33 +1643,34 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << "forceUpdate =" << forceUpdate
              << mousePos;
              //*/
-    if (G::isEmbellish) return;
-    if (G::isInitializing) return;
-    if (G::stop) return;
-    if (!G::isNewFolderLoaded) return;
+    QString failReason = "";
+    if (G::isEmbellish) failReason = "G::isEmbellish";
+    if (G::isInitializing) failReason = "G::isInitializing";
+    if (G::stop) failReason = "G::stop";
+    if (!G::isNewFolderLoaded) failReason = "!G::isNewFolderLoaded";
     bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (isVideo) return;
+    if (isVideo) failReason = "isVideo";
 
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
-        return;
+        failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
     }
 
     if (G::isModifier) {
         setCursor(Qt::ArrowCursor);
-        return;
+        failReason = "G::isModifier";
     }
 
-    if (idx == prevIdx && !forceUpdate) return;
-    if (!showZoomFrame) return;
-    if (!idx.isValid()) return;
-    if (m2->imageView->isFit) return;
+//    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
+    if (!showZoomFrame) failReason = "!showZoomFrame";
+    if (!idx.isValid()) failReason = "!idx.isValid()";
+    if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
 
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
-    if (imW == 0 || imH == 0) return;
+    if (imW == 0 || imH == 0) failReason = "";
 
     qreal zoom = m2->imageView->zoom;
     imW = static_cast<int>(imW * zoom);
@@ -1677,7 +1688,15 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     if (imW < cW && imH < cH) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
+        failReason = "imW < cW && imH < cH";
+    }
+
+    if (failReason.length()) {
+        qDebug() << "IconView::zoomCursor Failed because" << failReason;
         return;
+    }
+    else {
+//        qDebug() << "IconView::zoomCursor" << "Succeeded";
     }
 
     prevIdx = idx;

@@ -96,10 +96,11 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
         /*
-        qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
-             << "***  thumbView Ht =" << thumbView->height()
+        qDebug()
+             << "MW::setThumbDockFeatures  dock area =" << area
+             << "thumbView Ht =" << thumbView->height()
              << "maxHt ="  << maxHt << "minHt =" << minHt
-             << "thumbHeight =" << thumbView->thumbHeight
+             << "G::iconHMax =" << G::iconHMax
              << "newThumbDockHeight" << newThumbDockHeight
              << "scrollBarHeight =" << G::scrollBarThickness;
 //        */

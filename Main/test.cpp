@@ -119,6 +119,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << G::css;
+    thumbView->setThumbParameters();
+//    thumbView->thumbsFitTopOrBottom();
 }
 
+//0 IconView::bestAspect                               Thumbnails
+//0 IconView::setThumbParameters                       Thumbnails
+//3 MW::setThumbDockHeight
+//50 MW::setThumbDockFeatures

@@ -691,11 +691,9 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     // err
     QString err = "Box type " + type + " is unknown";
     G::error("Heic::getHeifBox", fPath, err);
-    qDebug();
-    qDebug() << "Heic::getHeifBox"
-             << "**************************************** Failed to get box for type ="
-             << type
-             << "****************************************\n";
+    qWarning() << "WARNING Heic::getHeifBox"
+             << "Failed to get box for type ="
+             << type;
     offset += length;
     return false;
 }
