@@ -313,11 +313,10 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->templatesCB->setMaxCount(100);
 
     // minimum button size override G::css (widgetcss)
-    ui->okBtn->setStyleSheet("QPushButton {min-width: 120px;}");
+    ui->okBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->renameBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->newBtn->setStyleSheet("QPushButton {min-width: 60px;}");
     ui->deleteBtn->setStyleSheet("QPushButton {min-width: 60px;}");
-    ui->closeBtn->setStyleSheet("QPushButton {min-width: 60px;}");
 
     setStyleSheet(G::css);
 
@@ -396,7 +395,7 @@ void TokenDlg::on_okBtn_clicked()
     }
     templatesMap.swap(newTemplatesMap);
 //    currentKey = ui->templatesCB->currentText();
-//    accept();
+    accept();
 }
 
 void TokenDlg::on_deleteBtn_clicked()
@@ -511,32 +510,17 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
     indexJustChanged = false;
 }
 
-void TokenDlg::on_closeBtn_clicked()
-{
-    qDebug() << "TokenDlg::on_closeBtn_clicked";
-    on_okBtn_clicked();
-    accept();
-}
-
 void TokenDlg::on_chkUseInLoupeView_checked(int state)
 {
     qDebug() << "TokenDlg::on_chkUseInLoupeView_checked" << "state +" << state;
-    if (indexJustChanged) {
-        if (ui->chkUseInLoupeView->isChecked()) {
-            currentKey = ui->templatesCB->currentText();
-        }
-        else {
-            ui->chkUseInLoupeView->setChecked(true);
-        }
-    }
-    else {
+    if (!indexJustChanged) {
         if (ui->chkUseInLoupeView->isChecked()) {
             currentKey = ui->templatesCB->currentText();
         }
         else {
             ui->chkUseInLoupeView->setChecked(true);
             QString msg = "Select another template and then click checkbox to make it<br>"
-                          "the one used for the loupe view overlay info.  PressESC to<br>"
+                          "the one used for the loupe view overlay info.  Press ESC to<br>"
                           "close this message.";
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
         }

@@ -1059,14 +1059,14 @@ void MW::createActions()
     addAction(iconNumberVisibleAction);
     connect(iconNumberVisibleAction, &QAction::triggered, this, &MW::setIconNumberVisibility);
 
-    infoVisibleAction = new QAction(tr("Show Shooting Info"), this);
+    infoVisibleAction = new QAction(tr("Show info overlay"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setShortcutVisibleInContextMenu(true);
     infoVisibleAction->setCheckable(true);
     addAction(infoVisibleAction);
     connect(infoVisibleAction, &QAction::triggered, this, &MW::setShootingInfoVisibility);
 
-    infoSelectAction = new QAction(tr("Select or edit shooting info"), this);
+    infoSelectAction = new QAction(tr("Select or edit info overlay   "), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
     if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());

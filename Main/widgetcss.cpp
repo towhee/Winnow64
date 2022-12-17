@@ -79,8 +79,8 @@ QString WidgetCSS::css()
             textEdit() +
             toolButton() +
             toolTip() +
-            treeView() +
-            treeWidget()
+//            treeWidget() +
+            treeView()
             ;
 }
 
@@ -374,6 +374,7 @@ QString WidgetCSS::listWidget()
 
 QString WidgetCSS::treeWidget()
 {
+    return "";
     return
     "QTreeWidget {"
 //        "background-color: " + QColor(bg,bg,bg).name() + ";"
@@ -421,7 +422,7 @@ QString WidgetCSS::treeWidget()
 QString WidgetCSS::treeView()
 {
     return
-    "QTreeView {"
+    "QTreeView, QTreeWidget {"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "color: " + textColor.name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"

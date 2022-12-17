@@ -98,7 +98,6 @@ private slots:
     void on_newBtn_clicked();
     void on_renameBtn_clicked();
     void on_templatesCB_currentIndexChanged(int row);
-    void on_closeBtn_clicked();
     void on_chkUseInLoupeView_checked(int state);
 
 private:
