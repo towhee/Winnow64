@@ -78,7 +78,7 @@ public:
     QStringList getSelectionOrPicks();
     QModelIndex getNearestSelectedIndex(int sfRow);
     void invertSelection();
-    void toggleRowSelection(int sfRow);
+    void chkForDeselection(int sfRow);
     bool isSelected(int row);
 
     QMutex mutex;

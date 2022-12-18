@@ -138,19 +138,9 @@ void MW::createDataModel()
     else combineRawJpg = false;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
-//    thumb = new Thumb(dm, metadata, frameDecoder);
 
     dm->iconChunkSize = 3000;
 
-    // show appropriate count column in filters
-//    if (combineRawJpg) {
-//        filters->hideColumn(3);
-//        filters->showColumn(4);
-//    }
-//    else {
-//        filters->hideColumn(4);
-//        filters->showColumn(3);
-//    }
     filters->totalColumnToUse(combineRawJpg);
 
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);

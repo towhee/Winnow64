@@ -1206,7 +1206,7 @@ void IconView::updateView()
 /*
     Force the view delegate to update.  Also scroll to current.
 */
-    if (G::isLogger) G::log("IconView::scrollDown", objectName());
+    if (G::isLogger) G::log("IconView::updateView", objectName());
     update();
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
 }
@@ -1497,35 +1497,13 @@ void IconView::mousePressEvent(QMouseEvent *event)
     to imageView, which pans to the same center in zoom view. This is handy
     when the user wants to view a specific part of another image that is in a
     different position than the current image.
-
-    Important: QListView::mousePressEvent triggers IconView::selectionChanged,
-    where the behavior of the currentIndex is controlled and MW::fileSelectionChange
-    is triggered.  IconView scrolling is controlled in MW::fileSelectionChange.
 */
     if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
 
-    // is this a grid or a thumb view
-//    if (G::mode == "Grid") G::fileSelectionChangeSource =  "GridMouseClick";
-//    else G::fileSelectionChangeSource =  "ThumbMouseClick";
-    if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
-    else G::fileSelectionChangeSource =  "ThumbMouseClick";
-
-    QModelIndex currPosIdx = indexAt(event->pos());
-    int row = currPosIdx.row();
+    QListView::mousePressEvent(event);
 
     // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();
-
-    // check attempt to deselect only selected item (must always be one selected)
-    bool isCtrlMod = modifiers & Qt::ControlModifier;
-    if (isCtrlMod) {
-        dm->toggleRowSelection(row);
-        // update IconView delegate in case currentIndex changes
-        updateView();
-    }
-    else {
-        QListView::mousePressEvent(event);
-    }
 
     // is start tab currently visible
     if (m2->centralLayout->currentIndex() == m2->StartTab)
@@ -1548,22 +1526,22 @@ void IconView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-//    QModelIndex currPosIdx = indexAt(event->pos());
-
     // left button or touch
     if (event->button() == Qt::LeftButton) {
+        QModelIndex idx = indexAt(event->pos());
+        if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
+        else G::fileSelectionChangeSource =  "ThumbMouseClick";
+        QString src = "IconView::mousePressEvent " + objectName();
+
         // unmodified click or touch
         if (!modifiers) {
-            // trigger fileSelectionChange
-            QString src = "IconView::mousePressEvent " + objectName();
-            emit fileSelectionChange(currPosIdx, QModelIndex(), true, src);
-            updateView();
+            m2->fileSelectionChange(idx, QModelIndex(), true, src);
 
-            // reqd for thumb resizing
+            // thumb resizing
             isLeftMouseBtnPressed = true;
             /* Capture the percent coordinates of the mouse click within the thumbnail
                so that the full scale image can be zoomed to the same point.  */
-            QRect iconRect = currPosIdx.data(G::IconRectRole).toRect();
+            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
             QPoint mousePt = event->pos();
             QPoint iconPt = mousePt - iconRect.topLeft();
             xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
@@ -1598,6 +1576,25 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     if (G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
 
     QListView::mouseReleaseEvent(event);
+
+    QModelIndex idx = indexAt(event->pos());
+
+    /*
+    qDebug() << "\nIconView::mouseReleaseEvent"
+             << "\n" << "idx =" << idx
+             << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
+             << "\n" << "row =" << idx.row()
+             << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
+             << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
+             << "\n" << "dm selected =" << dm->isSelected(idx.row())
+             << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
+                ;
+                //*/
+
+    if (event->modifiers() & Qt::ControlModifier) {
+        // check attempt to deselect only selected item (must always be one selected)
+        dm->chkForDeselection(idx.row());
+    }
 
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
@@ -1692,7 +1689,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     }
 
     if (failReason.length()) {
-        qDebug() << "IconView::zoomCursor Failed because" << failReason;
+//        qDebug() << "IconView::zoomCursor Failed because" << failReason;
         return;
     }
     else {

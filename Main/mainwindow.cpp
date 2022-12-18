@@ -1017,8 +1017,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     thumbDock is referenced from the parent because thumbView is a friend class to MW.
     */
 
-    if (event->type() == QEvent::MouseButtonPress) {
-//        qDebug() << "MW::eventFilter" << obj << obj->objectName(); // << event;
+     if (event->type() == QEvent::MouseButtonPress) {
         if (obj->objectName() == "FiltersViewport") return false;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
@@ -1757,10 +1756,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 ;
                 //*/
 
-    // check if current selection = current index.  If so, nothng to do
-    if (current == dm->currentSfIdx) return;
-
-    if (!isCurrentFolderOkay
+     if (!isCurrentFolderOkay
             || G::isInitializing
             || isFilterChange
             || !G::isNewFolderLoaded)
@@ -1778,6 +1774,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         dm->select(0);
         return;
     }
+
+    // check if current selection = current index.  If so, nothng to do
+    if (current == dm->currentSfIdx) return;
 
     /*
     qDebug() << "MW::fileSelectionChange"
@@ -1834,10 +1833,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (thumbView->isVisible())  thumbView->scrollToRow(dm->currentSfRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(dm->currentSfRow, __FUNCTION__);
     }
-//    if (previous.isValid()) {
-        if (thumbView->isVisible()) thumbView->repaint();
-        if (gridView->isVisible()) gridView->repaint();
-//    }
+
+    // update delegates to show current
+    if (thumbView->isVisible()) thumbView->updateView();
+    if (gridView->isVisible()) gridView->updateView();
 
     // reset table, grid or thumb item clicked
     G::fileSelectionChangeSource = "";
