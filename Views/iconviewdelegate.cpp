@@ -525,7 +525,9 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setBrush(G::backgroundColor);
         painter->drawRect(bRect);
         painter->setPen(videoTextcolor);
-        painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
+        QString vText;
+        G::renderVideoThumb ? vText = duration : vText = "Video";
+        painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, vText);
     }
 
     // show lock if file does not have read/write permissions

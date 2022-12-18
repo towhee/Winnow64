@@ -119,7 +119,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->setThumbParameters();
+    G::renderVideoThumb = true;
 //    thumbView->thumbsFitTopOrBottom();
 }
 

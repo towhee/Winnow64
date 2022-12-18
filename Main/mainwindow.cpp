@@ -4128,6 +4128,7 @@ void MW::writeSettings()
     setting->setValue("modifySourceFiles", G::modifySourceFiles);
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
+    setting->setValue("renderVideoThumb", G::renderVideoThumb);
     setting->setValue("tryConcurrentLoading", !G::isLinearLoading);
     setting->setValue("isLogger", G::isLogger);
     setting->setValue("isErrorLogger", G::isErrorLogger);
@@ -4512,6 +4513,10 @@ bool MW::loadSettings()
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
         G::embedTifThumb = false;
+    if (setting->contains("renderVideoThumb"))
+        G::renderVideoThumb = setting->value("renderVideoThumb").toBool();
+    else
+        G::renderVideoThumb = false;
     // show/hide use of ConcurrentLoading for dev/release using G::tryConcurrentLoading
     if (G::tryConcurrentLoading) {
         if (setting->contains("tryConcurrentLoading"))

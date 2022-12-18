@@ -120,6 +120,7 @@ namespace G
     bool useSidecar;
     bool embedTifThumb;
     bool isLinearLoading;               // = !tryConcurrentLoading;
+    bool renderVideoThumb;
 
     // ingest
     bool isRunningBackgroundIngest;

@@ -208,7 +208,10 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     // If video file then just show video icon
     if (metadata->videoFormats.contains(ext)) {
-        loadFromVideo(fPath, dmRow);
+        if (G::renderVideoThumb) {
+            loadFromVideo(fPath, dmRow);
+        }
+
         QFile(fPath).setPermissions(oldPermissions);
         return true;
     }

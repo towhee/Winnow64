@@ -257,6 +257,10 @@ itemChange, which is subclassed here.
         G::embedTifThumb = v.toBool();
     }
 
+    if (source == "renderVideoThumb") {
+        G::renderVideoThumb = v.toBool();
+    }
+
     if (source == "tryConcurrentLoading") {
         G::isLinearLoading = !v.toBool();
     }
@@ -513,6 +517,23 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
+    // Render video thumbnails
+    i.name = "renderVideoThumb";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Render video thumbnails (slow).";
+    i.tooltip = "If true, the first frame of the video with be shown as the\n"
+                "thumbnail.  If false, then ""Video"" will be shown at the\n"
+                "bottom of the video.  Rendering the first frame cam be quite\n"
+                "slow, so if performance is important then do not render."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::renderVideoThumb;
+    i.key = "renderVideoThumb";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     // Try concurrent loading
     i.name = "tryConcurrentLoading";
     i.parentName = "GeneralHeader";
@@ -521,7 +542,7 @@ void Preferences::addItems()
                 "will be loaded concurrently.  For larger folders, this will\n"
                 "allow you to browse full size images almost immediately.\n\n"
                 "Please note that this is beta and may have some stability issues."
-                ;
+            ;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = !G::isLinearLoading;
