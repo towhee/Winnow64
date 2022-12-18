@@ -1426,7 +1426,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
-    // mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     /* const QIcon icon(pm) - required to prevent occasional malloc deallocation error
        in qarraydata.h deallocate:
@@ -1440,7 +1439,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     item->setIcon(icon);
     setData(dmIdx, false, G::CachingIconRole);
     setIconMax(pm);
-    // mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)

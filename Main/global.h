@@ -248,6 +248,7 @@ namespace G
     extern bool useSidecar;
     extern bool embedTifThumb;
     extern bool isLinearLoading;
+    extern bool renderVideoThumb;
 
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;

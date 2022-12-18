@@ -357,7 +357,7 @@ bool MetadataCache::loadIcon(int sfRow)
         QString fPath = dmIdx.data(G::PathRole).toString();
         QPixmap pm;
         bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetadataCache::loadIcon");
-        if (isVideo) {
+        if (isVideo && G::renderVideoThumb) {
             iconsCached.append(dmRow);
             return true;
         }
