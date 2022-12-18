@@ -1902,26 +1902,43 @@ void DataModel::invertSelection()
     if (idx.isValid()) emit currentChanged(idx);
 }
 
-void DataModel::toggleRowSelection(int sfRow)
+void DataModel::chkForDeselection(int sfRow)
+/*
+    The selection change to sfRow has already occurred.  Check attempt to deselect
+    only selected row (must always be one selected).  Also check to see if the
+    current row in a selection range greater than one has been deselected.  If so,
+    then select the nearest selected row.
+*/
 {
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::select QModelIndex");
+
     QModelIndex idx = sf->index(sfRow, 0);
-    if (isSelected(sfRow)) {
-        // deselect
-        if (selectionModel->selectedRows().count() > 1) {
-            selectionModel->select(idx, QItemSelectionModel::Deselect  | QItemSelectionModel::Rows);
+    int count = selectionModel->selectedRows().count();
+    bool isCurrent = idx == currentSfIdx;
+
+    qDebug() << "DataModel::chkForDeselection"
+             << "row =" << sfRow
+             << "isSelected =" << isSelected(sfRow)
+             << "isCurrent =" << isCurrent
+             << "count =" << count
+                ;
+
+    if (!isSelected(idx.row())) {
+        // reselect if no selected rows
+        if (selectionModel->selectedRows().count() == 0) {
+            selectionModel->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
+        }
+        //
+        else {
             if (idx == currentSfIdx) {
                 // just deselected current index, move current index to nearest selected
-                idx = getNearestSelectedIndex(sfRow);
-                // MW::fileSelectionChange (updates DataModel current indexes, rows)
-                if (idx.isValid()) emit currentChanged(idx);
+                QModelIndex nearestIdx = getNearestSelectedIndex(sfRow);
+//                currentSfIdx = getNearestSelectedIndex(sfRow);
+//                currentSfRow = currentSfIdx.row();
+                emit currentChanged(nearestIdx, QModelIndex(), false);
             }
         }
-    }
-    else {
-        // select
-        selectionModel->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
     }
 }
 

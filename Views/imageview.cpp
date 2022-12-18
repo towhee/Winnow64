@@ -38,6 +38,7 @@ ImageView::ImageView(QWidget *parent,
     if (G::isLogger) G::log("ImageView::ImageView");
 
     this->mainWindow = parent;
+    setObjectName("ImageView");
 //    this->centralWidget = centralWidget;
     this->metadata = metadata;
     this->dm = dm;
@@ -931,6 +932,20 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     if (G::isLogger) G::log("ImageView::mouseDoubleClickEvent");
     // placeholder function pending use
     QGraphicsView::mouseDoubleClickEvent(event);
+    mousePressPt.setX(event->x());
+    mousePressPt.setY(event->y());
+
+    if (isFit) {
+//        if (isDebug) qDebug() << "ImageView::mousePressEvent isFit, zoomToggle";
+        zoomToggle();
+        scale();
+        isZoomToggled = true;
+        setCursor(Qt::PointingHandCursor);
+    }
+    else {
+//        if (isDebug) qDebug() << "ImageView::mousePressEvent not isFit";
+        isZoomToggled = false;
+    }
 
 }
 
@@ -939,7 +954,9 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     if (G::isLogger) G::log("ImageView::mousePressEvent");
 
     // bad things happen if no image when click
-    if (currentImagePath.isEmpty()) return;
+    if (currentImagePath.isEmpty()) {
+        return;
+    }
 
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
@@ -958,7 +975,9 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    if (isMouseDoubleClick) return;
+    if (isMouseDoubleClick) {
+        return;
+    }
 
     isMouseDoubleClick = false;
     isMouseDrag = false;
@@ -989,7 +1008,6 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         }
 
     }
-//    QGraphicsView::mousePressEvent(event);
 }
 
 void ImageView::mouseMoveEvent(QMouseEvent *event)
@@ -1068,7 +1086,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     isLeftMouseBtnPressed = false;
 
     // if mouse dragging then do not toggle zoom
-    if (isMouseDrag || isMouseDoubleClick) {
+    if (isMouseDrag /*|| isMouseDoubleClick*/) {
         isMouseDrag = false;
         if (isScrollable) setCursor(Qt::OpenHandCursor);
         else setCursor(Qt::ArrowCursor);
