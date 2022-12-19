@@ -665,6 +665,7 @@ void Embel::updateText(int i)
     // font
     QFont font(p->t[i].font);
     int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
+    if (fontSize < 6) fontSize = 6;
     font.setPixelSize(fontSize);
     font.setItalic(p->t[i].isItalic);
     font.setBold(p->t[i].isBold);

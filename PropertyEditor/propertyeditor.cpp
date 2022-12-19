@@ -515,6 +515,7 @@ void PropertyEditor::resizeColumns()
 {
     QFont fnt = this->font();
     int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    if (px < 6) px = 6;
     fnt.setPixelSize(px);
     QFontMetrics fm(fnt);
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();

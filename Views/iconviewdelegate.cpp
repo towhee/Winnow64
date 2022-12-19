@@ -163,6 +163,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     delegateShowThumbLabels = showThumbLabels;
 //    fPad = thumbPadding;
     font = QApplication::font();
+    if (labelFontSize < 6) labelFontSize = 6;
     font.setPixelSize(labelFontSize);
     QFontMetrics fm(font);
     fontHt = fm.height();
@@ -462,7 +463,9 @@ void IconViewDelegate::paint(QPainter *painter,
         numberPen.setWidth(2);
         painter->setBrush(G::backgroundColor);
         QFont numberFont = painter->font();
-        numberFont.setPixelSize(badgeSize);
+        int pxSize = badgeSize;
+        if (pxSize < 6) pxSize = 6;
+        numberFont.setPixelSize(pxSize);
         numberFont.setBold(true);
         painter->setFont(numberFont);
         QFontMetrics fm(numberFont);
@@ -508,7 +511,9 @@ void IconViewDelegate::paint(QPainter *painter,
             ratingTextPen.setWidth(2);
             painter->setPen(ratingTextPen);
             QFont font = painter->font();
-            font.setPixelSize(badgeSize);
+            int pxSize = badgeSize;
+            if (pxSize < 6) pxSize = 6;
+            font.setPixelSize(pxSize);
             font.setBold(true);
             painter->setFont(font);
             painter->drawText(ratingTextRect, Qt::AlignCenter, rating);

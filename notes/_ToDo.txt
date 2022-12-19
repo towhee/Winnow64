@@ -16,8 +16,6 @@ WHAT'S NEW
 - A lot of minor bug fixes
 
 BUGS / TO DO
-- Remember folder crashing
-- Fix drag selection
 - Add a selection class for all SelectionModel operations
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -89,6 +87,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Crash on open if just hid an info field
+- Remember folder crashing
+- Fix drag selection
 - Render video thumbnails option for performance
 - ImageView not toggling zoom with every mouse click (ignore mouse double click)
 - Show missing bookmarks in red

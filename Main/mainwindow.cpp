@@ -440,6 +440,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         // process the persistant folder if available
         if (rememberLastDir && !isShift) {
             if (isFolderValid(lastDir, true, true)) {
+                stop("MW::MW rememberLastDir");
                 fsTree->select(lastDir);
                 folderSelectionChange();
             }
@@ -995,7 +996,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 prevTabIndex = i;
                 QFontMetrics fm(QToolTip::font());
                 int h = fm.boundingRect(tip).height();
-                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h*2);
+                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h);
                 QToolTip::hideText();
                 QToolTip::showText(locPos, tip, tabBar);
             }
@@ -1746,8 +1747,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << "current =" << current
              << "row =" << current.row()
              << "dm->currentDmIdx =" << dm->currentDmIdx
-//             << "G::isInitializing =" << G::isInitializing
-//             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isInitializing =" << G::isInitializing
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
 //             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
 //             << "isCurrentFolderOkay =" << isCurrentFolderOkay
@@ -1755,12 +1756,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
-
-     if (!isCurrentFolderOkay
-            || G::isInitializing
-            || isFilterChange
-            || !G::isNewFolderLoaded)
-        return;
+    if (!rememberLastDir)
+        if (!isCurrentFolderOkay
+                || G::isInitializing
+                || isFilterChange
+                || !G::isNewFolderLoaded)
+            return;
 
     if (!currRootDir.exists()) {
         refreshFolders();
@@ -1777,7 +1778,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // check if current selection = current index.  If so, nothng to do
     if (current == dm->currentSfIdx) return;
-
     /*
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
@@ -2523,7 +2523,6 @@ void MW::loadLinearNewFolder()
     updateIconBestFit();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
-
     // re-enable sorting and filtering
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
@@ -2551,7 +2550,7 @@ void MW::loadImageCacheForNewFolder()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadImageCacheForNewFolder");
 
     // clear the cache progress bar
-    if(isShowCacheProgressBar) {
+    if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
     }
 
