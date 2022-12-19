@@ -1535,7 +1535,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
         // unmodified click or touch
         if (!modifiers) {
-            m2->fileSelectionChange(idx, QModelIndex(), true, src);
+            m2->fileSelectionChange(idx, QModelIndex(), false, src);
 
             // thumb resizing
             isLeftMouseBtnPressed = true;
@@ -1594,6 +1594,11 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     if (event->modifiers() & Qt::ControlModifier) {
         // check attempt to deselect only selected item (must always be one selected)
         dm->chkForDeselection(idx.row());
+    }
+
+    if  (!event->modifiers() && isMouseDrag) {
+        QString src = "IconView::mouseReleaseEvent";
+        m2->fileSelectionChange(idx, QModelIndex(), true, src);
     }
 
     isLeftMouseBtnPressed = false;

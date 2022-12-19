@@ -1850,7 +1850,7 @@ void DataModel::select(int row)
     if (isDebug) qDebug() << "DataModel::select int" << "instance =" << instance
                           << "row =" << row
                           << currentFolderPath;
-    select(sf->index(row,0));
+    select(sf->index(row, 0));
 }
 
 void DataModel::select(QModelIndex sfIdx)

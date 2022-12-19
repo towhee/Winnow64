@@ -121,6 +121,7 @@ void ClassificationLabel::paintEvent(QPaintEvent *event)
         }
         painter.setPen(ratingTextPen);
         int fontHeight = static_cast<int>(diameter - 6);
+        if (fontHeight < 6) fontHeight = 6;
         font.setPixelSize(fontHeight);
     //    font.setBold(true);
         painter.setFont(font);
