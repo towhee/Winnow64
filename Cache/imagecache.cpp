@@ -79,7 +79,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = false;
+    debugCaching = true;
 }
 
 ImageCache::~ImageCache()
@@ -647,7 +647,7 @@ void ImageCache::setSizeMB(int id, int cacheKey)
     int w = image->width();
     int h = image->height();
     // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-    icd->cacheItemList[cacheKey].sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+    icd->cacheItemList[cacheKey].sizeMB = static_cast<float>(w * h * 1.0 / 262144);
     icd->cacheItemList[cacheKey].estSizeMB = false;
     // recalc currMB
     icd->cache.currMB = getImCacheSize();
@@ -1069,7 +1069,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
     mutex.lock();
-    float sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+    float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
     if (sizeMB > 0) {
         // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
         icd->cacheItemList[row].sizeMB = sizeMB;
