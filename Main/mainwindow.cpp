@@ -506,38 +506,28 @@ void MW::showEvent(QShowEvent *event)
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 //    QMainWindow::showEvent(event);
 //    return;
+    static int count = 0;
+    count++;
+    qDebug() << "MW::showEvent" << count << geometry();
+
+    qDebug() << "MW::showEvent before       showEvent:"
+             << "geometry() =" << geometry()
+                ;
 
     QMainWindow::showEvent(event);
     getDisplayProfile();
 
-    if (isSettings) {
-        // restore internal geometry (scren location,
-        restoreGeometry(setting->value("Geometry").toByteArray());
-//        // run restoreGeometry second time if display has been scaled
-        if (G::actDevicePixelRatio > 1.0)
-            restoreGeometry(setting->value("Geometry").toByteArray());
+    /*
+    For Mac (not sure about Win), if there are multiple screens, executing
+    restoreGeometry here does not work if the previous geometry was in any screen other
+    than the leftmost screen. Qt does not seem to know aobut the overall operating system
+    geometry until later in the QGuiApplication startup process.
 
-        // restoreState sets docks which triggers setThumbDockFeatures prematurely
-        restoreState(setting->value("WindowState").toByteArray());
-        /*
-        // do not start with filterDock open
-        if (filterDock->isVisible()) {
-            folderDock->raise();
-            folderDockVisibleAction->setChecked(true);
-        }
-        //*/
-        updateState();
-        /*
-        // if embel dock visible then set mode to embelView
-        embelDockVisibilityChange();    // rgh not being used
-        //*/
-    }
-    else {
-        defaultWorkspace();
-    }
-
-//    QMainWindow::showEvent(event);
-//    getDisplayProfile();
+    Workaround: Make the application clear so the user cannot see the window
+    appear in the wrong location.  When the event->type() == QEvent::WindowTitleChange
+    happens then restore the geometry and state and reset the opacity to 1.
+    */
+    setWindowOpacity(0);
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
@@ -548,7 +538,7 @@ void MW::showEvent(QShowEvent *event)
     embelProperties->resizeColumns();
 
     // check for updates
-    if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(100, this, SLOT(checkForUpdate()));
+    if (checkIfUpdate && !isStartupArgs) QTimer::singleShot(100, this, SLOT(checkForUpdate()));
 
     // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
     QPoint loc = centralWidget->window()->geometry().center();
@@ -585,7 +575,7 @@ void MW::closeEvent(QCloseEvent *event)
 //    if (testCrash) return;
 
     setCentralMessage("Closing Winnow ...");
-    stop();
+    stop("MW::closeEvent");
 //    metaReadThread->stop();
 //    imageCacheThread->stop();
 //    metadataCacheThread->stop();
@@ -844,19 +834,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* RESTORE GEOMETRY ***********************************************************************
 
     The geometry is initially restored in MW::showEvent.  On MacOS, if the window was not
-    located on the primary screen, then restoreGeometry does not move the window to
+    located on the leftmost screen, then restoreGeometry does not move the window to
     its prior screen location until after the event loop finishes all windowActivate events.
-
     */
 
-    if (event->type() == QEvent::Expose && G::isInitializing) {
-        // second time event triggered is after event loop finishes all windowActivate events.
-        static int count = 0;
-        if (count) G::isInitializing = false;
-        count++;
+    if (event->type() == QEvent::WindowTitleChange && G::isInitializing) {
         if (isSettings) {
+            qDebug() << "event->type() == QEvent::ScreenChangeInternal && obj == this && G::isInitializing";
             restoreGeometry(setting->value("Geometry").toByteArray());
+            restoreState(setting->value("WindowState").toByteArray());
         }
+        else {
+            defaultWorkspace();
+        }
+        setWindowOpacity(1);
+        G::isInitializing = false;
     }
 
     /* EMBEL DOCK TITLE ***********************************************************************
@@ -3580,6 +3572,9 @@ void MW::setDisplayResolution()
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
     monitorChanged = screen->name() != prevScreenName;
+
+    if (!monitorChanged) return;
+
     /*
     qDebug() << "MW::setDisplayResolution" << "1"
              << "G::isInitializing  =" << G::isInitializing

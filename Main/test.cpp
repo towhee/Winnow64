@@ -119,8 +119,31 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    G::renderVideoThumb = true;
-//    thumbView->thumbsFitTopOrBottom();
+//    QList<QScreen*> screens = QGuiApplication::screens();
+//    for (int i = 0; i < screens.size(); i++) {
+//        qDebug() << i
+//                 << screens.at(i)->geometry()
+//                 << screens.at(i)->serialNumber()
+//                 << screens.at(i)->manufacturer()
+//                 << screens.at(i)->name()
+//                    ;
+//    }
+//    return;
+//    setVisible(false);
+//    move (100,100);
+//    setVisible(true);
+//    return;
+
+//    show();
+//    return;
+//    QPoint p = setting->value("WindowLocation").toRect().topLeft();
+//    move(setting->value("WindowLocation").toRect().topLeft());
+//    return;
+//    setGeometry(setting->value("WindowLocation").toRect());
+//    return;
+//    QRect r(1239,516, 1712,985);
+//    qDebug() << geometry();
+//    setGeometry(r);
 }
 
 //0 IconView::bestAspect                               Thumbnails
