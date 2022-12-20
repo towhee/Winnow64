@@ -1838,6 +1838,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (thumbView->isVisible()) thumbView->updateView();
     if (gridView->isVisible()) gridView->updateView();
 
+//    // icons may require resizing to fit
+//    if (thumbView->isVisible()) thumbView->repaint();
+//    if (gridView->isVisible()) gridView->repaint();
+
     // reset table, grid or thumb item clicked
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
@@ -2521,6 +2525,7 @@ void MW::loadLinearNewFolder()
     mct->readIconChunk();
     if (reset(src + "6")) return;
     updateIconBestFit();
+    thumbView->thumbsFitTopOrBottom();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
     // re-enable sorting and filtering
