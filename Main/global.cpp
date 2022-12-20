@@ -5,7 +5,7 @@ namespace G
     QSettings *settings;
 
     // system messaging
-    bool isLogger = true;              // Writes log messages to file or console
+    bool isLogger = false;              // Writes log messages to file or console
     bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
