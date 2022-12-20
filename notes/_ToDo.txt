@@ -1,13 +1,13 @@
 WHAT'S NEW
 - Play video (loading video thumbnails is slow)
-- Mouse wheel sensitivity preference
 - Icon/Thumbnail numbering (Menu: View > Show icon number)
+- Mouse wheel sensitivity preference
 - Drag and drop files within Winnow
-- External app arguments
-- Copy paths to clipboard for selected images
 - Read GPS coord
 - Read keywords
 - Filter by keywords
+- External app arguments
+- Copy paths to clipboard for selected images
 - Improved crash recovery
 - Read Olympus serial number
 - Esc cancels more processes including background ingest
