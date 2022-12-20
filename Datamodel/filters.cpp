@@ -1042,9 +1042,16 @@ void Filters::mousePressEvent(QMouseEvent *event)
     if (G::isLogger) G::log("Filters::mousePressEvent");
     if (buildingFilters) return;
     QPoint p = event->pos();
+    QModelIndex idx = indexAt(p);
+    // ignore if click below filter items
+    if (!idx.isValid()) {
+        QTreeWidget::mousePressEvent(event);
+        return;
+    }
+
     // ignore mouse clicks on decoration to the header
     if (p.x() < indentation) p.setX(indentation);
-    QModelIndex idx = indexAt(p);
+
     QTreeWidgetItem *item = itemFromIndex(idx);
     bool isLeftBtn = event->button() == Qt::LeftButton;
     bool isHdr = idx.parent() == QModelIndex();

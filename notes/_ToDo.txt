@@ -87,6 +87,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Not counting in filters for keywords
 - Crash on open if just hid an info field
 - Remember folder crashing
 - Fix drag selection

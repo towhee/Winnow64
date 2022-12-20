@@ -177,7 +177,7 @@ void BuildFilters::countFiltered()
             int tot = 0;
             dm->mutex.lock();
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
-                if (cat == " Keywords") {
+                if (cat == "Keywords") {
                     QStringList x = dm->index(row, col).data().toStringList();
                     for (int i = 0; i < x.size(); i++) {
                         if (x.at(i) == searchValue) tot++;
@@ -230,7 +230,7 @@ void BuildFilters::countUnfiltered()
             dm->mutex.lock();
             for (int row = 0; row < dmRows; ++row) {
                 bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
-                if (cat == " Keywords") {
+                if (cat == "Keywords") {
                     QStringList x = dm->index(row, col).data().toStringList();
                     for (int i = 0; i < x.size(); i++) {
                         if (x.at(i) == searchValue) {
