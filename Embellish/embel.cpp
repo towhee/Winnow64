@@ -171,7 +171,7 @@ void Embel::build(QString path, QString src)
     The image created by following the embellish template happens here. The path to the
     current image is not required if the source is the main Winnow program. However, if the
     source is an EmbelExort then path will be defined, and the data model will not have
-    been loaded, requiring a call Metadata to load the image data.
+    been loaded, requiring a call to Metadata to load the image data.
 
     isRemote == true when build is called by EmbelExport and the source is an external program.
     It is used in updateText when a token string is applied.

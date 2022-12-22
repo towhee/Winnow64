@@ -1,21 +1,7 @@
 WHAT'S NEW
-- Play video (loading video thumbnails is slow)
-- Icon/Thumbnail numbering (Menu: View > Show icon number)
-- Mouse wheel sensitivity preference
-- Drag and drop files within Winnow
-- Read GPS coord
-- Read keywords
-- Filter by keywords
-- External app arguments
-- Copy paths to clipboard for selected images
-- Improved crash recovery
-- Read Olympus serial number
-- Esc cancels more processes including background ingest
-- Filter header text red if part of filtration criteria
-- Icon selection issues
-- A lot of minor bug fixes
 
 BUGS / TO DO
+- Remote embellish G::dmEmpty issue
 - Add a selection class for all SelectionModel operations
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -47,7 +33,8 @@ BUGS / TO DO
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - DNG without JPG preview: show TIFF?
 - DNG without jpg preview: add one similar to TIFF
-- Tiff with compression = 7, 8 not supported
+- TIF LZW and predictor = 2 (crashes)
+- Tiff with compression = 7, 8 not supported /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
 - Copy / paste files inside Winnow
 - Maintain count when switch folders during the same ingest
@@ -69,6 +56,7 @@ MAC
 - Add HEIC files to Mac https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/imageio_source/ikpg_source.html#//apple_ref/doc/uid/TP40005462-CH218-SW3
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Mac check for updates not done yet
+- Share https://developer.apple.com/documentation/appkit/nssharingservice?language=objc
 PERFORMANCE
 - HEIF files are slow
 CODE IMPROVEMENTS
@@ -87,6 +75,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Use Qt image load if TIF LZW and predictor = 2 (crashes)
 - Not counting in filters for keywords
 - Crash on open if just hid an info field
 - Remember folder crashing

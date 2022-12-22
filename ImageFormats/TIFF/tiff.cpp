@@ -811,10 +811,11 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    if (compression == 1) decodeBase(/*m, */p, image);
-    if (compression == 5) decodeLZW(p, image);
-//    qDebug() << "Tiff::decode" << "Close" << p.file.fileName();
+    bool decoded;
+    if (compression == 1) decoded = decodeBase(/*m, */p, image);
+    if (compression == 5) decoded = decodeLZW(p, image);
     p.file.close();
+    if (!decoded) return false;
 
     if (bitsPerSample == 16) {
         if (isBigEnd) invertEndian16(im);
@@ -839,7 +840,7 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
     return true;
 }
 
-void Tiff::decodeBase(MetadataParameters &p, QImage &image)
+bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
 {
     if (G::isLogger) G::log("Tiff::decodeBase");
     int strips = stripOffsets.count();
@@ -874,10 +875,13 @@ void Tiff::decodeBase(MetadataParameters &p, QImage &image)
             scanBytes += bytesPerRow;
         }
     }
+    return true;
 }
 
 bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
 {
+    if (G::isLogger) G::log("Tiff::decodeLZW");
+    qDebug() << "Tiff::decodeLZW" << p.fPath;
     int strips = stripOffsets.count();
     TiffStrips tiffStrips;
     QFuture<void> future;
@@ -888,7 +892,27 @@ bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
         tiffStrip.bitsPerSample = bitsPerSample;
         tiffStrip.bytesPerRow = bytesPerRow;
         tiffStrip.stripBytes = stripByteCounts.at(strip);
-        if (predictor == 2) tiffStrip.predictor = true;
+        if (predictor == 2) {
+            tiffStrip.predictor = true;
+            /*
+            this is causing a crash when decoding
+            /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
+            in Tiff::TiffStrips Tiff::lzwDecompress:
+
+            if (t.predictor) {
+                // output char string for code (add from left)
+                // pBuf   00000000 11111111 22222222 33333333
+                for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+                    if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
+                    else *out++ = (*(s[code] + i) + *(out - 3));  // crash here
+                    ++n;
+                }
+            }
+
+            So, return and use default tif decoder for now.
+            */
+            return false;
+        }
         // read tiff strip into QByteArray
         p.file.seek(stripOffsets.at(strip));
         inBa.append(p.file.read(stripByteCounts.at(strip)));
@@ -1008,8 +1032,10 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    if (compression == 1) decodeBase(/*m, */p, *im);
-    if (compression == 5) decodeLZW(p, *im);
+    bool decoded;
+    if (compression == 1) decoded = decodeBase(/*m, */p, *im);
+    if (compression == 5) decoded = decodeLZW(p, *im);
+    if (!decoded) return false;
 
     if (bitsPerSample == 16) {
         if (m.isBigEnd) invertEndian16(im);

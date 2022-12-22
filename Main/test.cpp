@@ -119,6 +119,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    restoreLastSessionGeometryState();
 //    QList<QScreen*> screens = QGuiApplication::screens();
 //    for (int i = 0; i < screens.size(); i++) {
 //        qDebug() << i
@@ -145,8 +146,3 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    qDebug() << geometry();
 //    setGeometry(r);
 }
-
-//0 IconView::bestAspect                               Thumbnails
-//0 IconView::setThumbParameters                       Thumbnails
-//3 MW::setThumbDockHeight
-//50 MW::setThumbDockFeatures

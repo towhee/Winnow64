@@ -1115,12 +1115,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
 bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                                  bool essential, bool nonEssential,
-                                 bool isReport, bool isLoadXmp, QString source)
+                                 bool isReport, bool isLoadXmp, QString source,
+                                 bool isRemote)
 {
     if (G::isLogger) G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
 
     // check abort
-    if (G::dmEmpty) return false;
+    if (G::dmEmpty && !isRemote) return false;
 
     // check instance up-to-date
     if (instance != G::dmInstance) {
@@ -1129,6 +1130,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                    << "this =" << instance
                    << "DM =" << G::dmInstance
                       ;
+        QString msg = "this instance: " + QString::number(instance) +
+                "DM instance: " + QString::number(G::dmInstance);
+        Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
         return false;
     }
 
@@ -1181,6 +1185,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
+        Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         return false;
     }
 

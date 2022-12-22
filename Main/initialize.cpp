@@ -3,6 +3,7 @@
 void MW::initialize()
 {
     if (G::isLogger) G::log("MW::initialize");
+//    connect(windowHandle(), &QWindow::screenChanged, this, &MW::restoreLastSessionGeometryState);
     this->setWindowTitle(winnowWithVersion);
     G::stop = false;
     G::dmEmpty = true;
