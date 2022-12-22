@@ -348,6 +348,7 @@ protected:
 
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
+    void restoreLastSessionGeometryState();
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();

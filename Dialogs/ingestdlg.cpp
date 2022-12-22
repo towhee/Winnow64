@@ -887,8 +887,8 @@ void IngestDlg::updateFolderPaths()
     // Auto folders
     if (isAuto) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
-                ? ui->descriptionLineEdit->text() + "/" : "";
-        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription;
+                ? ui->descriptionLineEdit->text() : "";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
 //        /*
         qDebug() << "IngestDlg::"
                  << "\nrootFolderPath        =" << rootFolderPath
@@ -1355,7 +1355,7 @@ void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesCB_currentTextChanged");
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
-    if (fromRootToBaseFolder.length() > 0) fromRootToBaseFolder += "/";
+//    if (fromRootToBaseFolder.length() > 0) fromRootToBaseFolder += "/";
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
     updateFolderPaths();
     seqStart += getSequenceStart(folderPath);

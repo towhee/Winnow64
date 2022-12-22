@@ -318,7 +318,7 @@ QT VERSIONS
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     if (G::isLogger) G::log("MW::MW", "START APPLICATION", true);
-    setObjectName("WinnowMainWindow");
+    setObjectName("MW");
 
     // Check if modifier key pressed while program opening
     isShift = false;
@@ -365,7 +365,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
-    setting->setValue("appPath", qApp->applicationDirPath());
+//    setting->setValue("appPath", qApp->applicationDirPath());
+    qDebug() << "MW::MW" << qApp->applicationDirPath();
 
 //    // Logger
 //    if (G::isLogger && G::sendLogToConsole == false) openLog();
@@ -430,6 +431,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     show();
 
+    G::isInitializing = false;
+
     if (isStartupArgs) {
         handleStartupArgs(args);
     }
@@ -490,6 +493,22 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
 }
 
+void MW::restoreLastSessionGeometryState()
+{
+    if (G::isLogger) G::log("MW::restoreLastSessionGeometryState");
+    static int count = 0;
+    if (isSettings) {
+        qDebug() << "MW::restoreLastSessionGeometryState" << count;
+        restoreGeometry(setting->value("Geometry").toByteArray());
+        restoreState(setting->value("WindowState").toByteArray());
+    }
+    else {
+        defaultWorkspace();
+    }
+    setWindowOpacity(1);
+    count ++;
+}
+
 bool MW::isDevelopment()
 {
     if (G::isLogger) G::log("MW::isDevelopment");
@@ -508,11 +527,11 @@ void MW::showEvent(QShowEvent *event)
 //    return;
     static int count = 0;
     count++;
-    qDebug() << "MW::showEvent" << count << geometry();
+//    qDebug() << "MW::showEvent" << count << geometry();
 
-    qDebug() << "MW::showEvent before       showEvent:"
-             << "geometry() =" << geometry()
-                ;
+//    qDebug() << "MW::showEvent before       showEvent:"
+//             << "geometry() =" << geometry()
+//                ;
 
     QMainWindow::showEvent(event);
     getDisplayProfile();
@@ -523,9 +542,9 @@ void MW::showEvent(QShowEvent *event)
     than the leftmost screen. Qt does not seem to know aobut the overall operating system
     geometry until later in the QGuiApplication startup process.
 
-    Workaround: Make the application clear so the user cannot see the window
-    appear in the wrong location.  When the event->type() == QEvent::WindowTitleChange
-    happens then restore the geometry and state and reset the opacity to 1.
+    Workaround: Make the application opacity zero so the user cannot see the window
+    appear in the wrong location.  The main function calls restoreLastSessionGeometryState()
+    after calling show().
     */
     setWindowOpacity(0);
 
@@ -830,26 +849,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 //    */
-
-    /* RESTORE GEOMETRY ***********************************************************************
-
-    The geometry is initially restored in MW::showEvent.  On MacOS, if the window was not
-    located on the leftmost screen, then restoreGeometry does not move the window to
-    its prior screen location until after the event loop finishes all windowActivate events.
-    */
-
-    if (event->type() == QEvent::WindowTitleChange && G::isInitializing) {
-        if (isSettings) {
-            qDebug() << "event->type() == QEvent::ScreenChangeInternal && obj == this && G::isInitializing";
-            restoreGeometry(setting->value("Geometry").toByteArray());
-            restoreState(setting->value("WindowState").toByteArray());
-        }
-        else {
-            defaultWorkspace();
-        }
-        setWindowOpacity(1);
-        G::isInitializing = false;
-    }
 
     /* EMBEL DOCK TITLE ***********************************************************************
 
@@ -1534,6 +1533,7 @@ void MW::folderSelectionChange()
 */
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
+
     if (G::stop) return;
 
     if (G::isLogger || G::isFlowLogger) {

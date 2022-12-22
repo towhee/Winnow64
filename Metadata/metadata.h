@@ -203,7 +203,9 @@ public slots:
                            bool nonEssential = true,
                            bool isReport = false,
                            bool isLoadXmp = false,
-                           QString source = "");
+                           QString source = "",
+                           bool isRemote = false
+            );
 
 };
 

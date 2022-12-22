@@ -11,10 +11,13 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log("MW::dropEvent");
+    qDebug() << "MW::dropEvent";
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         // prevent drop onto folder already active in Winnow
-        if (QFileInfo(fPath).dir() == G::currRootFolder) return;
+//        if (QFileInfo(fPath).dir() == G::currRootFolder) {
+//            return;
+//        }
         handleDrop(fPath);
     }
 }
@@ -31,6 +34,7 @@ void MW::handleDrop(QString fPath)
         }
     }
     else {
+        qDebug() << "MW::handleDrop" << fPath;
         folderAndFileSelectionChange(fPath, "handleDropOnCentralView");
     }
 
