@@ -1167,7 +1167,8 @@ void IconView::thumbsFitTopOrBottom()
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
 
-    int maxCellHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
+    int maxCellHeight = static_cast<int>(newViewportHt * bestAspectRatio);
+//    int maxCellHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
     int hMax = iconViewDelegate->getCellHeightFromThumbHeight(maxCellHeight);
     int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
 
@@ -1179,24 +1180,31 @@ void IconView::thumbsFitTopOrBottom()
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
 
     // make sure within range (should be from thumbSpace check but just to be sure)
-    if (bestAspectRatio < 0.1) bestAspectRatio = 1;
+//    if (bestAspectRatio < 0.1) bestAspectRatio = 1;
     iconHeight = iconHeight > G::maxIconSize ? G::maxIconSize : iconHeight;
     iconHeight = iconHeight < ICON_MIN ? ICON_MIN : iconHeight;
     iconWidth = static_cast<int>(iconHeight / bestAspectRatio);
-//    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
-             << "viewportHeight =" << newViewportHt
-             << "bestAspectRatio =" << bestAspectRatio
-             << "iconHeight =" << iconHeight
-             << "iconWidth =" << iconWidth
-                ;
-//    */
 
     // check thumbWidth within range
     if(iconWidth > G::maxIconSize) {
         iconWidth = G::maxIconSize;
         iconHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
     }
+
+    //    /*
+        qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+                 << "viewportHeight =" << newViewportHt
+                 << "maxCellHeight =" << maxCellHeight
+                 << "bestAspectRatio =" << bestAspectRatio
+                 << "iconHeight =" << iconHeight
+                 << "iconWidth =" << iconWidth
+                 << "hMax =" << hMax
+                 << "hMin =" << hMin
+                 << "G::iconWMax =" << G::iconWMax
+                 << "G::iconHMax =" << G::iconHMax
+                 << "G::maxIconSize =" << G::maxIconSize
+                    ;
+    //    */
 
     // this is critical - otherwise thumbs bunch up
     setSpacing(0);

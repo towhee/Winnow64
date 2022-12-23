@@ -257,11 +257,6 @@ QSize IconViewDelegate::getCellSize(QSize icon)
     return (icon + QSize(pad2, pad2 + textHeight));
 }
 
-int IconViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
-{
-    return cellWidth - pad2;
-}
-
 int IconViewDelegate::getCellWidthFromThumbWidth(int width)
 {
     return width + pad2;
@@ -272,11 +267,17 @@ int IconViewDelegate::getCellHeightFromThumbHeight(int height)
     return height + pad2 + textHeight + 2;
 }
 
+int IconViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
+{
+    return cellWidth - pad2;
+}
+
 int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 {
     // used to fit thumb (icon) into the available viewport height
     int thumbHeight = availHeight - pad2 - textHeight - 2;
-    return thumbHeight <= G::maxIconSize ? thumbHeight : G::maxIconSize;
+    int maxHeight = G::maxIconSize - pad2 - textHeight - 2;
+    return thumbHeight <= G::maxIconSize ? thumbHeight : maxHeight;
 }
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
@@ -305,7 +306,8 @@ void IconViewDelegate::paint(QPainter *painter,
                              const QStyleOptionViewItem &option,
                              const QModelIndex &index) const
 {
-/*  The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
+/*
+    The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
     The thumbSize cell contains a number of cells or rectangles:
 
     Outer dimensions = cellRect or option.rect (QListView icon spacing is set to zero)
@@ -361,9 +363,11 @@ void IconViewDelegate::paint(QPainter *painter,
     if (aspectRatio > 0) {
         if (aspectRatio > 1) {
             iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
+            iconSize.setWidth(thumbSize.width());
         }
         else {
             iconSize.setWidth(thumbSize.width() * aspectRatio);
+            iconSize.setHeight(thumbSize.height());
         }
     }
 
@@ -378,16 +382,16 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconSize.width(), iconSize.height());
 
-    /*
+//    /*
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow
-             << "selected =" << isSelected
+//             << "selected =" << isSelected
              << "cellRect =" << cellRect
 //             << "frameRect =" << frameRect
-             << "thumbRect =" << thumbRect
              << "thumbSize =" << thumbSize
              << "iconsize =" << iconSize
+             << "thumbRect =" << thumbRect
              << "iconRect =" << iconRect
                 ;
 //             */
