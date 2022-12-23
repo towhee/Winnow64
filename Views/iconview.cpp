@@ -11,19 +11,13 @@ The thumbView is inside a QDockWidget which allows it to dock and be moved and r
 
 ThumbView does the following:
 
-    Manages the file list of eligible images, including attributes for selected and picked.
+    Shows the file list of eligible images, including attributes for selected and picked.
     Picked files are shown in green and can be filtered and copied to another folder via the
     ingestDlg class.
 
     The thumbViewDelegate class formats the look of the thumbnails.
 
     Sorts the list based on date acquired, filename and forward/reverse
-
-    Provides functions to navigate the list, including current index, next item, previous
-    item, first item, last item and random item.
-
-    Changes in selection trigger the MW::fileSelectionChange which loads the new selection in
-    imageView and updates status.
 
     The mouse click location within the thumb is used in ImageView to pan a zoomed image.
 
@@ -49,8 +43,6 @@ Note that a "row" in this class refers to the row in the model, which has one th
 not the view in the dock, where there can be many thumbs per row
 
 ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
-
-    Behavior is controlled in preferences
 
         ● thumb/icon size
         ● thumb padding
@@ -105,6 +97,22 @@ Loading icons
     loaded.  A default number of icons (250) are loaded and the best aspect is determined.  The
     number of thumbs visible in the viewport (thumbs per page or tpp) are calculated.  If this
     is more than the number already read then the additional icons are read in a second pass.
+
+Best fit
+
+    The best fit is a function of the aspect ratios of the icon population.  The IconView cell
+    size is defined by the smallest cell that will fit all the icons.  For example, if all the
+    icons are 16x9 landscape then the cell size will be shorter than if the icons were portrait
+    9x16 aspect.  Usually there is a mix, and the thumb size (from which the cell size is calc)
+    is the rectangle that all the icons will fit.
+
+    ie |------------|  and  |------|  fit into  |------------|
+       |            |       |      |            |            |
+       |            |       |      |            |            |
+       |------------|       |      |            |            |
+                            |      |            |            |
+                            |      |            |            |
+                            |------|            |------------|
 */
 
 extern MW *m2;
@@ -895,9 +903,10 @@ void IconView::thumbsShrink()
 int IconView::justifyMargin()
 {
 /*
-The ListView can hold x amount of icons in a row before it wraps to the next row.  There will
-be a right margin where there was not enough room for another icon.  This function returns the
-right margin amount.  It is used in MW::gridDisplay to determine if a rejustify is req'd.
+    The ListView can hold x amount of icons in a row before it wraps to the next row.
+    There will be a right margin where there was not enough room for another icon. This
+    function returns the right margin amount. It is used in MW::gridDisplay to determine
+    if a rejustify is req'd.
 */
     if (G::isLogger) G::log("IconView::justifyMargin", objectName());
     int wCell = iconViewDelegate->getCellSize().width();
@@ -1097,10 +1106,14 @@ void IconView::resizeEvent(QResizeEvent *event)
 void IconView::bestAspect()
 {
 /*
-    This function scans icons in the datamodel to find the greatest height and width of
-    the icons. The resulting max width and height are sent to IconViewDelegate to define
-    the thumbRect that holds each icon. This is also the most compact container
-    available.
+    When a new folder is loaded MetadataCache::loadIcon calls MetadataCache::iconMax for
+    each icon in the datamodel to find the greatest height and width of the icons, stored
+    in G::iconWMax and G::iconHMax. This is used to define the thumb size in
+    IconViewDelegate.
+
+The resulting max width and
+    height are sent to IconViewDelegate to define the thumbRect that holds each icon.
+    This is also the most compact container available.
 
     The function is called after a new folder is selected and the datamodel icon data has
     been loaded. Both thumbView and gridView have to be called.
@@ -1120,7 +1133,7 @@ void IconView::bestAspect()
     if (G::iconHMax > G::iconWMax)
         iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
-     setThumbParameters();
+    setThumbParameters();
 
     bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;
 

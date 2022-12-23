@@ -1013,6 +1013,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (obj->objectName() == "FiltersViewport") return false;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
+        qDebug() << "MW::eventFilter" << "MouseButtonPress"
+                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                 << "isMouseDrag" << isMouseDrag
+                 << obj->objectName();
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
@@ -1020,12 +1024,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
+            qDebug() << "MW::eventFilter" << "MouseButtonRelease"
+                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                     << "isMouseDrag" << isMouseDrag
+                     << obj->objectName();
         }
     }
 
-    if (event->type() == QEvent::MouseMove && obj->objectName() == "WinnowMainWindowWindow") {
-//        qDebug() << "MW::eventFilter" << "MouseMove" << obj->objectName();
+    if (event->type() == QEvent::MouseMove /*&& obj->objectName() == "MWWindow"*/) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
+        qDebug() << "MW::eventFilter" << "MouseMove"
+                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                 << "isMouseDrag" << isMouseDrag
+                 << obj->objectName();
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -1035,12 +1046,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     // make thumbs fit the resized thumb dock
     if (obj == thumbDock) {
         if (event->type() == QEvent::Resize) {
+            qDebug() << "MW::eventFilter" << "thumbDock::Resize"
+                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                     << "isMouseDrag" << isMouseDrag
+                     << obj->objectName();
             if (isMouseDrag) {
                 if (!thumbDock->isFloating()) {
                     Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
                     if (area == Qt::BottomDockWidgetArea
                     || area == Qt::TopDockWidgetArea
                     || !thumbView->isWrapping()) {
+//                        qDebug() << "thumb dock splitter moved";
 //                        QTimer::singleShot(250, thumbView, SLOT(thumbsFitTopOrBottom()));
                         thumbView->thumbsFitTopOrBottom();
                     }
