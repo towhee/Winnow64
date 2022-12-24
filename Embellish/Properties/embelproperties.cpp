@@ -5219,7 +5219,7 @@ void EmbelProperties::flash(QModelIndex idx)
 
 void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("EmbelProperties::mouseMoveEvent");
+//    if (G::isLogger) G::log("EmbelProperties::mouseMoveEvent");
     // nothing to flash
     if (!G::isEmbellish) return;
 
