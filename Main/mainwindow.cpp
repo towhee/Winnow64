@@ -3589,7 +3589,7 @@ void MW::setDisplayResolution()
     if (screen == nullptr) return;
     monitorChanged = screen->name() != prevScreenName;
 
-    if (!monitorChanged) return;
+//    if (!monitorChanged) return;
 
     /*
     qDebug() << "MW::setDisplayResolution" << "1"
