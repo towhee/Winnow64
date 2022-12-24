@@ -382,7 +382,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconSize.width(), iconSize.height());
 
-//    /*
+    /*
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow
