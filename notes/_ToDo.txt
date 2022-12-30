@@ -75,6 +75,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+-
 - Use Qt image load if TIF LZW and predictor = 2 (crashes)
 - Not counting in filters for keywords
 - Crash on open if just hid an info field

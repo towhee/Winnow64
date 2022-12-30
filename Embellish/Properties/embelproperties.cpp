@@ -841,10 +841,10 @@ void EmbelProperties::sortTemplateList()
 void EmbelProperties::readTemplateList()
 {
 /*
-    Read the template list using QSettings. The sort order of the templateList has "Do not
-    Embellish" first, followed by the template items in alphabetical order. The template items
-    are read from settings to a temp list, sorted, and then appended to templateList.
-
+    Read the template list using QSettings. The sort order of the templateList has "Do
+    not Embellish" first, followed by the template items in alphabetical order. The
+    template items are read from settings to a temp list, sorted, and then appended to
+    templateList.
 */
     if (G::isLogger) G::log("EmbelProperties::readTemplateList");
     templateList.clear();

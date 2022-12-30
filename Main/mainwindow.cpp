@@ -321,10 +321,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setObjectName("MW");
 
     // Check if modifier key pressed while program opening
-    isShift = false;
+    isShiftOnOpen = false;
     Qt::KeyboardModifiers modifier = QGuiApplication::queryKeyboardModifiers();
     if (modifier & Qt::ShiftModifier) {
-        isShift = true;
+        isShiftOnOpen = true;
         G::isEmbellish = false;
         qDebug() << "MW::MW" << "isShift == true";
     }
@@ -414,7 +414,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qApp->installEventFilter(this);
 
     // if isShift then set "Do not Embellish".  Note isShift also used in MW::showEvent.
-    if (isShift) {
+    if (isShiftOnOpen) {
         embelTemplatesActions.at(0)->setChecked(true);
         embelProperties->doNotEmbellish();
     }
@@ -441,7 +441,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         if (!isSettings) centralLayout->setCurrentIndex(StartTab);
 
         // process the persistant folder if available
-        if (rememberLastDir && !isShift) {
+        if (rememberLastDir && !isShiftOnOpen) {
             if (isFolderValid(lastDir, true, true)) {
                 stop("MW::MW rememberLastDir");
                 fsTree->select(lastDir);
@@ -523,30 +523,14 @@ bool MW::isDevelopment()
 void MW::showEvent(QShowEvent *event)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
-//    QMainWindow::showEvent(event);
-//    return;
-    static int count = 0;
-    count++;
-//    qDebug() << "MW::showEvent" << count << geometry();
-
-//    qDebug() << "MW::showEvent before       showEvent:"
-//             << "geometry() =" << geometry()
-//                ;
 
     QMainWindow::showEvent(event);
     getDisplayProfile();
 
-    /*
-    For Mac (not sure about Win), if there are multiple screens, executing
-    restoreGeometry here does not work if the previous geometry was in any screen other
-    than the leftmost screen. Qt does not seem to know aobut the overall operating system
-    geometry until later in the QGuiApplication startup process.
+    if (isSettings) restoreLastSessionGeometryState();
 
-    Workaround: Make the application opacity zero so the user cannot see the window
-    appear in the wrong location.  The main function calls restoreLastSessionGeometryState()
-    after calling show().
-    */
-    setWindowOpacity(0);
+    // set thumbanil size to fit the thumbdock initial size
+    thumbView->thumbsFitTopOrBottom();
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
@@ -565,7 +549,7 @@ void MW::showEvent(QShowEvent *event)
 //    currScreen = qApp->screenAt(loc);
 //    connect(currScreen, &QScreen::logicalDotsPerInchChanged, this, &MW::setDisplayResolution);
 
-    if (isShift) refreshFolders();
+    if (isShiftOnOpen) refreshFolders();
 
     // initial status bar icon state
     updateStatusBar();
@@ -1636,7 +1620,6 @@ void MW::folderSelectionChange()
     if (!dm->load(G::currRootFolder, subFoldersAction->isChecked())) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
         qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
-        stop("Load datamodel failed");
         enableSelectionDependentMenus();
         if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", "MW::folderSelectionChange");
@@ -2533,7 +2516,7 @@ void MW::loadLinearNewFolder()
     mct->readIconChunk();
     if (reset(src + "6")) return;
     updateIconBestFit();
-    thumbView->thumbsFitTopOrBottom();
+//    thumbView->thumbsFitTopOrBottom();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
     // re-enable sorting and filtering
@@ -3573,6 +3556,7 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log("MW::setDisplayResolution");
+    return;
 
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;

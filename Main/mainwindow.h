@@ -117,7 +117,7 @@ public:
             "Winnow main page</span></a>.  "
             "Includes links to download and video tutorials.</p></body></html>";
 
-    bool isShift;               // used when opening if shift key pressed
+    bool isShiftOnOpen;               // used when opening if shift key pressed
 
     // debugging flags
     bool ignoreSelectionChange = false;
