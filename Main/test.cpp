@@ -119,7 +119,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    restoreLastSessionGeometryState();
+//    restoreLastSessionGeometryState();
+//    setWindowOpacity(1);
+
 //    QList<QScreen*> screens = QGuiApplication::screens();
 //    for (int i = 0; i < screens.size(); i++) {
 //        qDebug() << i
@@ -137,9 +139,11 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
 //    show();
 //    return;
-//    QPoint p = setting->value("WindowLocation").toRect().topLeft();
-//    move(setting->value("WindowLocation").toRect().topLeft());
-//    return;
+
+    QPoint p = setting->value("WindowLocation").toRect().topLeft();
+    move(setting->value("WindowLocation").toRect().topLeft());
+    return;
+
 //    setGeometry(setting->value("WindowLocation").toRect());
 //    return;
 //    QRect r(1239,516, 1712,985);

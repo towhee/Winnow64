@@ -207,7 +207,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     where and ejected drive has resulted in clearing icd->cacheItemList. */
 
     int dmRow = dm->rowFromPath(fPath);
+    if (dmRow == -1) return false;
     int sfRow = dm->proxyRowFromModelRow(dmRow);
+    if (sfRow == -1) return false;
     bool isCached = false;
     if (icd->cacheItemList.size() >= sfRow) {
         isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";

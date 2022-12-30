@@ -150,7 +150,7 @@ QString MW::diagnostics()
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);
 
     rpt << "\n";
-    rpt << "\n" << "isShift = " << G::s(isShift);
+    rpt << "\n" << "isShift = " << G::s(isShiftOnOpen);
     rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
     rpt << "\n" << "lastPrefPage = " << G::s(lastPrefPage);
 //    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);

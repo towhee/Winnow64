@@ -900,7 +900,7 @@ void DataModel::addAllMetadata()
         // Load folder progress
         if (G::isLinearLoading && row % 100 == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
-                        " secondary metadata loading...";
+                        " metadata loading...";
             emit centralMsg(s);    // rghmsg
             qApp->processEvents();
         }

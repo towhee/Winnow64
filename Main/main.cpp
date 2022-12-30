@@ -40,8 +40,6 @@ int main(int argc, char *argv[])
     // start program
     QCoreApplication::addLibraryPath("./");
     MW mw(args);
-    mw.show();
-    mw.restoreLastSessionGeometryState();
 
     // connect message when instance already running
     QObject::connect(&instance, SIGNAL(messageReceived(const QString&)),

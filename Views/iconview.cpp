@@ -88,17 +88,13 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
 Loading icons
 
-    At a minimum we want to load icons for all the visible cells in the IconView.  This is a
-    little tricky to determine when the program is first opened if the thumbView is not
-    visible.  Also, we do not know the best fit size of the thumbs in advance as this is only
-    known after checking the aspect of each image in the folder.
+    Icons are loaded each time a new folder is selected. MetadataCache::loadIcon reads the
+    thumbnail pixmap into the DataModel as an icon.  Thumbnails or icons are a maximum of
+    256px and can have various aspect ratios.  The IconView thumbView, when anchored to the
+    top or bottom of the centralWidget, sets its height based on the tallest aspect.  To
+    dewtermine this, the widest and highest amounts are determined by calling MetadataCache::iconMax
+    for each icon as it is loaded as G::iconWMax and G::iconHMax.
 
-    Consequently an incremental approach is taken in MdCache, where the metadata and icons are
-    loaded.  A default number of icons (250) are loaded and the best aspect is determined.  The
-    number of thumbs visible in the viewport (thumbs per page or tpp) are calculated.  If this
-    is more than the number already read then the additional icons are read in a second pass.
-
-Best fit
 
     The best fit is a function of the aspect ratios of the icon population.  The IconView cell
     size is defined by the smallest cell that will fit all the icons.  For example, if all the
@@ -113,6 +109,26 @@ Best fit
                             |      |            |            |
                             |      |            |            |
                             |------|            |------------|
+
+    After all the icons have been loaded IconView::bestAspect is called to define iconWidth
+    and iconHeight, the dimensions of the rectangle that will just fit all the icons.  This
+    is sent to IconViewDelegate::setThumbDimensions.  The IconViewDelegate is where the icons
+    are drawn in IconViewDelegate::paint.
+
+Making icons bigger or smaller
+
+    Icon size can resized in 10% increments with IconView::thumbsEnlarge and IconView::thumbsShrink.
+    iconWidth and iconHeight are incremented and IconViewDelegate::setThumbDimensions is called.
+    The thumbDock is a container that resizes to fit its contents: the icons.
+
+    If the thumbDock is made taller by dragging the xxx MW::eventFilter calls
+    IconView::thumbsFitTopOrBottom. The thumb size is adjusted to fit the new thumbDock
+    height and scrolled to keep the midVisibleThumb in the middle. Other objects visible
+    (docks and central widget) are resized.
+
+Justification
+
+
 */
 
 extern MW *m2;
@@ -1191,7 +1207,7 @@ void IconView::thumbsFitTopOrBottom()
         iconHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
     }
 
-    //    /*
+        /*
         qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
                  << "viewportHeight =" << newViewportHt
                  << "maxCellHeight =" << maxCellHeight
