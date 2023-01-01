@@ -49,5 +49,4 @@ int main(int argc, char *argv[])
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
     return instance.exec();             //    return QApp.exec();
-    //*/
 }
