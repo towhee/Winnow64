@@ -1,45 +1,6 @@
-IconView::mousePressEvent  modifiers = QFlags<Qt::KeyboardModifier>(ControlModifier)
-
-IconView::selectionChanged "Thumbnails" src = "ThumbMouseClick"
-  type                 = "Other"
-  modifiers            = QFlags<Qt::KeyboardModifier>(ControlModifier)
-  selectionInverted    = false
-  isCurrent            = false
-  oldCurrentRow        = 0
-  newCurrentRow        = -1
-  isSelected           = true Count = 1
-  isDeselected         = false Count = 0
-  selectedRow          = 1
-  deselectedRow        = -1
-  selectedRowsCount    = 1
-
-IconView::selectionChanged "Thumbnails" src = "ThumbMouseClick"
-  type                 = "UniSelection, Deselect current"
-  modifiers            = QFlags<Qt::KeyboardModifier>(ControlModifier)
-  selectionInverted    = false
-  isCurrent            = false
-  oldCurrentRow        = 1
-  newCurrentRow        = -1
-  isSelected           = false Count = 0
-  isDeselected         = true Count = 1
-  selectedRow          = -1
-  deselectedRow        = 0
-  selectedRowsCount    = 0
-
-IconView::selectionChanged "Grid" src = "ThumbMouseClick"
-
-IconView::selectionChanged "Grid" src = ""
-
-
-IconView::selectionChanged "Thumbnails" src = "ThumbMouseClick"
-  type                 = "Other"
-  modifiers            = QFlags<Qt::KeyboardModifier>(ControlModifier)
-  selectionInverted    = false
-  isCurrent            = false
-  oldCurrentRow        = 0
-  newCurrentRow        = -1
-  isSelected           = true Count = 1
-  isDeselected         = false Count = 0
-  selectedRow          = 2
-  deselectedRow        = -1
-  selectedRowsCount    = 1
+12-24_2
+MW::folderSelectionChange New folder = "D:/Pictures/Demo embellish"
+IconView::thumbsFitTopOrBottom "Thumbnails" viewportHeight = 204 maxCellHeight = 204 bestAspectRatio = 1 iconHeight = 186 iconWidth = 186 hMax = 222 hMin = 58 G::iconWMax = 256 G::iconHMax = 256 G::maxIconSize = 256
+MW::restoreLastSessionGeometryState 0
+MW::setDisplayResolution 1 G::isInitializing  = false isVisible()  = true prevDevicePixelRatio = -1 screen->name() = "\\\\.\\DISPLAY1" prevScreenName = "\\\\.\\DISPLAY1" monitorChanged = false devicePixelRatioChanged = false
+MW::setDisplayResolution 2 G::isInitializing  = false isVisible()  = true prevDevicePixelRatio = -1 screen->name() = "\\\\.\\DISPLAY1" prevScreenName = "\\\\.\\DISPLAY1" monitorChanged = false devicePixelRatioChanged = true

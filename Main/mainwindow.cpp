@@ -525,9 +525,9 @@ void MW::showEvent(QShowEvent *event)
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 
     QMainWindow::showEvent(event);
-    getDisplayProfile();
 
     if (isSettings) restoreLastSessionGeometryState();
+    getDisplayProfile();
 
     // set thumbanil size to fit the thumbdock initial size
     thumbView->thumbsFitTopOrBottom();
@@ -3556,24 +3556,20 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log("MW::setDisplayResolution");
-    return;
 
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
+
     // ignore until show event
-    if (!isVisible()) return;
+    if (!isVisible()) {
+        return;
+    }
 
     // Screen info
     QPoint loc = centralWidget->window()->geometry().center();
-    /*
-    if (loc == prevScreenLoc) return;
-    prevScreenLoc = loc;
-//    */
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
     monitorChanged = screen->name() != prevScreenName;
-
-//    if (!monitorChanged) return;
 
     /*
     qDebug() << "MW::setDisplayResolution" << "1"
