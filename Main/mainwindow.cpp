@@ -326,7 +326,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (modifier & Qt::ShiftModifier) {
         isShiftOnOpen = true;
         G::isEmbellish = false;
-        qDebug() << "MW::MW" << "isShift == true";
     }
     /* modifier & Qt::ControlModifier
     if (modifier & Qt::ControlModifier) {
@@ -365,8 +364,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
-//    setting->setValue("appPath", qApp->applicationDirPath());
-    qDebug() << "MW::MW" << qApp->applicationDirPath();
+    setting->setValue("appPath", qApp->applicationDirPath());
 
 //    // Logger
 //    if (G::isLogger && G::sendLogToConsole == false) openLog();
@@ -496,9 +494,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 void MW::restoreLastSessionGeometryState()
 {
     if (G::isLogger) G::log("MW::restoreLastSessionGeometryState");
-    static int count = 0;
     if (isSettings) {
-        qDebug() << "MW::restoreLastSessionGeometryState" << count;
         restoreGeometry(setting->value("Geometry").toByteArray());
         restoreState(setting->value("WindowState").toByteArray());
     }
@@ -506,7 +502,6 @@ void MW::restoreLastSessionGeometryState()
         defaultWorkspace();
     }
     setWindowOpacity(1);
-    count ++;
 }
 
 bool MW::isDevelopment()
@@ -1541,8 +1536,6 @@ void MW::folderSelectionChange()
         G::log("MW::folderSelectionChange");
     }
 
-//    qDebug();
-//    qDebug() << "MW::folderSelectionChange";
     stop("MW::folderSelectionChange()");
 
     dm->abortLoadingModel = false;
@@ -1550,9 +1543,9 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-    qDebug() << " ";
-    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
-    Utilities::log("MW::folderSelectionChange", G::currRootFolder);
+//    qDebug() << " ";
+//    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
+//    Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1998,12 +1991,18 @@ bool MW::stop(QString src)
 /*
     Stops and clears all folder loading processes and data.
 
-    Trriggered when:
-    - the user picks a folder in the folder panel or open menu.
-    - picks a bookmark.
-    - ejects a drive and the resulting folder does not have any eligible images.
-    - ESC pressed while folder is loading
+    Triggered when:
+    - a folder is selected in the folder panel or open menu.
+    - a bookmark is selected.
+    - a drive is ejected and the resulting folder does not have any eligible images.
+    - ESC is pressed while folder is loading.
 
+    DataModel instances:
+
+    The datamodel instance, dm->instance, starts at zero and is incremented when a
+    new folder is selected.  G::dmInstance is the global variant.  This is required
+    as the image decoders, running in separate threads, may still be decoding an
+    image from a prior folder.  See ImageCache::fillCache.
 
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::stop", G::currRootFolder);
@@ -2048,64 +2047,6 @@ bool MW::stop(QString src)
     frameDecoder->clear();
 //    qDebug() << "MW::stop" << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
 
-    /*
-    dm->abortLoad();
-    G::wait(1000);
-
-    stopped["MetaRead"] = !metaReadThread->isRunning();
-    stopped["MDCache"] = !metadataCacheThread->isRunning();
-    stopped["ImageCache"] = !imageCacheThread->isRunning();
-    stopped["BuildFilters"] = !buildFilters->isRunning();
-    stopped["FrameDecoder"] = !frameDecoder->isBusy();
-
-    if (src == "Escape key") {
-        fsTree->selectionModel()->clearSelection();
-        bookmarks->selectionModel()->clearSelection();
-    }
-
-    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
-//    qDebug() << "MW::stop" << "emitting abortMetaRead";
-    if (!stopped["MetaRead"]) emit abortMetaRead();
-    if (!stopped["MDCache"]) emit abortMDCache();
-    if (!stopped["ImageCache"]) emit abortImageCache();
-    if (!stopped["BuildFilters"]) emit abortBuildFilters();
-    if (!stopped["FrameDecoder"]) emit abortFrameDecoder();
-
-    // check if all stopped
-    bool allStopped = true;
-    for (bool isStopped : stopped) {
-        if (!isStopped) allStopped = false;
-    }
-    if (allStopped) reset("AllStopped");
-
-}
-
-void MW::reset(QString src) {
-
-    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
-    Can be triggered when the user picks a folder in the folder panel or open menu, picks
-    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
-
-    if (G::isLogger || G::isFlowLogger) G::log("MW::reset");
-
-    if (src != "AllStopped") {
-        stopped[src] = true;
-        qDebug() << "MW::reset" << "src =" << src
-                 << "\n  MetaRead     stopped" << stopped["MetaRead"]
-                 << "\n  MDCache      stopped" << stopped["MDCache"]
-                 << "\n  ImageCache   stopped" << stopped["ImageCache"]
-                 << "\n  BuildFilters stopped" << stopped["BuildFilters"]
-                 << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
-                 << "\n" ;
-
-        // if any thread processes still running then do not complete reset yet
-        for (bool isStopped : stopped) {
-            if (!isStopped) return;
-        }
-    }
-    G::wait(1000);
-    */
-
     reset("MW::stop");
 
     if (src == "Escape key") {
@@ -2120,7 +2061,7 @@ bool MW::reset(QString src)
 {
     if (G::isLogger) G::log("MW::reset", "Source: " + src);
 
-    if (!G::dmEmpty) return false;
+    if (!G::dmEmpty /*|| !G::stop*/) return false;
 
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
@@ -2297,10 +2238,13 @@ void MW::updateIconRange(int row)
 void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentNewFolder");
-    qDebug() << "MW::loadConcurrentNewFolder";
-                // reset for bestAspect calc
+
+    QString src = "MW::loadConcurrentNewFolder ";
+
+    // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
+
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
        metadata ~20K  */
@@ -2312,19 +2256,24 @@ void MW::loadConcurrentNewFolder()
         dm->currentSfRow = dm->rowFromPath(folderAndFileChangePath);
         qDebug() << "MW::loadConcurrentNewFolder" << dm->currentSfRow;
     }
+    if (reset(src + "1")) return;
     updateIconRange(dm->currentSfRow);
+    if (reset(src + "2")) return;
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+    if (reset(src + "3")) return;
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
     // no sorting or filtering until all metadata loaded
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
+    if (reset(src + "4")) return;
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
 //    emit startMetaRead(dm->currentSfRow, "MW::loadConcurrentNewFolder");
+    if (reset(src + "5")) return;
     metaReadThread->setCurrentRow(0, "MW::loadConcurrentNewFolder");
 }
 
@@ -2335,7 +2284,7 @@ void MW::loadConcurrent(int sfRow)
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-            qDebug() << "MW::loadConcurrent" << "row =" << sfRow;
+//            qDebug() << "MW::loadConcurrent" << "row =" << sfRow;
 //            emit startMetaRead(sfRow, "MW::loadConcurrent");
             metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent");
         }
@@ -2347,11 +2296,12 @@ void MW::loadConcurrentMetaDone()
 /*
     Signalled from MetaRead::run when finished
 */
-    QSignalBlocker blocker(bookmarks);
+//    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
-    qDebug() << "MW::loadConcurrentMetaDone";
+//    qDebug() << "MW::loadConcurrentMetaDone";
 
+    if (reset()) return;
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     if (G::mode == "Grid") {
         thumbDock->setVisible(false);
@@ -2365,7 +2315,9 @@ void MW::loadConcurrentMetaDone()
     }
 
     // double check all visible icons loaded, depending on best fit
+    if (reset()) return;
     updateIconBestFit();
+    if (reset()) return;
     updateIconRange(-1);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -2377,20 +2329,24 @@ void MW::loadConcurrentMetaDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
+    if (reset()) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
         launchBuildFilters();
     }
 
+    if (reset()) return;
     updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMetaDone");
     // resize table columns with all data loaded
+    if (reset()) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
 //    emit refreshImageCache();
+    if (reset()) return;
     emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
-    blocker.unblock();
+//    blocker.unblock();
 }
 
 void MW::loadConcurrentStartImageCache(QString src)
@@ -2401,7 +2357,7 @@ void MW::loadConcurrentStartImageCache(QString src)
     QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentStartImageCache");
-    qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
+//    qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
 
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
@@ -4515,8 +4471,8 @@ bool MW::loadSettings()
     // show/hide use of ConcurrentLoading for dev/release using G::tryConcurrentLoading
     if (G::tryConcurrentLoading) {
         if (setting->contains("tryConcurrentLoading"))
-//            G::isLinearLoading = !setting->value("tryConcurrentLoading").toBool(); // until fix
-            G::isLinearLoading = true;
+            G::isLinearLoading = !setting->value("tryConcurrentLoading").toBool(); // until fix
+//            G::isLinearLoading = true;
         else
         G::isLinearLoading = true;
     }

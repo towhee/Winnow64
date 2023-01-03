@@ -519,7 +519,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
                 // report file progress within folder
-                if (imageCount % countInterval == 0 && imageCount > 0) {
+                if (G::isLinearLoading && imageCount % countInterval == 0 && imageCount > 0) {
                     QString s = step +
                                 QString::number(imageCount) + " found so far in " +
                                 QString::number(folderCount) + " folders" +

@@ -83,7 +83,10 @@ void MetaRead::setCurrentRow(int row, QString src)
                  << "isrunning" << isRunning();
     }
 
-    if (isRunning()) stop();
+    if (isRunning()) {
+        stop();
+    }
+
     testMultiThread = false;
     startRow = row;
     this->src = src;
@@ -94,7 +97,13 @@ void MetaRead::setCurrentRow(int row, QString src)
 void MetaRead::stop()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::stop");
-//    qDebug() << "MetaRead::stop";
+    if (debugCaching)
+    qDebug() << "MetaRead::stop"
+             << "src =" << src
+             << "startRow =" << startRow
+             << "abort =" << abort
+                ;
+    static int count = 0;
 
     if (isRunning()) {
         mutex.lock();
@@ -102,10 +111,11 @@ void MetaRead::stop()
 //        qDebug() << "MetaRead::stop   Set abort = true";
         condition.wakeOne();
         mutex.unlock();
-//        qDebug() << "MetaRead::stop   starting wait()  isRunning() =" << isRunning();
-        wait();
+//        qDebug() << "MetaRead::stop   starting wait()  isRunning() =" << isRunning()
+//                 << "count =" << count;
+//        wait();
         abort = false;
-//        qDebug() << "MetaRead::stop   STOPPED";
+//        qDebug() << "MetaRead::stop   STOPPED" << count++;
     }
     return;
 
@@ -149,7 +159,7 @@ int MetaRead::interrupt()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::pause");
     G::stop = false;
-//    qDebug() << "MetaRead::interrupt";
+    qDebug() << "MetaRead::interrupt";
     mutex.lock();
     interrupted = true;
     mutex.unlock();
@@ -319,8 +329,26 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
 
+    if (debugCaching) {
+        qDebug() << "MetaRead::readMetadata"
+                 << "added row =" << sfIdx.row()
+                 << "abort =" << abort
+                 ;
+    }
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
+    if (debugCaching) {
+        qDebug() << "MetaRead::readMetadata"
+                 << "addToDatamodel row =" << sfIdx.row()
+                 << "abort =" << abort
+                 ;
+    }
     if (G::useImageCache) emit addToImageCache(metadata->m);
+    if (debugCaching) {
+        qDebug() << "MetaRead::readMetadata"
+                 << "addToImageCache row =" << sfIdx.row()
+                 << "abort =" << abort
+                 ;
+    }
     return true;
 
 //    if (dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata")) {
@@ -455,11 +483,13 @@ void MetaRead::run()
     folderPath = dm->currentFolderPath;
     iconLimit = iconChunkSize * 1.2;
     sfRowCount = dm->sf->rowCount();
+    /*
     qDebug() << "MetaRead::run"
              << "instance =" << instance
              << "startRow =" << startRow
              << "sfRowCount =" << sfRowCount
                 ;
+                //*/
 
     if (debugCaching) {
         qDebug().noquote() << "MetaRead::run"
@@ -493,13 +523,11 @@ void MetaRead::run()
     int rowBehind = row;
 
     while (i++ <= sfRowCount) {
-//        qDebug() << "MetaRead::run  i =" << i << "abort =" << abort;
         if (dm->instance != instance) {
             abort = true;
         }
         if (abort) {
             if (interrupted) {
-//                qDebug() << "MetaRead::run  interrupted";
                 interruptedRow = row;
             }
             qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at item" << i;
@@ -508,8 +536,9 @@ void MetaRead::run()
         }
 
         // do something with row
-//        qDebug() << "MetaRead::run  row =" << row;
+//        qDebug() << "MetaRead::run   row =" << row;
         readRow(row);
+        if (abort) return;
 
         // delayed start ImageCache
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
@@ -539,7 +568,7 @@ void MetaRead::run()
         }
     } // end loop processing rows
 
-    qDebug() << "MetaRead::run  Completed loop";    // finished or aborted
+    if (debugCaching) qDebug() << "MetaRead::run  Completed loop";    // finished or aborted
 
     if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead::run");
 
@@ -553,5 +582,5 @@ void MetaRead::run()
     }
     emit done();
 
-    qDebug() << "MetaRead::run  Done.";
+    if (debugCaching) qDebug() << "MetaRead::run  Done.";
 }
