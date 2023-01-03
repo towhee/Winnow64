@@ -119,6 +119,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QList<int> x;
+    x.append(1);
+    x.append(2);
+    x.append(1);
+    qDebug() << x;
+    return;
+
+
+    qDebug() << "MW::test" << thumbView->iconHeight;
+    return;
     qDebug() << "MW::test";
     getDisplayProfile(); return;
 //    restoreLastSessionGeometryState();

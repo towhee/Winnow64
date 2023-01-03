@@ -184,7 +184,7 @@ void Filters::createPredefinedFilters()
     picksTrue = new QTreeWidgetItem(picks);
     picksTrue->setText(0, "Picked");
     picksTrue->setCheckState(0, Qt::Unchecked);
-    picksTrue->setData(1, Qt::EditRole, "true");
+    picksTrue->setData(1, Qt::EditRole, "picked");
     picksReject = new QTreeWidgetItem(picks);
     picksReject->setText(0, "Rejected");
     picksReject->setCheckState(0, Qt::Unchecked);

@@ -1,7 +1,6 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Remote embellish G::dmEmpty issue
 - Add a selection class for all SelectionModel operations
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -75,7 +74,12 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
--
+- Concurrent metadata reading rapid folder changing fixed
+- Refine not working
+- Filters not including picked images
+- Release 1.33.1
+- Embellish not working on windows (setmonitorProfile return issue)
+- Release 1.33
 - Use Qt image load if TIF LZW and predictor = 2 (crashes)
 - Not counting in filters for keywords
 - Crash on open if just hid an info field

@@ -1149,9 +1149,10 @@ The resulting max width and
     if (G::iconHMax > G::iconWMax)
         iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
-    setThumbParameters();
+//    setThumbParameters();
 
     bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;
+    thumbsFitTopOrBottom();
 
      /*
     qDebug() << "IconView::bestAspect" << objectName()

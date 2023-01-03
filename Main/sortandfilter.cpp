@@ -301,7 +301,7 @@ void MW::refine()
     bool isPick = false;
     int pickCount = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "true") {
+        if (dm->index(row, G::PickColumn).data() == "picked") {
             isPick = true;
             pickCount++;
             if (pickCount > 1) break;
@@ -349,7 +349,7 @@ void MW::refine()
     // clear refine = pick
     pushPick("Begin multiple select");
     for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "true") {
+        if (dm->index(row, G::PickColumn).data() == "picked") {
             // save pick history
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
             pushPick(fPath, "true");

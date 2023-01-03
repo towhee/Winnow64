@@ -184,6 +184,13 @@ void BuildFilters::countFiltered()
                     }
                 }
                 else {
+                    if (cat == "Picks")
+                    qDebug() << "BuildFilters::countFiltered"  << cat
+                             << "row = " << row
+                             << "col =" << col
+                             << "dm val =" << dm->sf->index(row, col).data().toString()
+                             << "searchValue =" << searchValue
+                                ;
                     if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
                 }
             }
