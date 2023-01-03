@@ -75,7 +75,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
-    double a = w / h;
+    double a = w * 1.0 / h;
     QString src = "Thumb::loadFromEntireFile";
 
     emit setValue(dm->index(row, G::WidthColumn), w, instance, src);

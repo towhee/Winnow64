@@ -346,6 +346,7 @@ void MetadataCache::iconMax(QPixmap &thumb)
 bool MetadataCache::loadIcon(int sfRow)
 {
     if (G::isLogger) G::log("MetadataCache::loadIcon");
+
     QModelIndex sfIdx = dm->sf->index(sfRow,0);
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
 
