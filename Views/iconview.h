@@ -26,6 +26,7 @@ public:
     bool showZoomFrame;
     int badgeSize;
     QSize cellSize;
+    int preferredThumbDockHeight;
 
     int firstVisibleCell;
     int midVisibleCell;

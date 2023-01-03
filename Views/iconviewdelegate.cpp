@@ -2,7 +2,7 @@
 #include "iconviewdelegate.h"
 
 /*
-ThumbViewDelegate Anatomy:
+IconViewDelegate Anatomy:
 
 
 0-----cellRect = option.rect --------------------------------|
@@ -264,6 +264,10 @@ int IconViewDelegate::getCellWidthFromThumbWidth(int width)
 
 int IconViewDelegate::getCellHeightFromThumbHeight(int height)
 {
+//    qDebug() << "IconViewDelegate::getCellHeightFromThumbHeight"
+//             << "pad2 =" << pad2
+//             << "textHeight =" << textHeight
+//                ;
     return height + pad2 + textHeight + 2;
 }
 
@@ -276,8 +280,9 @@ int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 {
     // used to fit thumb (icon) into the available viewport height
     int thumbHeight = availHeight - pad2 - textHeight - 2;
-    int maxHeight = G::maxIconSize - pad2 - textHeight - 2;
-    return thumbHeight <= G::maxIconSize ? thumbHeight : maxHeight;
+    return thumbHeight;
+//    int maxHeight = G::maxIconSize - pad2 - textHeight - 2;
+//    return thumbHeight <= G::maxIconSize ? thumbHeight : maxHeight;
 }
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)

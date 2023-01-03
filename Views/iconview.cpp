@@ -3,25 +3,27 @@
 
 /*  IconView Overview
 
-IconView manages the list of images within a folder and it's children (optional). The
-thumbView can either be a QListView of file names or thumbnails. When a list item is selected
-the image is shown in imageView.
+IconView shows the list of images within a folder and it's children (optional) as
+thumbnails/icons. When a list item is selected the image is shown in imageView.
 
-The thumbView is inside a QDockWidget which allows it to dock and be moved and resized.
+There are two versions of IconView: gridView and thumbView.
 
-ThumbView does the following:
+    1. The thumbView is inside a QDockWidget which allows it to dock and be moved
+       and resized.
+    2. The gridView is in the CentralWidget and cannot be moved.
 
-    Shows the file list of eligible images, including attributes for selected and picked.
-    Picked files are shown in green and can be filtered and copied to another folder via the
-    ingestDlg class.
+IconView does the following:
 
-    The thumbViewDelegate class formats the look of the thumbnails.
+    Shows the file list of eligible images, including attributes for selected, picked,
+    rating, color class and locked.
+
+    The IconViewDelegate class formats the look of the thumbnails.
 
     Sorts the list based on date acquired, filename and forward/reverse
 
     The mouse click location within the thumb is used in ImageView to pan a zoomed image.
 
-QStandardItemModel roles used:
+DataModel QStandardItemModel roles used:
 
     1   DecorationRole - holds the thumbnail as an icon
     3   ToolTipRole - the file path
@@ -35,12 +37,32 @@ QStandardItemModel roles used:
 
    Datamodel columns:
 
-        PickColumn - bool is picked
-        RatingColumn
-        LabelColumn
+        G::PickColumn
+        G::RatingColumn
+        G::LabelColumn
 
-Note that a "row" in this class refers to the row in the model, which has one thumb per row,
-not the view in the dock, where there can be many thumbs per row
+Rows
+
+    Note that a "row" in this class refers to the row in the datamodel, which has one
+    thumb per row, not the view in the dock, where there can be many thumbs per row.
+
+Icons
+
+    An icon is a QPixmap reduction of an eligible image in the folder.  The icons are
+    stored as QIcons in the datamodel in the first column using the DecorationRole.
+
+    ie dm->sf->index(row, 0).data(Qt::DecorationRole)
+
+Cells
+
+    In IconView, each thumbnail/icon is located inside a cell, which is managed by
+    IconViewDelegate (see iconviewdelegate.cpp documentation at top of file).
+
+    Cell container heirarchy
+
+        • cellRect
+        • frameRect
+        • thumbRect (iconWidth, iconHeight)
 
 ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
@@ -58,9 +80,32 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
         ● MW thumbDock Signal topLevelChanged
         ● MW::eventFilter() resize event
 
-    The thumbDock dimensions are controlled by the size of its contents - the thumbView. When
-    docked in bottom or top and thumb wrapping is false the maximum height is defined by
-    thumbView->setMaximumHeight().
+    The thumbDock dimensions are controlled by the size of its contents - the thumbView.
+    When docked in bottom or top and thumb wrapping is false the maximum height is
+    defined by thumbView->setMaximumHeight().
+
+    Icon and ThumbDock size variables
+
+        When icons are loaded they are resized with the long side = G::maxIconSize.
+        When icons are displayed in IconView they can be resized by the user.  The
+        resized icon best fit dimensions are iconWidth and iconHeight.
+
+        Cells & Icons:
+        G::maxIconSize      - set to 256 px
+        G::minIconSize      - set to  40 px
+        G::iconWMax         - widest icon px
+        G::iconHMax         - highest icon px
+        bestAspectRatio     - G::iconHMax / G::iconWMax
+        iconWidth           - resized best fit icon width  (IconViewDelegate::thumbRect)
+        iconHeight          - resized best fit icon height (IconViewDelegate::thumbRect)
+        preferredHeight     - height set by user by resizing icons or dragging the
+                              ThumbDock splitter when docked top or bottom.
+
+        ThumbDock:
+        G::scrollBarThickness    - set to 14 px
+        height()                 - height of the IconView viewport
+        preferredThumbDockHeight - height set by user by resizing icons or dragging the
+                                   ThumbDock splitter when docked top or bottom.
 
     ThumbDock resize to fit thumbs:
 
@@ -1127,31 +1172,15 @@ void IconView::bestAspect()
     in G::iconWMax and G::iconHMax. This is used to define the thumb size in
     IconViewDelegate.
 
-The resulting max width and
-    height are sent to IconViewDelegate to define the thumbRect that holds each icon.
-    This is also the most compact container available.
+    The resulting max width and height are sent to IconViewDelegate to define the
+    thumbRect that holds each icon. This is also the most compact container available.
 
     The function is called after a new folder is selected and the datamodel icon data has
     been loaded. Both thumbView and gridView have to be called.
 */
     if (G::isLogger) G::log("IconView::bestAspect", objectName());
-    if (iconWidth > G::maxIconSize) iconWidth = G::maxIconSize;
-    if (iconHeight > G::maxIconSize) iconHeight = G::maxIconSize;
-    if (iconWidth < G::minIconSize) iconWidth = G::minIconSize;
-    if (iconHeight < G::minIconSize) iconHeight = G::minIconSize;
 
-    if (G::iconWMax == G::iconHMax && iconWidth > iconHeight)
-        iconHeight = iconWidth;
-    if (G::iconWMax == G::iconHMax && iconHeight > iconWidth)
-        iconWidth = iconHeight;
-    if (G::iconWMax > G::iconHMax)
-        iconHeight = static_cast<int>(iconWidth * (static_cast<double>(G::iconHMax) / G::iconWMax));
-    if (G::iconHMax > G::iconWMax)
-        iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
-
-//    setThumbParameters();
-
-    bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;
+    bestAspectRatio = static_cast<double>(G::iconHMax) / G::iconWMax;
     thumbsFitTopOrBottom();
 
      /*
@@ -1160,6 +1189,7 @@ The resulting max width and
              << "G::iconHMax =" << G::iconHMax
              << "iconWidth =" << iconWidth
              << "iconHeight =" << iconHeight
+             << "bestAspectRatio =" << bestAspectRatio
                 ;
 //  */
 }
@@ -1184,34 +1214,31 @@ void IconView::thumbsFitTopOrBottom()
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
 
-    int maxCellHeight = static_cast<int>(newViewportHt * bestAspectRatio);
-//    int maxCellHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
-    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(maxCellHeight);
-    int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
+    // best aspect ratio to use
+    double ba = bestAspectRatio;
+    if (ba > 1.0) ba = 1.0;
 
-    // restrict icon cell height within limits
-    int newThumbSpaceHt = newViewportHt > hMax ? hMax : newViewportHt;
-    newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
+    // max/min viedwport height adjusted for best aspect ratio to use
+    int hMax = static_cast<int>(G::maxIconSize * ba);
+    int hMin = static_cast<int>(G::minIconSize * ba);
 
-    // derive new cellsize from new cellSpace
-    iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
+    // max/min cell size
+    int maxCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMax);
+    int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
 
-    // make sure within range (should be from thumbSpace check but just to be sure)
-//    if (bestAspectRatio < 0.1) bestAspectRatio = 1;
-    iconHeight = iconHeight > G::maxIconSize ? G::maxIconSize : iconHeight;
-    iconHeight = iconHeight < ICON_MIN ? ICON_MIN : iconHeight;
+    // do nothing if exceed limits
+    if (newViewportHt > maxCellHeight) return;
+    if (newViewportHt < minCellHeight) return;
+
+    // newViewportHt is okay, set icon size
+    iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight / bestAspectRatio);
-
-    // check thumbWidth within range
-    if(iconWidth > G::maxIconSize) {
-        iconWidth = G::maxIconSize;
-        iconHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
-    }
 
         /*
         qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
-                 << "viewportHeight =" << newViewportHt
+                 << "newViewportHt =" << newViewportHt
                  << "maxCellHeight =" << maxCellHeight
+                 << "minCellHeight =" << minCellHeight
                  << "bestAspectRatio =" << bestAspectRatio
                  << "iconHeight =" << iconHeight
                  << "iconWidth =" << iconWidth
