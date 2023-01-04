@@ -983,6 +983,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     isMouseDoubleClick = false;
     isMouseDrag = false;
+
     if (event->button() == Qt::LeftButton) {
         /*if (isRubberBand) {
             setCursor(Qt::CrossCursor);
@@ -999,9 +1000,15 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
         QGraphicsView::mousePressEvent(event);
 
-        if (isFit) {
+        qDebug() << "ImageView::mousePressEvent 1"
+                 << "isFit =" << isFit
+                 << "isZoomToggled =" << isZoomToggled
+                 << "zoom =" << zoom
+                    ;
+
+        if (isFit /*&& zoom < 1.0*/) {
             zoomToggle();
-            scale();
+//            scale();
             isZoomToggled = true;
             setCursor(Qt::PointingHandCursor);
         }
@@ -1009,6 +1016,11 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             isZoomToggled = false;
         }
 
+        qDebug() << "ImageView::mousePressEvent 2"
+                 << "isFit =" << isFit
+                 << "isZoomToggled =" << isZoomToggled
+                 << "zoom =" << zoom
+                    ;
     }
 }
 
@@ -1096,7 +1108,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     // if zoomToggle was not executed on mouse press (image was scrollable and zoom in toggled)
-    if (!isZoomToggled) {
+    if (!isZoomToggled /*&& zoom < 1.0*/) {
         zoomToggle();
         scale();
         if (isScrollable) setCursor(Qt::OpenHandCursor);

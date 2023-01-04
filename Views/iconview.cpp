@@ -1548,7 +1548,7 @@ bool IconView::event(QEvent *event) {
 
     if (event->type() == QEvent::Enter) {
         mouseOverThumbView = true;
-//        qDebug() << "IconView::event Enter" << event;
+        qDebug() << "IconView::event Enter" << event;
     }
 
     QListView::event(event);
@@ -1737,7 +1737,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
-    if (imW == 0 || imH == 0) failReason = "";
+    if (imW == 0 || imH == 0) failReason = "Zero width or height";
 
     qreal zoom = m2->imageView->zoom;
     imW = static_cast<int>(imW * zoom);
@@ -1759,7 +1759,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     }
 
     if (failReason.length()) {
-//        qDebug() << "IconView::zoomCursor Failed because" << failReason;
+        qDebug() << "IconView::zoomCursor Failed because" << failReason;
         return;
     }
     else {

@@ -57,6 +57,7 @@ public:
     QModelIndex proxyIndexFromPath(QString fPath);
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);
+    QModelIndex modelIndexFromProxyIndex(QModelIndex sfIdx);
     QString diagnostics();
     QString diagnosticsErrors();
     QString diagnosticsForCurrentRow();
