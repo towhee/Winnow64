@@ -249,6 +249,9 @@ void TableView::selectionChanged(const QItemSelection &selected, const QItemSele
 {
     if (G::isLogger) G::log("TableView::selectionChanged");
     QTableView::selectionChanged(selected, deselected);
+    if (G::isInitializing) return;
+    // update status bar
+    emit selectionChange(true, "", "TableView::selectionChanged");
 }
 
 void TableView::createOkToShow()

@@ -48,6 +48,7 @@ private slots:
 
 signals:
     void displayLoupe();
+    void selectionChange(bool, QString, QString);
 };
 
 #include <QStyledItemDelegate>

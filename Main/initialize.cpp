@@ -490,6 +490,8 @@ void MW::createTableView()
     // sync scrolling between tableview and thumbview
     connect(tableView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::tableHasScrolled);
+    // update status bar when selection count changes
+    connect(tableView, &TableView::selectionChange, this, &MW::updateStatus);
 }
 
 void MW::createVideoView()

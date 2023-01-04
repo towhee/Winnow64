@@ -740,7 +740,7 @@ QFileInfoList IconView::getPicks()
     QFileInfoList fileInfoList;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") {
+        if (idx.data(Qt::EditRole).toString() == "picked") {
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
@@ -760,7 +760,7 @@ int IconView::getNextPick()
     QModelIndex idx;
     while (frwd < rowCount) {
         idx = dm->sf->index(frwd, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
+        if (idx.data(Qt::EditRole).toString() == "picked") return frwd;
         ++frwd;
     }
     return -1;
@@ -775,7 +775,7 @@ int IconView::getPrevPick()
     QModelIndex idx;
     while (back >= 0) {
         idx = dm->sf->index(back, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") return back;
+        if (idx.data(Qt::EditRole).toString() == "picked") return back;
         --back;
     }
     return -1;
@@ -1758,8 +1758,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "imW < cW && imH < cH";
     }
 
+    // debugging
     if (failReason.length()) {
-        qDebug() << "IconView::zoomCursor Failed because" << failReason;
+//        qDebug() << "IconView::zoomCursor Failed because" << failReason;
         return;
     }
     else {

@@ -71,12 +71,13 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
 //        base += "Mem: " + mem + spacer;
-        if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel")
+        if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel") {
             base += "Zoom: " + getZoom();
+        }
         base += spacer + "Pos: " + getPosition();
         if (source != "nextSlide") {
-        QString s = QString::number(thumbView->getSelectedCount());
-            base += spacer +"Selected: " + s;
+            QString s = QString::number(thumbView->getSelectedCount());
+            base += spacer +" Selected: " + s;
             base += spacer + "Picked: " + getPicked();
         }
     }
@@ -199,7 +200,7 @@ QString MW::getPicked()
     if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
-        if (dm->sf->index(row, G::PickColumn).data() == "true") count++;
+        if (dm->sf->index(row, G::PickColumn).data() == "picked") count++;
     QString image = count == 1 ? " image, " : " images, ";
 
     if (count == 0) return "Nothing";
