@@ -280,7 +280,7 @@ qulonglong MW::memoryReqdForPicks()
     qulonglong memTot = 0;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
-        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "true") {
+        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "picked") {
             idx = dm->sf->index(row, G::SizeColumn);
             memTot += idx.data(Qt::EditRole).toULongLong();
         }

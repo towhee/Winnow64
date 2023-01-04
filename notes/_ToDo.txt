@@ -74,7 +74,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
-- Concurrent metadata reading rapid folder changing fixed
+- ImageView zoom and zoom cursor behavior improved
+- Update selection and pick count fixed
+- Navigate to nearest pick fixed
+- Concurrent metadata crash reading rapid folder changing fixed
 - Refine not working
 - Filters not including picked images
 - Release 1.33.1
