@@ -378,11 +378,11 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         return;
     }
 
-    QModelIndex dmIdx;
-    dmIdx = dm->sf->mapToSource(sfIdx);
-    int dmRow;
+//  //  dmIdx = dm->sf->mapToSource(sfIdx); // EXC_BAD_ACCESS crash when rapid folder changes
+    int dmRow = dm->rowFromPath(fPath);
+    QModelIndex dmIdx = dm->index(dmRow, 0);
+
     bool isVideo = false;
-    dmRow = dmIdx.row();
     isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
 
     // get thumbnail
@@ -394,23 +394,19 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         return;
     }
     if (thumbLoaded) {
-//        if (instance != dm->instance) {
-//            qWarning() << "WARNING MetaRead::readIcon Instance Clash";
-//            abort = true;
-//            return;
-//        }
         QPixmap pm;
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//        dm->setIcon(dmIdx, pm, instance);
-        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");  // also works
+        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
         rowsWithIcon.append(dmRow);
     }
 
-//    if (debugCaching) {
-//        qDebug().noquote() << "MetaRead::readIcon"
-//                           << "done   row =" << sfIdx.row()
-//                              ;
-//    }
+    /*
+    if (debugCaching) {
+        qDebug().noquote() << "MetaRead::readIcon"
+                           << "done   row =" << sfIdx.row()
+                              ;
+    }
+    //*/
 }
 
 void MetaRead::readRow(int sfRow)

@@ -2023,7 +2023,8 @@ bool MW::stop(QString src)
        The flag "G::dmEmpty is checked to terminate these processes.
     */
     G::stop = true;
-    if (dm->loadingModel) dm->abortLoadingModel = true;
+    dm->abortLoad();
+//    if (dm->loadingModel) dm->abortLoadingModel = true;
     G::dmEmpty = true;
 //    qDebug() << "MW::stop" << "src =" << src;
 
@@ -2433,7 +2434,7 @@ void MW::loadLinearNewFolder()
     }
 
     if (reset(src + "2")) return;
-    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
+    if (dm->abortLoadingModel /*|| !G::allMetadataLoaded*/) {
         updateStatus(false, "Image loading has been cancelled", "MW::loadLinearNewFolder");
         setCentralMessage("Image loading has been cancelled 2.");
         QApplication::processEvents();

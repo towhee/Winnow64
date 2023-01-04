@@ -1,6 +1,0 @@
-12-24_2
-MW::folderSelectionChange New folder = "D:/Pictures/Demo embellish"
-IconView::thumbsFitTopOrBottom "Thumbnails" viewportHeight = 204 maxCellHeight = 204 bestAspectRatio = 1 iconHeight = 186 iconWidth = 186 hMax = 222 hMin = 58 G::iconWMax = 256 G::iconHMax = 256 G::maxIconSize = 256
-MW::restoreLastSessionGeometryState 0
-MW::setDisplayResolution 1 G::isInitializing  = false isVisible()  = true prevDevicePixelRatio = -1 screen->name() = "\\\\.\\DISPLAY1" prevScreenName = "\\\\.\\DISPLAY1" monitorChanged = false devicePixelRatioChanged = false
-MW::setDisplayResolution 2 G::isInitializing  = false isVisible()  = true prevDevicePixelRatio = -1 screen->name() = "\\\\.\\DISPLAY1" prevScreenName = "\\\\.\\DISPLAY1" monitorChanged = false devicePixelRatioChanged = true

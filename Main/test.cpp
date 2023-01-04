@@ -119,46 +119,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QList<int> x;
-    x.append(1);
-    x.append(2);
-    x.append(1);
-    qDebug() << x;
-    return;
-
-
-    qDebug() << "MW::test" << thumbView->iconHeight;
-    return;
-    qDebug() << "MW::test";
-    getDisplayProfile(); return;
-//    restoreLastSessionGeometryState();
-//    setWindowOpacity(1);
-
-//    QList<QScreen*> screens = QGuiApplication::screens();
-//    for (int i = 0; i < screens.size(); i++) {
-//        qDebug() << i
-//                 << screens.at(i)->geometry()
-//                 << screens.at(i)->serialNumber()
-//                 << screens.at(i)->manufacturer()
-//                 << screens.at(i)->name()
-//                    ;
-//    }
-//    return;
-//    setVisible(false);
-//    move (100,100);
-//    setVisible(true);
-//    return;
-
-//    show();
-//    return;
-
-    QPoint p = setting->value("WindowLocation").toRect().topLeft();
-    move(setting->value("WindowLocation").toRect().topLeft());
-    return;
-
-//    setGeometry(setting->value("WindowLocation").toRect());
-//    return;
-//    QRect r(1239,516, 1712,985);
-//    qDebug() << geometry();
-//    setGeometry(r);
+    QImage image;
+    QString fPath = "/Users/roryhill/Pictures/Avatars/Frog.jpg";
+    bool test = thumb->loadThumb(fPath, image, dm->instance, "MW::test");
+    qDebug() << test;
+    QPixmap pm;
+    pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+    const QIcon icon(pm);
+    QVariant v = QVariant(pm);
+    QModelIndex idx = dm->index(0,0);
+//    QModelIndex sfIdx = dm->sf->index(0,0);
+    QStandardItem *item = dm->itemFromIndex(idx);
+    item->setIcon(icon);
+//    dm->setData(idx, v, Qt::DecorationRole);
+//    thumbView->refreshThumbs();
 }

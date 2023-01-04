@@ -403,7 +403,7 @@ bool DataModel::endLoad(bool success)
                           << "success =" << success;
 
     loadingModel = false;
-    abortLoadingModel = false;
+//    abortLoadingModel = false;
     if (success) {
         G::dmEmpty = false;
         return true;
@@ -1783,6 +1783,12 @@ int DataModel::modelRowFromProxyRow(int sfRow)
                           << "row =" << sfRow
                           << currentFolderPath;
     return sf->mapToSource(sf->index(sfRow, 0)).row();
+}
+
+QModelIndex DataModel::modelIndexFromProxyIndex(QModelIndex sfIdx)
+{
+    if (G::isLogger) G::log("DataModel::modelIndexFromProxyIndex");
+    return sf->mapToSource(sfIdx);
 }
 
 //void DataModel::selectNext()
