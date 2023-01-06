@@ -1,0 +1,48 @@
+==============================================   ImageCache Diagnostics  ==============================================
+Load algorithm: Concurrent
+
+isRunning                = false
+
+directionChangeThreshold = 3
+wtAhead                  = 7
+isForward                = false
+totFiles                 = 6
+currMB                   = 5.74738
+currMB Check             = 5.74738
+maxMB                    = 16000
+minMB                    = 16000
+folderMB                 = 0
+targetFirst              = 4
+targetLast               = 5
+decoderCount             = 20
+
+currentPath              = /Users/roryhill/Temp/Screen captures/Diag for not loading new folder.png
+cacheSizeHasChanged      = false
+filterOrSortHasChanged   = false
+isCacheUpToDate          = true
+
+cacheItemList (used to manage image cache):
+ Title:  Key:0  cacheMB:5.74738  Wt ahead:7  Direction ahead:0  Total files:6
+
+      Key Priority   Target Attempts  Caching   Thread   Cached  imCache dmCached    Video   SizeMB Estimate   Offset   Length   File Name
+        0        0    false        0    false       -1    false    false    false    false        0        0        0        0   /Users/roryhill/Temp/Screen captures/Diag for not loading new folder.png
+        1        1    false        0    false       -1    false    false    false    false        0        0        0        0   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 2.09.39 PM.png
+        2        2    false        0    false       -1    false    false    false    false        0        0        0        0   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 2.10.45 PM.png
+        3        3    false        0    false       -1    false    false    false    false        0        0        0        0   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 2.11.36 PM.png
+        4        4     true        1    false        0     true     true     true    false  5.62822        0        0        0   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 6.57.12 AM.png
+        5        5     true        1    false        0     true     true     true    false 0.119165        1        0        0   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-08-12 at 7.44.18 AM.png
+2 images reported as cached.
+
+priorityList:
+ Priority      Key   Path
+        0        4   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 6.57.12 AM.png
+        1        5   /Users/roryhill/Temp/Screen captures/Screen Shot 2022-08-12 at 7.44.18 AM.png
+
+imCache hash: 2 items
+  Hash  Priority   Key     W     H    MB  Path
+     0         0     4  1334  1106     5  /Users/roryhill/Temp/Screen captures/Screen Shot 2022-07-25 at 6.57.12 AM.png
+     1         1     5   659   396     0  /Users/roryhill/Temp/Screen captures/Screen Shot 2022-08-12 at 7.44.18 AM.png
+
+2 images in image cache.
+5 MB consumed
+

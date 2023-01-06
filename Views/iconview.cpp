@@ -1531,7 +1531,7 @@ bool IconView::event(QEvent *event) {
         else p = c - i - d;
         QModelIndex idx = indexAt(p);
         QRect vr = visualRect(model()->index(6,0));
-//        /*
+        /*
         qDebug() << "IconView::event"
                  << "\n  d =" << d
                  << "\n  i =" << i
@@ -1548,7 +1548,6 @@ bool IconView::event(QEvent *event) {
 
     if (event->type() == QEvent::Enter) {
         mouseOverThumbView = true;
-        qDebug() << "IconView::event Enter" << event;
     }
 
     QListView::event(event);

@@ -350,18 +350,6 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  ;
     }
     return true;
-
-//    if (dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata")) {
-//        if (G::useImageCache) emit addToImageCache(metadata->m);
-//        return true;
-//    }
-//    else return false;
-
-    /*
-    if (!abort) emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
-    if (!abort) emit addToImageCache(metadata->m);
-    //*/
-//    if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
 
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
@@ -502,8 +490,8 @@ void MetaRead::run()
     firstIconRow = startRow - iconChunkSize / 2;
     if (firstIconRow < 0) firstIconRow = 0;
     lastIconRow = firstIconRow + iconChunkSize;
-//    qDebug() << "MetaRead::read" << firstIconRow << lastIconRow
-//             << rowsWithIcon.size();
+    qDebug() << "MetaRead::run" << firstIconRow << lastIconRow
+             << rowsWithIcon.size() << folderPath;
 
     if (rowsWithIcon.size() > iconChunkSize) {
 //        cleanupIcons();
@@ -534,6 +522,7 @@ void MetaRead::run()
         // do something with row
 //        qDebug() << "MetaRead::run   row =" << row;
         readRow(row);
+//        Utilities::log("MetaRead::run", "row = " + QString::number(row));
         if (abort) return;
 
         // delayed start ImageCache
@@ -542,6 +531,7 @@ void MetaRead::run()
                 // start image caching thread after head start
                 emit triggerImageCache("Initial");
                 imageCachingStarted = true;
+//                Utilities::log("MetaRead::run", "start iamge caching");
             }
         }
 

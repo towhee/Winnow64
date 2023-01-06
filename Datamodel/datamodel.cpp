@@ -1392,6 +1392,11 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     changing folders it is possible to receive a delayed signal from the previous folder.
     To prevent this, the datamodel instance is incremented every time a new folder is
     loaded, and this is checked against the signal instance.
+
+    In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
+    lagging calls when the folder has been changed.  This probably makes the instance
+    checking, which was not totally reliable, to no longer be required.  Keeping it for
+    now.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIcon");
@@ -1417,16 +1422,43 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "loadingModel = " << loadingModel;
         return;
     }
+
     if (G::stop) {
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "G::stop = " << G::stop;
         return;
     }
+
     if (!dmIdx.isValid()) {
         qWarning() << "WARNING" << "DataModel::setIcon" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
 
-    QStandardItem *item = itemFromIndex(dmIdx);
+    if (dmIdx.row() >= rowCount()) {
+        qWarning() << "WARNING" << "DataModel::setIcon" << "row exceeds rowCount" << dmIdx.isValid() << dmIdx;
+        return;
+    }
+
+    /*
+    qDebug() << "DataModel::setIcon"
+             << "row =" << dmIdx.row()
+             << "rows =" << rowCount()
+             << "fromInstance =" << fromInstance
+             << "currentInstance =" << instance
+                ;
+                //*/
+
+    // this fails same as QStandardItem *item when rapid change folders
+    const QVariant vIcon = QVariant(QIcon(pm));
+    mutex.lock();
+    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
+    if (fromInstance == instance) setData(dmIdx, false, G::CachingIconRole);
+    mutex.unlock();
+    setIconMax(pm);
+//    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
+//    if (fromInstance == instance) setData(dmIdx, false, G::CachingIconRole);
+//    if (fromInstance == instance) setIconMax(pm);
+
+//    QStandardItem *item = itemFromIndex(dmIdx);
     /* const QIcon icon(pm) - required to prevent occasional malloc deallocation error
        in qarraydata.h deallocate:
         static void deallocate(QArrayData *data) noexcept
@@ -1435,10 +1467,10 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
             QArrayData::deallocate(data, sizeof(T), alignof(AlignmentDummy)); // crashes here
         }
     */
-    const QIcon icon(pm);
-    item->setIcon(icon);
-    setData(dmIdx, false, G::CachingIconRole);
-    setIconMax(pm);
+//    const QIcon icon(pm);
+//    item->setIcon(icon);
+//    setData(dmIdx, false, G::CachingIconRole);
+//    setIconMax(pm);
 }
 
 void DataModel::setIconMax(const QPixmap &pm)
