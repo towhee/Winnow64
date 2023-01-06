@@ -78,17 +78,25 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-//    if (G::isLogger) {mutex.lock(); G::log("ImageDecoder::load", fPath); mutex.unlock();}
-    /*
-    qDebug() << "ImageDecoder::load" << "fPath =" << fPath;
-    //*/
+    if (G::isLogger) G::log("ImageDecoder::load", fPath);
 
     // null fPath when caching is cycling, waiting to finish.
-    if (fPath == "") return false;
+    if (fPath == "") {
+        qWarning() << "WARNING" << "ImageDecoder::load  Null file path" << fPath;
+        status = Status::NoFile;
+        return false;
+    }
 
+    // get image type (extension)
     QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) {
+        qWarning() << "WARNING" << "ImageDecoder::load  File does not exist" << fPath;
+        status = Status::NoFile;
+        return false;
+    }
     ext = fileInfo.completeSuffix().toLower();
 
+    // ignore video files
     if (metadata->videoFormats.contains(ext)) {
         status = Status::Video;
         return false;
@@ -99,6 +107,7 @@ bool ImageDecoder::load()
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
         qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded" << fPath;
+        status = Status::NoMetadata;
         return false;
     }
 
@@ -107,6 +116,7 @@ bool ImageDecoder::load()
     // is file already open by another process
     if (imFile.isOpen()) {
         qWarning() << "WARNING" << "ImageDecoder::load  File already open" << fPath;
+        status = Status::FileOpen;
         return false;
     }
 
@@ -120,6 +130,10 @@ bool ImageDecoder::load()
         if (!dir.exists()) {
             status = Status::NoDir;
             errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
+            qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
+        }
+        else {
+            status = Status::Failed;
         }
         return false;
     }
@@ -130,6 +144,7 @@ bool ImageDecoder::load()
         if (n.lengthFull == 0) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
+            status = Status::Failed;
             return false;
         }
 
@@ -137,6 +152,7 @@ bool ImageDecoder::load()
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load Illegal offset to image " << fPath;
+            status = Status::Failed;
             return false;
         }
 
@@ -144,6 +160,7 @@ bool ImageDecoder::load()
         if (buf.length() == 0) {
             qWarning() << "WARNING" << "ImageDecoder::load  Zero JPG buffer" << fPath;
             imFile.close();
+            status = Status::Failed;
             return false;
         }
 
@@ -155,6 +172,7 @@ bool ImageDecoder::load()
                        << "instance =" << instance
                        << fPath;
             imFile.close();
+            status = Status::Failed;
             return false;
         }
         imFile.close();
@@ -168,6 +186,7 @@ bool ImageDecoder::load()
         if (!heic.decodePrimaryImage(fPath, image)) {
             G::error("ImageDecoder::load", fPath, "heic.decodePrimaryImage failed.");
             imFile.close();
+            status = Status::Failed;
             return false;
         }
         /*
@@ -182,6 +201,7 @@ bool ImageDecoder::load()
         if (!image.load(fPath)) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
+            status = Status::Failed;
             return false;
         }
         imFile.close();
@@ -197,6 +217,7 @@ bool ImageDecoder::load()
                     + " samplesPerPixel > 3.";
             qWarning() << "WARNING" << "ImageDecoder::load " << err << fPath;
 //            G::error("ImageDecoder::load", fPath, err);
+            status = Status::Failed;
             return false;
         }
 
@@ -217,6 +238,7 @@ bool ImageDecoder::load()
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //                QString err = "Could not decode using Qt.";
 //                G::error("ImageDecoder::load", fPath, err);
+                status = Status::Failed;
                 return false;
             }
         }
@@ -239,13 +261,17 @@ bool ImageDecoder::load()
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
+            status = Status::Failed;
             return false;
         }
         imFile.close();
     }
 
     // check for null image
-    if (image.width() == 0 || image.height() == 0) return false;
+    if (image.width() == 0 || image.height() == 0) {
+        status = Status::Failed;
+        return false;
+    }
 
     return true;
 }
@@ -312,9 +338,9 @@ void ImageDecoder::colorManage()
 void ImageDecoder::run()
 {
     if (G::isLogger) {
-//        mutex.lock();
-//        G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
-//        mutex.unlock();
+        mutex.lock();
+        G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+        mutex.unlock();
     }
 
     if (instance != dm->instance) {
@@ -329,14 +355,14 @@ void ImageDecoder::run()
         if (G::colorManage && !abort) colorManage();
         status = Status::Done;
     }
-    else {
-        if (status == Status::Video) {}
-        else if (status == Status::NoDir) {}
-        else {
-            status = Status::Failed;
-            fPath = "";
-        }
-    }
+//    else {
+//        if (status == Status::Video) {}
+//        else if (status == Status::NoDir) {}
+//        else {
+//            status = Status::Failed;
+//            fPath = "";
+//        }
+//    }
 
     if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
     if (!abort) emit done(threadId);

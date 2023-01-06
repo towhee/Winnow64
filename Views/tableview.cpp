@@ -248,6 +248,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     if (G::isLogger) G::log("TableView::selectionChanged");
+//    qDebug() << "TableView::selectionChanged";
     QTableView::selectionChanged(selected, deselected);
     if (G::isInitializing) return;
     // update status bar

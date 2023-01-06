@@ -276,7 +276,7 @@ void MW::diagnosticsReport(QString reportString)
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->setFixedWidth(1000);
+//    dlg->setFixedWidth(1000);
     md.textBrowser->setStyleSheet(G::css);
     QFont courier("Courier", 12);
     md.textBrowser->setFont(courier);

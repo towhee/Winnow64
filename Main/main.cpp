@@ -2,6 +2,9 @@
 #include <QApplication>
 #include "qtsingleapplication.h"
 
+// see https://github.com/itay-grudev/SingleApplication if replacement for
+// QtSingleApplication required
+
 int main(int argc, char *argv[])
 {
     /* Original multi instance version
@@ -17,8 +20,6 @@ int main(int argc, char *argv[])
         return QApp.exec();
         //*/
 
-//    /* Single instance version
-//    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QtSingleApplication instance("Winnow", argc, argv);
@@ -29,11 +30,12 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-//    Utilities::log("WinnowMain", args);
+    // Utilities::log("WinnowMain", args);
 
     // instance already running
     if (instance.sendMessage(args)) {
-//        Utilities::log("main", "Instance already running");
+        Utilities::log("WinnowMain", "Instance already running");
+        // qDebug() << "main  instance already running, sent args";
         return 0;
     }
 
@@ -47,6 +49,8 @@ int main(int argc, char *argv[])
 
     instance.setActivationWindow(&mw, false);
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
+
+    // Utilities::log("WinnowMain", "Start new instance");
 
     return instance.exec();             //    return QApp.exec();
 }

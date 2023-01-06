@@ -252,14 +252,11 @@ void MW::createMDCache()
 
     // MetaRead
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-//    metaRead = new MetaRead(this, dm, metadata, frameDecoder);
-//    metaRead->moveToThread(&metaReadThread);
 
     metaReadThread->iconChunkSize = 2000;
     if (setting->contains("iconChunkSize")) {
         dm->iconChunkSize = setting->value("iconChunkSize").toInt();
         metaReadThread->iconChunkSize = setting->value("iconChunkSize").toInt();
-//        metaRead->iconChunkSize = setting->value("iconChunkSize").toInt();
     }
     else {
         dm->iconChunkSize = 3000;
@@ -353,8 +350,8 @@ void MW::createImageCache()
     connect(imageCacheThread, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 
     // concurrent load
+
     // add to image cache list
-    // signal to ImageCache new image selection req'd?
     connect(metaReadThread, &MetaRead::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
     // signal ImageCache refresh

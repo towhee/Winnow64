@@ -44,6 +44,9 @@ public:
         Video,
         InstanceClash,
         NoDir,
+        NoFile,
+        NoMetadata,
+        FileOpen,
         Done
     } status;
 
