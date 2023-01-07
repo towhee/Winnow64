@@ -342,7 +342,9 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << "abort =" << abort
                  ;
     }
-    if (G::useImageCache) emit addToImageCache(metadata->m);
+    if (G::useImageCache) {
+        emit addToImageCache(metadata->m);
+    }
     if (debugCaching) {
         qDebug() << "MetaRead::readMetadata"
                  << "addToImageCache row =" << sfIdx.row()

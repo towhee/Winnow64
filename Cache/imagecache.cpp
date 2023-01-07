@@ -1036,15 +1036,11 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     Concurrent metadata loading alternative to buildImageCacheList. The imageCacheList is
     built row by row, triggered by signal addToImageCache in MetaRead::readMetadata.
 */
-    // deal with lagging signals when new folder selected suddenly
-    if (m.currRootFolder != G::currRootFolder) return;
-
     if (G::isLogger /*|| G::isFlowLogger*/) G::log("ImageCache::addCacheItemImageMetadata");
     if (!G::useImageCache) return;  // rgh isolate image cache
     if (G::stop) {
         return;
     }
-
     if (!cacheKeyHash.contains(m.fPath)) {
         qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
                    << "cacheKeyHash does not contain" << m.fPath;
