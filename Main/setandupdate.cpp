@@ -407,10 +407,10 @@ void MW::setIngested()
     setting->beginGroup("PickLog");
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QString sKey = dm->sf->index(row, 0).data(G::PathRole).toString();
-        if (dm->sf->index(row, G::PickColumn).data().toString() == "picked") {
+        if (dm->sf->index(row, G::PickColumn).data().toString() == "Picked") {
             emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
                             dm->instance, "MW::setIngested", Qt::EditRole);
-            emit setValueSf(dm->sf->index(row, G::PickColumn), "false",
+            emit setValueSf(dm->sf->index(row, G::PickColumn), "Unpicked",
                             dm->instance, "MW::setIngested", Qt::EditRole);
             // update pickLog
             sKey.replace("/", "🔸");
@@ -440,10 +440,10 @@ void MW::toggleReject()
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        foundFalse = (pickStatus != "reject");
+        foundFalse = (pickStatus != "Rejected");
         if (foundFalse) break;
     }
-    foundFalse ? pickStatus = "reject" : pickStatus = "false";
+    foundFalse ? pickStatus = "Rejected" : pickStatus = "Unpicked";
 
     // set pick status for selection
     foreach (idx, idxList) {
@@ -465,7 +465,8 @@ void MW::toggleReject()
     updateStatus(true, "", "MW::toggleReject");
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    launchBuildFilters();
+//    buildFilters->updateCountFiltered();
 }
 
 void MW::setCombineRawJpg()
@@ -598,8 +599,8 @@ void MW::updateClassification()
         imageView->classificationLabel->setVisible(false);
     }
     int row = thumbView->currentIndex().row();
-    isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
-    isReject = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "reject";
+    isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked";
+    isReject = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Rejected";
     rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     if (rating == "0") rating = "";

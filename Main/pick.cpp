@@ -22,7 +22,7 @@ void MW::togglePickUnlessRejected()
         foundFalse = (pickStatus == "false");
         if (foundFalse) break;
     }
-    foundFalse ? newPickStatus = "picked" : newPickStatus = "false";
+    foundFalse ? newPickStatus = "Picked" : newPickStatus = "Unpicked";
 
     // add multiple selection flag to pick history
     if (idxList.length() > 1) pushPick("Begin multiple select");
@@ -36,7 +36,7 @@ void MW::togglePickUnlessRejected()
         // set pick status
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        if (pickStatus != "reject") {
+        if (pickStatus != "Rejected") {
             emit setValueSf(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
         }
     }
@@ -50,7 +50,8 @@ void MW::togglePickUnlessRejected()
     updateStatus(true, "", "MW::togglePickUnlessRejected");
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    launchBuildFilters();
+//    buildFilters->updateCountFiltered();
 }
 
 void MW::togglePickMouseOver()
@@ -75,7 +76,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     if (G::isLogger) G::log("MW::togglePickMouseOverItem");
     QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-    pickStatus == "false" ? pickStatus = "true" : pickStatus = "false";
+    pickStatus == "false" ? pickStatus = "Picked" : pickStatus = "Unpicked";
     emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
 //    dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
 
@@ -87,7 +88,8 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     updateStatus(true, "", "MW::togglePickMouseOverItem");
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    launchBuildFilters();
+//    buildFilters->updateCountFiltered();
 }
 
 void MW::togglePick()
@@ -99,9 +101,9 @@ void MW::togglePick()
     Push the changes onto the pick history stack.
 
     The pick status is a string in dm->sf->index(idx.row(), G::PickColumn)
-        - "false"
-        - "picked"
-        - "reject"
+        - "Unpicked"
+        - "Picked"
+        - "Rejected"
 
     The settings pickLog (for crash recovery) values:
         - "picked"      datamodel pick = "picked"
@@ -118,10 +120,10 @@ void MW::togglePick()
     foreach (idx, idxList) {
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        foundFalse = (pickStatus == "false");
+        foundFalse = (pickStatus == "Unpicked");
         if (foundFalse) break;
     }
-    foundFalse ? pickStatus = "picked" : pickStatus = "false";
+    foundFalse ? pickStatus = "Picked" : pickStatus = "Unpicked";
 //    foundFalse ? pickStatus = "true" : pickStatus = "false";
 
     // add multiple selection flag to pick history
@@ -148,7 +150,8 @@ void MW::togglePick()
     updateStatus(true, "", "MW::togglePick");
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    launchBuildFilters();
+//    buildFilters->updateCountFiltered();
 
     // auto advance
     if (autoAdvance) thumbView->selectNext();
@@ -174,9 +177,9 @@ void MW::recoverPickLog()
         QString pickStatus = setting->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
-            if (pickStatus == "picked") {
+            if (pickStatus == "Picked") {
                 QModelIndex idxPick = dm->sf->index(idx.row(), G::PickColumn);
-                emit setValueSf(idxPick, "picked", dm->instance, "MW::recoverPickLog", Qt::EditRole);
+                emit setValueSf(idxPick, "Picked", dm->instance, "MW::recoverPickLog", Qt::EditRole);
             }
             if (pickStatus == "ingested") {
                 QModelIndex idxIngest = dm->sf->index(idx.row(), G::IngestedColumn);
@@ -213,7 +216,7 @@ void MW::updatePickLog(QString fPath, QString pickStatus)
     setting->beginGroup("PickLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
-    if (pickStatus == "picked") {
+    if (pickStatus == "Picked") {
 //        qDebug() << "MW::updatePickLog" << "adding" << sKey;
         setting->setValue(sKey, pickStatus);
     }
@@ -270,7 +273,8 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         updateStatus(true, "", "MW::updatePickFromHistory");
 
         // update filter counts
-        buildFilters->updateCountFiltered();
+        launchBuildFilters();
+//        buildFilters->updateCountFiltered();
     }
 }
 
@@ -280,7 +284,7 @@ qulonglong MW::memoryReqdForPicks()
     qulonglong memTot = 0;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
-        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "picked") {
+        if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "Picked") {
             idx = dm->sf->index(row, G::SizeColumn);
             memTot += idx.data(Qt::EditRole).toULongLong();
         }

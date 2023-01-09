@@ -19,6 +19,7 @@ public:
                  bool &combineRawJpg);
     void stop();
     void done();
+    void reset();
     void loadAllMetadata();
     void mapUniqueInstances();
     void updateCountFiltered();
@@ -46,10 +47,12 @@ private:
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
-    int instance;
+    bool isReset;                           // if true, reset the filter tree filters (new folder)
+    int instance;                           // instance of the datamodel
     int dmRows = 0;                         // rows in datamodel (get once at start)
-    QMap <QString, int>instances;           // total items per category in filters
-    int totInstances;                       // total items in all categories in filters
+    // progress
+    QMap <QString, int>uniqueItemCount;     // total unique items per category in filters
+    int totUniqueItems;                     // total unique items in all categories in filters
     int progress = 0;                       // 0-100 progress for progressBar
     QElapsedTimer buildFiltersTimer;
 };

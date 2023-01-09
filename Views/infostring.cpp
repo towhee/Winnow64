@@ -329,7 +329,7 @@ QString InfoString:: parseTokenString(QString &tokenString,
     Metadata metadata;
     metadata.loadImageMetadata(info, dm->instance, true, true, false, false,
                                "InfoString:: parseTokenString", /*isRemote*/true);
-    Utilities::log("InfoString:: parseTokenString  title =", metadata.m.title);
+    if (G::isFileLogger) Utilities::log("InfoString:: parseTokenString  title =", metadata.m.title);
     QString s;
     int tokenEnd;
     int i = 0;

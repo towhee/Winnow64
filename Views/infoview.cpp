@@ -123,7 +123,7 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     copyInfoAction = new QAction(tr("Copy item"), this);
 
     // metadata fields that can be edited
-    editFields << "Title" << "Creator" << "Copyright" << "Email" << "Url";
+    editFields << "Title*" << "Creator*" << "Copyright*" << "Email*" << "Url*";
 
     connect(this, &InfoView::setValueSf, dm, &DataModel::setValueSf);
 
@@ -174,7 +174,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             for (int i = 0; i < n; i++) {
                 int row = selection.at(i).row();
                 QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-                if (field == "Title") {
+                if (field == "Title*") {
                     QString s = idx1.data().toString();
                     emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
                     emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
@@ -187,22 +187,22 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                                 ;
     //                            */
                 }
-                if (field == "Creator") {
+                if (field == "Creator*") {
                     QString s = idx1.data().toString();
                     emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
                     emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
-                if (field == "Copyright") {
+                if (field == "Copyright*") {
                     QString s = idx1.data().toString();
                     emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::EditRole);
                     emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
-                if (field == "Email") {
+                if (field == "Email*") {
                     QString s = idx1.data().toString();
                     emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::EditRole);
                     emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
-                if (field == "Url") {
+                if (field == "Url*") {
                     QString s = idx1.data().toString();
                     emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::EditRole);
                     emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::ToolTipRole);
@@ -283,7 +283,7 @@ void InfoView::setupOk()
 
     ok->setData(ok->index(fileInfoCat, 0), "File:");
     ok->setData(ok->index(imageInfoCat, 0), "Camera:");
-    ok->setData(ok->index(tagInfoCat, 0), "Tags:");
+    ok->setData(ok->index(tagInfoCat, 0), "Tags: *editable");
     ok->setData(ok->index(statusInfoCat, 0), "Status:");
 
     fileInfoIdx = ok->index(fileInfoCat, 0, QModelIndex());
@@ -320,11 +320,11 @@ void InfoView::setupOk()
     ok->setData(ok->index(ISORow, 0, imageInfoIdx), "ISO");
     ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "EC");
     ok->setData(ok->index(FocalLengthRow, 0, imageInfoIdx), "Focal length");
-    ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title");
-    ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator");
-    ok->setData(ok->index(CopyrightRow, 0, tagInfoIdx), "Copyright");
-    ok->setData(ok->index(EmailRow, 0, tagInfoIdx), "Email");
-    ok->setData(ok->index(UrlRow, 0, tagInfoIdx), "Url");
+    ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title*");
+    ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator*");
+    ok->setData(ok->index(CopyrightRow, 0, tagInfoIdx), "Copyright*");
+    ok->setData(ok->index(EmailRow, 0, tagInfoIdx), "Email*");
+    ok->setData(ok->index(UrlRow, 0, tagInfoIdx), "Url*");
     ok->setData(ok->index(GPSCoordRow, 0, tagInfoIdx), "GPS");
     ok->setData(ok->index(KeywordRow, 0, tagInfoIdx), "Keywords");
     ok->setData(ok->index(PositionRow, 0, statusInfoIdx), "Position");

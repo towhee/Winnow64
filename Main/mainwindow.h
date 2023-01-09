@@ -285,6 +285,7 @@ public:
 //    int prevTabIndex= -1;
 
     QDir currRootDir;
+    int instance;
 
     enum centralWidgetTabs {
         LoupeTab,       // 0
@@ -357,6 +358,7 @@ public slots:
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     bool reset(QString src = "");
+    bool instanceClash();
     void nullFiltration();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -522,6 +524,7 @@ private slots:
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache(QString source);
     void loadImageCacheForNewFolder();
+    void updateAllFilters();
     void launchBuildFilters();
 //    void loadFilteredImageCache();
     void addNewBookmarkFromMenu();

@@ -371,11 +371,12 @@ void MW::createActions()
     addAction(pick1Action);
     connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
 
-    pickMouseOverAction = new QAction(tr("Pick at cursor"), this);  // IconView context menu
+    pickMouseOverAction = new QAction(tr("Pick"), this);  // IconView context menu
     pickMouseOverAction->setObjectName("toggleMouseOverPick");
     pickAction->setShortcutVisibleInContextMenu(true);
     addAction(pickMouseOverAction);
-    connect(pickMouseOverAction, &QAction::triggered, this, &MW::togglePickMouseOver);
+    connect(pickMouseOverAction, &QAction::triggered, this, &MW::togglePick);
+//    connect(pickMouseOverAction, &QAction::triggered, this, &MW::togglePickMouseOver);
 
     pickUnlessRejectedAction = new QAction(tr("Pick unless rejected"), this);
     pickUnlessRejectedAction->setObjectName("pickUnlessRejected");
@@ -1769,6 +1770,10 @@ void MW::createMenus()
     separatorAction4->setSeparator(true);
     QAction *separatorAction5 = new QAction(this);
     separatorAction5->setSeparator(true);
+    QAction *separatorAction6 = new QAction(this);
+    separatorAction6->setSeparator(true);
+    QAction *separatorAction7 = new QAction(this);
+    separatorAction7->setSeparator(true);
 
     // FSTREE CONTEXT MENU
     fsTreeActions = new QList<QAction *>;
@@ -1831,10 +1836,18 @@ void MW::createMenus()
 
     // THUMBVIEW CONTEXT MENU
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
-    thumbViewActions->append(pickMouseOverAction);
+//    thumbViewActions->append(pickMouseOverAction);
+    thumbViewActions->append(pickAction);
+    thumbViewActions->append(rejectAction);
+    thumbViewActions->append(refineAction);
+    thumbViewActions->append(pickUnlessRejectedAction);
+    thumbViewActions->append(separatorAction6);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
+    thumbViewActions->append(separatorAction7);
+    thumbViewActions->append(ratingBadgeVisibleAction);
+    thumbViewActions->append(iconNumberVisibleAction);
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);

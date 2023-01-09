@@ -696,7 +696,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::ModifiedColumn), s);
     setData(index(row, G::RefineColumn), false);
     setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::PickColumn), "false");
+    setData(index(row, G::PickColumn), "Unpicked");
     setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
     setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1776,7 +1776,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
                           << currentFolderPath;
     if (!fPathRow.contains(fPath)) {
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Not in fPathrow";
-        Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     int dmRow = fPathRow[fPath];
@@ -2115,7 +2115,7 @@ bool DataModel::isPick()
     if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < sf->rowCount(); ++row) {
         QModelIndex idx = sf->index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "picked") return true;
+        if (idx.data(Qt::EditRole).toString() == "Picked") return true;
     }
     return false;
 }
@@ -2362,15 +2362,18 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
                     QString itemName = (*filter)->text(0);      // for debugging
                     /*
-                    qDebug() << "DataModel::filterAcceptsRow" << "\t" << itemCategory << itemName
+                    qDebug() << "DataModel::filterAcceptsRow"
+                             << "\tC at =" << itemCategory
+                             << "dataModelColumn =" << dataModelColumn
+                             << "itemName =" << itemName
                              << "sfRow" << sourceRow
                              << "Comparing" << dataValue << filterValue
                              << (dataValue == filterValue);
-                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
-                             << dataModelColumn << G::KeywordsColumn
-                             << dataValue.typeId()
-                             << QMetaType::QStringList
-                                ;
+//                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
+//                             << dataModelColumn << G::KeywordsColumn
+//                             << dataValue.typeId()
+//                             << QMetaType::QStringList
+//                                ;
                     //*/
                     if (dataValue.typeId() == QMetaType::QStringList) {  // keywords
                         if (dataValue.toStringList().contains(filterValue)) isMatch = true;
@@ -2385,7 +2388,13 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             // top level item = category
             // check results of category items filter match
             if (isCategoryUnchecked) isMatch = true;
-//            qDebug() << G::t.restart() << "\t" << G::sj("", 25)"Category" << itemCategory << isMatch;
+            /*
+            qDebug() << "Category" << itemCategory
+                     << "isCategoryUnchecked =" << isCategoryUnchecked
+                     << "dataModelColumn =" << (*filter)->data(0, G::ColumnRole).toInt()
+                         ;
+            //*/
+
             if (!isMatch) return false;   // no match in category
 
             /* prepare for category items filter match.  If no item is checked
@@ -2401,6 +2410,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     }
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
+
     return isMatch;
 }
 

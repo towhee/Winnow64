@@ -740,7 +740,7 @@ QFileInfoList IconView::getPicks()
     QFileInfoList fileInfoList;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "picked") {
+        if (idx.data(Qt::EditRole).toString() == "Picked") {
             QModelIndex pathIdx = dm->sf->index(row, 0);
             QString fPath = pathIdx.data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
@@ -760,7 +760,7 @@ int IconView::getNextPick()
     QModelIndex idx;
     while (frwd < rowCount) {
         idx = dm->sf->index(frwd, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "picked") return frwd;
+        if (idx.data(Qt::EditRole).toString() == "Picked") return frwd;
         ++frwd;
     }
     return -1;
@@ -775,7 +775,7 @@ int IconView::getPrevPick()
     QModelIndex idx;
     while (back >= 0) {
         idx = dm->sf->index(back, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "picked") return back;
+        if (idx.data(Qt::EditRole).toString() == "Picked") return back;
         --back;
     }
     return -1;
@@ -1564,8 +1564,6 @@ void IconView::mousePressEvent(QMouseEvent *event)
 */
     if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
 
-    QListView::mousePressEvent(event);
-
     // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();
 
@@ -1589,6 +1587,9 @@ void IconView::mousePressEvent(QMouseEvent *event)
         }
         return;
     }
+
+    // must be after button events but preceed left button event
+    QListView::mousePressEvent(event);
 
     // left button or touch
     if (event->button() == Qt::LeftButton) {

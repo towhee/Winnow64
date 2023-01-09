@@ -340,7 +340,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
     if (argList.length() > 1) isStartupArgs = true;
-//    Utilities::log("MW::MW", QString::number(argList.length()) + " arguments");
+//    if (G::isFileLogger) Utilities::log("MW::MW", QString::number(argList.length()) + " arguments");
 
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
@@ -1201,11 +1201,11 @@ void MW::checkForUpdate()
     qDebug() << "MW::checkForUpdate" << "exitCode() =" << process.exitCode();
     qDebug() << "MW::checkForUpdate" << "readAllStandardError() =" << process.readAllStandardError();
 
-    Utilities::log("MW::checkForUpdate", "process.error() = " + QString::number(process.error()));
-    Utilities::log("MW::checkForUpdate", "noUpdataAvailable = " + noUpdataAvailable.toString());
-    Utilities::log("MW::checkForUpdate", "data = " + data);
-    Utilities::log("MW::checkForUpdate", "readAllStandardError() = " + process.readAllStandardError());
-    Utilities::log("MW::checkForUpdate", "exitCode() = " + QString::number(process.exitCode()));
+    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "process.error() = " + QString::number(process.error()));
+    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "noUpdataAvailable = " + noUpdataAvailable.toString());
+    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "data = " + data);
+    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "readAllStandardError() = " + process.readAllStandardError());
+    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "exitCode() = " + QString::number(process.exitCode()));
 //    */
     G::log("MW::checkForUpdate", "after check");
 
@@ -1283,8 +1283,8 @@ void MW::handleStartupArgs(const QString &args)
     QMessageBox::information(this, "MW::handleStartupArgs", a);
     //*/
     if (argList.length() > 1) {
-        Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        Utilities::log("MW::handleStartupArgs", argList.join(" | "));
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
     QStringList pathList;
@@ -1308,14 +1308,14 @@ void MW::handleStartupArgs(const QString &args)
         templateName = argList.at(2);
 
         /* log
-        Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
         QFileInfo info(argList.at(3));
         QString folderPath = info.dir().absolutePath();
 //        QMessageBox::information(this, "MW::handleStartupArgs", folderPath);
-//        Utilities::log("MW::handleStartupArgs", args);
+//        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", args);
 
         // list of all supported files in the folder
         QStringList fileFilters;
@@ -1371,12 +1371,12 @@ void MW::handleStartupArgs(const QString &args)
                           " t = " + t.toString("yyyy-MM-dd hh:mm:ss") +
                           "  " + fPath
                           ;
-            Utilities::log("MW::handleStartupArgs", msg);
+            if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", msg);
             //*/
         }
 
         /* log
-        Utilities::log("MW::handleStartupArgs", QString::number(dir.entryInfoList().size()) + " files " +
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", QString::number(dir.entryInfoList().size()) + " files " +
                        folderPath + "  Cutoff = " + t.toString("yyyy-MM-dd hh:mm:ss"));
         //*/
 
@@ -1390,7 +1390,7 @@ void MW::handleStartupArgs(const QString &args)
                 QString msg = QString::number(i) +
                         " Adding " + info.lastModified().toString("yyyy-MM-dd hh:mm:ss") +
                         " " + info.filePath();
-                Utilities::log("MW::handleStartupArgs", msg);
+                if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", msg);
                 //*/
             }
         }
@@ -1403,7 +1403,7 @@ void MW::handleStartupArgs(const QString &args)
 
         // export get the location for the last embellished file
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
-        Utilities::log("MW::handleStartupArgs", "lastFileExportedThumbPath = " + fPath);
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "lastFileExportedThumbPath = " + fPath);
 
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
@@ -1422,10 +1422,10 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->select(f.dir().path());
 //        selectionChange();
         folderSelectionChange();
-         Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
 
-    Utilities::log("MW::handleStartupArgs", "done");
+    if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "done");
     return;
 }
 
@@ -1545,7 +1545,7 @@ void MW::folderSelectionChange()
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 //    qDebug() << " ";
 //    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
-//    Utilities::log("MW::folderSelectionChange", G::currRootFolder);
+//    if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1587,7 +1587,7 @@ void MW::folderSelectionChange()
     if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
         stop("Invalid folder");
         setWindowTitle(winnowWithVersion);
-        if (G::isLogger) Utilities::log("MW::folderSelectionChange", "Invalid folder " + G::currRootFolder);
+        if (G::isLogger) if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", "Invalid folder " + G::currRootFolder);
         return;
     }
 
@@ -1695,6 +1695,8 @@ void MW::folderSelectionChange()
 
     // start loading new folder
     G::t.restart();
+    instance = dm->instance;
+    buildFilters->reset();
     if (G::isLinearLoading) {
         // metadata and icons loaded in GUI thread
         loadLinearNewFolder();
@@ -1962,7 +1964,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     if (!fsTree->select(folder)) {
         qWarning() << "WARNING" << "MW::folderAndFileSelectionChange" << "fsTree failed to select" << fPath;
-        Utilities::log("MW::folderAndFileSelectionChange", "fsTree failed to select " + fPath);
+        if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "fsTree failed to select " + fPath);
         return;
     }
 
@@ -1973,7 +1975,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
-    Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
+    if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     folderSelectionChange();
 
     return;
@@ -2008,12 +2010,10 @@ bool MW::stop(QString src)
     disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
     connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
     disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
-    disconnect(metaReadThread, &MetaRead::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    connect(metaReadThread, &MetaRead::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+    disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+
     /*
        Program interrupt flags used to stop all folder loading activity.  If
        the activity is happening in another thread then it stops when the thread
@@ -2023,11 +2023,9 @@ bool MW::stop(QString src)
     */
     G::stop = true;
     dm->abortLoad();
-//    if (dm->loadingModel) dm->abortLoadingModel = true;
     G::dmEmpty = true;
-//    qDebug() << "MW::stop" << "src =" << src;
 
-    G::t.restart();
+//    G::t.restart();
     buildFilters->stop();
 //    qDebug() << "MW::stop" << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
 
@@ -2105,6 +2103,11 @@ bool MW::reset(QString src)
 
     G::stop = false;
     return true;
+}
+
+bool MW::instanceClash()
+{
+    return (instance == dm->instance);
 }
 
 void MW::nullFiltration()
@@ -2275,9 +2278,8 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + "4")) return;
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
-//    emit startMetaRead(dm->currentSfRow, "MW::loadConcurrentNewFolder");
     if (reset(src + "5")) return;
-    Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
+    if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     metaReadThread->setCurrentRow(dm->currentSfRow, "MW::loadConcurrentNewFolder");
 }
 
@@ -2288,9 +2290,7 @@ void MW::loadConcurrent(int sfRow)
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-//            qDebug() << "MW::loadConcurrent" << "row =" << sfRow;
-//            emit startMetaRead(sfRow, "MW::loadConcurrent");
-            metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent");
+            metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent"); // also emit option
         }
     }
 }
@@ -2335,7 +2335,7 @@ void MW::loadConcurrentMetaDone()
     sortMenu->setEnabled(true);
     if (reset()) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-        launchBuildFilters();
+        launchBuildFilters();   // new folder = true
     }
 
     if (reset()) return;
@@ -2348,7 +2348,7 @@ void MW::loadConcurrentMetaDone()
     // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
 //    emit refreshImageCache();
     if (reset()) return;
-    Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
+    if (G::isFileLogger) if (G::isFileLogger) Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
     emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
 //    blocker.unblock();
@@ -2523,17 +2523,17 @@ void MW::loadImageCacheForNewFolder()
     the file to select in the new folder; otherwise the first file in dm->sf will be
     selected. */
     QString fPath = folderAndFileChangePath;
-    Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
+    if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         dm->select(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
-        Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
+        if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
     else {
         dm->selectFirst();
         dm->currentSfIdx = dm->sf->index(0,0);
-        Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to first image");
+        if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to first image");
     }
 }
 

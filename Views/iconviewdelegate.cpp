@@ -460,8 +460,8 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // picked item
-    if (pickStatus != "false") {
-        if (pickStatus == "picked") painter->setPen(pickPen);
+    if (pickStatus != "Unpicked") {
+        if (pickStatus == "Picked") painter->setPen(pickPen);
         else painter->setPen(rejectPen);
         painter->drawPath(iconPath);
     }

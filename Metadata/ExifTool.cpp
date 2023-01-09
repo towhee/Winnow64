@@ -6,7 +6,7 @@
 
 ExifTool::ExifTool()
 {
-    Utilities::log("ExifTool::ExifTool", exifToolPath);
+    if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
 #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
 #endif
@@ -31,7 +31,7 @@ int ExifTool::execute(QStringList &args)
 {
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    Utilities::log("ExifTool::execute", exifToolPath);
+    if (G::isFileLogger) Utilities::log("ExifTool::execute", exifToolPath);
     return QProcess::execute(exifToolPath, args);
 }
 
@@ -49,7 +49,7 @@ int ExifTool::close()
     if (!process.waitForFinished(30000)) {
         // qDebug() << "ExifTool::close" << "ExifTool exit code =" << process.exitCode();
         qWarning() << "WARNING" << "ExifTool::close"  << "process.waitForFinished failed";
-        Utilities::log("ExifTool::close", "process.waitForFinished failed");
+        if (G::isFileLogger) Utilities::log("ExifTool::close", "process.waitForFinished failed");
         return -1;
     }
 

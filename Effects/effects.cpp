@@ -112,7 +112,7 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
     int h = img.height();
     int x, y;
 #ifdef ISLOGGER
-Utilities::log("Effects::transparentEdgeMap", "");
+if (G::isFileLogger) Utilities::log("Effects::transparentEdgeMap", "");
 #endif
 
     // create QVector edge map (em) used to tally pixels added to QMultiMap edge
@@ -545,7 +545,7 @@ void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::zeroVector", "");
+if (G::isFileLogger) Utilities::log("Effects::zeroVector", "");
 #endif
 //    QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
@@ -594,7 +594,7 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
 QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::convolve", "");
+if (G::isFileLogger) Utilities::log("Effects::convolve", "");
 #endif
     // matrix descriptors
     int i, mX, mY;
@@ -741,7 +741,7 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
                        const int &w, const int &h, const int &width)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::blurLine", "");
+if (G::isFileLogger) Utilities::log("Effects::blurLine", "");
 #endif
     if (p1.x > p2.x) swapPoints(p1, p2);
 
@@ -938,7 +938,7 @@ void fastblur(BImage img,int radius){
 */
     if (G::isLogger) G::log("Effects::boxBlur");
 #ifdef ISLOGGER
-Utilities::log("Effects::boxBlur", "");
+if (G::isFileLogger) Utilities::log("Effects::boxBlur", "");
 #endif
     qDebug() << "Effects::boxBlur" << QTime::currentTime();
 
@@ -1774,7 +1774,7 @@ void Effects::boxBlur2D(QImage &img, int radius)
 void Effects::blurOriginal(QImage &img, int radius)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::blurOriginal", "");
+if (G::isFileLogger) Utilities::log("Effects::blurOriginal", "");
 #endif
     qDebug() << "Effects::blurOriginal";
     QElapsedTimer t;
@@ -2198,7 +2198,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 void Effects::brightness(QImage &img, qreal evDelta)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::brightness", "");
+if (G::isFileLogger) Utilities::log("Effects::brightness", "");
 #endif
 //    qDebug() << "Effects::brightness" << QTime::currentTime();
 //    qDebug() << "Effects::brightness" << "delta =" << evDelta;
@@ -2293,7 +2293,7 @@ double Effects::embossEV(int &m, int d, double &contrast, double exposure,
     isUmbraGradient = create a smooth gradient between startEv to midEV to endEV
     */
 #ifdef ISLOGGER
-Utilities::log("Effects::embossEV", "");
+if (G::isFileLogger) Utilities::log("Effects::embossEV", "");
 #endif
 
     double ev = exposure;
@@ -2361,7 +2361,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     For each pixel, Effects::embossEV is called.
     */
     #ifdef ISLOGGER
-    Utilities::log("Effects::emboss", "");
+    if (G::isFileLogger) Utilities::log("Effects::emboss", "");
     #endif
 
     // border or graphics object with no transparent pixels along outer border
@@ -2440,7 +2440,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
     Draws a solid boundary around an object in an image, where the boundary is transparency.
 */
     #ifdef ISLOGGER
-    Utilities::log("Effects::stroke", "");
+    if (G::isFileLogger) Utilities::log("Effects::stroke", "");
     #endif
 
     int imW = img.width();
@@ -2541,7 +2541,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
 {
 #ifdef ISLOGGER
-Utilities::log("Effects::glow", "");
+if (G::isFileLogger) Utilities::log("Effects::glow", "");
 #endif
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
