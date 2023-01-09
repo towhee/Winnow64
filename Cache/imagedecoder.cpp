@@ -337,14 +337,18 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
+//    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+//    /*
     if (G::isLogger) {
         mutex.lock();
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
         mutex.unlock();
     }
+    //*/
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;
+        qWarning() << "WARNING" << "ImageDecoder::run  Instance clash" << fPath;
         if (!abort) emit done(threadId);
         return;
     }
@@ -355,15 +359,12 @@ void ImageDecoder::run()
         if (G::colorManage && !abort) colorManage();
         status = Status::Done;
     }
-//    else {
-//        if (status == Status::Video) {}
-//        else if (status == Status::NoDir) {}
-//        else {
-//            status = Status::Failed;
-//            fPath = "";
-//        }
-//    }
 
-    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
+//    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
+    if (G::isLogger) {
+        mutex.lock();
+        G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
+        mutex.unlock();
+    }
     if (!abort) emit done(threadId);
 }

@@ -119,47 +119,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    bool b1 = icd->cacheItemList.contains(1);
-//    bool b2 = icd->cacheItemList.contains(100);
-//    qDebug() << b1 << b2;
-//    return;
-
-    // check for missing icons
-    for (int row = dm->startIconRange; row <= dm->endIconRange; row++) {
-        if (dm->index(row,0).data(Qt::DecorationRole).isNull()) {
-            metaReadThread->setCurrentRow(row);
-            qDebug() << "rerun MetaRead at row =" << row;
-            break;
-        }
-    }
-    // check for missing cached images
-    for (int row = dm->startIconRange; row <= dm->endIconRange; row++) {
-//        qDebug() << icd->cacheItemList.at(row).fPath;
-        if (!icd->cacheItemList.at(row).isCached) {
-            emit setImageCachePosition(icd->cacheItemList.at(row).fPath, "Fix");
-            qDebug() << "Cache  row =" << row << icd->cacheItemList.at(row).fPath;
-            break;
-        }
-    }
-
-//    QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2022-12-31_0036-Edit_Zen2048.JPG";
-//    QModelIndex dmIdx = dm->index(0,0);
-//    QImage image;
-//    QImageReader thumbReader(fPath);
-//    thumbReader.setAutoTransform(true);
-//    image = thumbReader.read();
-//    image = image.scaled(QSize(256,256), Qt::KeepAspectRatio);
-//    QPixmap pm = QPixmap::fromImage(image);
-
-
-//    qDebug() << "test" << "image.width() =" << image.width();
-//    QStandardItem *item = dm->itemFromIndex(dmIdx);
-//    const QIcon icon(pm);
-//    item->setIcon(icon);
-
-//    const QIcon icon(pm);
-//    const QVariant vIcon = QVariant(icon);
-//    dm->setData(dmIdx, vIcon, Qt::DecorationRole);
-
-//    folderAndFileSelectionChange(fPath, "test");
+    QTreeWidgetItem *item;
+        QString s = "test";
+        item = new QTreeWidgetItem(filters->ratings);
+        item->setText(0, s);
+        item->setCheckState(0, Qt::Unchecked);
+        item->setData(1, Qt::EditRole, s);
+    return;
 }

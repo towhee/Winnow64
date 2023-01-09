@@ -167,6 +167,7 @@ namespace G
     extern QSettings *settings;
 
     extern bool isLogger;
+    extern bool isFileLogger;
     extern bool isErrorLogger;
     extern bool isFlowLogger;
     extern bool isTestLogger;

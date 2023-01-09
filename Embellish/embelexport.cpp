@@ -143,13 +143,13 @@ bool EmbelExport::isValidExportFolder()
     if (G::isLogger) G::log("EmbelExport::isValidExportFolder");
     if (embelProperties->saveMethod == "Subfolder") {
         if (embelProperties->exportSubfolder == "") {
-            Utilities::log("EmbelExport::isValidExportFolder", "Embellish export subfolder not defined");
+            if (G::isFileLogger) Utilities::log("EmbelExport::isValidExportFolder", "Embellish export subfolder not defined");
             return false;
         }
     }
     else {
         if (embelProperties->exportFolderPath == "") {
-            Utilities::log("EmbelExport::isValidExportFolder", "Embellish export folder not defined");
+            if (G::isFileLogger) Utilities::log("EmbelExport::isValidExportFolder", "Embellish export folder not defined");
             return false;
         }
     }
@@ -182,7 +182,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     embellish->setRemote(true);
 
 //    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
-    Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));
 
     exportImages(pathList, true);
 
@@ -194,7 +194,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
 //    QFileInfo info(fPath);
 //    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
 
-    Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
     return lastFileExportedPath;
 }
 
@@ -272,14 +272,14 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             et.addThumb(dstThumb, dst);
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
-            Utilities::log("EmbelExport::exportImages", msg);
+            if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", msg);
         }
     }
     et.close();
     exportingEmbellishedImages = false;
 
     // delete the thumbnail files
-    Utilities::log("EmbelExport::exportImages", "Delete thumbnail files");
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", "Delete thumbnail files");
     for (int i = 0; i < thumbList.length(); ++i) {
         QFile::remove(thumbList.at(i));
     }
@@ -287,7 +287,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     G::popUp->setProgressVisible(false);
     G::popUp->end();
     G::isProcessingExportedImages = false;
-    Utilities::log("EmbelExport::exportImages", "Delete embellish");
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", "Delete embellish");
     delete embellish;
 
     if (abort) {
@@ -341,7 +341,7 @@ bool EmbelExport::exportImage(const QString &fPath)
     if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
 
     QString msg = "src = " + fPath + " dst = " + exportPath;
-    Utilities::log("EmbelExport::exportImage", msg);
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportImage", msg);
 
     // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {
@@ -351,7 +351,7 @@ bool EmbelExport::exportImage(const QString &fPath)
     }
     else {
         msg = "Failed to load Image " + fPath;
-        Utilities::log("EmbelExport::exportImage", msg);
+        if (G::isFileLogger) Utilities::log("EmbelExport::exportImage", msg);
         return false;
     }
 
@@ -373,7 +373,7 @@ bool EmbelExport::exportImage(const QString &fPath)
     msg = exportPath
             + (wasSaved ? " saved" : " failed")
             + " Image width: " + QString::number(image.width());
-    Utilities::log("EmbelExport::exportImage", msg);
+    if (G::isFileLogger) Utilities::log("EmbelExport::exportImage", msg);
 
     if (wasSaved) {
         // add thumbnail

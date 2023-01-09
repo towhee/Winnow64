@@ -524,7 +524,7 @@ void MetaRead::run()
         // do something with row
 //        qDebug() << "MetaRead::run   row =" << row;
         readRow(row);
-//        Utilities::log("MetaRead::run", "row = " + QString::number(row));
+//        if (G::isFileLogger) Utilities::log("MetaRead::run", "row = " + QString::number(row));
         if (abort) return;
 
         // delayed start ImageCache
@@ -533,7 +533,7 @@ void MetaRead::run()
                 // start image caching thread after head start
                 emit triggerImageCache("Initial");
                 imageCachingStarted = true;
-//                Utilities::log("MetaRead::run", "start iamge caching");
+//                if (G::isFileLogger) Utilities::log("MetaRead::run", "start iamge caching");
             }
         }
 

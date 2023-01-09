@@ -1,5 +1,45 @@
 #include "buildfilters.h"
 
+/*
+    The DataModel is filtered based on which items are checked in the filter tree
+    class Filters.  The actual filtering happens in SortFilter::filterAcceptsRow.
+
+    Filters are based on Categories that contain items.  The categories are:
+
+         *refine;
+         *picks;
+         *ratings;
+         *labels;
+         *types;
+         *models;
+         *titles;
+         *lenses;
+         *keywords;
+         *creators;
+         *focalLengths;
+         *years;
+         *days;
+
+    An item is a unique value for its category in the DataModel.  For example,
+    in the category types, items could include JPG, NEF, PNG ...
+
+    BuildFilters does the following:
+
+        • check and load all metadata if necessary
+        • add unique items for categories (build filter tree)
+        • count occurrances of items in the proxy sf (filtered)
+        • count occurrances of items in the datamodel dm (unfiltered)
+
+    Filters visibility
+
+        IMPORTANT - filters cannot be edited (add and remove rows) when it is
+        hidden.  The isReset flag is used to rebuild the filters tree when
+        MW::filterDockVisibilityChange = visible for a new folder.
+
+        reset() is called from MW::folderSelectionChange, setting isRest = true and
+        isReset is set to false in BuildFilters::done.
+*/
+
 BuildFilters::BuildFilters(QObject *parent,
                            DataModel *dm,
                            Metadata *metadata,
@@ -49,7 +89,7 @@ void BuildFilters::build()
     }
     abort = false;
     instance = dm->instance;
-    filters->startBuildFilters();
+    filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
     buildFiltersTimer.restart();
@@ -59,9 +99,17 @@ void BuildFilters::build()
 void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::done");
+    isReset = false;
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
+}
+
+void BuildFilters::reset()
+{
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
+    isReset = true;
+    filters->cjf = nullptr;
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -184,6 +232,7 @@ void BuildFilters::countFiltered()
                     }
                 }
                 else {
+                    /*
                     if (cat == "Picks")
                     qDebug() << "BuildFilters::countFiltered"  << cat
                              << "row = " << row
@@ -191,6 +240,7 @@ void BuildFilters::countFiltered()
                              << "dm val =" << dm->sf->index(row, col).data().toString()
                              << "searchValue =" << searchValue
                                 ;
+                                //*/
                     if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
                 }
             }
@@ -199,8 +249,9 @@ void BuildFilters::countFiltered()
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         if (!(*it)->parent()) {
-            if (instances.contains(cat)) {
-                int itemProgress = 40 * instances[cat] / totInstances;
+            qDebug() << "BuildFilters::countFiltered  cat =" << cat;
+            if (uniqueItemCount.contains(cat)) {
+                int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
                 emit updateProgress(progress);
                 /*
@@ -225,6 +276,7 @@ void BuildFilters::countUnfiltered()
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
+    // iterate all items in filters tree
     while (*it) {
         // items
         if ((*it)->parent()) {
@@ -261,15 +313,16 @@ void BuildFilters::countUnfiltered()
         }
         // categories
         if (!(*it)->parent()) {
-            if (instances.contains(cat)) {
-                int itemProgress = 40 * instances[cat] / totInstances;
+            qDebug() << "BuildFilters::countUnfiltered Category =" << cat;
+            if (uniqueItemCount.contains(cat)) {
+                int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
                 emit updateProgress(progress);
-                /*
+//                /*
                 qDebug() << "BuildFilters::countUnfiltered"
                          << cat
-                         << "instances =" << instances[cat]
-                         << "total instances =" << totInstances
+                         << "instances =" << uniqueItemCount[cat]
+                         << "total instances =" << totUniqueItems
                          << "itemProgress % =" << itemProgress
                          << "Progress % =" << progress;
                          //*/
@@ -282,6 +335,9 @@ void BuildFilters::countUnfiltered()
 
 void BuildFilters::loadAllMetadata()
 {
+/*
+    Load all metadata if not already loaded.  Cannot filter without all the data.
+*/
     QString src = "BuildFilters::loadAllMetadata";
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(src); mutex.unlock();}
     if (!G::allMetadataLoaded) {
@@ -310,8 +366,15 @@ void BuildFilters::loadAllMetadata()
 
 void BuildFilters::mapUniqueInstances()
 {
+/*
+
+*/
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::mapUniqueInstances"); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
+    QStringList refineList;
+    QStringList pickList;
+    QStringList ratingList;
+    QStringList labelList;
     QStringList typeList;
     QStringList modelList;
     QStringList lensList;
@@ -323,6 +386,14 @@ void BuildFilters::mapUniqueInstances()
     QStringList dayList;
     for (int row = 0; row < dm->sf->rowCount(); row++) {
         if (abort) return;
+//        QString refine = dm->sf->index(row, G::RefineColumn).data().toString();
+//        if (!refineList.contains(refine)) refineList.append(refine);
+        QString pick = dm->sf->index(row, G::PickColumn).data().toString();
+        if (!pickList.contains(pick)) pickList.append(pick);
+        QString rating = dm->sf->index(row, G::RatingColumn).data().toString();
+        if (!ratingList.contains(rating)) ratingList.append(rating);
+        QString label = dm->sf->index(row, G::LabelColumn).data().toString();
+        if (!labelList.contains(label)) labelList.append(label);
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();
         if (!typeList.contains(type)) typeList.append(type);
         QString model = dm->sf->index(row, G::CameraModelColumn).data().toString();
@@ -345,36 +416,69 @@ void BuildFilters::mapUniqueInstances()
             if (!keywordList.contains(keyWord)) keywordList.append(keyWord);
         }
     }
+//    qDebug() << "BuildFilters::mapUniqueInstances" << creatorList;
     // populate count map for progress
-    totInstances = 0;      // total fixed instances ie search, rating, labels etc
-    int x = typeList.count();
-    totInstances += x;
-    instances[" File type"] = x;
+    totUniqueItems = 0;      // total fixed instances ie search, rating, labels etc
+    int x;
+
+//    x = refineList.count();
+//    totInstances += x;
+//    instances[" Refine"] = x;
+
+    x = pickList.count();
+    totUniqueItems += x;
+    uniqueItemCount[filters->catPick] = x;
+
+    x = ratingList.count();
+    totUniqueItems += x;
+    uniqueItemCount[filters->catRating] = x;
+//    qDebug() << "BuildFilters::mapUniqueInstances  ratingList =" << ratingList;
+
+    x = labelList.count();
+    totUniqueItems += x;
+    uniqueItemCount[filters->catLabel] = x;
+
+    x = typeList.count();
+    totUniqueItems += x;
+    uniqueItemCount[filters->catType] = x;
+
     x = modelList.count();
-    totInstances += x;
-    instances[" Camera model"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catModel] = x;
+
     x = lensList.count();
-    totInstances += x;
-    instances[" Lenses"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catLens] = x;
+
     x = titleList.count();
-    totInstances += x;
-    instances[" Title"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catTitle] = x;
+
     x = flList.count();
-    totInstances += x;
-    instances[" FocalLengths"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catFocalLength] = x;
+
     x = creatorList.count();
-    totInstances += x;
-    instances[" Creators"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catCreator] = x;
+
     x = yearList.count();
-    totInstances += x;
-    instances[" Years"] = x;
-    totInstances += x;
-    instances[" Days"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catYear] = x;
+
+    totUniqueItems += x;
+    uniqueItemCount[filters->catDay] = x;
     x = keywordList.count();
-    totInstances += x;
-    instances[" Keywords"] = x;
+    totUniqueItems += x;
+    uniqueItemCount[filters->catKeyword] = x;
+
+    qDebug() << "BuildFilters::mapUniqueInstances instances =" << uniqueItemCount;
 
     // build filter item maps
+//    filters->addCategoryFromData(refineList, filters->refine);
+    filters->addCategoryFromData(pickList, filters->picks);
+    filters->addCategoryFromData(ratingList, filters->ratings);
+    filters->addCategoryFromData(labelList, filters->labels);
     filters->addCategoryFromData(typeList, filters->types);
     filters->addCategoryFromData(modelList, filters->models);
     filters->addCategoryFromData(lensList, filters->lenses);

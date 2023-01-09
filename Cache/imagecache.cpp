@@ -1491,19 +1491,6 @@ void ImageCache::fillCache(int id)
          cacheKey = cacheKeyHash[decoder[id]->fPath];  // if not contains return -1
     }
 
-    // get the row in
-//    cacheKey = cacheKeyHash[decoder[id]->fPath];  // if not contains return -1
-    /* debugging
-    QString k = QString::number(cacheKey).leftJustified((4));
-    qDebug().noquote() << "ImageCache::fillCache"
-             << "      decoder" << id
-             << "row =" << k    // row = key
-             << "isRunning =" << decoder[id]->isRunning()
-             << "instance =" << decoder[id]->instance
-             << decoder[id]->fPath
-                ;
-                //*/
-
     // Error checking
     {
 //        // DM instance check

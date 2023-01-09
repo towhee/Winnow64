@@ -1,6 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Rebuild filters except for current category
 - Add a selection class for all SelectionModel operations
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -74,6 +75,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- InfoView add * for editable tag items
+- Filter disable cat with 0 or 1 items
+- Fix 0 terminating strings in Utilities::getString
+- Added items to thumbView contect menu
 - ImageView zoom and zoom cursor behavior improved
 - Update selection and pick count fixed
 - Navigate to nearest pick fixed

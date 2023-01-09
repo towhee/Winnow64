@@ -187,7 +187,7 @@ void Embel::build(QString path, QString src)
 
     /*
     QString msg = "src = " + src + "  path = " + path;
-    Utilities::log("Embel::build", msg);
+    if (G::isFileLogger) Utilities::log("Embel::build", msg);
     //*/
 
     QElapsedTimer t;
@@ -203,13 +203,13 @@ void Embel::build(QString path, QString src)
         fPath = path;
     }
     QString msg = "src = " + src + "  fPath = " + fPath;
-    Utilities::log("Embel::build", msg);
+    if (G::isFileLogger) Utilities::log("Embel::build", msg);
     clear();
     createBorders();
     createTexts();
     createGraphics();
     borderImageCoordinates();
-    Utilities::log("Embel::build", "w = " + QString::number(w));
+    if (G::isFileLogger) Utilities::log("Embel::build", "w = " + QString::number(w));
     scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();

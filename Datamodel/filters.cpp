@@ -20,12 +20,12 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     The tree contains top level items (Categories ie Ratings, Color Classes, File types
     ...). For each top level item the children are the filter choices to filter
-    DataModel->Proxy (dm->sf). The categories are divided into predefined (Picks, Ratings
-    and Color Classes) and dynamic categories based on existing metadata (File types,
+    DataModel->Proxy (dm->sf). The categories are divided into predefined (Search, Refine)
+    and dynamic categories based on existing metadata (Ratings, Labels, File types,
     Camera Models, Focal Lengths, Titles etc).
 
     The tree columns are:
-        0   CheckBox filter item
+        0   CheckBox filter item (includes name)
         1   The value to filter (hidden)
         2   The number of proxy rows containing the value
         3   The number of datamodel rows containing the value combining Raw+Jpg
@@ -88,28 +88,28 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     searchDefaultTextFont = font();
     searchDefaultTextFont.setItalic(true);
 
+    filterCategoryToDmColumn[catSearch] = G::SearchColumn;
+
+    filterCategoryToDmColumn[catRefine] = G::RefineColumn;
+    filterCategoryToDmColumn[catPick] = G::PickColumn;
+    filterCategoryToDmColumn[catRating] = G::RatingColumn;
+    filterCategoryToDmColumn[catLabel] = G::LabelColumn;
+    filterCategoryToDmColumn[catType] = G::TypeColumn;
+    filterCategoryToDmColumn[catYear] = G::YearColumn;
+    filterCategoryToDmColumn[catDay] = G::DayColumn;
+    filterCategoryToDmColumn[catModel] = G::CameraModelColumn;
+    filterCategoryToDmColumn[catLens] = G::LensColumn;
+    filterCategoryToDmColumn[catFocalLength] = G::FocalLengthColumn;
+    filterCategoryToDmColumn[catTitle] = G::TitleColumn;
+    filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
+    filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
+
     createPredefinedFilters();
     createDynamicFilters();
     setCategoryBackground(a, b);
 
     setItemDelegate(new FiltersDelegate(this));
     setFocusPolicy(Qt::NoFocus);
-
-    filterCategoryToDmColumn[" Search"] = G::SearchColumn;
-
-    filterCategoryToDmColumn["Refine"] = G::RefineColumn;
-    filterCategoryToDmColumn["Picks"] = G::PickColumn;
-    filterCategoryToDmColumn["Ratings"] = G::RatingColumn;
-    filterCategoryToDmColumn["Color class"] = G::LabelColumn;
-    filterCategoryToDmColumn["File type"] = G::TypeColumn;
-    filterCategoryToDmColumn["Years"] = G::YearColumn;
-    filterCategoryToDmColumn["Days"] = G::DayColumn;
-    filterCategoryToDmColumn["Camera model"] = G::CameraModelColumn;
-    filterCategoryToDmColumn["Lenses"] = G::LensColumn;
-    filterCategoryToDmColumn["FocalLengths"] = G::FocalLengthColumn;
-    filterCategoryToDmColumn["Title"] = G::TitleColumn;
-    filterCategoryToDmColumn["Keywords"] = G::KeywordsColumn;
-    filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 
     /* Sits above the filters QTreeWidget and is used to message that the filters are
        being rebuilt.  Set invisible at start and rendered visible when building filters */
@@ -158,7 +158,6 @@ void Filters::createPredefinedFilters()
 
     refine = new QTreeWidgetItem(this);
     refine->setText(0, "Refine");
-//    refine->setFont(0, categoryFont);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
     refine->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
@@ -170,141 +169,61 @@ void Filters::createPredefinedFilters()
     refineTrue->setText(0, "True");
     refineTrue->setCheckState(0, Qt::Unchecked);
     refineTrue->setData(1, Qt::EditRole, true);
+}
 
-    picks = new QTreeWidgetItem(this);
-    picks->setText(0, "Picks");
-//    picks->setFont(0, categoryFont);
-    picks->setData(0, G::ColumnRole, G::PickColumn);
-    picks->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
-    picksFalse = new QTreeWidgetItem(picks);
-    picksFalse->setText(0, "Not Picked");
-    picksFalse->setCheckState(0, Qt::Unchecked);
-    picksFalse->setData(1, Qt::EditRole, "false");
-    picksTrue = new QTreeWidgetItem(picks);
-    picksTrue->setText(0, "Picked");
-    picksTrue->setCheckState(0, Qt::Unchecked);
-    picksTrue->setData(1, Qt::EditRole, "picked");
-    picksReject = new QTreeWidgetItem(picks);
-    picksReject->setText(0, "Rejected");
-    picksReject->setCheckState(0, Qt::Unchecked);
-    picksReject->setData(1, Qt::EditRole, "reject");
-
-    ratings = new QTreeWidgetItem(this);
-    ratings->setText(0, "Ratings");
-//    ratings->setFont(0, categoryFont);
-    ratings->setData(0, G::ColumnRole, G::RatingColumn);
-    ratings->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
-    ratingsNone = new QTreeWidgetItem(ratings);
-    ratingsNone->setText(0, "No Rating");
-    ratingsNone->setCheckState(0, Qt::Unchecked);
-    ratingsNone->setData(1, Qt::EditRole, "");
-    ratings1 = new QTreeWidgetItem(ratings);
-    ratings1->setText(0, "One");
-    ratings1->setCheckState(0, Qt::Unchecked);
-    ratings1->setData(1, Qt::EditRole, 1);
-    ratings2 = new QTreeWidgetItem(ratings);
-    ratings2->setText(0, "Two");
-    ratings2->setCheckState(0, Qt::Unchecked);
-    ratings2->setData(1, Qt::EditRole, 2);
-    ratings3 = new QTreeWidgetItem(ratings);
-    ratings3->setText(0, "Three");
-    ratings3->setCheckState(0, Qt::Unchecked);
-    ratings3->setData(1, Qt::EditRole, 3);
-    ratings4 = new QTreeWidgetItem(ratings);
-    ratings4->setText(0, "Four");
-    ratings4->setCheckState(0, Qt::Unchecked);
-    ratings4->setData(1, Qt::EditRole, 4);
-    ratings5 = new QTreeWidgetItem(ratings);
-    ratings5->setText(0, "Five");
-    ratings5->setCheckState(0, Qt::Unchecked);
-    ratings5->setData(1, Qt::EditRole, 5);
-
-    labels = new QTreeWidgetItem(this);
-    labels->setText(0, "Color class");
-//    labels->setFont(0, categoryFont);
-    labels->setData(0, G::ColumnRole, G::LabelColumn);
-    labels->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
-    labelsNone = new QTreeWidgetItem(labels);
-    labelsNone->setText(0, "No Color Class");
-    labelsNone->setCheckState(0, Qt::Unchecked);
-    labelsNone->setData(1, Qt::EditRole, "");
-    labelsRed = new QTreeWidgetItem(labels);
-    labelsRed->setText(0, "Red");
-    labelsRed->setCheckState(0, Qt::Unchecked);
-    labelsRed->setData(1, Qt::EditRole, "Red");
-    labelsYellow = new QTreeWidgetItem(labels);
-    labelsYellow->setText(0, "Yellow");
-    labelsYellow->setCheckState(0, Qt::Unchecked);
-    labelsYellow->setData(1, Qt::EditRole, "Yellow");
-    labelsGreen = new QTreeWidgetItem(labels);
-    labelsGreen->setText(0, "Green");
-    labelsGreen->setCheckState(0, Qt::Unchecked);
-    labelsGreen->setData(1, Qt::EditRole, "Green");
-    labelsBlue = new QTreeWidgetItem(labels);
-    labelsBlue->setText(0, "Blue");
-    labelsBlue->setCheckState(0, Qt::Unchecked);
-    labelsBlue->setData(1, Qt::EditRole, "Blue");
-    labelsPurple = new QTreeWidgetItem(labels);
-    labelsPurple->setText(0, "Purple");
-    labelsPurple->setCheckState(0, Qt::Unchecked);
-    labelsPurple->setData(1, Qt::EditRole, "Purple");
+void Filters::createFilter(QTreeWidgetItem *cat, QString name)
+{
+    if (G::isLogger) G::log("Filters::createDynamicFilters");
+    cat->setText(0, name);
+    cat->setData(0, G::ColumnRole, filterCategoryToDmColumn[name]);
+    cat->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 }
 
 void Filters::createDynamicFilters()
 {
-/* Dynamic filters change with the model data and apply to file metadata such as
-file type, camera model etc.  When a new folder is selected each dynamic filter
-column is scanned for unique elements which are added to the dynamic filter
-by addCategoryFromData.
+/*
+    Dynamic filters change with the model data and apply to file metadata such as file
+    type, camera model etc. When a new folder is selected each dynamic filter column is
+    scanned for unique elements which are added to the dynamic filter by
+    addCategoryFromData.
 */
     if (G::isLogger) G::log("Filters::createDynamicFilters");
+
+    picks = new QTreeWidgetItem(this);
+    ratings = new QTreeWidgetItem(this);
+    labels = new QTreeWidgetItem(this);
     types = new QTreeWidgetItem(this);
-    types->setText(0, "File type");
-    types->setData(0, G::ColumnRole, G::TypeColumn);
-    types->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     years = new QTreeWidgetItem(this);
-    years->setText(0, "Years");
-    years->setData(0, G::ColumnRole, G::YearColumn);
-    years->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     days = new QTreeWidgetItem(this);
-    days->setText(0, "Days");
-    days->setData(0, G::ColumnRole, G::DayColumn);
-    days->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     models = new QTreeWidgetItem(this);
-    models->setText(0, "Camera model");
-    models->setData(0, G::ColumnRole, G::CameraModelColumn);
-    models->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     lenses = new QTreeWidgetItem(this);
-    lenses->setText(0, "Lenses");
-    lenses->setData(0, G::ColumnRole, G::LensColumn);
-    lenses->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     focalLengths = new QTreeWidgetItem(this);
-    focalLengths->setText(0, "FocalLengths");
-    focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
-    focalLengths->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     titles = new QTreeWidgetItem(this);
-    titles->setText(0, "Title");
-    titles->setData(0, G::ColumnRole, G::TitleColumn);
-    titles->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     keywords = new QTreeWidgetItem(this);
-    keywords->setText(0, "Keywords");
-    keywords->setData(0, G::ColumnRole, G::KeywordsColumn);
-    keywords->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
     creators = new QTreeWidgetItem(this);
-    creators->setText(0, "Creators");
-    creators->setData(0, G::ColumnRole, G::CreatorColumn);
-    creators->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
+
+    createFilter(picks, catPick);
+    createFilter(ratings, catRating);
+    createFilter(labels, catLabel);
+    createFilter(types, catType);
+    createFilter(years, catYear);
+    createFilter(days, catDay);
+    createFilter(models, catModel);
+    createFilter(lenses, catLens);
+    createFilter(focalLengths, catFocalLength);
+    createFilter(titles, catTitle);
+    createFilter(keywords, catKeyword);
+    createFilter(creators, catCreator);
+}
+
+void Filters::setCategoryBackground(QTreeWidgetItem *cat)
+{
+    if (G::isLogger) G::log("Filters::setCategoryBackground");
+
+    cat->setBackground(0, categoryBackground);
+    cat->setBackground(2, categoryBackground);
+    cat->setBackground(3, categoryBackground);
+    cat->setBackground(4, categoryBackground);
 }
 
 void Filters::setCategoryBackground(const int &a, const int &b)
@@ -317,75 +236,20 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
 
-    search->setBackground(0, categoryBackground);
-    search->setBackground(2, categoryBackground);
-    search->setBackground(3, categoryBackground);
-    search->setBackground(4, categoryBackground);
-
-    refine->setBackground(0, categoryBackground);
-    refine->setBackground(2, categoryBackground);
-    refine->setBackground(3, categoryBackground);
-    refine->setBackground(4, categoryBackground);
-
-    picks->setBackground(0, categoryBackground);
-    picks->setBackground(2, categoryBackground);
-    picks->setBackground(3, categoryBackground);
-    picks->setBackground(4, categoryBackground);
-
-    ratings->setBackground(0, categoryBackground);
-    ratings->setBackground(2, categoryBackground);
-    ratings->setBackground(3, categoryBackground);
-    ratings->setBackground(4, categoryBackground);
-
-    labels->setBackground(0, categoryBackground);
-    labels->setBackground(2, categoryBackground);
-    labels->setBackground(3, categoryBackground);
-    labels->setBackground(4, categoryBackground);
-
-    types->setBackground(0, categoryBackground);
-    types->setBackground(2, categoryBackground);
-    types->setBackground(3, categoryBackground);
-    types->setBackground(4, categoryBackground);
-
-    years->setBackground(0, categoryBackground);
-    years->setBackground(2, categoryBackground);
-    years->setBackground(3, categoryBackground);
-    years->setBackground(4, categoryBackground);
-
-    days->setBackground(0, categoryBackground);
-    days->setBackground(2, categoryBackground);
-    days->setBackground(3, categoryBackground);
-    days->setBackground(4, categoryBackground);
-
-    models->setBackground(0, categoryBackground);
-    models->setBackground(2, categoryBackground);
-    models->setBackground(3, categoryBackground);
-    models->setBackground(4, categoryBackground);
-
-    lenses->setBackground(0, categoryBackground);
-    lenses->setBackground(2, categoryBackground);
-    lenses->setBackground(3, categoryBackground);
-    lenses->setBackground(4, categoryBackground);
-
-    focalLengths->setBackground(0, categoryBackground);
-    focalLengths->setBackground(2, categoryBackground);
-    focalLengths->setBackground(3, categoryBackground);
-    focalLengths->setBackground(4, categoryBackground);
-
-    titles->setBackground(0, categoryBackground);
-    titles->setBackground(2, categoryBackground);
-    titles->setBackground(3, categoryBackground);
-    titles->setBackground(4, categoryBackground);
-
-    keywords->setBackground(0, categoryBackground);
-    keywords->setBackground(2, categoryBackground);
-    keywords->setBackground(3, categoryBackground);
-    keywords->setBackground(4, categoryBackground);
-
-    creators->setBackground(0, categoryBackground);
-    creators->setBackground(2, categoryBackground);
-    creators->setBackground(3, categoryBackground);
-    creators->setBackground(4, categoryBackground);
+    setCategoryBackground(search);
+    setCategoryBackground(refine);
+    setCategoryBackground(picks);
+    setCategoryBackground(ratings);
+    setCategoryBackground(labels);
+    setCategoryBackground(types);
+    setCategoryBackground(years);
+    setCategoryBackground(days);
+    setCategoryBackground(models);
+    setCategoryBackground(lenses);
+    setCategoryBackground(focalLengths);
+    setCategoryBackground(titles);
+    setCategoryBackground(creators);
+    setCategoryBackground(keywords);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -396,6 +260,9 @@ void Filters::removeChildrenDynamicFilters()
     prevent duplication and orphans.
 */
     if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
+    picks->takeChildren();
+    ratings->takeChildren();
+    labels->takeChildren();
     types->takeChildren();
     years->takeChildren();
     days->takeChildren();
@@ -407,17 +274,12 @@ void Filters::removeChildrenDynamicFilters()
     creators->takeChildren();
 }
 
-void Filters::checkPicks(bool check)
+void Filters::checkPicks()
 {
     if (G::isLogger) G::log("Filters::checkPicks");
-    if (check) {
-        picksFalse->setCheckState(0, Qt::Unchecked);
-        picksTrue->setCheckState(0, Qt::Checked);
-    }
-    else {
-        picksFalse->setCheckState(0, Qt::Unchecked);
-        picksTrue->setCheckState(0, Qt::Unchecked);
-    }
+    checkItem(picks, "Picked", Qt::Checked);
+    checkItem(picks, "Unpicked", Qt::Unchecked);
+    checkItem(picks, "Rejected", Qt::Unchecked);
     emit filterChange("Filters::checkPicks");
 }
 
@@ -431,7 +293,7 @@ void Filters::setSearchNewFolder()
 void Filters::disableColorZeroCountItems()
 {
     if (G::isLogger) G::log("Filters::disableColorZeroCountItems");
-//    return;
+    return;
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != " Search") {
@@ -543,10 +405,13 @@ void Filters::disableEmptyCat()
     QTreeWidgetItemIterator it(this);
     while (*it) {
         // categories
-        if (!(*it)->parent()) {
-            qDebug() << (*it)->text(0) << (*it)->childCount();
-            if ((*it)->childCount() == 0)
+        if (!(*it)->parent()/* && (*it)->parent() != catJustFiltered*/) {
+//            qDebug() << (*it)->text(0) << (*it)->childCount();
+            if ((*it)->childCount() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
+            else {
+                (*it)->setForeground(0, G::textColor);
+            }
         }
         ++it;
     }
@@ -638,10 +503,10 @@ void Filters::loadedDataModel(bool isLoaded)
     }
 }
 
-void Filters::startBuildFilters()
+void Filters::startBuildFilters(bool isReset)
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    removeChildrenDynamicFilters();
+    if (isReset) removeChildrenDynamicFilters();
     filtersBuilt = false;
     buildingFilters = true;
     msgFrame->setVisible(true);
@@ -649,7 +514,7 @@ void Filters::startBuildFilters()
     filterLabel->setVisible(true);
     setProgressBarStyle();
     bfProgressBar->setVisible(true);
-    collapseAll();
+    if (isReset) collapseAll();
     setEnabled(false);
 }
 
@@ -664,8 +529,8 @@ void Filters::finishedBuildFilters()
     msgFrame->setVisible(false);
     disableColorZeroCountItems();
     setEnabled(true);
-    if (isSolo) collapseAll();
-    else expandAll();
+//    if (isSolo) collapseAll();
+//    else expandAll();
 }
 
 void Filters::clearAll()
@@ -712,6 +577,21 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
 //        }
 //        ++it;
 //    }
+}
+
+void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state)
+{
+    if (G::isLogger) G::log("Filters::checkItem");
+    for (int i = 0; i < par->childCount(); i++) {
+        QTreeWidgetItem *item = par->child(i);
+        if (item->data(0, Qt::DisplayRole).toString() == itemName) {
+            item->setCheckState(0, state);
+            emit filterChange("Filters::checkItem");
+        }
+//        qDebug() << "Filters::checkItem"
+//                 << "item =" << item->data(0, Qt::DisplayRole)
+//                    ;
+    }
 }
 
 void Filters::uncheckAllFilters()
@@ -780,29 +660,49 @@ void Filters::toggleExpansion()
         }
         ++it;
     }
-    if (isExpanded) collapseAll();
-    else expandAll();
-    qDebug() << "Filters::toggleExpansion" << "isExpanded =" << isExpanded;
+//    if (isExpanded) collapseAll();
+//    else expandAll();
+//    qDebug() << "Filters::toggleExpansion" << "isExpanded =" << isExpanded;
 }
 
 void Filters::addCategoryFromData(QStringList itemList, QTreeWidgetItem *category)
 {
 /*
-    All the values for a category are collected into a QMap object in DataModel as the
-    model data is added from the images in the folder. The list is passed here, where
-    unique values are extracted and added to the category. For example, there could be
-    multiple file types in the folder like JPG and NEF. A QMap object is used so the
-    items can be sorted by key in the same order as the tableView. This function should
-    only be used for dynamic categories - see createDynamicFilters;
+    All the unique values for a category are collected into a QMap object in
+    BuildFilters. The list is passed here, where unique values are extracted and added to
+    the category. For example, there could be multiple file types in the folder like JPG
+    and NEF. A QMap object is used so the items can be sorted by key in the same order as
+    the tableView. This function should only be used for dynamic categories - see
+    createDynamicFilters;
+
+    If a category item was just checked (cjf) then it is ignored, as the user may want
+    to check another item in the same category.
 */
     if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryFromData", category->text(0));
-    static QTreeWidgetItem *item;
-//    // qt 6.2
-//    QMap<QString, QString> uniqueItems;
-//    for (auto key : itemMap.keys()) {
-//      if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
-//    }
-    itemList.sort();
+    // cjf - the category just filtered (just had an item checked)
+    if (cjf == category) return;
+    if (itemList.size() < 2) return;
+//    itemList.sort();
+
+    // iterate existing category items in filters
+    if (category->childCount()) {
+        for (int i = category->childCount() - 1; i >= 0 ; i--) {
+            QString s = category->child(i)->text(0);
+            // remove from unique itemList
+            if (itemList.contains(s)) {
+                itemList.remove(itemList.indexOf(s));
+            }
+            // remove from filter tree unless checked item
+            else {
+                if (category->child(i)->checkState(0) == Qt::Unchecked) {
+                    category->removeChild(category->child(i));
+                }
+            }
+        }
+    }
+
+    // add all remaining items in unique itemList to filter tree
+    QTreeWidgetItem *item;
     for (int i = 0; i < itemList.count(); i++) {
         QString s = itemList.at(i);
         item = new QTreeWidgetItem(category);
@@ -810,33 +710,10 @@ void Filters::addCategoryFromData(QStringList itemList, QTreeWidgetItem *categor
         item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, s);
     }
+
+    // sort the result
+    category->sortChildren(0, Qt::AscendingOrder);
 }
-
-//void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category)
-//{
-//    /*
-//    All the values for a category are collected into a QMap object in DataModel as the
-//    model data is added from the images in the folder. The list is passed here, where
-//    unique values are extracted and added to the category. For example, there could be
-//    multiple file types in the folder like JPG and NEF. A QMap object is used so the
-//    items can be sorted by key in the same order as the tableView. This function should
-//    only be used for dynamic categories - see createDynamicFilters;
-//*/
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryFromData", category->text(0));
-//    static QTreeWidgetItem *item;
-//    // qt 6.2
-//    QMap<QString, QString> uniqueItems;
-//    for (auto key : itemMap.keys()) {
-//        if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
-//    }
-//    for (auto key : uniqueItems.keys()) {
-//        item = new QTreeWidgetItem(category);
-//        item->setText(0, uniqueItems.value(key));
-//        item->setCheckState(0, Qt::Unchecked);
-//        item->setData(1, Qt::EditRole, key);
-//    }
-//}
-
 
 void Filters::dataChanged(const QModelIndex &topLeft,
                           const QModelIndex &bottomRight,
@@ -975,6 +852,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         item->parent()->setForeground(0, QBrush(G::textColor));
     }
 
+    cjf = item->parent();
     emit filterChange("Filters::itemClickedSignal");
 }
 

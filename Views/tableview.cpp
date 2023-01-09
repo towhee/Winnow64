@@ -360,8 +360,6 @@ PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 
 QString PickItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
-//    if (value == "reject") return "X";
-//    return (value == "true") ? "✓" : "";
     return value.toString();
 }
 

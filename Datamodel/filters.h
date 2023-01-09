@@ -18,23 +18,8 @@ public:
     QTreeWidgetItem *refineFalse;
     QTreeWidgetItem *refineTrue;
     QTreeWidgetItem *picks;
-    QTreeWidgetItem *picksFalse;
-    QTreeWidgetItem *picksTrue;
-    QTreeWidgetItem *picksReject;
     QTreeWidgetItem *ratings;
-    QTreeWidgetItem *ratingsNone;
-    QTreeWidgetItem *ratings1;
-    QTreeWidgetItem *ratings2;
-    QTreeWidgetItem *ratings3;
-    QTreeWidgetItem *ratings4;
-    QTreeWidgetItem *ratings5;
     QTreeWidgetItem *labels;
-    QTreeWidgetItem *labelsNone;
-    QTreeWidgetItem *labelsRed;
-    QTreeWidgetItem *labelsYellow;
-    QTreeWidgetItem *labelsGreen;
-    QTreeWidgetItem *labelsBlue;
-    QTreeWidgetItem *labelsPurple;
     QTreeWidgetItem *types;
     QTreeWidgetItem *models;
     QTreeWidgetItem *titles;
@@ -45,17 +30,37 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
 
+    QTreeWidgetItem *cjf;   // category just filtered
+
+    QString catSearch = "Search";
+    QString catRefine = "Refine";
+    QString catPick = "Picks";
+    QString catRating = "Ratings";
+    QString catLabel = "Color classes";
+    QString catType = "File types";
+    QString catYear = "Years";
+    QString catDay = "Days";
+    QString catModel = "Camera models";
+    QString catLens = "Lenses";
+    QString catFocalLength = "Focal lengths";
+    QString catTitle = "Titles";
+    QString catKeyword = "Keywords";
+    QString catCreator = "Creators";
+
     QMap<QString,int> filterCategoryToDmColumn;
+//    QHash<QString,QString>categories;
     QLabel *filterLabel;
     QProgressBar *bfProgressBar;
     QFrame *msgFrame;
 
+    void createFilter(QTreeWidgetItem *cat, QString name);
     void createPredefinedFilters();
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
     void addCategoryFromData(QStringList itemList, QTreeWidgetItem *category);
 //    void addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
+    void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
     void disableColorZeroCountItems();
     void disableAllItems(bool disable);
@@ -86,14 +91,15 @@ public slots:
     void disableEmptyCat();
     void invertFilters();
     void clearAll();
+    void checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state);
     void uncheckAllFilters();
     void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
     void toggleExpansion();
-    void checkPicks(bool check);
+    void checkPicks();
     void updateProgress(int progress);
-    void startBuildFilters();
+    void startBuildFilters(bool isReset = false);
     void finishedBuildFilters();
     void loadedDataModel(bool isLoaded);
     void setSoloMode(bool isSolo);

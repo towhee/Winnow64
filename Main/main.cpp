@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-    // Utilities::log("WinnowMain", args);
+    // if (G::isFileLogger) Utilities::log("WinnowMain", args);
 
     // instance already running
     if (instance.sendMessage(args)) {
-        Utilities::log("WinnowMain", "Instance already running");
+        if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
         // qDebug() << "main  instance already running, sent args";
         return 0;
     }
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     instance.setActivationWindow(&mw, false);
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    // Utilities::log("WinnowMain", "Start new instance");
+    // if (G::isFileLogger) Utilities::log("WinnowMain", "Start new instance");
 
     return instance.exec();             //    return QApp.exec();
 }

@@ -1132,7 +1132,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                       ;
         QString msg = "this instance: " + QString::number(instance) +
                 "DM instance: " + QString::number(G::dmInstance);
-        Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
+        if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
         return false;
     }
 
@@ -1185,7 +1185,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
-        Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
+        if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         return false;
     }
 

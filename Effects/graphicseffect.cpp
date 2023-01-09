@@ -163,7 +163,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 void GraphicsEffect::draw(QPainter* painter)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::draw", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::draw", "");
 #endif
     /*
     qDebug() << "GraphicsEffect::draw" << okToDraw << QTime::currentTime() << painter;
@@ -315,7 +315,7 @@ QT_END_NAMESPACE
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::blurEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::blurEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::blurEffect" << QTime::currentTime();
 
@@ -342,7 +342,7 @@ Utilities::log("GraphicsEffect::blurEffect", "");
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::sharpenEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::sharpenEffect", "");
 #endif
     qDebug() << "GraphicsEffect::sharpenEffect" << QTime::currentTime();
 
@@ -361,7 +361,7 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::shadowEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::shadowEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::shadowEffect" << QTime::currentTime();
 
@@ -413,7 +413,7 @@ void GraphicsEffect::shadowEffect1(double length, double radius, QColor color, d
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::shadowEffect1", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::shadowEffect1", "");
 #endif
     /*
     qDebug() << "GraphicsEffect:shadowEffect1:" << QTime::currentTime();
@@ -541,7 +541,7 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
 //    qDebug() << "GraphicsEffect::raiseEffect" << QTime::currentTime();
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::raiseEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::raiseEffect", "");
 #endif
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
@@ -556,7 +556,7 @@ Utilities::log("GraphicsEffect::raiseEffect", "");
 void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::brightnessEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::brightnessEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::brightnessEffect" << QTime::currentTime();
     if (overlay.isNull()) return;
@@ -583,7 +583,7 @@ void GraphicsEffect::strokeEffect(double width,
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::strokeEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::strokeEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::strokeEffect" /*<< QTime::currentTime()*/
 //             << "boundingRect =" << boundingRect();
@@ -609,7 +609,7 @@ Utilities::log("GraphicsEffect::strokeEffect", "");
 void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::glowEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::glowEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::glowEffect" << QTime::currentTime();
     if (overlay.isNull()) return;
@@ -644,7 +644,7 @@ void GraphicsEffect::embossEffect(double size,
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log("GraphicsEffect::embossEffect", "");
+if (G::isFileLogger) Utilities::log("GraphicsEffect::embossEffect", "");
 #endif
 //    qDebug() << "GraphicsEffect::embossEffect" << QTime::currentTime();
     if (overlay.isNull()) return;

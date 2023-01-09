@@ -517,11 +517,14 @@ QString Utilities::getCString(QFile &file)
 template<typename T>    // QFile or QBuffer
 QString Utilities::getString(T &io, quint32 offset, quint32 length)
 {
-    /*
+/*
     In IFD type 2 = string
-    */
+*/
     io.seek(offset);
-    return(io.read(length));
+//    return(io.read(length));
+    QString s = io.read(length);
+    if (s.endsWith('\0')) s.remove('\0');
+    return(s);
 }
 template QString Utilities::getString<QFile>(QFile&, quint32 offset, quint32 length);
 template QString Utilities::getString<QBuffer>(QBuffer&, quint32 offset, quint32 length);

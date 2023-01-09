@@ -27,19 +27,20 @@ void MW::filterDockVisibilityChange(bool isVisible)
     if (isVisible && !G::isInitializing && G::allMetadataLoaded) launchBuildFilters();
 }
 
+void MW::updateAllFilters()
+{
+    if (G::isLogger) G::log("MW::updateAllFilters");
+
+}
+
 void MW::launchBuildFilters()
 {
+/*
+    Filters cannot be updated if hidden.
+    Check if can build: filterDock->visibleRegion().isNull()
+*/
     if (G::isLogger) G::log("MW::launchBuildFilters");
     if (G::isInitializing) return;
-    if (filterDock->visibleRegion().isNull()) {
-        filters->setSoloMode(filterSoloAction->isChecked());
-//        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
-//        return;
-    }
-//    if (filters->filtersBuilt) {
-//        G::popUp->showPopup("Filters are up-to-date.");
-//        return;
-//    }
     if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
@@ -90,8 +91,9 @@ void MW::filterChange(QString source)
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    buildFilters->updateCountFiltered();
-    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
+    buildFilters->build();
+//    buildFilters->updateCountFiltered();
+//    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
     // recover sort after filtration
     sortChange("filterChange");
@@ -145,29 +147,29 @@ void MW::quickFilter()
     if (!filters->filtersBuilt) buildFilters->build();
 
     // checked
-    if (filterSearchAction->isChecked()) filters->searchTrue->setCheckState(0, Qt::Checked);
-    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
-    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
-    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
-    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Checked);
-    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Checked);
-    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Checked);
-    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Checked);
-    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
-    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
-    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
+//    if (filterSearchAction->isChecked()) filters->searchTrue->setCheckState(0, Qt::Checked);
+//    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
+//    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
+//    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
+//    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Checked);
+//    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Checked);
+//    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Checked);
+//    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Checked);
+//    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
+//    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
+//    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
 
     // unchecked
-    if (!filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
-    if (!filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
-    if (!filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
-    if (!filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
-    if (!filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
-    if (!filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
-    if (!filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
-    if (!filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
-    if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
-    if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
+//    if (!filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
+//    if (!filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
+//    if (!filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
+//    if (!filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
+//    if (!filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
+//    if (!filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
+//    if (!filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
+//    if (!filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
+//    if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
+//    if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 
     filters->setCatFiltering();
     filterChange("MW::quickFilter");
@@ -176,16 +178,16 @@ void MW::quickFilter()
 void MW::filterSyncActionsWithFilters()
 {
     if (G::isLogger) G::log("MW::filterSyncActionsWithFilters");
-    filterRating1Action->setChecked(filters->ratings1->checkState(0));
-    filterRating2Action->setChecked(filters->ratings2->checkState(0));
-    filterRating3Action->setChecked(filters->ratings3->checkState(0));
-    filterRating4Action->setChecked(filters->ratings4->checkState(0));
-    filterRating5Action->setChecked(filters->ratings5->checkState(0));
-    filterRedAction->setChecked(filters->labelsRed->checkState(0));
-    filterYellowAction->setChecked(filters->labelsYellow->checkState(0));
-    filterGreenAction->setChecked(filters->labelsGreen->checkState(0));
-    filterBlueAction->setChecked(filters->labelsBlue->checkState(0));
-    filterPurpleAction->setChecked(filters->labelsPurple->checkState(0));
+//    filterRating1Action->setChecked(filters->ratings1->checkState(0));
+//    filterRating2Action->setChecked(filters->ratings2->checkState(0));
+//    filterRating3Action->setChecked(filters->ratings3->checkState(0));
+//    filterRating4Action->setChecked(filters->ratings4->checkState(0));
+//    filterRating5Action->setChecked(filters->ratings5->checkState(0));
+//    filterRedAction->setChecked(filters->labelsRed->checkState(0));
+//    filterYellowAction->setChecked(filters->labelsYellow->checkState(0));
+//    filterGreenAction->setChecked(filters->labelsGreen->checkState(0));
+//    filterBlueAction->setChecked(filters->labelsBlue->checkState(0));
+//    filterPurpleAction->setChecked(filters->labelsPurple->checkState(0));
     filterLastDayAction->setChecked(filters->isOnlyMostRecentDayChecked());
 }
 
@@ -217,16 +219,16 @@ void MW::uncheckAllFilters()
     if (G::isLogger) G::log("MW::uncheckAllFilters");
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
-    filterRating1Action->setChecked(false);
-    filterRating2Action->setChecked(false);
-    filterRating3Action->setChecked(false);
-    filterRating4Action->setChecked(false);
-    filterRating5Action->setChecked(false);
-    filterRedAction->setChecked(false);
-    filterYellowAction->setChecked(false);
-    filterGreenAction->setChecked(false);
-    filterBlueAction->setChecked(false);
-    filterPurpleAction->setChecked(false);
+//    filterRating1Action->setChecked(false);
+//    filterRating2Action->setChecked(false);
+//    filterRating3Action->setChecked(false);
+//    filterRating4Action->setChecked(false);
+//    filterRating5Action->setChecked(false);
+//    filterRedAction->setChecked(false);
+//    filterYellowAction->setChecked(false);
+//    filterGreenAction->setChecked(false);
+//    filterBlueAction->setChecked(false);
+//    filterPurpleAction->setChecked(false);
     filterLastDayAction->setChecked(false);
 }
 
@@ -301,7 +303,7 @@ void MW::refine()
     bool isPick = false;
     int pickCount = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "picked") {
+        if (dm->index(row, G::PickColumn).data() == "Picked") {
             isPick = true;
             pickCount++;
             if (pickCount > 1) break;
@@ -349,13 +351,14 @@ void MW::refine()
     // clear refine = pick
     pushPick("Begin multiple select");
     for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "picked") {
+        if (dm->index(row, G::PickColumn).data() == "Picked") {
             // save pick history
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-            pushPick(fPath, "true");
+            pushPick(fPath, "Picked");
+//            pushPick(fPath, "true");
             // clear picks
             emit setValue(dm->index(row, G::RefineColumn), true, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-            emit setValue(dm->index(row, G::PickColumn), "false", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+            emit setValue(dm->index(row, G::PickColumn), "Unpicked", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         }
         else {
             emit setValue(dm->index(row, G::RefineColumn), false, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
@@ -364,7 +367,9 @@ void MW::refine()
     pushPick("End multiple select");
 
     // reset filters
+//    launchBuildFilters();
     filters->uncheckAllFilters();
+//    filters->checkItem(filters->refine, "true");
     filters->refineTrue->setCheckState(0, Qt::Checked);
 
     filterChange("MW::refine");

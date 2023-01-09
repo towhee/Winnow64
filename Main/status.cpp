@@ -200,7 +200,7 @@ QString MW::getPicked()
     if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
-        if (dm->sf->index(row, G::PickColumn).data() == "picked") count++;
+        if (dm->sf->index(row, G::PickColumn).data() == "Picked") count++;
     QString image = count == 1 ? " image, " : " images, ";
 
     if (count == 0) return "Nothing";
