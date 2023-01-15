@@ -48,6 +48,9 @@ public:
     // set true when called from EmbelExport (see explanation in EmBel::build)
     bool isRemote = false;
 
+    QGraphicsPixmapItem *pmItem;
+
+
 public slots:
     void build(QString fPath = "", QString src = "");
     void clear();
@@ -62,7 +65,7 @@ signals:
 
 private:
     QGraphicsScene *scene;
-    QGraphicsPixmapItem *pmItem;
+//    QGraphicsPixmapItem *pmItem;
     GraphicsItemEventFilter *itemEventFilter;
     EmbelProperties *p;
     DataModel *dm;

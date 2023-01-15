@@ -51,7 +51,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString fileSym = "📁📂📗🕎📷🎨👍";
     QString camera = "📈📌🔈📎🔗🔑🧾🛈";
     //    https://www.vertex42.com/ExcelTips/unicode-symbols.html
-    QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞";
+    QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞🚫";
 //        */
 
     // update G::availableMemory

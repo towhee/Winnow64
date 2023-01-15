@@ -3,9 +3,10 @@
 
 GraphicsEffect::GraphicsEffect(QString src, QObject */*parent*/)
 {
-//    qDebug() << "GraphicsEffect::GraphicsEffect";
+//    qDebug() << "GraphicsEffect::GraphicsEffect" << "src =" << src;
     this->objectName() = "GraphicsEffect";
     this->src = src;
+    useSnapshot = false;
 }
 
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
@@ -30,7 +31,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                          QRectF boundRect)
 {
 /*
-       padding, shift, rotation, ligt direction
+    padding, shift, rotation, light direction
 */
 
     this->effects = &effects;
@@ -38,31 +39,18 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     this->rotation = rotation;
     srcRectZeroRotation = boundRect;
 
-    /*
-    // reset bounding rect
-    offset.setX(0);
-    offset.setY(0);
-    m.top = 0;
-    m.left = 0;
-    m.right = 0;
-    m.bottom = 0;
-    updateBoundingRect();
-//    */
+    drawCount = -1;
+//    qDebug() << "GraphicsEffect::set  boundRect =" << boundRect;
 
     // iterate effects in style to set boundingRect
     using namespace winnow_effects;
     /*
     std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
               return l.effectOrder < r.effectOrder; });
-//              */
+              //*/
     for (int i = 0; i < effects.length(); ++i) {
+        qDebug() << "GraphicsEffect::set" << i;
         const Effect &ef = effects.at(i);
-        /*
-        qDebug() << "GraphicsEffect::set"
-                 << "ef.effectOrder =" << ef.effectOrder
-                 << "ef.effectName =" << ef.effectName
-                    ;
-//                    */
         switch (ef.effectType) {
             case emboss:
             case sharpen:
@@ -77,17 +65,20 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 if (m.bottom < ef.highlighter.bottom) m.bottom = ef.highlighter.bottom;
                 shift.x += -m.left;
                 shift.y += -m.top;
+
                 break;
             }
             case blur: {
-//                int r = static_cast<int>(ef.blur.radius);
-//                if (ef.blur.outer) {
-//                    if (m.top < r) m.top = r;
-//                    if (m.left < r) m.left = r;
-//                    if (m.right < r) m.right = r;
-//                    if (m.bottom < r) m.bottom = r;
-//                }
+                int r = static_cast<int>(ef.blur.radius);
+                /*
+                if (ef.blur.outer) {
+                    if (m.top < r) m.top = r;
+                    if (m.left < r) m.left = r;
+                    if (m.right < r) m.right = r;
+                    if (m.bottom < r) m.bottom = r;
+                }
                 updateBoundingRect();
+                //*/
                 break;
             }
             case shadow: {
@@ -96,54 +87,14 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 double rads = lightDirection * (3.14159 / 180);
                 int dx = qRound(-sin(rads) * length);
                 int dy = qRound(+cos(rads) * length);
-//                int dx = static_cast<int>(-sin(rads) * length);
-//                int dy = static_cast<int>(+cos(rads) * length);
                 offset.setX(dx);
                 offset.setY(dy);
                 // blur expansion
                 int r = static_cast<int>(ef.shadow.blurRadius);
-                /*
-                int dt, dl, dr, db;  // dt = delta top etc
-                dt = dl = dr = db = 0;
-                if (dx > 0) {
-                    dr = r;
-                    dl = 0;
-                }
-                else {
-                    dl = r;
-                    dr = 0;
-                }
-                if (dy > 0) {
-                    db = r;
-                    dt = 0;
-                }
-                else {
-                    dt = r;
-                    db = 0;
-                }
-                // expand for greater of shadow length or shadow blur
-                if (m.top < dt) m.top = dt;
-                if (m.left < dl) m.left = dl;
-                if (m.right < dr) m.right = dr;
-                if (m.bottom < db) m.bottom = db;
-
-                // or...  */
                 m.top = r;
                 m.left = r;
                 m.right = r;
                 m.bottom = r;
-
-                /*
-                qDebug() << "GraphicsEffect::set"
-                         << "dx =" << dx
-                         << "dy =" << dy
-                         << "r =" << r
-                         << "m.top =" << m.top
-                         << "m.left =" << m.left
-                         << "m.right =" << m.right
-                         << "m.bottom =" << m.bottom
-                            ;
-    //                        */
                 updateBoundingRect();
                 break;
             }
@@ -165,15 +116,20 @@ void GraphicsEffect::draw(QPainter* painter)
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::draw", "");
 #endif
-    /*
-    qDebug() << "GraphicsEffect::draw" << okToDraw << QTime::currentTime() << painter;
-    if (!okToDraw) return;
-    okToDraw = false;
 
-    qDebug() << "GraphicsEffect::draw" << "effects->length() =" << effects->length();
+//    if (!okToDraw) return;
+//    okToDraw = false;
+//    if (drawCount) return;
+    drawCount++;
+    status = "DrawCount" + QString::number(drawCount);
+//    if (drawCount == 0) painter->eraseRect(boundingRect());
+
+/*
+    qDebug() << "GraphicsEffect::draw" << okToDraw << QTime::currentTime() << painter;
 
     if (effects->length() == 0) return;
     */
+    qDebug() << "GraphicsEffect::draw" << "drawCount =" << drawCount;
     if (this->sourcePixmap().isNull()) return;
 
     painter->save();
@@ -185,13 +141,16 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::draw", "");
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
-//    qDebug() << "GraphicsEffect::draw" << "srcPixmap.width() =" << srcPixmap.width();
+    overlay = QImage();
     overlay = srcPixmap.toImage();
+    saveSnapshot("unpadsrc", unpaddedSrcImage);
+    saveSnapshot("src", overlay);
     /*
     qDebug() << "GraphicsEffect::draw"
              << "boundingRect =" << boundingRect()
              << "boundingRect.x() =" << boundingRect().x()
              << "overlay =" << overlay.rect()
+             << "srcPixmap =" << srcPixmap.rect()
                 ;
 //                */
 
@@ -264,48 +223,9 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::draw", "");
     painter->setWorldTransform(QTransform());
 
     painter->drawImage(srcOffset, overlay);
+    saveSnapshot("drawfinal", overlay);
     painter->restore();
     return;
-    /*
-    if (rotation != 0.0) {
-        qDebug() << "GraphicsEffect::draw" << "rotation =" << rotation;
-        // Rotate the overlay
-        double ovrX = overlay.width() / 2;
-        double ovrY = overlay.height() / 2;
-        double ovrZ = sqrt(ovrX * ovrX + ovrY * ovrY); // radius of circle large enough to hold rotated overlay
-        int side = static_cast<int>(ovrZ * 2);
-
-        // image to hold rotated overlay
-        QImage rotatedOverlay(QSize(side,side), QImage::Format_ARGB32_Premultiplied);
-        rotatedOverlay.fill(Qt::transparent);
-        QPainter rotatedOverlayPainter(&rotatedOverlay);
-        rotatedOverlayPainter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-        // translate origin to center of rotatedOverlayImage
-        rotatedOverlayPainter.translate(ovrZ, ovrZ);
-        // rotate axis
-        rotatedOverlayPainter.rotate(rotation);
-        // draw overlay with center offset to translated origin
-        rotatedOverlayPainter.drawImage(QPointF(-ovrX, -ovrY), overlay);
-        rotatedOverlayPainter.end();
-
-        // delta offset based on offset to center from top left corner
-        int srcCtrX = srcPixmap.width()/2;
-        int srcCtrY = srcPixmap.height()/2;
-        int ovrCtrX = rotatedOverlay.width()/2;
-        int ovrCtrY = rotatedOverlay.height()/2;
-        int dx = srcCtrX - ovrCtrX;
-        int dy = srcCtrY - ovrCtrY;
-        QPoint deltaOffset(dx, dy);
-
-        painter->drawImage(srcOffset + deltaOffset, rotatedOverlay);
-    }
-    else {
-//        overlay.save("D:/Pictures/Temp/effect/overlay.tif");
-        painter->drawImage(srcOffset, overlay);
-    }
-
-    painter->restore();
-    */
 }
 
 QT_BEGIN_NAMESPACE
@@ -363,11 +283,29 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::shadowEffect", "");
 #endif
-//    qDebug() << "GraphicsEffect::shadowEffect" << QTime::currentTime();
+    qDebug() << "GraphicsEffect::shadowEffect"
+//             << QTime::currentTime();
+             << "boundingRect =" << boundingRect()
+             << "overlay.size() =" << overlay.size()
+                ;
 
     if (overlay.isNull()) return;
 
+    // update bounding rect
     double rads = lightDirection * (3.14159 / 180);
+    int dx = qRound(-sin(rads) * length);
+    int dy = qRound(+cos(rads) * length);
+    offset.setX(dx);
+    offset.setY(dy);
+    // blur expansion
+    int r = static_cast<int>(radius);
+    m.top = r;
+    m.left = r;
+    m.right = r;
+    m.bottom = r;
+//    updateBoundingRect();
+
+//    double rads = lightDirection * (3.14159 / 180);
     QPointF shadowOffset;
     shadowOffset.setX(-sin(rads) * length);
     shadowOffset.setY(+cos(rads) * length);
@@ -405,6 +343,7 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::shadowEffect", "");
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(shadowOffset, shadIm);
     overlayPainter.end();
+//    saveSnapshot("shadow2", overlay);
 
     return;
 }
@@ -543,14 +482,14 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::raiseEffect", "");
 #endif
-    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    temp = overlay;
-    effect.raise(temp, margin, 0.2, false);
+//    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+//    temp = overlay;
+//    effect.raise(temp, margin, 0.2, false);
 
-    QPainter overlayPainter(&overlay);
-    overlayPainter.setCompositionMode(mode);
-    overlayPainter.drawImage(0,0, temp);
-    overlayPainter.end();
+//    QPainter overlayPainter(&overlay);
+//    overlayPainter.setCompositionMode(mode);
+//    overlayPainter.drawImage(0,0, temp);
+//    overlayPainter.end();
 }
 
 void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
@@ -585,24 +524,30 @@ void GraphicsEffect::strokeEffect(double width,
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::strokeEffect", "");
 #endif
-//    qDebug() << "GraphicsEffect::strokeEffect" /*<< QTime::currentTime()*/
-//             << "boundingRect =" << boundingRect();
+    qDebug() << "GraphicsEffect::strokeEffect"
+             << "boundingRect =" << boundingRect()
+             << "overlay.size() =" << overlay.size()
+                ;
 
     if (overlay.isNull() || width < 1) return;
 
+//    saveSnapshot("stroke0", overlay);
     QImage temp(overlay.size(), QImage::Format_ARGB32);
+    temp.fill(Qt::transparent);
+//    saveSnapshot("stroketemp", temp);
     QPainter tempPainter(&temp);
     // transparency not working unless add overlay in a painter
     tempPainter.drawImage(0, 0, overlay);
     tempPainter.end();
+//    saveSnapshot("stroke1", temp);
     Effects effect;
     if (effect.stroke(temp, width, color, opacity, true)) {
-//        temp.save("D:/Pictures/Temp/effect/stroke.tif");
+//        saveSnapshot("stroke2", overlay);
         QPainter overlayPainter(&overlay);
         overlayPainter.setCompositionMode(mode);
         overlayPainter.drawImage(0, 0, temp);
         overlayPainter.end();
-//        overlay.save("D:/Pictures/Temp/effect/o2.tif");
+//        saveSnapshot("stroke3", overlay);
     }
 }
 
@@ -669,285 +614,10 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::embossEffect", "");
 //    overlay.save("D:/Pictures/Temp/effect/overlay.tif");
 }
 
-/* bool GraphicsEffect::eventFilter(QObject *obj, QEvent *event)
+void GraphicsEffect::saveSnapshot(QString name, QImage image)
 {
-    qDebug() << "GraphicsEffect::embossEffect"
-             << event << "\t"
-             << event->type() << "\t"
-             << obj << "\t"
-             << obj->objectName();
-    return QGraphicsEffect::eventFilter(obj, event);
-} */
-
-bool GraphicsEffect::event(QEvent *event)
-{
-    qDebug() << "GraphicsEffect::event"
-             << event << "\t"
-             << event->type()
-                ;
-    return  QGraphicsEffect::event(event);
+    if (!useSnapshot) return;
+    QString s = path + QString::number(order++).rightJustified(3, '0') +
+                status + "_" + name + ".png";
+    image.save(s);
 }
-
-/*
-#define AVG(a,b)  ( ((((a)^(b)) & 0xfefefefeUL) >> 1) + ((a)&(b)) )
-#define AVG16(a,b)  ( ((((a)^(b)) & 0xf7deUL) >> 1) + ((a)&(b)) )
-
-QImage GraphicsEffect::halfScaled(const QImage &source)
-{
-    if (source.width() < 2 || source.height() < 2)
-        return QImage();
-
-    QImage srcImage = source;
-
-    if (source.format() == QImage::Format_Indexed8 || source.format() == QImage::Format_Grayscale8) {
-        // assumes grayscale
-        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-        dest.setDevicePixelRatio(source.devicePixelRatioF());
-
-        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
-        int sx = srcImage.bytesPerLine();
-        int sx2 = sx << 1;
-
-        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
-        int dx = dest.bytesPerLine();
-        int ww = dest.width();
-        int hh = dest.height();
-
-        for (int y = hh; y; --y, dst += dx, src += sx2) {
-            const uchar *p1 = src;
-            const uchar *p2 = src + sx;
-            uchar *q = dst;
-            for (int x = ww; x; --x, ++q, p1 += 2, p2 += 2)
-                *q = ((int(p1[0]) + int(p1[1]) + int(p2[0]) + int(p2[1])) + 2) >> 2;
-        }
-
-        return dest;
-    } else if (source.format() == QImage::Format_ARGB8565_Premultiplied) {
-        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-        dest.setDevicePixelRatio(source.devicePixelRatioF());
-
-        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
-        int sx = srcImage.bytesPerLine();
-        int sx2 = sx << 1;
-
-        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
-        int dx = dest.bytesPerLine();
-        int ww = dest.width();
-        int hh = dest.height();
-
-        for (int y = hh; y; --y, dst += dx, src += sx2) {
-            const uchar *p1 = src;
-            const uchar *p2 = src + sx;
-            uchar *q = dst;
-            for (int x = ww; x; --x, q += 3, p1 += 6, p2 += 6) {
-                // alpha
-                q[0] = AVG(AVG(p1[0], p1[3]), AVG(p2[0], p2[3]));
-                // rgb
-                const quint16 p16_1 = (p1[2] << 8) | p1[1];
-                const quint16 p16_2 = (p1[5] << 8) | p1[4];
-                const quint16 p16_3 = (p2[2] << 8) | p2[1];
-                const quint16 p16_4 = (p2[5] << 8) | p2[4];
-                const quint16 result = AVG16(AVG16(p16_1, p16_2), AVG16(p16_3, p16_4));
-                q[1] = result & 0xff;
-                q[2] = result >> 8;
-            }
-        }
-
-        return dest;
-    } else if (source.format() != QImage::Format_ARGB32_Premultiplied
-               && source.format() != QImage::Format_RGB32)
-    {
-        srcImage = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
-
-    QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-    dest.setDevicePixelRatio(source.devicePixelRatioF());
-
-    const quint32 *src = reinterpret_cast<const quint32*>(const_cast<const QImage &>(srcImage).bits());
-    int sx = srcImage.bytesPerLine() >> 2;
-    int sx2 = sx << 1;
-
-    quint32 *dst = reinterpret_cast<quint32*>(dest.bits());
-    int dx = dest.bytesPerLine() >> 2;
-    int ww = dest.width();
-    int hh = dest.height();
-
-    for (int y = hh; y; --y, dst += dx, src += sx2) {
-        const quint32 *p1 = src;
-        const quint32 *p2 = src + sx;
-        quint32 *q = dst;
-        for (int x = ww; x; --x, q++, p1 += 2, p2 += 2)
-            *q = AVG(AVG(p1[0], p1[1]), AVG(p2[0], p2[1]));
-    }
-
-    return dest;
-}
-
-template<int aprec, int zprec>
-inline void qt_blurinner(uchar *bptr, int &zR, int &zG, int &zB, int &zA, int alpha)
-{
-    QRgb *pixel = (QRgb *)bptr;
-
-#define Z_MASK (0xff << zprec)
-    const int A_zprec = qt_static_shift<zprec - 24>(*pixel) & Z_MASK;
-    const int R_zprec = qt_static_shift<zprec - 16>(*pixel) & Z_MASK;
-    const int G_zprec = qt_static_shift<zprec - 8>(*pixel)  & Z_MASK;
-    const int B_zprec = qt_static_shift<zprec>(*pixel)      & Z_MASK;
-#undef Z_MASK
-
-    const int zR_zprec = zR >> aprec;
-    const int zG_zprec = zG >> aprec;
-    const int zB_zprec = zB >> aprec;
-    const int zA_zprec = zA >> aprec;
-
-    zR += alpha * (R_zprec - zR_zprec);
-    zG += alpha * (G_zprec - zG_zprec);
-    zB += alpha * (B_zprec - zB_zprec);
-    zA += alpha * (A_zprec - zA_zprec);
-
-#define ZA_MASK (0xff << (zprec + aprec))
-    *pixel =
-        qt_static_shift<24 - zprec - aprec>(zA & ZA_MASK)
-        | qt_static_shift<16 - zprec - aprec>(zR & ZA_MASK)
-        | qt_static_shift<8 - zprec - aprec>(zG & ZA_MASK)
-        | qt_static_shift<-zprec - aprec>(zB & ZA_MASK);
-#undef ZA_MASK
-}
-
-const int alphaIndex = (QSysInfo::ByteOrder == QSysInfo::BigEndian ? 0 : 3);
-
-template<int aprec, int zprec, bool alphaOnly>
-inline void qt_blurrow(QImage & im, int line, int alpha)
-{
-    uchar *bptr = im.scanLine(line);
-
-    int zR = 0, zG = 0, zB = 0, zA = 0;
-
-    if (alphaOnly && im.format() != QImage::Format_Indexed8)
-        bptr += alphaIndex;
-
-    const int stride = im.depth() >> 3;
-    const int im_width = im.width();
-    for (int index = 0; index < im_width; ++index) {
-        if (alphaOnly)
-            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
-        else
-            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
-        bptr += stride;
-    }
-
-    bptr -= stride;
-
-    for (int index = im_width - 2; index >= 0; --index) {
-        bptr -= stride;
-        if (alphaOnly)
-            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
-        else
-            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
-    }
-}
-
-void GraphicsEffect::expblur(QImage &img, qreal radius, bool improvedQuality, int transposed)
-{
-    // halve the radius if we're using two passes
-    if (improvedQuality)
-        radius *= qreal(0.5);
-
-    Q_ASSERT(img.format() == QImage::Format_ARGB32_Premultiplied
-             || img.format() == QImage::Format_RGB32
-             || img.format() == QImage::Format_Indexed8
-             || img.format() == QImage::Format_Grayscale8);
-
-    // choose the alpha such that pixels at radius distance from a fully
-    // saturated pixel will have an alpha component of no greater than
-    // the cutOffIntensity
-    const qreal cutOffIntensity = 2;
-    int alpha = radius <= qreal(1e-5)
-        ? ((1 << aprec)-1)
-        : qRound((1<<aprec)*(1 - qPow(cutOffIntensity * (1 / qreal(255)), 1 / radius)));
-
-    int img_height = img.height();
-    for (int row = 0; row < img_height; ++row) {
-        for (int i = 0; i <= int(improvedQuality); ++i)
-            qt_blurrow<aprec, zprec, alphaOnly>(img, row, alpha);
-    }
-
-    QImage temp(img.height(), img.width(), img.format());
-    temp.setDevicePixelRatio(img.devicePixelRatioF());
-    if (transposed >= 0) {
-        if (img.depth() == 8) {
-            qt_memrotate270(reinterpret_cast<const quint8*>(img.bits()),
-                            img.width(), img.height(), img.bytesPerLine(),
-                            reinterpret_cast<quint8*>(temp.bits()),
-                            temp.bytesPerLine());
-        } else {
-            qt_memrotate270(reinterpret_cast<const quint32*>(img.bits()),
-                            img.width(), img.height(), img.bytesPerLine(),
-                            reinterpret_cast<quint32*>(temp.bits()),
-                            temp.bytesPerLine());
-        }
-    } else {
-        if (img.depth() == 8) {
-            qt_memrotate90(reinterpret_cast<const quint8*>(img.bits()),
-                           img.width(), img.height(), img.bytesPerLine(),
-                           reinterpret_cast<quint8*>(temp.bits()),
-                           temp.bytesPerLine());
-        } else {
-            qt_memrotate90(reinterpret_cast<const quint32*>(img.bits()),
-                           img.width(), img.height(), img.bytesPerLine(),
-                           reinterpret_cast<quint32*>(temp.bits()),
-                           temp.bytesPerLine());
-        }
-    }
-
-    img_height = temp.height();
-    for (int row = 0; row < img_height; ++row) {
-        for (int i = 0; i <= int(improvedQuality); ++i)
-            qt_blurrow<aprec, zprec, alphaOnly>(temp, row, alpha);
-    }
-
-    if (transposed == 0) {
-        if (img.depth() == 8) {
-            qt_memrotate90(reinterpret_cast<const quint8*>(temp.bits()),
-                           temp.width(), temp.height(), temp.bytesPerLine(),
-                           reinterpret_cast<quint8*>(img.bits()),
-                           img.bytesPerLine());
-        } else {
-            qt_memrotate90(reinterpret_cast<const quint32*>(temp.bits()),
-                           temp.width(), temp.height(), temp.bytesPerLine(),
-                           reinterpret_cast<quint32*>(img.bits()),
-                           img.bytesPerLine());
-        }
-    } else {
-        img = temp;
-    }
-}
-
-void GraphicsEffect::blurImage(QPainter *p, QImage &blurImage, qreal radius,
-                               bool quality, bool alphaOnly, int transposed)
-{
-    if (blurImage.format() != QImage::Format_ARGB32_Premultiplied
-        && blurImage.format() != QImage::Format_RGB32)
-    {
-        blurImage = blurImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
-
-    qreal scale = 1;
-    if (radius >= 4 && blurImage.width() >= 2 && blurImage.height() >= 2) {
-        blurImage = halfScaled(blurImage);
-        scale = 2;
-        radius *= qreal(0.5);
-    }
-
-    if (alphaOnly)
-        qt_expblur<12, 10, true>(blurImage, radius, quality, transposed);
-    else
-        expblur<12, 10, false>(blurImage, radius, quality, transposed);
-
-    if (p) {
-        p->scale(scale, scale);
-        p->setRenderHint(QPainter::SmoothPixmapTransform);
-        p->drawImage(QRect(QPoint(0, 0), blurImage.size() / blurImage.devicePixelRatioF()), blurImage);
-    }
-}
-*/

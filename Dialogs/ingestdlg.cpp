@@ -1608,11 +1608,11 @@ void IngestDlg::fontSize()
     QScreen *screen = qApp->screenAt(geometry().center());
     if (screen == nullptr) return;
     qreal screenScaling = screen->logicalDotsPerInch() / 96;
-    int fontPtSize = static_cast<int>(G::fontSize.toInt() / screenScaling);
+    int fontPtSize = static_cast<int>(G::strFontSize.toInt() / screenScaling);
     int fontPxSize = static_cast<int>(fontPtSize * G::ptToPx);
     QString titleShift = QString::number(fontPxSize * screenScaling / 2);
 
-    QString fs = "QWidget {font-size: " + G::fontSize + "pt;}";
+    QString fs = "QWidget {font-size: " + G::strFontSize + "pt;}";
 //    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
     /*
     qDebug() << "IngestDlg::"

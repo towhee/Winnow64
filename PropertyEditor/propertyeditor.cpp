@@ -514,7 +514,7 @@ void PropertyEditor::mouseReleaseEvent(QMouseEvent * /*event*/)
 void PropertyEditor::resizeColumns()
 {
     QFont fnt = this->font();
-    int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    int px = static_cast<int>(G::strFontSize.toInt() * G::ptToPx);
     if (px < 6) px = 6;
     fnt.setPixelSize(px);
     QFontMetrics fm(fnt);

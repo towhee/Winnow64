@@ -3,9 +3,9 @@
 
 /*
 
-Embel applies all the settings in EmbelProperties to the ImageView QGraphicScene (scene), which
-contains just pmItem (a pixmap of the image) in the base "Do not embellish" mode.  All
-embellishments are defined in the PropertyEditor embelProperties.
+Embel applies all the settings in EmbelProperties to the ImageView QGraphicScene (scene),
+which contains just pmItem (a pixmap of the image) in the base "Do not embellish" mode.
+All embellishments are defined in the PropertyEditor embelProperties.
 
 Export converts the scene, with any borders, texts and graphics, into a QImage.
 
@@ -163,18 +163,22 @@ void Embel::clear()
 
     // remove flashItem
     if (scene->items().contains(flashItem)) scene->removeItem(flashItem);
+
+    // clear any prior graphics effects
+//    pmItem->setGraphicsEffect(nullptr);
+
 }
 
 void Embel::build(QString path, QString src)
 {
 /*
     The image created by following the embellish template happens here. The path to the
-    current image is not required if the source is the main Winnow program. However, if the
-    source is an EmbelExort then path will be defined, and the data model will not have
-    been loaded, requiring a call to Metadata to load the image data.
+    current image is not required if the source is the main Winnow program. However, if
+    the source is an EmbelExort then path will be defined, and the data model will not
+    have been loaded, requiring a call to Metadata to load the image data.
 
-    isRemote == true when build is called by EmbelExport and the source is an external program.
-    It is used in updateText when a token string is applied.
+    isRemote == true when build is called by EmbelExport and the source is an external
+    program. It is used in updateText when a token string is applied.
 */
     if (G::isLogger) G::log("Embel::build", "Source: " + src);
     /*
@@ -190,20 +194,20 @@ void Embel::build(QString path, QString src)
     if (G::isFileLogger) Utilities::log("Embel::build", msg);
     //*/
 
-    QElapsedTimer t;
-    t.start();
-
     if (G::mode != "Loupe") return;
 
     if (p->templateId == 0) {
         doNotEmbellish();
         return;
     }
+
     if (path != "") {
         fPath = path;
     }
+
     QString msg = "src = " + src + "  fPath = " + fPath;
     if (G::isFileLogger) Utilities::log("Embel::build", msg);
+
     clear();
     createBorders();
     createTexts();
@@ -602,6 +606,7 @@ void Embel::updateBorder(int i)
 {
     if (G::isLogger) G::log("Embel::updateBorder");
     if (G::mode != "Loupe") return;
+    qDebug() << "Embel::updateBorder";
     // index guard
     if (bItems.count() < i + 1) return;
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
@@ -646,6 +651,7 @@ void Embel::updateText(int i)
 {
     if (G::isLogger) G::log("Embel::updateText");
     if (G::mode != "Loupe") return;
+    qDebug() << "Embel::updateText";
 
     // index guard
     if (p->t.count() < i + 1) return;
@@ -724,6 +730,7 @@ void Embel::updateGraphic(int i)
 {
     if (G::isLogger) G::log("Embel::updateGraphic");
     if (G::mode != "Loupe") return;
+    qDebug() << "Embel::updateGraphic";
 
     // index guard
     if (p->g.count() < i + 1) return;
@@ -799,11 +806,11 @@ void Embel::updateGraphic(int i)
 //        gItems[i]->setRotation(rotation);
     }
 }
-
-void Embel::updateImage()
+void Embel::updateImage()       // all effects bundled in style
 {
     if (G::isLogger) G::log("Embel::updateImage");
     if (G::mode != "Loupe") return;
+    qDebug() << "Embel::updateImage" << fPath;
 
     bool isEffects = (p->styleMap[p->image.style].size() > 0);
     bool legalStyle = (p->image.style != "No style" && p->image.style != "");
@@ -814,21 +821,18 @@ void Embel::updateImage()
         // start with a fresh image from the ImageCache
         QImage im;
         if (icd->imCache.find(fPath, im)) {
+            qDebug() << "Embel::updateImage  image.w =" << image.w;
             pmItem->setPixmap(QPixmap::fromImage(im).scaledToWidth(image.w));
         }
-        GraphicsEffect *effect = new GraphicsEffect(src);
-        effect->setObjectName("EmbelImageEffect");
-        /*
-        qDebug() << "Embel::updateImage"
-                 << "effect =" << effect
-                 << "p->image.style =" << p->image.style;
-//                     */
-        effect->set(p->styleMap[p->image.style],
-                p->lightDirection,
-                0,
-                pmItem->pixmap().rect()
-                );
-        pmItem->setGraphicsEffect(effect);
+
+        GraphicsEffect *imageEffect = new GraphicsEffect(src);
+        imageEffect->setObjectName("EmbelImageEffect");
+        imageEffect->set(p->styleMap[p->image.style],
+                         p->lightDirection,
+                         0,
+                         pmItem->pixmap().rect()
+                        );
+        pmItem->setGraphicsEffect(imageEffect);     // triggers GraphicsEffect::draw()
     }
     else pmItem->setGraphicsEffect(nullptr);
 }
@@ -840,8 +844,6 @@ void Embel::refreshTexts()
         updateText(i);
     }
 }
-
-
 
 void Embel::removeBorder(int i)
 {

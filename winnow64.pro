@@ -46,7 +46,8 @@ QT += multimediawidgets
 QT += concurrent
 #QT += network
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Dialogs/imagedlg.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -166,6 +167,7 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
+    Dialogs/imagedlg.cpp \
     Main/pick.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
@@ -318,7 +320,8 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/imagedlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui

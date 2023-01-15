@@ -182,7 +182,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::ICCBufColumn) return fm.boundingRect("=ICCBuf=").width();
     if (column == G::ICCSpaceColumn) return fm.boundingRect("=ICCSpaceColumn=").width();
     if (column == G::OrientationOffsetColumn) return fm.boundingRect("=OrientationOffsetColumn=").width();
-//    if (column == G::OrientationColumn) return fm.boundingRect("=OrientationColumn=").width();
+    if (column == G::OrientationColumn) return fm.boundingRect("=Orientation=").width();
     if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();
     if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
     if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
@@ -223,7 +223,7 @@ void TableView::resizeColumns()
 void TableView::paintEvent(QPaintEvent *event)
 {
     resizeColumns();      // prevents user changing column widths
-    int d = static_cast<int>(G::fontSize.toInt() * G::ptToPx * 1.5);
+    int d = static_cast<int>(G::strFontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
     verticalHeader()->setDefaultSectionSize(d);
     horizontalHeader()->setFixedHeight(d);

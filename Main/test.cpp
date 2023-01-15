@@ -106,6 +106,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+
     centralLayout->setCurrentIndex(GridTab);
 //    gridView->setVisible(!gridView->isVisible());
     return;
@@ -119,11 +120,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QTreeWidgetItem *item;
-        QString s = "test";
-        item = new QTreeWidgetItem(filters->ratings);
-        item->setText(0, s);
-        item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, s);
+    embel->pmItem->setGraphicsEffect(nullptr);
     return;
+
+    QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"
+                       // "🦦🦫🐫🐪🦎🦋🕷️🐌🦭🦧🦣"
+    qDebug() << s;
 }

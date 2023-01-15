@@ -57,7 +57,8 @@ namespace G
     // application parameters
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
     bool isModifier;                    // is shift, ctrl/command or alt/option pressed
-    QString fontSize;                   // app font point size
+    QString strFontSize;                // app font point size
+    int fontSize;
     qreal dpi;                          // current logical screen dots per inch
     qreal ptToPx;                       // font points to pixels conversion factor
 
@@ -225,7 +226,7 @@ namespace G
             QString e = microSec.rightJustified(11, ' ') + " ";
             QString f = prevFunctionName.leftJustified(50, ' ') + " ";
             QString c = prevComment;
-            if (G::stop) stop = "STOP ";
+//            if (G::stop) stop = "STOP ";
             if (sendLogToConsole) {
                 QString msg = stop + e + f + c;
                 if (prevFunctionName == "skipline") qDebug().noquote() << " ";

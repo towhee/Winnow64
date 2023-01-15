@@ -2305,6 +2305,9 @@ void MW::loadConcurrentMetaDone()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
 //    qDebug() << "MW::loadConcurrentMetaDone";
 
+    // clear the central
+    setCentralMessage("");
+
     if (reset()) return;
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     if (G::mode == "Grid") {
@@ -2398,9 +2401,11 @@ void MW::loadConcurrentStartImageCache(QString src)
 
     // update image cache after all metadata has been read and cache item list is complete
     if (src == "Final") {
+        /*
         qDebug() << "MW::loadConcurrentStartImageCache  src = Final"
                  << dm->currentFilePath
                     ;
+                    //*/
         emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentStartImageCache");
     }
 
@@ -2502,6 +2507,9 @@ void MW::loadImageCacheForNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadImageCacheForNewFolder");
+
+    // clear the central
+    setCentralMessage("");
 
     // clear the cache progress bar
     if (isShowCacheProgressBar) {
@@ -3388,7 +3396,8 @@ void MW::setFontSize(int fontPixelSize)
     scheduleDelayedItemsLayout().
 */
     if (G::isLogger) G::log("MW::setFontSize");
-    G::fontSize = QString::number(fontPixelSize);
+    G::fontSize = fontPixelSize;
+    G::strFontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
 //    emit widgetCSS.fontSizeChange(fontPixelSize);
     css = widgetCSS.css();
@@ -4092,7 +4101,7 @@ void MW::writeSettings()
 
     // appearance
     setting->setValue("backgroundShade", G::backgroundShade);
-    setting->setValue("fontSize", G::fontSize);
+    setting->setValue("fontSize", G::strFontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
     setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
@@ -4372,7 +4381,7 @@ bool MW::loadSettings()
 
         // appearance
         G::backgroundShade = 50;
-        G::fontSize = "12";
+        G::strFontSize = "12";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
@@ -4494,8 +4503,9 @@ bool MW::loadSettings()
         G::backgroundColor = QColor(G::backgroundShade,G::backgroundShade,G::backgroundShade);
     }
     if (setting->contains("fontSize")) {
-        G::fontSize = setting->value("fontSize").toString();
-        if (G::fontSize == "") G::fontSize = "12";
+        G::strFontSize = setting->value("fontSize").toString();
+        if (G::strFontSize == "") G::strFontSize = "12";
+        G::fontSize = G::strFontSize.toInt();
     }
 
     // thumbdock

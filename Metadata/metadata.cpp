@@ -103,6 +103,7 @@ void Metadata::initSupportedFiles()
                         << "cr2"
                         << "cr3"
                         << "dng"
+                        << "heic"
                         << "nef"
                         << "orf"
                         << "raf"
@@ -824,6 +825,10 @@ bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
 //    qDebug() << "Metadata::parseHEIF";
+    // might be a JPG
+    if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
+        parseJPG(0);
+    }
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
@@ -832,8 +837,10 @@ bool Metadata::parseHEIF()
     return ok;
 #endif
 #ifdef Q_OS_MAC
-    if (heic == nullptr) heic = new Heic;
+//    if (heic == nullptr) heic = new Heic;
+    heic = new Heic;
     bool ok = heic->parseHeic(p, m, ifd, exif, gps);
+    delete heic;
     if (ok && p.report) reportMetadata();
     return ok;
 #endif
@@ -1040,6 +1047,14 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
     }
+
+    // check file permissions
+    QFileDevice::Permissions oldPermissions = fileInfo.permissions();
+    if (!(oldPermissions & QFileDevice::ReadUser)) {
+        QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
+        QFile(path).setPermissions(newPermissions);
+    }
+
     QString ext = fileInfo.suffix().toLower();
     bool parsed = false;
     if (p.file.open(QIODevice::ReadOnly)) {
@@ -1061,6 +1076,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
+//        QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
             qWarning() << "WARNING" << "Metadata::readMetadata" << "Could not close" << path << "after format was read";
         }

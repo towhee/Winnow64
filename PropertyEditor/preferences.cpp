@@ -294,6 +294,7 @@ itemChange, which is subclassed here.
 
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());
+        G::fontSize = v.toInt();
         setStyleSheet(mw->css);
     }
 
@@ -647,7 +648,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 10;
-    i.value = G::fontSize;
+    i.value = G::strFontSize;
     i.key = "globalFontSize";
     i.delegateType = DT_Spinbox;
 //    i.delegateType = DT_Slider;

@@ -12,7 +12,7 @@ public:
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
-        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
+        int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
 
@@ -56,7 +56,7 @@ public:
         }
         QString text = index.data().toString();
         QFont font = painter->font();
-        font.setPointSize(G::fontSize.toInt());
+        font.setPointSize(G::strFontSize.toInt());
         painter->setFont(font);
 
         QString elidedText;
@@ -246,7 +246,7 @@ void InfoView::setColumn0Width()
 {
     if (G::isLogger) G::log("InfoView::setColumn0Width");
     QFont ft = this->font();
-    ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
+    ft.setPixelSize(static_cast<int>(G::strFontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
     #ifdef Q_OS_WIN
     setColumnWidth(0, fm.boundingRect("---Shutter speed---").width());

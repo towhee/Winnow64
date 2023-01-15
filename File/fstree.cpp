@@ -405,7 +405,7 @@ void FSTree::resizeColumns()
     if (G::isLogger) G::log("FSTree::resizeColumns");
     if (fsModel->showImageCount) {
         QFont font = this->font();
-        font.setPointSize(G::fontSize.toInt());
+        font.setPointSize(G::strFontSize.toInt());
         QFontMetrics fm(font);
         imageCountColumnWidth = fm.boundingRect("99999").width();
         showColumn(4);

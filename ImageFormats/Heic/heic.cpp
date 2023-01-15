@@ -427,6 +427,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     if (G::isLogger) G::log("Heic::parseHeic");
     if (p.report) isDebug = true;
     else isDebug = false;
+//    isDebug = true;
 
     file = &p.file;
 
@@ -435,9 +436,13 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     QString type;
     eof = file->size();
 
+    // initialize
+    exifItemID = 0;
+    exifOffset = 0;
+
     QFileInfo info(*file);
     if (isDebug) {
-        qDebug() << "Heic::parseHeic" << info.filePath() << "\n";
+        qDebug() << "\nHeic::parseHeic" << info.filePath() << "\n";
     }
 
     // iterate box structures to find exif data offset
@@ -446,6 +451,10 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         nextHeifBox(length, type);
         getHeifBox(type, offset, length);
     }
+
+    if (isDebug) qDebug() << "Heic::parseHeic"
+                          << "exifItemID =" << exifItemID
+                          << "exifOffset =" << exifOffset;
 
     // EXIF data found?
     if (exifItemID == -1) return false;

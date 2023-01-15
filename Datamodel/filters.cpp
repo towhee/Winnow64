@@ -7,7 +7,7 @@ public:
 
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
     {
-        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
+        int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
 };
