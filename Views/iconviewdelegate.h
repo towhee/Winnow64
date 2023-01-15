@@ -72,6 +72,7 @@ private:
     bool delegateShowThumbLabels;
     QString labelChoice;
     QFont font;
+    QString badFile = "🚫";
 
     // define colors
     QColor defaultBorderColor;

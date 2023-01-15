@@ -1,113 +1,17 @@
+success
+Heic::nextHeifBox offset: 0 length: 4292411361 type: "9�Ex"
+Heic::getHeifBox type = "9�Ex" offset = 0 length = 4292411361
+WARNING Heic::getHeifBox Failed to get box for type = "9�Ex"
+Heic::parseHeic exifItemID = 0 exifOffset = 0
 
-45,925,261 MW::focusChange                                    Previous = Thumbnails
-         1 MW::focusChange                                     Current = Thumbnails
-   435,075 MW::enableGoKeyActions
-         6 DockWidget::moveEvent
-         0 MW::folderDockVisibilityChange
-         0 FSTree::scrollToCurrent
-        34 FSTree::getCurrentIndex
-        31 DockWidget::moveEvent
-         0 Filters::resizeEvent
-       649 Filters::resizeColumns
-         6 DockWidget::resizeEvent
-         0 MW::filterDockVisibilityChange
-         5 MW::launchBuildFilters
-         0 BuildFilters::build
-         0 Filters::startBuildFilters
-        19 Filters::removeChildrenDynamicFilters
-         0 Filters::resizeEvent
-       406 Filters::resizeColumns
-         0 Filters::resizeEvent
-       230 Filters::resizeColumns
-       264 MW::embelDockActivated
-         0 BuildFilters::run
-         0 BuildFilters::loadAllMetadata
-BuildFilters::mapUniqueInstances instances = QMap(("Camera models", 4)("Color classes", 3)("Creators", 3)("Days", 6)("File types", 2)("Focal lengths", 5)("Keywords", 15)("Lenses", 3)("Picks", 1)("Ratings", 2)("Titles", 5)("Years", 6))
-        51 BuildFilters::mapUniqueInstances
-         4 Filters::addCategoryFromData                       Picks
-        44 Filters::addCategoryFromData                       Ratings
-        33 Filters::addCategoryFromData                       Color classes
-        23 Filters::addCategoryFromData                       File types
-        44 Filters::addCategoryFromData                       Camera models
-        49 Filters::addCategoryFromData                       Lenses
-       107 Filters::addCategoryFromData                       Focal lengths
-        82 Filters::addCategoryFromData                       Years
-        72 Filters::addCategoryFromData                       Days
-        57 Filters::addCategoryFromData                       Titles
-       211 Filters::addCategoryFromData                       Keywords
-       107 Filters::addCategoryFromData                       Creators
-        77 Filters::paintEvent
-BuildFilters::countFiltered  cat = ""
-BuildFilters::countFiltered  cat = "Search"
-BuildFilters::countFiltered  cat = "Refine"
-BuildFilters::countFiltered  cat = "Refine"
-BuildFilters::countFiltered  cat = "Ratings"
-BuildFilters::countFiltered  cat = "Color classes"
-BuildFilters::countFiltered  cat = "File types"
-BuildFilters::countFiltered  cat = "Years"
-BuildFilters::countFiltered  cat = "Days"
-BuildFilters::countFiltered  cat = "Camera models"
-BuildFilters::countFiltered  cat = "Lenses"
-BuildFilters::countFiltered  cat = "Focal lengths"
-BuildFilters::countFiltered  cat = "Titles"
-BuildFilters::countFiltered  cat = "Keywords"
-       423 BuildFilters::countFiltered
-         0 Filters::disableColorZeroCountItems
-BuildFilters::countUnfiltered Category = ""
-BuildFilters::countUnfiltered Category = "Search"
-BuildFilters::countUnfiltered Category = "Refine"
-BuildFilters::countUnfiltered Category = "Refine"
-BuildFilters::countUnfiltered Category = "Ratings"
-BuildFilters::countUnfiltered "Ratings" instances = 2 total instances = 55 itemProgress % = 1 Progress % = 61
-BuildFilters::countUnfiltered Category = "Color classes"
-BuildFilters::countUnfiltered "Color classes" instances = 3 total instances = 55 itemProgress % = 2 Progress % = 63
-BuildFilters::countUnfiltered Category = "File types"
-BuildFilters::countUnfiltered "File types" instances = 2 total instances = 55 itemProgress % = 1 Progress % = 64
-BuildFilters::countUnfiltered Category = "Years"
-BuildFilters::countUnfiltered "Years" instances = 6 total instances = 55 itemProgress % = 4 Progress % = 68
-BuildFilters::countUnfiltered Category = "Days"
-BuildFilters::countUnfiltered "Days" instances = 6 total instances = 55 itemProgress % = 4 Progress % = 72
-BuildFilters::countUnfiltered Category = "Camera models"
-BuildFilters::countUnfiltered "Camera models" instances = 4 total instances = 55 itemProgress % = 2 Progress % = 74
-BuildFilters::countUnfiltered Category = "Lenses"
-BuildFilters::countUnfiltered "Lenses" instances = 3 total instances = 55 itemProgress % = 2 Progress % = 76
-BuildFilters::countUnfiltered Category = "Focal lengths"
-BuildFilters::countUnfiltered "Focal lengths" instances = 5 total instances = 55 itemProgress % = 3 Progress % = 79
-BuildFilters::countUnfiltered Category = "Titles"
-BuildFilters::countUnfiltered "Titles" instances = 5 total instances = 55 itemProgress % = 3 Progress % = 82
-BuildFilters::countUnfiltered Category = "Keywords"
-BuildFilters::countUnfiltered "Keywords" instances = 15 total instances = 55 itemProgress % = 10 Progress % = 92
-       809 BuildFilters::countUnfiltered
-         8 Filters::isCatEmpty
-     1,275 BuildFilters::done
-       644 Filters::updateProgress
-       130 Filters::updateProgress
-     1,817 Filters::updateProgress
-       428 Filters::updateProgress
-       296 Filters::updateProgress
-       122 Filters::updateProgress
-       303 Filters::updateProgress
-       301 Filters::updateProgress
-       315 Filters::updateProgress
-       315 Filters::updateProgress
-       306 Filters::updateProgress
-       130 Filters::updateProgress
-       319 Filters::updateProgress
-       320 Filters::updateProgress
-       308 Filters::updateProgress
-       137 Filters::updateProgress
-       308 Filters::updateProgress
-       377 Filters::updateProgress
-       411 Filters::updateProgress
-       336 Filters::updateProgress
-       200 Filters::finishedBuildFilters
-       161 Filters::paintEvent
-       138 Filters::disableColorZeroCountItems
-         0 Filters::resizeEvent
-       337 Filters::resizeColumns
-     1,522 Filters::paintEvent
- 3,655,491 Filters::paintEvent
-     5,000 MW::focusChange                                    Previous = Thumbnails
-     9,268 Filters::paintEvent
+fail
+Heic::nextHeifBox offset: 0 length: 4292411361 type: "9�Ex"
+Heic::getHeifBox type = "9�Ex" offset = 0 length = 4292411361
+WARNING Heic::getHeifBox Failed to get box for type = "9�Ex"
+Heic::parseHeic exifItemID = 53 exifOffset = 18333
+WARNING Metadata::readMetadata "Unable to parse metadata for /Users/roryhill/Pictures/_test2/IMG_3186.HEIC. "
+WARNING Metadata::loadImageMetadata  Metadata not loaded for "/Users/roryhill/Pictures/_test2/IMG_3186.HEIC"
 
-
+git log -S 'setPermissions' --source --reverse -- since="2022-09-01"
+ git log -S 'setPermissions' --source --reverse --since="2022-09-01" --all -p
+ git log -S 'setPermissions' --source --reverse --all -p

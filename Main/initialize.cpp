@@ -571,6 +571,7 @@ void MW::createImageView()
 
     connect(imageView, &ImageView::togglePick, this, &MW::togglePick);
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
+    connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::thumbClick);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
@@ -811,7 +812,7 @@ void MW::createBookmarks()
 void MW::createAppStyle()
 {
     if (G::isLogger) G::log("MW::createAppStyle");
-    widgetCSS.fontSize = G::fontSize.toInt();
+    widgetCSS.fontSize = G::strFontSize.toInt();
     int bg = G::backgroundShade;
     widgetCSS.widgetBackgroundColor = QColor(bg,bg,bg);
     css = widgetCSS.css();

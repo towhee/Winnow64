@@ -230,6 +230,9 @@ bool ImageView::loadImage(QString fPath, QString src)
             #endif
         }
     }
+    else {
+        setCentralMessage("Unable to decode " + fPath);
+    }
 
     /* When the program is opening or resizing it is possible this function could be called
     before the central widget has been fully defined, and has a small default size. If that is

@@ -724,7 +724,7 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
-    int maxHt = G::fontSize.toInt() * G::ptToPx + 4;  // font size plus space in button
+    int maxHt = G::strFontSize.toInt() * G::ptToPx + 4;  // font size plus space in button
 
     QString pushBtnStyle =
         "QPushButton {"

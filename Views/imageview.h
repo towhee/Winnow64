@@ -95,6 +95,7 @@ public slots:
 signals:
     void togglePick();
     void updateStatus(bool, QString, QString);
+    void setCentralMessage(QString msg);
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(QString fPath);

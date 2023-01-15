@@ -383,12 +383,16 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         rowsWithIcon.append(dmRow);
         return;
     }
+    QPixmap pm;
     if (thumbLoaded) {
-        QPixmap pm;
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-        rowsWithIcon.append(dmRow);
     }
+    else {
+        pm = QPixmap(":/images/error_image256.png");
+        qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
+    }
+    emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
+    rowsWithIcon.append(dmRow);
 
     /*
     if (debugCaching) {

@@ -130,7 +130,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &/*index*/) const
 {
     // row height = 1.7 * text height
-    int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);
+    int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
     return QSize(option.rect.width(), height);
 }
 
@@ -355,7 +355,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     QFont font;
     font = painter->font();
-    int fontSize = G::fontSize.toInt();
+    int fontSize = G::strFontSize.toInt();
     font.setPointSize(fontSize);
     painter->setFont(font);
 

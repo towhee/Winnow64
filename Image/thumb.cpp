@@ -49,10 +49,11 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     see top of FrameDecoder.cpp for documentation
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
-
-//    qDebug() << "Thumb::loadFromVideo                  "
-//             << "row =" << dmRow
-//                ;
+    /*
+    qDebug() << "Thumb::loadFromVideo                  "
+             << "row =" << dmRow
+                ;
+                //*/
     QModelIndex dmIdx = dm->index(dmRow, 0);
     emit videoFrameDecode(fPath, dmIdx, dm->instance);
 }

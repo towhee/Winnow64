@@ -531,7 +531,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     if (isVideo) {
         QFont videoFont = painter->font();
-        videoFont.setPixelSize(12);
+        videoFont.setPixelSize(G::fontSize);
         painter->setFont(videoFont);
         QRectF bRect;
         painter->setPen(G::backgroundColor);
@@ -567,6 +567,7 @@ void IconViewDelegate::paint(QPainter *painter,
                     ;
                     //*/
     }
+
 
     // draw the cache circle
     if (!isCached && !isVideo && metaLoaded && !G::isSlideShow) {

@@ -96,7 +96,7 @@ void DockTitleBar::setStyle()
                 "padding-left: 2px;"
 //                "padding-bottom: 2px;"
                 "border: none;"
-                "font-size:" + G::fontSize + "pt;";
+                "font-size:" + G::strFontSize + "pt;";
     setStyleSheet(s);
 }
 

@@ -230,7 +230,8 @@ namespace G
     extern QString mode;
     extern QString fileSelectionChangeSource;
 
-    extern QString fontSize;                    // in points
+    extern int fontSize;                        // in pixels
+    extern QString strFontSize;                 // in pixels
     extern qreal dpi;                           // current screen dots per inch
     extern qreal ptToPx;
     extern int textShade;

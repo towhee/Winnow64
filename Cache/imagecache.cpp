@@ -265,18 +265,24 @@ void ImageCache::setTargetRange()
     float sumMB = 0;
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-        if (icd->cacheItemList.at(i).sizeMB == 0) {
+        if (icd->cacheItemList[i].isVideo) {
+            icd->cacheItemList[i].isTarget = false;
+            continue;
+        }
+        if (icd->cacheItemList.at(i).sizeMB < 0.001) {
             icd->cacheItemList[i].isTarget = false;
             continue;
         }
         sumMB += icd->cacheItemList.at(i).sizeMB;
-        if (sumMB < icd->cache.maxMB && !icd->cacheItemList[i].isVideo) {
-//            qDebug() << "ImageCache::setTargetRange"
-//                     << i
-//                     << icd->cacheItemList.at(i).sizeMB
-//                     << sumMB
-//                     << icd->cache.maxMB
-//                        ;
+        if (sumMB < icd->cache.maxMB) {
+            /*
+            qDebug() << "ImageCache::setTargetRange"
+                     << i
+                     << icd->cacheItemList.at(i).sizeMB
+                     << sumMB
+                     << icd->cache.maxMB
+                        ;
+                        //*/
             icd->cacheItemList[i].isTarget = true;
             priorityList.append(icd->cacheItemList.at(i).key);
         }
@@ -292,12 +298,14 @@ void ImageCache::setTargetRange()
     // targetFirst, targetLast
     int i;
     for (i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (icd->cacheItemList[i].isVideo) continue;
         if (icd->cacheItemList.at(i).isTarget) {
             icd->cache.targetFirst = i;
             break;
         }
     }
     for (int j = i; j < icd->cacheItemList.length(); ++j) {
+        if (icd->cacheItemList[j].isVideo) continue;
         if (!icd->cacheItemList.at(j).isTarget) {
             icd->cache.targetLast = j - 1;
             break;
@@ -616,6 +624,7 @@ bool ImageCache::cacheUpToDate()
 */
     isCacheUpToDate = false;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        if (icd->cacheItemList[i].isVideo) continue;
         if (i >= icd->cacheItemList.count()) break;
         // check if image was passed over while rapidly traversing the folder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).threadId == -1) {

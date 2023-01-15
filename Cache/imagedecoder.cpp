@@ -179,7 +179,6 @@ bool ImageDecoder::load()
     }
 
     // HEIC format
-    // rgh remove heic (why?)
     else if (metadata->hasHeic.contains(ext)) {
         #ifdef Q_OS_WIN
         Heic heic;

@@ -1,8 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Rebuild filters except for current category
 - Add a selection class for all SelectionModel operations
+- Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - HEIC metadata on mac
@@ -75,6 +75,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Rebuild filters except for current category
 - InfoView add * for editable tag items
 - Filter disable cat with 0 or 1 items
 - Fix 0 terminating strings in Utilities::getString
