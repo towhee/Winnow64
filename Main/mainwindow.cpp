@@ -382,6 +382,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
+    createSelection();          // dependent on DataModel, ThumbView, GridView, TableView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createFrameDecoder();       // dependent on DataModel
@@ -906,6 +907,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         QKeyEvent *e = static_cast<QKeyEvent *>(event);
         G::isModifier = e->modifiers() != 0;
         eventName = "KeyRelease";
+//        qDebug() << "MW::eventFilter" << "Modifier KeyRelease  G::isModifier = " << G::isModifier;
     }
 
     /* THUMBVIEW ZOOMCURSOR **************************************************************
@@ -1657,7 +1659,8 @@ void MW::folderSelectionChange()
             QFileInfo info(dragDropFilePath);
             QString fileType = info.suffix().toLower();
             if (metadata->supportedFormats.contains(fileType)) {
-                dm->select(dragDropFilePath);
+                sel->select(dragDropFilePath);
+//                dm->select(dragDropFilePath);
                 dragFileSelected = true;
             }
         }
@@ -1760,7 +1763,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-        dm->select(0);
+        sel->select(0);
+//        dm->select(0);
         return;
     }
 
@@ -1789,7 +1793,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
     // select
-    if (clearSelection) dm->select(current);
+    if (clearSelection) sel->select(current);
+//    if (clearSelection) dm->select(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1800,26 +1805,26 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
-    // don't scroll mouse click source (screws up double clicks and disorients users)
+    // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, __FUNCTION__);
-        if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToCenter();
+        if (thumbView->isVisible()) thumbView->scrollToCenter();
     }
     else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(dm->currentSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToCenter();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(dm->currentSfRow, __FUNCTION__);
+        if (thumbView->isVisible()) thumbView->scrollToCenter();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else {
-        if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, __FUNCTION__);
-        if (thumbView->isVisible())  thumbView->scrollToRow(dm->currentSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(dm->currentSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToCenter();
+        if (thumbView->isVisible())  thumbView->scrollToCenter();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
     }
 
     // update delegates to show current
@@ -1946,7 +1951,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (src == "handleDropOnCentralView") {
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
-                dm->select(fPath);
+                sel->select(fPath);
+//                dm->select(fPath);
                 dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
                 fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::folderAndFileSelectionChange");
             }
@@ -2388,11 +2394,13 @@ void MW::loadConcurrentStartImageCache(QString src)
         fPath = folderAndFileChangePath;
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-            dm->select(fPath);
+            sel->select(fPath);
+//            dm->select(fPath);
             dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         }
         else {
-            dm->selectFirst();
+//            dm->selectFirst();
+            sel->first();
             dm->currentSfIdx = dm->sf->index(0,0);
         }
 
@@ -2534,12 +2542,14 @@ void MW::loadImageCacheForNewFolder()
     if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        dm->select(fPath);
+        sel->select(fPath);
+//        dm->select(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
     else {
-        dm->selectFirst();
+//        dm->selectFirst();
+        sel->first();
         dm->currentSfIdx = dm->sf->index(0,0);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to first image");
     }
@@ -3807,7 +3817,7 @@ void MW::toggleFullScreen()
 void MW::selectAllThumbs()
 {
     if (G::isLogger) G::log("MW::selectAllThumbs");
-    dm->selectAll();
+    sel->all();
 }
 
 void MW::toggleZoomDlg()
@@ -5539,7 +5549,8 @@ void MW::refreshCurrentAfterReload()
 //             */
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
-    dm->select(sfRow);
+    sel->select(sfRow);
+//    dm->select(sfRow);
     isRefreshingDM = false;
 }
 
@@ -5722,7 +5733,8 @@ void MW::deleteFiles(QStringList paths)
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    dm->select(sfIdx);
+    sel->select(sfIdx);
+//    dm->select(sfIdx);
 }
 
 void MW::deleteFolder()
@@ -5837,7 +5849,8 @@ void MW::openUsbFolder()
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
-        dm->select(0);
+        sel->select(0);
+//        dm->select(0);
         if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();
     }
@@ -6033,7 +6046,8 @@ void MW::generateMeanStack()
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
-        dm->select(fPath);
+        sel->select(fPath);
+//        dm->select(fPath);
     }
 }
 

@@ -73,13 +73,16 @@ public:
     bool iconLoaded(int sfRow, int instance);
     int rowFromPath(QString fPath);
     void refreshRowFromPathHash();
-    void saveSelection();
-    void recoverSelection();
+    int nextPick();
+    int prevPick();
+    int nearestPick();
+//    void saveSelection();
+//    void recoverSelection();
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
-    QModelIndex getNearestSelectedIndex(int sfRow);
-    void invertSelection();
-    void chkForDeselection(int sfRow);
+//    QModelIndex getNearestSelectedIndex(int sfRow);
+//    void invertSelection();
+//    void chkForDeselection(int sfRow);
     bool isSelected(int row);
 
     QMutex mutex;
@@ -99,7 +102,7 @@ public:
     int currentDmRow;                     // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
-    QModelIndexList selectedRows;
+//    QModelIndexList selectedRows;
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
@@ -144,12 +147,12 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    void selectAll();
-    void selectFirst();
-    void selectLast();
-    void select(QModelIndex sfIdx);
-    void select(int sfRow);
-    void select(QString &fPath);
+//    void selectAll();
+//    void selectFirst();
+//    void selectLast();
+//    void select(QModelIndex sfIdx);
+//    void select(int sfRow);
+//    void select(QString &fPath);
 //    void selectNext();
 //    void selectPrev();
 //    void selectRandom();

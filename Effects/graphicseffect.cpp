@@ -503,6 +503,7 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::brightnessEffect", "");
 //    QImage temp(overlay.size(), QImage::Format_ARGB32/*_Premultiplied*/);
 //    temp = overlay;
     QImage temp(overlay.size(), QImage::Format_ARGB32);
+    temp.fill(Qt::transparent);
     QPainter tempPainter(&temp);
     // transparency not working unless add overlay in a painter
     tempPainter.drawImage(0, 0, overlay);
@@ -595,6 +596,7 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::embossEffect", "");
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32);
+    temp.fill(Qt::transparent);
     QPainter tempPainter(&temp);
     // transparency not working unless add overlay in a painter
     tempPainter.drawImage(0, 0, overlay);

@@ -246,8 +246,10 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::showCacheStatus,
             this, &MW::setCentralMessage, Qt::DirectConnection);
 
+//    connect(metadataCacheThread, &MetadataCache::selectFirst,
+//            thumbView, &IconView::selectFirst);
     connect(metadataCacheThread, &MetadataCache::selectFirst,
-            thumbView, &IconView::selectFirst);
+            sel, &Selection::first);
 
 
     // MetaRead
@@ -489,6 +491,16 @@ void MW::createTableView()
             this, &MW::tableHasScrolled);
     // update status bar when selection count changes
     connect(tableView, &TableView::selectionChange, this, &MW::updateStatus);
+    // update fileSelectionChange when table selection changes
+    connect(tableView, &TableView::fileSelectionChange, this, &MW::fileSelectionChange);
+}
+
+void MW::createSelection()
+{
+    if (G::isLogger) G::log("MW::createSelection");
+    sel = new Selection(this, dm, thumbView, gridView, tableView);
+    connect(sel, &Selection::currentChanged, this, &MW::fileSelectionChange);
+
 }
 
 void MW::createVideoView()
@@ -496,7 +508,7 @@ void MW::createVideoView()
     if (G::isLogger) G::log("MW::createVideoView");
     if (!G::useMultimedia) return;
 
-    videoView = new VideoView(this, thumbView);
+    videoView = new VideoView(this, thumbView, sel);
 
     // back and forward mouse buttons toggle pick
     connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
@@ -547,6 +559,7 @@ void MW::createImageView()
                               metadata,
                               dm,
                               icd,
+                              sel,
                               thumbView,
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),

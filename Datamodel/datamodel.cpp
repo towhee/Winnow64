@@ -1841,174 +1841,230 @@ QModelIndex DataModel::modelIndexFromProxyIndex(QModelIndex sfIdx)
 //    select(row);
 //}
 
-void DataModel::selectAll()
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::selectAll");
-    if (isDebug) qDebug() << "DataModel::selectAll" << "instance =" << instance << currentFolderPath;
-    QItemSelection selection;
-    QModelIndex first = sf->index(0, 0);
-    QModelIndex last = sf->index(sf->rowCount() - 1, 0);
-    selection.select(first, last);
-    selectionModel->select(selection,
-                           QItemSelectionModel::Clear |
-                           QItemSelectionModel::Select |
-                           QItemSelectionModel::Current |
-                           QItemSelectionModel::Rows);
-}
+//void DataModel::selectAll()
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::selectAll");
+//    if (isDebug) qDebug() << "DataModel::selectAll" << "instance =" << instance << currentFolderPath;
+//    QItemSelection selection;
+//    QModelIndex first = sf->index(0, 0);
+//    QModelIndex last = sf->index(sf->rowCount() - 1, 0);
+//    selection.select(first, last);
+//    selectionModel->select(selection,
+//                           QItemSelectionModel::Clear |
+//                           QItemSelectionModel::Select |
+//                           QItemSelectionModel::Current |
+//                           QItemSelectionModel::Rows);
+//}
 
-void DataModel::selectFirst()
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::selectFirst");
-    if (isDebug) qDebug() << "DataModel::selectFirst" << "instance =" << instance << currentFolderPath;
-    select(sf->index(0, 0));
-}
+//void DataModel::selectFirst()
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::selectFirst");
+//    if (isDebug) qDebug() << "DataModel::selectFirst" << "instance =" << instance << currentFolderPath;
+//    select(sf->index(0, 0));
+//}
 
-void DataModel::selectLast()
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::selectLast");
-    if (isDebug) qDebug() << "DataModel::selectLast" << "instance =" << instance << currentFolderPath;
-    select(sf->index(sf->rowCount() - 1, 0));
-}
+//void DataModel::selectLast()
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::selectLast");
+//    if (isDebug) qDebug() << "DataModel::selectLast" << "instance =" << instance << currentFolderPath;
+//    select(sf->index(sf->rowCount() - 1, 0));
+//}
 
-void DataModel::select(QString &fPath)
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select QString");
-    if (isDebug) qDebug() << "DataModel::select QString" << "instance =" << instance << currentFolderPath;
-    select(proxyIndexFromPath(fPath));
-}
+//void DataModel::select(QString &fPath)
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select QString");
+////    if (isDebug)
+//        qDebug() << "DataModel::select QString" << "instance =" << instance << currentFolderPath;
+//    select(proxyIndexFromPath(fPath));
+//}
 
-void DataModel::select(int row)
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select int");
-    if (isDebug) qDebug() << "DataModel::select int" << "instance =" << instance
-                          << "row =" << row
-                          << currentFolderPath;
-    select(sf->index(row, 0));
-}
+//void DataModel::select(int row)
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select int");
+////    if (isDebug)
+//        qDebug() << "DataModel::select int" << "instance =" << instance
+//                          << "row =" << row
+//                          << currentFolderPath;
+//    select(sf->index(row, 0));
+//}
 
-void DataModel::select(QModelIndex sfIdx)
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select QModelIndex");
-    if (isDebug) qDebug() << "DataModel::select QModelIndex" << "instance =" << instance
-                          << "idx =" << sfIdx
-                          << currentFolderPath;
-    if (sfIdx.isValid()) {
-        selectionModel->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-        emit currentChanged(sfIdx, QModelIndex(), true, "DataModel::select");
-    }
-}
+//void DataModel::select(QModelIndex sfIdx)
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select QModelIndex");
+////    if (isDebug)
+//        qDebug() << "DataModel::select QModelIndex" << "instance =" << instance
+//                          << "idx =" << sfIdx
+//                          << currentFolderPath;
+//    if (sfIdx.isValid()) {
+//        selectionModel->clear();
+//        selectionModel->setCurrentIndex(sfIdx,
+////                                        QItemSelectionModel::Current |
+//                                        QItemSelectionModel::ClearAndSelect |
+//                                        QItemSelectionModel::Rows
+//                                        );
+//        emit currentChanged(sfIdx, QModelIndex(), true, "DataModel::select");
+//    }
+//}
 
-QModelIndex DataModel::getNearestSelectedIndex(int sfRow)
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select QModelIndex");
-    int frwd = sfRow;
-    int back = frwd;
-    int rowCount = sf->rowCount();
-    QModelIndex idx;
-    while (back >= 0 || frwd < rowCount) {
-        if (back >= 0) idx = sf->index(back, 0);
-        if (selectionModel->selectedIndexes().contains(idx)) return idx;
-        if (frwd < rowCount) idx = sf->index(frwd, 0);
-        if (selectionModel->selectedIndexes().contains(idx)) return idx;
-        --back;
-        ++frwd;
-    }
-    // not found, return invalid index
-    return QModelIndex();
-}
+//QModelIndex DataModel::getNearestSelectedIndex(int sfRow)
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select QModelIndex");
+//    int frwd = sfRow;
+//    int back = frwd;
+//    int rowCount = sf->rowCount();
+//    QModelIndex idx;
+//    while (back >= 0 || frwd < rowCount) {
+//        if (back >= 0) idx = sf->index(back, 0);
+//        if (selectionModel->selectedIndexes().contains(idx)) return idx;
+//        if (frwd < rowCount) idx = sf->index(frwd, 0);
+//        if (selectionModel->selectedIndexes().contains(idx)) return idx;
+//        --back;
+//        ++frwd;
+//    }
+//    // not found, return invalid index
+//    return QModelIndex();
+//}
 
-void DataModel::invertSelection()
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select QModelIndex");
-    QItemSelection toggleSelection;
-    QModelIndex firstIndex = sf->index(0, 0);
-    QModelIndex lastIndex = sf->index(sf->rowCount() - 1, 0);
-    toggleSelection.select(firstIndex, lastIndex);
-    selectionModel->select(toggleSelection, QItemSelectionModel::Toggle);
-    QModelIndex idx = getNearestSelectedIndex(currentSfRow);
-    // MW::fileSelectionChange (updates DataModel current indexes, rows)
-    if (idx.isValid()) emit currentChanged(idx);
-}
+//void DataModel::invertSelection()
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select QModelIndex");
+//    QItemSelection toggleSelection;
+//    QModelIndex firstIndex = sf->index(0, 0);
+//    QModelIndex lastIndex = sf->index(sf->rowCount() - 1, 0);
+//    toggleSelection.select(firstIndex, lastIndex);
+//    selectionModel->select(toggleSelection, QItemSelectionModel::Toggle);
+//    QModelIndex idx = getNearestSelectedIndex(currentSfRow);
+//    // MW::fileSelectionChange (updates DataModel current indexes, rows)
+//    if (idx.isValid()) emit currentChanged(idx);
+//}
 
-void DataModel::chkForDeselection(int sfRow)
-/*
-    The selection change to sfRow has already occurred.  Check attempt to deselect
-    only selected row (must always be one selected).  Also check to see if the
-    current row in a selection range greater than one has been deselected.  If so,
-    then select the nearest selected row.
-*/
-{
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::select QModelIndex");
+//void DataModel::chkForDeselection(int sfRow)
+///*
+//    The selection change to sfRow has already occurred.  Check attempt to deselect
+//    only selected row (must always be one selected).  Also check to see if the
+//    current row in a selection range greater than one has been deselected.  If so,
+//    then select the nearest selected row.
+//*/
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::select QModelIndex");
 
-    QModelIndex idx = sf->index(sfRow, 0);
-    int count = selectionModel->selectedRows().count();
-    bool isCurrent = idx == currentSfIdx;
+//    QModelIndex idx = sf->index(sfRow, 0);
+//    int count = selectionModel->selectedRows().count();
+//    bool isCurrent = idx == currentSfIdx;
 
-    qDebug() << "DataModel::chkForDeselection"
-             << "row =" << sfRow
-             << "isSelected =" << isSelected(sfRow)
-             << "isCurrent =" << isCurrent
-             << "count =" << count
-                ;
+//    qDebug() << "DataModel::chkForDeselection"
+//             << "row =" << sfRow
+//             << "isSelected =" << isSelected(sfRow)
+//             << "isCurrent =" << isCurrent
+//             << "count =" << count
+//                ;
 
-    if (!isSelected(idx.row())) {
-        // reselect if no selected rows
-        if (selectionModel->selectedRows().count() == 0) {
-            selectionModel->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
-        }
-        //
-        else {
-            if (idx == currentSfIdx) {
-                // just deselected current index, move current index to nearest selected
-                QModelIndex nearestIdx = getNearestSelectedIndex(sfRow);
-//                currentSfIdx = getNearestSelectedIndex(sfRow);
-//                currentSfRow = currentSfIdx.row();
-                emit currentChanged(nearestIdx, QModelIndex(), false);
-            }
-        }
-    }
-}
+//    if (!isSelected(idx.row())) {
+//        // reselect if no selected rows
+//        if (selectionModel->selectedRows().count() == 0) {
+//            selectionModel->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
+//        }
+//        //
+//        else {
+//            if (idx == currentSfIdx) {
+//                // just deselected current index, move current index to nearest selected
+//                QModelIndex nearestIdx = getNearestSelectedIndex(sfRow);
+////                currentSfIdx = getNearestSelectedIndex(sfRow);
+////                currentSfRow = currentSfIdx.row();
+//                emit currentChanged(nearestIdx, QModelIndex(), false);
+//            }
+//        }
+//    }
+//}
 
 bool DataModel::isSelected(int row)
 {
+/*
+    req'd by IconViewDelegate (does not connect to Selection class)
+*/
 //    if (G::isLogger) G::log("DataModel::isSelected");
     return selectionModel->isSelected(sf->index(row, 0));
 }
 
-void DataModel::saveSelection()
+//void DataModel::saveSelection()
+//{
+///*
+//    This function saves the current selection. This is required, even though the three views
+//    (thumbView, gridView and tableViews) share the same selection model, because when a view
+//    is hidden it loses the current index and selection, which has to be re-established each
+//    time it is made visible.
+//*/
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::saveSelection");
+//    if (isDebug) qDebug() << "DataModel::saveSelection" << "instance =" << instance << currentFolderPath;
+//    selectedRows = selectionModel->selectedRows();
+//    currentSfIdx = selectionModel->currentIndex();
+//}
+
+//void DataModel::recoverSelection()
+//{
+//    lastFunction = "";
+//    if (G::isLogger) G::log("DataModel::recoverSelection");
+//    if (isDebug) qDebug() << "DataModel::recoverSelection" << "instance =" << instance << currentFolderPath;
+//    QItemSelection selection;
+//    QModelIndex idx;
+//    foreach (idx, selectedRows)
+//        selection.select(idx, idx);
+//    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//}
+
+int DataModel::nextPick()
 {
-/*
-    This function saves the current selection. This is required, even though the three views
-    (thumbView, gridView and tableViews) share the same selection model, because when a view
-    is hidden it loses the current index and selection, which has to be re-established each
-    time it is made visible.
-*/
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::saveSelection");
-    if (isDebug) qDebug() << "DataModel::saveSelection" << "instance =" << instance << currentFolderPath;
-    selectedRows = selectionModel->selectedRows();
-    currentSfIdx = selectionModel->currentIndex();
+    if (G::isLogger) G::log("DataModel::nextPick");
+    int frwd = currentSfRow + 1;
+    int rowCount = sf->rowCount();
+    QModelIndex idx;
+    while (frwd < rowCount) {
+        idx = sf->index(frwd, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "Picked") return frwd;
+        ++frwd;
+    }
+    return -1;
 }
 
-void DataModel::recoverSelection()
+int DataModel::prevPick()
 {
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::recoverSelection");
-    if (isDebug) qDebug() << "DataModel::recoverSelection" << "instance =" << instance << currentFolderPath;
-    QItemSelection selection;
+    if (G::isLogger) G::log("DataModel:prevPick");
+    int back = currentSfRow - 1;
     QModelIndex idx;
-    foreach (idx, selectedRows)
-        selection.select(idx, idx);
-    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    while (back >= 0) {
+        idx = sf->index(back, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "Picked") return back;
+        --back;
+    }
+    return -1;
+}
+
+int DataModel::nearestPick()    // not used
+{
+    if (G::isLogger) G::log("DataModel:nearestPick");
+    int frwd = currentSfRow;
+    int back = frwd;
+    int rowCount = sf->rowCount();
+    QModelIndex idx;
+    while (back >=0 || frwd < rowCount) {
+        if (back >=0) idx = sf->index(back, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return back;
+        if (frwd < rowCount) idx = sf->index(frwd, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
+        --back;
+        ++frwd;
+    }
+    return 0;
 }
 
 bool DataModel::getSelection(QStringList &list)

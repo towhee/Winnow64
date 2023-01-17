@@ -1,17 +1,72 @@
-success
-Heic::nextHeifBox offset: 0 length: 4292411361 type: "9�Ex"
-Heic::getHeifBox type = "9�Ex" offset = 0 length = 4292411361
-WARNING Heic::getHeifBox Failed to get box for type = "9�Ex"
-Heic::parseHeic exifItemID = 0 exifOffset = 0
+KEYBOARD CHANGE
+4,552,678 MW::enableGoKeyActions
+        1 MW::keyRight                                       ROW: 3
+        0 IconView::selectNext                               Thumbnails
+        6 IconView::isLast                                   Thumbnails
+        0 IconView::getNextRow                               Thumbnails
+        0 DataModel::select int
+       47 DataModel::select QModelIndex
+        5 TableView::selectionChanged
+        0 MW::updateStatus
+        5 IconView::getCurrentFilePath
+        4 DataModel::rowFromPath
+    5,925 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/2022/202204/2022-04-11_Nora/2022-04-11_0005.arw
 
-fail
-Heic::nextHeifBox offset: 0 length: 4292411361 type: "9�Ex"
-Heic::getHeifBox type = "9�Ex" offset = 0 length = 4292411361
-WARNING Heic::getHeifBox Failed to get box for type = "9�Ex"
-Heic::parseHeic exifItemID = 53 exifOffset = 18333
-WARNING Metadata::readMetadata "Unable to parse metadata for /Users/roryhill/Pictures/_test2/IMG_3186.HEIC. "
-WARNING Metadata::loadImageMetadata  Metadata not loaded for "/Users/roryhill/Pictures/_test2/IMG_3186.HEIC"
 
-git log -S 'setPermissions' --source --reverse -- since="2022-09-01"
- git log -S 'setPermissions' --source --reverse --since="2022-09-01" --all -p
- git log -S 'setPermissions' --source --reverse --all -p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MOUSE CHANGE
+240,315 MW::enableGoKeyActions
+     26 IconView::mousePressEvent                          Thumbnails
+      1 TableView::selectionChanged
+      0 IconView::getCurrentFilePath
+      1 DataModel::rowFromPath
+      1 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/2022/202204/2022-04-11_Nora/2022-04-11_0005.arw
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

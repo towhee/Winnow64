@@ -31,13 +31,14 @@ void MW::keyRight()
 
 */
     if (G::isLogger || G::isFlowLogger) {
-        qDebug() << " ";
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
-    if (G::mode == "Compare") compareImages->go("Right");
-    if (G::mode == "Loupe") thumbView->selectNext();
-    if (G::mode == "Table") thumbView->selectNext();
-    if (G::mode == "Grid") gridView->selectNext();
+    if (G::mode == "Compare") {
+        sel->select(compareImages->go("Right"));
+    }
+    if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
+        sel->next();
+    }
 }
 
 void MW::keyLeft()
@@ -46,14 +47,14 @@ void MW::keyLeft()
 
 */
     if (G::isLogger || G::isFlowLogger) {
-//        qDebug() << " ";
-        G::log();   // show blank line
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
-    if (G::mode == "Compare") compareImages->go("Left");
-    if (G::mode == "Loupe") thumbView->selectPrev();
-    if (G::mode == "Table") thumbView->selectPrev();
-    if (G::mode == "Grid") gridView->selectPrev();
+    if (G::mode == "Compare") {
+        sel->select(compareImages->go("Left"));
+    }
+    if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
+        sel->prev();
+    }
 }
 
 void MW::keyUp()
@@ -62,9 +63,9 @@ void MW::keyUp()
 
 */
     if (G::isLogger) G::log("MW::keyUp");
-    if (G::mode == "Loupe") thumbView->selectUp();
-    if (G::mode == "Table") thumbView->selectUp();
-    if (G::mode == "Grid") gridView->selectUp();
+    if (G::mode == "Loupe") sel->up();
+    if (G::mode == "Table") sel->up();
+    if (G::mode == "Grid") sel->up();
 }
 
 void MW::keyDown()
@@ -73,25 +74,25 @@ void MW::keyDown()
 
 */
     if (G::isLogger) G::log("MW::keyDown");
-    if (G::mode == "Loupe") thumbView->selectDown();
-    if (G::mode == "Table") thumbView->selectDown();
-    if (G::mode == "Grid") gridView->selectDown();
+    if (G::mode == "Loupe") sel->down();
+    if (G::mode == "Table") sel->down();
+    if (G::mode == "Grid") sel->down();
 }
 
 void MW::keyPageUp()
 {
     if (G::isLogger) G::log("MW::keyPageUp");
-    if (G::mode == "Loupe") thumbView->selectPageUp();
-    if (G::mode == "Table") tableView->selectPageUp();
-    if (G::mode == "Grid") gridView->selectPageUp();
+    if (G::mode == "Loupe") sel->nextPage();
+    if (G::mode == "Table") sel->nextPage();
+    if (G::mode == "Grid") sel->nextPage();
 }
 
 void MW::keyPageDown()
 {
     if (G::isLogger) G::log("MW::keyPageDown");
-    if (G::mode == "Loupe") thumbView->selectPageDown();
-    if (G::mode == "Table") tableView->selectPageDown();
-    if (G::mode == "Grid") gridView->selectPageDown();
+    if (G::mode == "Loupe") sel->prevPage();
+    if (G::mode == "Table") sel->prevPage();
+    if (G::mode == "Grid") sel->prevPage();
 }
 
 void MW::keyHome()
@@ -102,10 +103,11 @@ void MW::keyHome()
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
         if (G::mode == "Compare") compareImages->go("Home");
-        if (G::mode == "Grid") gridView->selectFirst();
-        else {
-            thumbView->selectFirst();
-        }
+        else sel->first();
+//        if (G::mode == "Grid") gridView->selectFirst();
+//        else {
+//            thumbView->selectFirst();
+//        }
     }
 }
 
@@ -118,10 +120,11 @@ void MW::keyEnd()
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
         metadataCacheThread->stop();
         if (G::mode == "Compare") compareImages->go("End");
-        if (G::mode == "Grid") gridView->selectLast();
-        else {
-            thumbView->selectLast();
-        }
+        else sel->last();
+//        if (G::mode == "Grid") gridView->selectLast();
+//        else {
+//            thumbView->selectLast();
+//        }
     }
 }
 

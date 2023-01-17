@@ -4,12 +4,13 @@
 #include "Views/videowidget.h"
 #include "Main/global.h"
 #include "Views/iconview.h"
+#include "Datamodel/selection.h"
 
 class VideoView : public QWidget
 {
     Q_OBJECT
 public:
-    explicit VideoView(QWidget *parent, IconView *thumbView);
+    explicit VideoView(QWidget *parent, IconView *thumbView, Selection *sel);
     void load(QString fPath);
     void play();
     void pause();
@@ -35,6 +36,7 @@ public slots:
 
 private:
     IconView *thumbView;
+    Selection *sel;
     VideoWidget *video;
     QToolButton *playPauseBtn;
     QSlider *scrub;

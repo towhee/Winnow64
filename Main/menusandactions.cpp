@@ -346,8 +346,9 @@ void MW::createActions()
     invertSelectionAction->setObjectName("invertSelection");
     invertSelectionAction->setShortcutVisibleInContextMenu(true);
     addAction(invertSelectionAction);
-    connect(invertSelectionAction, &QAction::triggered,
-            thumbView, &IconView::invertSelection);
+    connect(invertSelectionAction, &QAction::triggered, sel, &Selection::invert);
+//    connect(invertSelectionAction, &QAction::triggered,
+//            thumbView, &IconView::invertSelection);
 
     rejectAction = new QAction(tr("Reject"), this);
     rejectAction->setObjectName("Reject");
@@ -655,19 +656,22 @@ void MW::createActions()
     randomImageAction->setObjectName("randomImage");
     randomImageAction->setShortcutVisibleInContextMenu(true);
     addAction(randomImageAction);
-    connect(randomImageAction, &QAction::triggered, thumbView, &IconView::selectRandom);
+    connect(randomImageAction, &QAction::triggered, sel, &Selection::random);
+//    connect(randomImageAction, &QAction::triggered, thumbView, &IconView::selectRandom);
 
     nextPickAction = new QAction(tr("Next Pick"), this);
     nextPickAction->setObjectName("nextPick");
     nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
-    connect(nextPickAction, &QAction::triggered, thumbView, &IconView::selectNextPick);
+    connect(nextPickAction, &QAction::triggered, sel, &Selection::nextPick);
+//    connect(nextPickAction, &QAction::triggered, thumbView, &IconView::selectNextPick);
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
     prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
-    connect(prevPickAction, &QAction::triggered, thumbView, &IconView::selectPrevPick);
+    connect(prevPickAction, &QAction::triggered, sel, &Selection::prevPick);
+//    connect(prevPickAction, &QAction::triggered, thumbView, &IconView::selectPrevPick);
 
     // Filters
 

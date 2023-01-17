@@ -154,7 +154,8 @@ void MW::togglePick()
 //    buildFilters->updateCountFiltered();
 
     // auto advance
-    if (autoAdvance) thumbView->selectNext();
+    if (autoAdvance) sel->next();
+//    if (autoAdvance) thumbView->selectNext();
 }
 
 int MW::pickLogCount()

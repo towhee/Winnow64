@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- After home or end further selection can be wrong
+- TableView selection not synced with thumbView and gridView
 - Add a selection class for all SelectionModel operations
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
@@ -75,6 +77,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix embellish ghost issue (temp QImage not filled transparent)
 - Rebuild filters except for current category
 - InfoView add * for editable tag items
 - Filter disable cat with 0 or 1 items

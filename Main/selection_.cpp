@@ -16,7 +16,7 @@
 
     Current Index:
 
-        The current index is managed in the DataaModel, NOT in the selection model.
+        The current index is managed in the DataModel, NOT in the selection model.
 
         • currentDmIdx, currentDmSfIdx
         • currentDmRow, currentDmSfRow

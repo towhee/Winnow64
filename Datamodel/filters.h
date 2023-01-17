@@ -98,6 +98,10 @@ public slots:
     void collapseAllFilters();
     void toggleExpansion();
     void checkPicks();
+    void checkRating(QString rating, bool isChecked);
+    void checkLabel(QString label, bool isChecked);  // color class red, yellow...
+    bool isRatingChecked(QString rating);
+    bool isLabelChecked(QString label);
     void updateProgress(int progress);
     void startBuildFilters(bool isReset = false);
     void finishedBuildFilters();

@@ -25,6 +25,7 @@
 
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"
+#include "Datamodel/selection.h"
 #include "Datamodel/filters.h"
 #include "Datamodel/buildfilters.h"
 #include "File/bookmarks.h"
@@ -990,6 +991,7 @@ private:
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
     DataModel *dm;
+    Selection *sel;
     ImageCacheData *icd;
     IconCacheData *iconCacheData;
     BuildFilters *buildFilters;
@@ -1151,6 +1153,7 @@ private:
     void createThumbView();
     void createGridView();
     void createSelectionModel();
+    void createSelection();
     void createStatusBar();
     int availableSpaceForProgressBar();
     void updateProgressBarWidth();

@@ -1,10 +1,11 @@
 #include "videoview.h"
 
-VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
+VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWidget{parent}
 {
     if (G::isLogger) G::log("VideoView::VideoView");
 
     this->thumbView = thumbView;
+    this->sel = sel;
 
     video = new VideoWidget(this);
 
@@ -179,12 +180,14 @@ void VideoView::wheelEvent(QWheelEvent *event)
                 //*/
 
     if (deltaSum > G::wheelSensitivity) {
-        thumbView->selectPrev();
+        sel->prev();
+//        thumbView->selectPrev();
         deltaSum = 0;
     }
 
     if (deltaSum < (-G::wheelSensitivity)) {
-        thumbView->selectNext();
+        sel->next();
+//        thumbView->selectNext();
         deltaSum = 0;
     }
 }

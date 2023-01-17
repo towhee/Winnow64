@@ -433,11 +433,11 @@ int IconView::getLastRow()
     return dm->sf->rowCount() - 1;
 }
 
-uint IconView::getRandomRow()
-{
-    if (G::isLogger) G::log("IconView::getRandomRow", objectName());
-    return QRandomGenerator::global()->generate() % static_cast<uint>(dm->sf->rowCount());
-}
+//uint IconView::getRandomRow()
+//{
+//    if (G::isLogger) G::log("IconView::getRandomRow", objectName());
+//    return QRandomGenerator::global()->generate() % static_cast<uint>(dm->sf->rowCount());
+//}
 
 // rgh not being used
 //bool IconView::isSelectedItem()
@@ -750,57 +750,57 @@ QFileInfoList IconView::getPicks()
     return fileInfoList;
 }
 
-int IconView::getNextPick()
-{
-    // used by selectNextPick - move to selection
+//int IconView::getNextPick()
+//{
+//    // used by selectNextPick - move to selection
 
-    if (G::isLogger) G::log("IconView::getNextPick", objectName());
-    int frwd = currentIndex().row() + 1;
-    int rowCount = dm->sf->rowCount();
-    QModelIndex idx;
-    while (frwd < rowCount) {
-        idx = dm->sf->index(frwd, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "Picked") return frwd;
-        ++frwd;
-    }
-    return -1;
-}
+//    if (G::isLogger) G::log("IconView::getNextPick", objectName());
+//    int frwd = currentIndex().row() + 1;
+//    int rowCount = dm->sf->rowCount();
+//    QModelIndex idx;
+//    while (frwd < rowCount) {
+//        idx = dm->sf->index(frwd, G::PickColumn);
+//        if (idx.data(Qt::EditRole).toString() == "Picked") return frwd;
+//        ++frwd;
+//    }
+//    return -1;
+//}
 
-int IconView::getPrevPick()
-{
-    // used by selectPrevPick - move to selection
+//int IconView::getPrevPick()
+//{
+//    // used by selectPrevPick - move to selection
 
-    if (G::isLogger) G::log("IconView::getPrevPick", objectName());
-    int back = currentIndex().row() - 1;
-    QModelIndex idx;
-    while (back >= 0) {
-        idx = dm->sf->index(back, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "Picked") return back;
-        --back;
-    }
-    return -1;
-}
+//    if (G::isLogger) G::log("IconView::getPrevPick", objectName());
+//    int back = currentIndex().row() - 1;
+//    QModelIndex idx;
+//    while (back >= 0) {
+//        idx = dm->sf->index(back, G::PickColumn);
+//        if (idx.data(Qt::EditRole).toString() == "Picked") return back;
+//        --back;
+//    }
+//    return -1;
+//}
 
-int IconView::getNearestPick()
-{
-    // not being used
+//int IconView::getNearestPick()
+//{
+//    // not being used
 
-/* Returns the model row of the nearest pick, used in toggleFilterPick */
-    if (G::isLogger) G::log("IconView::getNearestPick", objectName());
-    int frwd = currentIndex().row();
-    int back = frwd;
-    int rowCount = dm->sf->rowCount();
-    QModelIndex idx;
-    while (back >=0 || frwd < rowCount) {
-        if (back >=0) idx = dm->sf->index(back, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") return back;
-        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
-        --back;
-        ++frwd;
-    }
-    return 0;
-}
+///* Returns the model row of the nearest pick, used in toggleFilterPick */
+//    if (G::isLogger) G::log("IconView::getNearestPick", objectName());
+//    int frwd = currentIndex().row();
+//    int back = frwd;
+//    int rowCount = dm->sf->rowCount();
+//    QModelIndex idx;
+//    while (back >=0 || frwd < rowCount) {
+//        if (back >=0) idx = dm->sf->index(back, G::PickColumn);
+//        if (idx.data(Qt::EditRole).toString() == "true") return back;
+//        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickColumn);
+//        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
+//        --back;
+//        ++frwd;
+//    }
+//    return 0;
+//}
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
@@ -845,84 +845,108 @@ QStringList IconView::getSelectedThumbsList()
 //    return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 //}
 
-void IconView::selectNext()
-{
-    if (G::isLogger) G::log("IconView::selectNext", objectName());
-    if (G::mode == "Compare") return;
-    if (isLast()) return;
-    dm->select(getNextRow());
-}
+//void IconView::selectNext()
+//{
+//    if (G::isLogger) G::log("IconView::selectNext", objectName());
+//    if (G::mode == "Compare") return;
+//    if (isLast()) return;
+//    dm->select(getNextRow());
+//}
 
-void IconView::selectPrev()
-{
-    if (G::isLogger) G::log("IconView::selectPrev", objectName());
-    if(G::mode == "Compare") return;
-    if (isFirst()) return;
-    dm->select(getPrevRow());
-}
+//void IconView::selectPrev()
+//{
+//    if (G::isLogger) G::log("IconView::selectPrev", objectName());
+//    if(G::mode == "Compare") return;
+//    if (isFirst()) return;
+//    dm->select(getPrevRow());
+//}
 
-void IconView::selectUp()
-{
-    if (G::isLogger) G::log("IconView::selectUp", objectName());
-    if (G::mode == "Table" || !isWrapping()) selectPrev();
-    else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
-    dm->select(currentIndex());
-}
-
-void IconView::selectDown()
-{
-    if (G::isLogger) G::log("IconView::selectDown", objectName());
-    if (G::mode == "Table" || !isWrapping()) selectNext();
-    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
-    dm->select(currentIndex());
-}
-
-void IconView::selectPageUp()
-{
-    if (G::isLogger) G::log("IconView::selectPageUp", objectName());
+//void IconView::selectUp()
+//{
+//    if (G::isLogger) G::log("IconView::selectUp", objectName());
 //    if (G::mode == "Table" || !isWrapping()) selectPrev();
-    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
-    dm->select(currentIndex());
+//    else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
+//    dm->select(currentIndex());
+//}
+
+//void IconView::selectDown()
+//{
+//    if (G::isLogger) G::log("IconView::selectDown", objectName());
+//    if (G::mode == "Table" || !isWrapping()) selectNext();
+//    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
+//    dm->select(currentIndex());
+//}
+
+QModelIndex IconView::upIndex()
+{
+    if (G::isLogger) G::log("IconView::downIndex", objectName());
+    return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
 }
 
-void IconView::selectPageDown()
+QModelIndex IconView::downIndex()
 {
-    if (G::isLogger) G::log("IconView::selectPageDown", objectName());
-    if (G::mode == "Table" || !isWrapping()) selectNext();
-    else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
-    dm->select(currentIndex());
+    if (G::isLogger) G::log("IconView::upIndex", objectName());
+    return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
 }
 
-void IconView::selectFirst()
+QModelIndex IconView::pageUpIndex()
 {
-    if (G::isLogger) G::log("IconView::selectFirst", objectName());
-    dm->select(0);
+    if (G::isLogger) G::log("IconView::pageUpIndex", objectName());
+    return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
 
-void IconView::selectLast()
+QModelIndex IconView::pageDownIndex()
 {
-    if (G::isLogger) G::log("IconView::selectLast", objectName());
-    dm->select(getLastRow());
+    if (G::isLogger) G::log("IconView::pageDownIndex", objectName());
+    return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
-void IconView::selectRandom()
-{
-    if (G::isLogger) G::log("IconView::selectRandom", objectName());
-//    qDebug() << "\n***************************************************************************\n" << "IconView::selectRandom";
-    dm->select(getRandomRow());
-}
+//void IconView::selectPageUp()
+//{
+//    if (G::isLogger) G::log("IconView::selectPageUp", objectName());
+////    if (G::mode == "Table" || !isWrapping()) selectPrev();
+//    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
+//    dm->select(currentIndex());
+//}
 
-void IconView::selectNextPick()
-{
-    if (G::isLogger) G::log("IconView::selectNextPick", objectName());
-    dm->select(getNextPick());
-}
+//void IconView::selectPageDown()
+//{
+//    if (G::isLogger) G::log("IconView::selectPageDown", objectName());
+//    if (G::mode == "Table" || !isWrapping()) selectNext();
+//    else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
+//    dm->select(currentIndex());
+//}
 
-void IconView::selectPrevPick()
-{
-    if (G::isLogger) G::log("IconView::selectPrevPick", objectName());
-    dm->select(getPrevPick());
-}
+//void IconView::selectFirst()
+//{
+//    if (G::isLogger) G::log("IconView::selectFirst", objectName());
+//    dm->select(0);
+//}
+
+//void IconView::selectLast()
+//{
+//    if (G::isLogger) G::log("IconView::selectLast", objectName());
+//    dm->select(getLastRow());
+//}
+
+//void IconView::selectRandom()
+//{
+//    if (G::isLogger) G::log("IconView::selectRandom", objectName());
+////    qDebug() << "\n***************************************************************************\n" << "IconView::selectRandom";
+//    dm->select(getRandomRow());
+//}
+
+//void IconView::selectNextPick()
+//{
+//    if (G::isLogger) G::log("IconView::selectNextPick", objectName());
+//    dm->select(getNextPick());
+//}
+
+//void IconView::selectPrevPick()
+//{
+//    if (G::isLogger) G::log("IconView::selectPrevPick", objectName());
+//    dm->select(getPrevPick());
+//}
 
 void IconView::thumbsEnlarge()
 {
@@ -1273,7 +1297,7 @@ void IconView::updateView()
 */
     if (G::isLogger) G::log("IconView::updateView", objectName());
     update();
-    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
+//    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
 }
 
 void IconView::scrollDown(int /*step*/)
@@ -1342,16 +1366,23 @@ void IconView::scrollToRow(int row, QString source)
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
+void IconView::scrollToCenter()
+{
+    if (G::isLogger) G::log("IconView::scrollToCenter", objectName());
+    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
+    scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
+}
+
 bool IconView::okToScroll()
 {
     if (G::isLogger) G::log("IconView::okToScroll", objectName());
-    qDebug() << "IconView::okToScroll";
+//    qDebug() << "IconView::okToScroll";
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << "IconView::okToScroll" << objectName()
                  << "horizontalScrollBar()->maximum() =" << horizontalScrollBar()->maximum()
                  << "getHorizontalScrollBarMax() = " << getHorizontalScrollBarMax();
-        */
+        //*/
         return horizontalScrollBar()->maximum() > 0.95 * getHorizontalScrollBarMax();
     }
     else {
@@ -1658,7 +1689,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 
     if (event->modifiers() & Qt::ControlModifier) {
         // check attempt to deselect only selected item (must always be one selected)
-        dm->chkForDeselection(idx.row());
+        m2->sel->chkForDeselection(idx.row());
     }
 
     if  (!event->modifiers() && isMouseDrag) {
@@ -1760,7 +1791,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     // debugging
     if (failReason.length()) {
-//        qDebug() << "IconView::zoomCursor Failed because" << failReason;
+//        qWarning() << "WARNING IconView::zoomCursor Failed because" << failReason;
         return;
     }
     else {
@@ -1894,17 +1925,18 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     setCursor(QCursor(QPixmap::fromImage(frame)));
 }
 
-void IconView::invertSelection()
-{
-/*
-    Move to selection class.
+//void IconView::invertSelection()
+//{
+///*
+//    Move to selection class.
 
-    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct.
-*/
-    if (G::isLogger) G::log("IconView::invertSelection", objectName());
-    dm->invertSelection();
-    updateView();
-}
+//    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct.
+//*/
+//    if (G::isLogger) G::log("IconView::invertSelection", objectName());
+//    m2->sel->invert();
+////    dm->invertSelection();
+//    updateView();
+//}
 
 void IconView::startDrag(Qt::DropActions)
 {

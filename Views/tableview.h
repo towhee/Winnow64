@@ -26,8 +26,10 @@ public:
 
 public slots:
     void showOrHide();
-    void selectPageUp();
-    void selectPageDown();
+    QModelIndex pageUpIndex();
+    QModelIndex pageDownIndex();
+    void selectPageUp();    // rgh req'd?
+    void selectPageDown();  // rgh req'd?
     void setViewportParameters();
 
 protected:
@@ -49,6 +51,10 @@ private slots:
 signals:
     void displayLoupe();
     void selectionChange(bool, QString, QString);
+    void fileSelectionChange(QModelIndex idx,
+                             QModelIndex idx2 = QModelIndex(),
+                             bool clearSelection = false,
+                             QString src = "TableView::fileSelectionChange") ;
 };
 
 #include <QStyledItemDelegate>
