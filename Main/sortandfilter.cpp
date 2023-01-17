@@ -117,7 +117,8 @@ void MW::filterChange(QString source)
     // check if still in filtered set, if not select first item in filtered set
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-    dm->select(dm->currentSfRow);
+    sel->select(dm->currentSfRow);
+//    dm->select(dm->currentSfRow);
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
@@ -146,30 +147,16 @@ void MW::quickFilter()
     // make sure the filters have been built
     if (!filters->filtersBuilt) buildFilters->build();
 
-    // checked
-//    if (filterSearchAction->isChecked()) filters->searchTrue->setCheckState(0, Qt::Checked);
-//    if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
-//    if (filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Checked);
-//    if (filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Checked);
-//    if (filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Checked);
-//    if (filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Checked);
-//    if (filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Checked);
-//    if (filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Checked);
-//    if (filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Checked);
-//    if (filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Checked);
-//    if (filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Checked);
-
-    // unchecked
-//    if (!filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Unchecked);
-//    if (!filterRating2Action->isChecked()) filters->ratings2->setCheckState(0, Qt::Unchecked);
-//    if (!filterRating3Action->isChecked()) filters->ratings3->setCheckState(0, Qt::Unchecked);
-//    if (!filterRating4Action->isChecked()) filters->ratings4->setCheckState(0, Qt::Unchecked);
-//    if (!filterRating5Action->isChecked()) filters->ratings5->setCheckState(0, Qt::Unchecked);
-//    if (!filterRedAction->isChecked()) filters->labelsRed->setCheckState(0, Qt::Unchecked);
-//    if (!filterYellowAction->isChecked()) filters->labelsYellow->setCheckState(0, Qt::Unchecked);
-//    if (!filterGreenAction->isChecked()) filters->labelsGreen->setCheckState(0, Qt::Unchecked);
-//    if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
-//    if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
+    filters->checkRating("1", filterRating1Action->isChecked());
+    filters->checkRating("2", filterRating2Action->isChecked());
+    filters->checkRating("3", filterRating3Action->isChecked());
+    filters->checkRating("4", filterRating4Action->isChecked());
+    filters->checkRating("5", filterRating5Action->isChecked());
+    filters->checkLabel("Red", filterRedAction->isChecked());
+    filters->checkLabel("Yellow", filterYellowAction->isChecked());
+    filters->checkLabel("Green", filterGreenAction->isChecked());
+    filters->checkLabel("Blue", filterBlueAction->isChecked());
+    filters->checkLabel("Purple", filterPurpleAction->isChecked());
 
     filters->setCatFiltering();
     filterChange("MW::quickFilter");
@@ -178,16 +165,16 @@ void MW::quickFilter()
 void MW::filterSyncActionsWithFilters()
 {
     if (G::isLogger) G::log("MW::filterSyncActionsWithFilters");
-//    filterRating1Action->setChecked(filters->ratings1->checkState(0));
-//    filterRating2Action->setChecked(filters->ratings2->checkState(0));
-//    filterRating3Action->setChecked(filters->ratings3->checkState(0));
-//    filterRating4Action->setChecked(filters->ratings4->checkState(0));
-//    filterRating5Action->setChecked(filters->ratings5->checkState(0));
-//    filterRedAction->setChecked(filters->labelsRed->checkState(0));
-//    filterYellowAction->setChecked(filters->labelsYellow->checkState(0));
-//    filterGreenAction->setChecked(filters->labelsGreen->checkState(0));
-//    filterBlueAction->setChecked(filters->labelsBlue->checkState(0));
-//    filterPurpleAction->setChecked(filters->labelsPurple->checkState(0));
+    filterRating1Action->setChecked(filters->isRatingChecked("1"));
+    filterRating2Action->setChecked(filters->isRatingChecked("2"));
+    filterRating3Action->setChecked(filters->isRatingChecked("3"));
+    filterRating4Action->setChecked(filters->isRatingChecked("4"));
+    filterRating5Action->setChecked(filters->isRatingChecked("5"));
+    filterRedAction->setChecked(filters->isLabelChecked("Red"));
+    filterYellowAction->setChecked(filters->isLabelChecked("Yellow"));
+    filterGreenAction->setChecked(filters->isLabelChecked("Green"));
+    filterBlueAction->setChecked(filters->isLabelChecked("Blue"));
+    filterPurpleAction->setChecked(filters->isLabelChecked("Purple"));
     filterLastDayAction->setChecked(filters->isOnlyMostRecentDayChecked());
 }
 

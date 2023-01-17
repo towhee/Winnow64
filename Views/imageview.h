@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QHash>
 #include "Datamodel/datamodel.h"
+#include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
 //#include "Cache/cachedata.h"
 #include "Views/iconview.h"
@@ -23,6 +24,7 @@ public:
               Metadata *metadata,
               DataModel *dm,
               ImageCacheData *icd,
+              Selection *sel,
               IconView *thumbView,
               InfoString *infoString = nullptr,
               bool isShootingInfoVisible = false,
@@ -137,6 +139,7 @@ private:
     QWidget *mainWindow;
     Metadata *metadata;
     DataModel *dm;
+    Selection *sel;
     ImageCacheData *icd;
     IconView *thumbView;
 

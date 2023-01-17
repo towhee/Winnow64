@@ -90,6 +90,7 @@ public slots:
     void scrollPageDown(int);
     void scrollPageUp(int);
     void scrollToRow(int row, QString source);
+    void scrollToCenter();
     void thumbsEnlarge();
     void thumbsShrink();
     int justifyMargin();
@@ -97,9 +98,13 @@ public slots:
     void rejustify();
     void bestAspect();
     void thumbsFitTopOrBottom();
-    void invertSelection();         // move to selection class.
+//    void invertSelection();         // move to selection class.
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
+    QModelIndex upIndex();
+    QModelIndex downIndex();
+    QModelIndex pageUpIndex();
+    QModelIndex pageDownIndex();
     int getFirstVisible();          // not being used
     int getLastVisible();           // not being used
     void scannedViewportRange();
@@ -113,17 +118,17 @@ public slots:
              int _labelFontSize, bool _showThumbLabels, int _badgeSize);
 
     // move all select to selection class
-    void selectNext();
-    void selectPrev();
-    void selectUp();
-    void selectDown();
-    void selectPageUp();
-    void selectPageDown();
-    void selectFirst();
-    void selectLast();
-    void selectRandom();
-    void selectNextPick();
-    void selectPrevPick();
+//    void selectNext();
+//    void selectPrev();
+//    void selectUp();
+//    void selectDown();
+//    void selectPageUp();
+//    void selectPageDown();
+//    void selectFirst();
+//    void selectLast();
+//    void selectRandom();
+//    void selectNextPick();
+//    void selectPrevPick();
 
     void sortThumbs(int sortColumn, bool isReverse);
 
@@ -153,9 +158,9 @@ private:
     int getLastRow();                           //not used? Seems handy
     uint getRandomRow();                         //not used? Seems handy
 
-    int getNearestPick();       // not being used
-    int getNextPick();          // used by selectNextPick - move to selection
-    int getPrevPick();          // used by selectPrevPick - move to selection
+//    int getNearestPick();       // not being used
+//    int getNextPick();          // used by selectNextPick - move to selection
+//    int getPrevPick();          // used by selectPrevPick - move to selection
 
     DataModel *dm;
     ImageCacheData *icd;

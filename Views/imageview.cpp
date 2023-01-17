@@ -26,6 +26,7 @@ ImageView::ImageView(QWidget *parent,
                      Metadata *metadata,
                      DataModel *dm,
                      ImageCacheData *icd,
+                     Selection *sel,
                      IconView *thumbView,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
@@ -43,6 +44,7 @@ ImageView::ImageView(QWidget *parent,
     this->metadata = metadata;
     this->dm = dm;
     this->icd = icd;
+    this->sel = sel;
     this->thumbView = thumbView;
     this->infoString = infoString;
     this->classificationBadgeDiam = classificationBadgeDiam;
@@ -903,12 +905,14 @@ void ImageView::wheelEvent(QWheelEvent *event)
                 //*/
 
     if (deltaSum > G::wheelSensitivity) {
-        thumbView->selectPrev();
+        sel->prev();
+//        thumbView->selectPrev();
         deltaSum = 0;
     }
 
     if (deltaSum < (-G::wheelSensitivity)) {
-        thumbView->selectNext();
+        sel->next();
+//        thumbView->selectNext();
         deltaSum = 0;
     }
 }

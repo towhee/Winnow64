@@ -329,35 +329,37 @@ int CompareImages::current()
     return -1;
 }
 
-void CompareImages::go(QString key)
+QModelIndex CompareImages::go(QString key)
 {
     if (G::isLogger) G::log("CompareImages::go", key);
+    int i = 0;
     if (key == "Right") {
-        int i = current();
+        i = current();
         imList->at(i)->deselect();
         if (i == imList->count() - 1) i = 0;
         else i++;
         imList->at(i)->select();
     }
     if (key == "Left") {
-        int i = current();
+        i = current();
         imList->at(i)->deselect();
         if (i == 0) i = imList->count() - 1;
         else i--;
         imList->at(i)->select();
     }
     if (key == "End") {
-        int i = current();
+        i = current();
         imList->at(i)->deselect();
         i = imList->count() - 1;
         imList->at(i)->select();
     }
     if (key == "Home") {
-        int i = current();
+        i = current();
         imList->at(i)->deselect();
         i = 0;
         imList->at(i)->select();
     }
+    return imList->at(i)->imageIndex;
 }
 
 void CompareImages::updateClassification(bool isPick, QString rating, QString colorClass,

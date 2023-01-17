@@ -120,7 +120,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embel->pmItem->setGraphicsEffect(nullptr);
+    qDebug()
+            << "\nDM currentIndex =" << dm->selectionModel->currentIndex()
+            << "\nTV currentIndex =" << thumbView->selectionModel()->currentIndex()
+            << "\nTV selectedRows =" << thumbView->selectionModel()->selectedRows()
+            << "\nDM selectedRows =" << dm->selectionModel->selectedRows()
+            << "\nDM selection =" << dm->selectionModel->selection()
+            << "\nTV selection =" << thumbView->selectionModel()->selection()
+            ;
     return;
 
     QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"

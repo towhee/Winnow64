@@ -189,6 +189,18 @@ int TableView::sizeHintForColumn(int column) const
     return 50;
 }
 
+QModelIndex TableView::pageUpIndex()
+{
+    if (G::isLogger) G::log("TableView::pageUpIndex");
+    return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
+}
+
+QModelIndex TableView::pageDownIndex()
+{
+    if (G::isLogger) G::log("TableView::pageDownIndex");
+    return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
+}
+
 void TableView::selectPageUp()
 {
     if (G::isLogger) G::log("TableView::selectPageUp");
@@ -234,9 +246,13 @@ void TableView::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
-    G::fileSelectionChangeSource = "TableMouseClick";
+    QModelIndex idx = indexAt(event->pos());
     // propogate mouse press if pressed in a table row, otherwise do nothing
-    if (indexAt(event->pos()).isValid()) QTableView::mousePressEvent(event);
+    if (idx.isValid()) {
+        QTableView::mousePressEvent(event);
+        G::fileSelectionChangeSource = "TableMouseClick";
+            emit fileSelectionChange(idx);
+    }
 }
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)

@@ -32,7 +32,7 @@ public slots:
     void zoomChangeFromView(qreal zoomValue, bool hasfocus);
     void updateToggleZoom(qreal toggleZoomValue);
 
-    void go(QString key);
+    QModelIndex go(QString key);
     void zoomOut();
     void zoomIn();
     void zoomToFit();

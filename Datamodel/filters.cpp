@@ -283,6 +283,56 @@ void Filters::checkPicks()
     emit filterChange("Filters::checkPicks");
 }
 
+void Filters::checkRating(QString rating, bool isChecked)
+{
+    if (G::isLogger) G::log("Filters::checkRating");
+    Qt::CheckState state;
+    isChecked ? state = Qt::Checked : state = Qt::Unchecked;
+    for (int i = 0; i < ratings->childCount(); i++) {
+        if (ratings->child(i)->text(0) == rating) {
+            ratings->child(i)->setCheckState(0, state);
+        }
+    }
+}
+
+void Filters::checkLabel(QString label, bool isChecked)
+{
+    if (G::isLogger) G::log("Filters::checkRating");
+    Qt::CheckState state;
+    isChecked ? state = Qt::Checked : state = Qt::Unchecked;
+    for (int i = 0; i < labels->childCount(); i++) {
+        if (labels->child(i)->text(0) == label) {
+            labels->child(i)->setCheckState(0, state);
+        }
+    }
+}
+
+bool Filters::isRatingChecked(QString rating)
+{
+    if (G::isLogger) G::log("Filters::checkRating");
+    for (int i = 0; i < ratings->childCount(); i++) {
+        if (ratings->child(i)->text(0) == rating) {
+            if (ratings->child(i)->checkState(0) == Qt::Checked) return true;
+            else return false;
+        }
+    }
+    // not found
+    return false;
+}
+
+bool Filters::isLabelChecked(QString label)
+{
+    if (G::isLogger) G::log("Filters::checkRating");
+    for (int i = 0; i < labels->childCount(); i++) {
+        if (labels->child(i)->text(0) == label) {
+            if (labels->child(i)->checkState(0) == Qt::Checked) return true;
+            else return false;
+        }
+    }
+    // not found
+    return false;
+}
+
 void Filters::setSearchNewFolder()
 {
     if (G::isLogger) G::log("Filters::setSearchNewFolder");

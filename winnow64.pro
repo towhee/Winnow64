@@ -47,6 +47,7 @@ QT += concurrent
 #QT += network
 
 HEADERS += Cache/cachedata.h \
+    Datamodel/selection.h \
     Dialogs/imagedlg.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
@@ -167,6 +168,7 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
+    Datamodel/selection.cpp \
     Dialogs/imagedlg.cpp \
     Main/pick.cpp
 SOURCES += Cache/framedecoder.cpp
@@ -261,7 +263,8 @@ SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
 SOURCES += Main/menusandactions.cpp
 SOURCES += Main/navigate.cpp
-SOURCES += Main/selection.cpp
+SOURCES += \
+    Main/selection_.cpp
 SOURCES += Main/setandupdate.cpp
 SOURCES += Main/slideshow.cpp
 SOURCES += Main/sortandfilter.cpp
