@@ -56,7 +56,7 @@ namespace G
 
     // application parameters
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
-    bool isModifier;                    // is shift, ctrl/command or alt/option pressed
+//    bool isModifier;                    // is shift, ctrl/command or alt/option pressed
     QString strFontSize;                // app font point size
     int fontSize;
     qreal dpi;                          // current logical screen dots per inch

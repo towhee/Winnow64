@@ -594,7 +594,7 @@ void MW::createImageView()
 void MW::createCompareView()
 {
     if (G::isLogger) G::log("MW::createCompareView");
-    compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, icd);
+    compareImages = new CompareImages(this, centralWidget, metadata, dm, sel, thumbView, icd);
 
     if (isSettings) {
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
