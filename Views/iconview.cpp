@@ -287,7 +287,8 @@ void IconView::refreshThumb(QModelIndex idx, int role)
 
 void IconView::refreshThumbs() {
     if (G::isLogger) G::log("IconView::refreshThumbs", objectName());
-    dataChanged(dm->sf->index(0, 0), dm->sf->index(getLastRow(), 0));
+    int last = dm->sf->rowCount() - 1;
+    dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0));
 }
 
 void IconView::setThumbParameters()
@@ -373,82 +374,6 @@ int IconView::getThumbSpaceWidth(int thumbSpaceHeight)
     int newThumbWidth = static_cast<int>(newThumbHeight * aspect);
     return newThumbWidth + margin - 1;
 }
-
-//int IconView::getScrollThreshold(int thumbSpaceHeight)
-//{
-//    if (G::isLogger) G::log("IconView::getScrollThreshold");
-//    return viewport()->width() / getThumbSpaceWidth(thumbSpaceHeight);
-//}
-
-// debugging
-//void IconView::reportThumb()
-//{
-//    if (G::isLogger) G::log("IconView::reportThumb", objectName());
-//    int currThumb = currentIndex().row();
-//    qDebug() << G::t.restart() << "\t" << "\n ***** THUMB INFO *****";
-//    qDebug() << G::t.restart() << "\t" << "Row =" << currThumb;
-//    qDebug() << G::t.restart() << "\t" << "FileNameRole " << G::PathRole << dm->item(currThumb)->data(G::PathRole).toString();
-
-//}
-
-//int IconView::getCurrentRow()
-//{
-//    if (G::isLogger) G::log("IconView::getCurrentRow", objectName());
-//    return currentIndex().row();
-//}
-
-bool IconView::isFirst()
-{
-    if (G::isLogger) G::log("IconView::isFirst", objectName());
-    return  currentIndex().row() == 0;
-}
-
-bool IconView::isLast()
-{
-    if (G::isLogger) G::log("IconView::isLast", objectName());
-    return  currentIndex().row() == dm->sf->rowCount() - 1;
-}
-
-int IconView::getNextRow()
-{
-    if (G::isLogger) G::log("IconView::getNextRow", objectName());
-    int row = currentIndex().row();
-    if (row == dm->sf->rowCount() - 1)
-        return row;
-    return row + 1;
-}
-
-int IconView::getPrevRow()
-{
-    if (G::isLogger) G::log("IconView::getPrevRow", objectName());
-    int row = currentIndex().row();
-    if (row == 0)
-        return 0;
-    return row - 1;
-}
-
-int IconView::getLastRow()
-{
-    if (G::isLogger) G::log("IconView::", objectName());
-    return dm->sf->rowCount() - 1;
-}
-
-//uint IconView::getRandomRow()
-//{
-//    if (G::isLogger) G::log("IconView::getRandomRow", objectName());
-//    return QRandomGenerator::global()->generate() % static_cast<uint>(dm->sf->rowCount());
-//}
-
-// rgh not being used
-//bool IconView::isSelectedItem()
-//{
-//    // call before getting current row or index
-//    if (G::isLogger) G::log("IconView::isSelectedItem", objectName());
-//    if (selectionModel()->selectedRows().size() > 0)
-//        return true;
-//    else
-//        return false;
-//}
 
 bool IconView::calcViewportRange(int sfRow)
 {
@@ -750,58 +675,6 @@ QFileInfoList IconView::getPicks()
     return fileInfoList;
 }
 
-//int IconView::getNextPick()
-//{
-//    // used by selectNextPick - move to selection
-
-//    if (G::isLogger) G::log("IconView::getNextPick", objectName());
-//    int frwd = currentIndex().row() + 1;
-//    int rowCount = dm->sf->rowCount();
-//    QModelIndex idx;
-//    while (frwd < rowCount) {
-//        idx = dm->sf->index(frwd, G::PickColumn);
-//        if (idx.data(Qt::EditRole).toString() == "Picked") return frwd;
-//        ++frwd;
-//    }
-//    return -1;
-//}
-
-//int IconView::getPrevPick()
-//{
-//    // used by selectPrevPick - move to selection
-
-//    if (G::isLogger) G::log("IconView::getPrevPick", objectName());
-//    int back = currentIndex().row() - 1;
-//    QModelIndex idx;
-//    while (back >= 0) {
-//        idx = dm->sf->index(back, G::PickColumn);
-//        if (idx.data(Qt::EditRole).toString() == "Picked") return back;
-//        --back;
-//    }
-//    return -1;
-//}
-
-//int IconView::getNearestPick()
-//{
-//    // not being used
-
-///* Returns the model row of the nearest pick, used in toggleFilterPick */
-//    if (G::isLogger) G::log("IconView::getNearestPick", objectName());
-//    int frwd = currentIndex().row();
-//    int back = frwd;
-//    int rowCount = dm->sf->rowCount();
-//    QModelIndex idx;
-//    while (back >=0 || frwd < rowCount) {
-//        if (back >=0) idx = dm->sf->index(back, G::PickColumn);
-//        if (idx.data(Qt::EditRole).toString() == "true") return back;
-//        if (frwd < rowCount) idx = dm->sf->index(frwd, G::PickColumn);
-//        if (idx.data(Qt::EditRole).toString() == "true") return frwd;
-//        --back;
-//        ++frwd;
-//    }
-//    return 0;
-//}
-
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
     if (G::isLogger || G::isFlowLogger) G::log("IconView::sortThumbs", objectName());
@@ -839,44 +712,6 @@ QStringList IconView::getSelectedThumbsList()
     return SelectedThumbsPaths;
 }
 
-//bool IconView::isThumb(int row)
-//{
-//    if (G::isLogger) G::log("IconView::isThumb", objectName());
-//    return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
-//}
-
-//void IconView::selectNext()
-//{
-//    if (G::isLogger) G::log("IconView::selectNext", objectName());
-//    if (G::mode == "Compare") return;
-//    if (isLast()) return;
-//    dm->select(getNextRow());
-//}
-
-//void IconView::selectPrev()
-//{
-//    if (G::isLogger) G::log("IconView::selectPrev", objectName());
-//    if(G::mode == "Compare") return;
-//    if (isFirst()) return;
-//    dm->select(getPrevRow());
-//}
-
-//void IconView::selectUp()
-//{
-//    if (G::isLogger) G::log("IconView::selectUp", objectName());
-//    if (G::mode == "Table" || !isWrapping()) selectPrev();
-//    else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
-//    dm->select(currentIndex());
-//}
-
-//void IconView::selectDown()
-//{
-//    if (G::isLogger) G::log("IconView::selectDown", objectName());
-//    if (G::mode == "Table" || !isWrapping()) selectNext();
-//    else setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
-//    dm->select(currentIndex());
-//}
-
 QModelIndex IconView::upIndex()
 {
     if (G::isLogger) G::log("IconView::downIndex", objectName());
@@ -900,53 +735,6 @@ QModelIndex IconView::pageDownIndex()
     if (G::isLogger) G::log("IconView::pageDownIndex", objectName());
     return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
-
-//void IconView::selectPageUp()
-//{
-//    if (G::isLogger) G::log("IconView::selectPageUp", objectName());
-////    if (G::mode == "Table" || !isWrapping()) selectPrev();
-//    /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
-//    dm->select(currentIndex());
-//}
-
-//void IconView::selectPageDown()
-//{
-//    if (G::isLogger) G::log("IconView::selectPageDown", objectName());
-//    if (G::mode == "Table" || !isWrapping()) selectNext();
-//    else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
-//    dm->select(currentIndex());
-//}
-
-//void IconView::selectFirst()
-//{
-//    if (G::isLogger) G::log("IconView::selectFirst", objectName());
-//    dm->select(0);
-//}
-
-//void IconView::selectLast()
-//{
-//    if (G::isLogger) G::log("IconView::selectLast", objectName());
-//    dm->select(getLastRow());
-//}
-
-//void IconView::selectRandom()
-//{
-//    if (G::isLogger) G::log("IconView::selectRandom", objectName());
-////    qDebug() << "\n***************************************************************************\n" << "IconView::selectRandom";
-//    dm->select(getRandomRow());
-//}
-
-//void IconView::selectNextPick()
-//{
-//    if (G::isLogger) G::log("IconView::selectNextPick", objectName());
-//    dm->select(getNextPick());
-//}
-
-//void IconView::selectPrevPick()
-//{
-//    if (G::isLogger) G::log("IconView::selectPrevPick", objectName());
-//    dm->select(getPrevPick());
-//}
 
 void IconView::thumbsEnlarge()
 {
@@ -1293,7 +1081,7 @@ void IconView::updateLayout()
 void IconView::updateView()
 {
 /*
-    Force the view delegate to update.  Also scroll to current.
+    Force the view delegate to update.
 */
     if (G::isLogger) G::log("IconView::updateView", objectName());
     update();
@@ -1366,7 +1154,7 @@ void IconView::scrollToRow(int row, QString source)
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
-void IconView::scrollToCenter()
+void IconView::scrollToCurrent()
 {
     if (G::isLogger) G::log("IconView::scrollToCenter", objectName());
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
@@ -1755,9 +1543,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
     }
 
-    if (G::isModifier) {
+    if (QGuiApplication::queryKeyboardModifiers()) {
         setCursor(Qt::ArrowCursor);
-        failReason = "G::isModifier";
+        failReason = "Key modifier pressed";
     }
 
 //    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
@@ -1925,19 +1713,6 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     setCursor(QCursor(QPixmap::fromImage(frame)));
 }
 
-//void IconView::invertSelection()
-//{
-///*
-//    Move to selection class.
-
-//    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct.
-//*/
-//    if (G::isLogger) G::log("IconView::invertSelection", objectName());
-//    m2->sel->invert();
-////    dm->invertSelection();
-//    updateView();
-//}
-
 void IconView::startDrag(Qt::DropActions)
 {
 /*
@@ -1964,7 +1739,7 @@ void IconView::startDrag(Qt::DropActions)
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
 
-//    /*  Fancy drag cursor
+    //  Fancy drag cursor
     int w = 96;
     int h = 80;
 
@@ -2000,7 +1775,6 @@ void IconView::startDrag(Qt::DropActions)
         pix = dm->item(selection.at(0).row())->icon().pixmap(w);
         drag->setPixmap(pix);
     }
-    //*/
 
     Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
     if (key == Qt::AltModifier) {

@@ -27,9 +27,6 @@ void MW::enableGoKeyActions(bool ok)
 
 void MW::keyRight()
 {
-/*
-
-*/
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
@@ -43,9 +40,6 @@ void MW::keyRight()
 
 void MW::keyLeft()
 {
-/*
-
-*/
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
@@ -59,9 +53,6 @@ void MW::keyLeft()
 
 void MW::keyUp()
 {
-/*
-
-*/
     if (G::isLogger) G::log("MW::keyUp");
     if (G::mode == "Loupe") sel->up();
     if (G::mode == "Table") sel->up();
@@ -70,9 +61,6 @@ void MW::keyUp()
 
 void MW::keyDown()
 {
-/*
-
-*/
     if (G::isLogger) G::log("MW::keyDown");
     if (G::mode == "Loupe") sel->down();
     if (G::mode == "Table") sel->down();

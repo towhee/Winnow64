@@ -894,21 +894,22 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* MODIFIER PRESSED ******************************************************************
     is shift, ctrl/command or alt/option pressed.
+    use QGuiApplication::queryKeyboardModifiers() instead of this
     */
 
-    QString eventName;
-    if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *e = static_cast<QKeyEvent *>(event);
-        eventName = "KeyPress";
-        G::isModifier = e->modifiers() != 0;
-    }
+//    QString eventName;
+//    if (event->type() == QEvent::KeyPress) {
+//        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+//        eventName = "KeyPress";
+//        G::isModifier = e->modifiers() != 0;
+//    }
 
-    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *e = static_cast<QKeyEvent *>(event);
-        G::isModifier = e->modifiers() != 0;
-        eventName = "KeyRelease";
-//        qDebug() << "MW::eventFilter" << "Modifier KeyRelease  G::isModifier = " << G::isModifier;
-    }
+//    if (event->type() == QEvent::KeyRelease) {
+//        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+//        G::isModifier = e->modifiers() != 0;
+//        eventName = "KeyRelease";
+////        qDebug() << "MW::eventFilter" << "Modifier KeyRelease  G::isModifier = " << G::isModifier;
+//    }
 
     /* THUMBVIEW ZOOMCURSOR **************************************************************
     Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.  The
@@ -917,7 +918,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     if (thumbView->mouseOverThumbView) {
         if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
-            if (G::isModifier) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+//            if (G::isModifier) {
+            if (e->modifiers() != 0) {
                 thumbView->setCursor(Qt::ArrowCursor);
 //                qDebug() << "MW::eventFilter" << "Modifier pressed" << event;
             }
@@ -926,7 +929,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QModelIndex idx = thumbView->indexAt(pos);
 //                qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
                 if (idx.isValid()) {
-                    QString src = "MW::eventFilter: " + eventName;
+                    QString src = "MW::eventFilter ZoomCursor";
                     thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
                 }
             }
@@ -939,7 +942,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             bool noModifiers = e->modifiers() == 0;
             const QModelIndex idx = thumbView->indexAt(e->pos());
             if (idx.isValid() && noModifiers) {
-                QString src = "MW::eventFilter: " + eventName;
+                QString src = "MW::eventFilter: ";
                 thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
             }
             else {
@@ -1808,22 +1811,22 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCenter();
-        if (thumbView->isVisible()) thumbView->scrollToCenter();
+        if (gridView->isVisible()) gridView->scrollToCurrent();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCenter();
+        if (gridView->isVisible()) gridView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToCenter();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else {
-        if (gridView->isVisible()) gridView->scrollToCenter();
-        if (thumbView->isVisible())  thumbView->scrollToCenter();
+        if (gridView->isVisible()) gridView->scrollToCurrent();
+        if (thumbView->isVisible())  thumbView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
 

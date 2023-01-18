@@ -7,6 +7,7 @@
 #include "Views/compareview.h"
 #include "Image/imagealign.h"
 #include "Datamodel/datamodel.h"
+#include "Datamodel/selection.h"
 
 class CompareImages : public QWidget
 {
@@ -14,7 +15,7 @@ class CompareImages : public QWidget
 
 public:
     CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata, DataModel *dm,
-                  IconView *thumbView, ImageCacheData *icd);
+                  Selection *sel, IconView *thumbView, ImageCacheData *icd);
 
     qreal toggleZoom;
     qreal zoomValue;
@@ -56,6 +57,7 @@ private slots:
 private:
     Metadata *metadata;
     DataModel *dm;
+    Selection *sel;
     IconView *thumbView;
     ImageCacheData *icd;
     QWidget *centralWidget;

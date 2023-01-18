@@ -233,7 +233,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
     }
     else {
-        setCentralMessage("Unable to decode " + fPath);
+//        setCentralMessage("Unable to decode " + fPath);
     }
 
     /* When the program is opening or resizing it is possible this function could be called

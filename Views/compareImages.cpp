@@ -10,13 +10,16 @@ CompareImages::CompareImages(QWidget *parent,
                              QWidget *centralWidget,
                              Metadata *metadata,
                              DataModel *dm,
+                             Selection *sel,
                              IconView *thumbView,
-                             ImageCacheData *icd)
+                             ImageCacheData *icd
+                             )
     : QWidget(parent)
 {
     if (G::isLogger) G::log("CompareImages::CompareImages");
     this->metadata = metadata;
     this->dm = dm;
+    this->sel = sel;
     this->thumbView = thumbView;
     this->icd = icd;
     this->centralWidget = centralWidget;
@@ -102,7 +105,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 //        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
-        imList->append(new CompareView(this, gridCell, dm, metadata, icd, thumbView));
+        imList->append(new CompareView(this, gridCell, dm, sel, metadata, icd, thumbView));
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;
@@ -462,7 +465,7 @@ void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
     CompareView instances.
 */
     if (G::isLogger) G::log("CompareImages::zoomChangeFromView");
-    qDebug() << "CompareImages::zoomChangeFromView" << "zoomValue =" << zoomValue;
+//    qDebug() << "CompareImages::zoomChangeFromView" << "zoomValue =" << zoomValue;
 //    zoomValue /= G::actDevicePixelRatio;
     this->zoomValue = zoomValue;       // used by MW::updateStatus
 

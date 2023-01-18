@@ -63,7 +63,7 @@ Synced panning:
 
 CompareView::CompareView(QWidget *parent,
                          QSize gridCell,
-                         DataModel *dm,
+                         DataModel *dm, Selection *sel,
                          Metadata *metadata,
                          ImageCacheData *icd,
                          IconView *thumbView)
@@ -73,6 +73,7 @@ CompareView::CompareView(QWidget *parent,
     this->mainWindow = parent;
     this->gridCell = gridCell;
     this->dm = dm;
+    this->sel = sel;
     this->metadata = metadata;
     this->icd = icd;
     this->thumbView = thumbView;
@@ -661,13 +662,17 @@ void CompareView::select()
     if (G::isLogger) G::log("CompareView::select");
     emit deselectAll();
     this->setFocus();
+    // req'd for IconViewDelegate to show current item
+    dm->currentSfIdx = imageIndex;
+    dm->currentSfRow = imageIndex.row();
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    thumbView->setCurrentIndex(imageIndex);
+    sel->select(imageIndex);
+    // prevent user selection in thumbView while comparing
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "
-                        "border-width: 2; "
+                        "border-width: 3; "
                         "border-color: rgb(225,225,225);}");
 }
 

@@ -50,10 +50,6 @@ public:
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
-//    void selectThumb(int row);
-//    void selectThumb(QString &fPath);
-//    bool isThumb(int row);
-//    void reportThumb();                             //debugging thumb roles
     QString diagnostics();
 
     QFileInfoList getPicks();       // not being used.
@@ -61,9 +57,7 @@ public:
     QSize getMaxCellSize();
     QSize getCellSize();
     int getThumbSpaceWidth(int thumbSpaceHeight);
-//    int getScrollThreshold(int thumbSpaceHeight);
     QStringList getSelectedThumbsList();        //used by tags, might be useful, move to selection
-//    int getCurrentRow();
     QString getCurrentFilePath();       // used by MW::updateStatus to check for instance clash.  Is this needed?
     int getSelectedCount();             // used by MW::updateStatus - move to selection?
 
@@ -90,7 +84,7 @@ public slots:
     void scrollPageDown(int);
     void scrollPageUp(int);
     void scrollToRow(int row, QString source);
-    void scrollToCenter();
+    void scrollToCurrent();
     void thumbsEnlarge();
     void thumbsShrink();
     int justifyMargin();
@@ -98,13 +92,13 @@ public slots:
     void rejustify();
     void bestAspect();
     void thumbsFitTopOrBottom();
-//    void invertSelection();         // move to selection class.
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
     QModelIndex upIndex();
     QModelIndex downIndex();
     QModelIndex pageUpIndex();
     QModelIndex pageDownIndex();
+
     int getFirstVisible();          // not being used
     int getLastVisible();           // not being used
     void scannedViewportRange();
@@ -116,19 +110,6 @@ public slots:
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
              int _labelFontSize, bool _showThumbLabels, int _badgeSize);
-
-    // move all select to selection class
-//    void selectNext();
-//    void selectPrev();
-//    void selectUp();
-//    void selectDown();
-//    void selectPageUp();
-//    void selectPageDown();
-//    void selectFirst();
-//    void selectLast();
-//    void selectRandom();
-//    void selectNextPick();
-//    void selectPrevPick();
 
     void sortThumbs(int sortColumn, bool isReverse);
 
@@ -148,19 +129,6 @@ protected:
 private:
     void initLoad();
     bool addFolderImageDataToModel();
-//    bool isSelectedItem();          // call before getting row or index
-
-    bool isLast();
-    bool isFirst();
-
-    int getNextRow();
-    int getPrevRow();
-    int getLastRow();                           //not used? Seems handy
-    uint getRandomRow();                         //not used? Seems handy
-
-//    int getNearestPick();       // not being used
-//    int getNextPick();          // used by selectNextPick - move to selection
-//    int getPrevPick();          // used by selectPrevPick - move to selection
 
     DataModel *dm;
     ImageCacheData *icd;

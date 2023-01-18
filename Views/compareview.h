@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
+#include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
 #include "Views/iconview.h"
 #include "Utilities/classificationlabel.h"
@@ -17,6 +18,7 @@ public:
     CompareView(QWidget *parent,
                 QSize gridCell,
                 DataModel *dm,
+                Selection *sel,
                 Metadata *metadata,
                 ImageCacheData *icd,
                 IconView *thumbView);
@@ -75,6 +77,7 @@ private:
     QWidget *mainWindow;
     QSize gridCell;
     DataModel *dm;
+    Selection *sel;
     Metadata *metadata;
     ImageCacheData *icd;
     IconView *thumbView;
