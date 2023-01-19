@@ -16,6 +16,7 @@ public:
     void pause();
     void stop();
     void updatePositionLabel();
+    VideoWidget *video;
 
 signals:
     void togglePick();
@@ -37,7 +38,7 @@ public slots:
 private:
     IconView *thumbView;
     Selection *sel;
-    VideoWidget *video;
+//    VideoWidget *video;
     QToolButton *playPauseBtn;
     QSlider *scrub;
     QLabel *positionLabel;

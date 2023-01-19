@@ -160,6 +160,7 @@ void MW::createDataModel()
     connect(buildFilters, &BuildFilters::stopped, this, &MW::reset);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
+    connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
 
     // test how to add to datamodel from another thread
     connect(this, &MW::testAddToDM, dm, &DataModel::addMetadataForItem);

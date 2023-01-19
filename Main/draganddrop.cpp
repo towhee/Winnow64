@@ -31,7 +31,6 @@ void MW::handleDrop(QString fPath)
         QString fileType = info.suffix().toLower();
         if (metadata->supportedFormats.contains(fileType)) {
             sel->select(dragDropFilePath);
-//            dm->select(dragDropFilePath);
         }
     }
     else {

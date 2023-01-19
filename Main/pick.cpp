@@ -155,7 +155,6 @@ void MW::togglePick()
 
     // auto advance
     if (autoAdvance) sel->next();
-//    if (autoAdvance) thumbView->selectNext();
 }
 
 int MW::pickLogCount()

@@ -181,13 +181,11 @@ void VideoView::wheelEvent(QWheelEvent *event)
 
     if (deltaSum > G::wheelSensitivity) {
         sel->prev();
-//        thumbView->selectPrev();
         deltaSum = 0;
     }
 
     if (deltaSum < (-G::wheelSensitivity)) {
         sel->next();
-//        thumbView->selectNext();
         deltaSum = 0;
     }
 }

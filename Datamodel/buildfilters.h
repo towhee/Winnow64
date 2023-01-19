@@ -20,6 +20,7 @@ public:
     void stop();
     void done();
     void reset();
+    void setAfterAction(QString afterAction);
     void loadAllMetadata();
     void mapUniqueInstances();
     void updateCountFiltered();
@@ -35,6 +36,7 @@ signals:
     void updateProgress(int progress);
     void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
+    void quickFilter();
 
 public slots:
     void build();
@@ -46,6 +48,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Filters *filters;
+    QString afterAction = "";               // What to do when done
     bool &combineRawJpg;
     bool isReset;                           // if true, reset the filter tree filters (new folder)
     int instance;                           // instance of the datamodel

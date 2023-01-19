@@ -72,16 +72,13 @@ void MW::nextSlide()
         QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
         slideshowRandomHistoryStack->push(fPath);
         sel->random();
-//        thumbView->selectRandom();
     }
     else {
         if (dm->currentSfRow == dm->sf->rowCount() - 1) {
-//            if (isSlideShowWrap) thumbView->selectFirst();
             if (isSlideShowWrap) sel->first();
             else slideShow();
         }
         else sel->next();
-//        else thumbView->selectNext();
     }
 
     QString msg = "  Slide # "+ QString::number(slideCount) +
@@ -100,7 +97,6 @@ void MW::prevRandomSlide()
 //    isSlideshowPaused = true;
     QString prevPath = slideshowRandomHistoryStack->pop();
     sel->select(prevPath);
-//    dm->select(prevPath);
     updateStatus(false,
                  "Slideshow random history."
                  "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "

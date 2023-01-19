@@ -120,14 +120,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug()
-            << "\nDM currentIndex =" << dm->selectionModel->currentIndex()
-            << "\nTV currentIndex =" << thumbView->selectionModel()->currentIndex()
-            << "\nTV selectedRows =" << thumbView->selectionModel()->selectedRows()
-            << "\nDM selectedRows =" << dm->selectionModel->selectedRows()
-            << "\nDM selection =" << dm->selectionModel->selection()
-            << "\nTV selection =" << thumbView->selectionModel()->selection()
-            ;
+    centralLayout->setCurrentIndex(LoupeTab);
+    return;
+
+    QMediaMetaData mediaMetadata = videoView->video->mediaPlayer->metaData();
+    QList<QMediaMetaData::Key> keys = mediaMetadata.keys();
+    qDebug() << keys;
+    return;
+    QVariant v = mediaMetadata[QMediaMetaData::ThumbnailImage];
+    QPixmap pm = v.value<QPixmap>();
+    ImageDlg imageDlg(pm, "test");
+    imageDlg.exec();
     return;
 
     QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"

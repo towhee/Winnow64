@@ -92,10 +92,6 @@ void MW::keyHome()
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
         if (G::mode == "Compare") compareImages->go("Home");
         else sel->first();
-//        if (G::mode == "Grid") gridView->selectFirst();
-//        else {
-//            thumbView->selectFirst();
-//        }
     }
 }
 
@@ -109,10 +105,6 @@ void MW::keyEnd()
         metadataCacheThread->stop();
         if (G::mode == "Compare") compareImages->go("End");
         else sel->last();
-//        if (G::mode == "Grid") gridView->selectLast();
-//        else {
-//            thumbView->selectLast();
-//        }
     }
 }
 
