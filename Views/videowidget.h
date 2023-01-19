@@ -9,6 +9,7 @@
 #include <QVideoSink>
 #include <QVideoFrame>
 #include <QMediaFormat>
+#include <QMediaMetaData>
 #include "Main/global.h"
 
 class VideoWidget: public QVideoWidget

@@ -118,7 +118,6 @@ void MW::filterChange(QString source)
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
     sel->select(dm->currentSfRow);
-//    dm->select(dm->currentSfRow);
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
@@ -145,8 +144,22 @@ void MW::quickFilter()
     if (G::isLogger) G::log("MW::quickFilter");
 
     // make sure the filters have been built
-    if (!filters->filtersBuilt) buildFilters->build();
+    qDebug() << "MW::quickFilter  filters->filtersBuilt =" << filters->filtersBuilt;
+    if (filters->filtersBuilt) {
+        quickFilterComplete();
+    }
+    else {
+        buildFilters->setAfterAction("QuickFilter");
+        filterDock->setVisible(true);       // triggers launchBuildFilters()
+        filterDock->raise();
+        filterDockVisibleAction->setChecked(true);
+//        buildFilters->build();
+    }
+}
 
+void MW::quickFilterComplete()
+{
+    if (G::isLogger) G::log("MW::quickFilter");
     filters->checkRating("1", filterRating1Action->isChecked());
     filters->checkRating("2", filterRating2Action->isChecked());
     filters->checkRating("3", filterRating3Action->isChecked());

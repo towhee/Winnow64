@@ -45,7 +45,6 @@ void MW::loupeDisplay()
 
     // save selection as tableView is hidden and not synced
     sel->save();
-//    dm->saveSelection();
 
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
@@ -67,7 +66,6 @@ void MW::loupeDisplay()
             thumbDockVisibleAction->setChecked(true);
         }
         sel->select(dm->currentSfRow);
-//        dm->select(dm->currentSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
@@ -84,7 +82,6 @@ void MW::loupeDisplay()
 
     // selection has been lost while tableView and possibly thumbView were hidden
     sel->recover();
-//    dm->recoverSelection();
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -139,7 +136,6 @@ void MW::gridDisplay()
 
     // save selection as gridView is hidden and not synced
     sel->save();
-//    dm->saveSelection();
 
     int interruptedRow;
     bool interrupted = false;
@@ -175,7 +171,6 @@ void MW::gridDisplay()
 
     // selection has been lost while tableView and possibly thumbView were hidden
     sel->recover();
-//    dm->recoverSelection();
 
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
@@ -226,7 +221,6 @@ void MW::tableDisplay()
 
     // save selection as tableView is hidden and not synced
     sel->save();
-//    dm->saveSelection();
 
     // change to the table view
     centralLayout->setCurrentIndex(TableTab);
@@ -254,7 +248,6 @@ void MW::tableDisplay()
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
             sel->select(dm->currentSfRow);
-//            dm->select(dm->currentSfRow);
         }
         if(!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
@@ -269,7 +262,6 @@ void MW::tableDisplay()
 
     // selection has been lost while tableView and possibly thumbView were hidden
     sel->recover();
-//    dm->recoverSelection();
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -346,10 +338,8 @@ void MW::compareDisplay()
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
     sel->save();
-//    dm->saveSelection();
     centralLayout->setCurrentIndex(CompareTab);
     sel->recover();
-//    dm->recoverSelection();
     prevCentralView = CompareTab;
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, dm->selectionModel);
 

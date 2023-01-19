@@ -526,7 +526,6 @@ void MetaRead::run()
         }
 
         // do something with row
-//        qDebug() << "MetaRead::run   row =" << row;
         readRow(row);
 //        if (G::isFileLogger) Utilities::log("MetaRead::run", "row = " + QString::number(row));
         if (abort) return;
@@ -570,7 +569,7 @@ void MetaRead::run()
     emit updateIconBestFit();
     // refresh image cache in case not up-to-date (usually issue is target range)
     if (sfRowCount > imageCacheTriggerCount) {
-        emit triggerImageCache("Final");
+//        emit triggerImageCache("Final");
     }
     emit done();
 

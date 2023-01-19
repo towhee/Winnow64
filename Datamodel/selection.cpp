@@ -60,12 +60,7 @@ void Selection::select(QModelIndex sfIdx)
         thumbView->setCurrentIndex(sfIdx);
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
-//        sm->clear();
-        sm->setCurrentIndex(sfIdx,
-//                          QItemSelectionModel::Current |
-                            QItemSelectionModel::ClearAndSelect |
-                            QItemSelectionModel::Rows
-                           );
+        sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         // MW::fileSelectionChange
         emit currentChanged(sfIdx, QModelIndex(), true, "Selection::select");
     }

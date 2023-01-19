@@ -444,6 +444,7 @@ private slots:
     void filterSyncActionsWithFilters();
     void filterChange(QString source = "");
     void quickFilter();
+    void quickFilterComplete();
     void invertFilters();
     void setFilterSolo();
     void toggleReject();

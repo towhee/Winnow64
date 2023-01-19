@@ -98,7 +98,12 @@ Following is out of date:
       the image priority queues, the target range and limit the cache to the assigned
       maximum size.
 
-A new image is selected which triggers fileSelectionChange
+PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
+
+PROGRAM FLOW - FOLDER AND FILE SELECTED
+PROGRAM FLOW - NEW IMAGE SELECTED
+
+    A new image is selected which triggers fileSelectionChange:
 
     • If starting the program select the first image in the folder.
 
@@ -1955,7 +1960,6 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
                 sel->select(fPath);
-//                dm->select(fPath);
                 dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
                 fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::folderAndFileSelectionChange");
             }
@@ -2265,7 +2269,7 @@ void MW::loadConcurrentNewFolder()
     // target image
     if (folderAndFileChangePath != "") {
         dm->currentSfRow = dm->rowFromPath(folderAndFileChangePath);
-        qDebug() << "MW::loadConcurrentNewFolder" << dm->currentSfRow;
+        dm->currentFilePath = folderAndFileChangePath;
     }
     else {
         dm->currentSfRow = 0;
@@ -2312,10 +2316,6 @@ void MW::loadConcurrentMetaDone()
 //    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
-//    qDebug() << "MW::loadConcurrentMetaDone";
-
-    // clear the central
-    setCentralMessage("");
 
     if (reset()) return;
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
@@ -2398,11 +2398,9 @@ void MW::loadConcurrentStartImageCache(QString src)
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
             sel->select(fPath);
-//            dm->select(fPath);
             dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         }
         else {
-//            dm->selectFirst();
             sel->first();
             dm->currentSfIdx = dm->sf->index(0,0);
         }
@@ -2546,12 +2544,10 @@ void MW::loadImageCacheForNewFolder()
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         sel->select(fPath);
-//        dm->select(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
     else {
-//        dm->selectFirst();
         sel->first();
         dm->currentSfIdx = dm->sf->index(0,0);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to first image");
@@ -5553,7 +5549,6 @@ void MW::refreshCurrentAfterReload()
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
     sel->select(sfRow);
-//    dm->select(sfRow);
     isRefreshingDM = false;
 }
 
@@ -5737,7 +5732,6 @@ void MW::deleteFiles(QStringList paths)
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     sel->select(sfIdx);
-//    dm->select(sfIdx);
 }
 
 void MW::deleteFolder()
@@ -5853,7 +5847,6 @@ void MW::openUsbFolder()
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
         sel->select(0);
-//        dm->select(0);
         if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();
     }
@@ -6050,7 +6043,6 @@ void MW::generateMeanStack()
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
         sel->select(fPath);
-//        dm->select(fPath);
     }
 }
 

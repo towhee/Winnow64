@@ -77,6 +77,11 @@ void BuildFilters::stop()
     if (G::stop) emit stopped("BuildFilters");
 }
 
+void BuildFilters::setAfterAction(QString afterAction)
+{
+    this->afterAction = afterAction;
+}
+
 void BuildFilters::build()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
@@ -101,6 +106,8 @@ void BuildFilters::done()
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::done");
     isReset = false;
     if (!abort) emit finishedBuildFilters();
+    if (afterAction == "QuickFilter") emit quickFilter();
+    afterAction = "";
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
@@ -249,7 +256,9 @@ void BuildFilters::countFiltered()
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         if (!(*it)->parent()) {
+            /*
             qDebug() << "BuildFilters::countFiltered  cat =" << cat;
+            //*/
             if (uniqueItemCount.contains(cat)) {
                 int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
@@ -313,12 +322,14 @@ void BuildFilters::countUnfiltered()
         }
         // categories
         if (!(*it)->parent()) {
+            /*
             qDebug() << "BuildFilters::countUnfiltered Category =" << cat;
+            //*/
             if (uniqueItemCount.contains(cat)) {
                 int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
                 emit updateProgress(progress);
-//                /*
+                /*
                 qDebug() << "BuildFilters::countUnfiltered"
                          << cat
                          << "instances =" << uniqueItemCount[cat]
