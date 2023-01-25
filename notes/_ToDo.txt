@@ -74,6 +74,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Dragging thumb splitter not scrolling icons to maintain the mid icon centered
+- Classification badge / number size can be too big for cell size
+- Filters not updated after deleting an image file
 - Quick filter not working until Filter panel selected
 - Folder and file selection resulting in blank central view
 - Compare not updating thumbView correctly

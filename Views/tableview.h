@@ -30,7 +30,7 @@ public slots:
     QModelIndex pageDownIndex();
     void selectPageUp();    // rgh req'd?
     void selectPageDown();  // rgh req'd?
-    void setViewportParameters();
+    void updateVisible();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

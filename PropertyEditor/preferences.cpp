@@ -138,9 +138,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "iconChunkSize") {
-        mw->metadataCacheThread->metadataChunkSize = v.toInt();
-        mw->metaReadThread->iconChunkSize = v.toInt();
-        mw->dm->iconChunkSize = v.toInt();
+        mw->updateDefaultIconChunkSize(v.toInt());
     }
 
     if (source == "loadOnlyVisibleIcons") {
@@ -685,7 +683,7 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     addItem(i);
 
-    // Classification badge size
+    // Loupe classification badge and count number size
     i.name = "classificationBadgeInImageDiameter";
     i.parentName = "BadgeSizeHeader";
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
@@ -704,7 +702,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Thumbnail badge size
+    // Thumbnail classification badge and count number size
     i.name = "thumbnailBadgeInImageDiameter";
     i.parentName = "BadgeSizeHeader";
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
@@ -1005,11 +1003,11 @@ void Preferences::addItems()
                 "what works best.  250 is the default amount.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->dm->iconChunkSize;
+    i.value = mw->dm->defaultIconChunkSize;
     i.key = "iconChunkSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
-    i.min = 1;
+    i.min = 1000;
     i.max = 10000;
     i.fixedWidth = 50;
     addItem(i);   // set to 3000

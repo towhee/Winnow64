@@ -75,7 +75,7 @@ TableView::TableView(DataModel *dm)
     createOkToShow();
 }
 
-void TableView::setViewportParameters()
+void TableView::updateVisible()
 {
     if (G::isLogger) G::log("TableView::setViewportParameters");
 		firstVisibleRow = rowAt(0);

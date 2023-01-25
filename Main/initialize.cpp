@@ -140,7 +140,7 @@ void MW::createDataModel()
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
 
-    dm->iconChunkSize = 3000;
+//    dm->iconChunkSize = 3000;
 
     filters->totalColumnToUse(combineRawJpg);
 
@@ -217,12 +217,12 @@ void MW::createMDCache()
         metadataCacheThread->cacheAllIcons = false;
     }
 
-    if (setting->contains("iconChunkSize")) {
-        metadataCacheThread->metadataChunkSize = setting->value("iconChunkSize").toInt();
-    }
-    else {
-        metadataCacheThread->metadataChunkSize = 3000;
-    }
+//    if (setting->contains("iconChunkSize")) {
+//        metadataCacheThread->metadataChunkSize = setting->value("iconChunkSize").toInt();
+//    }
+//    else {
+//        metadataCacheThread->metadataChunkSize = 3000;
+//    }
 
     // not being used
     metadataCacheScrollTimer = new QTimer(this);
@@ -256,21 +256,13 @@ void MW::createMDCache()
     // MetaRead
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
 
-    metaReadThread->iconChunkSize = 2000;
-    if (setting->contains("iconChunkSize")) {
-        dm->iconChunkSize = setting->value("iconChunkSize").toInt();
-        metaReadThread->iconChunkSize = setting->value("iconChunkSize").toInt();
-    }
-    else {
-        dm->iconChunkSize = 3000;
-    }
 
 //    // delete thread when finished
 //    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
     // signal stopped when abort completed
-    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
+//    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
     // read metadata
     connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // add metadata to datamodel
@@ -289,9 +281,21 @@ void MW::createMDCache()
     // pause waits until isRunning == false
     connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt/*, Qt::BlockingQueuedConnection*/);
 
-    connect(metaReadThread, &MetaRead::finished, metaReadThread, &MetaRead::testFinished);
 
-//    metaReadThread.start();
+    if (isSettings) {
+        if (setting->contains("iconChunkSize")) {
+            dm->defaultIconChunkSize = setting->value("iconChunkSize").toInt();
+        }
+        else {
+            dm->defaultIconChunkSize = 3000;
+        }
+    }
+    else {
+        setting->setValue("iconChunkSize", dm->defaultIconChunkSize);
+    }
+    dm->iconChunkSize = dm->defaultIconChunkSize;
+    metaReadThread->iconChunkSize = dm->iconChunkSize;
+    metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 }
 
 void MW::createImageCache()
@@ -382,7 +386,7 @@ void MW::createThumbView()
         if (setting->contains("labelChoice")) thumbView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
         if (setting->contains("classificationBadgeInThumbDiameter")) thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        if (setting->contains("thumbsPerPage")) thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
+        if (setting->contains("thumbsPerPage")) thumbView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
         thumbView->iconWidth = 100;
@@ -391,7 +395,7 @@ void MW::createThumbView()
         thumbView->showIconLabels = false;
         thumbView->showZoomFrame = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
-        thumbView->visibleCells = width() / thumbView->iconWidth;
+        thumbView->visibleCellCount = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
@@ -431,7 +435,7 @@ void MW::createGridView()
         if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
         if (setting->contains("labelChoice")) gridView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("classificationBadgeInThumbDiameter")) gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
-        if (setting->contains("thumbsPerPage")) gridView->visibleCells = setting->value("thumbsPerPage").toInt();
+        if (setting->contains("thumbsPerPage")) gridView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
         gridView->iconWidth = 200;
@@ -440,7 +444,7 @@ void MW::createGridView()
         gridView->showIconLabels = true;
         gridView->badgeSize = classificationBadgeInThumbDiameter;
         // rgh has window size been assigned yet
-        gridView->visibleCells = (width() / 200) * (height() / 200);
+        gridView->visibleCellCount = (width() / 200) * (height() / 200);
     }
 
     // trigger fileSelectionChange

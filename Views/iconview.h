@@ -31,7 +31,7 @@ public:
     int firstVisibleCell;
     int midVisibleCell;
     int lastVisibleCell;
-    int visibleCells;
+    int visibleCellCount;
 
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
     bool isMouseModifier = false;       // for zoomCursor in MW::eventFilter
@@ -39,6 +39,7 @@ public:
     QModelIndex mouseOverIndex;         // for toggle pick
     QModelIndex prevIdx;                // for zoomCursor
 
+    void updateVisible(int sfRow = -1);
     bool calcViewportRange(int row);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
@@ -47,7 +48,7 @@ public:
 
     void updateLayout();
     void updateView();
-    bool okToScroll();
+    bool readyToScroll();
 
     IconViewDelegate *iconViewDelegate;
     QString diagnostics();
@@ -106,6 +107,7 @@ public slots:
     bool isRowVisible(int row);
     int getThumbsPerPage();
 
+//    void updateAfterThumbSplitterChange();
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -123,12 +125,14 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void resizeEvent(QResizeEvent* event) override;
+    void resizeEvent(QResizeEvent*) override;
     void leaveEvent(QEvent *event) override;
 
 private:
     void initLoad();
     bool addFolderImageDataToModel();
+    void waitUntilScrollReady();
+    int fitBadge(int pxAvail);
 
     DataModel *dm;
     ImageCacheData *icd;
@@ -139,7 +143,6 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
-    bool isFitTopOrBottom = false;
 
     QRect cursorRect;
     QRect iconRect;

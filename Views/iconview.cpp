@@ -52,6 +52,7 @@ Icons
     stored as QIcons in the datamodel in the first column using the DecorationRole.
 
     ie dm->sf->index(row, 0).data(Qt::DecorationRole)
+    and dm->sf->index(row, 0).data(Qt::DecorationRole).isNull
 
 Cells
 
@@ -173,6 +174,8 @@ Making icons bigger or smaller
 
 Justification
 
+Scrolling
+
 
 */
 
@@ -263,7 +266,7 @@ QString IconView::diagnostics()
     rpt << "\n" << "firstVisibleRow = " << G::s(firstVisibleCell);
     rpt << "\n" << "midVisibleRow = " << G::s(midVisibleCell);
     rpt << "\n" << "lastVisibleRow = " << G::s(lastVisibleCell);
-    rpt << "\n" << "thumbsPerPage = " << G::s(visibleCells);
+    rpt << "\n" << "thumbsPerPage = " << G::s(visibleCellCount);
     rpt << "\n\n" ;
     rpt << iconViewDelegate->diagnostics();
     rpt << "\n\n" ;
@@ -375,6 +378,127 @@ int IconView::getThumbSpaceWidth(int thumbSpaceHeight)
     return newThumbWidth + margin - 1;
 }
 
+void IconView::updateVisible(int sfRow)
+{
+/*
+    Determine the first and last visible icons in the IconView viewport for any item in the
+    datamodel. There are two options:
+
+    1.  The user has scrolled or jumped to a known row.
+
+    2.  The user has scrolled or jumped and we do not know the new visible icons.
+
+    OPTION 1 (sfRow = 0 to dm->sf->rowCount)
+
+    The known datamodel sfRow is the visual midpoint (midVisibleCell) since scrolling is
+    set to center the current item in the viewport.
+
+    If we determine the maximum cells in the viewport then it is easy to calculate
+    the firstVisibleCell and lastVisibleCell.
+
+    OPTION 2 (sfRow is default -1)
+
+    Scrolling is set to center the current item in the viewport. The value of
+    the scrollbar tells us where we are.
+
+    So we have to determine when scrolling will first occur, how many rows of icons will be
+    visible in the viewport, how many icons are visible and the first/last icons visible.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("IconView::updateVisibleCells", objectName());
+
+    int n = dm->sf->rowCount() - 1;
+
+    if (sfRow >= 0) {
+        QSize cell = getCellSize();
+        QSize vp = viewport()->size();
+        int cellsPerRow = vp.width() / cell.width() + 1;
+        // VP = vp = viewport
+        int rowsPerVP = vp.height() / cell.height() + 1;
+        int cellsPerVP = cellsPerRow * rowsPerVP;
+        int half = static_cast<int>(cellsPerVP * 0.5);
+        if (cellsPerVP < n) {
+            midVisibleCell = sfRow;
+            firstVisibleCell = midVisibleCell - half;
+            if (firstVisibleCell < 0) firstVisibleCell = 0;
+            lastVisibleCell = firstVisibleCell + cellsPerVP;
+            if (lastVisibleCell > n ) {
+                lastVisibleCell = n;
+                firstVisibleCell = lastVisibleCell - cellsPerVP;
+            }
+        }
+        else {
+            firstVisibleCell = 0;
+            lastVisibleCell = n;
+            midVisibleCell = n / 2;
+        }
+        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+    }
+    else {
+        waitUntilScrollReady();
+        /*
+        int hScrollPos = horizontalScrollBar()->value();
+        int hScrollMax = getHorizontalScrollBarMax();
+        int vScrollPos = verticalScrollBar()->value();
+        int vScrollMax = verticalScrollBar()->maximum();
+        int vScrollMax = getVerticalScrollBarMax();
+        */
+        int first;
+        if (isWrapping()) {
+            first = verticalScrollBar()->value() * 1.0 / verticalScrollBar()->maximum() * n;
+//            first = vScrollPos * 1.0 / vScrollMax * n;
+            /*
+            qDebug() << "IconView::getFirstVisible"
+                     << "vScrollPos =" << vScrollPos
+                     << "vScrollMax =" << vScrollMax
+                     << "first =" << first
+                        ;
+                        //*/
+        }
+        else {
+            first = horizontalScrollBar()->value() * 1.0 / horizontalScrollBar()->maximum() * n;
+//            first = hScrollPos * 1.0 / hScrollMax * n;
+    //        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
+        }
+
+        QRect vpRect = viewport()->rect();
+        if (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
+            while (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
+                first--;
+    //            bool in = visualRect(dm->sf->index(first, 0)).intersects(vpRect);
+    //            qDebug() << "IconView::getFirstVisible inside" << "first =" << first << in;
+                if (first < 0) break;
+            }
+            firstVisibleCell = first + 2;
+        }
+        else {
+            while (!visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
+                first++;
+    //            qDebug() << "IconView::getFirstVisible outside" << "first =" << first;
+                if (first > n) break;
+            }
+            firstVisibleCell = first;
+        }
+
+        for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
+            if (!visualRect(dm->sf->index(row, 0)).intersects(vpRect)) {
+                lastVisibleCell = row;
+                break;
+            }
+            lastVisibleCell = dm->sf->rowCount() - 1;
+        }
+
+        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+        midVisibleCell = firstVisibleCell + visibleCellCount / 2 - 1;
+    }
+
+//    qDebug() << "IconView::updateVisibleCells  row" << sfRow
+//             << "firstVisibleCell =" << firstVisibleCell
+//             << "lastVisibleCell =" << lastVisibleCell
+//             << "midVisibleCell =" << midVisibleCell
+//                ;
+
+}
+
 bool IconView::calcViewportRange(int sfRow)
 {
 /*
@@ -414,16 +538,17 @@ bool IconView::calcViewportRange(int sfRow)
         lastVisibleCell = i + cellsPerVPRow;
         if (lastVisibleCell > tCells - 1) lastVisibleCell = tCells - 1;
 
-        visibleCells = lastVisibleCell - firstVisibleCell + 1;
-        midVisibleCell = firstVisibleCell + visibleCells / 2;
+        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+        midVisibleCell = firstVisibleCell + visibleCellCount / 2;
 
-/*        qDebug()
-                 << "IconView::calcViewportRange"
-                 << "i:" << i
-                 << "firstVisibleCell =" << firstVisibleCell
-                 << "lastVisibleCell =" << lastVisibleCell;
-                 */
-        return true;
+/*
+        qDebug()
+        << "IconView::calcViewportRange"
+        << "i:" << i
+        << "firstVisibleCell =" << firstVisibleCell
+        << "lastVisibleCell =" << lastVisibleCell;
+        << "midVisibleCell =" << midVisibleCell;
+        */
     }
 
     int rowInView = i / cellsPerVPRow;  //qCeil(i / cellsPerVPRow);
@@ -448,7 +573,7 @@ bool IconView::calcViewportRange(int sfRow)
                 ;
 //                */
 
-    visibleCells = cellsPerVPRow * rowsPerVP;
+    visibleCellCount = cellsPerVPRow * rowsPerVP;
     int visibleRowsAbove = qCeil((rowsPerVP - 1) / 2);
 
     // vertical alignment is centered, first cell requiring the view to scroll
@@ -470,9 +595,9 @@ bool IconView::calcViewportRange(int sfRow)
     }
 
     firstVisibleCell = firstVisibleVPRow * cellsPerVPRow;
-    lastVisibleCell = firstVisibleCell + visibleCells - 1;
-    visibleCells = lastVisibleCell - firstVisibleCell + 1;
-    midVisibleCell = firstVisibleCell + visibleCells / 2;
+    lastVisibleCell = firstVisibleCell + visibleCellCount - 1;
+    visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+    midVisibleCell = firstVisibleCell + visibleCellCount / 2;
 
     /*
     qDebug()
@@ -527,7 +652,7 @@ int IconView::getThumbsPerPage()
     if (rpp - rppDbl < -0.05) rpp += 2;
 
     // thumbs per page
-    visibleCells = tpr * rpp;
+    visibleCellCount = tpr * rpp;
     /*qDebug() << "IconView::getThumbsPerPage" << objectName()
              << "G::isInitializing" << G::isInitializing
              << "| G::isNewFolderLoaded" << G::isNewFolderLoaded
@@ -537,7 +662,7 @@ int IconView::getThumbsPerPage()
              << "| tpr =" << tpr
              << "| rpp =" << rpp
              << "| thumbsPerPage" << thumbsPerPage;*/
-    return visibleCells;
+    return visibleCellCount;
 }
 
 int IconView::getFirstVisible()
@@ -552,7 +677,95 @@ int IconView::getFirstVisible()
     of images in the selected folder.
 */
     if (G::isLogger) G::log("IconView::getFirstVisible", objectName());
+    int n = dm->sf->rowCount()-1;
+    QSize cell = getCellSize();
+    int iconsPerRow = viewport()->width() / cell.width() + 0;
+    int rowsPerPage = viewport()->height() / cell.height() + 1;
+    int iconsPerPage = iconsPerRow * rowsPerPage;
+    int hScrollPos = this->horizontalScrollBar()->value();
+    int hScrollMax = getHorizontalScrollBarMax();
+    int vScrollPos = verticalScrollBar()->value();
+    int vScrollMax = getVerticalScrollBarMax();
+    int first;
+    if (isWrapping()) {
+        first = vScrollPos * 1.0 / vScrollMax * n;
+        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
+    }
+    else {
+        first = hScrollPos * 1.0 / hScrollMax * n;
+        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
+    }
+
+//    scannedViewportRange();
+
+    QRect iconViewRect = viewport()->rect();
+    if (visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+        while (visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+            first--;
+            bool in = visualRect(dm->sf->index(first, 0)).intersects(iconViewRect);
+            qDebug() << "IconView::getFirstVisible inside" << "first =" << first << in;
+            if (first < 0) break;
+        }
+        firstVisibleCell = first + 2;
+    }
+    else {
+        while (!visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+            first++;
+            qDebug() << "IconView::getFirstVisible outside" << "first =" << first;
+            if (first > n) break;
+        }
+        firstVisibleCell = first;
+    }
+
+    for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
+        if (!visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
+            lastVisibleCell = row;
+            break;
+        }
+        lastVisibleCell = dm->sf->rowCount() - 1;
+    }
+    visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+    midVisibleCell = firstVisibleCell + visibleCellCount / 2;
+
     QRect thumbViewRect = viewport()->rect();
+    QRect r0 = visualRect(dm->sf->index(0, 0));
+    QRect rn = visualRect(dm->sf->index(n, 0));
+    int cellW = r0.width();
+    int cellH = r0.height();
+    QSize a = QSize(rn.x() - r0.x() + r0.width(), rn.y() - r0.y() + rn.height());
+    int rows = a.height() / cellH;
+    int cols = a.width() / cellW;
+    int nExtent = a.width() * a.height();
+
+    //    int mid = (rn.x() - r0.x()) icon.;
+    qDebug() << "IconView::getFirstVisible"
+             << "ObjectNeme =" << objectName()
+             << "isWrapping =" << isWrapping()
+
+             << "cell =" << cell
+             << "iconsPerRow =" << iconsPerRow
+             << "rowsPerPage =" << rowsPerPage
+             << "iconsPerPage =" << iconsPerPage
+
+             << "hScrollPos =" << hScrollPos
+             << "hScrollMax =" << hScrollMax
+             << "vScrollPos =" << vScrollPos
+             << "vScrollMax =" << vScrollMax
+             << "firstVisibleCell =" << firstVisibleCell
+             << "midVisibleCell =" << midVisibleCell
+             << "lastVisibleCell =" << lastVisibleCell
+//             << "thumbViewRect =" << thumbViewRect
+//             << "cellW =" << cellW
+//             << "cellH =" << cellH
+//             << "n =" << n
+//             << "r0 =" << r0
+//             << "rn =" << rn
+//             << "a =" << a
+//             << "rows =" << rows
+//             << "cols =" << cols
+//             << "nExtent =" << nExtent
+                ;
+
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
             return row;
@@ -603,6 +816,7 @@ void IconView::scannedViewportRange()
     icon justification happens.
 */
     if (G::isLogger) G::log("IconView::scannedViewportRange", objectName());
+    /* old
     int row;    // an item, not a row in the grid
     firstVisibleCell = 0;
     QRect iconViewRect = viewport()->rect();
@@ -621,15 +835,66 @@ void IconView::scannedViewportRange()
     }
     visibleCells = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + visibleCells / 2;
+    */
+
+    int n = dm->sf->rowCount() - 1;
+    QSize cell = getCellSize();
+    int iconsPerRow = viewport()->width() / cell.width() + 1;
+    int rowsPerPage = viewport()->height() / cell.height() + 1;
+//    int iconsPerPage = iconsPerRow * rowsPerPage;
+    int hScrollPos = this->horizontalScrollBar()->value();
+    int hScrollMax = getHorizontalScrollBarMax();
+    int vScrollPos = verticalScrollBar()->value();
+    int vScrollMax = getVerticalScrollBarMax();
+    int first;
+    if (isWrapping()) {
+        first = vScrollPos * 1.0 / vScrollMax * n;
+//        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
+    }
+    else {
+        first = hScrollPos * 1.0 / hScrollMax * n;
+//        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
+    }
+
+    QRect iconViewRect = viewport()->rect();
+    if (visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+        while (visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+            first--;
+            bool in = visualRect(dm->sf->index(first, 0)).intersects(iconViewRect);
+//            qDebug() << "IconView::getFirstVisible inside" << "first =" << first << in;
+            if (first < 0) break;
+        }
+        firstVisibleCell = first + 2;
+    }
+    else {
+        while (!visualRect(dm->sf->index(first, 0)).intersects(iconViewRect)) {
+            first++;
+//            qDebug() << "IconView::getFirstVisible outside" << "first =" << first;
+            if (first > n) break;
+        }
+        firstVisibleCell = first;
+    }
+
+    for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
+        if (!visualRect(dm->sf->index(row, 0)).intersects(iconViewRect)) {
+            lastVisibleCell = row;
+            break;
+        }
+        lastVisibleCell = dm->sf->rowCount() - 1;
+    }
+
+    visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+    midVisibleCell = firstVisibleCell + visibleCellCount / 2;
+
     /*
-   qDebug() << "IconView::scannedViewportRange" << objectName().leftJustified(10, ' ')
+    qDebug() << "IconView::scannedViewportRange" << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
              << "firstVisibleRow =" << firstVisibleCell
              << "lastVisibleRow =" << lastVisibleCell
              << "midVisibleRow =" << midVisibleCell
              << "thumbsPerPage =" << visibleCells;
-//            */
+                //*/
 }
 
 bool IconView::isRowVisible(int row)
@@ -736,6 +1001,27 @@ QModelIndex IconView::pageDownIndex()
     return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
+int IconView::fitBadge(int pxAvail)
+{
+    if (G::isLogger) G::log("IconView::fitBadge", objectName());
+
+    QString s;
+    int n = dm->sf->rowCount();
+    if (n < 10) s = "9";
+    else if (n < 100) s = "99";
+    else if (n < 1000) s = "999";
+    else if (n < 10000) s = "9999";
+    else if (n < 100000) s = "99999";
+    int newBadgeSize;
+    badgeSize = m2->classificationBadgeInThumbDiameter;
+    for (newBadgeSize = badgeSize; newBadgeSize > 6; newBadgeSize--) {
+        QFont font(this->font().family(), newBadgeSize);
+        QFontMetrics fm(font);
+        if (fm.horizontalAdvance(s) < pxAvail) break;
+    }
+    return newBadgeSize;
+}
+
 void IconView::thumbsEnlarge()
 {
 /* This function enlarges the size of the thumbnails in the thumbView, with the objectName
@@ -752,6 +1038,9 @@ void IconView::thumbsEnlarge()
         if (iconWidth > G::maxIconSize) iconWidth = G::maxIconSize;
         if (iconHeight > G::maxIconSize) iconHeight = G::maxIconSize;
     }
+    // does number badge fit
+    int pxAvail = getCellSize().width() * 1.1 * 0.8;
+    badgeSize = fitBadge(pxAvail);
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -769,6 +1058,9 @@ void IconView::thumbsShrink()
         if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
         if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
     }
+    // does number badge fit
+    int pxAvail = getCellSize().width() * 0.9 * 0.8;
+    badgeSize = fitBadge(pxAvail);
     setThumbParameters();
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -835,7 +1127,8 @@ void IconView::rejustify()
 
     setThumbParameters();
 //    setViewportParameters();
-    calcViewportRange(currentIndex().row());
+//    calcViewportRange(currentIndex().row());
+    updateVisible(currentIndex().row());
 
 //    qDebug() << objectName() << "::rejustify   "
 //             << "firstVisibleRow" << firstVisibleRow
@@ -892,7 +1185,8 @@ void IconView::justify(JustifyAction action)
 
     setThumbParameters();
 //    setViewportParameters();
-    calcViewportRange(currentIndex().row());
+//    calcViewportRange(currentIndex().row());
+    updateVisible(currentIndex().row());
 
 //    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
@@ -908,36 +1202,45 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     emit setValueSf(index, iconRect, dm->instance, src, G::IconRectRole);
 }
 
-void IconView::resizeEvent(QResizeEvent *event)
+void IconView::resizeEvent(QResizeEvent *)
 {
 /*
     The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth)
-    that requires justification or by a change in the thumbDock splitter. That is
-    filtered by checking if the ThumbView width has changed or skipResize has been set.
+    that requires justification; by a change in the thumbDock splitter; or a resize of
+    the application window.
+
+    The IconView can be a gridView, a wrapping thumbView, or a non-wrapping thumbView
+    (docked top or bottom).
+
+    If the view is wrapping and the width changes then a rejustification of the icons is
+    required. There is a delay before rejustification in case there is multiple resize
+    events to minimize calls to rejustification. That is filtered by checking if the
+    ThumbView width has changed or skipResize has been set.
 
     This event is not forwarded to QListView::resize. This would cause multiple scroll
     events which isn't pretty at all.
 */
-//    event->ignore();    // suppress compiler warning
     if (G::isLogger) G::log("IconView::resizeEvent", objectName());
-//    if (m2->thumbDock != nullptr) {
-//        qDebug() << "IconView::resizeEvent"
-//                 << "m2->thumbDock->isFloating() ="
-//                 << m2->thumbDock->isFloating();
-//        if (m2->thumbDock->isFloating()) return;
-//    }
-    int mid = midVisibleCell;
+    /*
+    if (m2->thumbDock != nullptr) {
+        qDebug() << "IconView::resizeEvent"
+                 << "m2->thumbDock->isFloating() ="
+                 << m2->thumbDock->isFloating();
+        if (m2->thumbDock->isFloating()) return;
+    }
+    //*/
 
     static int prevWidth = 0;
     /*
     qDebug() << "IconView::resizeEvent"
              << "Object =" << objectName()
              << "hScroll Policy =" << horizontalScrollBarPolicy()
-             << "isFitTopOrBottom =" << isFitTopOrBottom
+             << "thumbDockSplitterChange =" << thumbDockSplitterChange
              << "isWrapping =" << isWrapping()
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << " m2->gridDisplayFirstOpen =" <<  m2->gridDisplayFirstOpen
+             << "m2->gridDisplayFirstOpen =" <<  m2->gridDisplayFirstOpen
+             << "midVisibleCell =" <<  midVisibleCell
                 ;
 //    */
 
@@ -947,33 +1250,20 @@ void IconView::resizeEvent(QResizeEvent *event)
         return;
     }
 
+    // Rejustify icons
     bool widthChange = width() != prevWidth;
-
-    // only rejustify when user resizes
-    if (widthChange) {
-        if (isWrapping()) {
-            QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
-        }
+    if (isWrapping() && widthChange) {
+        QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
     }
     prevWidth = width();
 
-    setThumbParameters();           // req'd to show/hide scrollbar in thumb dock
+    // req'd to show/hide scrollbar in thumb dock
+    setThumbParameters();
 
     // return if grid view has not been opened yet
-    if (m2->gridDisplayFirstOpen) return;
+//    if (m2->gridDisplayFirstOpen) return;
 
-    if (isFitTopOrBottom) {
-//        qDebug() << "IconView::resizeEvent"
-//                 << "isFitTopOrBottom =" << isFitTopOrBottom;
-        // thumbDock isWrapping = false situation
-        G::ignoreScrollSignal = true;
-        scrollToRow(mid, "IconView::resizeEvent");
-        isFitTopOrBottom = false;
-        calcViewportRange(mid);
-    }
-    else {
-        m2->numberIconsVisibleChange();
-    }
+    m2->numberIconsVisibleChange();
 }
 
 void IconView::bestAspect()
@@ -1014,14 +1304,17 @@ void IconView::thumbsFitTopOrBottom()
     and scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks
     and central widget) are resized.
 
+    Also called by bestAspect.
+
     For icon cell anatomy (see diagram at top of iconviewdelegate.cpp)
 */
     if (G::isLogger) G::log("IconView::thumbsFitTopOrBottom", objectName());
+//    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName();
 
-    /* isFitTopOrBottom is set here, cleared in resize. Used to flag when to just scroll
+    /* thumbDockSplitterChange is set here, cleared in resize. Used to flag when to just scroll
     the thumbView when the thumbdock splitter triggers this function and when the resize
     event is from another event.  */
-    isFitTopOrBottom = true;
+//    thumbDockSplitterChange = true;
 
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
@@ -1064,6 +1357,10 @@ void IconView::thumbsFitTopOrBottom()
 
     // this is critical - otherwise thumbs bunch up
     setSpacing(0);
+
+    // check badge size fits
+    int pxAvail = iconViewDelegate->getCellWidthFromThumbWidth(iconWidth) * 0.8;
+    badgeSize = fitBadge(pxAvail);
 
     // this will change the icon size, which will trigger the resize event
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
@@ -1161,10 +1458,19 @@ void IconView::scrollToCurrent()
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
 
-bool IconView::okToScroll()
+void IconView::waitUntilScrollReady()
+{
+/*
+    When the viewport resizes it can take a bit before the scrollbars are ready to
+    accept new values.
+*/
+    if (G::isLogger) G::log("IconView::scrollToCenter", objectName());
+    while (!readyToScroll()) {}
+}
+
+bool IconView::readyToScroll()
 {
     if (G::isLogger) G::log("IconView::okToScroll", objectName());
-//    qDebug() << "IconView::okToScroll";
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << "IconView::okToScroll" << objectName()
@@ -1307,12 +1613,11 @@ int IconView::getVerticalScrollBarMax()
     float pages = float(n) / thumbsPerPage - 1;
     int vMax = static_cast<int>(pages * pageHeight);
     /*
-    qDebug() << G::t.restart() << "\t" << objectName()
-             << "Row =" << m2->currentRow
+    qDebug() << "IconView::getVerticalScrollBarMax" << objectName()
              << "verticalScrollBarMax Qt vs Me"
              << verticalScrollBar()->maximum()
              << vMax;
-             */
+             //*/
     return vMax;
 }
 

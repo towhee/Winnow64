@@ -107,6 +107,8 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
+    loadConcurrent(dm->currentSfRow);
+    return;
     centralLayout->setCurrentIndex(GridTab);
 //    gridView->setVisible(!gridView->isVisible());
     return;
@@ -120,7 +122,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    centralLayout->setCurrentIndex(LoupeTab);
+    thumbView->scrollToRow(53-1, "temp");
+//    diagnosticsMetadataCache();
     return;
 
     QMediaMetaData mediaMetadata = videoView->video->mediaPlayer->metaData();

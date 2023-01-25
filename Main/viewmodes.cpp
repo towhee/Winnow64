@@ -41,7 +41,7 @@ void MW::loupeDisplay()
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", "MW::loupeDisplay");
-    updateIconRange(-1);
+//    updateIconRange(-1, "MW::loupeDisplay");
 
     // save selection as tableView is hidden and not synced
     sel->save();
@@ -87,7 +87,7 @@ void MW::loupeDisplay()
     thumbView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
-    updateIconRange(-1);
+//    updateIconRange(-1, "MW::loupeDisplay1");
     if (prevMode == "Table") {
         if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = tableView->midVisibleRow;
@@ -132,7 +132,7 @@ void MW::gridDisplay()
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", "MW::gridDisplay");
-    updateIconRange(-1);
+//    updateIconRange(-1, "MW::gridDisplay");
 
     // save selection as gridView is hidden and not synced
     sel->save();
@@ -189,7 +189,7 @@ void MW::gridDisplay()
     G::ignoreScrollSignal = false;
     G::wait(100);
     gridView->scrollToRow(scrollRow, "MW::gridDisplay");
-    updateIconRange(-1);
+//    updateIconRange(-1, "MW::gridDisplay1");
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
 
@@ -217,7 +217,7 @@ void MW::tableDisplay()
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", "MW::tableDisplay");
-    updateIconRange(-1);
+//    updateIconRange(-1, "MW::tableDisplay");
 
     // save selection as tableView is hidden and not synced
     sel->save();
@@ -267,7 +267,6 @@ void MW::tableDisplay()
     thumbView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
-//    updateMetadataCacheIconviewState(false);
     if (prevMode == "Grid") {
         if (gridView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = gridView->midVisibleCell;
@@ -281,8 +280,6 @@ void MW::tableDisplay()
 //    qDebug() << "MW::tableDisplay" << "scrollRow =" << scrollRow;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
-    updateIconRange(-1);
-//    qDebug() << "MW::tableDisplay" << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
