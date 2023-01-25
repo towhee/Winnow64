@@ -6,7 +6,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-#include "Main/global.h"
+//#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
@@ -31,9 +31,6 @@ public:
     int firstIconRow;
     int lastIconRow;
 
-    bool testMultiThread;
-    void multiThreadTest();
-
 signals:
     void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
@@ -49,7 +46,6 @@ public slots:
     void initialize();
     void setCurrentRow(int row = 0, QString src = "");
     int interrupt();
-    void testFinished();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -59,13 +55,14 @@ private:
     void readRow(int sfRow);
     bool readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
-    void iconMax(QPixmap &thumb);
-    bool isNotLoaded(int sfRow);
-    bool inIconRange(int sfRow);
+//    void iconMax(QPixmap &thumb);
+//    bool isNotLoaded(int sfRow);
+//    bool inIconRange(int sfRow);
 
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
+    bool changeStartRowWhileRunning;
     bool interrupted;
     int interruptedRow;
 
@@ -74,8 +71,9 @@ private:
     FrameDecoder *frameDecoder;
     Thumb *thumb;
     int instance;
-    int visibleIconCount;
+//    int visibleIconCount;
     int sfRowCount;
+    double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
     int imageCacheTriggerCount = 50;
 

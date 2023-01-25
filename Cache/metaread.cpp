@@ -1,9 +1,9 @@
 #include "metaread.h"
 
 /*
-    MetaRead loads the metadata and icons into the datamodel (dm) for a folder.  All the
-    metadata will be loaded, and icons will be loaded up to either the iconChunkSize or
-    visibleIcons, depending on the preferences.
+    MetaRead, runing in a separate thread, loads the metadata and icons into the
+    datamodel (dm) for a folder. All the metadata will be loaded, and icons will be
+    loaded up to either the iconChunkSize or visibleIcons, depending on the preferences.
 
     MetaRead::setCurrentRow is called when:
 
@@ -45,7 +45,7 @@ MetaRead::MetaRead(QObject *parent,
     thumb = new Thumb(dm, metadata, frameDecoder);
     instance = 0;
     abort = false;
-    debugCaching = false;
+//    debugCaching = true;
 }
 
 MetaRead::~MetaRead()
@@ -54,44 +54,24 @@ MetaRead::~MetaRead()
     delete thumb;
 }
 
-void MetaRead::testFinished()
-{
-    if (debugCaching) qDebug() << "MetaRead::testFinished   Finished  isRunning() =" << isRunning();
-}
-
-void MetaRead::multiThreadTest()
-{
-    QModelIndex sfIdx = dm->sf->index(0, 0);
-    QString fPath = sfIdx.data(G::PathRole).toString();
-    QFileInfo fileInfo(fPath);
-    for (int i = 0; i < 100; i++) {
-        qDebug() << "MetaRead::multiThreadTest" << i;
-        metadata->loadImageMetadata(fileInfo, 0, true, true, false, true, "MetaRead::multiThreadTest");
-        metadata->m.row = 0;
-        metadata->m.instance = 0;
-        metadata->m.rating = QString::number(i);
-        emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
-//        dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata");
-    }
-}
-
 void MetaRead::setCurrentRow(int row, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::start");
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug() << "MetaRead::setCurrentRow" << row
                  << "isrunning" << isRunning();
     }
 
-    if (isRunning()) {
-        stop();
-    }
-
-    testMultiThread = false;
-    startRow = row;
     this->src = src;
-
-    start();
+    mutex.lock();
+    iconChunkSize = dm->iconChunkSize;
+    startRow = row;
+    changeStartRowWhileRunning = isRunning();
+    mutex.unlock();
+    if (!isRunning()) {
+        start();
+    }
 }
 
 void MetaRead::stop()
@@ -117,46 +97,15 @@ void MetaRead::stop()
         abort = false;
 //        qDebug() << "MetaRead::stop   STOPPED" << count++;
     }
-    return;
-
-
-//             << "isRunning =" << isRunning();
-    bool isStopped = true;
-
-    // stop imagecache thread
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        qDebug() << "MetaRead::stop   Set abort = true";
-        tAbort.restart();
-        condition.wakeOne();
-        qDebug() << "MetaRead::stop   condition.wakeOne()";
-        mutex.unlock();
-//        if (!wait(1000)) qWarning() << "WARNING" << "MetaRead::stop  FAILED";
-        t.restart();
-        bool isStopped = true;
-//        isStopped = wait();
-        QString quitMsg = "normal";
-        if (!isStopped) {
-            quitMsg = "Forced";
-            quit();
-        }
-        qDebug() << "MetaRead::stop"
-                 << "isStopped =" << isStopped << quitMsg
-                 << t.elapsed() << "ms"
-                    ;
-        interrupted = false;
-//        abort = false;
-    }
-
     // signal MW all stopped if a folder change
-    if (G::stop) emit stopped("MetaRead");
-
+//    if (G::stop) emit stopped("MetaRead");
     return;
 }
 
 int MetaRead::interrupt()
 {
+    // is this being used?
+
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::pause");
     G::stop = false;
     qDebug() << "MetaRead::interrupt";
@@ -186,20 +135,27 @@ QString MetaRead::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead Diagnostics");
     rpt << "\n" ;
-    rpt << "\n" << "Load algorithm:     " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
-    rpt << "\n" << "instance:           " << instance;
-    rpt << "\n" << "sfRowCount:         " << sfRowCount;
-    rpt << "\n" << "visibleIconCount:   " << visibleIconCount;
-    rpt << "\n" << "iconChunkSize:      " << iconChunkSize;
-    rpt << "\n" << "firstIconRow:       " << firstIconRow;
-    rpt << "\n" << "lastIconRow:        " << lastIconRow;
-    rpt << "\n" << "rowsWithIcon:       " << rowsWithIcon.size();
-    rpt << "\n" << "dm->iconCount:      " << dm->iconCount();
-    rpt << "\n" ;
+    rpt << "\n" << "Load algorithm:        " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "\n" << "instance:              " << instance;
     rpt << "\n" << "abort:              " << (abort ? "true" : "false");
     rpt << "\n" << "isRunning:          " << (isRunning() ? "true" : "false");
-    rpt << "\n" ;
-    rpt << "rowsWithIcon:";
+    rpt << "\n";
+    rpt << "\n" << "imageCacheTriggerCount:" << imageCacheTriggerCount;
+    rpt << "\n" << "expansionFactor:       " << expansionFactor;
+    rpt << "\n";
+//    rpt << "\n" << "visibleIconCount:      " << visibleIconCount;
+    rpt << "\n" << "sfRowCount:            " << sfRowCount;
+    rpt << "\n" << "dm->currentSfRow:      " << dm->currentSfRow;
+    rpt << "\n";
+    rpt << "\n" << "defaultIconChunkSize:  " << dm->defaultIconChunkSize;
+    rpt << "\n" << "iconChunkSize:         " << iconChunkSize;
+    rpt << "\n" << "iconLimit:             " << iconLimit;
+    rpt << "\n" << "firstIconRow:          " << firstIconRow;
+    rpt << "\n" << "lastIconRow:           " << lastIconRow;
+    rpt << "\n" << "rowsWithIcon:          " << rowsWithIcon.size();
+    rpt << "\n" << "dm->iconCount:         " << dm->iconCount();
+    rpt << "\n";
+    rpt << "rowsWithIcon in datamodel:";
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
     for (int i = 0; i < dm->rowCount(); i++) {
@@ -229,47 +185,33 @@ QString MetaRead::reportMetaCache()
     return reportString;
 }
 
-// move to DataModel??
-void MetaRead::iconMax(QPixmap &thumb)
-{
-    if (G::isLogger) G::log("MetaRead::iconMax");
-    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
-
-    // for best aspect calc
-    int w = thumb.width();
-    int h = thumb.height();
-    if (w > G::iconWMax) G::iconWMax = w;
-    if (h > G::iconHMax) G::iconHMax = h;
-}
-
-bool MetaRead::isNotLoaded(int sfRow)
-{
-    /* not used  */
-
-    QModelIndex sfIdx = dm->sf->index(sfRow, G::MetadataLoadedColumn);
-    if (!sfIdx.data().toBool()) return true;
-    if (!dm->iconLoaded(sfRow, instance)) return true;
-    return false;
-}
-
-bool MetaRead::inIconRange(int row) {
-    if (row >= firstIconRow && row <= lastIconRow) return true;
-    else return false;
-}
-
 void MetaRead::cleanupIcons()
 {
 /*
-    Remove icons not in priority queue after iconChunkSize or MW::deleteFiles
+    Remove icons not in icon range after start row change, iconChunkSize change or
+    MW::deleteFiles.
+
+    The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
+    the current datamodel row dm->currentSfRow.
+
+    For efficiency, the currently cached icons are tracked in the QList rowsWithIcon.
+    Each item in rowsWithIcon is the dmRow in the datamodel.
+
+    If a new startRow is sent to setStartPosition while running then the icon
+    cleanup is interrupted.
 */
     if (G::isLogger) G::log("MetaRead::cleanupIcons");
-    return;  // rgh1027
+
     // check if datamodel size is less than assigned icon cache chunk size
     if (iconChunkSize >= sfRowCount) return;
 
     int i = 0;
     while (rowsWithIcon.size() > iconChunkSize) {
         if (i >= rowsWithIcon.size()) break;
+        mutex.lock();
+        bool abortCleanup = changeStartRowWhileRunning;
+        mutex.unlock();
+        if (abortCleanup) break;
         int dmRow = rowsWithIcon.at(i);
         QModelIndex dmIdx = dm->index(dmRow, 0);
         int sfRow = dm->sf->mapFromSource(dmIdx).row();
@@ -278,38 +220,23 @@ void MetaRead::cleanupIcons()
             ++i;
             continue;
         }
-        // remove icon
-//        qDebug() << "MetaRead::cleanupIcons   REMOVING" << dmRow;
-        QStandardItem *item = dm->itemFromIndex(dmIdx);
-        if (item->icon().isNull()) {
+        // if no icon continue
+        if (dmIdx.data(Qt::DecorationRole).isNull()) {
             i++;
             continue;
         }
-        item->setIcon(QIcon());
+        // remove icon
+        emit setIcon(dmIdx, QPixmap(), instance, "MetaRead::cleanupIcons");
         rowsWithIcon.remove(i);
     }
-    /* cleanup by iterating entire model
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        if (row >= firstIconRow && row <= lastIconRow) {
-            continue;
-        }
-        QModelIndex dmIdx = dm->index(row, 0);
-        QStandardItem *item = dm->itemFromIndex(dmIdx);
-        if (item->icon().isNull()) {
-            continue;
-        }
-        // emit setIcon(dmIdx, nullPm, instance, "MetaRead::clearIcons"); causes
-        // deallocation crash
-        item->setIcon(QIcon());
-    }
-    */
 }
 
 bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
 //    if (abort) return;
     if (G::isLogger) G::log("MetaRead::readMetadata");
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug() << "MetaRead::readMetadata"
                  << "instance =" << instance
                  << "dm->instance" << dm->instance
@@ -329,14 +256,16 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
 
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug() << "MetaRead::readMetadata"
                  << "added row =" << sfIdx.row()
                  << "abort =" << abort
                  ;
     }
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug() << "MetaRead::readMetadata"
                  << "addToDatamodel row =" << sfIdx.row()
                  << "abort =" << abort
@@ -394,19 +323,19 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
     rowsWithIcon.append(dmRow);
 
-    /*
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "done   row =" << sfIdx.row()
                               ;
     }
-    //*/
 }
 
 void MetaRead::readRow(int sfRow)
 {
     if (G::isLogger) G::log("MetaRead::readRow");
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug().noquote() << "MetaRead::readRow"
                            << "start  row =" << sfRow
                            << "dm->sf->rowCount()=" << dm->sf->rowCount()
@@ -440,8 +369,13 @@ void MetaRead::readRow(int sfRow)
         }
     }
 
-    // load icon (G::useReadIcons for debugging)
-    if (G::useReadIcons && inIconRange(sfRow)) {
+    // load icon
+
+    // can ignore if debugging
+    if (!G::useReadIcons) return;
+
+    // read icon if in icon range
+    if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
         if (!dm->iconLoaded(sfRow, instance)) {
             if (!abort) readIcon(sfIdx, fPath);
             if (rowsWithIcon.size() > iconLimit) {
@@ -450,7 +384,8 @@ void MetaRead::readRow(int sfRow)
         }
     }
 
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug().noquote() << "MetaRead::readRow"
                            << "done   row =" << sfRow
                               ;
@@ -465,23 +400,12 @@ void MetaRead::run()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::read", src);
 
-    if (testMultiThread) {
-        multiThreadTest();
-        return;
-    }
-
     folderPath = dm->currentFolderPath;
-    iconLimit = iconChunkSize * 1.2;
+//    iconLimit = iconChunkSize * 1.2;
     sfRowCount = dm->sf->rowCount();
-    /*
-    qDebug() << "MetaRead::run"
-             << "instance =" << instance
-             << "startRow =" << startRow
-             << "sfRowCount =" << sfRowCount
-                ;
-                //*/
 
-    if (debugCaching) {
+    if (debugCaching)
+    {
         qDebug().noquote() << "MetaRead::run"
                            << "src =" << src
                            << "startRow =" << startRow
@@ -489,22 +413,24 @@ void MetaRead::run()
                               ;
     }
     if (startRow >= sfRowCount) return;
+//    int row = startRow;
+//    startRow = -1;
 
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead::run");
 
     // range of datamodel rows to load icons
-    firstIconRow = startRow - iconChunkSize / 2;
-    if (firstIconRow < 0) firstIconRow = 0;
-    lastIconRow = firstIconRow + iconChunkSize;
-    qDebug() << "MetaRead::run" << firstIconRow << lastIconRow
-             << rowsWithIcon.size() << folderPath;
+//    firstIconRow = startRow - iconChunkSize / 2;
+//    if (firstIconRow < 0) firstIconRow = 0;
+//    lastIconRow = firstIconRow + iconChunkSize;
+//    qDebug() << "MetaRead::run" << firstIconRow << lastIconRow
+//             << rowsWithIcon.size() << folderPath;
 
-    if (rowsWithIcon.size() > iconChunkSize) {
-//        cleanupIcons();
-    }
+//    if (rowsWithIcon.size() > iconChunkSize) {
+////        cleanupIcons();
+//    }
 
-    int i = -1;
     int row = startRow;
+    int count = -1;                     // used to delay start ImageCache
     bool ahead = true;
     int lastRow = sfRowCount - 1;
     bool moreAhead = row < lastRow;
@@ -512,7 +438,8 @@ void MetaRead::run()
     int rowAhead = row;
     int rowBehind = row;
 
-    while (i++ <= sfRowCount) {
+    while (moreAhead || moreBehind) {
+        // abort?
         if (dm->instance != instance) {
             abort = true;
         }
@@ -520,23 +447,48 @@ void MetaRead::run()
             if (interrupted) {
                 interruptedRow = row;
             }
-            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at item" << i;
+            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at row" << row;
             abort = false;
             return;
         }
 
-        // do something with row
+        // check if start row has changed
+        if (startRow != -1) {
+            row = startRow;
+            moreAhead = row < lastRow;
+            moreBehind = row >= 0;
+            rowAhead = row;
+            rowBehind = row;
+            moreAhead ? ahead = true : ahead = false;
+            // icon range
+            iconChunkSize = dm->iconChunkSize;              // in case changes ie thumb size change
+            iconLimit = static_cast<int>(iconChunkSize * 1.2);
+            firstIconRow = startRow - iconChunkSize / 2;
+            if (firstIconRow < 0) firstIconRow = 0;
+            lastIconRow = firstIconRow + iconChunkSize - 1;
+            if (lastIconRow > lastRow) lastIconRow = lastRow;
+            if (rowsWithIcon.size() > iconChunkSize) {
+                cleanupIcons();
+            }
+//            qDebug() << "MetaRead::run" << "row =" << row;
+            startRow = -1;
+        }
+
+//        // do something with row
+//        qDebug() << "MetaRead::run" << "row =" << row;
+
         readRow(row);
 //        if (G::isFileLogger) Utilities::log("MetaRead::run", "row = " + QString::number(row));
-        if (abort) return;
+//        if (abort) return;
 
         // delayed start ImageCache
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
-            if (i == sfRowCount - 1 || i == imageCacheTriggerCount) {
+            count++;
+            if (count == sfRowCount - 1 || count == imageCacheTriggerCount) {
                 // start image caching thread after head start
                 emit triggerImageCache("Initial");
                 imageCachingStarted = true;
-//                if (G::isFileLogger) Utilities::log("MetaRead::run", "start iamge caching");
+//                if (G::isFileLogger) Utilities::log("MetaRead::run", "start image caching");
             }
         }
 

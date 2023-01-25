@@ -283,6 +283,8 @@ void DataModel::clearDataModel()
     fPathRow.clear();
     // clear list of fileInfo
     fileInfoList.clear();
+    // reset iconChunkSize
+    iconChunkSize = defaultIconChunkSize;
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -1400,8 +1402,11 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIcon");
-    if (isDebug) {
-        qDebug() << "DataModel::setIcon" << "instance =" << instance
+    if (isDebug)
+    {
+        qDebug() << "DataModel::setIcon"
+                 << "src =" << src
+                 << "instance =" << instance
                  << "fromInstance =" << fromInstance
                  << "row =" << dmIdx.row()
                  << currentFolderPath;
@@ -1449,28 +1454,10 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     // this fails same as QStandardItem *item when rapid change folders
     const QVariant vIcon = QVariant(QIcon(pm));
-    mutex.lock();
+//    mutex.lock();
     if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
-    if (fromInstance == instance) setData(dmIdx, false, G::CachingIconRole);
-    mutex.unlock();
     setIconMax(pm);
-//    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
-//    if (fromInstance == instance) setData(dmIdx, false, G::CachingIconRole);
-//    if (fromInstance == instance) setIconMax(pm);
-
-//    QStandardItem *item = itemFromIndex(dmIdx);
-    /* const QIcon icon(pm) - required to prevent occasional malloc deallocation error
-       in qarraydata.h deallocate:
-        static void deallocate(QArrayData *data) noexcept
-        {
-            static_assert(sizeof(QTypedArrayData) == sizeof(QArrayData));
-            QArrayData::deallocate(data, sizeof(T), alignof(AlignmentDummy)); // crashes here
-        }
-    */
-//    const QIcon icon(pm);
-//    item->setIcon(icon);
-//    setData(dmIdx, false, G::CachingIconRole);
-//    setIconMax(pm);
+//    mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)
@@ -1567,6 +1554,7 @@ void DataModel::setIconRange(int first, int last)
     mutex.lock();
     startIconRange = first;
     endIconRange = last;
+    midIconRange = first + (last - first) / 2;
     mutex.unlock();
 }
 

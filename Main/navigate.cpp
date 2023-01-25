@@ -102,7 +102,7 @@ void MW::keyEnd()
 */
     if (G::isLogger) G::log("MW::keyEnd");
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
-        metadataCacheThread->stop();
+        if (G::isLinearLoading) metadataCacheThread->stop();
         if (G::mode == "Compare") compareImages->go("End");
         else sel->last();
     }

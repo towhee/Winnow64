@@ -102,10 +102,11 @@ public:
     int currentDmRow;                     // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
-//    QModelIndexList selectedRows;
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
+    int midIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
+    int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
 
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel

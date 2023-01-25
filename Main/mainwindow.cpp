@@ -183,6 +183,8 @@ Current model row:
     currentDmIdx
     currentSfIdx
 
+
+
 ***********************************************************************************************
 
 CACHING
@@ -231,6 +233,46 @@ CACHE STATUS
   MW::updateImageCacheStatus                - ImageCache calls to update image cache status
   MW::setCachedStatus                       - sets isCached in datamodel and refreshes views
 
+ICON CACHING
+
+• Each icon is a 256px longside QIcon so we want to balance how many we load when weighing
+  performance vs memory footprint.
+
+• Icons are stored in the DataModel at dm->(row, 0).data(Qt::DecorationRole).  The loaded
+  status can be determined two ways:
+
+  1. dm->itemFromIndex(dmIdx)->icon().isNull()      // used up to 2023
+  2. dmIdx.data(Qt::DecorationRole).isNull()        // switch to in 2023
+
+• Cases:
+
+  1.
+
+• The default limit of icons to load is dm->defaultIconChunkSize, which is set in
+  preferences.  dm->iconChunkSize (the variable used to manage the actual number of
+  icons loaded) is initially set to dm->defaultIconChunkSize.
+
+• If the number of images in the folder(s) is less than dm->defaultIconChunkSize, then
+  all rows in the DataModel are loaded with an icon.
+
+• When there are more DataModel rows than the dm->defaultIconChunkSize then only the
+  default amount of icons are loaded.  As the user moves through the DataSet icons are
+  removed and added.
+
+• When there are more thumbnails (icons) visible in either thumbView, gridView or
+  tableView than dm->defaultIconChunkSize, then dm->iconChunkSize is adjusted to the
+  largest number in MW::updateIconRange.
+
+• CASE X: When the app is resized or the thumbnails are resized the number visible may change
+  and dm->iconChunkSize is adjusted in MW::updateIconRange.
+
+• When dm->iconChunkSize changes or there is a scroll event then the metadata cache
+  read process must be rerun to update the icons.
+•
+•
+•
+
+
 ***********************************************************************************************
 
 DATAMODEL CHANGES
@@ -246,7 +288,6 @@ Folder change
     MW::updateIconBestFit
     IconView::bestAspect
     IconView::setThumbParameters
-    MW::updateMetadataCacheIconviewState
     MetadataCache::loadNewFolder2ndPass
     MetadataCache::setRange
     MetadataCache::readMetadataIconChunk
@@ -295,26 +336,49 @@ Sort change
 
 SCROLLING
 
-When the user scrolls a datamodel view (thumbView, gridView or tableView) the scrollbar change
-signal is received by thumbHasScrolled, gridHasScrolled or tableHasScrolled. The other views
-are scrolled to sync with the source view midVisibleRow.  The first and last visible items are
-determined in updateMetadataCacheIconviewState and the metadataCacheThread is called to update
-the metadata and icons in the range (chunk).
+When the user scrolls a datamodel view (thumbView, gridView or tableView) the scrollbar
+change signal is received by thumbHasScrolled, gridHasScrolled or tableHasScrolled. The
+other views are scrolled to sync with the source view midVisibleRow. The first, mid and
+last visible items are determined in MW::updateIconRange and the metadataCacheThread or
+metaReadThread is called to update the metadata and icons in the range (chunk).
 
-However, when the program syncs the views this generates more scrollbar signals that would
-loop.  This is prevented by the G::ignoreScrollSignal flag.  This is also employed in
+However, when the program syncs the views this generates more scrollbar signals that
+would loop. This is prevented by the G::ignoreScrollSignal flag. This is also employed in
 fileSelectionChange, where visible views are scrolled to center on the current selection.
 
-When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
-thumbView or gridView) can change state from hidden to visible. Since hidden widgets cannot be
-accessed we need to wait until the IconView becomes visible and fully repainted before
-attempting to scroll to the current index. MW::eventFilter monitors the IconView scrollBar
-paint event and when the last paint event occurs the scrollToCurrent function is called. The
-last paint event is identified by calculating the maximum of the scrollbar range and comparing
-it to the paint event, which updates the range each time. With larger datasets (ie 1500+
-thumbs) it can take a number of paint events and 100s of ms to complete. A flag is assigned
-(scrollWhenReady) to show when we need to monitor so not checking needlessly. Unfortunately
-there does not appear to be any signal or event when ListView is finished hence this cludge.
+Painting delays:
+
+    When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
+    thumbView or gridView) can change state from hidden to visible. Since hidden widgets
+    cannot be accessed we need to wait until the IconView becomes visible and fully
+    repainted before attempting to scroll to the current index.
+
+    Also, when an IconView resize event occurs: triggered by a change in the gridView
+    cell size (thumbWidth) that requires justification; by a change in the thumbDock
+    splitter; or a resize of the application window; we also need to wait until
+    repainting the scrollbars is completed.
+
+    The last paint event is identified by calculating the maximum of the scrollbar range
+    and comparing it to the paint event, which updates the range each time. With larger
+    datasets (ie 1500+ thumbs) it can take a number of paint events and hundreds of ms to
+    complete. IconView::waitUntilScrollReady monitors this and returns when done.
+
+Scrollbar change flow:
+
+    • The ScrollBar signal valueChanged triggers MW::thumbHasScrolled, MW::thumbHasScrolled
+      or MW::tableHasScrolled.
+
+    • MW::updateIconRange updates the first, mid and last visible icons from all views to
+      find the greatest range of visible icons by calling IconView::updateVisible and
+      TableView::updateVisible. This is stored in the DataModel class as startIconRange,
+      midIconRange amd endIconRange. The dm->iconChunkSize is adjusted if it is less
+      than the visible icon range.
+
+    • Concurrent metadata loading:
+
+         MW::loadConcurrent(midVisibleIcon) is called and it loads any missing icons and
+         cleans up any orphaned icons (not in the iconChunkRange).
+
 
 QT VERSIONS
 
@@ -530,7 +594,7 @@ void MW::showEvent(QShowEvent *event)
     if (isSettings) restoreLastSessionGeometryState();
     getDisplayProfile();
 
-    // set thumbanil size to fit the thumbdock initial size
+    // set thumbnail size to fit the thumbdock initial size
     thumbView->thumbsFitTopOrBottom();
 
     // create popup window used for messaging
@@ -835,7 +899,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* EMBEL DOCK TITLE ***********************************************************************
+    /* EMBEL DOCK TITLE
 
     Set dock title if not tabified
 
@@ -847,16 +911,14 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     */
 
-
-    /* CONTEXT MENU ***************************************************************************
-
-    Intercept context menu
-
-    Intercept context menu to enable/disable:
-    - eject usb drive menu item
-    - add bookmarks menu item
-    mouseOverFolder is used in folder related context menu actions instead of
-    currentViewDir
+    // CONTEXT MENU
+    {
+    /*
+        - Intercept context menu to enable/disable:
+            - eject usb drive menu item
+            - add bookmarks menu item
+        - mouseOverFolder is used in folder related context menu actions instead of
+          currentViewDir
     */
 
     if (event->type() == QEvent::ContextMenu) {
@@ -896,27 +958,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+    } // end section
 
-    /* MODIFIER PRESSED ******************************************************************
-    is shift, ctrl/command or alt/option pressed.
-    use QGuiApplication::queryKeyboardModifiers() instead of this
-    */
-
-//    QString eventName;
-//    if (event->type() == QEvent::KeyPress) {
-//        QKeyEvent *e = static_cast<QKeyEvent *>(event);
-//        eventName = "KeyPress";
-//        G::isModifier = e->modifiers() != 0;
-//    }
-
-//    if (event->type() == QEvent::KeyRelease) {
-//        QKeyEvent *e = static_cast<QKeyEvent *>(event);
-//        G::isModifier = e->modifiers() != 0;
-//        eventName = "KeyRelease";
-////        qDebug() << "MW::eventFilter" << "Modifier KeyRelease  G::isModifier = " << G::isModifier;
-//    }
-
-    /* THUMBVIEW ZOOMCURSOR **************************************************************
+    // THUMBVIEW ZOOMCURSOR
+    {
+    /*
     Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.  The
     ImageView must be zoomed and no modifier keys pressed to show zoom cursor.
     */
@@ -955,9 +1001,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+    } // end section
 
-
-    /* DOCK TAB TOOLTIPS *****************************************************************
+    // DOCK TAB TOOLTIPS
+    {
+    /*
     Show a tooltip for docked widget tabs.
     */
     static int prevTabIndex = -1;
@@ -985,9 +1033,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             prevTabIndex = -1;
         }
     }
+    } // end section
 
-    /* THUMBDOCK SPLITTER ****************************************************************
-
+    // THUMBDOCK SPLITTER
+    {
+    /*
     A splitter resize of top/bottom thumbDock is happening:
 
     Events are filtered from qApp here by an installEventFilter in the MW contructor to
@@ -998,14 +1048,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     thumbDock is referenced from the parent because thumbView is a friend class to MW.
     */
 
-     if (event->type() == QEvent::MouseButtonPress) {
+    if (event->type() == QEvent::MouseButtonPress) {
         if (obj->objectName() == "FiltersViewport") return false;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
-//        qDebug() << "MW::eventFilter" << "MouseButtonPress"
-//                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-//                 << "isMouseDrag" << isMouseDrag
-//                 << obj->objectName();
+        /*
+        qDebug() << "MW::eventFilter" << "MouseButtonPress"
+                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                 << "isMouseDrag" << isMouseDrag
+                 << obj->objectName();
+                    //*/
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
@@ -1013,19 +1065,27 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
-//            qDebug() << "MW::eventFilter" << "MouseButtonRelease"
-//                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-//                     << "isMouseDrag" << isMouseDrag
-//                     << obj->objectName();
+            if (thumbSplitDrag) {
+                thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
+                thumbSplitDrag = false;
+            }
+            /*
+            qDebug() << "MW::eventFilter" << "MouseButtonRelease"
+                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                     << "isMouseDrag" << isMouseDrag
+                     << obj->objectName();
+                        //*/
         }
     }
 
     if (event->type() == QEvent::MouseMove /*&& obj->objectName() == "MWWindow"*/) {
         if (isLeftMouseBtnPressed) isMouseDrag = true;
-//        qDebug() << "MW::eventFilter" << "MouseMove"
-//                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-//                 << "isMouseDrag" << isMouseDrag
-//                 << obj->objectName();
+        /*
+        qDebug() << "MW::eventFilter" << "MouseMove"
+                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                 << "isMouseDrag" << isMouseDrag
+                 << obj->objectName();
+                 //*/
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -1035,24 +1095,27 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     // make thumbs fit the resized thumb dock
     if (obj == thumbDock) {
         if (event->type() == QEvent::Resize) {
-//            qDebug() << "MW::eventFilter" << "thumbDock::Resize"
-//                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-//                     << "isMouseDrag" << isMouseDrag
-//                     << obj->objectName();
+            /*
+            qDebug() << "MW::eventFilter" << "thumbDock::Resize"
+                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                     << "isMouseDrag" << isMouseDrag
+                     << obj->objectName();
+                     //*/
             if (isMouseDrag) {
                 if (!thumbDock->isFloating()) {
                     Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
                     if (area == Qt::BottomDockWidgetArea
-                    || area == Qt::TopDockWidgetArea
-                    || !thumbView->isWrapping()) {
-//                        qDebug() << "thumb dock splitter moved";
-//                        QTimer::singleShot(250, thumbView, SLOT(thumbsFitTopOrBottom()));
+                        || area == Qt::TopDockWidgetArea
+                        || !thumbView->isWrapping())
+                    {
+                        thumbSplitDrag = true;
                         thumbView->thumbsFitTopOrBottom();
                     }
                 }
             }
         }
     }
+    } // end section
 
     /*
     if (obj->objectName() == "FiltersViewport") {
@@ -1884,7 +1947,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-        updateIconRange(dm->currentSfRow);
+        updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
         if (G::isLinearLoading) {
             metadataCacheThread->fileSelectionChange();
         }
@@ -2144,12 +2207,25 @@ bool MW::isCurrentThumbVisible()
     do not invoke metadata caching.
 */
     if (G::isLogger) G::log("MW::isCurrentThumbVisible");
-    updateIconRange(-1);
+    updateIconRange(-1, "MW::isCurrentThumbVisible");
     return (dm->currentSfRow > metadataCacheThread->firstIconVisible &&
             metadataCacheThread->lastIconVisible);
 }
 
-void MW::updateIconRange(int row)
+void MW::updateDefaultIconChunkSize(int size)
+{
+    if (G::isLogger) G::log("MW::updateDefaultIconChunkSize");
+    // update settings
+    setting->setValue("iconChunkSize", size);
+    dm->defaultIconChunkSize = size;
+    if (size > dm->iconChunkSize) {
+        dm->iconChunkSize = size;
+        metadataCacheThread->metadataChunkSize = size;
+        metaReadThread->iconChunkSize = size;
+    }
+}
+
+bool MW::updateIconRange(int row, QString src)
 {
 /*
     Polls both thumbView and gridView to determine the first and last thumbnail visible.
@@ -2157,34 +2233,47 @@ void MW::updateIconRange(int row)
     row == -1 then scan the current view to determine the first/last. Otherwise,
     calculate first/last.
 */
-    if (G::isLogger) G::log("MW::updateIconRange", QString::number(row));
+    if (G::isLogger || G::isFlowLogger) G::log("MW::updateIconRange", "src = " + src + " row = " + QString::number(row));
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
+    static int chunkSize = dm->defaultIconChunkSize;
+    bool chunkSizeChanged;
 
-//    // Grid might not be selected in CentralWidget
+    // Grid might not be selected in CentralWidget
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
-        if (row >= 0) thumbView->calcViewportRange(row);
-        else thumbView->scannedViewportRange();
+//        if (row >= 0) thumbView->calcViewportRange(row);
+//        else thumbView->scannedViewportRange();
+        thumbView->updateVisible(row);
         if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
-        if (row >= 0) gridView->calcViewportRange(row);
-        else gridView->scannedViewportRange();
+//        if (row >= 0) gridView->calcViewportRange(row);
+//        else gridView->scannedViewportRange();
+        gridView->updateVisible(row);
         if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
     }
 
     if (tableView->isVisible()) {
-        tableView->setViewportParameters();
+        tableView->updateVisible();
         if (tableView->firstVisibleRow < firstVisible) firstVisible = tableView->firstVisibleRow;
         if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
     }
 
-    int visibleIcons = lastVisible - firstVisible + 1;
+    // chunk size
+    int visibleIcons = lastVisible - firstVisible;
+    if (dm->iconChunkSize < visibleIcons) dm->iconChunkSize = visibleIcons;
+    if (dm->iconChunkSize > chunkSize) {
+        chunkSize = dm->iconChunkSize;
+        chunkSizeChanged = true;
+    }
+    else {
+        chunkSizeChanged = false;
+    }
 
     /*
     // icons to range based on caching icons for prev, curr and next page of thumbnails
@@ -2224,29 +2313,23 @@ void MW::updateIconRange(int row)
 
     /*
     qDebug()
-         << "MW::updateIconRange" << "row =" << row
-         << "dm->iconChunkSize =" << dm->iconChunkSize
-         << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
-         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
-         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
-         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
-         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
-         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
-         << "\n\tfirstVisible =" << firstVisible
-         << "lastVisible =" << lastVisible
-         << "\n\tdm->startIconRange =" << dm->startIconRange
-         << "dm->endIconRange =" << dm->endIconRange
+         << "MW::updateIconRange" << "row =" << row << "src =" << src
+//         << "dm->iconChunkSize =" << dm->iconChunkSize
+//         << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
+//         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+//         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
+//         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
+//         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
+//         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
+//         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
+//         << "\n\tfirstVisible =" << firstVisible
+//         << "lastVisible =" << lastVisible
+//         << "\n\tdm->startIconRange =" << dm->startIconRange
+//         << "dm->endIconRange =" << dm->endIconRange
             ;
 //        */
 
-    /*
-    qDebug()
-         << "MW::updateIconRange"
-         << "\n\tdm->iconChunkSize =" << dm->iconChunkSize
-         ;
-         //*/
-
+    return chunkSizeChanged;
 }
 
 void MW::loadConcurrentNewFolder()
@@ -2263,7 +2346,7 @@ void MW::loadConcurrentNewFolder()
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
        metadata ~20K  */
     int rows = dm->rowCount();
-    int maxIconsToLoad = rows < metaReadThread->iconChunkSize ? rows : metaReadThread->iconChunkSize;
+    int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // target image
@@ -2275,7 +2358,7 @@ void MW::loadConcurrentNewFolder()
         dm->currentSfRow = 0;
     }
     if (reset(src + "1")) return;
-    updateIconRange(dm->currentSfRow);
+    updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
     if (reset(src + "2")) return;
 
     // set image cache parameters and build image cacheItemList
@@ -2297,13 +2380,18 @@ void MW::loadConcurrentNewFolder()
 }
 
 void MW::loadConcurrent(int sfRow)
+/*
+    Called after scroll event in IconView or TableView.
+*/
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row =" + QString::number(sfRow));
+    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
+//            updateIconRange(dm->currentSfRow, "MW::loadConcurrent");
             metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent"); // also emit option
+//            emit startMetaRead(sfRow, "MW::loadConcurrent");
         }
     }
 }
@@ -2334,7 +2422,7 @@ void MW::loadConcurrentMetaDone()
     if (reset()) return;
     updateIconBestFit();
     if (reset()) return;
-    updateIconRange(-1);
+    updateIconRange(-1, "MW::loadConcurrentMetaDone");
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
@@ -2480,7 +2568,7 @@ void MW::loadLinearNewFolder()
 
     // read icons
     if (reset(src + "3")) return;
-    updateIconRange(dm->currentSfRow);
+    updateIconRange(dm->currentSfRow, "MW::loadLinearNewFolder");
     if (reset(src + "4")) return;
     setCentralMessage("Reading icons.");
     QApplication::processEvents();
@@ -2583,13 +2671,14 @@ void MW::thumbHasScrolled()
     is set true in IconView when a selection is made, and set false in
     fileSelectionChange.
 
-    MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible
-    views (thumbView, gridView and tableView) to assign the firstVisibleRow,
-    midVisibleRow and lastVisibleRow in metadataCacheThread.
+    MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
+    tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
+    metadataCacheThread (Linear) or metaReadThread (Concurrent).
 
     The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
-    Finally metadataCacheThread->scrollChange is called to load any necessary metadata
+    Finally, either metadataCacheThread->scrollChange (Linear) or
+    metaReadThread->setCurrentRow (Concurrent), is called to load any necessary metadata
     and icons within the cache range.
 
     Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
@@ -2598,14 +2687,13 @@ void MW::thumbHasScrolled()
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
-    if (G::isInitializing) return;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange(-1);
-        gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
-        updateIconRange(-1);
+        updateIconRange(-1, "MW::thumbHasScrolled");
+        if (gridView->isVisible())
+            gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
@@ -2625,8 +2713,8 @@ void MW::thumbHasScrolled()
 void MW::gridHasScrolled()
 {
 /*
-    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
-    are determined and loaded if necessary.
+    This function is triggered after a gridView scrollbar change signal. The visible
+    thumbnails are determined and loaded if necessary.
 
     If the change was caused by the user scrolling then we want to process it, as defined by
     G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
@@ -2636,11 +2724,11 @@ void MW::gridHasScrolled()
     will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
     in IconView when a selection is made, and set false in fileSelectionChange.
 
-    MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
-    (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
-    lastVisibleRow in metadataCacheThread.
+    MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
+    tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
+    metadataCacheThread (Linear) or metaReadThread (Concurrent).
 
-    The gridView and tableView, if visible, are scrolled to sync with thumbView.
+    The thumbView and tableView, if visible, are scrolled to sync with gridView.
 
     Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
     icons within the cache range.
@@ -2650,19 +2738,19 @@ void MW::gridHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::gridHasScrolled");
+    if (G::isLogger || G::isFlowLogger) G::log("MW::gridHasScrolled", "Visible (0 = false) = " + QString::number(gridView->isVisible()));
     if (G::isInitializing || !G::isNewFolderLoaded) return;
+    if (gridView->isHidden()) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange(-1);
+        updateIconRange(-1, "MW::gridHasScrolled");
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection && gridView->isVisible()) {
             if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::gridHasScrolled");
             else loadConcurrent(gridView->midVisibleCell);
-//            else scrollChange(gridView->midVisibleCell, "MW::gridHasScrolled");
         }
     }
     G::ignoreScrollSignal = false;
@@ -2671,25 +2759,26 @@ void MW::gridHasScrolled()
 void MW::tableHasScrolled()
 {
 /*
-    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
-    are determined and loaded if necessary.
+    This function is called after a tableView scrollbar change signal. The visible
+    thumbnails are determined and loaded if necessary.
 
-    If the change was caused by the user scrolling then we want to process it, as defined by
-    G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-    another view then we do not want to process again and get into a loop.
+    If the change was caused by the user scrolling then we want to process it, as defined
+    by G::ignoreScrollSignal == false. However, if the scroll change was caused by
+    syncing with another view then we do not want to process again and get into a loop.
 
     Also, we do not need to process scrolling if it was the result of a new selection, which
     will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
     in IconView when a selection is made, and set false in fileSelectionChange.
 
-    MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
-    (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
-    lastVisibleRow in metadataCacheThread.
+    MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
+    tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
+    metadataCacheThread (Linear) or metaReadThread (Concurrent).
 
-    The gridView and tableView, if visible, are scrolled to sync with thumbView.
+    The gridView and thumbView, if visible, are scrolled to sync with tableView.
 
-    Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
-    icons within the cache range.
+    Finally, either metadataCacheThread->scrollChange (Linear) or
+    metaReadThread->setCurrentRow (Concurrent), is called to load any necessary metadata
+    and icons within the cache range.
 
     Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
     call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
@@ -2701,7 +2790,7 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange(-1);
+        updateIconRange(-1, "MW::tableHasScrolled");
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
@@ -2723,12 +2812,18 @@ void MW::numberIconsVisibleChange()
 */
     if (G::isLogger) G::log("MW::numberIconsVisibleChange");
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    updateIconRange(dm->currentSfRow);
-//    if (G::isLinearLoading)
-//        metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
-//    else
-//        loadConcurrent(MetaRead::SizeChange, "MW::numberIconsVisibleChange");
-    metadataCacheThread->scrollChange("MW::numberIconsVisibleChange");
+    bool chunkSizeChanged = updateIconRange(dm->currentSfRow, "MW::numberIconsVisibleChange");
+    qDebug() << "MW::numberIconsVisibleChange"
+             << "dm->iconChunkSize =" << dm->iconChunkSize
+             << "change =" << chunkSizeChanged
+                ;
+    if (chunkSizeChanged) {
+        if (G::isLinearLoading)
+            metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
+        else
+            loadConcurrent(dm->midIconRange);
+//        loadConcurrent(dm->currentSfRow);
+    }
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -2792,7 +2887,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (dm->isAllMetadataLoaded()) return;
 
-    updateIconRange(dm->currentSfRow);
+    updateIconRange(dm->currentSfRow, "MW::loadEntireMetadataCache");
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -3205,7 +3300,7 @@ void MW::scrollToCurrentRow()
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateIconRange(dm->currentSfRow);
+    updateIconRange(dm->currentSfRow, "MW::scrollToCurrentRow");
     metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
 }
 
@@ -4112,7 +4207,7 @@ void MW::writeSettings()
     setting->setValue("backgroundShade", G::backgroundShade);
     setting->setValue("fontSize", G::strFontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
-    setting->setValue("classificationBadgeInThumbDiameter", thumbView->badgeSize);
+    setting->setValue("classificationBadgeInThumbDiameter", classificationBadgeInThumbDiameter);
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
@@ -4149,7 +4244,7 @@ void MW::writeSettings()
     // metadata and icon cache
     setting->setValue("cacheAllMetadata", metadataCacheThread->cacheAllMetadata);
     setting->setValue("cacheAllIcons", metadataCacheThread->cacheAllIcons);
-    setting->setValue("iconChunkSize", dm->iconChunkSize);
+//    setting->setValue("iconChunkSize", dm->iconChunkSize);
 
     // image cache
     setting->setValue("cacheSizeMethod", cacheSizeMethod);
@@ -5732,6 +5827,9 @@ void MW::deleteFiles(QStringList paths)
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     sel->select(sfIdx);
+
+    // update filters
+    launchBuildFilters();
 }
 
 void MW::deleteFolder()

@@ -512,7 +512,8 @@ private slots:
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
-    void updateIconRange(int row);
+    void updateDefaultIconChunkSize(int size);
+    bool updateIconRange(int row = -1, QString src = "");
     bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
     void loadMetadataChunk();
@@ -1065,6 +1066,7 @@ private:
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
+    bool thumbSplitDrag = false;
     bool ignoreDockResize;
     bool wasThumbDockVisible;
     bool workspaceChange;
