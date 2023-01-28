@@ -122,8 +122,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->scrollToRow(53-1, "temp");
-//    diagnosticsMetadataCache();
+    filters->ratings->setForeground(0, QBrush(Qt::red));
     return;
 
     QMediaMetaData mediaMetadata = videoView->video->mediaPlayer->metaData();

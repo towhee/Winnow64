@@ -485,7 +485,7 @@ void ImageCache::setPriorities(int key)
 */
     if (G::isLogger) G::log("ImageCache::setPriorities", "key = " + QString::number(key));
     if (debugCaching) {
-        qDebug().noquote() << "ImageCache::setPriorities" << "  decoder-1" << "key =" << key;
+        qDebug().noquote() << "ImageCache::setPriorities" << "  starting with row =" << key;  // row = key
     }
     // key = current position = current selected thumbnail
     int aheadAmount = 1;
@@ -638,7 +638,7 @@ bool ImageCache::cacheUpToDate()
     }
     isCacheUpToDate = true;
     if (debugCaching) {
-        qDebug() << "ImageCache::cacheUpToDate"
+        qDebug() << "ImageCache::cacheUpToDate  "
                  << "true"
                  << "targetFirst =" << icd->cache.targetFirst
                  << "targetLast =" << icd->cache.targetLast
@@ -1423,7 +1423,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
 */
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id << k;
+        qDebug().noquote() << "ImageCache::cacheImage"
+                           << "     decoder" << id
+                           << "row =" << k;
     }
 
     if (decoder[id]->status != ImageDecoder::Status::Video) {
@@ -1591,13 +1593,21 @@ void ImageCache::fillCache(int id)
     }
 
     if (debugCaching) {
-        QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::fillCache"
-                 << "      decoder" << id
-                 << "row =" << k    // row = key
-                 << "isRunning =" << decoder[id]->isRunning()
-                 << decoder[id]->fPath
-                    ;
+        if (cacheKey == -1) {
+            qDebug().noquote() << "ImageCache::fillCache"
+                     << "      decoder" << id
+                     << "started"
+                        ;
+        }
+        else {
+            QString k = QString::number(cacheKey).leftJustified((4));
+            qDebug().noquote() << "ImageCache::fillCache"
+                     << "      decoder" << id
+                     << "row =" << k    // row = key
+//                     << "decoder isRunning =" << decoder[id]->isRunning()
+                     << decoder[id]->fPath
+                        ;
+        }
     }
 
     // add decoded QImage to imCache.

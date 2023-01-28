@@ -166,6 +166,36 @@ MW::loadConcurrent metaReadThread->setCurrentRow  row = 2119
 
 
 
+ImageCache::initImageCache  dm->instance = 1
+ImageCache::setCurrentPosition /Users/roryhill/Pictures/_test2/2017-02-08_0155.jpg src = MW::fileSelectionChange
+ImageCache::run
+ImageCache::setKeyToCurrent key = 0
+ImageCache::setDirection
+ImageCache::getImCacheSize  cache size = 0
+ImageCache::setPriorities   starting with row = 0
+ImageCache::setTargetRange  targetFirst = 0 targetLast = 0 isForward = true
+ImageCache::fixOrphans      No orphans found
+ImageCache::fillCache       decoder 0 started
+ImageCache::nextToCache     decoder 0 row = 0    threadId = -1 priority = 0 isCaching = false isCached = false attempts = 0
+ImageCache::decodeNextImage decoder 0 row = 0    threadId = 0 isCaching = true isCached = false attempts = 1 /Users/roryhill/Pictures/_test2/2017-02-08_0155.jpg
+ImageCache::cacheUpToDate   true targetFirst = 0 targetLast = 0
+ImageCache::fillCache       decoder 0 row = 0    /Users/roryhill/Pictures/_test2/2017-02-08_0155.jpg
+ImageCache::cacheImage      decoder 0 row = 0
+ImageCache::getImCacheSize  cache size = 0
+ImageCache::fixOrphans      No orphans found
+ImageCache::fillCache       decoder 0 cacheUpToDate = true
+
+
+
+disableColorAllHeaders
+disableEmptyCat
+clearAll
+uncheckAllFilters
+
+
+
+
+
 
 
 

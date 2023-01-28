@@ -1065,9 +1065,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
-            if (thumbSplitDrag) {
+            if (thumbView->thumbSplitDrag) {
                 thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
-                thumbSplitDrag = false;
+                thumbView->thumbSplitDrag = false;
             }
             /*
             qDebug() << "MW::eventFilter" << "MouseButtonRelease"
@@ -1108,7 +1108,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                         || area == Qt::TopDockWidgetArea
                         || !thumbView->isWrapping())
                     {
-                        thumbSplitDrag = true;
+                        thumbView->thumbSplitDrag = true;
                         thumbView->thumbsFitTopOrBottom();
                     }
                 }
@@ -2406,20 +2406,20 @@ void MW::loadConcurrentMetaDone()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
 
     if (reset()) return;
-    // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    if (G::mode == "Grid") {
-        thumbDock->setVisible(false);
-        thumbDockVisibleAction->setChecked(false);
-    }
+//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
+//    if (G::mode == "Grid") {
+//        thumbDock->setVisible(false);
+//        thumbDockVisibleAction->setChecked(false);
+//    }
 
-    // show thumbDock in loupe mode
-    if (G::mode == "Loupe" && wasThumbDockVisible) {
-        thumbDock->setVisible(true);
-        thumbDockVisibleAction->setChecked(true);
-    }
+//    // show thumbDock in loupe mode
+//    if (G::mode == "Loupe" && wasThumbDockVisible) {
+//        thumbDock->setVisible(true);
+//        thumbDockVisibleAction->setChecked(true);
+//    }
 
-    // double check all visible icons loaded, depending on best fit
-    if (reset()) return;
+//    // double check all visible icons loaded, depending on best fit
+//    if (reset()) return;
     updateIconBestFit();
     if (reset()) return;
     updateIconRange(-1, "MW::loadConcurrentMetaDone");
@@ -2447,9 +2447,9 @@ void MW::loadConcurrentMetaDone()
 
     // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
 //    emit refreshImageCache();
-    if (reset()) return;
-    if (G::isFileLogger) if (G::isFileLogger) Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
-    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
+//    if (reset()) return;
+//    if (G::isFileLogger) Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
+//    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
 //    blocker.unblock();
 }
@@ -2688,6 +2688,7 @@ void MW::thumbHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
     if (G::isInitializing || !G::isNewFolderLoaded) return;
+    qDebug() << "MW::thumbHasScrolled";
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;

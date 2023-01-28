@@ -434,7 +434,7 @@ void IconView::updateVisible(int sfRow)
         visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     }
     else {
-        waitUntilScrollReady();
+//        waitUntilScrollReady();  // can get into infinite loop
         /*
         int hScrollPos = horizontalScrollBar()->value();
         int hScrollMax = getHorizontalScrollBarMax();
@@ -1250,6 +1250,8 @@ void IconView::resizeEvent(QResizeEvent *)
         return;
     }
 
+    if (thumbSplitDrag) return;
+
     // Rejustify icons
     bool widthChange = width() != prevWidth;
     if (isWrapping() && widthChange) {
@@ -1458,9 +1460,9 @@ void IconView::scrollToCurrent()
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
 
-void IconView::waitUntilScrollReady()
+void IconView::waitUntilScrollReady()  // can get into infinite loop
 {
-/*
+/*  Not used...
     When the viewport resizes it can take a bit before the scrollbars are ready to
     accept new values.
 */
@@ -1470,7 +1472,7 @@ void IconView::waitUntilScrollReady()
 
 bool IconView::readyToScroll()
 {
-    if (G::isLogger) G::log("IconView::okToScroll", objectName());
+    if (G::isLogger) G::log("IconView::readyToScroll", objectName());
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << "IconView::okToScroll" << objectName()

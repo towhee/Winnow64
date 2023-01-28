@@ -30,7 +30,7 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
 
-    QTreeWidgetItem *cjf;   // category just filtered
+    QTreeWidgetItem *catItemJustClicked;   // category just filtered
 
     QString catSearch = "Search";
     QString catRefine = "Refine";
@@ -58,12 +58,15 @@ public:
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
     void addCategoryFromData(QStringList itemList, QTreeWidgetItem *category);
-//    void addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category);
+    void updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
     void disableColorZeroCountItems();
     void disableAllItems(bool disable);
+    void disableColorAllHeaders(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
     void totalColumnToUse(bool combineRawJpg);
@@ -133,6 +136,7 @@ private:
     int indentation;
     bool hdrJustClicked;
     QModelIndex searchTrueIdx;
+    bool debugFilters;
 };
 
 #endif // FILTERS_H

@@ -161,3 +161,32 @@ char *buffer;
 buffer = new char[length];
 
 const char *buf = ba.data();
+
+-----------
+Count unique strings in list: (chatGPT)
+#include <iostream>
+#include <unordered_map>
+#include <vector>
+
+int main() {
+    std::vector<std::string> my_list;
+    // Add 100,000 strings to my_list
+
+    std::unordered_map<std::string, int> count_map;
+    for (const auto &str : my_list) {
+        count_map[str]++;
+    }
+
+    for (const auto &[str, count] : count_map) {
+        std::cout << str << ": " << count << std::endl;
+    }
+
+    return 0;
+}
+
+This example uses an unordered_map to keep track of the count of each unique string in
+the list. The map stores the unique strings as keys and the count of each string as
+values. The for loop iterates over the list of strings and for each string, increments
+the count in the map. Finally, the program loops over the map and prints out the count of
+each unique string.
+-----------

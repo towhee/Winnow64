@@ -91,7 +91,8 @@ void MW::filterChange(QString source)
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    buildFilters->build();
+    buildFilters->countMapFiltered();
+//    buildFilters->build();
 //    buildFilters->updateCountFiltered();
 //    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
@@ -665,8 +666,8 @@ void MW::setRating()
     // refresh the filter
     dm->sf->filterChange();
 
-    // update filter counts
-    buildFilters->updateCountFiltered();
+    // update filter list and counts
+    buildFilters->build(BuildFilters::Action::RatingEdit);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -830,7 +831,8 @@ void MW::setColorClass()
     dm->sf->filterChange();
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    buildFilters->build(BuildFilters::Action::LabelEdit);
+
     dm->sf->filterChange();
 
     if (G::useSidecar) {

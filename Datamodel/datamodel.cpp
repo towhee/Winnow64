@@ -674,7 +674,6 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     setData(index(row, G::PathColumn), false, G::CachedRole);
-    setData(index(row, G::PathColumn), false, G::CachingIconRole);
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -1454,10 +1453,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     // this fails same as QStandardItem *item when rapid change folders
     const QVariant vIcon = QVariant(QIcon(pm));
-//    mutex.lock();
     if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
     setIconMax(pm);
-//    mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)

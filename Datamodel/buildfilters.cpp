@@ -82,7 +82,7 @@ void BuildFilters::setAfterAction(QString afterAction)
     this->afterAction = afterAction;
 }
 
-void BuildFilters::build()
+void BuildFilters::build(BuildFilters::Action action)
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
     if (isRunning()) {
@@ -93,11 +93,18 @@ void BuildFilters::build()
         wait();
     }
     abort = false;
+    this->action = action;
     instance = dm->instance;
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
-    buildFiltersTimer.restart();
+    start(NormalPriority);
+}
+
+void BuildFilters::categoryChanged(Action action)
+{
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::categoryChanged");
+    this->action = action;
     start(NormalPriority);
 }
 
@@ -116,7 +123,8 @@ void BuildFilters::reset()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
     isReset = true;
-    filters->cjf = nullptr;
+    action = Action::Reset;
+    filters->catItemJustClicked = nullptr;
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -164,6 +172,9 @@ void BuildFilters::unfilteredItemSearchCount()
 
 void BuildFilters::updateCountFiltered()
 {
+//    countMapFiltered();
+//    return;
+
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::updateCountFiltered"); mutex.unlock();}
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
@@ -219,6 +230,7 @@ void BuildFilters::updateCountFiltered()
 
 void BuildFilters::countFiltered()
 {
+
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::countFiltered"); mutex.unlock();}
     // count filtered
     QTreeWidgetItemIterator it(filters);
@@ -282,6 +294,9 @@ void BuildFilters::countFiltered()
 void BuildFilters::countUnfiltered()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::countUnfiltered"); mutex.unlock();}
+    QString method = "Brute force";
+//    buildFiltersTimer.restart();
+
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -342,6 +357,13 @@ void BuildFilters::countUnfiltered()
         ++it;
     }
     progress = 100;
+
+//    qDebug() << "BuildFilters::countUnfiltered"
+//             << buildFiltersTimer.elapsed() << "ms"
+//             << "Method:" << method
+//             << "Rows:" << dmRows
+//             << "Src:" << dm->currentFolderPath
+//                ;
 }
 
 void BuildFilters::loadAllMetadata()
@@ -483,7 +505,7 @@ void BuildFilters::mapUniqueInstances()
     totUniqueItems += x;
     uniqueItemCount[filters->catKeyword] = x;
 
-    qDebug() << "BuildFilters::mapUniqueInstances instances =" << uniqueItemCount;
+//    qDebug() << "BuildFilters::mapUniqueInstances instances =" << uniqueItemCount;
 
     // build filter item maps
 //    filters->addCategoryFromData(refineList, filters->refine);
@@ -501,15 +523,224 @@ void BuildFilters::mapUniqueInstances()
     filters->addCategoryFromData(creatorList, filters->creators);
 }
 
+void BuildFilters::countMapFiltered()
+{
+    QMap<QString,int> map;
+    QString method = "Map";
+//    buildFiltersTimer.restart();
+    int rows = dm->sf->rowCount();
+
+    // count unfiltered
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::PickColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->picks);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::RatingColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->ratings);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::LabelColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->labels);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::TypeColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->types);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::YearColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->years);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::DayColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->days);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::CameraModelColumn).data().toString()]++;
+    map.clear();
+    filters->addFilteredCountPerItem(map, filters->models);
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::LensColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->lenses);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::FocalLengthColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->focalLengths);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::TitleColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->titles);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::CreatorColumn).data().toString()]++;
+    filters->addFilteredCountPerItem(map, filters->creators);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) {
+        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        for (int i = 0; i < x.size(); i++) map[x.at(i)]++;
+    }
+    filters->addFilteredCountPerItem(map, filters->keywords);
+    map.clear();
+
+//    filters->disableColorZeroCountItems();
+//    filters->setCatFiltering();
+//    filters->filtersBuilt = true;
+//    filters->buildingFilters = false;
+//    filters->update();
+
+//    qDebug() << "BuildFilters::countMapUnfiltered"
+//             << buildFiltersTimer.elapsed() << "ms"
+//             << "Method:" << method
+//             << "Rows:" << dmRows
+//             << "Src:" << dm->currentFolderPath
+//                ;
+}
+
+void BuildFilters::updateCategory()
+{
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::updateCategory");
+    QMap<QString,int> map;
+    QTreeWidgetItem *cat = nullptr;
+    int col = 0;
+    switch (action) {
+    case PickEdit:
+        col = G::PickColumn;
+        cat = filters->picks;
+        break;
+    case RatingEdit:
+        col = G::RatingColumn;
+        cat = filters->ratings;
+        break;
+    case LabelEdit:
+        col = G::LabelColumn;
+        cat = filters->labels;
+        break;
+    case TitleEdit:
+        col = G::TitleColumn;
+        cat = filters->titles;
+        break;
+    case CreatorEdit:
+        col = G::CreatorColumn;
+        cat = filters->creators;
+        break;
+    case Reset: break; // not used, prevent compiler msg
+    }
+
+    for (int row = 0; row < dm->rowCount(); row++) map[dm->index(row, col).data().toString()]++;
+
+    // update filter list and unfiltered counts
+    filters->updateCategoryItems(map, cat);
+    map.clear();
+
+    // update filtered counts for category
+    for (int row = 0; row < dm->sf->rowCount(); row++) map[dm->sf->index(row, col).data().toString()]++;
+    filters->addFilteredCountPerItem(map, cat);
+}
+
+void BuildFilters::initializeUniqueItems()
+{
+    QMap<QString,int> map;
+    QString method = "Map";
+//    buildFiltersTimer.restart();
+    int rows = dm->rowCount();
+
+    // count unfiltered
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::PickColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->picks);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::RatingColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->ratings);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::LabelColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->labels);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::TypeColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->types);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::YearColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->years);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::DayColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->days);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::CameraModelColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->models);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::LensColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->lenses);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::FocalLengthColumn).data().toString()/*.rightJustified(4, ' ')*/]++;
+    filters->addCategoryItems(map, filters->focalLengths);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::TitleColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->titles);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::CreatorColumn).data().toString()]++;
+    filters->addCategoryItems(map, filters->creators);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) {
+        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        for (int i = 0; i < x.size(); i++) map[x.at(i)]++;
+    }
+    filters->addCategoryItems(map, filters->keywords);
+    map.clear();
+
+
+//    qDebug() << "BuildFilters::countMapUnfiltered"
+//             << buildFiltersTimer.elapsed() << "ms"
+//             << "Method:" << method
+//             << "Rows:" << dmRows
+//             << "Src:" << dm->currentFolderPath
+//                ;
+}
+
 void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::run"); mutex.unlock();}
 
     if (filters->filtersBuilt) return;
-    if (!abort) loadAllMetadata();
+
+    buildFiltersTimer.restart();
+
+    switch (action) {
+    case Reset:
+        if (!abort) loadAllMetadata();
+        if (!abort) initializeUniqueItems();
+        break;
+    case Update:
+        if (!abort) countMapFiltered();
+        break;
+    // category item edited
+    default:
+        updateCategory();
+    }
+
+    if (!abort) filters->disableEmptyCat();
+    done();
+
+    /* old code
     if (!abort) mapUniqueInstances();
-    if (!abort) countFiltered();
     if (!abort) countUnfiltered();
+    if (!abort) countFiltered();
     filters->disableEmptyCat();
     done();
+    */
+
+    qDebug() << "BuildFilters::run"
+             << buildFiltersTimer.elapsed() << "ms"
+             << "Rows:" << dmRows
+             << "Src:" << dm->currentFolderPath
+                ;
+
 }

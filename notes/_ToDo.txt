@@ -1,6 +1,9 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Toggle rating to none, not saved in xmp
+- When change mode from grid to loupe, the selected image may not be visible in thumbView
+- Jump to end while still loading metadata sometimes fails to cache last image
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
