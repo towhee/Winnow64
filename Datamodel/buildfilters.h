@@ -17,16 +17,30 @@ class BuildFilters : public QThread
 public:
     BuildFilters(QObject *parent, DataModel *dm, Metadata *metadata, Filters *filters,
                  bool &combineRawJpg);
+
+    enum Action {
+        Reset,
+        Update,
+        PickEdit,
+        RatingEdit,
+        LabelEdit,
+        TitleEdit,
+        CreatorEdit
+    } action;
+
     void stop();
     void done();
     void reset();
     void setAfterAction(QString afterAction);
     void loadAllMetadata();
+    void countMapFiltered();
+    void unfilteredItemSearchCount();
+    void categoryChanged(Action action);
+
     void mapUniqueInstances();
     void updateCountFiltered();
     void countFiltered();
     void countUnfiltered();
-    void unfilteredItemSearchCount();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -39,9 +53,12 @@ signals:
     void quickFilter();
 
 public slots:
-    void build();
+    void build(BuildFilters::Action action = Action::Reset);
 
 private:
+    void initializeUniqueItems();
+    void updateCategory();
+
     QMutex mutex;
     QWaitCondition condition;
     bool abort;

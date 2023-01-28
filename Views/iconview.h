@@ -33,6 +33,8 @@ public:
     int lastVisibleCell;
     int visibleCellCount;
 
+    bool thumbSplitDrag = false;
+
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
     bool isMouseModifier = false;       // for zoomCursor in MW::eventFilter
 
@@ -69,7 +71,7 @@ public:
     int getHorizontalScrollBarMax();
     int getVerticalScrollBarMax();
 
-     QItemSelectionModel *thumbViewSelection;
+    QItemSelectionModel *thumbViewSelection;
 
     bool scrollWhenReady;
 

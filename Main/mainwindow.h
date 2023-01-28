@@ -1066,7 +1066,6 @@ private:
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
-    bool thumbSplitDrag = false;
     bool ignoreDockResize;
     bool wasThumbDockVisible;
     bool workspaceChange;

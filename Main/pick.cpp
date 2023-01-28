@@ -50,8 +50,7 @@ void MW::togglePickUnlessRejected()
     updateStatus(true, "", "MW::togglePickUnlessRejected");
 
     // update filter counts
-    launchBuildFilters();
-//    buildFilters->updateCountFiltered();
+    buildFilters->build(BuildFilters::Action::PickEdit);
 }
 
 void MW::togglePickMouseOver()
@@ -78,7 +77,6 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
     pickStatus == "false" ? pickStatus = "Picked" : pickStatus = "Unpicked";
     emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
-//    dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
 
     updateClassification();
     thumbView->refreshThumbs();
@@ -88,8 +86,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     updateStatus(true, "", "MW::togglePickMouseOverItem");
 
     // update filter counts
-    launchBuildFilters();
-//    buildFilters->updateCountFiltered();
+    buildFilters->build(BuildFilters::Action::PickEdit);
 }
 
 void MW::togglePick()
@@ -150,8 +147,7 @@ void MW::togglePick()
     updateStatus(true, "", "MW::togglePick");
 
     // update filter counts
-    launchBuildFilters();
-//    buildFilters->updateCountFiltered();
+    buildFilters->build(BuildFilters::Action::PickEdit);
 
     // auto advance
     if (autoAdvance) sel->next();
@@ -264,8 +260,6 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         int row = dm->fPathRow[fPath];
         QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
         emit setValueSf(pickIdx, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);
-//        dm->sf->setData(pickIdx, status, Qt::EditRole);
-//        dm->sf->filterChange();
         thumbView->refreshThumbs();
         gridView->refreshThumbs();
 
@@ -273,8 +267,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         updateStatus(true, "", "MW::updatePickFromHistory");
 
         // update filter counts
-        launchBuildFilters();
-//        buildFilters->updateCountFiltered();
+        buildFilters->build(BuildFilters::Action::PickEdit);
     }
 }
 

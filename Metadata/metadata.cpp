@@ -1163,6 +1163,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     clearMetadata();
     p.instance = instance;
+    m.fPath = fPath;
+    m.currRootFolder = fileInfo.absoluteDir().absolutePath();
+    m.size = fileInfo.size();
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
@@ -1171,9 +1174,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     if (!hasMetadataFormats.contains(ext)) {
         bool parsedSidcar = false;
-        m.fPath = fPath;
-        m.currRootFolder = fileInfo.absoluteDir().absolutePath();
-        m.size = fileInfo.size();
         m.metadataLoaded = true;
 //        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {

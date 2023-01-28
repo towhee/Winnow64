@@ -6,6 +6,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
+#include "Datamodel/buildfilters.h"
 #include "Views/iconview.h"
 #include "Utilities/utilities.h"
 
@@ -89,6 +90,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void dataEdited();
+    void updateFilter(BuildFilters::Action action);
 
 public slots:
     void showOrHide();

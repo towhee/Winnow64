@@ -742,7 +742,8 @@ void MW::createInfoView()
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(metadataChanged(QStandardItem*)));
-
+    // update filters
+    connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::build);
 }
 
 void MW::createEmbel()
@@ -1065,7 +1066,7 @@ void MW::createFilterDock()
     BarBtn *updateFiltersBtn = new BarBtn();
     updateFiltersBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     updateFiltersBtn->setToolTip("Update filters");
-    connect(updateFiltersBtn, &BarBtn::clicked, buildFilters, &BuildFilters::build);
+//    connect(updateFiltersBtn, &BarBtn::clicked, buildFilters, &BuildFilters::build);
     filterTitleLayout->addWidget(updateFiltersBtn);
 
     // Spacer

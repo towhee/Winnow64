@@ -27,7 +27,6 @@ namespace G
         PathRole = Qt::UserRole + 1,    // path to image file
         IconRectRole,                   // used in IconView
         CachedRole,                     // used in ImageView, IconViewDelegate
-        CachingIconRole,
         DupIsJpgRole,                   // manage raw/jpg pairs
         DupOtherIdxRole,                // manage raw/jpg pairs
         DupHideRawRole,                 // manage raw/jpg pairs

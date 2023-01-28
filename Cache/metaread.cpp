@@ -45,7 +45,7 @@ MetaRead::MetaRead(QObject *parent,
     thumb = new Thumb(dm, metadata, frameDecoder);
     instance = 0;
     abort = false;
-//    debugCaching = true;
+    debugCaching = false;
 }
 
 MetaRead::~MetaRead()
