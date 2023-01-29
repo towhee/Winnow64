@@ -52,10 +52,15 @@ BuildFilters::BuildFilters(QObject *parent,
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
+    debugBuildFilters = true;
 }
 
 void BuildFilters::stop()
 {
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::"
+               ;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -77,14 +82,35 @@ void BuildFilters::stop()
     if (G::stop) emit stopped("BuildFilters");
 }
 
-void BuildFilters::setAfterAction(QString afterAction)
+/*void BuildFilters::setAfterAction(QString afterAction)
 {
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::setAfterAction"
+            << "afterAction =" << afterAction
+               ;
     this->afterAction = afterAction;
 }
+*/
 
 void BuildFilters::build(BuildFilters::Action action)
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::build"
+            << "action =" << action
+            << "filters visible =" << filters->isVisible()
+               ;
+    if (filters->isHidden()) {
+        if (action > Update) filtersBuilt = false;
+        action = Reset;
+        return;
+    }
+
+    // this may need a little work
+    if (action == Reset && filtersBuilt) return;
+
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -101,17 +127,28 @@ void BuildFilters::build(BuildFilters::Action action)
     start(NormalPriority);
 }
 
-void BuildFilters::categoryChanged(Action action)
+/*void BuildFilters::categoryChanged(Action action)
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::categoryChanged");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::categoryChanged"
+            << "action =" << action
+               ;
     this->action = action;
     start(NormalPriority);
 }
+*/
 
 void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::done");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::done"
+               ;
     isReset = false;
+    filtersBuilt = true;
     if (!abort) emit finishedBuildFilters();
     if (afterAction == "QuickFilter") emit quickFilter();
     afterAction = "";
@@ -122,9 +159,16 @@ void BuildFilters::done()
 void BuildFilters::reset()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::reset"
+               ;
     isReset = true;
+    filtersBuilt = false;
     action = Action::Reset;
     filters->catItemJustClicked = nullptr;
+    // clear all items for filters based on data content ie file types, camera model
+    filters->removeChildrenDynamicFilters();
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -170,7 +214,7 @@ void BuildFilters::unfilteredItemSearchCount()
     filters->searchFalse->setData(4, Qt::EditRole, QString::number(tot));
 }
 
-void BuildFilters::updateCountFiltered()
+/*void BuildFilters::updateCountFiltered()
 {
 //    countMapFiltered();
 //    return;
@@ -227,8 +271,9 @@ void BuildFilters::updateCountFiltered()
     filters->buildingFilters = false;
     filters->update();
 }
+*/
 
-void BuildFilters::countFiltered()
+/*void BuildFilters::countFiltered()
 {
 
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::countFiltered"); mutex.unlock();}
@@ -251,7 +296,6 @@ void BuildFilters::countFiltered()
                     }
                 }
                 else {
-                    /*
                     if (cat == "Picks")
                     qDebug() << "BuildFilters::countFiltered"  << cat
                              << "row = " << row
@@ -259,7 +303,6 @@ void BuildFilters::countFiltered()
                              << "dm val =" << dm->sf->index(row, col).data().toString()
                              << "searchValue =" << searchValue
                                 ;
-                                //*/
                     if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
                 }
             }
@@ -268,21 +311,16 @@ void BuildFilters::countFiltered()
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
         if (!(*it)->parent()) {
-            /*
-            qDebug() << "BuildFilters::countFiltered  cat =" << cat;
-            //*/
             if (uniqueItemCount.contains(cat)) {
                 int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
                 emit updateProgress(progress);
-                /*
                 qDebug() << "BuildFilters::countFiltered"
                          << cat
                          << "instances =" << instances[cat]
                          << "total instances =" << totInstances
                          << "itemProgress % =" << itemProgress
                          << "Progress % =" << progress;
-              //*/
             }
         }
         ++it;
@@ -290,8 +328,9 @@ void BuildFilters::countFiltered()
     filters->disableColorZeroCountItems();
     progress = 60;
 }
+*/
 
-void BuildFilters::countUnfiltered()
+/*void BuildFilters::countUnfiltered()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::countUnfiltered"); mutex.unlock();}
     QString method = "Brute force";
@@ -337,21 +376,16 @@ void BuildFilters::countUnfiltered()
         }
         // categories
         if (!(*it)->parent()) {
-            /*
-            qDebug() << "BuildFilters::countUnfiltered Category =" << cat;
-            //*/
             if (uniqueItemCount.contains(cat)) {
                 int itemProgress = 40 * uniqueItemCount[cat] / totUniqueItems;
                 progress += itemProgress;
                 emit updateProgress(progress);
-                /*
                 qDebug() << "BuildFilters::countUnfiltered"
                          << cat
                          << "instances =" << uniqueItemCount[cat]
                          << "total instances =" << totUniqueItems
                          << "itemProgress % =" << itemProgress
                          << "Progress % =" << progress;
-                         //*/
             }
         }
         ++it;
@@ -365,6 +399,7 @@ void BuildFilters::countUnfiltered()
 //             << "Src:" << dm->currentFolderPath
 //                ;
 }
+*/
 
 void BuildFilters::loadAllMetadata()
 {
@@ -373,6 +408,10 @@ void BuildFilters::loadAllMetadata()
 */
     QString src = "BuildFilters::loadAllMetadata";
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(src); mutex.unlock();}
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::loadAllMetadata"
+               ;
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -397,11 +436,8 @@ void BuildFilters::loadAllMetadata()
     progress = 20;
 }
 
-void BuildFilters::mapUniqueInstances()
+/*void BuildFilters::mapUniqueInstances()
 {
-/*
-
-*/
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::mapUniqueInstances"); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
     QStringList refineList;
@@ -522,12 +558,16 @@ void BuildFilters::mapUniqueInstances()
     filters->addCategoryFromData(keywordList, filters->keywords);
     filters->addCategoryFromData(creatorList, filters->creators);
 }
+*/
 
 void BuildFilters::countMapFiltered()
 {
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::countMapFiltered"
+               ;
     QMap<QString,int> map;
     QString method = "Map";
-//    buildFiltersTimer.restart();
     int rows = dm->sf->rowCount();
 
     // count unfiltered
@@ -556,14 +596,14 @@ void BuildFilters::countMapFiltered()
     map.clear();
 
     for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::CameraModelColumn).data().toString()]++;
-    map.clear();
     filters->addFilteredCountPerItem(map, filters->models);
+    map.clear();
 
     for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::LensColumn).data().toString()]++;
     filters->addFilteredCountPerItem(map, filters->lenses);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::FocalLengthColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::FocalLengthColumn).data().toString().rightJustified(4, ' ')]++;
     filters->addFilteredCountPerItem(map, filters->focalLengths);
     map.clear();
 
@@ -586,7 +626,7 @@ void BuildFilters::countMapFiltered()
 //    filters->setCatFiltering();
 //    filters->filtersBuilt = true;
 //    filters->buildingFilters = false;
-//    filters->update();
+    filters->update();
 
 //    qDebug() << "BuildFilters::countMapUnfiltered"
 //             << buildFiltersTimer.elapsed() << "ms"
@@ -599,6 +639,11 @@ void BuildFilters::countMapFiltered()
 void BuildFilters::updateCategory()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::updateCategory");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::updateCategory"
+            << "action =" << action
+               ;
     QMap<QString,int> map;
     QTreeWidgetItem *cat = nullptr;
     int col = 0;
@@ -639,6 +684,10 @@ void BuildFilters::updateCategory()
 
 void BuildFilters::initializeUniqueItems()
 {
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::initializeUniqueItems"
+               ;
     QMap<QString,int> map;
     QString method = "Map";
 //    buildFiltersTimer.restart();
@@ -677,7 +726,7 @@ void BuildFilters::initializeUniqueItems()
     filters->addCategoryItems(map, filters->lenses);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::FocalLengthColumn).data().toString()/*.rightJustified(4, ' ')*/]++;
+    for (int row = 0; row < rows; row++) map[dm->index(row, G::FocalLengthColumn).data().toString().rightJustified(4, ' ')]++;
     filters->addCategoryItems(map, filters->focalLengths);
     map.clear();
 
@@ -708,15 +757,21 @@ void BuildFilters::initializeUniqueItems()
 void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::run"); mutex.unlock();}
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::run"
+            << "action =" << action
+               ;
 
-    if (filters->filtersBuilt) return;
+//    if (filters->filtersBuilt) return;
 
     buildFiltersTimer.restart();
 
     switch (action) {
     case Reset:
         if (!abort) loadAllMetadata();
-        if (!abort) initializeUniqueItems();
+        if (!abort && !filtersBuilt) initializeUniqueItems();
+        if (!abort) countMapFiltered();
         break;
     case Update:
         if (!abort) countMapFiltered();

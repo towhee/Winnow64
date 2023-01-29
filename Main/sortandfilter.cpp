@@ -91,9 +91,7 @@ void MW::filterChange(QString source)
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    buildFilters->countMapFiltered();
-//    buildFilters->build();
-//    buildFilters->updateCountFiltered();
+    buildFilters->build(BuildFilters::Update);
 //    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
     // recover sort after filtration
@@ -150,7 +148,7 @@ void MW::quickFilter()
         quickFilterComplete();
     }
     else {
-        buildFilters->setAfterAction("QuickFilter");
+//        buildFilters->setAfterAction("QuickFilter");
         filterDock->setVisible(true);       // triggers launchBuildFilters()
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);

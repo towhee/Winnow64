@@ -64,6 +64,7 @@ public:
     void setCategoryBackground(const int &a, const int &b);
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
+    void setCategoryFilterStatus(QTreeWidgetItem *item);
     void disableColorZeroCountItems();
     void disableAllItems(bool disable);
     void disableColorAllHeaders(bool disable);
