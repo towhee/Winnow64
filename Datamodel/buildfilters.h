@@ -31,16 +31,16 @@ public:
     void stop();
     void done();
     void reset();
-    void setAfterAction(QString afterAction);
     void loadAllMetadata();
     void countMapFiltered();
     void unfilteredItemSearchCount();
-    void categoryChanged(Action action);
 
-    void mapUniqueInstances();
-    void updateCountFiltered();
-    void countFiltered();
-    void countUnfiltered();
+//    void categoryChanged(Action action);
+//    void setAfterAction(QString afterAction);
+//    void mapUniqueInstances();
+//    void updateCountFiltered();
+//    void countFiltered();
+//    void countUnfiltered();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -67,9 +67,13 @@ private:
     Filters *filters;
     QString afterAction = "";               // What to do when done
     bool &combineRawJpg;
+    bool filtersBuilt = false;
     bool isReset;                           // if true, reset the filter tree filters (new folder)
     int instance;                           // instance of the datamodel
     int dmRows = 0;                         // rows in datamodel (get once at start)
+
+    bool debugBuildFilters = false;
+
     // progress
     QMap <QString, int>uniqueItemCount;     // total unique items per category in filters
     int totUniqueItems;                     // total unique items in all categories in filters

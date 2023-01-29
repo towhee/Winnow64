@@ -181,9 +181,9 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                     dm->setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
 //                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
 //                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
-                    /*
-                    qDebug() << "InfoView::dataChanged"
-                             << "dm->currentRow =" << dm->currentRow
+//                    /*
+                    qDebug() << "InfoView::dataChanged Title"
+                             << "dm->currentRow =" << dm->currentSfRow
                              << "idx0.data() =" << idx0.data()
                              << "idx1.data() =" << idx1.data()
                              << "isEditable =" << isEditable
@@ -226,8 +226,9 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         }
 
         // update filters
-        if (field == "Title") emit updateFilter(BuildFilters::Action::TitleEdit);
-        if (field == "Creator") emit updateFilter(BuildFilters::Action::CreatorEdit);
+        qDebug() << "InfoView::dataChanged field =" << field;
+        if (field == "Title*") emit updateFilter(BuildFilters::Action::TitleEdit);
+        if (field == "Creator*") emit updateFilter(BuildFilters::Action::CreatorEdit);
     }
     count++;
     if (count > 1) count = 0;

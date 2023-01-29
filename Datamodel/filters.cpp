@@ -388,6 +388,22 @@ void Filters::setSearchNewFolder()
     searchTrue->setCheckState(0, Qt::Checked);
 }
 
+void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
+{
+    if (G::isLogger) G::log("Filters::setCategoryFilterStatus");
+    if (debugFilters)
+        qDebug() << "Filters::setCategoryFilterStatus"
+                    ;
+
+    // is this category filtering after itemCheckStateHasChanged
+    if (isCatFiltering(item->parent())) {
+        item->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
+    }
+    else {
+        item->parent()->setForeground(0, QBrush(G::textColor));
+    }
+}
+
 void Filters::disableColorZeroCountItems()
 {
     if (G::isLogger) G::log("Filters::disableColorZeroCountItems");
@@ -474,7 +490,7 @@ bool Filters::isAnyFilter()
 void Filters::setCatFiltering()
 {
 /*
-    Update all categories is filtering status
+    Update all categories 'is filtering' status
 */
     if (G::isLogger) G::log("Filters::setCatFiltering");
     if (debugFilters)
@@ -487,7 +503,7 @@ void Filters::setCatFiltering()
                 (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
         }
         else {
-//            (*it)->setForeground(0, QBrush(G::textColor));
+            (*it)->setForeground(0, QBrush(G::textColor));
         }
         ++it;
     }
@@ -1059,9 +1075,6 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     if (roles.contains(Qt::CheckStateRole)) {
         itemCheckStateHasChanged = true;
         QTreeWidget::dataChanged(topLeft, bottomRight, roles);
-//        if (G::allMetadataLoaded) {
-//            qDebug() << "" << topLeft << topLeft.data();
-//        }
         return;
     }
 
@@ -1158,13 +1171,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     }
 
     // is this category filtering after itemCheckStateHasChanged
-    QString cat = item->parent()->text(0);
-    if (isCatFiltering(item->parent())) {
-        item->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
-    }
-    else {
-        item->parent()->setForeground(0, QBrush(G::textColor));
-    }
+    setCategoryFilterStatus(item);
 
     catItemJustClicked = item->parent();
     emit filterChange("Filters::itemClickedSignal");
