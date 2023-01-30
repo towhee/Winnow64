@@ -90,7 +90,7 @@ signals:
 public slots:
 
     bool isAnyFilter();
-    void setCatFiltering();
+    void setEachCatTextColor();
     bool isCatFiltering(QTreeWidgetItem *item);
     void disableEmptyCat();
     void invertFilters();

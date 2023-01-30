@@ -170,7 +170,7 @@ void MW::quickFilterComplete()
     filters->checkLabel("Blue", filterBlueAction->isChecked());
     filters->checkLabel("Purple", filterPurpleAction->isChecked());
 
-    filters->setCatFiltering();
+    filters->setEachCatTextColor();
     filterChange("MW::quickFilter");
 }
 

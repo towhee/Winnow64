@@ -226,7 +226,6 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         }
 
         // update filters
-        qDebug() << "InfoView::dataChanged field =" << field;
         if (field == "Title*") emit updateFilter(BuildFilters::Action::TitleEdit);
         if (field == "Creator*") emit updateFilter(BuildFilters::Action::CreatorEdit);
     }

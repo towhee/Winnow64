@@ -487,7 +487,7 @@ bool Filters::isAnyFilter()
     return false;
 }
 
-void Filters::setCatFiltering()
+void Filters::setEachCatTextColor()
 {
 /*
     Update all categories 'is filtering' status
@@ -498,6 +498,47 @@ void Filters::setCatFiltering()
                     ;
     QTreeWidgetItemIterator it(this);
     while (*it) {
+        if (!(*it)->parent() && (*it) != search) {
+            if ((*it)->childCount() < 2)
+                (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
+            else if ((*it) == catItemJustClicked)
+                (*it)->setForeground(0, QBrush(Qt::darkGreen));
+            else {
+                bool isChecked = false;
+                for (int i = 0; i < (*it)->childCount(); i++) {
+                    if ((*it)->child(i)->checkState(0) == Qt::Checked) {
+                        isChecked = true;
+                        break;
+                    }
+                }
+                QColor colorToUse;
+                isChecked ? colorToUse = Qt::darkRed : colorToUse = G::textColor;
+                (*it)->setForeground(0, QBrush(colorToUse));
+             }
+        }
+        ++it;
+    }
+//    while (*it) {
+//        if ((*it)->parent() && (*it)->parent() != search) {
+//            if ((*it)->parent()->childCount() < 2)
+//                (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
+//            else {
+//                if ((*it)->checkState(0) == Qt::Checked) {
+//                    if ((*it)->parent() == catItemJustClicked)
+//                        (*it)->parent()->setForeground(0, QBrush(Qt::darkGreen));
+//                    else
+//                        (*it)->parent()->setForeground(0, QBrush(Qt::darkCyan));
+//                    //                    (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
+//                }
+//            }
+//        }
+//        else {
+//            (*it)->setForeground(0, QBrush(G::textColor));
+//        }
+//        ++it;
+//    }
+    /*
+    while (*it) {
         if ((*it)->parent() && (*it)->parent() != search) {
             if ((*it)->checkState(0) == Qt::Checked)
                 (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
@@ -507,6 +548,8 @@ void Filters::setCatFiltering()
         }
         ++it;
     }
+    */
+
     if (searchTrue->text(0) != enterSearchString) {
         if (searchTrue->checkState(0) == Qt::Checked)
             search->setForeground(0, QBrush(hdrIsFilteringColor));
@@ -1171,7 +1214,8 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     }
 
     // is this category filtering after itemCheckStateHasChanged
-    setCategoryFilterStatus(item);
+//    setCategoryFilterStatus(item);
+//    setCatFiltering();
 
     catItemJustClicked = item->parent();
     emit filterChange("Filters::itemClickedSignal");
