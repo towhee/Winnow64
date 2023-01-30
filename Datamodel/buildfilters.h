@@ -67,7 +67,7 @@ private:
     Filters *filters;
     QString afterAction = "";               // What to do when done
     bool &combineRawJpg;
-    bool filtersBuilt = false;
+//    bool filtersBuilt = false;
     bool isReset;                           // if true, reset the filter tree filters (new folder)
     int instance;                           // instance of the datamodel
     int dmRows = 0;                         // rows in datamodel (get once at start)

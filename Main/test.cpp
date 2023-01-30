@@ -122,7 +122,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->ratings->setForeground(0, QBrush(Qt::red));
+    qDebug() << filters->catItemJustClicked->text(0);
+    filters->setEachCatTextColor();
     return;
 
     QMediaMetaData mediaMetadata = videoView->video->mediaPlayer->metaData();

@@ -103,13 +103,13 @@ void BuildFilters::build(BuildFilters::Action action)
             << "filters visible =" << filters->isVisible()
                ;
     if (filters->isHidden()) {
-        if (action > Update) filtersBuilt = false;
+        if (action > Update) filters->filtersBuilt = false;
         action = Reset;
         return;
     }
 
     // this may need a little work
-    if (action == Reset && filtersBuilt) return;
+    if (action == Reset && filters->filtersBuilt) return;
 
     if (isRunning()) {
         mutex.lock();
@@ -148,7 +148,7 @@ void BuildFilters::done()
             << "BuildFilters::done"
                ;
     isReset = false;
-    filtersBuilt = true;
+    filters->filtersBuilt = true;
     if (!abort) emit finishedBuildFilters();
     if (afterAction == "QuickFilter") emit quickFilter();
     afterAction = "";
@@ -164,7 +164,7 @@ void BuildFilters::reset()
             << "BuildFilters::reset"
                ;
     isReset = true;
-    filtersBuilt = false;
+    filters->filtersBuilt = false;
     action = Action::Reset;
     filters->catItemJustClicked = nullptr;
     // clear all items for filters based on data content ie file types, camera model
@@ -770,7 +770,7 @@ void BuildFilters::run()
     switch (action) {
     case Reset:
         if (!abort) loadAllMetadata();
-        if (!abort && !filtersBuilt) initializeUniqueItems();
+        if (!abort && !filters->filtersBuilt) initializeUniqueItems();
         if (!abort) countMapFiltered();
         break;
     case Update:
@@ -781,7 +781,9 @@ void BuildFilters::run()
         updateCategory();
     }
 
-    if (!abort) filters->disableEmptyCat();
+//    if (!abort) filters->disableEmptyCat();
+    if (!abort) filters->setEachCatTextColor();
+
     done();
 
     /* old code
