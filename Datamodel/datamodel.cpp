@@ -7,8 +7,8 @@ image files, defined in the metadata class, are files Winnow knows how to decode
 
 The data is structured in columns:
 
-    ● Path:             from QFileInfoList  FilePathRole (absolutePath)
-                        from QFileInfoList  ToolTipRole
+    ● Path:             from QFileInfoList  G::PathRole (absolutePath)
+                        from QFileInfoList  Qt::ToolTipRole
                                             G::IconRectRole (icon)
                                             G::CachedRole
                                             G::CachingIcon
@@ -367,9 +367,25 @@ void DataModel::remove(QString fPath)
     }
 
     // remove from fPathRow hash
-    if (fPathRow.contains(fPath)) {
-        fPathRow.remove(fPath);
+    if (fPathRow.contains(fPath.toLower())) {
+        fPathRow.remove(fPath.toLower());
     }
+}
+
+bool DataModel::contains(QString &path)
+{
+    lastFunction = "";
+    if (G::isLogger) G::log("DataModel::contains");
+    if (isDebug)
+        qDebug() << "DataModel::contains" << "instance =" << instance << path;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (index(row, 0).data(G::PathRole).toString().toLower() == path.toLower()) {
+            // set to same case used by op system
+            path = index(row, 0).data(G::PathRole).toString();
+            return true;
+        }
+    }
+    return false;
 }
 
 void DataModel::find(QString text)
@@ -449,7 +465,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     if (isDebug) qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
-    filters->loadedDataModel(false);
+    filters->loadingDataModel(false);
     loadingModel = true;
 
     if (G::isLinearLoading) {
@@ -663,14 +679,14 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 //    qDebug() << "DataModel::addFileDataForRow" << row << fPath;
     QString ext = fileInfo.suffix().toLower();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
-    fPathRow[fPath] = row;
+    fPathRow[fPath.toLower()] = row;
 
     // string to hold aggregated text for searching
     QString search = fPath;
 
     mutex.lock();
     setData(index(row, G::PathColumn), fPath, G::PathRole);
-    QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
+    QString tip = QString::number(row) + ": " + fPath;  //fileInfo.absoluteFilePath();
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     setData(index(row, G::PathColumn), false, G::CachedRole);
@@ -715,8 +731,8 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     if (G::isLogger) G::log("DataModel::updateFileData");
 //    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
     QString fPath = fileInfo.filePath();
-    if (!fPathRow.contains(fPath)) return false;
-    int row = fPathRow[fPath];
+    if (!fPathRow.contains(fPath.toLower())) return false;
+    int row = fPathRow[fPath.toLower()];
     if (!index(row,0).isValid()) return false;
     mutex.lock();
     setData(index(row, G::SizeColumn), fileInfo.size());
@@ -745,7 +761,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int row = fPathRow[fPath];
+    int row = fPathRow[fPath.toLower()];
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
@@ -1317,7 +1333,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     }
     if (G::stop) return;
 //    qDebug() << "DataModel::setValuePath" << "Instance =" << instance << currentFolderPath;
-    QModelIndex dmIdx = index(fPathRow[fPath], col);
+    QModelIndex dmIdx = index(fPathRow[fPath.toLower()], col);
     if (!dmIdx.isValid()) {
         qWarning() << "WARNING" << "DataModel::setValuePath" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
@@ -1589,7 +1605,7 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
     G::allMetadataLoaded = isLoaded;
-    filters->loadedDataModel(isLoaded);
+    filters->loadingDataModel(isLoaded);
 }
 
 bool DataModel::isAllMetadataLoaded()
@@ -1607,7 +1623,7 @@ int DataModel::rowFromPath(QString fPath)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentFolderPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
-    if (fPathRow.contains(fPath)) return fPathRow[fPath];
+   if (fPathRow.contains(fPath.toLower())) return fPathRow[fPath.toLower()];
     else return -1;
 }
 
@@ -1619,7 +1635,7 @@ void DataModel::refreshRowFromPathHash()
     fPathRow.clear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
-        fPathRow[fPath] = row;
+        fPathRow[fPath.toLower()] = row;
     }
 }
 
@@ -1711,22 +1727,17 @@ void DataModel::searchStringChange(QString searchString)
 void DataModel::rebuildTypeFilter()
 {
 /*
-    When Raw+Jpg is toggled in the main program MW the file type filter must
-    be rebuilt.
+    When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::rebuildTypeFilter");
     if (isDebug) qDebug() << "DataModel::rebuildTypeFilter" << "instance =" << instance << currentFolderPath;
-    filters->types->takeChildren();
     QStringList typeList;
-    int rows = sf->rowCount();
-    for(int row = 0; row < rows; row++) {
-        QString type = sf->index(row, G::TypeColumn).data().toString();
-        if (!typeList.contains(type)) {
-            typeList.append(type);
-        }
+    QMap<QString,int> map;
+    for (int row = 0; row < rowCount(); row++) {
+        map[index(row, G::TypeColumn).data().toString()]++;
     }
-    filters->addCategoryFromData(typeList, filters->types);
+    filters->updateCategoryItems(map, filters->types);
 }
 
 //void DataModel::rebuildTypeFilter()
@@ -1759,12 +1770,12 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (isDebug) qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
                           << "fPath =" << fPath
                           << currentFolderPath;
-    if (!fPathRow.contains(fPath)) {
+    if (!fPathRow.contains(fPath.toLower())) {
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Not in fPathrow";
         if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
-    int dmRow = fPathRow[fPath];
+    int dmRow = fPathRow[fPath.toLower()];
     QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
     if (sfIdx.isValid()) {
         return sfIdx;

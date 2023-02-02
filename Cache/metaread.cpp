@@ -59,14 +59,17 @@ void MetaRead::setCurrentRow(int row, QString src)
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::start");
     if (debugCaching)
     {
-        qDebug() << "MetaRead::setCurrentRow" << row
+        qDebug() << "MetaRead::setCurrentRow"
+                 << "src =" << src
+                 << "row =" << row
                  << "isrunning" << isRunning();
     }
 
     this->src = src;
     mutex.lock();
     iconChunkSize = dm->iconChunkSize;
-    startRow = row;
+    if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
+    else startRow = 0;
     changeStartRowWhileRunning = isRunning();
     mutex.unlock();
     if (!isRunning()) {
@@ -123,7 +126,8 @@ void MetaRead::initialize()
     rowsWithIcon.clear();
     imageCachingStarted = false;
     instance = dm->instance;
-
+    dmRowCount = dm->rowCount();
+    metaReadCount = 0;
 }
 
 QString MetaRead::diagnostics()
@@ -255,6 +259,11 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
+    metaReadCount++;
+//    if (dmRowCount % metaReadCount == 0) {
+        int progress = 1.0 * metaReadCount / dmRowCount * 100;
+        emit updateProgress(progress);
+//    }
 
     if (debugCaching)
     {

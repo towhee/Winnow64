@@ -140,10 +140,6 @@ void MW::createDataModel()
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
 
-//    dm->iconChunkSize = 3000;
-
-    filters->totalColumnToUse(combineRawJpg);
-
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -278,6 +274,8 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+    // update filters metaread progress
+    connect(metaReadThread, &MetaRead::updateProgress, filters, &Filters::updateProgress);
     // pause waits until isRunning == false
     connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt/*, Qt::BlockingQueuedConnection*/);
 

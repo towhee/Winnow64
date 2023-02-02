@@ -179,7 +179,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     if (G::isSlideShow) {
         // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
-        int dmRow = dm->fPathRow[fPath];
+        int dmRow = dm->fPathRow[fPath.toLower()];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "ImageView::loadImage")) {
@@ -722,7 +722,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
     qDebug() << "ImageView::rotateByExifRotation" << imageFullPath;
 
     QTransform trans;
-    int row = dm->fPathRow[imageFullPath];
+    int row = dm->fPathRow[imageFullPath.toLower()];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
 //    int orientation = metadata->getOrientation(imageFullPath);
 

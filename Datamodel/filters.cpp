@@ -1,5 +1,17 @@
 #include "Datamodel/filters.h"
 
+/*
+    OVERVIEW
+
+    The Filters QTreeWidget is part of the filterDock - a window that includes:
+
+    • filterTitleBar with several buttons
+    • msgFrame with filterLabel and bfProgressBar
+    • filters (the tree showing all the filter criterea)
+
+    The filterDock is created in MW::createFilterDock in initialize.cpp
+*/
+
 class FiltersDelegate : public QStyledItemDelegate
 {
 public:
@@ -28,8 +40,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
         0   CheckBox filter item (includes name)
         1   The value to filter (hidden)
         2   The number of proxy rows containing the value
-        3   The number of datamodel rows containing the value combining Raw+Jpg
-        4   The number of datamodel rows containing the value
+        3   The number of datamodel rows containing the value
 
     The dynamic filter options are populated by DataModel on demand when the user filters
     or the filters dock has focus.
@@ -42,22 +53,36 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     header row labels are modified with an icon to replicate the decoration arrow
     heads.
 
+    When a criteria item checkbox is clicked:
+
+        • Signals MW::filterChange.
+        • Load all metadata if not already done.
+        • SortFilter::filterChange() triggers SortFilter::filterAcceptsRow for all rows
+          in the DataModel.
+        • Each DataModel row is compared to all the checked filter items from QTreeWidget,
+          updating the proxy model dm->sf.
+        • BuildFilters updates the filtered item counts in QTreeWidget.
+        • The proxy dm->sf is resorted.
+        • The status bar is updated.
+        • If dm->sf contains dm->currentDmIdx then scroll to it, else set to zero.
+        • Rebuild the image cache.
+        • Scroll to current.
+
 */
     if (G::isLogger) G::log("Filters::Filters");
     viewport()->setObjectName("FiltersViewport");
     setRootIsDecorated(false);
     setSelectionMode(QAbstractItemView::NoSelection);
-    setColumnCount(5);
+    setColumnCount(4);
 //    setHeaderHidden(true);
     setColumnWidth(0, 250); // chkBox + description
     setColumnWidth(1, 50);  // value to filter (hidden)
     setColumnWidth(2, 50);  // number of proxy rows containing the value (filtered)
-    setColumnWidth(3, 50);  // number of datamodel rows containing the value combining Raw+Jpg
-    setColumnWidth(4, 50);  // number of datamodel rows containing the value
+    setColumnWidth(3, 50);  // number of datamodel rows containing the value
 
     // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
-    QStringList hdrLabels = {"", "Value", "Filter", "All", "All"};
+    QStringList hdrLabels = {"", "Value", "Filter", "All"};
     this->setHeaderLabels(hdrLabels);
     /* how to add pixmap to a header
     model()->setHeaderData(0, Qt::Horizontal, QVariant::fromValue(QIcon(":/images/branch-closed-winnow.png")), Qt::DecorationRole);
@@ -124,17 +149,19 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     bfProgressBar = new QProgressBar;
     bfProgressBar->setFixedHeight(6);
     bfProgressBar->setTextVisible(false);
+    bfProgressBar->setMaximum(100);
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
-    debugFilters = true;
+    debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
 
 void Filters::createPredefinedFilters()
 {
-/* Predefined filters are edited by the user: Search, Picks, Ratings and Color Class.
+/*
+    Predefined filters are edited by the user: Search and refine.
 */
     if (G::isLogger) G::log("Filters::createPredefinedFilters");
     if (debugFilters)
@@ -241,7 +268,6 @@ void Filters::setCategoryBackground(QTreeWidgetItem *cat)
     cat->setBackground(0, categoryBackground);
     cat->setBackground(2, categoryBackground);
     cat->setBackground(3, categoryBackground);
-    cat->setBackground(4, categoryBackground);
 }
 
 void Filters::setCategoryBackground(const int &a, const int &b)
@@ -300,6 +326,9 @@ void Filters::removeChildrenDynamicFilters()
 
 void Filters::checkPicks()
 {
+/*
+    Filter picks by setting 'Picked' true.
+*/
     if (G::isLogger) G::log("Filters::checkPicks");
     if (debugFilters)
         qDebug() << "Filters::checkPicks"
@@ -312,6 +341,9 @@ void Filters::checkPicks()
 
 void Filters::checkRating(QString rating, bool isChecked)
 {
+/*
+    Filter rating by setting the rating true.
+*/
     if (G::isLogger) G::log("Filters::checkRating");
     if (debugFilters)
         qDebug() << "Filters::checkRating"
@@ -329,6 +361,9 @@ void Filters::checkRating(QString rating, bool isChecked)
 
 void Filters::checkLabel(QString label, bool isChecked)
 {
+/*
+    Filter label by setting the rating true.
+*/
     if (G::isLogger) G::log("Filters::checkRating");
     if (debugFilters)
         qDebug() << "Filters::checkLabel"
@@ -378,6 +413,24 @@ bool Filters::isLabelChecked(QString label)
     return false;
 }
 
+bool Filters::isOnlyMostRecentDayChecked()
+{
+/*
+    This is used to sync MW filters menu check state with Filters panel (here)
+*/
+    if (G::isLogger) G::log("Filters::isOnlyMostRecentDayChecked");
+    if (debugFilters)
+        qDebug() << "Filters::isOnlyMostRecentDayChecked"
+                    ;
+    int n = days->childCount();
+    for (int i = 0; i < n; i++) {
+        bool isChecked = days->child(i)->checkState(0);
+        if ((i < n - 1) && isChecked) return false;
+         if (i == n - 1) return isChecked;
+    }
+    return false;
+}
+
 void Filters::setSearchNewFolder()
 {
     if (G::isLogger) G::log("Filters::setSearchNewFolder");
@@ -390,6 +443,7 @@ void Filters::setSearchNewFolder()
 
 void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
 {
+    // used?
     if (G::isLogger) G::log("Filters::setCategoryFilterStatus");
     if (debugFilters)
         qDebug() << "Filters::setCategoryFilterStatus"
@@ -406,6 +460,7 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
 
 void Filters::disableColorZeroCountItems()
 {
+    // used?
     if (G::isLogger) G::log("Filters::disableColorZeroCountItems");
     if (debugFilters)
         qDebug() << "Filters::disableColorZeroCountItems"
@@ -413,7 +468,7 @@ void Filters::disableColorZeroCountItems()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent() && (*it)->parent()->text(0) != " Search") {
+        if ((*it)->parent() && (*it)->parent() != search) {
            if ((*it)->text(2) == "0") (*it)->setForeground(0, QBrush(G::disabledColor));
             else (*it)->setForeground(0, QBrush(G::textColor));
         }
@@ -423,6 +478,7 @@ void Filters::disableColorZeroCountItems()
 
 void Filters::disableAllItems(bool disable)
 {
+    // not used
     if (G::isLogger) G::log("Filters::disableAllItems");
     if (debugFilters)
         qDebug() << "Filters::disableAllItems"
@@ -444,7 +500,7 @@ void Filters::disableColorAllHeaders(bool disable)
                     ;
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if (!(*it)->parent()) {
+        if (!(*it)->parent() && (*it) != search) {
             if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
             else (*it)->setForeground(0, QBrush(G::textColor));
         }
@@ -459,6 +515,13 @@ void Filters::updateProgress(int progress)
         qDebug() << "Filters::updateProgress"
                     ;
     bfProgressBar->setValue(progress);
+//    if (progress < 0) {
+//        setHeaderLabel("");
+//        return;
+//    }
+//    QString s = "Updating filter: " + QString::number((int)progress) + "%";
+//    qDebug() << "Filters::updateProgress" << s;
+//    setHeaderLabel(s);
 }
 
 void Filters::setProgressBarStyle()
@@ -518,37 +581,6 @@ void Filters::setEachCatTextColor()
         }
         ++it;
     }
-//    while (*it) {
-//        if ((*it)->parent() && (*it)->parent() != search) {
-//            if ((*it)->parent()->childCount() < 2)
-//                (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
-//            else {
-//                if ((*it)->checkState(0) == Qt::Checked) {
-//                    if ((*it)->parent() == catItemJustClicked)
-//                        (*it)->parent()->setForeground(0, QBrush(Qt::darkGreen));
-//                    else
-//                        (*it)->parent()->setForeground(0, QBrush(Qt::darkCyan));
-//                    //                    (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
-//                }
-//            }
-//        }
-//        else {
-//            (*it)->setForeground(0, QBrush(G::textColor));
-//        }
-//        ++it;
-//    }
-    /*
-    while (*it) {
-        if ((*it)->parent() && (*it)->parent() != search) {
-            if ((*it)->checkState(0) == Qt::Checked)
-                (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
-        }
-        else {
-            (*it)->setForeground(0, QBrush(G::textColor));
-        }
-        ++it;
-    }
-    */
 
     if (searchTrue->text(0) != enterSearchString) {
         if (searchTrue->checkState(0) == Qt::Checked)
@@ -594,6 +626,7 @@ void Filters::disableEmptyCat()
 /*
 
 */
+    // used?
     if (G::isLogger) G::log("Filters::isCatEmpty");
     if (debugFilters)
         qDebug() << "Filters::disableEmptyCat"
@@ -601,7 +634,7 @@ void Filters::disableEmptyCat()
     QTreeWidgetItemIterator it(this);
     while (*it) {
         // categories
-        if (!(*it)->parent()/* && (*it)->parent() != catJustFiltered*/) {
+        if (!(*it)->parent() && (*it) != search) {
 //            qDebug() << (*it)->text(0) << (*it)->childCount();
             if ((*it)->childCount() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
@@ -611,24 +644,6 @@ void Filters::disableEmptyCat()
         }
         ++it;
     }
-}
-
-bool Filters::isOnlyMostRecentDayChecked()
-{
-/*
-    This is used to sync MW filters menu chech state with Filters panel (here)
-*/
-    if (G::isLogger) G::log("Filters::isOnlyMostRecentDayChecked");
-    if (debugFilters)
-        qDebug() << "Filters::isOnlyMostRecentDayChecked"
-                    ;
-    int n = days->childCount();
-    for (int i = 0; i < n; i++) {
-        bool isChecked = days->child(i)->checkState(0);
-        if ((i < n - 1) && isChecked) return false;
-         if (i == n - 1) return isChecked;
-    }
-    return false;
 }
 
 void Filters::invertFilters()
@@ -688,11 +703,11 @@ void Filters::invertFilters()
     // emit filterChange();  // this is done in MW::invertFilters - which calls this function
 }
 
-void Filters::loadedDataModel(bool isLoaded)
+void Filters::loadingDataModel(bool isLoaded)
 {
-    if (G::isLogger) G::log("Filters::loadedDataModel");
+    if (G::isLogger) G::log("Filters::loadingDataModel");
     if (debugFilters)
-        qDebug() << "Filters::loadedDataModel"
+        qDebug() << "Filters::loadingDataModel"
                     ;
     if (isLoaded) {
         msgFrame->setVisible(false);
@@ -719,12 +734,13 @@ void Filters::startBuildFilters(bool isReset)
     if (isReset) removeChildrenDynamicFilters();
     filtersBuilt = false;
     buildingFilters = true;
-    // move to title row
-//    msgFrame->setVisible(true);
-//    filterLabel->setText(buildingFiltersMsg);
-//    filterLabel->setVisible(true);
-//    setProgressBarStyle();
-//    bfProgressBar->setVisible(true);
+    if (!G::allMetadataLoaded) {
+        msgFrame->setVisible(true);
+        filterLabel->setText(buildingFiltersMsg);
+        filterLabel->setVisible(true);
+//        setProgressBarStyle();
+        bfProgressBar->setVisible(true);
+    }
     if (isReset) collapseAll();
     setEnabled(false);
 }
@@ -777,6 +793,10 @@ void Filters::clearAll()
 
 bool Filters::otherHdrExpanded(QModelIndex thisIdx)
 {
+/*
+    Determines if there is another category expanded in the tree.  This is used to
+    control solo mode in mousePressEvent.
+*/
     if (G::isLogger || G::isFlowLogger) G::log("Filters::otherHdrExpanded");
     if (debugFilters)
         qDebug() << "Filters::otherHdrExpanded"
@@ -787,20 +807,13 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
         if (isExpanded(idx)) return true;
     }
     return false;
-//    QTreeWidgetItemIterator it(this);
-//    while (*it) {
-//        if (!(*it)->parent()) {
-//            (*it)->setCheckState(0, Qt::Unchecked);
-//            (*it)->setData(2, Qt::EditRole, "");
-//            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-//            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-//        }
-//        ++it;
-//    }
 }
 
 void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state)
 {
+/*
+    Iterates the category to find the item and sets the item checkbox to state (true or false)
+*/
     if (G::isLogger) G::log("Filters::checkItem");
     if (debugFilters)
         qDebug() << "Filters::checkItem"
@@ -814,9 +827,6 @@ void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState s
             item->setCheckState(0, state);
             emit filterChange("Filters::checkItem");
         }
-//        qDebug() << "Filters::checkItem"
-//                 << "item =" << item->data(0, Qt::DisplayRole)
-//                    ;
     }
 }
 
@@ -845,26 +855,26 @@ void Filters::uncheckAllFilters()
     setSearchNewFolder();
 }
 
-void Filters::uncheckTypesFilters()
-{
-/*
-    Uncheck types.  This is required when raw + jpg are either combined or not combined.
-*/
-    if (G::isLogger) G::log("Filters::uncheckTypesFilters");
-    if (debugFilters)
-        qDebug() << "Filters::uncheckTypesFilters"
-                    ;
-    QTreeWidgetItemIterator it(this);
-    while (*it) {
-        if ((*it)->parent() == types) {
-            (*it)->setCheckState(0, Qt::Unchecked);
-            (*it)->setData(2, Qt::EditRole, "");
-            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-        }
-        ++it;
-    }
-}
+//void Filters::uncheckTypesFilters()  // not used
+//{
+///*
+//    Uncheck types.  This is required when raw + jpg are either combined or not combined.
+//*/
+//    if (G::isLogger) G::log("Filters::uncheckTypesFilters");
+//    if (debugFilters)
+//        qDebug() << "Filters::uncheckTypesFilters"
+//                    ;
+//    QTreeWidgetItemIterator it(this);
+//    while (*it) {
+//        if ((*it)->parent() == types) {
+//            (*it)->setCheckState(0, Qt::Unchecked);
+//            (*it)->setData(2, Qt::EditRole, "");
+//            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+//            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+//        }
+//        ++it;
+//    }
+//}
 
 void Filters::expandAllFilters()
 {
@@ -901,63 +911,63 @@ void Filters::toggleExpansion()
         }
         ++it;
     }
-//    if (isExpanded) collapseAll();
-//    else expandAll();
+    if (isExpanded) collapseAll();
+    else expandAll();
 //    qDebug() << "Filters::toggleExpansion" << "isExpanded =" << isExpanded;
 }
 
-void Filters::addCategoryFromData(QStringList itemList, QTreeWidgetItem *category)
-{
-/*
-    All the unique values for a category are collected into a QMap object in
-    BuildFilters. The list is passed here, where unique values are extracted and added to
-    the category. For example, there could be multiple file types in the folder like JPG
-    and NEF. A QMap object is used so the items can be sorted by key in the same order as
-    the tableView. This function should only be used for dynamic categories - see
-    createDynamicFilters;
+//void Filters::updateCategoryItems(QStringList itemList, QTreeWidgetItem *category)
+//{
+///*
+//    All the unique values for a category are collected into a QList object in
+//    BuildFilters. The list is passed here, where unique values are extracted and added to
+//    the category. For example, there could be multiple file types in the folder like JPG
+//    and NEF. A QMap object is used so the items can be sorted by key in the same order as
+//    the tableView. This function should only be used for dynamic categories - see
+//    createDynamicFilters;
 
-    If a category item was just checked (cjf) then it is ignored, as the user may want
-    to check another item in the same category.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryFromData", category->text(0));
-    if (debugFilters)
-        qDebug() << "Filters::addCategoryFromData"
-                 << "category =" << category->text(0)
-                    ;
-    if (catItemJustClicked == category) return;
-    if (itemList.size() < 2) return;
-//    itemList.sort();
+//    If a category item was just checked (cjf) then it is ignored, as the user may want
+//    to check another item in the same category.
+//*/
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::updateCategoryItems", category->text(0));
+//    if (debugFilters)
+//        qDebug() << "Filters::updateCategoryItems"
+//                 << "category =" << category->text(0)
+//                    ;
+//    if (catItemJustClicked == category) return;
+//    if (itemList.size() < 2) return;
+////    itemList.sort();
 
-    // iterate existing category items in filters
-    if (category->childCount()) {
-        for (int i = category->childCount() - 1; i >= 0 ; i--) {
-            QString s = category->child(i)->text(0);
-            // remove from unique itemList
-            if (itemList.contains(s)) {
-                itemList.remove(itemList.indexOf(s));
-            }
-            // remove from filter tree unless checked item
-            else {
-                if (category->child(i)->checkState(0) == Qt::Unchecked) {
-                    category->removeChild(category->child(i));
-                }
-            }
-        }
-    }
+//    // iterate existing category items in filters
+//    if (category->childCount()) {
+//        for (int i = category->childCount() - 1; i >= 0 ; i--) {
+//            QString s = category->child(i)->text(0);
+//            // remove from unique itemList
+//            if (itemList.contains(s)) {
+//                itemList.remove(itemList.indexOf(s));
+//            }
+//            // remove from filter tree unless checked item
+//            else {
+//                if (category->child(i)->checkState(0) == Qt::Unchecked) {
+//                    category->removeChild(category->child(i));
+//                }
+//            }
+//        }
+//    }
 
-    // add all remaining items in unique itemList to filter tree
-    QTreeWidgetItem *item;
-    for (int i = 0; i < itemList.count(); i++) {
-        QString s = itemList.at(i);
-        item = new QTreeWidgetItem(category);
-        item->setText(0, s);
-        item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, s);
-    }
+//    // add all remaining items in unique itemList to filter tree
+//    QTreeWidgetItem *item;
+//    for (int i = 0; i < itemList.count(); i++) {
+//        QString s = itemList.at(i);
+//        item = new QTreeWidgetItem(category);
+//        item->setText(0, s);
+//        item->setCheckState(0, Qt::Unchecked);
+//        item->setData(1, Qt::EditRole, s);
+//    }
 
-    // sort the result
-    category->sortChildren(0, Qt::AscendingOrder);
-}
+//    // sort the result
+//    category->sortChildren(0, Qt::AscendingOrder);
+//}
 
 void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
@@ -1017,7 +1027,7 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
-    /*
+/*
     All the unique values for a category are collected into a QMap object in
     BuildFilters. The list is passed here, where unique values are extracted and added to
     the category. For example, there could be multiple file types in the folder like JPG
@@ -1057,7 +1067,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
 
 void Filters::addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
-    /*
+/*
     All the unique values for a category are collected into a QMap object in
     BuildFilters. The list is passed here, where unique values are extracted and added to
     the category. For example, there could be multiple file types in the folder like JPG
@@ -1074,7 +1084,12 @@ void Filters::addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetIte
                  << "category =" << category->text(0)
                     ;
 //    qDebug() << "Filters::addFilteredCountPerItem  Category =" << category->text(0);
-    if (catItemJustClicked == category) return;
+    if (catItemJustClicked == category) {
+        // only ignore if there is at least one checked item
+        for (int i = 0; i < category->childCount(); i++) {
+            if (category->child(i)->checkState(0) == Qt::Checked) return;
+        }
+    }
 
     for (int i = 0; i < category->childCount(); i++) {
         category->child(i)->setData(2, Qt::EditRole, 0);
@@ -1213,10 +1228,6 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         }
     }
 
-    // is this category filtering after itemCheckStateHasChanged
-//    setCategoryFilterStatus(item);
-//    setCatFiltering();
-
     catItemJustClicked = item->parent();
     emit filterChange("Filters::itemClickedSignal");
 }
@@ -1227,28 +1238,10 @@ void Filters::setSoloMode(bool isSolo)
     this->isSolo = isSolo;
 }
 
-void Filters::totalColumnToUse(bool combineRawJpg)
-{
-    if (G::isLogger) G::log("Filters::totalColumnToUse");
-    this->combineRawJpg = combineRawJpg;
-}
-
 void Filters::resizeColumns()
 {
     if (G::isLogger) G::log("Filters::resizeColumns");
     hideColumn(1);
-//    hideColumn(3);
-    int totCol;
-    if (combineRawJpg) {
-        hideColumn(4);
-        showColumn(3);
-        totCol = 3;
-    }
-    else {
-        hideColumn(3);
-        showColumn(4);
-        totCol = 4;
-    }
     QFont font = this->font();
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
@@ -1257,7 +1250,7 @@ void Filters::resizeColumns()
     int countFilteredColumnWidth = fm.boundingRect("-99999-").width();
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;
-    setColumnWidth(totCol, countColumnWidth);
+    setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
 }

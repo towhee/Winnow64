@@ -256,8 +256,8 @@ void MW::popPick()
 void MW::updatePickFromHistory(QString fPath, QString status)
 {
     if (G::isLogger) G::log("MW::updatePickFromHistory");
-    if (dm->fPathRow.contains(fPath)) {
-        int row = dm->fPathRow[fPath];
+    if (dm->fPathRow.contains(fPath.toLower())) {
+        int row = dm->fPathRow[fPath.toLower()];
         QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
         emit setValueSf(pickIdx, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);
         thumbView->refreshThumbs();

@@ -109,33 +109,16 @@ void MW::filterChange(QString source)
         return;
     }
 
-    // get the current selected item if it has not been filtered, else = 0 row
-    QModelIndex oldSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    if (oldSfIdx.isValid()) dm->currentSfRow = oldSfIdx.row();
-    else dm->currentSfRow = 0;
-    // check if still in filtered set, if not select first item in filtered set
-    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-    sel->select(dm->currentSfRow);
-    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-    // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
-    // also update datamodel, used in MdCache
-    dm->currentFilePath = fPath;
-
-    updateStatus(true, "", "MW::filterChange");
-
-    // sync image cache with datamodel filtered proxy dm->sf
-    imageCacheThread->rebuildImageCacheParameters(fPath, "MW::filterChange");
+    // Is the DataModel current index still in the filter.  If not, set to zero
+    QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    if (!newSfIdx.isValid()) {
+        newSfIdx = dm->sf->index(0,0);
+    }
+    bool clearSelection = true;
+    dm->currentSfIdx = QModelIndex();   // allow fileSelectionChange()
+    fileSelectionChange(newSfIdx, QModelIndex(), clearSelection,  "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
-
-    qDebug() << "MW::filterChange" << "Calling fileSelectionChange";
-    fileSelectionChange(idx, idx, true, "MW::filterChange");
-    source = "";    // suppress compiler warning
-
-    // force refresh thumbnails
-    thumbHasScrolled();
 }
 
 void MW::quickFilter()
@@ -651,6 +634,9 @@ void MW::setRating()
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
+            // update _Rating (used to check what metadata has changed in metadata->writeXMP)
+            QModelIndex _ratingIdx = dm->sf->index(row, G::_RatingColumn);
+            emit setValueSf(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }
@@ -774,9 +760,10 @@ void MW::setColorClass()
             isAlreadyLabel = false;
         }
     }
-    if(isAlreadyLabel) colorClass = "";     // invert the label
+    if (isAlreadyLabel) colorClass = "";     // invert the label
 
     int n = selection.count();
+
     if (G::useSidecar) {
         G::popUp->setProgressVisible(true);
         G::popUp->setProgressMax(n + 1);
@@ -798,7 +785,7 @@ void MW::setColorClass()
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
             // is this part of a raw+jpg pair
-            if(idx.data(G::DupIsJpgRole).toBool()) {
+            if (idx.data(G::DupIsJpgRole).toBool()) {
                 // set color class (label) for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
@@ -814,6 +801,9 @@ void MW::setColorClass()
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+            // update _Label (used to check what metadata has changed in metadata->writeXMP)
+            QModelIndex _labelIdx = dm->sf->index(row, G::_LabelColumn);
+            emit setValueSf(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }

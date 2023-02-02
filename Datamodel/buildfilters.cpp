@@ -53,6 +53,7 @@ BuildFilters::BuildFilters(QObject *parent,
     this->metadata = metadata;
     this->filters = filters;
     debugBuildFilters = true;
+    reportTime = true;
 }
 
 void BuildFilters::stop()
@@ -73,7 +74,7 @@ void BuildFilters::stop()
         filters->filtersBuilt = false;
         filters->buildingFilters = false;
         filters->filterLabel->setVisible(false);
-        filters->bfProgressBar->setVisible(false);
+//        filters->bfProgressBar->setVisible(false);
         filters->disableColorZeroCountItems();
         filters->setEnabled(true);
         filters->collapseAll();
@@ -102,13 +103,14 @@ void BuildFilters::build(BuildFilters::Action action)
             << "action =" << action
             << "filters visible =" << filters->isVisible()
                ;
+    // defer update if filters is hidden
     if (filters->isHidden()) {
         if (action > Update) filters->filtersBuilt = false;
         action = Reset;
         return;
     }
 
-    // this may need a little work
+    // ignore if filters are up-to-date
     if (action == Reset && filters->filtersBuilt) return;
 
     if (isRunning()) {
@@ -124,21 +126,8 @@ void BuildFilters::build(BuildFilters::Action action)
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
-    start(NormalPriority);
+    if (G::allMetadataLoaded) start(NormalPriority);
 }
-
-/*void BuildFilters::categoryChanged(Action action)
-{
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::categoryChanged");
-    if (debugBuildFilters)
-        qDebug()
-            << "BuildFilters::categoryChanged"
-            << "action =" << action
-               ;
-    this->action = action;
-    start(NormalPriority);
-}
-*/
 
 void BuildFilters::done()
 {
@@ -149,6 +138,7 @@ void BuildFilters::done()
                ;
     isReset = false;
     filters->filtersBuilt = true;
+    emit updateProgress(-1);        // clear progress msg
     if (!abort) emit finishedBuildFilters();
     if (afterAction == "QuickFilter") emit quickFilter();
     afterAction = "";
@@ -412,7 +402,9 @@ void BuildFilters::loadAllMetadata()
         qDebug()
             << "BuildFilters::loadAllMetadata"
                ;
+
     if (!G::allMetadataLoaded) {
+        filters->bfProgressBar->setVisible(true);
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
             dm->mutex.lock();
@@ -424,16 +416,17 @@ void BuildFilters::loadAllMetadata()
                 metadata->m.row = row;
                 metadata->m.instance = instance;
                 emit addToDatamodel(metadata->m, "BuildFilters::loadAllMetadata");
-                if (row % 100 == 0 || row == 0) {
-                    progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
-                    emit updateProgress(progress);
-                }
             }
             dm->mutex.unlock();
+            if (row % 100 == 0 || row == 0) {
+                progress = 100.0 * row / dmRows;
+                emit updateProgress(progress);
+            }
         }
         G::allMetadataLoaded = true;
+        filters->bfProgressBar->setVisible(false);
     }
-    progress = 20;
+    progress = 0;
 }
 
 /*void BuildFilters::mapUniqueInstances()
@@ -571,53 +564,64 @@ void BuildFilters::countMapFiltered()
     int rows = dm->sf->rowCount();
 
     // count unfiltered
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::PickColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::PickColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->picks);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::RatingColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->ratings);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::LabelColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::LabelColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->labels);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::TypeColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::TypeColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->types);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::YearColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::YearColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->years);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::DayColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::DayColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->days);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::CameraModelColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->models);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::LensColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::LensColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->lenses);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::FocalLengthColumn).data().toString().rightJustified(4, ' ')]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
     filters->addFilteredCountPerItem(map, filters->focalLengths);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::TitleColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::TitleColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->titles);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->sf->index(row, G::CreatorColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::CreatorColumn).data().toString().trimmed()]++;
     filters->addFilteredCountPerItem(map, filters->creators);
     map.clear();
 
     for (int row = 0; row < rows; row++) {
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
-        for (int i = 0; i < x.size(); i++) map[x.at(i)]++;
+        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->addFilteredCountPerItem(map, filters->keywords);
     map.clear();
@@ -684,65 +688,103 @@ void BuildFilters::updateCategory()
 
 void BuildFilters::initializeUniqueItems()
 {
+/*
+    After a new folder, when the filter panel becomes visible, the unfiltered DataModel
+    filter items and counts are generated here.
+*/
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::initializeUniqueItems"
                ;
     QMap<QString,int> map;
-    QString method = "Map";
-//    buildFiltersTimer.restart();
     int rows = dm->rowCount();
+    double progressInc = 8.5;
 
     // count unfiltered
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::PickColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->picks);
+    time("Initialize picks");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::RatingColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->ratings);
+    time("Initialize ratings");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::LabelColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->labels);
+    time("Initialize labels");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::TypeColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->types);
+    time("Initialize types");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::YearColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->years);
+    time("Initialize years");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::DayColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->days);
+    time("Initialize days");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::CameraModelColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->models);
+    time("Initialize models");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::LensColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->lenses);
+    time("Initialize lenses");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::FocalLengthColumn).data().toString().rightJustified(4, ' ')]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
     filters->addCategoryItems(map, filters->focalLengths);
+    time("Initialize focallengths");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::TitleColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->titles);
+    time("Initialize titles");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
-    for (int row = 0; row < rows; row++) map[dm->index(row, G::CreatorColumn).data().toString()]++;
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->creators);
+    time("Initialize creators");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
     for (int row = 0; row < rows; row++) {
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
-        for (int i = 0; i < x.size(); i++) map[x.at(i)]++;
+        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->addCategoryItems(map, filters->keywords);
+    time("Initialize keywords");
+    emit updateProgress(progress += progressInc);
     map.clear();
 
 
@@ -752,6 +794,20 @@ void BuildFilters::initializeUniqueItems()
 //             << "Rows:" << dmRows
 //             << "Src:" << dm->currentFolderPath
 //                ;
+}
+
+void BuildFilters::time(QString msg)
+{
+    if (!reportTime) return;
+    int ms = buildFiltersTimer.elapsed();
+    totms += ms;
+    msg.resize(25, ' ');
+    qDebug() << "BuildFilters::time"
+             << msg
+             << ms << "ms"
+             << totms << "total ms so far"
+                ;
+    buildFiltersTimer.restart();
 }
 
 void BuildFilters::run()
@@ -765,11 +821,14 @@ void BuildFilters::run()
 
 //    if (filters->filtersBuilt) return;
 
-    buildFiltersTimer.restart();
+    if (reportTime) {
+        totms = 0;
+        buildFiltersTimer.restart();
+    }
 
     switch (action) {
     case Reset:
-        if (!abort) loadAllMetadata();
+//        if (!abort) loadAllMetadata();
         if (!abort && !filters->filtersBuilt) initializeUniqueItems();
         if (!abort) countMapFiltered();
         break;
@@ -786,18 +845,10 @@ void BuildFilters::run()
 
     done();
 
-    /* old code
-    if (!abort) mapUniqueInstances();
-    if (!abort) countUnfiltered();
-    if (!abort) countFiltered();
-    filters->disableEmptyCat();
-    done();
-    */
-
-    qDebug() << "BuildFilters::run"
-             << buildFiltersTimer.elapsed() << "ms"
-             << "Rows:" << dmRows
-             << "Src:" << dm->currentFolderPath
-                ;
+//    qDebug() << "BuildFilters::run"
+//             << buildFiltersTimer.elapsed() << "ms"
+//             << "Rows:" << dmRows
+//             << "Src:" << dm->currentFolderPath
+//                ;
 
 }

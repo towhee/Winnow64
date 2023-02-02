@@ -56,7 +56,7 @@ void BarBtn::setIcon(const QIcon &icon)
 //}
 
 /* DockTitleBar *******************************************************************************
-This replaces the QDockWidget titlebar, enabling the placement of tool buttons.
+    This replaces the QDockWidget titlebar, enabling the placement of tool buttons.
 */
 
 QSize DockTitleBar::sizeHint() const
