@@ -1,8 +1,12 @@
 WHAT'S NEW
+- 769 how to iterate all categories
 
 BUGS / TO DO
-- Resolve filters->filtersBuilt vs buildFilters->filtersBuilt
-- Toggle rating to none, not saved in xmp
+- Occasionally Winnow starts as small window on main monitor
+- Figure out how to update filtered item counts in catItemJustClicked
+- Check invertFilters
+= BuildFilters::build isReset
+- Build filters progress
 - When change mode from grid to loupe, the selected image may not be visible in thumbView
 - Jump to end while still loading metadata sometimes fails to cache last image
 - Fast video thumbnail generation
@@ -78,6 +82,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Toggle rating to none, not saved in xmp
 - Dragging thumb splitter not scrolling icons to maintain the mid icon centered
 - Classification badge / number size can be too big for cell size
 - Filters not updated after deleting an image file

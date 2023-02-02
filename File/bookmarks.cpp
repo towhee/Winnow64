@@ -15,7 +15,8 @@ public:
     }
 };
 
-/* A QStringList of paths to bookmarked folders is displayed as top level items
+/*
+A QStringList of paths to bookmarked folders is displayed as top level items
 in a QWidgetTree in column 0.  Column 1 holds a count of the readable image files
 in the folder.
 
@@ -88,7 +89,7 @@ void BookMarks::addBookmark(QString itemPath)
     item->setToolTip(1, itemPath);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
     if (!QFileInfo::exists(itemPath)) {
-        item->setForeground(0, QBrush(QColor(Qt::darkRed)));
+        item->setForeground(0, QBrush(QColor(G::disabledColor)));
     }
 }
 

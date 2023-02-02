@@ -122,6 +122,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+    filters->msgFrame->setVisible(true);
+    filters->filterLabel->setText("testing");
+    filters->filterLabel->setVisible(true);
+    filters->bfProgressBar->setVisible(true);
+    filters->bfProgressBar->setValue(100);
+    return;
+
     qDebug() << filters->catItemJustClicked->text(0);
     filters->setEachCatTextColor();
     return;

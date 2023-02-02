@@ -600,24 +600,20 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // rgh error trap file operation
     if (p.file.isOpen()) {
         p.file.close();
-//        qDebug() << "Metadata::writeXMP" << "Close" << p.file.fileName();
     }
-    qDebug() << "Metadata::writeXMP" << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadWrite);
 
     // if current xmp is invalid then fix
     Xmp xmp(p.file, p.instance);
     if (!xmp.isValid) xmp.fix();
-//    {
-//        p.file.close();
-//        return false;
-//    }
 
+    /*
     // orientation is written to xmp sidecars only
-//    if (orientationChanged && G::useSidecar) {
-//        QString s = QString::number(newOrientation);
-//        xmp.setItem("Orientation", s.toLatin1());
-//    }
+    if (orientationChanged && G::useSidecar) {
+        QString s = QString::number(newOrientation);
+        xmp.setItem("Orientation", s.toLatin1());
+    }
+    //*/
 
     // update xmp data
     if (urlChanged) xmp.setItem("url", m.url.toLatin1());
@@ -632,13 +628,6 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     xmp.setItem("ModifyDate", modifyDate.toLatin1());
 
-    m._rating = m.rating;
-    m._label = m.label;
-    m._title = m.title;
-    m._creator = m.creator;
-    m._copyright = m.copyright;
-    m._email = m.email;
-    m._url = m.url;
 
     // get the buffer to write to a new p.file
     /* write orientation directly into jpg
@@ -664,7 +653,6 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     xmp.writeSidecar(p.file);
 
     p.file.close();
-//    qDebug() << "Metadata::writeXMP" << "Close" << p.file.fileName();
     return true;
 }
 

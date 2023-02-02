@@ -48,6 +48,7 @@ public:
     bool readMetadataForItem(int row, int instance);
     void clearDataModel();
     bool hasFolderChanged();
+    bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
     bool isPick();

@@ -190,3 +190,10 @@ values. The for loop iterates over the list of strings and for each string, incr
 the count in the map. Finally, the program loops over the map and prints out the count of
 each unique string.
 -----------
+
+Share an image on MacOS (ChatGPT)
+
+(void)shareImage:(NSImage *)image {
+    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:@[image]];
+    [picker showRelativeToRect:[self.view bounds] ofView:self.view preferredEdge:NSRectEdgeMaxY];
+}

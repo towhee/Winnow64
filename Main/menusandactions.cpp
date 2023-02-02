@@ -284,7 +284,7 @@ void MW::createActions()
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
     combineRawJpgAction->setCheckable(true);
     if (isSettings && setting->contains("combineRawJpg")) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
-    else combineRawJpgAction->setChecked(true);
+    else combineRawJpgAction->setChecked(false);
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
@@ -1618,6 +1618,7 @@ void MW::createMenus()
     QAction *filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
     filterMenu->addAction(filterUpdateAction);
+    filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterPickAction);
@@ -1814,6 +1815,7 @@ void MW::createMenus()
 //    QList<QAction *> *filterActions = new QList<QAction *>;
     filterActions->append(filterUpdateAction);
     filterActions->append(clearAllFiltersAction);
+    filterActions->append(filterInvertAction);
     filterActions->append(searchTextEditAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllFiltersAction);

@@ -34,6 +34,7 @@ public:
 signals:
     void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void updateProgress(int progress);
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
@@ -73,6 +74,8 @@ private:
     int instance;
 //    int visibleIconCount;
     int sfRowCount;
+    int dmRowCount;
+    int metaReadCount;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
     int imageCacheTriggerCount = 50;

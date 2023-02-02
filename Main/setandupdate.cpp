@@ -474,7 +474,7 @@ void MW::setCombineRawJpg()
     if (G::isLogger) G::log("MW::setCombineRawJpg");
     if (!G::isNewFolderLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
-        G::popUp->showPopup(msg, 1000);
+        G::popUp->showPopup(msg, 2000);
         return;
     }
 
@@ -492,34 +492,39 @@ void MW::setCombineRawJpg()
     fsTree->refreshModel();
     refreshBookmarks();
 
-    // show appropriate count column in filters
-//    if (combineRawJpg) {
-//        filters->hideColumn(3);
-//        filters->showColumn(4);
-//    }
-//    else {
-//        filters->hideColumn(4);
-//        filters->showColumn(3);
-//    }
-    filters->totalColumnToUse(combineRawJpg);
 
-    // update the datamodel type column
-    QString src = "setCombinedRawJpg";
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QModelIndex idx = dm->index(row, 0);
-        if (idx.data(G::DupIsJpgRole).toBool()) {
-            QString rawType = idx.data(G::DupRawTypeRole).toString();
-            QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-            else emit setValue(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+    /* Reopen the folder and go to the current file.  If the current file was a raw file
+       and Raw+Jpg is checked then the raw file will no longer be in the DataModel. In
+       this case the current file needs to be set to the jpg alternative. */
+    QString fPath = dm->currentFilePath;
+    QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
+    if (combineRawJpg && ext != "jpg") {
+        QString jpgVersion = Utilities::replaceSuffix(fPath, "jpg");
+        if (dm->contains(jpgVersion)) {
+            fPath = jpgVersion;
+//            fPath = "/Users/roryhill/Pictures/4K/2022-08-21_0020-arw_DxO_DeepPRIME.jpg";
         }
     }
+    qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
+    folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
+
+//    // update the datamodel type column
+//    QString src = "setCombinedRawJpg";
+//    for (int row = 0; row < dm->rowCount(); ++row) {
+//        QModelIndex idx = dm->index(row, 0);
+//        if (idx.data(G::DupIsJpgRole).toBool()) {
+//            QString rawType = idx.data(G::DupRawTypeRole).toString();
+//            QModelIndex typeIdx = dm->index(row, G::TypeColumn);
+//            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+//            else emit setValue(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+//        }
+//    }
 
     // refresh the proxy sort/filter
-    dm->sf->filterChange();
-    dm->rebuildTypeFilter();
-    filterChange("MW::setCombineRawJpg");
-    updateStatusBar();
+//    dm->sf->filterChange();
+//    dm->rebuildTypeFilter();
+//    filterChange("MW::setCombineRawJpg");
+//    updateStatusBar();
 
     G::popUp->close();
 }
@@ -543,7 +548,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     Make sure the file path exists in the datamodel. The most likely failure will be if a
     new folder has been selected but the image cache has not been rebuilt.
 */
-    int dmRow = dm->fPathRow[fPath];
+    int dmRow = dm->fPathRow[fPath.toLower()];
 
     if (G::isLogger) {
         int row = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();

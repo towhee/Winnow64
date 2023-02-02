@@ -1840,7 +1840,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // check if current selection = current index.  If so, nothng to do
-    if (current == dm->currentSfIdx) return;
+    if (current == dm->currentSfIdx) {
+        qDebug() << "MW::fileSelectionChange  current selection = current index";
+        return;
+    }
     /*
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
@@ -2052,6 +2055,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
+    qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     folderSelectionChange();
 
     return;
@@ -2406,30 +2410,19 @@ void MW::loadConcurrentMetaDone()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
 
     if (reset()) return;
-//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
-//    if (G::mode == "Grid") {
-//        thumbDock->setVisible(false);
-//        thumbDockVisibleAction->setChecked(false);
-//    }
-
-//    // show thumbDock in loupe mode
-//    if (G::mode == "Loupe" && wasThumbDockVisible) {
-//        thumbDock->setVisible(true);
-//        thumbDockVisibleAction->setChecked(true);
-//    }
-
-//    // double check all visible icons loaded, depending on best fit
-//    if (reset()) return;
+    // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
     if (reset()) return;
     updateIconRange(-1, "MW::loadConcurrentMetaDone");
 
-    /* now okay to write to xmp sidecar, as metadata is loaded and initial
-    updates to InfoView by fileSelectionChange have been completed. Otherwise,
-    InfoView::dataChanged would prematurely trigger Metadata::writeXMP */
-
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
+
+    /* now okay to write to xmp sidecar, as metadata is loaded and initial
+    updates to InfoView by fileSelectionChange have been completed. Otherwise,
+    InfoView::dataChanged would prematurely trigger Metadata::writeXMP
+    It is also okay to filter.  */
+
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
@@ -2483,6 +2476,7 @@ void MW::loadConcurrentStartImageCache(QString src)
     QString fPath = "";
     if (src == "Initial") {
         fPath = folderAndFileChangePath;
+        qDebug() << "MW::loadConcurrentStartImageCache  folderAndFileChangePath =" << folderAndFileChangePath;
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
             sel->select(fPath);
@@ -2814,10 +2808,12 @@ void MW::numberIconsVisibleChange()
     if (G::isLogger) G::log("MW::numberIconsVisibleChange");
     if (G::isInitializing || !G::isNewFolderLoaded) return;
     bool chunkSizeChanged = updateIconRange(dm->currentSfRow, "MW::numberIconsVisibleChange");
+    /*
     qDebug() << "MW::numberIconsVisibleChange"
              << "dm->iconChunkSize =" << dm->iconChunkSize
              << "change =" << chunkSizeChanged
                 ;
+                */
     if (chunkSizeChanged) {
         if (G::isLinearLoading)
             metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
@@ -5587,8 +5583,8 @@ void MW::refreshCurrentFolder()
     if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
         for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
             QString fPath = dm->modifiedFiles.at(i).filePath();
-            if (!dm->fPathRow.contains(fPath)) continue;
-            int dmRow = dm->fPathRow[fPath];
+            if (!dm->fPathRow.contains(fPath.toLower())) continue;
+            int dmRow = dm->fPathRow[fPath.toLower()];
             int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
             // update file size and modified date
             dm->updateFileData(dm->modifiedFiles.at(i));
@@ -5634,8 +5630,8 @@ void MW::refreshCurrentAfterReload()
 */
     if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
     int dmRow = 0;
-    if (dm->fPathRow.contains(refreshCurrentPath))
-        dmRow = dm->fPathRow[refreshCurrentPath];
+    if (dm->fPathRow.contains(refreshCurrentPath.toLower()))
+        dmRow = dm->fPathRow[refreshCurrentPath.toLower()];
     int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
     /*
     qDebug() << "MW::refreshCurrentAfterReload" << refreshCurrentPath

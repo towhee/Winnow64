@@ -57,7 +57,7 @@ public:
     void createPredefinedFilters();
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
-    void addCategoryFromData(QStringList itemList, QTreeWidgetItem *category);
+//    void updateCategoryItems(QStringList itemList, QTreeWidgetItem *category);
     void updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
@@ -70,7 +70,6 @@ public:
     void disableColorAllHeaders(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
-    void totalColumnToUse(bool combineRawJpg);
 
     bool combineRawJpg;
     bool buildingFilters = false;
@@ -97,7 +96,7 @@ public slots:
     void clearAll();
     void checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state);
     void uncheckAllFilters();
-    void uncheckTypesFilters();
+//    void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
     void toggleExpansion();
@@ -109,7 +108,7 @@ public slots:
     void updateProgress(int progress);
     void startBuildFilters(bool isReset = false);
     void finishedBuildFilters();
-    void loadedDataModel(bool isLoaded);
+    void loadingDataModel(bool isLoaded);
     void setSoloMode(bool isSolo);
     bool otherHdrExpanded(QModelIndex thisIdx);
 

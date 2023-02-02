@@ -58,6 +58,7 @@ public slots:
 private:
     void initializeUniqueItems();
     void updateCategory();
+    void time(QString msg);
 
     QMutex mutex;
     QWaitCondition condition;
@@ -73,11 +74,13 @@ private:
     int dmRows = 0;                         // rows in datamodel (get once at start)
 
     bool debugBuildFilters = false;
+    bool reportTime = false;
+    quint64 totms = 0;
 
     // progress
     QMap <QString, int>uniqueItemCount;     // total unique items per category in filters
     int totUniqueItems;                     // total unique items in all categories in filters
-    int progress = 0;                       // 0-100 progress for progressBar
+    double progress = 0;                       // 0-100 progress for progressBar
     QElapsedTimer buildFiltersTimer;
 };
 
