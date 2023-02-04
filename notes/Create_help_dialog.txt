@@ -1,0 +1,36 @@
+Creating a help document for Winnow:
+
+
+In the Forms > Help: duplicate filters help.ui and give it a newname.ui.
+
+Double click on the new name.ui to open the design editor, and then double click on the document to open the editor.  Make sure rich text is selected.
+
+Edit to make the new help file.
+
+Change the objectName for the dialog from FiltersHelpDlg to whatever is appropriate ie NewNameDlg.
+
+Save and return to Edit Mode in Qt Creator.
+
+Build Winnow.  This will create a new header file ie ui_new name.h.  Make sure to #include “ui_new name.h”
+
+Create a slot function to open the NewName dialog;  see Filters::howThisWorks example.
+
+QDialog *dlg = new QDialog;
+Ui:: NewNameDlg *ui = new Ui:: NewNameDlg;
+ui->setupUi(dlg);
+dlg->setWindowTitle(“New Name Help");
+dlg->setStyleSheet(G::css);
+dlg->exec();
+
+Create and connect a questionmark.png button and connect it to the slot function.  
+
+// question mark button example
+BarBtn *filterQuestionBtn = new BarBtn();
+filterQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+filterQuestionBtn->setToolTip("How this works");
+connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
+filterTitleLayout->addWidget(filterQuestionBtn);
+
+
+
+

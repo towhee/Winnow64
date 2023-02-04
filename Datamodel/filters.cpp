@@ -10,6 +10,10 @@
     • filters (the tree showing all the filter criterea)
 
     The filterDock is created in MW::createFilterDock in initialize.cpp
+
+    When a very large folder is loaded and filters is selected, if not all metadata
+    has been loaded, then the loading progress is signalled from MetaRead or DataModel
+    to Filters::updateProgress.
 */
 
 class FiltersDelegate : public QStyledItemDelegate
@@ -68,6 +72,9 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
         • Rebuild the image cache.
         • Scroll to current.
 
+    Category and item behavior
+
+
 */
     if (G::isLogger) G::log("Filters::Filters");
     viewport()->setObjectName("FiltersViewport");
@@ -93,7 +100,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     indentation = 14;
     setIndentation(indentation);
 
-    hdrIsFilteringColor = QColor(Qt::red);
+    hdrIsFilteringColor = QColor(Qt::yellow);
     hdrIsEmptyColor = G::disabledColor;
 
     int a = G::backgroundShade + 5;
@@ -149,7 +156,6 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     bfProgressBar = new QProgressBar;
     bfProgressBar->setFixedHeight(6);
     bfProgressBar->setTextVisible(false);
-    bfProgressBar->setMaximum(100);
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
@@ -460,7 +466,7 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
 
 void Filters::disableColorZeroCountItems()
 {
-    // used?
+    // not being used
     if (G::isLogger) G::log("Filters::disableColorZeroCountItems");
     if (debugFilters)
         qDebug() << "Filters::disableColorZeroCountItems"
@@ -564,8 +570,8 @@ void Filters::setEachCatTextColor()
         if (!(*it)->parent() && (*it) != search) {
             if ((*it)->childCount() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
-            else if ((*it) == catItemJustClicked)
-                (*it)->setForeground(0, QBrush(Qt::darkGreen));
+//            else if ((*it) == activeCategory)
+//                (*it)->setForeground(0, QBrush(Qt::darkGreen));
             else {
                 bool isChecked = false;
                 for (int i = 0; i < (*it)->childCount(); i++) {
@@ -575,7 +581,7 @@ void Filters::setEachCatTextColor()
                     }
                 }
                 QColor colorToUse;
-                isChecked ? colorToUse = Qt::darkRed : colorToUse = G::textColor;
+                isChecked ? colorToUse = hdrIsFilteringColor : colorToUse = G::textColor;
                 (*it)->setForeground(0, QBrush(colorToUse));
              }
         }
@@ -601,11 +607,11 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
     there will be no filtering because the one item represents the entire population.
 */
     if (G::isLogger) G::log("Filters::isCatFiltering");
+    /*
     if (debugFilters)
         qDebug() << "Filters::isCatFiltering"
                  << "Category =" << item->text(0)
-                    ;
-    qDebug() << "Filters::isCatFiltering" << "Category =" << item->text(0);
+                    ;  //*/
     if (item == search) {
         if (searchTrue->text(0) != enterSearchString) {
           if (searchTrue->checkState(0) == Qt::Checked) return true;
@@ -657,7 +663,7 @@ void Filters::invertFilters()
     QTreeWidgetItemIterator it(this);
 
     // enable all items
-    disableColorZeroCountItems();
+    // disableColorZeroCountItems();
 
     // populate catWithCheckedItems list with only categories that have one or more checked items
     while (*it) {
@@ -698,7 +704,7 @@ void Filters::invertFilters()
     }
 
     // disable items with no filter count
-    disableColorZeroCountItems();
+    // disableColorZeroCountItems();
 
     // emit filterChange();  // this is done in MW::invertFilters - which calls this function
 }
@@ -714,13 +720,13 @@ void Filters::loadingDataModel(bool isLoaded)
         filterLabel->setText("");
         filterLabel->setVisible(false);
         setEnabled(true);
-        disableColorZeroCountItems();
+        // disableColorZeroCountItems();
     }
     else {
         msgFrame->setVisible(true);
         filterLabel->setText("Filters disabled while loading all metadata...");
         filterLabel->setVisible(true);
-        disableColorAllHeaders(true);
+        // disableColorAllHeaders(true);
         setEnabled(false);
     }
 }
@@ -757,7 +763,7 @@ void Filters::finishedBuildFilters()
     bfProgressBar->setValue(0);
     bfProgressBar->setVisible(false);
     msgFrame->setVisible(false);
-    disableColorZeroCountItems();
+    // disableColorZeroCountItems();
     setEnabled(true);
 //    if (isSolo) collapseAll();
 //    else expandAll();
@@ -1075,21 +1081,21 @@ void Filters::addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetIte
     the tableView. This function should only be used for dynamic categories - see
     createDynamicFilters;
 
-    If a category item was just checked (cjf) then it is ignored, as the user may want
-    to check another item in the same category.
+    If a category item was just checked (activeCategory) then it is ignored, as the user
+    may want to check another item in the same category.
 */
     if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
     if (debugFilters)
         qDebug() << "Filters::addFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;
-//    qDebug() << "Filters::addFilteredCountPerItem  Category =" << category->text(0);
-    if (catItemJustClicked == category) {
-        // only ignore if there is at least one checked item
-        for (int i = 0; i < category->childCount(); i++) {
-            if (category->child(i)->checkState(0) == Qt::Checked) return;
-        }
-    }
+    // qDebug() << "Filters::addFilteredCountPerItem  Category =" << category->text(0);
+//    if (activeCategory == category) {
+//        // only ignore if there is at least one checked item
+//        for (int i = 0; i < category->childCount(); i++) {
+//            if (category->child(i)->checkState(0) == Qt::Checked) return;
+//        }
+//    }
 
     for (int i = 0; i < category->childCount(); i++) {
         category->child(i)->setData(2, Qt::EditRole, 0);
@@ -1228,7 +1234,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         }
     }
 
-    catItemJustClicked = item->parent();
+    activeCategory = item->parent();
     emit filterChange("Filters::itemClickedSignal");
 }
 
@@ -1339,4 +1345,16 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
 */
     if (G::isLogger) G::log("Filters::mouseReleaseEvent");
     if (!hdrJustClicked) QTreeWidget::mouseReleaseEvent(event);
+}
+
+void Filters::howThisWorks()
+{
+    if (G::isLogger) G::log("Filters::howThisWorks");
+
+    QDialog *dlg = new QDialog;
+    Ui::FiltersHelpDlg *ui = new Ui::FiltersHelpDlg;
+    ui->setupUi(dlg);
+    dlg->setWindowTitle("Filters Help");
+    dlg->setStyleSheet(G::css);
+    dlg->exec();
 }

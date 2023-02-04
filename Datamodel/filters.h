@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
+#include "ui_filtershelp.h"
 //#include "Datamodel/datamodel.h"
 
 class Filters : public QTreeWidget
@@ -30,7 +31,7 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
 
-    QTreeWidgetItem *catItemJustClicked;   // category just filtered
+    QTreeWidgetItem *activeCategory;   // category just filtered
 
     QString catSearch = "Search";
     QString catRefine = "Refine";
@@ -117,6 +118,7 @@ public slots:
                      const QModelIndex &bottomRight,
                      const QVector<int> &roles = QVector<int>()) override;
     void itemClickedSignal(QTreeWidgetItem *item, int column);
+    void howThisWorks();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;

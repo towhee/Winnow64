@@ -144,6 +144,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
+    connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
     connect(dm, &DataModel::currentChanged, this, &MW::fileSelectionChange);
     connect(this, &MW::setValue, dm, &DataModel::setValue);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
@@ -1086,6 +1087,16 @@ void MW::createFilterDock()
     filterGearBtn->setToolTip("Preferences");
     connect(filterGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     filterTitleLayout->addWidget(filterGearBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(5);
+
+    // question mark button
+    BarBtn *filterQuestionBtn = new BarBtn();
+    filterQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    filterQuestionBtn->setToolTip("How this works");
+    connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
+    filterTitleLayout->addWidget(filterQuestionBtn);
 
     // Spacer
     filterTitleLayout->addSpacing(10);

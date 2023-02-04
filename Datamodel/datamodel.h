@@ -127,6 +127,7 @@ public:
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
+    void updateProgress(int progress);
     void updateStatus(bool keepBase, QString s, QString source);
     void currentChanged(QModelIndex idx,
                         QModelIndex idx2 = QModelIndex(),

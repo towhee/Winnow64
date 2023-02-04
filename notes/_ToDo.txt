@@ -2,6 +2,7 @@ WHAT'S NEW
 - 769 how to iterate all categories
 
 BUGS / TO DO
+- Clean up MW::updateIconRange
 - Occasionally Winnow starts as small window on main monitor
 - Figure out how to update filtered item counts in catItemJustClicked
 - Check invertFilters

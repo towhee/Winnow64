@@ -488,6 +488,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
 
     // if previous sort was not by filename or reverse order then sort
+    qDebug() << "MW::MW  sortColumn =" << sortColumn;
     updateSortColumn(sortColumn);
     if (isReverseSort) toggleSortDirection(Tog::on);
     else toggleSortDirection(Tog::off);
@@ -1818,6 +1819,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
+
     if (!rememberLastDir)
         if (!isCurrentFolderOkay
                 || G::isInitializing
@@ -1827,7 +1829,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (!currRootDir.exists()) {
         refreshFolders();
-//        selectionChange();
         folderSelectionChange();
         return;
     }
@@ -1835,13 +1836,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // if starting program, set first image to display
     if (current.row() == -1) {
         sel->select(0);
-//        dm->select(0);
         return;
     }
 
     // check if current selection = current index.  If so, nothng to do
     if (current == dm->currentSfIdx) {
-        qDebug() << "MW::fileSelectionChange  current selection = current index";
+        // qDebug() << "MW::fileSelectionChange  current selection = current index";
         return;
     }
     /*
@@ -2296,6 +2296,13 @@ bool MW::updateIconRange(int row, QString src)
     metadataCacheThread->lastIconVisible = lastVisible;
     metadataCacheThread->visibleIcons = visibleIcons;
 
+    int firstIconRow = dm->currentSfRow - dm->iconChunkSize / 2;
+    if (firstIconRow < 0) firstIconRow = 0;
+    int lastIconRow = firstIconRow + dm->iconChunkSize;
+    if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
+    dm->setIconRange(firstIconRow, lastIconRow);
+
+    /*
 //    dm->firstVisibleRow = firstVisible;
 //    dm->lastVisibleRow = lastVisible;
 
@@ -2314,6 +2321,7 @@ bool MW::updateIconRange(int row, QString src)
 //        dm->endIconRange = lastIconRow;
         dm->setIconRange(firstIconRow, lastIconRow);
     }
+    */
 
     /*
     qDebug()
@@ -2456,7 +2464,7 @@ void MW::loadConcurrentStartImageCache(QString src)
 //    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentStartImageCache");
-//    qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
+    // qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
 
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
@@ -2476,7 +2484,7 @@ void MW::loadConcurrentStartImageCache(QString src)
     QString fPath = "";
     if (src == "Initial") {
         fPath = folderAndFileChangePath;
-        qDebug() << "MW::loadConcurrentStartImageCache  folderAndFileChangePath =" << folderAndFileChangePath;
+        // qDebug() << "MW::loadConcurrentStartImageCache  folderAndFileChangePath =" << folderAndFileChangePath;
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
             sel->select(fPath);
@@ -2538,6 +2546,14 @@ void MW::loadLinearNewFolder()
         return;
     }
 
+    // re-enable sorting and filtering
+    if (filters->isVisible()) {
+        launchBuildFilters();
+    }
+    filters->setEnabled(true);
+    filterMenu->setEnabled(true);
+    sortMenu->setEnabled(true);
+
     // load icons
 
     MetadataCache *mct = metadataCacheThread;
@@ -2573,9 +2589,6 @@ void MW::loadLinearNewFolder()
 //    thumbView->thumbsFitTopOrBottom();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
-    // re-enable sorting and filtering
-    filterMenu->setEnabled(true);
-    sortMenu->setEnabled(true);
 
     // start image cache
     if (reset(src + "7")) return;
@@ -2682,7 +2695,6 @@ void MW::thumbHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    qDebug() << "MW::thumbHasScrolled";
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;

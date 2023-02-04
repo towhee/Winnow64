@@ -237,7 +237,6 @@ void MetaRead::cleanupIcons()
 
 bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
-//    if (abort) return;
     if (G::isLogger) G::log("MetaRead::readMetadata");
     if (debugCaching)
     {
@@ -260,10 +259,8 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
     metaReadCount++;
-//    if (dmRowCount % metaReadCount == 0) {
-        int progress = 1.0 * metaReadCount / dmRowCount * 100;
-        emit updateProgress(progress);
-//    }
+    int progress = 1.0 * metaReadCount / dmRowCount * 100;
+    emit updateProgress(progress);
 
     if (debugCaching)
     {

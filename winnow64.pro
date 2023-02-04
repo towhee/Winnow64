@@ -324,7 +324,9 @@ SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/imagedlg.ui
+    Dialogs/imagedlg.ui \
+    Help/filtershelp.ui \
+    Help/filtershelp_copy.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui
@@ -363,7 +365,11 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath
+DISTFILES += Docs/ingestautopath \
+    notes/Create help dialog.rtf \
+    notes/Create help dialog.rtf \
+    notes/Create help dialog.txt \
+    notes/Create_help_dialog.txt
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html

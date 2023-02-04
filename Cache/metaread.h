@@ -40,7 +40,7 @@ signals:
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void triggerImageCache(QString src);
 
-    void updateIconBestFit();  // req'd?
+    void updateIconBestFit();  //r req'd?
     void done();               // not being used - req'd?
 
 public slots:

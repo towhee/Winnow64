@@ -19,6 +19,8 @@ public:
     int id;
     QString fPath;
     QModelIndex dmIdx;
+    int frameChangedCount;
+    bool frameCaptured;
 
 signals:
     void stopped(QString src);
@@ -31,6 +33,7 @@ public slots:
     void stop();
     bool isBusy();
     void frameChanged(const QVideoFrame frame);
+    void stateChanged(QMediaPlayer::PlaybackState state);
     void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
 
 private:
@@ -40,6 +43,8 @@ private:
     struct Item {
         QString fPath;
         QModelIndex dmIdx;
+        int frameChangedCount;
+        bool frameCaptured;
         int dmInstance;
     };
     QList<Item> queue;

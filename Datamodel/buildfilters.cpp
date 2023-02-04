@@ -52,16 +52,17 @@ BuildFilters::BuildFilters(QObject *parent,
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
-    debugBuildFilters = true;
-    reportTime = true;
+    debugBuildFilters = false;
+    reportTime = false;
 }
 
 void BuildFilters::stop()
 {
+    /*
     if (debugBuildFilters)
         qDebug()
-            << "BuildFilters::"
-               ;
+            << "BuildFilters::stop"
+               ; //*/
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -75,7 +76,7 @@ void BuildFilters::stop()
         filters->buildingFilters = false;
         filters->filterLabel->setVisible(false);
 //        filters->bfProgressBar->setVisible(false);
-        filters->disableColorZeroCountItems();
+//        filters->disableColorZeroCountItems();
         filters->setEnabled(true);
         filters->collapseAll();
 //        emit updateIsRunning(false);
@@ -156,7 +157,7 @@ void BuildFilters::reset()
     isReset = true;
     filters->filtersBuilt = false;
     action = Action::Reset;
-    filters->catItemJustClicked = nullptr;
+    filters->activeCategory = nullptr;
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
 }

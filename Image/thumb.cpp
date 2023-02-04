@@ -12,6 +12,7 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     this->dm = dm;
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
+
     connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
@@ -49,9 +50,11 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     see top of FrameDecoder.cpp for documentation
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
-    /*
+//    /*
+//    if (isDebug)
     qDebug() << "Thumb::loadFromVideo                  "
              << "row =" << dmRow
+             << fPath
                 ;
                 //*/
     QModelIndex dmIdx = dm->index(dmRow, 0);
@@ -205,9 +208,10 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         QFile(fPath).setPermissions(newPermissions);
     }
     QString ext = fileInfo.suffix().toLower();
-    int dmRow = dm->fPathRow[fPath];
+    int dmRow = dm->rowFromPath(fPath);
+//    int dmRow = dm->fPathRow[fPath];
 
-    // If video file then just show video icon
+    // If video file then just show video icon unless G::renderVideoThumb
     if (metadata->videoFormats.contains(ext)) {
         if (G::renderVideoThumb) {
             loadFromVideo(fPath, dmRow);
