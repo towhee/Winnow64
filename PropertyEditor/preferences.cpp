@@ -1024,7 +1024,7 @@ void Preferences::addItems()
     i.key = "loadOnlyVisibleIcons";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+//    addItem(i);
 
     // Maximum icon size (not used)
     i.name = "maxIconSize";

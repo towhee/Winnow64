@@ -1,54 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ingestAutoPath</class>
- <widget class="QDialog" name="ingestAutoPath">
+ <class>IngestAutoPath</class>
+ <widget class="QDialog" name="IngestAutoPath">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>800</width>
+    <height>798</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="spacing">
-    <number>0</number>
-   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
-    <number>0</number>
+    <number>6</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>6</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>6</number>
    </property>
    <item>
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+    <widget class="QTextBrowser" name="textBrowser">
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;  Overview&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;This tool automates the process of creating a folder in a specific folder structure where the images will be copied. The folder structure comprises of a &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#0000ff;&quot;&gt;root&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;, a &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#008000;&quot;&gt;template path&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; and a &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#800080;&quot;&gt;description&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;. The files can also be renamed as they are copied.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;Creating a path to the destination folder &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Windows example: &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#0000ff;&quot;&gt;e:\&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#008000;&quot;&gt;2018\2018-02\2018-02-23&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#800080;&quot;&gt;_Spring in Paris&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Mac example:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#0000ff;&quot;&gt;/users/pictures/&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#008000;&quot;&gt;Feb/23&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#800080;&quot;&gt;Paris&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#0000ff;&quot;&gt;Root:&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;   This is the base location where your images are stored. The root is entered in the “Ingest Picks” dialog. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#008000;&quot;&gt;Template path:&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;   The path from the root to the destination folder that can be defined by metadata from an image. It is based on a template in “Edit Template(s)” accessed from the “Ingest Picks” dialog. The template for the windows example is {YYYY}/{YYYY}-{MM}-{DD} and the mac example is {MMM}/{DD}. The templates are based on tokens inside curly brackets {}. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0; background-color:#800080;&quot;&gt;Description:&lt;/span&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;   An optional description that is appended to the template path. It is entered in the “Ingest Picks” dialog. &lt;/span&gt;&lt;/p&gt;
+&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;Tokens&lt;/span&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;/h3&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Tokens are place holders and the values for the tokens, extracted from each image file, are inserted from the metadata in the images. Tokens are surrounded with curly brackets like this: {YYYY}. In this case the year is found in the image metadata and formatted as 2019. If the token {YY} was chosen then the result would be formatted as 19 if the year was 2019. Tokens are listed in the &amp;quot;Token editor&amp;quot;, which is accessed from the &amp;quot;Ingest dialog&amp;quot;. Some other examples of tokens include: {TITLE} {ORIGINAL FILENAME} {HOUR} {SECOND} {CREATOR} etc. Note that all date information is from the image file creation date. &lt;/span&gt;&lt;/p&gt;
+&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;Templates&lt;/span&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#c0c0c0;&quot;&gt; &lt;/span&gt;&lt;/h3&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;A template is a structure used to build a file path or a file name. You create templates using tokens and text in the &amp;quot;Template Editor&amp;quot;. For example, to build the folder structure &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Weddings/2019/Hill wedding/ &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;we would build the template &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Weddings{2019}/{TITLE}/ &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;assuming we had put the description &amp;quot;Hill wedding&amp;quot; in the Title metadata for the images. &lt;/span&gt;&lt;/p&gt;
+&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;File names &lt;/span&gt;&lt;/h3&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;You can also create new file names using templates and tokens. For example, if you want file names in the format 2019-09-18_0187.NEF you would build the template &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;{YYYY}-{MM}-{DD}_{XXXX} &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;The .NEF will automatically be appended. &lt;/span&gt;&lt;/p&gt;
+&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:700; color:#fffc0d;&quot;&gt;Slashes and back slashes &lt;/span&gt;&lt;/h3&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Do not use “/” or “\” in the template name. The template name is used as a key to save the templates between sessions. Slashes do terrible things to the windows registry. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;In the template itself, Windows uses the “\” in file paths while MacOS and Linux use “/”. Since the “\” is also used for escape sequences I suggest you use the “/”. Winnow will automatically convert this to a “\” when creating the path to the destination folder in windows. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:9px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;For example, if the image was taken on Feb 23, 2018: &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:34px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#c0c0c0;&quot;&gt;Template = {YYYY}/{YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in windows. &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:600;&quot;&gt;Creating a path to the destination folder&lt;/span&gt;&lt;/h3&gt;&lt;p&gt;Example: &lt;/p&gt;&lt;p&gt;Windows: e:\2018\2018-02\2018-02-23_Spring in Paris &lt;/p&gt;&lt;p&gt;Mac: /users/pictures/Feb/23 Paris Root: &lt;/p&gt;&lt;p&gt;This is the base location where your images are stored. &lt;/p&gt;&lt;p&gt;The root is entered in the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris Template path: The path from the root to the destination folder that can be defined by metadata from an image. It is based on a template in “Edit Template(s)” accessed from the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris Description: An optional description appended to the template path, entered in the “Ingest Picks” dialog. = e:\2018\2018-02\2018-02-23_Spring in Paris = /users/pictures/Feb/23 Paris The path = Root + Template path + Description Creating the file names File names are created in the template editor, based on tokens, including sequence tokens that append digits. For example, if the image was taken with a Canon camera on Feb 23, 2018 and was the 36th image picked: Template = {YYYY}-{MM}-{DD}_{XXX} will become 2018-02-23_036.CR2 What is a template and what are tokens A template is a structure to use to build a file path or a file name. You can create templates using any descriptive name and create the template using tokens. Tokens are place holders and the values for the tokens are inserted from the metadata in the images. &lt;/p&gt;&lt;p&gt;For example: Template name = “Rory template” Template = {YYYY}/{YYYY}-{MM}-{DD} {YYYY} = a token (dragged from token list in token editor) Where does the metadata come from The metadata is sourced from the first image picked and all the picked images will be copied to one destination folder. &lt;/p&gt;&lt;h3 style=&quot; margin-top:14px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:large; font-weight:600;&quot;&gt;Slashes and back slashes &lt;/span&gt;&lt;/h3&gt;&lt;p&gt;Do not use “/” or “\” in the template name. The template name is used as a key to save the templates between sessions. Slashes do terrible things to the windows registry. In the template itself, Windows uses the “\” in file paths while MacOS and Linux use “/”. Since the “\” is also used for escape sequences I suggest you use the “/”. Winnow will automatically convert this to a “\” when creating the path to the destination folder in windows. &lt;/p&gt;&lt;p&gt;For example, if the image was taken on Feb 23, 2018: Template = {YYYY}/{YYYY}-{MM}-{DD} will become “2018\2018-02\2018-02-23” in windows. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
   </layout>

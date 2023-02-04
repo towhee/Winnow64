@@ -774,7 +774,7 @@ void MW::createActions()
     filterUpdateAction = new QAction(tr("Update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
-    connect(filterUpdateAction,  &QAction::triggered, this, &MW::launchBuildFilters);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::updateAllFilters);
 
     filterSoloAction = new QAction(tr("Solo mode"), this);
     filterSoloAction->setShortcutVisibleInContextMenu(true);

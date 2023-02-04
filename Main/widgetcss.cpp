@@ -57,6 +57,7 @@ QString WidgetCSS::css()
             menuBar() +
             checkBox() +
             comboBox() +
+            dialog() +
 //            dockTitleBar() +
             dockWidget() +
             doubleSpinBox() +
@@ -118,7 +119,9 @@ QString WidgetCSS::dialog()
 {
     return
     "QDialog {"
-        "background: " + QColor(l10,l10,l10).name() + ";"
+        "background: " + QColor(d10,d10,d10).name() + ";"
+//        "background: blue;"
+//        "background: " + QColor(l10,l10,l10).name() + ";"
     "}";
 }
 
@@ -751,6 +754,7 @@ QString WidgetCSS::textEdit()
 {
     return
     "QTextBrowser, QTextEdit {"
+//        "background: green;"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
 //        "border: 1px solid red;"
         "border: none;"

@@ -19,11 +19,11 @@
         - thumb->loadFromVideo signals to frameDecoder->addToQueue
         - frameDecoder->addToQueue calls frameDecoder->getNextThumbNail
         - start processing loop
-        - frameDecoder->getNextThumbNail sets media source to first in queue
-          and starts mediaPlayer
-        - mediaPlayer signals frameDecoder->frameChanged
-        - frameDecoder->frameChanged signals dm->setIconFromFrame
-        - frameDecoder->frameChanged calls frameDecoder->getNextThumbNail
+            - frameDecoder->getNextThumbNail sets media source to first in queue
+              and starts mediaPlayer
+            - mediaPlayer signals frameDecoder->frameChanged
+            - frameDecoder->frameChanged signals dm->setIconFromVideoFrame
+            - frameDecoder->frameChanged calls frameDecoder->getNextThumbNail
         - loop until queue is empty
 
 */
@@ -41,9 +41,10 @@ FrameDecoder::FrameDecoder(QObject *parent)
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
+    connect(mediaPlayer, &QMediaPlayer::playbackStateChanged, this, &FrameDecoder::stateChanged);
 
     abort = false;
-    isDebugging = false;
+    isDebugging = true;
 }
 
 void FrameDecoder::stop()
@@ -69,6 +70,22 @@ void FrameDecoder::clear()
     }
     else {
         reset = true;
+    }
+}
+
+void FrameDecoder::stateChanged(QMediaPlayer::PlaybackState state)
+{
+    if (isDebugging)
+        qDebug()  << "FrameDecoder::stateChanged            "
+                  << "row =" << dmIdx.row()
+                  << "state =" << state
+                  << "  " << fPath
+                  ;
+    if (state == QMediaPlayer::StoppedState) {
+        int i = queueIndex(dmIdx);
+        if (i != -1) queue.remove(i);
+        frameCaptured = false;
+        getNextThumbNail("frameChanged");
     }
 }
 
@@ -108,6 +125,7 @@ void FrameDecoder::getNextThumbNail(QString src)
         emit stopped("FrameDecoder");
     }
 
+    // aborting or finished queue
     if (queue.isEmpty() || abort) {
         if (isDebugging) qDebug() << "FrameDecoder::getNextThumbNail quiting"
                                   << "queue.isEmpty() =" << queue.isEmpty()
@@ -117,18 +135,21 @@ void FrameDecoder::getNextThumbNail(QString src)
         return;
     }
 
-    // clear the queue request received while decoding a frame
+    // if reset, clear the queue request received while decoding a frame
     if (reset) {
         queue.clear();
         reset = false;
         return;
     }
 
+    // start media player to process a frame
     status = Status::Busy;
 
     Item item = queue.first();
     fPath = item.fPath;
     dmIdx = item.dmIdx;
+    frameChangedCount = 0;
+//    frameCaptured = false;
     dmInstance = item.dmInstance;
 
     if (isDebugging) qDebug() << "FrameDecoder::getNextThumbNail        "
@@ -145,21 +166,58 @@ void FrameDecoder::getNextThumbNail(QString src)
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log("FrameDecoder::frameChanged");
-    /*
-    if (isDebugging) qDebug() << "FrameDecoder::frameChanged            "
-                              << "row =" << dmIdx.row()
-                              ;
+
+    frameChangedCount++;
+//    /*
+    if (isDebugging)
+        qDebug() << "FrameDecoder::frameChanged Enter      "
+                 << "row =" << dmIdx.row()
+                 << "count =" << frameChangedCount
+                 << "frameCaptured =" << frameCaptured
+                 << fPath
+                    ;
     //*/
-    mediaPlayer->stop();
+
+    // when a frame has beem captured, stop media player and process next queue item
+//    if (frameCaptured || frameChangedCount > 10) {
+//        if (isDebugging)
+//            qDebug() << "FrameDecoder::frameChanged Done       "
+//                     << "row =" << dmIdx.row()
+//                     << "count =" << frameChangedCount
+//                     << "frameCaptured =" << frameCaptured
+//                     << "COMPLETED, get next"
+//                        ;
+//        mediaPlayer->stop();
+////        int i = queueIndex(dmIdx);
+////        if (i != -1) queue.remove(i);
+////        frameCaptured = false;
+////        getNextThumbNail("frameChanged");
+//    }
+
+    // Check the frame is valid
     QImage im = frame.toImage();
-    if (!im.isNull()) {
+    if (im.isNull()) {
+            qDebug() << "FrameDecoder::frameChanged  Null frame"
+                   << "row =" << dmIdx.row()
+                   << "count =" << frameChangedCount
+                   << "frameCaptured =" << frameCaptured
+                   << fPath;
+    }
+    else if (!frameCaptured) {
+        // frame valid, save icon
         QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         qint64 duration = mediaPlayer->duration();
         emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
-        int i = queueIndex(dmIdx);
-        if (i != -1) queue.remove(i);
+        frameCaptured = true;
+        if (isDebugging)
+            qDebug() << "FrameDecoder::frameChanged Captured   "
+                     << "row =" << dmIdx.row()
+                     << "count =" << frameChangedCount
+                     << "frameCaptured =" << frameCaptured
+                     << fPath
+                        ;
+        mediaPlayer->stop();
     }
-    getNextThumbNail("frameChanged");
 }
 
 void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)

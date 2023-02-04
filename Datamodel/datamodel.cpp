@@ -919,6 +919,7 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " metadata loading...";
             emit centralMsg(s);    // rghmsg
+            emit updateProgress(1.0 * row / rowCount() * 100);
             qApp->processEvents();
         }
         if (abortLoadingModel || G::dmEmpty) {
@@ -1358,10 +1359,12 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-    if (isDebug) qDebug() << "DataModel::setIconFromVideoFrame" << "instance =" << instance
-                          << "fromInstance =" << fromInstance
-                          << "row =" << dmIdx.row()
-                          << currentFolderPath;
+//    if (isDebug)
+        qDebug() << "DataModel::setIconFromVideoFrame      "
+                 << "row =" << dmIdx.row()
+                 << "instance =" << instance
+                 << "fromInstance =" << fromInstance
+                 << currentFolderPath;
 
     if (G::stop) return;
     if (!dmIdx.isValid()) {

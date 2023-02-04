@@ -173,5 +173,11 @@
         <file>images/icon16/media_pause.png</file>
         <file>images/icon16/media_play.png</file>
         <file>images/error_image256.png</file>
+        <file>Docs/filtershelp.html</file>
+        <file>Docs/images/filters1.png</file>
+        <file>Docs/filtershelp.fld/colorschememapping.xml</file>
+        <file>Docs/filtershelp.fld/filelist.xml</file>
+        <file>Docs/filtershelp.fld/themedata.thmx</file>
+        <file>Docs/images/filters2.png</file>
     </qresource>
 </RCC>

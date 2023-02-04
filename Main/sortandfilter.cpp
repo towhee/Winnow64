@@ -30,7 +30,7 @@ void MW::filterDockVisibilityChange(bool isVisible)
 void MW::updateAllFilters()
 {
     if (G::isLogger) G::log("MW::updateAllFilters");
-
+    buildFilters->build(BuildFilters::Update);
 }
 
 void MW::launchBuildFilters()
@@ -497,7 +497,6 @@ void MW::sortChange(QString source)
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
-    qDebug() << "MW::sortChange" << "Calling fileSelectionChange";
     fileSelectionChange(idx, idx, true, "MW::sortChange");
 
     scrollToCurrentRow();
