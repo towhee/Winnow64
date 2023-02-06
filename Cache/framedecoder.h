@@ -31,7 +31,6 @@ public slots:
     void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void clear();
     void stop();
-    bool isBusy();
     void frameChanged(const QVideoFrame frame);
     void stateChanged(QMediaPlayer::PlaybackState state);
     void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
@@ -56,8 +55,7 @@ private:
 
     QMutex mutex;
 
-    bool abort = false;
-    bool reset =   false;
+//    bool reset = false;
     bool isDebugging;
 };
 

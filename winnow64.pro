@@ -1,6 +1,10 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
 
+# Must rerun qmake and rebuild when change:
+#CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
+#CONFIG(release, debug|release):DEFINES += QT_NO_WARNING_OUTPUT
+
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 greaterThan(QT_MAJOR_VERSION, 5) {
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x051500

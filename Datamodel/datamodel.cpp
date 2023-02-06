@@ -1359,7 +1359,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-//    if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame      "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
@@ -1445,22 +1445,18 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "loadingModel = " << loadingModel;
         return;
     }
-
     if (G::stop) {
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "G::stop = " << G::stop;
         return;
     }
-
     if (!dmIdx.isValid()) {
         qWarning() << "WARNING" << "DataModel::setIcon" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
-
     if (dmIdx.row() >= rowCount()) {
         qWarning() << "WARNING" << "DataModel::setIcon" << "row exceeds rowCount" << dmIdx.isValid() << dmIdx;
         return;
     }
-
     /*
     qDebug() << "DataModel::setIcon"
              << "row =" << dmIdx.row()
@@ -1471,9 +1467,21 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
                 //*/
 
     // this fails same as QStandardItem *item when rapid change folders
+    if (fromInstance == instance) writeIcon(dmIdx, pm);
+//    const QVariant vIcon = QVariant(QIcon(pm));
+//    if (fromInstance == instance) writeIcon(dmIdx, vIcon);
+//    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
+//    setIconMax(pm);
+}
+
+void DataModel::writeIcon(QModelIndex dmIdx, const QPixmap &pm)
+{
+    mutex.lock();
     const QVariant vIcon = QVariant(QIcon(pm));
-    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
+    Q_ASSERT(dmIdx.isValid());
+    setData(dmIdx, vIcon, Qt::DecorationRole);
     setIconMax(pm);
+    mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)
