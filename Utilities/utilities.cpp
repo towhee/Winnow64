@@ -592,17 +592,16 @@ void Utilities::hexFromByteArray(QByteArray &ba, int cols, int start, int end)
     QString s;
     int n = 0;
     if (end <= 0) end = ba.length();
-    QDebug debug = qDebug();
-    debug.noquote();
-    debug << "\n";
+    qDebug().noquote();
+    qDebug() << "\n";
 //    s += "\n";
     for (int i = start; i < end; i++) {
         quint8 x = (0xff & (unsigned int)ba[i]);
 //        s += QStringLiteral("%1").arg(x, 2, 16, QLatin1Char('0')).toUpper() + " ";
-        debug << QStringLiteral("%1").arg(x, 2, 16, QLatin1Char('0')).toUpper();
+        qDebug() << QStringLiteral("%1").arg(x, 2, 16, QLatin1Char('0')).toUpper();
 //        if (cols > 0 && ++n % cols == 0) s += "\n";
-        if (cols > 0 && ++n % cols == 0) debug << " " << n << "\n";
+        if (cols > 0 && ++n % cols == 0) qDebug() << " " << n << "\n";
     }
-    debug << "\n";
+    qDebug() << "\n";
 //    return s;
 }

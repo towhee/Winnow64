@@ -51,7 +51,7 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
 //    /*
-//    if (isDebug)
+    if (isDebug)
     qDebug() << "Thumb::loadFromVideo                  "
              << "row =" << dmRow
              << fPath
@@ -316,7 +316,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 void Thumb::insertThumbnails(QModelIndexList &selection)
 {
 /*
-
+    Fix missing thumbnails in JPG
 */
     if (G::isLogger) G::log("Thumb::insertThumbnails");
 

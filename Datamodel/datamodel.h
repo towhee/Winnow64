@@ -186,7 +186,7 @@ private:
     double aspectRatio(int w, int h, int orientation);
     void setIconMax(const QPixmap &pm);
     bool instanceClash(QModelIndex idx, QString src);
-
+    void writeIcon(QModelIndex dmIdx, const QPixmap &pm);
     int imageCount;
     int countInterval = 0;
     QString buildMsg = "Building filters.  This could take a while to complete.<p>"

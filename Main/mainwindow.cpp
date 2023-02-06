@@ -2088,7 +2088,7 @@ bool MW::stop(QString src)
 
     // clear queued signals from MetaRead
     disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
@@ -2122,7 +2122,7 @@ bool MW::stop(QString src)
 //    qDebug() << "MW::stop" << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
-    frameDecoder->clear();
+    frameDecoder->stop();
 //    qDebug() << "MW::stop" << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
 
     reset("MW::stop");
@@ -5432,6 +5432,9 @@ void MW::ejectUsbFromContextMenu()
 
 void MW::insertThumbnails()
 {
+/*
+    MENU:  Edit > Utilities > Fix missing thumbnails in JPG
+*/
     if (G::isLogger) G::log("MW::insertThumbnails");
     QModelIndexList selection = dm->selectionModel->selectedRows();
     thumb->insertThumbnails(selection);
