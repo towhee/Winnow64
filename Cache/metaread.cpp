@@ -253,11 +253,15 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         abort = true;
         return false;
     }
+
+    // read metadata from file into metadata->m
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     QFileInfo fileInfo(fPath);
     metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
+
+    // update progress in case filters panel activated before all metadata loaded
     metaReadCount++;
     int progress = 1.0 * metaReadCount / dmRowCount * 100;
     emit updateProgress(progress);
@@ -269,6 +273,8 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << "abort =" << abort
                  ;
     }
+
+    // add metadata->m to DataModel dm
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
     if (debugCaching)
     {
@@ -277,9 +283,12 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << "abort =" << abort
                  ;
     }
+
+    // add to ImageCache icd->cacheItemList (used to manage image cache)
     if (G::useImageCache) {
         emit addToImageCache(metadata->m);
     }
+
     if (debugCaching) {
         qDebug() << "MetaRead::readMetadata"
                  << "addToImageCache row =" << sfIdx.row()

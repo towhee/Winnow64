@@ -141,7 +141,7 @@ public slots:
     bool addMetadataForItem(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
-                          qint64 duration, FrameDecoder *frameDecoder);
+                          qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
@@ -186,7 +186,6 @@ private:
     double aspectRatio(int w, int h, int orientation);
     void setIconMax(const QPixmap &pm);
     bool instanceClash(QModelIndex idx, QString src);
-    void writeIcon(QModelIndex dmIdx, const QPixmap &pm);
     int imageCount;
     int countInterval = 0;
     QString buildMsg = "Building filters.  This could take a while to complete.<p>"

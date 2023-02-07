@@ -668,7 +668,7 @@ bool DataModel::addFileData()
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
     lastFunction = "";
-    if (G::isLogger) G::log("DataModel::addFileDataForRow");
+    if (G::isLogger) G::log("DataModel::addFileDataForRow", "row = " + QString::number(row));
     if (isDebug) qDebug() << "DataModel::addFileDataForRow"
                           << "instance =" << instance
                           << "row =" << row
@@ -912,10 +912,13 @@ void DataModel::addAllMetadata()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addAllMetadata");
     if (isDebug) qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentFolderPath;
 //    G::t.restart();
+
+    int mod = 10;
+    if (rowCount() > 1000) mod = 100;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // Load folder progress
-        if (G::isLinearLoading && row % 100 == 0) {
+        if (/*G::isLinearLoading && */row % mod == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " metadata loading...";
             emit centralMsg(s);    // rghmsg
@@ -946,6 +949,7 @@ void DataModel::addAllMetadata()
         }
     }
     setAllMetadataLoaded(true);
+    emit centralMsg("Metadata loaded");
     endLoad(true);
     /*
     qint64 ms = G::t.elapsed();
@@ -1345,7 +1349,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
 }
 
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
-                                      qint64 duration, FrameDecoder *frameDecoder)
+                                      qint64 duration)
 {
 /*
     This slot is signalled from FrameDecoder, where the thumbnail and video duration are
@@ -1417,6 +1421,9 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     lagging calls when the folder has been changed.  This probably makes the instance
     checking, which was not totally reliable, to no longer be required.  Keeping it for
     now.
+
+    This function is subject to potential race conditions, so it is critical that it only
+    be called via a connection with Qt::BlockingQueuedConnection.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIcon");
@@ -1457,31 +1464,10 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         qWarning() << "WARNING" << "DataModel::setIcon" << "row exceeds rowCount" << dmIdx.isValid() << dmIdx;
         return;
     }
-    /*
-    qDebug() << "DataModel::setIcon"
-             << "row =" << dmIdx.row()
-             << "rows =" << rowCount()
-             << "fromInstance =" << fromInstance
-             << "currentInstance =" << instance
-                ;
-                //*/
 
-    // this fails same as QStandardItem *item when rapid change folders
-    if (fromInstance == instance) writeIcon(dmIdx, pm);
-//    const QVariant vIcon = QVariant(QIcon(pm));
-//    if (fromInstance == instance) writeIcon(dmIdx, vIcon);
-//    if (fromInstance == instance) setData(dmIdx, vIcon, Qt::DecorationRole);
-//    setIconMax(pm);
-}
-
-void DataModel::writeIcon(QModelIndex dmIdx, const QPixmap &pm)
-{
-    mutex.lock();
     const QVariant vIcon = QVariant(QIcon(pm));
-    Q_ASSERT(dmIdx.isValid());
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setIconMax(pm);
-    mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)

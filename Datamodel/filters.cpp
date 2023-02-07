@@ -212,7 +212,7 @@ void Filters::createPredefinedFilters()
 
 void Filters::createFilter(QTreeWidgetItem *cat, QString name)
 {
-    if (G::isLogger) G::log("Filters::createDynamicFilters");
+    if (G::isLogger) G::log("Filters::createFilter", name);
     if (debugFilters)
         qDebug() << "Filters::createFilter"
                  << "name =" << name

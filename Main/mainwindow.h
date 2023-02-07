@@ -9,15 +9,9 @@
 #include <iomanip>
 
 #if defined(Q_OS_MAC)
-//#include "macScale.h"
 #include <ApplicationServices/ApplicationServices.h>
-//#include <QtMacExtras>
 #include <CoreServices/CoreServices.h>
 #include "CoreGraphics/CoreGraphics.h"
-////#include "Foundation/Foundation.h"
-////#include "UserPreferenceUtility.h"
-//#import <Foundation/Foundation.h>
-//#include "UserPreferenceUtility.h"
 #endif
 
 #include "Main/global.h"
@@ -90,7 +84,7 @@
 #endif
 
 #ifdef Q_OS_MAC
-#include "Utilities/mac.h"
+//#include "Utilities/mac.h"
 #endif
 
 class MW : public QMainWindow
@@ -359,7 +353,6 @@ public slots:
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     bool reset(QString src = "");
-    bool instanceClash();
     void nullFiltration();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -385,6 +378,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void restartMetaRead(int newRow);
     void interruptMetaRead(bool flag);
     void startMetaRead(int sfRow, QString src);
@@ -514,7 +508,6 @@ private slots:
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);
     bool updateIconRange(int row = -1, QString src = "");
-    bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
@@ -733,6 +726,7 @@ private:
     QAction *deleteActiveFolderAction;
     QAction *deleteBookmarkFolderAction;
     QAction *deleteFSTreeFolderAction;
+    QAction *shareFilesAction;
     QAction *rejectAction;
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
@@ -1185,6 +1179,7 @@ private:
     void wheelEvent(QWheelEvent *event) override;
 //    bool event(QEvent *event);
     void copyFiles();
+    void shareFiles();
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
     void deleteSelectedFiles();

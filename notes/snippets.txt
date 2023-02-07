@@ -197,3 +197,121 @@ Share an image on MacOS (ChatGPT)
     NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:@[image]];
     [picker showRelativeToRect:[self.view bounds] ofView:self.view preferredEdge:NSRectEdgeMaxY];
 }
+
+#include <QtMacExtras/QMacPasteboardMime>
+#include <QtGui/QImage>
+#include <QtGui/QClipboard>
+
+void shareImage(const QImage &image)
+{
+    // Convert the image to a png format
+    QByteArray ba;
+    QBuffer buffer(&ba);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+
+    // Put the image data on the clipboard
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setMimeData(new QMimeData(), QClipboard::Clipboard);
+    QMacPasteboardMime *mime = new QMacPasteboardMime(QStringLiteral("public.png"));
+    mime->writeToPasteboard(clipboard->mimeData(), ba);
+}
+
+-----------------------
+This code first converts the QImage to an NSImage using the toNSImage method, which is
+provided by the QtMacExtras module. Then, an instance of NSSharingServicePicker is
+created, configured and presented to the user, allowing them to choose from a variety of
+sharing options, such as email, message, or social media.
+
+#include <QtGui/QImage>
+#include <QtMacExtras/QMacNativeWidget>
+#include <AppKit/NSSharingServicePicker.h>
+
+void shareImage(const QImage &image)
+{
+    // Convert the image to a native NSImage
+    QMacNativeWidget nativeWidget;
+    NSImage *nsImage = [[NSImage alloc] initWithData:[image.toNSImage().TIFFRepresentation() mutableCopy]];
+
+    // Create an NSSharingServicePicker and present it
+    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] init];
+    [picker setDelegate:nil];
+    [picker setShowsServicesButton:NO];
+    [picker setSourceRect:NSZeroRect];
+    [picker setSourceView:nativeWidget.nativeView()];
+    [picker shareImage:nsImage];
+}
+
+-----------------------------------
+From a Qt 6 environment, create a c++ function that accepts a QList containing multiple
+QImages and shares the QImages on MacOS using NSSharingServicePicker.
+
+Here is an example of how to share multiple images on MacOS using NSSharingServicePicker
+from within a Qt 6 environment:
+
+#include <QtGui/QImage>
+#include <QtMacExtras/QMacNativeWidget>
+#include <AppKit/NSSharingServicePicker.h>
+
+void shareImages(const QList<QImage> &images)
+{
+    // Convert the QImages to native NSImages
+    QMacNativeWidget nativeWidget;
+    NSMutableArray *nsImages = [NSMutableArray array];
+    for (const auto &image : images) {
+        NSImage *nsImage = [[NSImage alloc] initWithData:[image.toNSImage().TIFFRepresentation() mutableCopy]];
+        [nsImages addObject:nsImage];
+    }
+
+    // Create an NSSharingServicePicker and present it
+    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] init];
+    [picker setDelegate:nil];
+    [picker setShowsServicesButton:NO];
+    [picker setSourceRect:NSZeroRect];
+    [picker setSourceView:nativeWidget.nativeView()];
+    [picker shareImages:nsImages];
+}
+
+This code first converts each QImage in the list to a native NSImage using the toNSImage
+method, which is provided by the QtMacExtras module. Then, an instance of
+NSSharingServicePicker is created, configured and presented to the user, allowing them to
+choose from a variety of sharing options, such as email, message, or social media. The
+shareImages: method of NSSharingServicePicker is used to share the list of NSImages.
+
+-----------------------------------
+From a Qt 6 environment, create a c++ function that accepts a List containing multiple
+image file urls and shares the files on MacOS using NSSharingServicePicker.
+
+Here is an example of how to share multiple image files on MacOS using
+NSSharingServicePicker from within a Qt 6 environment:
+
+#include <QtCore/QList>
+#include <QtCore/QUrl>
+#include <QtMacExtras/QMacNativeWidget>
+#include <AppKit/NSSharingServicePicker.h>
+
+void shareImageFiles(const QList<QUrl> &fileUrls)
+{
+    // Convert the file urls to native NSURLs
+    QMacNativeWidget nativeWidget;
+    NSMutableArray *nsFileUrls = [NSMutableArray array];
+    for (const auto &fileUrl : fileUrls) {
+        NSURL *nsFileUrl = [NSURL fileURLWithPath:fileUrl.toLocalFile()];
+        [nsFileUrls addObject:nsFileUrl];
+    }
+
+    // Create an NSSharingServicePicker and present it
+    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] init];
+    [picker setDelegate:nil];
+    [picker setShowsServicesButton:NO];
+    [picker setSourceRect:NSZeroRect];
+    [picker setSourceView:nativeWidget.nativeView()];
+    [picker shareFiles:nsFileUrls];
+}
+
+This code first converts each QUrl in the list to a native NSURL using the
+fileURLWithPath method from NSURL. Then, an instance of NSSharingServicePicker
+is created, configured and presented to the user, allowing them to choose from
+a variety of sharing options, such as email, message, or social media. The
+shareFiles: method of NSSharingServicePicker is used to share the list of file
+URLs.

@@ -384,25 +384,20 @@ void IconView::updateVisible(int sfRow)
     Determine the first and last visible icons in the IconView viewport for any item in the
     datamodel. There are two options:
 
-    1.  The user has scrolled or jumped to a known row.
+    1.  The user has scrolled or jumped to a known sfRow.
 
-    2.  The user has scrolled or jumped and we do not know the new visible icons.
+        The known datamodel sfRow is the visual midpoint (midVisibleCell) since scrolling
+        is set to center the current item in the viewport.
 
-    OPTION 1 (sfRow = 0 to dm->sf->rowCount)
+        If we determine the maximum cells in the viewport then it is easy to calculate
+        the firstVisibleCell and lastVisibleCell.
 
-    The known datamodel sfRow is the visual midpoint (midVisibleCell) since scrolling is
-    set to center the current item in the viewport.
+    2.  The user has scrolled or jumped to an unknown sfRow (-1).
 
-    If we determine the maximum cells in the viewport then it is easy to calculate
-    the firstVisibleCell and lastVisibleCell.
+        Scrolling is set to center the current item in the viewport. The value of the
+        scrollbar tells us approximately where we are.
 
-    OPTION 2 (sfRow is default -1)
-
-    Scrolling is set to center the current item in the viewport. The value of
-    the scrollbar tells us where we are.
-
-    So we have to determine when scrolling will first occur, how many rows of icons will be
-    visible in the viewport, how many icons are visible and the first/last icons visible.
+        By iterating back and forth the firstVisible and lastVisible is determined.
 */
     if (G::isLogger || G::isFlowLogger) G::log("IconView::updateVisibleCells", objectName());
 
@@ -412,7 +407,6 @@ void IconView::updateVisible(int sfRow)
         QSize cell = getCellSize();
         QSize vp = viewport()->size();
         int cellsPerRow = vp.width() / cell.width() + 1;
-        // VP = vp = viewport
         int rowsPerVP = vp.height() / cell.height() + 1;
         int cellsPerVP = cellsPerRow * rowsPerVP;
         int half = static_cast<int>(cellsPerVP * 0.5);
@@ -434,38 +428,18 @@ void IconView::updateVisible(int sfRow)
         visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     }
     else {
-//        waitUntilScrollReady();  // can get into infinite loop
-        /*
-        int hScrollPos = horizontalScrollBar()->value();
-        int hScrollMax = getHorizontalScrollBarMax();
-        int vScrollPos = verticalScrollBar()->value();
-        int vScrollMax = verticalScrollBar()->maximum();
-        int vScrollMax = getVerticalScrollBarMax();
-        */
         int first;
         if (isWrapping()) {
             first = verticalScrollBar()->value() * 1.0 / verticalScrollBar()->maximum() * n;
-//            first = vScrollPos * 1.0 / vScrollMax * n;
-            /*
-            qDebug() << "IconView::getFirstVisible"
-                     << "vScrollPos =" << vScrollPos
-                     << "vScrollMax =" << vScrollMax
-                     << "first =" << first
-                        ;
-                        //*/
         }
         else {
             first = horizontalScrollBar()->value() * 1.0 / horizontalScrollBar()->maximum() * n;
-//            first = hScrollPos * 1.0 / hScrollMax * n;
-    //        qDebug() << "IconView::getFirstVisible" << isWrapping() << "first =" << first;
         }
 
         QRect vpRect = viewport()->rect();
         if (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
             while (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
                 first--;
-    //            bool in = visualRect(dm->sf->index(first, 0)).intersects(vpRect);
-    //            qDebug() << "IconView::getFirstVisible inside" << "first =" << first << in;
                 if (first < 0) break;
             }
             firstVisibleCell = first + 2;
@@ -473,7 +447,6 @@ void IconView::updateVisible(int sfRow)
         else {
             while (!visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
                 first++;
-    //            qDebug() << "IconView::getFirstVisible outside" << "first =" << first;
                 if (first > n) break;
             }
             firstVisibleCell = first;
@@ -491,17 +464,20 @@ void IconView::updateVisible(int sfRow)
         midVisibleCell = firstVisibleCell + visibleCellCount / 2 - 1;
     }
 
-//    qDebug() << "IconView::updateVisibleCells  row" << sfRow
-//             << "firstVisibleCell =" << firstVisibleCell
-//             << "lastVisibleCell =" << lastVisibleCell
-//             << "midVisibleCell =" << midVisibleCell
-//                ;
-
+    /* debug
+    qDebug() << "IconView::updateVisibleCells  row" << sfRow
+             << "firstVisibleCell =" << firstVisibleCell
+             << "lastVisibleCell =" << lastVisibleCell
+             << "midVisibleCell =" << midVisibleCell
+                ;
+                //*/
 }
 
 bool IconView::calcViewportRange(int sfRow)
 {
 /*
+    Not used.
+
     Determine the first and last visible icons in the IconView viewport for any item in the
     datamodel. Scrolling is set to center the current item in the viewport. There are three
     scenarios to consider:

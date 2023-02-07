@@ -194,8 +194,8 @@ bool VideoView::event(QEvent *event) {
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    if (G::isLogger) G::log("VideoView::event");
     if (event->type() == QEvent::NativeGesture) {
+        if (G::isLogger) G::log("VideoView::event", "QEvent::NativeGesture");
         emit togglePick();
         /*
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);

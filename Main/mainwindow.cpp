@@ -1770,7 +1770,6 @@ void MW::folderSelectionChange()
 
     // start loading new folder
     G::t.restart();
-    instance = dm->instance;
     buildFilters->reset();
     if (G::isLinearLoading) {
         // metadata and icons loaded in GUI thread
@@ -2137,6 +2136,9 @@ bool MW::stop(QString src)
 
 bool MW::reset(QString src)
 {
+/*
+    Resets everything prior to a folder change.
+*/
     if (G::isLogger) G::log("MW::reset", "Source: " + src);
 
     if (!G::dmEmpty /*|| !G::stop*/) return false;
@@ -2185,11 +2187,6 @@ bool MW::reset(QString src)
     return true;
 }
 
-bool MW::instanceClash()
-{
-    return (instance == dm->instance);
-}
-
 void MW::nullFiltration()
 {
     if (G::isLogger) G::log("MW::nullFiltration");
@@ -2199,21 +2196,6 @@ void MW::nullFiltration()
     imageView->clear();
     progressLabel->setVisible(false);
     isDragDrop = false;
-}
-
-bool MW::isCurrentThumbVisible()
-{
-/*
-    rgh not being used
-
-    This function is used to determine if it is worthwhile to cache more metadata and/or
-    icons. If the image/thumb that has just become the current image is already visible then
-    do not invoke metadata caching.
-*/
-    if (G::isLogger) G::log("MW::isCurrentThumbVisible");
-    updateIconRange(-1, "MW::isCurrentThumbVisible");
-    return (dm->currentSfRow > metadataCacheThread->firstIconVisible &&
-            metadataCacheThread->lastIconVisible);
 }
 
 void MW::updateDefaultIconChunkSize(int size)
@@ -2232,10 +2214,15 @@ void MW::updateDefaultIconChunkSize(int size)
 bool MW::updateIconRange(int row, QString src)
 {
 /*
-    Polls both thumbView and gridView to determine the first and last thumbnail visible.
-    This is used in the metadataCacheThread to determine the range of files to cache. If
-    row == -1 then scan the current view to determine the first/last. Otherwise,
-    calculate first/last.
+    Polls thumbView, gridView and tableView to determine the first and last thumbnail
+    visible. This is used in the metadataCacheThread or metaReadThread to determine the
+    range of thumbnails to cache.
+
+    If row == -1 (scrolled to unknown row) then the isVisible() function uses the scrollbar
+    position to determine the visible thumbnails.
+
+    The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
+    it is less than the visible thumbnails.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::updateIconRange", "src = " + src + " row = " + QString::number(row));
     int firstVisible = dm->sf->rowCount();
@@ -2247,16 +2234,12 @@ bool MW::updateIconRange(int row, QString src)
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
-//        if (row >= 0) thumbView->calcViewportRange(row);
-//        else thumbView->scannedViewportRange();
         thumbView->updateVisible(row);
         if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
-//        if (row >= 0) gridView->calcViewportRange(row);
-//        else gridView->scannedViewportRange();
         gridView->updateVisible(row);
         if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
@@ -2279,51 +2262,20 @@ bool MW::updateIconRange(int row, QString src)
         chunkSizeChanged = false;
     }
 
-    /*
-    // icons to range based on caching icons for prev, curr and next page of thumbnails
-    int toCacheIcons = visibleIcons * 3;
-    int firstIconRow = firstVisible - visibleIcons;
-    int lastIconRow = lastVisible + visibleIcons;
-    if (firstIconRow < 0) firstIconRow = 0;
-    if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount();
-    */
-
-
-    // icon range to use:
-
+    // MDCache (Linear metadata loading) icon range to use:
     metadataCacheThread->firstIconVisible = firstVisible;
     metadataCacheThread->midIconVisible = (firstVisible + lastVisible) / 2;   // rgh qCeil ??
     metadataCacheThread->lastIconVisible = lastVisible;
     metadataCacheThread->visibleIcons = visibleIcons;
 
+    // DataModel (Concurrent metadata loading) icon range
     int firstIconRow = dm->currentSfRow - dm->iconChunkSize / 2;
     if (firstIconRow < 0) firstIconRow = 0;
     int lastIconRow = firstIconRow + dm->iconChunkSize;
     if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
     dm->setIconRange(firstIconRow, lastIconRow);
 
-    /*
-//    dm->firstVisibleRow = firstVisible;
-//    dm->lastVisibleRow = lastVisible;
-
-    if (G::loadOnlyVisibleIcons) {
-//        dm->startIconRange = firstVisible;
-//        dm->endIconRange = lastVisible;
-        dm->setIconRange(firstVisible, lastVisible);
-    }
-    else {
-        // icons to range based on iconChunkSize
-        int firstIconRow = dm->currentSfRow - dm->iconChunkSize / 2;
-        if (firstIconRow < 0) firstIconRow = 0;
-        int lastIconRow = firstIconRow + dm->iconChunkSize;
-        if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
-//        dm->startIconRange = firstIconRow;
-//        dm->endIconRange = lastIconRow;
-        dm->setIconRange(firstIconRow, lastIconRow);
-    }
-    */
-
-    /*
+    /* debug
     qDebug()
          << "MW::updateIconRange" << "row =" << row << "src =" << src
 //         << "dm->iconChunkSize =" << dm->iconChunkSize
@@ -2421,7 +2373,6 @@ void MW::loadConcurrentMetaDone()
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
     if (reset()) return;
-    updateIconRange(-1, "MW::loadConcurrentMetaDone");
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
@@ -4055,14 +4006,12 @@ void MW::rotateLeft()
 {
     if (G::isLogger) G::log("MW::rotateLeft");
     setRotation(270);
-//    imageView->refresh();
 }
 
 void MW::rotateRight()
 {
     if (G::isLogger) G::log("MW::rotateRight");
     setRotation(90);
-//    imageView->refresh();
 }
 
 void MW::setRotation(int degrees)
@@ -4111,34 +4060,30 @@ void MW::setRotation(int degrees)
 
         emit setValueSf(orientationIdx, newOrientation, dm->instance,
                         "MW::setRotation", Qt::EditRole);
-//        dm->sf->setData(orientationIdx, newOrientation);
 
-        // rotate thumbnail(s)
-        QTransform trans;
-        trans.rotate(degrees);
+        // rotate thumbnail
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
-        QString fPath = thumbIdx.data(G::PathRole).toString();
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
         QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
-        pm = pm.transformed(trans, Qt::SmoothTransformation);
-        item->setIcon(pm);  // rgh change to emit?
-        thumbView->refreshThumbs();
+        pm = pm.transformed(QTransform().rotate(degrees));
+        item->setIcon(pm);
 
         // rotate selected cached full size images
+        QString fPath = thumbIdx.data(G::PathRole).toString();
         QImage image;
         if (icd->imCache.find(fPath, image)) {
-            image = image.transformed(trans, Qt::SmoothTransformation);
+            image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->imCache.insert(fPath, image);
         }
 
         // update exif in image
         QString orient;
         switch (newRotation) {
-        case 0:   orient = "1"; break;
-        case 90:  orient = "6"; break;
-        case 180: orient = "3"; break;
-        case 270: orient = "8"; break;
+            case 0:   orient = "1"; break;
+            case 90:  orient = "6"; break;
+            case 180: orient = "3"; break;
+            case 270: orient = "8"; break;
         }
         if (orient.length() && G::modifySourceFiles) {
             // note that Metadata::writeOrientation must be static!
@@ -5593,13 +5538,14 @@ void MW::refreshCurrentFolder()
     folder images have changed.
 */
     if (G::isLogger) G::log("MW::refreshCurrentFolder");
+    QString src = "MW::refreshCurrentFolder";
     isRefreshingDM = true;
     refreshCurrentPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
         for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
             QString fPath = dm->modifiedFiles.at(i).filePath();
-            if (!dm->fPathRow.contains(fPath.toLower())) continue;
-            int dmRow = dm->fPathRow[fPath.toLower()];
+            int dmRow = dm->rowFromPath(fPath);
+            if (dmRow == -1) continue;
             int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
             // update file size and modified date
             dm->updateFileData(dm->modifiedFiles.at(i));
@@ -5627,7 +5573,8 @@ void MW::refreshCurrentFolder()
             bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, "MW::refreshCurrentFolder");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-// rgh1027               dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);  // rgh change to emit?
+                QModelIndex dmIdx = dm->index(dmRow, 0);
+                dm->setIcon(dmIdx, pm, dm->instance, src);
             }
         }
          if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
@@ -5644,9 +5591,8 @@ void MW::refreshCurrentAfterReload()
     complete the refresh current folder process by selecting the previously selected thumb.
 */
     if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
-    int dmRow = 0;
-    if (dm->fPathRow.contains(refreshCurrentPath.toLower()))
-        dmRow = dm->fPathRow[refreshCurrentPath.toLower()];
+    int dmRow = dm->rowFromPath(refreshCurrentPath);
+    if (dmRow == -1) return;
     int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
     /*
     qDebug() << "MW::refreshCurrentAfterReload" << refreshCurrentPath
@@ -5672,29 +5618,50 @@ void MW::saveAsFile()
     saveAsDlg->exec();
 }
 
+void MW::shareFiles()
+{
+    if (G::isLogger) G::log("MW::copy");
+
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    if (selection.isEmpty()) return;
+
+    int n = selection.count();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QMimeData *mimeData = new QMimeData;
+    QList<QUrl> urls;
+    for (int i = 0; i < n; ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        urls << QUrl::fromLocalFile(fPath);
+        qDebug() << "IconView::copyFiles" << fPath;
+    }
+
+    // Convert the file urls to native NSURLs  src snippets and chatGPT
+//    Mac::share(urls);
+}
+
 void MW::copyFiles()
 {
     if (G::isLogger) G::log("MW::copy");
     QModelIndexList selection = dm->selectionModel->selectedRows();
-   if (selection.isEmpty()) return;
+    if (selection.isEmpty()) return;
 
-   int n = selection.count();
-   QClipboard *clipboard = QGuiApplication::clipboard();
-   QMimeData *mimeData = new QMimeData;
-   QList<QUrl> urls;
-   for (int i = 0; i < n; ++i) {
-       QString fPath = selection.at(i).data(G::PathRole).toString();
-       urls << QUrl::fromLocalFile(fPath);
-       qDebug() << "IconView::copyFiles" << fPath;
-   }
-   mimeData->setUrls(urls);
-   clipboard->setMimeData(mimeData);
+    int n = selection.count();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QMimeData *mimeData = new QMimeData;
+    QList<QUrl> urls;
+    for (int i = 0; i < n; ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        urls << QUrl::fromLocalFile(fPath);
+        qDebug() << "IconView::copyFiles" << fPath;
+    }
+    mimeData->setUrls(urls);
+    clipboard->setMimeData(mimeData);
 
-   QString nPaths;
-   if (n == 1) nPaths = "1 file";
-   else nPaths = QString::number(n) + " files";
-   QString msg = "Copied " + nPaths + " to the clipboard";
-   G::popUp->showPopup(msg, 1500);
+    QString nPaths;
+    if (n == 1) nPaths = "1 file";
+    else nPaths = QString::number(n) + " files";
+    QString msg = "Copied " + nPaths + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
 }
 
 void MW::copyFolderPathFromContext()

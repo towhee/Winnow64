@@ -122,26 +122,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->setEnabled(true);
-//    filters->msgFrame->setVisible(true);
-//    filters->filterLabel->setText("testing");
-//    filters->filterLabel->setVisible(true);
-//    filters->bfProgressBar->setVisible(true);
-//    filters->bfProgressBar->setValue(100);
-    return;
-
-    qDebug() << filters->activeCategory->text(0);
-    filters->setEachCatTextColor();
-    return;
-
-    QMediaMetaData mediaMetadata = videoView->video->mediaPlayer->metaData();
-    QList<QMediaMetaData::Key> keys = mediaMetadata.keys();
-    qDebug() << keys;
-    return;
-    QVariant v = mediaMetadata[QMediaMetaData::ThumbnailImage];
-    QPixmap pm = v.value<QPixmap>();
-    ImageDlg imageDlg(pm, "test");
-    imageDlg.exec();
+    int row = dm->rowFromPath("randompath");
+    qDebug() << row;
     return;
 
     QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"

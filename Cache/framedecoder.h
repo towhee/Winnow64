@@ -24,8 +24,7 @@ public:
 
 signals:
     void stopped(QString src);
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
-                      FrameDecoder *thisFrameDecoder);
+    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration);
 
 public slots:
     void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);

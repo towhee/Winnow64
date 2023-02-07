@@ -34,6 +34,7 @@ public:
 signals:
     void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void centralMsg(QString message);
     void updateProgress(int progress);
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);

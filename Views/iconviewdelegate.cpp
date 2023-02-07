@@ -366,6 +366,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconSize = icon.actualSize(thumbSize);
     double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
+    /*
     if (aspectRatio > 0) {
         if (aspectRatio > 1) {
             iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
@@ -376,6 +377,7 @@ void IconViewDelegate::paint(QPainter *painter,
             iconSize.setHeight(thumbSize.height());
         }
     }
+    //*/
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
@@ -388,7 +390,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconSize.width(), iconSize.height());
 
-    /*
+    /* debug
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow

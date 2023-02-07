@@ -2,14 +2,14 @@
 #define THUMBVIEW_H
 
 #include <QtWidgets>
-//#include "Main/global.h"
 #include "File/fstree.h"
-//#include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include "iconviewdelegate.h"
-//#include "Datamodel/filters.h"
-//#include "Cache/threadsafehash.h"
 #include <math.h>
+
+#ifdef Q_OS_MAC
+//#include "Utilities/mac.h"
+#endif
 
 class IconView : public QListView
 {

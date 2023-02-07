@@ -79,7 +79,7 @@ void BookMarks::reloadBookmarks()
 
 void BookMarks::addBookmark(QString itemPath)
 {
-    if (G::isLogger) G::log("BookMarks::addBookmark");
+    if (G::isLogger) G::log("BookMarks::addBookmark", itemPath);
     QTreeWidgetItem *item = new QTreeWidgetItem(this);
     item->setText(0, QFileInfo(itemPath).fileName());
     item->setIcon(0, QIcon(":/images/bookmarks.png"));

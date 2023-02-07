@@ -59,7 +59,7 @@ bool EmbelExport::loadImage(QString fPath)
 */
     if (G::isLogger) G::log("EmbelExport::loadImage");
     QImage image;
-    int dmRow = dm->fPathRow[fPath.toLower()];
+    int dmRow = dm->rowFromPath(fPath);
 
     if (!embellish->isRemote) {
         if (icd->imCache.find(fPath, image)) {

@@ -148,6 +148,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::currentChanged, this, &MW::fileSelectionChange);
     connect(this, &MW::setValue, dm, &DataModel::setValue);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
+    connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
@@ -276,6 +277,8 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+    // update loading metadata in central window
+    connect(metaReadThread, &MetaRead::centralMsg, this, &MW::setCentralMessage);
     // update filters metaread progress
     connect(metaReadThread, &MetaRead::updateProgress, filters, &Filters::updateProgress);
     // pause waits until isRunning == false

@@ -430,6 +430,11 @@ void MW::createActions()
     addAction(deleteFSTreeFolderAction);
     connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
+    shareFilesAction = new QAction(tr("Share fil(s)"), this);
+    shareFilesAction->setObjectName("shareFiles");
+    addAction(shareFilesAction);
+    connect(shareFilesAction, &QAction::triggered, this, &MW::deleteFolder);
+
     copyFilesAction = new QAction(tr("Copy file(s)"), this);
     copyFilesAction->setObjectName("copyFiles");
     copyFilesAction->setShortcutVisibleInContextMenu(true);
@@ -1547,6 +1552,8 @@ void MW::createMenus()
     editMenu->addAction(copyImagePathFromContextAction);
     editMenu->addAction(deleteAction);
     editMenu->addAction(deleteActiveFolderAction);
+//    editMenu->addSeparator();
+//    editMenu->addAction(shareFilesAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
     editMenu->addAction(rejectAction);
