@@ -380,7 +380,7 @@ void Ingest::run()
         QString metadataChangedSourcePath = sourcePath;
         if (combineRawJpg) {
             // only raw files included if combineRawJpg and there is a rawjpg pair
-            int dmRow = dm->fPathRow[sourcePath.toLower()];
+            int dmRow = dm->rowFromPath(sourcePath);
             QModelIndex idx = dm->index(dmRow, 0);
             if (idx.isValid()) {
                 // check if raw/jpg pair

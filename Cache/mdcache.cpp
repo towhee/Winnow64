@@ -370,7 +370,8 @@ bool MetadataCache::loadIcon(int sfRow)
             pm = QPixmap(":/images/error_image256.png");
             qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
         }
-        dm->setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
+//        dm->setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
+        emit setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
         iconMax(pm);
         iconsCached.append(dmRow);
     }

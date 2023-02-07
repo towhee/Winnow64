@@ -16,6 +16,9 @@
 #include <CoreServices/CoreServices.h>
 #include <CoreGraphics/CoreGraphics.h>
 
+// share
+//#include <AppKit/NSSharingService.h>
+
 #include "Main/global.h"                // req'd by availableMemory
 
 class Mac
@@ -24,6 +27,7 @@ public:
     static void availableMemory();
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
+    static void share(QList<QUrl> urls);
 
 private:
     typedef struct {

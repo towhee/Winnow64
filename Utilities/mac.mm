@@ -92,3 +92,24 @@ float Mac::getMouseCursorMagnification()
     return cur_scale;
 }
 
+void Mac::share(QList<QUrl> urls)
+{
+    if (G::isLogger) G::log("Mac::share");
+
+//    QWidget nativeWidget;
+//    NSMutableArray *nsFileUrls = [NSMutableArray array];
+//    for (const auto &url : urls) {
+//        NSURL *nsFileUrl = url.toNSURL();
+////        NSURL *nsFileUrl = [NSURL fileURLWithPath:url.toLocalFile()];
+//        [nsFileUrls addObject:nsFileUrl];
+//    }
+
+    // Create an NSSharingServicePicker and present it
+//    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] init];
+//    [picker setDelegate:nil];
+//    [picker setShowsServicesButton:NO];
+//    [picker setSourceRect:NSZeroRect];
+//    [picker setSourceView:reinterpret_cast<NSView *>(nativeWidget.winId())];
+////    [picker setSourceView:nativeWidget.nativeView()];
+//    [picker shareFiles:nsFileUrls];
+}

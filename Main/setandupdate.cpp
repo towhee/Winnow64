@@ -548,11 +548,11 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     Make sure the file path exists in the datamodel. The most likely failure will be if a
     new folder has been selected but the image cache has not been rebuilt.
 */
-    int dmRow = dm->fPathRow[fPath.toLower()];
+    int dmRow = dm->rowFromPath(fPath);
 
     if (G::isLogger) {
-        int row = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
-        QString msg = "Row " + QString::number(row) + " " + fPath;
+        int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+        QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::updateCachedStatus", msg);
     }
 

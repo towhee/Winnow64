@@ -802,7 +802,6 @@ QString ImageCache::reportCache(QString title)
 //         << "  Total files:" << icd->cache.totFiles << "\n\n";
     int cachedCount = 0;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-        int row = dm->fPathRow[icd->cacheItemList.at(i).fPath];
         // show header every 40 rows
         if (i % 40 == 0) {
             rpt.reset();

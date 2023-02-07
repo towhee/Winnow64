@@ -353,7 +353,7 @@ void ImageDecoder::run()
     }
 
     if (load()) {
-        if (G::isLogger) G::log("ImageDecoder::run", "Image width =" + QString::number(image.width()));
+        if (G::isLogger) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         status = Status::Done;
@@ -362,7 +362,7 @@ void ImageDecoder::run()
 //    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
     if (G::isLogger) {
         mutex.lock();
-        G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
+        G::log("ImageDecoder::run", "Thread Done" + QString::number(threadId) + " done");
         mutex.unlock();
     }
     if (!abort) emit done(threadId);

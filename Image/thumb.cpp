@@ -22,12 +22,15 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log("Thumb::checkOrientation", fPath);
-//    qDebug() << "Thumb::checkOrientation" << fPath;
     // check orientation and rotate if portrait
     QTransform trans;
-    int row = dm->fPathRow[fPath];
+    int row = dm->rowFromPath(fPath);
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-//    qDebug() << "Thumb::checkOrientation" << orientation << fPath;
+    /* debug
+    qDebug() << "Thumb::checkOrientation"
+             << "row =" << row
+             << "orientation =" << orientation
+             << fPath;//*/
     switch(orientation) {
         case 3:
             trans.rotate(180);
@@ -209,7 +212,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     }
     QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->rowFromPath(fPath);
-//    int dmRow = dm->fPathRow[fPath];
 
     // If video file then just show video icon unless G::renderVideoThumb
     if (metadata->videoFormats.contains(ext)) {

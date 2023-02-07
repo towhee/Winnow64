@@ -86,9 +86,10 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
-        int row = dm->fPathRow[fPath.toLower()];
-        int width = dm->index(row, G::WidthColumn).data().toInt();
-        int height = dm->index(row, G::HeightColumn).data().toInt();
+        int dmRow = dm->rowFromPath(fPath);
+        if (dmRow == -1) continue;
+        int width = dm->index(dmRow, G::WidthColumn).data().toInt();
+        int height = dm->index(dmRow, G::HeightColumn).data().toInt();
         QSize imSize(width, height);
         sizeList->append(imSize);
     }

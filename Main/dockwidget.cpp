@@ -159,7 +159,7 @@ bool DockWidget::event(QEvent *event)
 
 void DockWidget::showEvent(QShowEvent *event)
 {
-    if (G::isLogger) G::log("DockWidget::showEvent");
+    if (G::isLogger) G::log("DockWidget::showEvent", objectName());
     /*
     if (isFloating())
         qDebug() << "DockWidget::showEvent" << event << objectName()
@@ -236,7 +236,7 @@ void DockWidget::resizeEvent(QResizeEvent *event)
 
 void DockWidget::moveEvent(QMoveEvent *event)
 {
-    if (G::isLogger) G::log("DockWidget::moveEvent");
+    if (G::isLogger) G::log("DockWidget::moveEvent", objectName());
     /*
     if (isFloating())
         qDebug() << "DockWidget::moveEvent" << event << objectName()
