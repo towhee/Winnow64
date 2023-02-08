@@ -433,7 +433,7 @@ void MW::createActions()
     shareFilesAction = new QAction(tr("Share fil(s)"), this);
     shareFilesAction->setObjectName("shareFiles");
     addAction(shareFilesAction);
-    connect(shareFilesAction, &QAction::triggered, this, &MW::deleteFolder);
+    connect(shareFilesAction, &QAction::triggered, this, &MW::shareFiles);
 
     copyFilesAction = new QAction(tr("Copy file(s)"), this);
     copyFilesAction->setObjectName("copyFiles");
@@ -1552,8 +1552,8 @@ void MW::createMenus()
     editMenu->addAction(copyImagePathFromContextAction);
     editMenu->addAction(deleteAction);
     editMenu->addAction(deleteActiveFolderAction);
-//    editMenu->addSeparator();
-//    editMenu->addAction(shareFilesAction);
+    editMenu->addSeparator();
+    editMenu->addAction(shareFilesAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
     editMenu->addAction(rejectAction);

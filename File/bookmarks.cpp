@@ -5,7 +5,7 @@ class BookDelegate : public QStyledItemDelegate
 public:
     explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
     {
         static int count = 0;
         count++;

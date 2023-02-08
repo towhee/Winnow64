@@ -2,6 +2,18 @@
 #include "ui_loadusbdlg.h"
 #include <QDebug>
 
+class LoadUsbDelegate : public QStyledItemDelegate
+//class LoadUsbDelegate : public QAbstractItemDelegate
+{
+public:
+    explicit LoadUsbDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const override
+    {
+        int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+        return QSize(option.rect.width(), height);
+    }
+};
+
 LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selectedDrive) :
     QDialog(parent),
     ui(new Ui::LoadUsbDlg),
@@ -10,6 +22,11 @@ LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selecte
 {
     ui->setupUi(this);
 
+    // adjust row height in list
+    ui->usbList->setItemDelegate(new LoadUsbDelegate(ui->usbList));
+
+    setStyleSheet(G::css);
+
     // load list of usb drives
     foreach (const QString &s, usbDrives) {
         ui->usbList->addItem(s);
@@ -17,12 +34,6 @@ LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selecte
     ui->usbList->setCurrentRow(0);
 
     setScreenDependencies();
-
-//    // set row height
-//    for (int i = 0; i < ui->usbList->count(); ++i) {
-//        QListWidgetItem *item = ui->usbList->item(i);
-//        item->setSizeHint(QSize(item->sizeHint().width(), 30));
-//    }
 }
 
 LoadUsbDlg::~LoadUsbDlg()
