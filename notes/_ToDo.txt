@@ -1,15 +1,12 @@
 WHAT'S NEW
-- 769 how to iterate all categories
 
 BUGS / TO DO
 - Occasionally Winnow starts as small window on main monitor
-- When change mode from grid to loupe, the selected image may not be visible in thumbView
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
-- Mac version missing de265-version.h file
 - Convert path to windows \ for copy path to clipboard
 - Extract frame from video
 - Update use of current image for video frame

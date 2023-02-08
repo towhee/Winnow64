@@ -3,6 +3,20 @@
 
 #include <QDialog>
 #include <QtWidgets>
+#include "Main/global.h"
+
+//class LoadUsbDelegate : public QStyledItemDelegate
+////class LoadUsbDelegate : public QAbstractItemDelegate
+//{
+//public:
+//    explicit LoadUsbDelegate(QObject *parent = nullptr);
+////    void paint ( QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index ) const;
+//    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
+//    {
+//        int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+//        return QSize(option.rect.width(), height);
+//    }
+//};
 
 namespace Ui {
 class LoadUsbDlg;

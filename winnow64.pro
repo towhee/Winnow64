@@ -405,7 +405,7 @@ macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
 #macx:LIBS += -framework ColorSync
 macx:LIBS += -framework CoreFoundation
-#macx:LIBS += -framework Foundation
+macx:LIBS += -framework Foundation
 
 # lcms
 #macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2

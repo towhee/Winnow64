@@ -1,6 +1,7 @@
 #include "mac.h"
 #import <Foundation/Foundation.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <AppKit/NSSharingService.h>
 
 void Mac::availableMemory()
 {
@@ -96,20 +97,20 @@ void Mac::share(QList<QUrl> urls)
 {
     if (G::isLogger) G::log("Mac::share");
 
-//    QWidget nativeWidget;
-//    NSMutableArray *nsFileUrls = [NSMutableArray array];
-//    for (const auto &url : urls) {
-//        NSURL *nsFileUrl = url.toNSURL();
-////        NSURL *nsFileUrl = [NSURL fileURLWithPath:url.toLocalFile()];
-//        [nsFileUrls addObject:nsFileUrl];
-//    }
+    QWidget *nativeWidget = new QWidget;
+    NSView *view = reinterpret_cast<NSView *>(nativeWidget->winId());
+    NSMutableArray *nsFileUrls = [NSMutableArray array];
+    for (const auto &url : urls) {
+        NSURL *nsFileUrl = url.toNSURL();
+        [nsFileUrls addObject:nsFileUrl];
+    }
 
     // Create an NSSharingServicePicker and present it
-//    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] init];
+    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:nsFileUrls];
 //    [picker setDelegate:nil];
 //    [picker setShowsServicesButton:NO];
 //    [picker setSourceRect:NSZeroRect];
-//    [picker setSourceView:reinterpret_cast<NSView *>(nativeWidget.winId())];
-////    [picker setSourceView:nativeWidget.nativeView()];
+    [picker showRelativeToRect:view];
+//    [picker setSourceView:nativeWidgetView];
 //    [picker shareFiles:nsFileUrls];
 }

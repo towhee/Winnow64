@@ -5625,18 +5625,15 @@ void MW::shareFiles()
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
 
-    int n = selection.count();
-    QClipboard *clipboard = QGuiApplication::clipboard();
-    QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
-        qDebug() << "IconView::copyFiles" << fPath;
+        qDebug() << "IconView::shareFiles" << fPath;
     }
 
     // Convert the file urls to native NSURLs  src snippets and chatGPT
-//    Mac::share(urls);
+    Mac::share(urls);
 }
 
 void MW::copyFiles()
@@ -5863,7 +5860,8 @@ void MW::deleteFolder()
 void MW::openUsbFolder()
 {
 /*
-
+    A list of available USB drives are listed in a dialog for the user.  Show all subfolders
+    is set and all images on the USB drive are loaded.
 */
     if (G::isLogger) G::log("MW::openUsbFolder");
     struct  UsbInfo {
