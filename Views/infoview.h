@@ -90,7 +90,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void dataEdited();
-    void updateFilter(BuildFilters::Action action);
+    void updateFilter(BuildFilters::Action action, QString afterAction = "");
 
 public slots:
     void showOrHide();

@@ -465,6 +465,7 @@ void MW::toggleReject()
     updateStatus(true, "", "MW::toggleReject");
 
     // update filter counts
+    qDebug() << "MW::toggleReject launchBuildFilters())";
     launchBuildFilters();
 //    buildFilters->updateCountFiltered();
 }

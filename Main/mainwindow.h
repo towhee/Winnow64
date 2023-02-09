@@ -354,6 +354,7 @@ public slots:
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
+    void filterLastDay();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
 //    void handleDrop(const QMimeData *mimeData);
@@ -433,8 +434,8 @@ private slots:
 
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
-    void filterLastDay();
-    void filterDockVisibilityChange(bool);
+//    void filterLastDay();
+    void filterDockTabMousePress();
     void filterSyncActionsWithFilters();
     void filterChange(QString source = "");
     void quickFilter();

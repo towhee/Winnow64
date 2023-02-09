@@ -29,18 +29,7 @@ public:
     } action;
 
     void stop();
-    void done();
     void reset();
-    void loadAllMetadata();
-    void countMapFiltered();
-    void unfilteredItemSearchCount();
-
-//    void categoryChanged(Action action);
-//    void setAfterAction(QString afterAction);
-//    void mapUniqueInstances();
-//    void updateCountFiltered();
-//    void countFiltered();
-//    void countUnfiltered();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -51,12 +40,15 @@ signals:
     void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
     void quickFilter();
+    void filterLastDay();
 
 public slots:
-    void build(BuildFilters::Action action = Action::Reset);
+    void build(BuildFilters::Action action = Action::Reset, QString afterAction = "");
 
 private:
+    void done();
     void initializeUniqueItems();
+    void countMapFiltered();
     void updateCategory();
     void time(QString msg);
 
