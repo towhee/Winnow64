@@ -1,6 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Quick filter not working before filters built
+- Rating set to zere instead of null somewhere
+- Icon Option click not working correctly
+- Cannot change tableView column widths by dragging
 - Occasionally Winnow starts as small window on main monitor
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
@@ -74,6 +78,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImageCache priorities not updating when filter
 - Rotate images not rotating thumbs (broken in v1.33)
 - Toggle rating to none, not saved in xmp
 - Dragging thumb splitter not scrolling icons to maintain the mid icon centered

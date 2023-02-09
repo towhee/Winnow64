@@ -1011,6 +1011,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     static int prevTabIndex = -1;
     if (QString(obj->metaObject()->className()) == "QTabBar") {
+        if (event->type() == QEvent::MouseButtonPress) {      // HoverMove / MouseMove work
+            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            int i = tabBar->tabAt(e->pos());
+            if (tabBar->tabText(i) == filterDockTabText) {
+                qDebug() << "MW::eventFilter FILTERDOCK CLICKED";
+                filterDockTabMousePress();
+            }
+        }
         if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -2387,6 +2396,7 @@ void MW::loadConcurrentMetaDone()
     sortMenu->setEnabled(true);
     if (reset()) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
+        qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
         launchBuildFilters();   // new folder = true
     }
 
@@ -2499,6 +2509,7 @@ void MW::loadLinearNewFolder()
 
     // re-enable sorting and filtering
     if (filters->isVisible()) {
+        qDebug() << "MW::loadLinearNewFolder launchBuildFilters())";
         launchBuildFilters();
     }
     filters->setEnabled(true);
@@ -5805,6 +5816,7 @@ void MW::deleteFiles(QStringList paths)
     sel->select(sfIdx);
 
     // update filters
+    qDebug() << "MW::deleteFiles launchBuildFilters())";
     launchBuildFilters();
 }
 

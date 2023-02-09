@@ -21,15 +21,27 @@
         * Filter based on criteria selected
 */
 
-void MW::filterDockVisibilityChange(bool isVisible)
+void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
-    if (isVisible && !G::isInitializing && G::allMetadataLoaded) launchBuildFilters();
+    qDebug() << "MW::filterDockTabMousePress" << "filterDock->isVisible() =" << filterDock->isVisible();
+    if (filterDock->isVisible() && !filters->filtersBuilt) {
+//        filterDock->setVisible(true);       // triggers launchBuildFilters()
+//        filterDock->raise();
+//        filterDockVisibleAction->setChecked(true);
+        qDebug() << "MW::filterDockTabMousePress buildFilters->build();";
+        buildFilters->build();
+    }
+//    if (isVisible && !G::isInitializing && G::allMetadataLoaded && !filters->filtersBuilt) {
+//        qDebug() << "MW::filterDockVisibilityChange launchBuildFilters())";
+//        launchBuildFilters();
+//    }
 }
 
 void MW::updateAllFilters()
 {
     if (G::isLogger) G::log("MW::updateAllFilters");
+    qDebug() << "MW::updateAllFilters buildFilters->build(BuildFilters::Update)";
     buildFilters->build(BuildFilters::Update);
 }
 
@@ -45,7 +57,9 @@ void MW::launchBuildFilters()
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
+    if (filters->filtersBuilt) return;
 
+    qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
 }
 
@@ -91,6 +105,7 @@ void MW::filterChange(QString source)
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
+    qDebug() << "MW::filterChange buildFilters->build(BuildFilters::Update)";
     buildFilters->build(BuildFilters::Update);
 //    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
@@ -114,6 +129,11 @@ void MW::filterChange(QString source)
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
     }
+
+    // update priorities in image cache
+    QString fPath = newSfIdx.data(G::PathRole).toString();
+    imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
+
     bool clearSelection = true;
     dm->currentSfIdx = QModelIndex();   // allow fileSelectionChange()
     fileSelectionChange(newSfIdx, QModelIndex(), clearSelection,  "MW::filterChange");
@@ -131,11 +151,11 @@ void MW::quickFilter()
         quickFilterComplete();
     }
     else {
-//        buildFilters->setAfterAction("QuickFilter");
         filterDock->setVisible(true);       // triggers launchBuildFilters()
         filterDock->raise();
+        qDebug() << "MW::quickFilter buildFilters->build(BuildFilters::Reset, 'QuickFilter')";
         filterDockVisibleAction->setChecked(true);
-//        buildFilters->build();
+        buildFilters->build(BuildFilters::Reset, "QuickFilter");
     }
 }
 
@@ -237,7 +257,7 @@ void MW::filterLastDay()
 .
 */
     if (G::isLogger) G::log("MW::filterLastDay");
-    if (dm->sf->rowCount() == 0) {
+    if (dm->sf->rowCount() == 0 && filterLastDayAction->isChecked()) {
         G::popUp->showPopup("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
@@ -246,16 +266,22 @@ void MW::filterLastDay()
     // if the additional filters have not been built then do an update
     if (!filters->filtersBuilt) {
 //        qDebug() << "MW::filterLastDay" << "build filters";
-        launchBuildFilters();
-        G::popUp->showPopup("Building filters.", 0);
-        buildFilters->wait();
-        G::popUp->end();
-    if (!filters->days->childCount()) launchBuildFilters();
+//        launchBuildFilters();
+//        G::popUp->showPopup("Building filters.", 0);
+//        buildFilters->wait();
+//        G::popUp->end();
+        filterDock->setVisible(true);       // triggers launchBuildFilters()
+        filterDock->raise();
+        filterDockVisibleAction->setChecked(true);
+        qDebug() << "MW::filterLasstDay buildFilters->build(BuildFilters::Reset, 'FilterLastDay')";
+        buildFilters->build(BuildFilters::Reset, "FilterLastDay");
+        return;
+//    if (!filters->days->childCount()) launchBuildFilters();
     }
 
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
-    if (filters->days->childCount() == 0) {
+    if (last == 0) {
         G::popUp->showPopup("No days are available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
@@ -650,6 +676,7 @@ void MW::setRating()
     dm->sf->filterChange();
 
     // update filter list and counts
+    qDebug() << "MW::set Rating buildFilters->build(BuildFilters::Action::RatingEdit)";
     buildFilters->build(BuildFilters::Action::RatingEdit);
 
     if (G::useSidecar) {
@@ -818,6 +845,7 @@ void MW::setColorClass()
     dm->sf->filterChange();
 
     // update filter counts
+    qDebug() << "MW::setColorClass buildFilters->build(BuildFilters::Action::LabelEdit)";
     buildFilters->build(BuildFilters::Action::LabelEdit);
 
     dm->sf->filterChange();

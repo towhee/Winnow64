@@ -516,6 +516,62 @@ void ImageCache::setPriorities(int key)
     int aheadPos;
     int behindPos;
 
+    /* use dm->sf
+    int sfRowCount = dm->sf->rowCount();
+    int dmRowCount = icd->cacheItemList.length();
+    // initialize priority to lowest (highest row count)
+    for (int i = 0; i < dmRowCount; i++) icd->cacheItemList[i].priority = dmRowCount;
+
+    int sfKey = dm->proxyRowFromModelRow(key);
+    if (sfKey < sfRowCount)
+        icd->cacheItemList[key].priority = 0;
+    int i = 1;                  // start at 1 because current pos preset to zero
+    if (icd->cache.isForward) {
+        aheadPos = sfKey + 1;
+        behindPos = sfKey - 1;
+        while (i < sfRowCount) {
+            for (int b = behindPos; b > behindPos - behindAmount; --b) {
+                for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
+                    if (a >= sfRowCount) break;
+                    int dmA = dm->sf->mapToSource(dm->sf->index(a, 0)).row();
+                    icd->cacheItemList[dmA].priority = i++;
+                    if (i >= sfRowCount) break;
+                    if (a == aheadPos + aheadAmount - 1 && b < 0) aheadPos += aheadAmount;
+                }
+                aheadPos += aheadAmount;
+                if (b < 0) break;
+                int dmB = dm->sf->mapToSource(dm->sf->index(b, 0)).row();
+                icd->cacheItemList[dmB].priority = i++;
+                if (i > sfRowCount) break;
+            }
+            behindPos -= behindAmount;
+        }
+    }
+    else {
+        aheadPos = key - 1;
+        behindPos = key + 1;
+        while (i < sfRowCount) {
+            for (int b = behindPos; b < behindPos + behindAmount; ++b) {
+                for (int a = aheadPos; a > aheadPos - aheadAmount; --a) {
+                    if (a < 0) break;
+                    int dmA = dm->sf->mapToSource(dm->sf->index(a, 0)).row();
+                    icd->cacheItemList[dmA].priority = i++;
+                    if (i >= sfRowCount) break;
+                    if (a == aheadPos - aheadAmount + 1 && b > sfRowCount)
+                        aheadPos -= aheadAmount;
+                }
+                aheadPos -= aheadAmount;
+                if (b >= sfRowCount) break;
+                int dmB = dm->sf->mapToSource(dm->sf->index(b, 0)).row();
+                icd->cacheItemList[b].priority = i++;
+                if (i > sfRowCount) break;
+            }
+            behindPos += behindAmount;
+        }
+    }
+    //*/
+
+    // use icd->cacheItemList
     if (key < icd->cacheItemList.length())
         icd->cacheItemList[key].priority = 0;
     int i = 1;                  // start at 1 because current pos preset to zero
@@ -558,6 +614,7 @@ void ImageCache::setPriorities(int key)
             behindPos += behindAmount;
         }
     }
+//    */
 }
 
 void ImageCache::fixOrphans()
@@ -1041,8 +1098,9 @@ void ImageCache::reportRunStatus()
 void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 {
 /*
-    Concurrent metadata loading alternative to buildImageCacheList. The imageCacheList is
-    built row by row, triggered by signal addToImageCache in MetaRead::readMetadata.
+    Concurrent metadata loading alternative to buildImageCacheList. The imageCacheList
+    metadata information is added row by row, triggered by signal addToImageCache in
+    MetaRead::readMetadata.
 */
     if (G::isLogger /*|| G::isFlowLogger*/) G::log("ImageCache::addCacheItemImageMetadata");
     if (!G::useImageCache) return;  // rgh isolate image cache
@@ -1139,7 +1197,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        if ((G::isLinearLoading || G::allMetadataLoaded)) {
+        if ((G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.isVideo = m.video;
@@ -1180,7 +1238,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItemList.append(icd->cacheItem);
     } // next row
 
-    if (G::isLinearLoading) icd->cache.folderMB = folderMB;
+    if (G::allMetadataLoaded) icd->cache.folderMB = folderMB;
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,
@@ -1257,9 +1315,9 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
     if(dm->sf->rowCount() == 0) return;
 
-    /*
+//    /*
     qDebug() << "ImageCache::rebuildImageCacheParameters" << "Source:" << source;
-    std::cout << diagnostics().toStdString() << std::flush;
+    // std::cout << diagnostics().toStdString() << std::flush;
     //*/
 
     // update currentPath
