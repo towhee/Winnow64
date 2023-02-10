@@ -43,16 +43,14 @@
 BuildFilters::BuildFilters(QObject *parent,
                            DataModel *dm,
                            Metadata *metadata,
-                           Filters *filters,
-                           bool &combineRawJpg) :
-                           QThread(parent),
-                           combineRawJpg(combineRawJpg)
+                           Filters *filters) :
+                           QThread(parent)
 {
     if (G::isLogger) G::log("BuildFilters::BuildFilters");
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
-    afterAction = "";
+    afterAction = NoAfterAction;
     debugBuildFilters = true;
     reportTime = false;
 }
@@ -85,55 +83,8 @@ void BuildFilters::stop()
     if (G::stop) emit stopped("BuildFilters");
 }
 
-/*void BuildFilters::setAfterAction(QString afterAction)
+void BuildFilters::abortIfRunning()
 {
-    if (debugBuildFilters)
-        qDebug()
-            << "BuildFilters::setAfterAction"
-            << "afterAction =" << afterAction
-               ;
-    this->afterAction = afterAction;
-}
-*/
-
-void BuildFilters::build(BuildFilters::Action action, QString afterAction)
-{
-/*
-    Filters is a tree where the primary branches are categories and the leafs are the
-    criteria for a filtration of the DataModel. Filters just contains the category
-    headers when a new folder is selected.
-
-    action == Reset (default):
-
-        • All unique items for each category are appended to Filters.
-        • The total and filtered counts are updated.
-
-
-
-*/
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
-    if (debugBuildFilters)
-    {
-        qDebug()
-            << "BuildFilters::build"
-            << "action =" << action
-            << "filters visible =" << filters->isVisible()
-               ;
-    }
-
-    // update action to take after build filters
-    this->afterAction = afterAction;
-
-    // defer update if filters is hidden
-    if (filters->isHidden()) {
-        if (action > Update) filters->filtersBuilt = false;
-        action = Reset;
-        return;
-    }
-
-    // ignore if filters are up-to-date
-    if (action == Reset && filters->filtersBuilt) return;
-
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -142,7 +93,54 @@ void BuildFilters::build(BuildFilters::Action action, QString afterAction)
         wait();
     }
     abort = false;
-    this->action = action;
+}
+
+void BuildFilters::build(AfterAction newAction)
+{
+/*
+    Filters is a tree where the primary branches are categories and the leafs are the
+    criteria for a filtration of the DataModel. Filters just contains the category
+    headers when a new folder is selected.
+
+    • If no items all unique items for each category are appended to Filters.
+    • The total and filtered counts are updated.
+    • AfterAction is executed.
+
+    AfterActions include:
+
+    • Go to search
+    • Quick filter (change of rating or label)
+    • Filter on most recent day
+
+    BuildFilters::build is called after a new folder is loaded if Filters is visible.
+    If Filters is not visible BuildFilters::build is called by clicking on the filter
+    tab or triggering a query from the filter menu.  This avoids building Filters until
+    they are required.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
+    if (debugBuildFilters)
+    {
+        qDebug()
+            << "BuildFilters::build"
+            << "afterAction =" << newAction
+            << "filters visible =" << filters->isVisible()
+               ;
+    }
+
+    // Update action to take after build filters. If build has been previously called
+    // while the DataModel metadata was being loaded then the previous afterAction will
+    // still be defined and should be honoured unless the new call to build has a defined
+    // newAction.
+    if (newAction != NoAfterAction) {
+        afterAction = newAction;
+    }
+
+    // ignore if filters are up-to-date
+    if (filters->filtersBuilt) return;
+
+    // define action for BuildFilters::run
+    action = Reset;
+    abortIfRunning();
     instance = dm->instance;
     filters->startBuildFilters(isReset);
     progress = 0;
@@ -150,27 +148,68 @@ void BuildFilters::build(BuildFilters::Action action, QString afterAction)
     if (G::allMetadataLoaded) start(NormalPriority);
 }
 
+void BuildFilters::update()
+{
+/*
+    Update the filtered item counts.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::update");
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::update"
+               ;
+    abortIfRunning();
+    action = Update;
+    if (G::allMetadataLoaded) start(NormalPriority);
+}
+
+void BuildFilters::updateCategory(BuildFilters::Category category)
+{
+/*
+    Called when a category item has been edited.  The old name is removed from the
+    category items, the new one is appended and the items are resorted.  The item
+    counts for this category only are updated.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::update");
+    if (debugBuildFilters)
+    {
+        qDebug()
+                << "BuildFilters::update"
+                   ;
+    }
+    abortIfRunning();
+    this->category = category;
+    action = UpdateCategory;
+    if (G::allMetadataLoaded) start(NormalPriority);
+}
+
 void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::done");
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::done"
                ;
+    }
     isReset = false;
     filters->filtersBuilt = true;
     emit updateProgress(-1);        // clear progress msg
     if (!abort) emit finishedBuildFilters();
-    if (afterAction == "QuickFilter") emit quickFilter();
-    if (afterAction == "FilterLastDay") emit filterLastDay();
-    if (afterAction == "SearchTextEdit") emit searchTextEdit();
-    afterAction = "";
+    if (afterAction == QuickFilter) emit quickFilter();
+    if (afterAction == MostRecentDay) emit filterLastDay();
+    if (afterAction == Search) emit searchTextEdit();
+    afterAction = NoAfterAction;
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::reset()
 {
+/*
+    Called when a new folder is being loaded. The Filters tree dynamic category items are
+    all removed, and relevent variables are reset.
+*/
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
     if (debugBuildFilters)
         qDebug()
@@ -179,7 +218,7 @@ void BuildFilters::reset()
     isReset = true;
     filters->filtersBuilt = false;
     action = Action::Reset;
-    afterAction = "";
+    afterAction = NoAfterAction;
     filters->activeCategory = nullptr;
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
@@ -193,9 +232,11 @@ void BuildFilters::updateFilteredCounts()
     calling filters->addFilteredCountPerItem.
 */
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::countMapFiltered"
                ;
+    }
 
     QMap<QString,int> map;
     QString method = "Map";
@@ -264,32 +305,29 @@ void BuildFilters::updateFilteredCounts()
     filters->addFilteredCountPerItem(map, filters->keywords);
     map.clear();
 
-//    filters->disableColorZeroCountItems();
-//    filters->setCatFiltering();
-//    filters->filtersBuilt = true;
-//    filters->buildingFilters = false;
     filters->update();
-
-//    qDebug() << "BuildFilters::countMapUnfiltered"
-//             << buildFiltersTimer.elapsed() << "ms"
-//             << "Method:" << method
-//             << "Rows:" << dmRows
-//             << "Src:" << dm->currentFolderPath
-//                ;
 }
 
 void BuildFilters::updateCategoryItems()
 {
+/*
+    Called when a category item has been edited.  The old name is removed from the
+    category items, the new one is appended and the items are resorted.  The item
+    counts for this category only are updated.
+*/
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::updateCategory");
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::updateCategory"
             << "action =" << action
                ;
+    }
+
     QMap<QString,int> map;
     QTreeWidgetItem *cat = nullptr;
     int col = 0;
-    switch (action) {
+    switch (category) {
     case PickEdit:
         col = G::PickColumn;
         cat = filters->picks;
@@ -310,7 +348,6 @@ void BuildFilters::updateCategoryItems()
         col = G::CreatorColumn;
         cat = filters->creators;
         break;
-    case Reset: break; // not used, prevent compiler msg
     }
 
     for (int row = 0; row < dm->rowCount(); row++) map[dm->index(row, col).data().toString()]++;
@@ -331,9 +368,12 @@ void BuildFilters::appendUniqueItems()
     fitems and counts are generated here.
 */
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::initializeUniqueItems"
                ;
+    }
+
     QMap<QString,int> map;
     int rows = dm->rowCount();
     double progressInc = 8.5;
@@ -424,14 +464,6 @@ void BuildFilters::appendUniqueItems()
     time("Initialize keywords");
     emit updateProgress(progress += progressInc);
     map.clear();
-
-
-//    qDebug() << "BuildFilters::countMapUnfiltered"
-//             << buildFiltersTimer.elapsed() << "ms"
-//             << "Method:" << method
-//             << "Rows:" << dmRows
-//             << "Src:" << dm->currentFolderPath
-//                ;
 }
 
 void BuildFilters::time(QString msg)
@@ -452,10 +484,12 @@ void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::run"); mutex.unlock();}
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::run"
             << "action =" << action
                ;
+    }
 
 //    if (filters->filtersBuilt) return;
 
@@ -472,19 +506,20 @@ void BuildFilters::run()
         if (!abort) updateFilteredCounts();
         break;
     // category item edited
-    default:
-        updateCategoryItems();
+    case UpdateCategory:
+        if (!abort) updateCategoryItems();
     }
 
-//    if (!abort) filters->disableEmptyCat();
     if (!abort) filters->setEachCatTextColor();
 
     done();
 
-//    qDebug() << "BuildFilters::run"
-//             << buildFiltersTimer.elapsed() << "ms"
-//             << "Rows:" << dmRows
-//             << "Src:" << dm->currentFolderPath
-//                ;
+    /* elapsed time
+    qDebug() << "BuildFilters::run"
+             << buildFiltersTimer.elapsed() << "ms"
+             << "Rows:" << dmRows
+             << "Src:" << dm->currentFolderPath
+                ;
+                  //*/
 
 }
