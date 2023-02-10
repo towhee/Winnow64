@@ -150,7 +150,7 @@ void MW::createDataModel()
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
-    buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
+    buildFilters = new BuildFilters(this, dm, metadata, filters);
 
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
     connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
@@ -748,7 +748,7 @@ void MW::createInfoView()
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(metadataChanged(QStandardItem*)));
     // update filters
-    connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::build);
+    connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::updateCategory);
 }
 
 void MW::createEmbel()

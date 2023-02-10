@@ -3,7 +3,7 @@ WHAT'S NEW
 BUGS / TO DO
 - Quick filter not working before filters built
 - Rating set to zere instead of null somewhere
-- Icon Option click not working correctly
+- Icon double click issue
 - Cannot change tableView column widths by dragging
 - Occasionally Winnow starts as small window on main monitor
 - Fast video thumbnail generation

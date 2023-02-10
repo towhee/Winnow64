@@ -37,7 +37,8 @@ void MW::updateAllFilters()
 {
     if (G::isLogger) G::log("MW::updateAllFilters");
     qDebug() << "MW::updateAllFilters buildFilters->build(BuildFilters::Update)";
-    buildFilters->build(BuildFilters::Update);
+    buildFilters->update();
+//    buildFilters->build(BuildFilters::Update);
 }
 
 void MW::launchBuildFilters()
@@ -101,8 +102,7 @@ void MW::filterChange(QString source)
 
     // update filter panel image count by filter item
     qDebug() << "MW::filterChange buildFilters->build(BuildFilters::Update)";
-    buildFilters->build(BuildFilters::Update);
-//    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
+    buildFilters->update();
 
     // recover sort after filtration
     sortChange("filterChange");
@@ -150,7 +150,7 @@ void MW::quickFilter()
         filterDock->raise();
         qDebug() << "MW::quickFilter buildFilters->build(BuildFilters::Reset, 'QuickFilter')";
         filterDockVisibleAction->setChecked(true);
-        buildFilters->build(BuildFilters::Reset, "QuickFilter");
+        buildFilters->build(BuildFilters::QuickFilter);
     }
 }
 
@@ -269,7 +269,7 @@ void MW::filterLastDay()
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         qDebug() << "MW::filterLasstDay buildFilters->build(BuildFilters::Reset, 'FilterLastDay')";
-        buildFilters->build(BuildFilters::Reset, "FilterLastDay");
+        buildFilters->build(BuildFilters::MostRecentDay);
         return;
 //    if (!filters->days->childCount()) launchBuildFilters();
     }
@@ -672,7 +672,7 @@ void MW::setRating()
 
     // update filter list and counts
     qDebug() << "MW::set Rating buildFilters->build(BuildFilters::Action::RatingEdit)";
-    buildFilters->build(BuildFilters::Action::RatingEdit);
+    buildFilters->updateCategory(BuildFilters::RatingEdit);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -841,7 +841,7 @@ void MW::setColorClass()
 
     // update filter counts
     qDebug() << "MW::setColorClass buildFilters->build(BuildFilters::Action::LabelEdit)";
-    buildFilters->build(BuildFilters::Action::LabelEdit);
+    buildFilters->updateCategory(BuildFilters::LabelEdit);
 
     dm->sf->filterChange();
 
@@ -931,7 +931,7 @@ void MW::searchTextEdit()
         filterDock->raise();
         qDebug() << "MW::searchTextEdit buildFilters->build(BuildFilters::Reset, 'SearchTextEdit')";
         filterDockVisibleAction->setChecked(true);
-        buildFilters->build(BuildFilters::Reset, "SearchTextEdit");
+        buildFilters->build(BuildFilters::Search);
     }
 
     // set visibility

@@ -50,7 +50,7 @@ void MW::togglePickUnlessRejected()
     updateStatus(true, "", "MW::togglePickUnlessRejected");
 
     // update filter counts
-    buildFilters->build(BuildFilters::Action::PickEdit);
+    buildFilters->updateCategory(BuildFilters::PickEdit);
 }
 
 void MW::togglePickMouseOver()
@@ -86,7 +86,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     updateStatus(true, "", "MW::togglePickMouseOverItem");
 
     // update filter counts
-    buildFilters->build(BuildFilters::Action::PickEdit);
+    buildFilters->updateCategory(BuildFilters::PickEdit);
 }
 
 void MW::togglePick()
@@ -147,7 +147,7 @@ void MW::togglePick()
     updateStatus(true, "", "MW::togglePick");
 
     // update filter counts
-    buildFilters->build(BuildFilters::Action::PickEdit);
+    buildFilters->updateCategory(BuildFilters::PickEdit);
 
     // auto advance
     if (autoAdvance) sel->next();
@@ -268,7 +268,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     updateStatus(true, "", "MW::updatePickFromHistory");
 
     // update filter counts
-    buildFilters->build(BuildFilters::Action::PickEdit);
+    buildFilters->updateCategory(BuildFilters::PickEdit);
 }
 
 qulonglong MW::memoryReqdForPicks()

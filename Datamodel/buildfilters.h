@@ -8,33 +8,34 @@
 #include "Datamodel/datamodel.h"
 #include "Datamodel/filters.h"
 #include "Metadata/metadata.h"
-#include "Main/global.h"
 
 class BuildFilters : public QThread
 {
     Q_OBJECT
 
 public:
-    BuildFilters(QObject *parent, DataModel *dm, Metadata *metadata, Filters *filters,
-                 bool &combineRawJpg);
+    BuildFilters(QObject *parent, DataModel *dm, Metadata *metadata, Filters *filters);
 
     enum Action {
         Reset,
         Update,
+        UpdateCategory
+    } action;
+
+    enum AfterAction {
+        NoAfterAction,
+        Search,
+        QuickFilter,
+        MostRecentDay
+    } afterAction;
+
+    enum Category {
         PickEdit,
         RatingEdit,
         LabelEdit,
         TitleEdit,
         CreatorEdit
-    } action;
-
-//    enum Category {
-//        PickEdit,
-//        RatingEdit,
-//        LabelEdit,
-//        TitleEdit,
-//        CreatorEdit
-//    } category;
+    } category;
 
     void stop();
     void reset();
@@ -52,11 +53,12 @@ signals:
     void searchTextEdit();
 
 public slots:
-    void build(BuildFilters::Action action = Action::Reset, QString afterAction = "");
-//    void update();
-//    void updateCategory();
+    void build(BuildFilters::AfterAction newAction = NoAfterAction);
+    void update();
+    void updateCategory(BuildFilters::Category category);
 
 private:
+    void abortIfRunning();
     void done();
     void appendUniqueItems();
     void updateFilteredCounts();
@@ -69,9 +71,6 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Filters *filters;
-    QString afterAction = "";               // What to do when done
-    bool &combineRawJpg;
-//    bool filtersBuilt = false;
     bool isReset;                           // if true, reset the filter tree filters (new folder)
     int instance;                           // instance of the datamodel
     int dmRows = 0;                         // rows in datamodel (get once at start)
