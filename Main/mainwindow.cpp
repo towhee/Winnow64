@@ -1714,6 +1714,10 @@ void MW::folderSelectionChange()
         return;
     }
 
+    // turn off include subfolders to prevent accidental loading a humungous number of files
+    subFoldersAction->setChecked(false);
+    updateStatusBar();
+
     // update FSTree count column for folder in case it has changed
 //    fsTree->refreshModel();
 
@@ -5934,7 +5938,7 @@ void MW::openUsbFolder()
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
         sel->select(0);
-        if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
+        if (!wasSubFoldersChecked) subFoldersAction->setChecked(false);
         updateStatusBar();
     }
     else {

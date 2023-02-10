@@ -533,14 +533,13 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Try concurrent loading
+    // Concurrent loading
     i.name = "tryConcurrentLoading";
     i.parentName = "GeneralHeader";
-    i.captionText = "Beta: try concurrent loading.";
+    i.captionText = "Concurrent load new folder.";
     i.tooltip = "When you click on a new folder, the metadata, icons and images\n"
                 "will be loaded concurrently.  For larger folders, this will\n"
-                "allow you to browse full size images almost immediately.\n\n"
-                "Please note that this is beta and may have some stability issues."
+                "allow you to browse full size images almost immediately."
             ;
     i.hasValue = true;
     i.captionIsEditable = false;

@@ -28,6 +28,14 @@ public:
         CreatorEdit
     } action;
 
+//    enum Category {
+//        PickEdit,
+//        RatingEdit,
+//        LabelEdit,
+//        TitleEdit,
+//        CreatorEdit
+//    } category;
+
     void stop();
     void reset();
 
@@ -41,15 +49,18 @@ signals:
     void finishedBuildFilters();
     void quickFilter();
     void filterLastDay();
+    void searchTextEdit();
 
 public slots:
     void build(BuildFilters::Action action = Action::Reset, QString afterAction = "");
+//    void update();
+//    void updateCategory();
 
 private:
     void done();
-    void initializeUniqueItems();
-    void countMapFiltered();
-    void updateCategory();
+    void appendUniqueItems();
+    void updateFilteredCounts();
+    void updateCategoryItems();
     void time(QString msg);
 
     QMutex mutex;

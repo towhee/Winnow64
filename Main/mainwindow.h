@@ -355,6 +355,7 @@ public slots:
     bool reset(QString src = "");
     void nullFiltration();
     void filterLastDay();
+    void searchTextEdit();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
 //    void handleDrop(const QMimeData *mimeData);
@@ -418,7 +419,7 @@ private slots:
     void ejectUsbFromContextMenu();
     void updateCachedStatus(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
-    void searchTextEdit();
+//    void searchTextEdit();
 
     int ratingLogCount();
     void recoverRatingLog();

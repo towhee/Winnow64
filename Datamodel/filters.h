@@ -100,6 +100,7 @@ public slots:
 //    void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
+    void collapseAllFiltersExceptSearch();
     void toggleExpansion();
     void checkPicks();
     void checkRating(QString rating, bool isChecked);
