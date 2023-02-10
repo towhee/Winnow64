@@ -160,6 +160,7 @@ void MW::createDataModel()
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
+    connect(buildFilters, &BuildFilters::searchTextEdit, this, &MW::searchTextEdit);
 
     // test how to add to datamodel from another thread
     connect(this, &MW::testAddToDM, dm, &DataModel::addMetadataForItem);
@@ -1133,9 +1134,6 @@ void MW::createFilterDock()
     QFrame *frame = new QFrame;
     frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
-
-//    connect(filterDock, &QDockWidget::visibilityChanged, this, &MW::filterDockTabMousePress);
-//    connect(filterDock, &QDockWidget::, this, &MW::filterDockVisibilityChange);
 
     if (isSettings) {
         setting->beginGroup(("FilterDock"));

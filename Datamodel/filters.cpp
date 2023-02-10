@@ -159,7 +159,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
-    debugFilters = false;
+    debugFilters = true;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
@@ -726,7 +726,9 @@ void Filters::loadingDataModel(bool isLoaded)
         msgFrame->setVisible(true);
         filterLabel->setText("Filters disabled while loading all metadata...");
         filterLabel->setVisible(true);
-        // disableColorAllHeaders(true);
+        // Allow search to remain visible in case search selected in menu or F2 pressed
+        // before or while filters are being built.
+        collapseAllFiltersExceptSearch();
         setEnabled(false);
     }
 }
@@ -747,7 +749,7 @@ void Filters::startBuildFilters(bool isReset)
 //        setProgressBarStyle();
         bfProgressBar->setVisible(true);
     }
-    if (isReset) collapseAll();
+//    if (isReset) collapseAll();
     setEnabled(false);
 }
 
@@ -898,6 +900,24 @@ void Filters::collapseAllFilters()
         qDebug() << "Filters::collapseAllFilters"
                     ;
     collapseAll();
+}
+
+void Filters::collapseAllFiltersExceptSearch()
+{
+    if (G::isLogger) G::log("Filters::collapseAllFiltersExceptSearch");
+    collapse(indexFromItem(refine));
+    collapse(indexFromItem(picks));
+    collapse(indexFromItem(ratings));
+    collapse(indexFromItem(labels));
+    collapse(indexFromItem(types));
+    collapse(indexFromItem(years));
+    collapse(indexFromItem(days));
+    collapse(indexFromItem(models));
+    collapse(indexFromItem(lenses));
+    collapse(indexFromItem(focalLengths));
+    collapse(indexFromItem(titles));
+    collapse(indexFromItem(keywords));
+    collapse(indexFromItem(creators));
 }
 
 void Filters::toggleExpansion()

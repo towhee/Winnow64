@@ -78,6 +78,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Turn off include subfolders after folder loaded
 - ImageCache priorities not updating when filter
 - Rotate images not rotating thumbs (broken in v1.33)
 - Toggle rating to none, not saved in xmp

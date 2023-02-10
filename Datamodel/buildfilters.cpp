@@ -25,10 +25,10 @@
 
     BuildFilters does the following:
 
-        • check and load all metadata if necessary
-        • add unique items for categories (build filter tree)
-        • count occurrances of items in the proxy sf (filtered)
+        • append unique items for categories (build filter tree)
         • count occurrances of items in the datamodel dm (unfiltered)
+        • count occurrances of items in the proxy sf (filtered)
+        • update items if values edited in DataModel
 
     Filters visibility
 
@@ -98,13 +98,29 @@ void BuildFilters::stop()
 
 void BuildFilters::build(BuildFilters::Action action, QString afterAction)
 {
+/*
+    Filters is a tree where the primary branches are categories and the leafs are the
+    criteria for a filtration of the DataModel. Filters just contains the category
+    headers when a new folder is selected.
+
+    action == Reset (default):
+
+        • All unique items for each category are appended to Filters.
+        • The total and filtered counts are updated.
+
+
+
+*/
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
     if (debugBuildFilters)
+    {
         qDebug()
             << "BuildFilters::build"
             << "action =" << action
             << "filters visible =" << filters->isVisible()
                ;
+    }
+
     // update action to take after build filters
     this->afterAction = afterAction;
 
@@ -147,6 +163,7 @@ void BuildFilters::done()
     if (!abort) emit finishedBuildFilters();
     if (afterAction == "QuickFilter") emit quickFilter();
     if (afterAction == "FilterLastDay") emit filterLastDay();
+    if (afterAction == "SearchTextEdit") emit searchTextEdit();
     afterAction = "";
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
@@ -168,7 +185,7 @@ void BuildFilters::reset()
     filters->removeChildrenDynamicFilters();
 }
 
-void BuildFilters::countMapFiltered()
+void BuildFilters::updateFilteredCounts()
 {
 /*
     Update the filtered DataModel item counts in Filters.  A QMap is used to count all the unique
@@ -261,7 +278,7 @@ void BuildFilters::countMapFiltered()
 //                ;
 }
 
-void BuildFilters::updateCategory()
+void BuildFilters::updateCategoryItems()
 {
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::updateCategory");
     if (debugBuildFilters)
@@ -307,11 +324,11 @@ void BuildFilters::updateCategory()
     filters->addFilteredCountPerItem(map, cat);
 }
 
-void BuildFilters::initializeUniqueItems()
+void BuildFilters::appendUniqueItems()
 {
 /*
-    After a new folder, when the filter panel becomes visible, the unfiltered DataModel
-    filter items and counts are generated here.
+    After a new folder, when the filter panel becomes visible, the DataModel unique
+    fitems and counts are generated here.
 */
     if (debugBuildFilters)
         qDebug()
@@ -449,16 +466,14 @@ void BuildFilters::run()
 
     switch (action) {
     case Reset:
-//        if (!abort) loadAllMetadata();
-        if (!abort && !filters->filtersBuilt) initializeUniqueItems();
-        if (!abort) countMapFiltered();
+        if (!abort && !filters->filtersBuilt) appendUniqueItems();
         break;
     case Update:
-        if (!abort) countMapFiltered();
+        if (!abort) updateFilteredCounts();
         break;
     // category item edited
     default:
-        updateCategory();
+        updateCategoryItems();
     }
 
 //    if (!abort) filters->disableEmptyCat();

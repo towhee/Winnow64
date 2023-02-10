@@ -25,17 +25,12 @@ void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
     qDebug() << "MW::filterDockTabMousePress" << "filterDock->isVisible() =" << filterDock->isVisible();
+
+    // Clicking on the filter dock tab toggles visibility before this function is called,
+    // so test for the opposite.
     if (filterDock->isVisible() && !filters->filtersBuilt) {
-//        filterDock->setVisible(true);       // triggers launchBuildFilters()
-//        filterDock->raise();
-//        filterDockVisibleAction->setChecked(true);
-        qDebug() << "MW::filterDockTabMousePress buildFilters->build();";
         buildFilters->build();
     }
-//    if (isVisible && !G::isInitializing && G::allMetadataLoaded && !filters->filtersBuilt) {
-//        qDebug() << "MW::filterDockVisibilityChange launchBuildFilters())";
-//        launchBuildFilters();
-//    }
 }
 
 void MW::updateAllFilters()
@@ -930,6 +925,15 @@ void MW::searchTextEdit2()
 void MW::searchTextEdit()
 {
     if (G::isLogger) G::log("MW::searchTextEdit");
+
+    if (!filters->filtersBuilt) {
+        filterDock->setVisible(true);       // triggers launchBuildFilters()
+        filterDock->raise();
+        qDebug() << "MW::searchTextEdit buildFilters->build(BuildFilters::Reset, 'SearchTextEdit')";
+        filterDockVisibleAction->setChecked(true);
+        buildFilters->build(BuildFilters::Reset, "SearchTextEdit");
+    }
+
     // set visibility
     if (!filterDock->isVisible()) {
         filterDock->setVisible(true);
