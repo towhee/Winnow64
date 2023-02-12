@@ -51,7 +51,7 @@ BuildFilters::BuildFilters(QObject *parent,
     this->metadata = metadata;
     this->filters = filters;
     afterAction = NoAfterAction;
-    debugBuildFilters = true;
+    debugBuildFilters = false;
     reportTime = false;
 }
 

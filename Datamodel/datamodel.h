@@ -65,6 +65,7 @@ public:
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
+    bool subFolderImagesLoaded = false;
     bool isAllMetadataLoaded();
     int iconCount();
     void clearAllIcons();

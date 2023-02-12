@@ -193,6 +193,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
     m2 = qobject_cast<MW*>(parent);
+    this->viewport()->setObjectName(objName + "ViewPort");
 
     setViewMode(QListView::IconMode);
     setTabKeyNavigation(true);              // not working
@@ -1656,7 +1657,7 @@ bool IconView::event(QEvent *event) {
     return true;
 }
 
-void IconView::mousePressEvent(QMouseEvent *event)
+void IconView::mousePress(QMouseEvent *event)
 {
 /*
     Captures the position of the mouse click within the thumbnail. This is sent
@@ -1665,6 +1666,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
     different position than the current image.
 */
     if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
+    qDebug() << "IconView::mousePressEvent";
 
     // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();
@@ -1731,18 +1733,124 @@ void IconView::mousePressEvent(QMouseEvent *event)
     }
 }
 
+void IconView::mousePressEvent(QMouseEvent *event)
+{
+/*
+    Captures the position of the mouse click within the thumbnail. This is sent
+    to imageView, which pans to the same center in zoom view. This is handy
+    when the user wants to view a specific part of another image that is in a
+    different position than the current image.
+*/
+    if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
+    qDebug() << "IconView::mousePressEvent";
+//    return;
+
+    // record modifier (used in IconView::selectionChanged)
+    modifiers = event->modifiers();
+    // index clicked
+    QModelIndex idx = indexAt(event->pos());
+    // mouse position
+    origin = event->pos();
+
+    // is start tab currently visible
+    if (m2->centralLayout->currentIndex() == m2->StartTab)
+        m2->centralLayout->setCurrentIndex(m2->LoupeTab);
+
+    if (event->button() == Qt::RightButton) {
+        // save mouse over index for toggle pick
+        mouseOverIndex = indexAt(event->pos());
+        // make available for MW::copyImagePathFromContext
+        m2->mouseOverIdx = mouseOverIndex;
+        return;
+    }
+
+    // forward and back buttons
+    if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
+        if (idx.isValid()) {
+            m2->togglePickMouseOverItem(idx);
+        }
+        return;
+    }
+
+    if (!idx.isValid()) return;
+
+    // left button or touch
+    if (event->button() == Qt::LeftButton) {
+        isLeftMouseBtnPressed = true;
+        if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
+        else G::fileSelectionChangeSource =  "ThumbMouseClick";
+        QString src = "IconView::mousePressEvent " + objectName();
+
+        // Ctrl modifier = toggle
+        if (event->modifiers() & Qt::ControlModifier) {
+            // check attempt to deselect only selected item (must always be one selected)
+            m2->sel->toggleSelect(idx);
+            dragQueue.append(idx.row());
+        }
+
+        // Shift modifier = select span
+        if (event->modifiers() & Qt::ShiftModifier) {
+            // check attempt to deselect only selected item (must always be one selected)
+            m2->sel->select(idx, shiftAnchor);
+            shiftAnchor = QModelIndex();
+            dragQueue.append(idx.row());
+        }
+
+        // unmodified click or touch
+        if (!modifiers) {
+            // Capture the percent coordinates of the mouse click within the thumbnail
+            // so that the full scale image can be zoomed to the same point.
+            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
+            QPoint mousePt = event->pos();
+            QPoint iconPt = mousePt - iconRect.topLeft();
+            xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
+            yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
+            /* debug
+            qDebug() << "IconView::mousePressEvent"
+                     << "\n currentIndex =" << currentIndex()
+                     << "\n currPosIdx   =" << currPosIdx
+                     << "\n iconRect     =" << iconRect
+                     << "\n mousePt      =" << mousePt
+                     << "\n iconPt       =" << iconPt
+                     << "\n xPct         =" << xPct
+                     << "\n yPct         =" << yPct;
+            //*/
+            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+                //signal sent to ImageView
+                emit thumbClick(xPct, yPct);
+            }
+        }
+    }
+}
+
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("IconView::mouseMoveEvent", objectName());
-    if (isLeftMouseBtnPressed) isMouseDrag = true;
-    QListView::mouseMoveEvent(event);
+    if (isLeftMouseBtnPressed) {
+        // allow small 'jiggle' tolerance before start drag
+        int deltaX = qAbs(origin.x() - event->pos().x());
+        int deltaY = qAbs(origin.y() - event->pos().y());
+        if (deltaX > 2)  isMouseDrag = true;
+        if (deltaY > 2)  isMouseDrag = true;
+        if (isMouseDrag) {
+            QModelIndex idx = indexAt(event->pos());
+            if (!dragQueue.contains(idx.row())) {
+                if (event->modifiers() & Qt::ControlModifier) m2->sel->toggleSelect(idx);
+                if (event->modifiers() & Qt::ShiftModifier)  m2->sel->select(idx);
+                dragQueue.append(idx.row());
+            }
+            if (event->modifiers() & Qt::AltModifier) startDrag(Qt::CopyAction);
+            if (!event->modifiers()) startDrag(Qt::MoveAction);
+        }
+    }
 }
 
-void IconView::mouseReleaseEvent(QMouseEvent *event)
+void IconView::mouseRelease(QMouseEvent *event)
 {
     if (G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
+    qDebug() << "IconView::mouseReleaseEvent";
 
-    QListView::mouseReleaseEvent(event);
+//    QListView::mouseReleaseEvent(event);
 
     QModelIndex idx = indexAt(event->pos());
 
@@ -1775,19 +1883,54 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     if (!event->modifiers()) emit thumbClick(xPct, yPct);
 }
 
+void IconView::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
+    qDebug() << "IconView::mouseReleaseEvent";
+    QModelIndex idx = indexAt(event->pos());
+
+    /* debug
+    qDebug() << "\nIconView::mouseReleaseEvent"
+             << "\n" << "idx =" << idx
+             << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
+             << "\n" << "row =" << idx.row()
+             << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
+             << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
+             << "\n" << "dm selected =" << dm->isSelected(idx.row())
+             << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
+                ;
+                //*/
+
+    if  (!event->modifiers() && !isMouseDrag) {
+        m2->sel->current(idx);
+        QString src = "IconView::mouseReleaseEvent";
+        m2->fileSelectionChange(idx, QModelIndex(), true, src);
+    }
+
+    isLeftMouseBtnPressed = false;
+    isMouseDrag = false;
+    dragQueue.clear();
+    shiftAnchor = idx;
+
+    if (!event->modifiers()) emit thumbClick(xPct, yPct);
+}
+
 void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 {
 /*
     Show the image in loupe view.  Scroll the thumbView or gridView to position at
     center.
 */
+//    qDebug() << "IconView::mouseDoubleClickEvent";
     if (G::isLogger) G::log("IconView::mouseDoubleClickEvent", objectName());
+    // prevents rapidly toggle ctrl click select/deselect issue
     QListView::mouseDoubleClickEvent(event);
-    // do not displayLoupe if already displayed
+    // display in loupe if Gridview
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         emit displayLoupe();
+        if (objectName() == "GridView")
+            scrollToRow(currentIndex().row(), "IconView::mouseDoubleClickEvent");
     }
-    scrollToRow(currentIndex().row(), "IconView::mouseDoubleClickEvent");
 }
 
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
@@ -2003,6 +2146,8 @@ void IconView::startDrag(Qt::DropActions)
 */
     if (G::isLogger) G::log("IconView::startDrag", objectName());
 //    qDebug() << "IconView::startDrag";
+
+    isMouseDrag = false;
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {

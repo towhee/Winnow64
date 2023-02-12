@@ -11,7 +11,11 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log("MW::dropEvent");
-    qDebug() << "MW::dropEvent";
+
+    // Ignore if source is Winnow.  Probably result of an aborted drag.
+    if (event->source() == thumbView) return;
+    if (event->source() == gridView) return;
+
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         // prevent drop onto folder already active in Winnow
@@ -30,7 +34,7 @@ void MW::handleDrop(QString fPath)
     if (incoming == currRootDir) {
         QString fileType = info.suffix().toLower();
         if (metadata->supportedFormats.contains(fileType)) {
-            sel->select(dragDropFilePath);
+            sel->current(dragDropFilePath);
         }
     }
     else {

@@ -250,6 +250,7 @@ namespace G
     extern bool embedTifThumb;
     extern bool isLinearLoading;
     extern bool renderVideoThumb;
+    extern bool includeSubfolders;
 
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;

@@ -688,7 +688,7 @@ void Preferences::addItems()
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
                 "status.  It is located in the lower right corner of the image.  This property \n"
                 "allows you to adjust its size.";
-    i.captionText = "Loupe (badge only)";
+    i.captionText = "Loupe badge size";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 36;
@@ -701,14 +701,14 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Thumbnail classification badge and count number size
+    // Thumbnail count number size
     i.name = "thumbnailBadgeInImageDiameter";
     i.parentName = "BadgeSizeHeader";
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
                 "status.  It is located in the top right corner of the thumbnail in the thumb \n"
                 "and grid views.  The image number is located in the top left corner.  This property\n"
                 "adjusts the size of both the badge and number.";
-    i.captionText = "Thumbnail (badge & number)";
+    i.captionText = "Icon count size";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 19;

@@ -467,6 +467,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     filters->filtersBuilt = false;
     filters->loadingDataModel(false);
     loadingModel = true;
+    subFolderImagesLoaded = false;
 
     if (G::isLinearLoading) {
         emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
@@ -531,6 +532,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
             int folderImageCount = dir->entryInfoList().size();
             // try next subfolder if no images in this folder
             if (!folderImageCount) continue;
+            subFolderImagesLoaded = true;
             // add supported images in folder to image list
             for (int i = 0; i < folderImageCount; ++i) {
                 if (abortLoadingModel) break;
@@ -1089,7 +1091,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
      search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
     setData(index(row, G::RatingColumn), m.rating);
+    if (m.rating == "0") m.rating = "";
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    if (m._rating == "0") m.rating = "";
     setData(index(row, G::_RatingColumn), m._rating);
     setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));

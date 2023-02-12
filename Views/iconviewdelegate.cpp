@@ -351,6 +351,7 @@ void IconViewDelegate::paint(QPainter *painter,
         labelText = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
     }
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    int ratingNumber = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toInt();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
@@ -484,7 +485,7 @@ void IconViewDelegate::paint(QPainter *painter,
         QString labelNumber = QString::number(row + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QPoint numberTopLeft(option.rect.left(), option.rect.top());
-        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + badgeSize - 1);
+        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + badgeSize - 2);
         QRect numberRect(numberTopLeft, numberBottomRight);
         painter->setPen(G::backgroundColor);
         painter->drawRoundedRect(numberRect, 2, 2);
@@ -492,6 +493,57 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
 
+    // rating badge (color filled circle with rating number in center)
+    if (isRatingBadgeVisible) {
+        // label/rating rect located top-right as containment for circle
+
+        QColor labelColorToUse;
+        QColor textColor(Qt::white);
+        if (G::labelColors.contains(colorClass) || G::ratings.contains(rating)) {
+            if (G::labelColors.contains(colorClass)) {
+                if (colorClass == "Red") labelColorToUse = G::labelRedColor;
+                if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
+                if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
+                if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
+                if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
+            }
+            else labelColorToUse = G::labelNoneColor;
+
+            // font
+            QFont font = painter->font();
+            int pxSize = G::fontSize + 2;
+            if (pxSize < 6) pxSize = 6;
+            font.setPixelSize(pxSize-1);
+            painter->setFont(font);
+            QString stars;
+            stars.fill('*', ratingNumber);
+
+            // define color rect
+            QFontMetrics fm(font);
+            QRect bRect = fm.boundingRect("******");
+            int w = bRect.width();
+            int h = bRect.height() * 0.6;
+            int r = h / 2;      // rounding amount for rect
+            int t = h / 5;      // translate to center * in ratingRect
+            QPoint ratingTopLeft(frameRect.right() - w, option.rect.top());
+            QPoint ratingBottomRight(frameRect.right(), option.rect.top() + h);
+            QRect ratingRect(ratingTopLeft, ratingBottomRight);
+
+            // draw color in rect
+            painter->setBrush(labelColorToUse);
+            QPen ratingPen(labelColorToUse);
+            ratingPen.setWidth(0);
+            painter->setPen(ratingPen);
+            painter->drawRoundedRect(ratingRect, r, r);
+
+            // draw stars
+            QPen ratingTextPen(textColor);
+            ratingTextPen.setWidth(1);
+            painter->setPen(ratingTextPen);
+            painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignCenter, stars);
+        }
+    }
+    /*
     // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
         // label/rating rect located top-right as containment for circle
@@ -520,18 +572,17 @@ void IconViewDelegate::paint(QPainter *painter,
             painter->setPen(ratingPen);
             painter->drawEllipse(ratingRect);
             QPen ratingTextPen(textColor);
-            ratingTextPen.setWidth(2);
+            ratingTextPen.setWidth(1);
             painter->setPen(ratingTextPen);
             QFont font = painter->font();
             int pxSize = badgeSize;
             if (pxSize < 6) pxSize = 6;
-            font.setPixelSize(pxSize);
-            font.setBold(true);
+            font.setPixelSize(pxSize-1);
             painter->setFont(font);
             painter->drawText(ratingTextRect, Qt::AlignCenter, rating);
         }
     }
-
+    //*/
     if (isVideo) {
         QFont videoFont = painter->font();
         videoFont.setPixelSize(G::fontSize);

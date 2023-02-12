@@ -73,6 +73,9 @@ TableView::TableView(DataModel *dm)
     setItemDelegateForColumn(G::SizeColumn, fileSizeItemDelegate);
 
     createOkToShow();
+
+    // default column widths
+    resizeColumns();
 }
 
 void TableView::updateVisible()
@@ -108,10 +111,11 @@ void TableView::scrollToCurrent()
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
-int TableView::sizeHintForColumn(int column) const
+//int TableView::sizeHintForColumn(int column) const
+int TableView::defaultCulumnWidth(int column)
 {
     QFontMetrics fm(this->font());
-    if (column == G::PathColumn) return fm.boundingRect("Icon").width();
+    if (column == G::PathColumn) return fm.boundingRect("-Icon-").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
     if (column == G::VideoColumn) return fm.boundingRect("=Video=").width();
@@ -163,15 +167,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::HeightPreviewColumn) return fm.boundingRect("=HeightPreview=").width();
     if (column == G::OffsetThumbColumn) return fm.boundingRect("=OffsetThumbColumn=").width();
     if (column == G::LengthThumbColumn) return fm.boundingRect("=LengthThumbColumn=").width();
-//    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
-//    if (column == G::LengthSmallColumn) return fm.boundingRect("=LengthSmallColumn=").width();
-
-//    if (column == G::bitsPerSampleColumn) return fm.boundingRect("=bitsPerSampleFullColumn=").width();
-//    if (column == G::photoInterpColumn) return fm.boundingRect("=photoInterpFullColumn=").width();
     if (column == G::samplesPerPixelColumn) return fm.boundingRect("=samplesPerPixelFullColumn=").width();
-//    if (column == G::compressionColumn) return fm.boundingRect("=compressionFullColumn=").width();
-//    if (column == G::stripByteCountsColumn) return fm.boundingRect("=stripByteCountsFullColumn=").width();
-
     if (column == G::isBigEndianColumn) return fm.boundingRect("=isBigEndian=").width();
     if (column == G::ifd0OffsetColumn) return fm.boundingRect("=ifd0OffsetColumn=").width();
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
@@ -227,14 +223,15 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 
 void TableView::resizeColumns()
 {
+    qDebug() << "TableView::resizeColumns";
     for (int column = 0; column < G::TotalColumns; ++column) {
-        setColumnWidth(column, sizeHintForColumn(column));
+        setColumnWidth(column, defaultCulumnWidth(column));
     }
 }
 
 void TableView::paintEvent(QPaintEvent *event)
 {
-    resizeColumns();      // prevents user changing column widths
+//    resizeColumns();      // prevents user changing column widths
     int d = static_cast<int>(G::strFontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
     verticalHeader()->setDefaultSectionSize(d);

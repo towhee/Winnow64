@@ -31,7 +31,7 @@ void MW::keyRight()
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Right"));
+        sel->current(compareImages->go("Right"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next();
@@ -44,7 +44,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Left"));
+        sel->current(compareImages->go("Left"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev();

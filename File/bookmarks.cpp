@@ -226,6 +226,12 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         }
         return;
     }
+
+    // load all subfolders images
+    if ((event->modifiers() & Qt::ControlModifier) && (event->modifiers() & Qt::ShiftModifier)) {
+        G::includeSubfolders = true;
+    }
+
     QTreeWidget::mousePressEvent(event);
 }
 

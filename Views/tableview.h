@@ -37,13 +37,14 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-    int sizeHintForColumn(int column) const override;
+//    int defaultCulumnWidth(int column) const override;
 
 private:
     void resizeColumns();
     IconView *thumbView;
     DataModel *dm;
     void createOkToShow();
+    int defaultCulumnWidth(int column);
 
 private slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
