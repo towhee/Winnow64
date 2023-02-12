@@ -618,13 +618,13 @@ void MW::setRating()
     if (isAlreadyRating) rating = "";     // invert the label(s)
 
     int n = selection.count();
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
+//    if (G::useSidecar) {
+//        G::popUp->setProgressVisible(true);
+//        G::popUp->setProgressMax(n + 1);
+//        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+//                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+//        G::popUp->showPopup(txt, 0, true, 1);
+//    }
 
     // set the rating in the datamodel
     QString src = "MW::setRating";
@@ -785,13 +785,13 @@ void MW::setColorClass()
 
     int n = selection.count();
 
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
+//    if (G::useSidecar) {
+//        G::popUp->setProgressVisible(true);
+//        G::popUp->setProgressMax(n + 1);
+//        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+//                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+//        G::popUp->showPopup(txt, 0, true, 1);
+//    }
 
     // update the data model
     QString src = "MW::setColorClass";

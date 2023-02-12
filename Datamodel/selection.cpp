@@ -35,19 +35,19 @@ Selection::Selection(QWidget *parent, DataModel *dm, IconView *thumbView, IconVi
     isDebug = false;
 }
 
-void Selection::select(QString &fPath)
+void Selection::current(QString &fPath)
 {
     if (G::isLogger) G::log("Selection::select QString");
-    select(dm->proxyIndexFromPath(fPath));
+    current(dm->proxyIndexFromPath(fPath));
 }
 
-void Selection::select(int sfRow)
+void Selection::current(int sfRow)
 {
     if (G::isLogger) G::log("Selection::select row");
-    select(dm->sf->index(sfRow, 0));
+    current(dm->sf->index(sfRow, 0));
 }
 
-void Selection::select(QModelIndex sfIdx)
+void Selection::current(QModelIndex sfIdx)
 {
     if (G::isLogger) G::log("Selection::select QModelIndex");
     /*
@@ -66,13 +66,45 @@ void Selection::select(QModelIndex sfIdx)
     }
 }
 
+void Selection::select(QString &fPath)
+{
+    if (G::isLogger) G::log("Selection::select QString");
+    current(dm->proxyIndexFromPath(fPath));
+}
+
+void Selection::select(int sfRow)
+{
+    if (G::isLogger) G::log("Selection::select row");
+    current(dm->sf->index(sfRow, 0));
+}
+
+void Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)
+{
+    if (G::isLogger) G::log("Selection::select QModelIndex");
+    qDebug() << "Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)" << sfIdx << sfIdx2;
+    if (!sfIdx2.isValid()) sfIdx2 = sfIdx;
+    QItemSelection selection;
+    selection.select(sfIdx, sfIdx2);
+    sm->select(selection, QItemSelectionModel::Select);
+}
+
+void Selection::toggleSelect(QModelIndex sfIdx)
+{
+    if (G::isLogger) G::log("Selection::toggleSelect");
+    // current index is always selected
+    if (sfIdx == dm->currentSfIdx) return;
+    QItemSelection toggleSelection;
+    toggleSelection.select(sfIdx, sfIdx);
+    sm->select(toggleSelection, QItemSelectionModel::Toggle);
+}
+
 void Selection::next()
 {
     if (G::isLogger) G::log("Selection::next");
     int row = dm->currentSfRow;
     if (row < dm->sf->rowCount() - 1)
         row++;
-    select(row);
+    current(row);
 }
 
 void Selection::prev()
@@ -81,28 +113,28 @@ void Selection::prev()
     int row = dm->currentSfRow;
     if (row > 0)
         row--;
-    select(row);
+    current(row);
 }
 
 void Selection::up()
 {
     if (G::isLogger) G::log("Selection::up");
     if (gridView->isVisible()) {
-        select(gridView->upIndex());
+        current(gridView->upIndex());
         return;
     }
     if (tableView->isVisible()) {
         prev();
         return;
     }
-    select(thumbView->pageUpIndex());
+    current(thumbView->pageUpIndex());
 }
 
 void Selection::down()
 {
     if (G::isLogger) G::log("Selection::down");
     if (gridView->isVisible()) {
-        select(gridView->downIndex());
+        current(gridView->downIndex());
         return;
     }
     if (tableView->isVisible()) {
@@ -115,53 +147,53 @@ void Selection::down()
 void Selection::first()
 {
     if (G::isLogger) G::log("Selection::home");
-    select(0);
+    current(0);
 }
 
 void Selection::last()
 {
     if (G::isLogger) G::log("Selection::end");
-    select(dm->sf->rowCount() - 1);
+    current(dm->sf->rowCount() - 1);
 }
 
 void Selection::prevPage()
 {
     if (G::isLogger) G::log("Selection::prevPage");
     if (gridView->isVisible()) {
-        select(gridView->pageUpIndex());
+        current(gridView->pageUpIndex());
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageUpIndex());
+        current(tableView->pageUpIndex());
         return;
     }
-    select(thumbView->pageUpIndex());
+    current(thumbView->pageUpIndex());
 }
 
 void Selection::nextPage()
 {
     if (G::isLogger) G::log("Selection::nextPage");
     if (gridView->isVisible()) {
-        select(gridView->pageDownIndex());
+        current(gridView->pageDownIndex());
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageDownIndex());
+        current(tableView->pageDownIndex());
         return;
     }
-    select(thumbView->pageDownIndex());
+    current(thumbView->pageDownIndex());
 }
 
 void Selection::nextPick()
 {
     if (G::isLogger) G::log("Selection::nextPick");
-    select(dm->nextPick());
+    current(dm->nextPick());
 }
 
 void Selection::prevPick()
 {
     if (G::isLogger) G::log("Selection::prevPick");
-    select(dm->prevPick());
+    current(dm->prevPick());
 }
 
 void Selection::all()
@@ -181,7 +213,7 @@ void Selection::all()
 void Selection::random()
 {
     if (G::isLogger) G::log("Selection::random");
-    select(QRandomGenerator::global()->generate() % static_cast<int>(dm->sf->rowCount()));
+    current(QRandomGenerator::global()->generate() % static_cast<int>(dm->sf->rowCount()));
 }
 
 QModelIndex Selection::nearestSelectedIndex(int sfRow)
@@ -237,12 +269,14 @@ void Selection::chkForDeselection(int sfRow)
     int count = sm->selectedRows().count();
     bool isCurrent = idx == dm->currentSfIdx;
 
+//    /*
     qDebug() << "DataModel::chkForDeselection"
              << "row =" << sfRow
              << "isSelected =" << isSelected(sfRow)
              << "isCurrent =" << isCurrent
              << "count =" << count
                 ;
+                //*/
 
     if (!isSelected(idx.row())) {
         // reselect if no selected rows

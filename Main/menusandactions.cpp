@@ -171,7 +171,7 @@ void MW::createActions()
     addAction(copyImagePathFromContextAction);
     connect(copyImagePathFromContextAction, &QAction::triggered, this, &MW::copyImagePathFromContext);
 
-    subFoldersAction = new QAction(tr("Include Sub-folders"), this);
+    subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setShortcutVisibleInContextMenu(true);
     subFoldersAction->setCheckable(true);
@@ -179,7 +179,7 @@ void MW::createActions()
     addAction(subFoldersAction);
     connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
 
-    refreshFoldersAction = new QAction(tr("Refresh all"), this);
+    refreshFoldersAction = new QAction(tr("Refresh folders"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
     refreshFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshFoldersAction);
@@ -1552,8 +1552,8 @@ void MW::createMenus()
     editMenu->addAction(copyImagePathFromContextAction);
     editMenu->addAction(deleteAction);
     editMenu->addAction(deleteActiveFolderAction);
-    editMenu->addSeparator();
-    editMenu->addAction(shareFilesAction);
+//    editMenu->addSeparator();
+//    editMenu->addAction(shareFilesAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
     editMenu->addAction(rejectAction);
@@ -1790,6 +1790,7 @@ void MW::createMenus()
     // FSTREE CONTEXT MENU
     fsTreeActions = new QList<QAction *>;
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
+    fsTreeActions->append(refreshCurrentAction);
     fsTreeActions->append(refreshFoldersAction);
 //    fsTreeActions->append(updateImageCountAction);
     fsTreeActions->append(collapseFoldersAction);

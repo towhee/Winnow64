@@ -71,6 +71,9 @@ public:
     int getHorizontalScrollBarMax();
     int getVerticalScrollBarMax();
 
+    void mousePress(QMouseEvent *event);
+    void mouseRelease(QMouseEvent *event);
+
     QItemSelectionModel *thumbViewSelection;
 
     bool scrollWhenReady;
@@ -139,6 +142,11 @@ private:
     DataModel *dm;
     ImageCacheData *icd;
 
+    QList<int> dragQueue;
+    QPoint origin;
+    int dragDistance = 0;
+    QModelIndex shiftAnchor;
+
     Qt::KeyboardModifiers modifiers;
     float xPct;
     float yPct;
@@ -149,7 +157,6 @@ private:
     QRect cursorRect;
     QRect iconRect;
     QLabel *zoomFrame;
-    QPoint mousePosition;
 
     // used during gridView resize to keep close to beginning thumb size
     int assignedIconWidth;

@@ -123,6 +123,7 @@ namespace G
     bool embedTifThumb;
     bool isLinearLoading;               // = !tryConcurrentLoading;
     bool renderVideoThumb;
+    bool includeSubfolders;
 
     // ingest
     bool isRunningBackgroundIngest;

@@ -1,11 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Quick filter not working before filters built
-- Rating set to zere instead of null somewhere
-- Icon double click issue
-- Cannot change tableView column widths by dragging
 - Occasionally Winnow starts as small window on main monitor
+- Icon double click issue (how rapidly toggle ctrl click select/deselect)
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -78,6 +75,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Cannot change tableView column widths by dragging
+- Shift+Ctrl click to include subfolders
+- Rating set to zero instead of null somewhere
 - Turn off include subfolders after folder loaded
 - ImageCache priorities not updating when filter
 - Rotate images not rotating thumbs (broken in v1.33)

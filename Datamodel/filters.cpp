@@ -159,7 +159,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
-    debugFilters = true;
+    debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }

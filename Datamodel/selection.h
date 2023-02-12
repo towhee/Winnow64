@@ -13,9 +13,13 @@ class Selection : public QObject
 public:
     Selection(QWidget *parent, DataModel *dm, IconView *thumbView,
               IconView *gridView, TableView *tableView);
-    void select(QModelIndex sfIdx);
+    void select(QModelIndex sfIdx, QModelIndex sfIdx2 = QModelIndex());
     void select(int sfRow);
     void select(QString &fPath);
+    void current(QModelIndex sfIdx);
+    void current(int sfRow);
+    void current(QString &fPath);
+    void toggleSelect(QModelIndex sfIdx);
     void next();
     void prev();
     void up();

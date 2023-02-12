@@ -488,7 +488,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
 
     // if previous sort was not by filename or reverse order then sort
-    qDebug() << "MW::MW  sortColumn =" << sortColumn;
+//    qDebug() << "MW::MW  sortColumn =" << sortColumn;
     updateSortColumn(sortColumn);
     if (isReverseSort) toggleSortDirection(Tog::on);
     else toggleSortDirection(Tog::off);
@@ -846,7 +846,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-    // uncomment below:
+
+     // uncomment below:
     /* use to show all events being filtered - handy to figure out which to intercept
     if (event->type()
                              != QEvent::Paint
@@ -911,6 +912,34 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         embelDockTabActivated = false;
     }
     */
+
+    // THUMBVIEW / GRIDVIEW MOUSE PRESS
+    {
+    /*
+
+    */
+//    if (event->type() == QEvent::MouseButtonPress) {
+//        if (obj->objectName() == "ThumbnailsViewPort") {
+//            qDebug() << "MW::eventFilter MouseButtonPress" << event << obj;
+//            thumbView->mousePress(static_cast<QMouseEvent *>(event));
+//        }
+//        if (obj->objectName() == "GridViewPort") {
+//            qDebug() << "MW::eventFilter MouseButtonPress" << event << obj;
+//            gridView->mousePress(static_cast<QMouseEvent *>(event));
+//        }
+//    }
+//    if (event->type() == QEvent::MouseButtonRelease) {
+//        if (obj->objectName() == "ThumbnailsViewPort") {
+//            qDebug() << "MW::eventFilter MouseButtonRelease" << event << obj;
+//            thumbView->mouseRelease(static_cast<QMouseEvent *>(event));
+//        }
+//        if (obj->objectName() == "GridViewPort") {
+//            qDebug() << "MW::eventFilter MouseButtonRelease" << event << obj;
+//            gridView->mouseRelease(static_cast<QMouseEvent *>(event));
+//        }
+//    }
+
+    } // end of section
 
     // CONTEXT MENU
     {
@@ -1693,7 +1722,7 @@ void MW::folderSelectionChange()
     updateMetadataThreadRunStatus(true, true, "MW::folderSelectionChange");
 
     // load datamodel
-    if (!dm->load(G::currRootFolder, subFoldersAction->isChecked())) {
+    if (!dm->load(G::currRootFolder, G::includeSubfolders)) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
         qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
         enableSelectionDependentMenus();
@@ -1715,6 +1744,7 @@ void MW::folderSelectionChange()
     }
 
     // turn off include subfolders to prevent accidental loading a humungous number of files
+    G::includeSubfolders = false;
     subFoldersAction->setChecked(false);
     updateStatusBar();
 
@@ -1744,7 +1774,7 @@ void MW::folderSelectionChange()
             QFileInfo info(dragDropFilePath);
             QString fileType = info.suffix().toLower();
             if (metadata->supportedFormats.contains(fileType)) {
-                sel->select(dragDropFilePath);
+                sel->current(dragDropFilePath);
 //                dm->select(dragDropFilePath);
                 dragFileSelected = true;
             }
@@ -1847,7 +1877,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-        sel->select(0);
+        sel->current(0);
         return;
     }
 
@@ -1879,7 +1909,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
     // select
-    if (clearSelection) sel->select(current);
+    if (clearSelection) sel->current(current);
 //    if (clearSelection) dm->select(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
@@ -2037,7 +2067,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (src == "handleDropOnCentralView") {
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
-                sel->select(fPath);
+                sel->current(fPath);
                 dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
                 fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::folderAndFileSelectionChange");
             }
@@ -2436,8 +2466,8 @@ void MW::loadConcurrentStartImageCache(QString src)
     }
 
     // preliminary resize table columns
-    tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(G::PathColumn, 24+8);
+//    tableView->resizeColumnsToContents();
+//    tableView->setColumnWidth(G::PathColumn, 24+8);
 
     G::isNewFolderLoaded = true;
 
@@ -2452,7 +2482,7 @@ void MW::loadConcurrentStartImageCache(QString src)
         // qDebug() << "MW::loadConcurrentStartImageCache  folderAndFileChangePath =" << folderAndFileChangePath;
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-            sel->select(fPath);
+            sel->current(fPath);
             dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         }
         else {
@@ -2604,7 +2634,7 @@ void MW::loadImageCacheForNewFolder()
     if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        sel->select(fPath);
+        sel->current(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
@@ -4183,7 +4213,7 @@ void MW::writeSettings()
     setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
-    setting->setValue("includeSubfolders", subFoldersAction->isChecked());
+//    setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
 
     /* ingest (moved to MW::ingest)
@@ -4994,6 +5024,7 @@ void MW::refreshFolders()
     bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
+    return;
 
     // make folder panel visible and set focus
     folderDock->raise();
@@ -5616,7 +5647,7 @@ void MW::refreshCurrentAfterReload()
 //             */
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
-    sel->select(sfRow);
+    sel->current(sfRow);
     isRefreshingDM = false;
 }
 
@@ -5817,7 +5848,7 @@ void MW::deleteFiles(QStringList paths)
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    sel->select(sfIdx);
+    sel->current(sfIdx);
 
     // update filters
     qDebug() << "MW::deleteFiles launchBuildFilters())";
@@ -5925,9 +5956,10 @@ void MW::openUsbFolder()
 
     refreshFolders();
     bookmarks->selectionModel()->clear();
-    bool wasSubFoldersChecked = subFoldersAction->isChecked();
-    if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
-    updateStatusBar();
+//    bool wasSubFoldersChecked = subFoldersAction->isChecked();
+//    if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
+//    updateStatusBar();
+    G::includeSubfolders = true;
     QString fPath = usbMap[drive].rootPath;
     fsTree->select(fPath);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
@@ -5937,12 +5969,10 @@ void MW::openUsbFolder()
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
-        sel->select(0);
-        if (!wasSubFoldersChecked) subFoldersAction->setChecked(false);
-        updateStatusBar();
     }
     else {
         setWindowTitle(winnowWithVersion);
+        setCentralMessage("Unable to access " + fPath);
     }
 }
 
@@ -6133,7 +6163,7 @@ void MW::generateMeanStack()
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
-        sel->select(fPath);
+        sel->current(fPath);
     }
 }
 

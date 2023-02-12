@@ -315,3 +315,115 @@ is created, configured and presented to the user, allowing them to choose from
 a variety of sharing options, such as email, message, or social media. The
 shareFiles: method of NSSharingServicePicker is used to share the list of file
 URLs.
+
+Note: Make sure you have imported AppKit framework to access NSSharingServicePicker.
+
+-------------------------------------
+FIND SUBJECT AND EYES
+
+Here's a basic algorithm for finding the center of a subject in an image using C++ and the Qt 6 framework:
+
+Load the image using the Qt QImage class. Convert the QImage to a grayscale image using
+the QImage's convertToFormat method. Apply a threshold to the grayscale image to convert
+it to a binary image, where the pixels are either black or white depending on whether
+they are below or above a certain intensity threshold. You can use the QImage's bits
+method to access the image data, and manually perform the thresholding. Loop through all
+the white pixels in the binary image, summing up the x and y positions of each pixel.
+Divide the sum of the x positions by the number of white pixels to find the average x
+position, which is the center of the subject in the x-dimension. Divide the sum of the y
+positions by the number of white pixels to find the average y position, which is the
+center of the subject in the y-dimension. The center of the subject is at the point
+(average x position, average y position). Here's some sample code to implement the above
+algorithm in Qt 6:
+
+#include <QImage>
+#include <QDebug>
+
+int main()
+{
+    QImage image("subject.jpg");
+
+    // Convert the image to grayscale
+    QImage grayImage = image.convertToFormat(QImage::Format_Grayscale8);
+
+    // Apply a threshold to the grayscale image to get a binary image
+    QImage binaryImage(grayImage.size(), QImage::Format_Grayscale8);
+    uchar *binaryData = binaryImage.bits();
+    uchar *grayData = grayImage.bits();
+    int imageSize = grayImage.byteCount();
+    for (int i = 0; i < imageSize; i++) {
+        if (grayData[i] > 128) {
+            binaryData[i] = 255;
+        } else {
+            binaryData[i] = 0;
+        }
+    }
+
+    // Sum up the x and y positions of all white pixels
+    int xSum = 0;
+    int ySum = 0;
+    int numWhitePixels = 0;
+    for (int y = 0; y < binaryImage.height(); y++) {
+        for (int x = 0; x < binaryImage.width(); x++) {
+            if (binaryImage.pixelColor(x, y).value() == 255) {
+                xSum += x;
+                ySum += y;
+                numWhitePixels++;
+            }
+        }
+    }
+
+    // Find the center of the subject
+    int centerX = xSum / numWhitePixels;
+    int centerY = ySum / numWhitePixels;
+    QPoint center(centerX, centerY);
+
+    qDebug() << "Center of subject:" << center;
+
+    return 0;
+}
+
+Here's a basic algorithm for finding the eyes of a subject in an image using C++ and the Qt 6 framework:
+
+Load the image using the Qt QImage class.
+Convert the QImage to a grayscale image using the QImage's convertToFormat method.
+Apply an edge detection filter to the grayscale image to create a binary edge map. One simple approach is to use the Canny edge detection algorithm, which is available in the OpenCV library.
+Find the eyes by looking for circular or oval-shaped objects in the binary edge map. This can be done by performing a blob detection or shape detection algorithm, such as the Hough Circle Transform or Hough Ellipse Transform, both of which are available in the OpenCV library.
+Once the eyes are found, their centers can be computed and used to determine the position of the eyes in the image.
+Here's some sample code to implement the above algorithm using the OpenCV library and the Qt 6 framework:
+
+#include <opencv2/opencv.hpp>
+#include <QImage>
+#include <QDebug>
+
+using namespace cv;
+
+int main()
+{
+    // Load the image as a Qt image
+    QImage qImage("subject.jpg");
+
+    // Convert the Qt image to an OpenCV Mat
+    cv::Mat mat;
+    mat = cv::Mat(qImage.height(), qImage.width(), CV_8UC4, (void*)qImage.bits(), qImage.bytesPerLine());
+
+    // Convert the image to grayscale
+    cv::Mat gray;
+    cvtColor(mat, gray, cv::COLOR_BGR2GRAY);
+
+    // Apply the Canny edge detection algorithm
+    cv::Mat edges;
+    Canny(gray, edges, 50, 150);
+
+    // Find circles in the edge map using the Hough Circle Transform
+    std::vector<Vec3f> circles;
+    HoughCircles(edges, circles, HOUGH_GRADIENT, 1, edges.rows / 8, 100, 30, 0, 0);
+
+    // Draw the circles on the original image
+    for (const auto& circle : circles) {
+        Point center(cvRound(circle[0]), cvRound(circle[1]));
+        int radius = cvRound(circle[2]);
+        circle(mat, center, radius, Scalar(0, 0, 255), 2, LINE_AA);
+    }
+
+    // Convert the OpenCV Mat back to a Qt image
