@@ -525,8 +525,10 @@ void IconViewDelegate::paint(QPainter *painter,
             int h = bRect.height() * 0.6;
             int r = h / 2;      // rounding amount for rect
             int t = h / 5;      // translate to center * in ratingRect
-            QPoint ratingTopLeft(frameRect.right() - w, option.rect.top());
-            QPoint ratingBottomRight(frameRect.right(), option.rect.top() + h);
+            QPoint ratingTopLeft(frameRect.right() - w, frameRect.top());
+//            QPoint ratingTopLeft(frameRect.right() - w, option.rect.top());
+            QPoint ratingBottomRight(frameRect.right(), frameRect.top() + h);
+//            QPoint ratingBottomRight(frameRect.right(), option.rect.top() + h);
             QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
             // draw color in rect
