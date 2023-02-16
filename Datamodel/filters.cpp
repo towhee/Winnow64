@@ -36,7 +36,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     The tree contains top level items (Categories ie Ratings, Color Classes, File types
     ...). For each top level item the children are the filter choices to filter
-    DataModel->Proxy (dm->sf). The categories are divided into predefined (Search, Refine)
+    DataModel->Proxy (dm->sf). The categories are divided into predefined (Search)
     and dynamic categories based on existing metadata (Ratings, Labels, File types,
     Camera Models, Focal Lengths, Titles etc).
 
@@ -122,8 +122,6 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     filterCategoryToDmColumn[catSearch] = G::SearchColumn;
 
-    filterCategoryToDmColumn[catRefine] = G::RefineColumn;
-
     filterCategoryToDmColumn[catPick] = G::PickColumn;
     filterCategoryToDmColumn[catRating] = G::RatingColumn;
     filterCategoryToDmColumn[catLabel] = G::LabelColumn;
@@ -167,7 +165,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 void Filters::createPredefinedFilters()
 {
 /*
-    Predefined filters are edited by the user: Search and refine.
+    Predefined filters are edited by the user: Search only.
 */
     if (G::isLogger) G::log("Filters::createPredefinedFilters");
     if (debugFilters)
@@ -194,20 +192,6 @@ void Filters::createPredefinedFilters()
     searchFalse->setText(0, "No match");
     searchFalse->setCheckState(0, Qt::Unchecked);
     searchFalse->setData(1, Qt::EditRole, false);
-
-    refine = new QTreeWidgetItem(this);
-    refine->setText(0, "Refine");
-    refine->setData(0, G::ColumnRole, G::RefineColumn);
-    refine->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-
-    refineFalse = new QTreeWidgetItem(refine);
-    refineFalse->setText(0, "False");
-    refineFalse->setCheckState(0, Qt::Unchecked);
-    refineFalse->setData(1, Qt::EditRole, false);
-    refineTrue = new QTreeWidgetItem(refine);
-    refineTrue->setText(0, "True");
-    refineTrue->setCheckState(0, Qt::Unchecked);
-    refineTrue->setData(1, Qt::EditRole, true);
 }
 
 void Filters::createFilter(QTreeWidgetItem *cat, QString name)
@@ -290,7 +274,6 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     categoryBackground.setColorAt(1, QColor(b,b,b));
 
     setCategoryBackground(search);
-    setCategoryBackground(refine);
     setCategoryBackground(picks);
     setCategoryBackground(ratings);
     setCategoryBackground(labels);
@@ -330,10 +313,10 @@ void Filters::removeChildrenDynamicFilters()
     creators->takeChildren();
 }
 
-void Filters::checkPicks()
+void Filters::setPicksState()
 {
 /*
-    Filter picks by setting 'Picked' true.
+    Quick Menu Filter picks by setting 'Picked' true.
 */
     if (G::isLogger) G::log("Filters::checkPicks");
     if (debugFilters)
@@ -345,10 +328,10 @@ void Filters::checkPicks()
     emit filterChange("Filters::checkPicks");
 }
 
-void Filters::checkRating(QString rating, bool isChecked)
+void Filters::setRatingState(QString rating, bool isChecked)
 {
 /*
-    Filter rating by setting the rating true.
+    Quick Menu Filter rating by setting the rating true.
 */
     if (G::isLogger) G::log("Filters::checkRating");
     if (debugFilters)
@@ -365,10 +348,10 @@ void Filters::checkRating(QString rating, bool isChecked)
     }
 }
 
-void Filters::checkLabel(QString label, bool isChecked)
+void Filters::setLabelState(QString label, bool isChecked)
 {
 /*
-    Filter label by setting the rating true.
+    Quick Menu Filter label by setting the rating true.
 */
     if (G::isLogger) G::log("Filters::checkRating");
     if (debugFilters)
@@ -905,7 +888,6 @@ void Filters::collapseAllFilters()
 void Filters::collapseAllFiltersExceptSearch()
 {
     if (G::isLogger) G::log("Filters::collapseAllFiltersExceptSearch");
-    collapse(indexFromItem(refine));
     collapse(indexFromItem(picks));
     collapse(indexFromItem(ratings));
     collapse(indexFromItem(labels));

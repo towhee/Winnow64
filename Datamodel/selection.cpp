@@ -61,6 +61,9 @@ void Selection::current(QModelIndex sfIdx)
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//        QItemSelection selection;
+//        selection.select(sfIdx, sfIdx);
+//        sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         // MW::fileSelectionChange
         emit currentChanged(sfIdx, QModelIndex(), true, "Selection::select");
     }
@@ -81,11 +84,10 @@ void Selection::select(int sfRow)
 void Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)
 {
     if (G::isLogger) G::log("Selection::select QModelIndex");
-    qDebug() << "Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)" << sfIdx << sfIdx2;
     if (!sfIdx2.isValid()) sfIdx2 = sfIdx;
     QItemSelection selection;
     selection.select(sfIdx, sfIdx2);
-    sm->select(selection, QItemSelectionModel::Select);
+    sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 void Selection::toggleSelect(QModelIndex sfIdx)
@@ -95,7 +97,7 @@ void Selection::toggleSelect(QModelIndex sfIdx)
     if (sfIdx == dm->currentSfIdx) return;
     QItemSelection toggleSelection;
     toggleSelection.select(sfIdx, sfIdx);
-    sm->select(toggleSelection, QItemSelectionModel::Toggle);
+    sm->select(toggleSelection, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
 }
 
 void Selection::next()
@@ -246,7 +248,9 @@ void Selection::invert()
     sm->select(toggleSelection, QItemSelectionModel::Toggle);
     QModelIndex idx = nearestSelectedIndex(dm->currentSfRow);
     // MW::fileSelectionChange (updates DataModel current indexes, rows)
+    // qDebug() << "Selection::invert" << idx.isValid() << dm->currentSfIdx;
     if (idx.isValid()) emit currentChanged(idx);
+    if (sm->selectedRows().isEmpty()) select(dm->currentSfIdx);
 }
 
 bool Selection::isSelected(int sfRow)

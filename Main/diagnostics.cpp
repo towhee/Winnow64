@@ -160,7 +160,7 @@ QString MW::diagnostics()
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
     rpt << "\n" << "isIconNumberVisible = " << G::s(isIconNumberVisible);
     rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);
-    rpt << "\n" << "classificationBadgeInThumbDiameter = " << G::s(classificationBadgeInThumbDiameter);
+    rpt << "\n" << "classificationBadgeSizeFactor = " << G::s(classificationBadgeSizeFactor);
     rpt << "\n" << "rememberLastDir = " << G::s(rememberLastDir);
     rpt << "\n" << "lastDir = " << G::s(lastDir);
     rpt << "\n" << "ingestRootFolder = " << G::s(ingestRootFolder);

@@ -74,14 +74,6 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
-class RefineItemDelegate : public QStyledItemDelegate {
-    Q_OBJECT
-public:
-    explicit RefineItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
-//    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-};
-
 class PickItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

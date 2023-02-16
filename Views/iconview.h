@@ -25,6 +25,7 @@ public:
     QString labelChoice;
     bool showZoomFrame;
     int badgeSize;
+    int iconNumberSize;
     QSize cellSize;
     int preferredThumbDockHeight;
 
@@ -38,11 +39,11 @@ public:
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
     bool isMouseModifier = false;       // for zoomCursor in MW::eventFilter
 
+    QModelIndex shiftAnchorIndex;
     QModelIndex mouseOverIndex;         // for toggle pick
     QModelIndex prevIdx;                // for zoomCursor
 
     void updateVisible(int sfRow = -1);
-    bool calcViewportRange(int row);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -85,12 +86,14 @@ public:
     double bestAspectRatio;
 
 public slots:
+    void repaintView();
     void scrollDown(int);
     void scrollUp(int);
     void scrollPageDown(int);
     void scrollPageUp(int);
     void scrollToRow(int row, QString source);
     void scrollToCurrent();
+    void setThumbSize();
     void thumbsEnlarge();
     void thumbsShrink();
     int justifyMargin();
@@ -116,7 +119,8 @@ public slots:
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
-             int _labelFontSize, bool _showThumbLabels, int _badgeSize);
+                            int _labelFontSize, bool _showThumbLabels,
+                            int _badgeSize, int _iconNumberSize);
 
     void sortThumbs(int sortColumn, bool isReverse);
 
@@ -133,6 +137,17 @@ protected:
     void resizeEvent(QResizeEvent*) override;
     void leaveEvent(QEvent *event) override;
 
+
+signals:
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src);
+    void togglePick();
+    void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
+    void displayLoupe();
+    void updateStatus(bool, QString, QString);
+    void updateThumbDockHeight();
+
 private:
     void initLoad();
     bool addFolderImageDataToModel();
@@ -143,9 +158,8 @@ private:
     ImageCacheData *icd;
 
     QList<int> dragQueue;
-    QPoint origin;
+    QPoint mousePressPos;
     int dragDistance = 0;
-    QModelIndex shiftAnchor;
 
     Qt::KeyboardModifiers modifiers;
     float xPct;
@@ -166,15 +180,7 @@ private:
     bool selectionInverted = false;
     QModelIndex newCurrentIndex;
 
-signals:
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src);
-    void togglePick();
-    void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
-    void displayLoupe();
-    void updateStatus(bool, QString, QString);
-    void updateThumbDockHeight();
+    bool isDebug;
 };
 
 

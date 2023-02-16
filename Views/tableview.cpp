@@ -33,9 +33,6 @@ TableView::TableView(DataModel *dm)
     CreatedItemDelegate *createdItemDelegate = new CreatedItemDelegate;
     setItemDelegateForColumn(G::CreatedColumn, createdItemDelegate);
 
-    RefineItemDelegate *refineItemDelegate = new RefineItemDelegate;
-    setItemDelegateForColumn(G::RefineColumn, refineItemDelegate);
-
     PickItemDelegate *pickItemDelegate = new PickItemDelegate;
     setItemDelegateForColumn(G::PickColumn, pickItemDelegate);
 
@@ -126,7 +123,6 @@ int TableView::defaultCulumnWidth(int column)
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
     if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
-    if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
     if (column == G::PickColumn) return fm.boundingRect("===Pick===").width();
     if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
@@ -223,7 +219,7 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 
 void TableView::resizeColumns()
 {
-    qDebug() << "TableView::resizeColumns";
+    // qDebug() << "TableView::resizeColumns";
     for (int column = 0; column < G::TotalColumns; ++column) {
         setColumnWidth(column, defaultCulumnWidth(column));
     }
@@ -350,22 +346,6 @@ QString CreatedItemDelegate::displayText(const QVariant& value, const QLocale& /
 {
     return value.toDateTime().toString("yyyy-MM-dd hh:mm:ss");
 }
-
-RefineItemDelegate::RefineItemDelegate(QObject* parent): QStyledItemDelegate(parent)
-{
-}
-
-QString RefineItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
-{
-    return (value.toBool()) ? "true" : "";
-}
-
-//QSize RefineItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-//{
-////    QFontMetrics fm(option.font);
-////    int width = fm.width(" Refine ");
-////    return QSize(width, option.rect.height());
-//}
 
 PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

@@ -15,9 +15,6 @@ public:
     QTreeWidgetItem *search;
     QTreeWidgetItem *searchTrue;
     QTreeWidgetItem *searchFalse;
-    QTreeWidgetItem *refine;
-    QTreeWidgetItem *refineFalse;
-    QTreeWidgetItem *refineTrue;
     QTreeWidgetItem *picks;
     QTreeWidgetItem *ratings;
     QTreeWidgetItem *labels;
@@ -34,7 +31,6 @@ public:
     QTreeWidgetItem *activeCategory;   // category just filtered
 
     QString catSearch = "Search";
-    QString catRefine = "Refine";
     QString catPick = "Picks";
     QString catRating = "Ratings";
     QString catLabel = "Color classes";
@@ -76,7 +72,7 @@ public:
     bool buildingFilters = false;
     bool filtersBuilt = false;
     bool isSolo = true;
-    QString buildingFiltersMsg = "Building filters. Press \"Esc\" to stop.";
+    QString buildingFiltersMsg = "Building filters.";
 
     QString searchString = "";
     QStringList ignoreSearchStrings;
@@ -97,14 +93,13 @@ public slots:
     void clearAll();
     void checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state);
     void uncheckAllFilters();
-//    void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
     void collapseAllFiltersExceptSearch();
     void toggleExpansion();
-    void checkPicks();
-    void checkRating(QString rating, bool isChecked);
-    void checkLabel(QString label, bool isChecked);  // color class red, yellow...
+    void setPicksState();
+    void setRatingState(QString rating, bool isChecked);
+    void setLabelState(QString label, bool isChecked);  // color class red, yellow...
     bool isRatingChecked(QString rating);
     bool isLabelChecked(QString label);
     void updateProgress(int progress);

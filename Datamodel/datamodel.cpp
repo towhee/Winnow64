@@ -27,7 +27,6 @@ The data is structured in columns:
     ● Day:              from metadata       createdDate
     ● Creator:          from metadata       EditRole
     ● Rejected:         reject function     EditRole
-    ● Refined:          refine function     EditRole
     ● Picked:           user edited         EditRole
     ● Rating:           user edited         EditRole
     ● Label:            user edited         EditRole
@@ -157,9 +156,6 @@ DataModel::DataModel(QWidget *parent,
 {
     if (G::isLogger) G::log("DataModel::DataModel");
 
-    lastFunction = "";
-    isDebug = false;
-
     /* Every time a new folder is selected the model instance is incremented to check for concurrency
        issues where a thumb or image decoder is still working on the prior folder */
     instance = -1;
@@ -180,6 +176,8 @@ DataModel::DataModel(QWidget *parent,
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
 
+    lastFunction = "";
+    isDebug = false;
 }
 
 void DataModel::setModelProperties()
@@ -192,7 +190,6 @@ void DataModel::setModelProperties()
     // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine")); horizontalHeaderItem(G::RefineColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
@@ -568,7 +565,6 @@ bool DataModel::addFileData()
     • SizeColumn        (core sort item)
     • CreatedColumn     (core sort item)
     • ModifiedColumn    (core sort item)
-    • RefineColumn
     • PickColumn        (core sort item)
     • IngestedColumn
     • SearchColumn
@@ -713,8 +709,6 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
-    setData(index(row, G::RefineColumn), false);
-    setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PickColumn), "Unpicked");
     setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
@@ -825,7 +819,6 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
         return m;
     }
 
-    m.refine  = index(row, G::RefineColumn).data().toBool();
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();
     m.metadataLoaded = index(row, G::MetadataLoadedColumn).data().toBool();
@@ -2296,7 +2289,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("video", 25) << G::s(index(row, G::VideoColumn).data());
     rpt << "\n  " << G::sj("duration", 25) << G::s(index(row, G::DurationColumn).data());
     rpt << "\n  " << G::sj("bytes", 25) << G::s(index(row, G::SizeColumn).data());
-    rpt << "\n  " << G::sj("refine", 25) << G::s(index(row, G::RefineColumn).data());
     rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());
     rpt << "\n  " << G::sj("ingested", 25) << G::s(index(row, G::IngestedColumn).data());
     rpt << "\n  " << G::sj("label", 25) << G::s(index(row, G::LabelColumn).data());

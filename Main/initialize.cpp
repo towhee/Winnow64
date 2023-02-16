@@ -145,7 +145,6 @@ void MW::createDataModel()
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
-    connect(dm, &DataModel::currentChanged, this, &MW::fileSelectionChange);
     connect(this, &MW::setValue, dm, &DataModel::setValue);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
@@ -267,6 +266,12 @@ void MW::createMDCache()
     connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // add metadata to datamodel
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
+    // update thumbView in case scrolling has occurred
+    connect(metaReadThread, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
+            Qt::BlockingQueuedConnection);
+    // update gridView in case scrolling has occurred
+    connect(metaReadThread, &MetaRead::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // add icon to datamodel
     connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon,
@@ -390,7 +395,8 @@ void MW::createThumbView()
         if (setting->contains("showThumbLabels")) thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
         if (setting->contains("labelChoice")) thumbView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
-        if (setting->contains("classificationBadgeInThumbDiameter")) thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        if (setting->contains("classificationBadgeSizeFactor")) thumbView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
+        if (setting->contains("iconNumberSize")) thumbView->iconNumberSize = setting->value("iconNumberSize").toInt();
         if (setting->contains("thumbsPerPage")) thumbView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
@@ -399,7 +405,8 @@ void MW::createThumbView()
         thumbView->labelFontSize = 12;
         thumbView->showIconLabels = false;
         thumbView->showZoomFrame = true;
-        thumbView->badgeSize = classificationBadgeInThumbDiameter;
+        thumbView->badgeSize = classificationBadgeSizeFactor;
+        thumbView->iconNumberSize = iconNumberSize;
         thumbView->visibleCellCount = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
@@ -439,7 +446,8 @@ void MW::createGridView()
         if (setting->contains("labelFontSizeGrid")) gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
         if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
         if (setting->contains("labelChoice")) gridView->labelChoice = setting->value("labelChoice").toString();
-        if (setting->contains("classificationBadgeInThumbDiameter")) gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
+        if (setting->contains("classificationBadgeSizeFactor")) gridView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
+        if (setting->contains("iconNumberSize")) gridView->iconNumberSize = setting->value("iconNumberSize").toInt();
         if (setting->contains("thumbsPerPage")) gridView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
@@ -447,7 +455,8 @@ void MW::createGridView()
         gridView->iconHeight = 200;
         gridView->labelFontSize = 10;
         gridView->showIconLabels = true;
-        gridView->badgeSize = classificationBadgeInThumbDiameter;
+        gridView->badgeSize = classificationBadgeSizeFactor;
+        gridView->iconNumberSize = iconNumberSize;
         // rgh has window size been assigned yet
         gridView->visibleCellCount = (width() / 200) * (height() / 200);
     }
@@ -957,7 +966,7 @@ void MW::createFolderDock()
     // toggle expansion button
     BarBtn *folderRefreshBtn = new BarBtn();
     folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
-    folderRefreshBtn->setToolTip("Refresh and collapse");
+    folderRefreshBtn->setToolTip("Refresh folders and image counts");
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
 
@@ -1015,7 +1024,7 @@ void MW::createFavDock()
     // refresh button
     BarBtn *favRefreshBtn = new BarBtn();
     favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
-    favRefreshBtn->setToolTip("Refresh");
+    favRefreshBtn->setToolTip("Refresh bookmarks and image counts");
     connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     favTitleLayout->addWidget(favRefreshBtn);
 

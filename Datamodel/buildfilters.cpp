@@ -6,7 +6,6 @@
 
     Filters are based on Categories that contain items.  The categories are:
 
-         *refine;
          *picks;
          *ratings;
          *labels;
@@ -49,6 +48,7 @@ BuildFilters::BuildFilters(QObject *parent,
     if (G::isLogger) G::log("BuildFilters::BuildFilters");
     this->dm = dm;
     this->metadata = metadata;
+
     this->filters = filters;
     afterAction = NoAfterAction;
     debugBuildFilters = false;
@@ -159,11 +159,16 @@ void BuildFilters::update()
             << "BuildFilters::update"
                ;
     abortIfRunning();
-    action = Update;
-    if (G::allMetadataLoaded) start(NormalPriority);
+    abortIfRunning();
+    this->category = category;
+    if (filters->filtersBuilt) {
+        action = Update;
+        if (G::allMetadataLoaded) start(NormalPriority);
+    }
+    else build();
 }
 
-void BuildFilters::updateCategory(BuildFilters::Category category)
+void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction newAction)
 {
 /*
     Called when a category item has been edited.  The old name is removed from the
@@ -179,8 +184,11 @@ void BuildFilters::updateCategory(BuildFilters::Category category)
     }
     abortIfRunning();
     this->category = category;
-    action = UpdateCategory;
-    if (G::allMetadataLoaded) start(NormalPriority);
+    if (filters->filtersBuilt) {
+        action = UpdateCategory;
+        if (G::allMetadataLoaded) start(NormalPriority);
+    }
+    else build();
 }
 
 void BuildFilters::done()

@@ -420,56 +420,6 @@ void MW::setIngested()
     setting->endGroup();
 }
 
-void MW::toggleReject()
-{
-/*
-    If the selection has any images that are not rejected then reject them all.
-    If the entire selection was already rejected then unreject them all.
-    If the entire selection is nor rejected then reject them all.
-*/
-    if (G::isLogger) G::log("MW::toggleReject");
-    QModelIndex idx;
-    QModelIndexList idxList = dm->selectionModel->selectedRows();
-    QString pickStatus;
-
-    // add multiple selection flag to pick history
-    if (idxList.length() > 1) pushPick("Begin multiple select");
-
-    bool foundFalse = false;
-    // check if any images are not rejected in the selection
-    foreach (idx, idxList) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-        foundFalse = (pickStatus != "Rejected");
-        if (foundFalse) break;
-    }
-    foundFalse ? pickStatus = "Rejected" : pickStatus = "Unpicked";
-
-    // set pick status for selection
-    foreach (idx, idxList) {
-        // save pick history
-        QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
-        QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
-        pushPick(fPath, priorPickStatus);
-        // set pick status
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::toggleReject", Qt::EditRole);
-    }
-    if (idxList.length() > 1) pushPick("End multiple select");
-
-    updateClassification();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
-
-    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", "MW::toggleReject");
-
-    // update filter counts
-    qDebug() << "MW::toggleReject launchBuildFilters())";
-    launchBuildFilters();
-//    buildFilters->updateCountFiltered();
-}
-
 void MW::setCombineRawJpg()
 {
     if (G::isLogger) G::log("MW::setCombineRawJpg");

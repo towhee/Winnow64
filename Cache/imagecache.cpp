@@ -1429,7 +1429,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
                    << path;
         return;
     }
-//    if (debugCaching)
+    if (debugCaching)
     {
         qDebug();
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path << "src =" << src;

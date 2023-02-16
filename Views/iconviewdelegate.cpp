@@ -142,7 +142,8 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
                                           int labelFontSize,
                                           bool showThumbLabels,
                                           QString labelChoice,
-                                          int badgeSize)
+                                          int badgeSize,
+                                          int iconNumberSize)
 
 {
 /*
@@ -172,6 +173,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     if (delegateShowThumbLabels) textHeight = fontHt + textHeadroom;
     this->labelChoice = labelChoice;
     this->badgeSize = badgeSize;
+    this->iconNumberSize = iconNumberSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
 
@@ -476,7 +478,7 @@ void IconViewDelegate::paint(QPainter *painter,
         numberPen.setWidth(2);
         painter->setBrush(G::backgroundColor);
         QFont numberFont = painter->font();
-        int pxSize = badgeSize;
+        int pxSize = iconNumberSize;
         if (pxSize < 6) pxSize = 6;
         numberFont.setPixelSize(pxSize);
         numberFont.setBold(true);
@@ -485,7 +487,7 @@ void IconViewDelegate::paint(QPainter *painter,
         QString labelNumber = QString::number(row + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QPoint numberTopLeft(option.rect.left(), option.rect.top());
-        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + badgeSize - 2);
+        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + iconNumberSize - 2);
         QRect numberRect(numberTopLeft, numberBottomRight);
         painter->setPen(G::backgroundColor);
         painter->drawRoundedRect(numberRect, 2, 2);
@@ -511,7 +513,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
             // font
             QFont font = painter->font();
-            int pxSize = G::fontSize + 2;
+            int pxSize = 1.0 * G::fontSize * badgeSize / 10;
             if (pxSize < 6) pxSize = 6;
             font.setPixelSize(pxSize-1);
             painter->setFont(font);
@@ -526,9 +528,7 @@ void IconViewDelegate::paint(QPainter *painter,
             int r = h / 2;      // rounding amount for rect
             int t = h / 5;      // translate to center * in ratingRect
             QPoint ratingTopLeft(frameRect.right() - w, frameRect.top());
-//            QPoint ratingTopLeft(frameRect.right() - w, option.rect.top());
             QPoint ratingBottomRight(frameRect.right(), frameRect.top() + h);
-//            QPoint ratingBottomRight(frameRect.right(), option.rect.top() + h);
             QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
             // draw color in rect
@@ -545,46 +545,7 @@ void IconViewDelegate::paint(QPainter *painter,
             painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignCenter, stars);
         }
     }
-    /*
-    // rating badge (color filled circle with rating number in center)
-    if (isRatingBadgeVisible) {
-        // label/rating rect located top-right as containment for circle
-        QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
-        QPoint ratingBottomRight(option.rect.right(), option.rect.top() + badgeSize);
-        QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
-        QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() - 1);
-        QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() - 1);
-        QRect ratingTextRect(ratingTextTopLeft, ratingTextBottomRight);
-
-        QColor labelColorToUse;
-        QColor textColor(Qt::white);
-        if (G::labelColors.contains(colorClass) || G::ratings.contains(rating)) {
-            if (G::labelColors.contains(colorClass)) {
-                if (colorClass == "Red") labelColorToUse = G::labelRedColor;
-                if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
-                if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
-                if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
-                if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
-            }
-            else labelColorToUse = G::labelNoneColor;
-            painter->setBrush(labelColorToUse);
-            QPen ratingPen(labelColorToUse);
-            ratingPen.setWidth(0);
-            painter->setPen(ratingPen);
-            painter->drawEllipse(ratingRect);
-            QPen ratingTextPen(textColor);
-            ratingTextPen.setWidth(1);
-            painter->setPen(ratingTextPen);
-            QFont font = painter->font();
-            int pxSize = badgeSize;
-            if (pxSize < 6) pxSize = 6;
-            font.setPixelSize(pxSize-1);
-            painter->setFont(font);
-            painter->drawText(ratingTextRect, Qt::AlignCenter, rating);
-        }
-    }
-    //*/
     if (isVideo) {
         QFont videoFont = painter->font();
         videoFont.setPixelSize(G::fontSize);

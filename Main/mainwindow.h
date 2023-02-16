@@ -210,7 +210,8 @@ public:
     bool isIconNumberVisible;
     int infoOverlayFontSize = 20;
     int classificationBadgeInImageDiameter;
-    int classificationBadgeInThumbDiameter;
+    int classificationBadgeSizeFactor;
+    int iconNumberSize;
 
     // files
     QString folderAndFileChangePath = "";
@@ -444,7 +445,6 @@ private slots:
     void invertFilters();
     void setFilterSolo();
     void toggleReject();
-    void refine();
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChangeFromAction();
@@ -555,7 +555,8 @@ private slots:
     void setBackgroundShade(int shade);
     void setInfoFontSize();
     void setClassificationBadgeImageDiam(int d);
-    void setClassificationBadgeThumbDiam(int d);
+    void setClassificationBadgeSizeFactor(int d);
+    void setIconNumberSize(int d);
     void setPrefPage(int page);
     void setDisplayResolution();
     void getDisplayProfile();
@@ -730,7 +731,6 @@ private:
     QAction *deleteFSTreeFolderAction;
     QAction *shareFilesAction;
     QAction *rejectAction;
-    QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
     QAction *pick1Action;               // added for shortcut "P"
     QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons

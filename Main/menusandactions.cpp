@@ -356,12 +356,6 @@ void MW::createActions()
     addAction(rejectAction);
     connect(rejectAction, &QAction::triggered, this, &MW::toggleReject);
 
-    refineAction = new QAction(tr("Refine"), this);
-    refineAction->setObjectName("Refine");
-    refineAction->setShortcutVisibleInContextMenu(true);
-    addAction(refineAction);
-    connect(refineAction, &QAction::triggered, this, &MW::refine);
-
     pickAction = new QAction(tr("Pick"), this);
     pickAction->setObjectName("togglePick");
     pickAction->setShortcutVisibleInContextMenu(true);
@@ -391,7 +385,7 @@ void MW::createActions()
     filterPickAction->setCheckable(true);
     filterPickAction->setChecked(false);
     addAction(filterPickAction);
-    connect(filterPickAction, &QAction::triggered, filters, &Filters::checkPicks);
+    connect(filterPickAction, &QAction::triggered, filters, &Filters::setPicksState);
 
     popPickHistoryAction = new QAction(tr("Recover prior pick state"), this);
     popPickHistoryAction->setObjectName("togglePick");
@@ -1557,7 +1551,6 @@ void MW::createMenus()
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
     editMenu->addAction(rejectAction);
-    editMenu->addAction(refineAction);
     editMenu->addAction(pickUnlessRejectedAction);
 //    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
@@ -1853,7 +1846,6 @@ void MW::createMenus()
 //    thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
-    thumbViewActions->append(refineAction);
     thumbViewActions->append(pickUnlessRejectedAction);
     thumbViewActions->append(separatorAction6);
     thumbViewActions->append(revealFileAction);
@@ -2025,7 +2017,6 @@ void MW::enableSelectionDependentMenus()
         reportMetadataAction->setEnabled(true);
         selectAllAction->setEnabled(true);
         invertSelectionAction->setEnabled(true);
-        refineAction->setEnabled(true);
         pickAction->setEnabled(true);
         filterPickAction->setEnabled(true);
         popPickHistoryAction->setEnabled(true);
@@ -2084,7 +2075,6 @@ void MW::enableSelectionDependentMenus()
         reportMetadataAction->setEnabled(false);
         selectAllAction->setEnabled(false);
         invertSelectionAction->setEnabled(false);
-        refineAction->setEnabled(false);
         pickAction->setEnabled(false);
         filterPickAction->setEnabled(false);
         popPickHistoryAction->setEnabled(false);

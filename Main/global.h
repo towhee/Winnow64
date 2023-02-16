@@ -44,7 +44,6 @@ namespace G
         // items read when new folder (core fields)
         PathColumn,
         NameColumn,
-        RefineColumn,
         PickColumn,
         IngestedColumn,
         LabelColumn,
