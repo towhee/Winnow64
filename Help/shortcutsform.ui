@@ -170,7 +170,7 @@
          <string>Include subfolders</string>
         </property>
         <property name="text">
-         <string>B</string>
+         <string>Cmd/Ctrl + Shift + mouse left click</string>
         </property>
         <property name="text">
          <string>Show images in all subfolders as well</string>
@@ -282,14 +282,6 @@
         </property>
         <property name="text">
          <string>Cmd/Ctrl + Shift +A</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Refine</string>
-        </property>
-        <property name="text">
-         <string>R</string>
         </property>
        </item>
        <item>

@@ -6,9 +6,9 @@ namespace G
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
     bool isErrorLogger = false;         // Writes error log messages to file or console
-    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()

@@ -40,7 +40,6 @@ Manage external programs     O           ⌥
 Pick image                   P
 Ingest / Copy to folder      Q
 Quit program                 Q    ⌘
-Refine                       R
 Reveal in Explore/Finder     R    ⌘
 
 Function                     Key  ⌘  ⇧  ⌥   ⌘(ctrl) ⇧(shift)  ⌥(alt)

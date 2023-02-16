@@ -336,7 +336,6 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("year", n) << G::s(m.year) << "\n";
     p.rpt << G::sj("day", n) << G::s(m.day) << "\n";
     p.rpt << "\n";
-    p.rpt << G::sj("refine", n) << G::s(m.refine) << "\n";
     p.rpt << G::sj("pick", n) << G::s(m.pick) << "\n";
     p.rpt << G::sj("ingested", n) << G::s(m.ingested) << "\n";
     p.rpt << G::sj("metadataLoaded", n) << G::s(m.metadataLoaded) << "\n";
@@ -410,7 +409,6 @@ void Metadata::reportMetadata()
 //    p.rpt << "year"                << m.year;                   p.rpt << "\n";
 //    p.rpt << "day"                 << m.day;                    p.rpt << "\n";
 //    p.rpt << "\n";
-//    p.rpt << "refine"              << b(m.refine);              p.rpt << "\n";
 //    p.rpt << "pick"                << b(m.pick);                p.rpt << "\n";
 //    p.rpt << "ingested"            << b(m.ingested);            p.rpt << "\n";
 //    p.rpt << "metadataLoaded"      << b(m.metadataLoaded);      p.rpt << "\n";

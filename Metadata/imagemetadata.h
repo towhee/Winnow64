@@ -28,7 +28,6 @@ public:
     QDateTime modifiedDate;
     QString year = "";
     QString day = "";
-    bool refine = false;
     bool pick = false;
     bool ingested = false;
     bool video = false;

@@ -188,7 +188,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     this->dm = dm;
     this->icd = icd;
     setObjectName(objName);
-    if (G::isLogger) G::log("IconView::IconView", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::IconView", objectName());
 
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
@@ -228,14 +228,17 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
                                             icd,
                                             dm->selectionModel
                                             );
-    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        labelFontSize, showIconLabels, labelChoice, badgeSize);
+    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
+                                         showIconLabels, labelChoice,
+                                         badgeSize, iconNumberSize);
     setItemDelegate(iconViewDelegate);
 
     zoomFrame = new QLabel;
 
     assignedIconWidth = iconWidth;
     prevIdx = model()->index(-1, -1);
+
+    isDebug = false;
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
@@ -246,7 +249,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
 
 QString IconView::diagnostics()
 {
-    if (G::isLogger) G::log("IconView::diagnostics", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::diagnostics", objectName());
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -276,7 +279,7 @@ QString IconView::diagnostics()
 
 void IconView::refreshThumb(QModelIndex idx, int role)
 {
-    if (G::isLogger) G::log("IconView::refreshThumb", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::refreshThumb", objectName());
     if (!idx.isValid()) {
         qWarning() << "WARNING" << "WARNING"
                    << "IconView::refreshThumb"
@@ -290,7 +293,7 @@ void IconView::refreshThumb(QModelIndex idx, int role)
 }
 
 void IconView::refreshThumbs() {
-    if (G::isLogger) G::log("IconView::refreshThumbs", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::refreshThumbs", objectName());
     int last = dm->sf->rowCount() - 1;
     dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0));
 }
@@ -317,7 +320,7 @@ void IconView::setThumbParameters()
     MW::setThumbDockHeight is called (friend class) so it can be resized to fit the
     possibly altered thumbnail dimensions.
 */
-    if (G::isLogger) G::log("IconView::setThumbParameters", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::setThumbParameters", objectName());
     if (G::isInitializing) return;
         /*
         qDebug() << "IconView::setThumbParameters" << objectName()
@@ -335,14 +338,16 @@ void IconView::setThumbParameters()
     }
     setSpacing(0);
     if (labelFontSize == 0) labelFontSize = 10;
-    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        labelFontSize, showIconLabels, labelChoice, badgeSize);
+    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
+                                         showIconLabels, labelChoice,
+                                         badgeSize, iconNumberSize);
 }
 
-void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/
-                                  int _labelFontSize, bool _showThumbLabels, int _badgeSize)
+void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
+                                  int _labelFontSize, bool _showThumbLabels,
+                                  int _badgeSize, int _iconNumberSize)
 {
-    if (G::isLogger) G::log("IconView::setThumbParameters", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::setThumbParameters", objectName());
 
     iconWidth = _thumbWidth;
     iconHeight = _thumbHeight;
@@ -350,12 +355,13 @@ void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thum
     labelFontSize = _labelFontSize;
     showIconLabels = _showThumbLabels;
     badgeSize = _badgeSize;
+    iconNumberSize = _iconNumberSize;
     setThumbParameters();
 }
 
 QSize IconView::getCellSize()
 {
-    if (G::isLogger) G::log("IconView::getCellSize");
+    if (isDebug || G::isLogger) G::log("IconView::getCellSize");
     return iconViewDelegate->getCellSize();
 }
 
@@ -370,7 +376,7 @@ int IconView::getThumbSpaceWidth(int thumbSpaceHeight)
     This function is used when the thumbView wrapping = false and the thumbDock changes
     height to determine whether a scrollbar is required.
 */
-    if (G::isLogger) G::log("IconView::getThumbSpaceWidth", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getThumbSpaceWidth", objectName());
     float aspect = iconWidth / iconHeight;
     // Difference between thumbSpace and thumbHeight
     int margin = iconViewDelegate->getCellSize().height() - iconHeight;
@@ -400,7 +406,7 @@ void IconView::updateVisible(int sfRow)
 
         By iterating back and forth the firstVisible and lastVisible is determined.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("IconView::updateVisibleCells", objectName());
+    if (isDebug || G::isLogger || G::isFlowLogger) G::log("IconView::updateVisibleCells", objectName());
 
     int n = dm->sf->rowCount() - 1;
 
@@ -430,6 +436,9 @@ void IconView::updateVisible(int sfRow)
     }
     else {
         int first;
+        QRect vpRect = viewport()->rect();
+
+        // estimate first icon from scrollbar position/value
         if (isWrapping()) {
             first = verticalScrollBar()->value() * 1.0 / verticalScrollBar()->maximum() * n;
         }
@@ -437,13 +446,13 @@ void IconView::updateVisible(int sfRow)
             first = horizontalScrollBar()->value() * 1.0 / horizontalScrollBar()->maximum() * n;
         }
 
-        QRect vpRect = viewport()->rect();
+        // iterate visual rects to find actual first visible
         if (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
             while (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
                 first--;
                 if (first < 0) break;
             }
-            firstVisibleCell = first + 2;
+            firstVisibleCell = first + 1;
         }
         else {
             while (!visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
@@ -453,16 +462,19 @@ void IconView::updateVisible(int sfRow)
             firstVisibleCell = first;
         }
 
+        // iterate visual rects to find actual mid and last visible
         for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
+            if (visualRect(dm->sf->index(row, 0)).contains(vpRect.center())) {
+                midVisibleCell = row;
+            }
             if (!visualRect(dm->sf->index(row, 0)).intersects(vpRect)) {
-                lastVisibleCell = row;
+                lastVisibleCell = row - 1;
                 break;
             }
             lastVisibleCell = dm->sf->rowCount() - 1;
         }
 
         visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-        midVisibleCell = firstVisibleCell + visibleCellCount / 2 - 1;
     }
 
     /* debug
@@ -474,138 +486,12 @@ void IconView::updateVisible(int sfRow)
                 //*/
 }
 
-bool IconView::calcViewportRange(int sfRow)
-{
-/*
-    Not used.
-
-    Determine the first and last visible icons in the IconView viewport for any item in the
-    datamodel. Scrolling is set to center the current item in the viewport. There are three
-    scenarios to consider:
-
-    1.  At the start the top of the viewport = the top of the first thumbnail.
-
-    2.  At the end the bottom = the bottom of the last thumbnail.
-
-    3.  In between the start and end the top of the viewport can be a fractional part of a
-        thumbnail and the same for the bottom of the viewport.
-
-    Scenario 3 occurs when the viewport has to scroll to center the current thumbnail.
-
-    So we have to determine when scrolling will first occur, how many rows of icons will be
-    visible in the viewport, how many icons are visible and the first/last icons visible.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log("IconView::calcViewportRange", objectName());
-//    qDebug() << "IconView::calcViewportRange" << "sfRow =" << sfRow;
-    int i = sfRow;
-    QSize vp = viewport()->size();
-    int rowWidth = vp.width() - G::scrollBarThickness;
-    QSize thumb(iconWidth, iconHeight);
-    QSize cell = iconViewDelegate->getCellSize(thumb);
-    if (cell.width() == 0) return false;
-    if (cell.height() == 0) return false;
-
-    int tCells = dm->sf->rowCount();
-    int cellsPerVPRow = qCeil(static_cast<qreal>(rowWidth) / cell.width());
-
-    if (!isWrapping()) {
-        // simple approach, will report more than visible, does not consider scroll alignment
-        firstVisibleCell = i - cellsPerVPRow;
-        if (firstVisibleCell < 0) firstVisibleCell = 0;
-        lastVisibleCell = i + cellsPerVPRow;
-        if (lastVisibleCell > tCells - 1) lastVisibleCell = tCells - 1;
-
-        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-        midVisibleCell = firstVisibleCell + visibleCellCount / 2;
-
-/*
-        qDebug()
-        << "IconView::calcViewportRange"
-        << "i:" << i
-        << "firstVisibleCell =" << firstVisibleCell
-        << "lastVisibleCell =" << lastVisibleCell;
-        << "midVisibleCell =" << midVisibleCell;
-        */
-    }
-
-    int rowInView = i / cellsPerVPRow;  //qCeil(i / cellsPerVPRow);
-//    int posInVPRow = i % cellsPerVPRow;
-    int rowsInView = qCeil(static_cast<qreal>(tCells) / cellsPerVPRow);
-    int lastVPRow = qCeil(tCells / cellsPerVPRow);
-
-    // rows per viewport
-    qreal rowsPerVPDbl = 1.0;
-    rowsPerVPDbl = static_cast<qreal>(vp.height()) / cell.height();
-    if (rowsPerVPDbl < 1.0) rowsPerVPDbl = 1.0;
-    int firstVPRowScrollReq = qCeil(rowsPerVPDbl / 2);
-    int lastVRowReqScroll = lastVPRow - firstVPRowScrollReq;
-    int rowsPerVP = qCeil(rowsPerVPDbl);
-    if (rowInView >= firstVPRowScrollReq && rowInView <= lastVRowReqScroll)
-        rowsPerVP += 1;
-
-    /*
-    qDebug() << "IconView::calcViewportRange"
-             << "cellsPerVPRow =" << cellsPerVPRow
-             << "rowsPerVP =" << rowsPerVP
-                ;
-//                */
-
-    visibleCellCount = cellsPerVPRow * rowsPerVP;
-    int visibleRowsAbove = qCeil((rowsPerVP - 1) / 2);
-
-    // vertical alignment is centered, first cell requiring the view to scroll
-    int firstCellReqScroll = qCeil(static_cast<qreal>(rowsPerVP) / 2) * cellsPerVPRow;
-
-    // last cell requiring the view to scroll
-    int lastCellReqScroll = lastVRowReqScroll * cellsPerVPRow;
-
-    // first visible cell
-    int firstVisibleVPRow = 0;
-    if (i < firstCellReqScroll) {
-         firstVisibleVPRow = 0;
-    }
-    if (i > lastCellReqScroll) {
-        firstVisibleVPRow = rowsInView - rowsPerVP;
-    }
-    if (i >= firstCellReqScroll && i <= lastCellReqScroll) {
-        firstVisibleVPRow = rowInView - visibleRowsAbove;
-    }
-
-    firstVisibleCell = firstVisibleVPRow * cellsPerVPRow;
-    lastVisibleCell = firstVisibleCell + visibleCellCount - 1;
-    visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-    midVisibleCell = firstVisibleCell + visibleCellCount / 2;
-
-    /*
-    qDebug()
-        << "IconView::calcViewportRange"
-        << "\n\t\ti:" << i
-        << "\n\t\trow =" << rowInView
-        << "\n\t\trows =" << rowsInView
-        << "\n\t\tviewport:" << vp << "cell:" << cell
-        << "\n\t\tfirstVisibleVPRow =" << firstVisibleVPRow
-        << "\n\t\tfirstVisibleCell =" << firstVisibleCell
-        << "\n\t\tlastVisibleCell =" << lastVisibleCell
-        << "\n\t\tcellsPerVPRow =" << cellsPerVPRow
-        << "\n\t\trowsPerVP =" << rowsPerVPDbl << rowsPerVP
-        << "\n\t\tvisibleCells ="  << visibleCells
-//        << "posInVPRow =" << posInVPRow
-        << "\n\t\trowInView =" << rowInView
-        << "\n\t\tfirstVPRowScrollReq =" << firstVPRowScrollReq
-        << "\n\t\tlastVRowReqScroll =" << lastVRowReqScroll
-        << "\n\t\tfirstCellReqScroll =" << firstCellReqScroll
-        << "\n\t\tlastCellReqScroll =" << lastCellReqScroll
-        ;
-//    */
-    return true;
-}
-
 int IconView::getThumbsPerPage()
 {
 /*
     Not being used
 */
-    if (G::isLogger) G::log("IconView::getThumbsPerPage", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getThumbsPerPage", objectName());
     QString obj = objectName();
     QSize vp = viewport()->size();
 //    if ((vp.width() == 0 || vp.height()) == 0 && objectName() == "Grid")
@@ -653,7 +539,7 @@ int IconView::getFirstVisible()
     thumbnails to be generated. This can take a few seconds if there are thousands
     of images in the selected folder.
 */
-    if (G::isLogger) G::log("IconView::getFirstVisible", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getFirstVisible", objectName());
     int n = dm->sf->rowCount()-1;
     QSize cell = getCellSize();
     int iconsPerRow = viewport()->width() / cell.width() + 0;
@@ -762,7 +648,7 @@ int IconView::getLastVisible()
     thumbnails to be generated. This can take a few seconds if there are thousands
     of images in the selected folder.
 */
-    if (G::isLogger) G::log("IconView::getLastVisible", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getLastVisible", objectName());
     QRect thumbViewRect = viewport()->rect();
     for (int row = dm->sf->rowCount() - 1; row >= 0; --row) {
         if (visualRect(dm->sf->index(row, 0)).intersects(thumbViewRect)) {
@@ -777,7 +663,7 @@ bool IconView::allPageIconsLoaded()
 /*
     Not being used.
 */
-    if (G::isLogger) G::log("IconView::allPageIconsLoaded", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::allPageIconsLoaded", objectName());
     for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
         if (dm->index(row, G::PathColumn).data(Qt::DecorationRole).isNull())
             return false;
@@ -792,7 +678,7 @@ void IconView::scannedViewportRange()
     when the application show event occurs, when there is a viewport scroll event or when an
     icon justification happens.
 */
-    if (G::isLogger) G::log("IconView::scannedViewportRange", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scannedViewportRange", objectName());
     /* old
     int row;    // an item, not a row in the grid
     firstVisibleCell = 0;
@@ -879,7 +765,7 @@ bool IconView::isRowVisible(int row)
 /*
     Dependent on calcViewportRange being up-to-date.
 */
-    if (G::isLogger) G::log("IconView::isRowVisible", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::isRowVisible", objectName());
     return row >= firstVisibleCell && row <= lastVisibleCell;
 }
 
@@ -888,7 +774,7 @@ QString IconView::getCurrentFilePath()
 /*
     Used by MW::updateStatus to check for instance clash.  Is this needed?
 */
-    if (G::isLogger) G::log("IconView::getCurrentFilePath");
+    if (isDebug || G::isLogger) G::log("IconView::getCurrentFilePath");
     return currentIndex().data(G::PathRole).toString();
 }
 
@@ -903,7 +789,7 @@ QFileInfoList IconView::getPicks()
     MW, passing the list on to the ingestDlg for ingestion/copying to another
     folder.
 */
-    if (G::isLogger) G::log("IconView::getPicks", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getPicks", objectName());
     QFileInfoList fileInfoList;
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
@@ -919,7 +805,7 @@ QFileInfoList IconView::getPicks()
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("IconView::sortThumbs", objectName());
+    if (isDebug || G::isLogger || G::isFlowLogger) G::log("IconView::sortThumbs", objectName());
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
 
@@ -935,7 +821,7 @@ int IconView::getSelectedCount()
     selectedIndexes().count() works. This is called from MW::updateStatus to report the
     number of images selected.
 */
-    if (G::isLogger) G::log("IconView::getSelectedCount", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getSelectedCount", objectName());
     return selectionModel()->selectedRows().count();
 }
 
@@ -944,7 +830,7 @@ QStringList IconView::getSelectedThumbsList()
 /*
     This was used by the eliminated tags class and is not used but looks useful.
 */
-    if (G::isLogger) G::log("IconView::getSelectedThumbsList", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getSelectedThumbsList", objectName());
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
     QStringList SelectedThumbsPaths;
 
@@ -956,31 +842,31 @@ QStringList IconView::getSelectedThumbsList()
 
 QModelIndex IconView::upIndex()
 {
-    if (G::isLogger) G::log("IconView::downIndex", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::downIndex", objectName());
     return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
 }
 
 QModelIndex IconView::downIndex()
 {
-    if (G::isLogger) G::log("IconView::upIndex", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::upIndex", objectName());
     return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
 }
 
 QModelIndex IconView::pageUpIndex()
 {
-    if (G::isLogger) G::log("IconView::pageUpIndex", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::pageUpIndex", objectName());
     return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
 
 QModelIndex IconView::pageDownIndex()
 {
-    if (G::isLogger) G::log("IconView::pageDownIndex", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::pageDownIndex", objectName());
     return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
 int IconView::fitBadge(int pxAvail)
 {
-    if (G::isLogger) G::log("IconView::fitBadge", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::fitBadge", objectName());
 
     QString s;
     int n = dm->sf->rowCount();
@@ -990,7 +876,7 @@ int IconView::fitBadge(int pxAvail)
     else if (n < 10000) s = "9999";
     else if (n < 100000) s = "99999";
     int newBadgeSize;
-    badgeSize = m2->classificationBadgeInThumbDiameter;
+    badgeSize = m2->classificationBadgeSizeFactor;
     for (newBadgeSize = badgeSize; newBadgeSize > 6; newBadgeSize--) {
         QFont font(this->font().family(), newBadgeSize);
         QFontMetrics fm(font);
@@ -999,12 +885,47 @@ int IconView::fitBadge(int pxAvail)
     return newBadgeSize;
 }
 
+void IconView::setThumbSize()
+{
+/*
+
+*/
+    if (isDebug || G::isLogger) G::log("IconView::setThumbSize", objectName());
+
+//    int pxAvail = getCellSize().width() * 1.1 * 0.8;
+//    badgeSize = fitBadge(pxAvail);
+
+    updateVisible();
+    setThumbParameters();
+//    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
+//                                         showIconLabels, labelChoice, badgeSize);
+
+    QModelIndex scrollToIndex;
+    int currentRow = currentIndex().row();
+    if (currentRow >= firstVisibleCell && currentRow <= lastVisibleCell)
+        scrollToIndex = currentIndex();
+    else
+        scrollToIndex = dm->sf->index(midVisibleCell, 0);
+    /* debug
+    qDebug() << "IconView::setThumbSize"
+             << "currentRow =" << currentRow
+             << "firstVisibleCell =" << firstVisibleCell
+             << "lastVisibleCell =" << lastVisibleCell
+             << "midVisibleCell =" << midVisibleCell
+             << "scrollToIndex.row() =" << scrollToIndex.row()
+                ;
+                //*/
+    G::ignoreScrollSignal = true;
+    scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
+}
+
 void IconView::thumbsEnlarge()
 {
-/* This function enlarges the size of the thumbnails in the thumbView, with the objectName
+/*
+   This function enlarges the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
-    if (G::isLogger) G::log("IconView::thumbsEnlarge", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsEnlarge", objectName());
 
     if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
     if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
@@ -1015,19 +936,18 @@ void IconView::thumbsEnlarge()
         if (iconWidth > G::maxIconSize) iconWidth = G::maxIconSize;
         if (iconHeight > G::maxIconSize) iconHeight = G::maxIconSize;
     }
-    // does number badge fit
-    int pxAvail = getCellSize().width() * 1.1 * 0.8;
-    badgeSize = fitBadge(pxAvail);
-    setThumbParameters();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
+    setThumbSize();
+    return;
 }
 
 void IconView::thumbsShrink()
 {
-/* This function reduces the size of the thumbnails in the thumbView, with the objectName
+/*
+   This function reduces the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
-    if (G::isLogger) G::log("IconView::thumbsShrink", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsShrink", objectName());
 
     if (iconWidth > ICON_MIN  && iconHeight > ICON_MIN) {
         iconWidth *= 0.9;
@@ -1035,11 +955,9 @@ void IconView::thumbsShrink()
         if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
         if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
     }
-    // does number badge fit
-    int pxAvail = getCellSize().width() * 0.9 * 0.8;
-    badgeSize = fitBadge(pxAvail);
-    setThumbParameters();
-    scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
+    setThumbSize();
+    return;
 }
 
 int IconView::justifyMargin()
@@ -1050,7 +968,7 @@ int IconView::justifyMargin()
     function returns the right margin amount. It is used in MW::gridDisplay to determine
     if a rejustify is req'd.
 */
-    if (G::isLogger) G::log("IconView::justifyMargin", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::justifyMargin", objectName());
     int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
@@ -1071,7 +989,7 @@ void IconView::rejustify()
     increased or decreased in the justify() function, and used to maintain the
     cell size during the resize and preference adjustment operations.
 */
-    if (G::isLogger) G::log("IconView::rejustify", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::rejustify", objectName());
 //    qDebug() << objectName() << "::rejustify   "
 //             << "isWrapping" << isWrapping();
 
@@ -1132,7 +1050,7 @@ void IconView::justify(JustifyAction action)
         Enlarge = -1
 
 */
-    if (G::isLogger) G::log("IconView::justify", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::justify", objectName());
     qDebug() << "IconView::justify" << objectName();
 
     int wCell = iconViewDelegate->getCellSize().width();
@@ -1197,7 +1115,7 @@ void IconView::resizeEvent(QResizeEvent *)
     This event is not forwarded to QListView::resize. This would cause multiple scroll
     events which isn't pretty at all.
 */
-    if (G::isLogger) G::log("IconView::resizeEvent", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::resizeEvent", objectName());
     /*
     if (m2->thumbDock != nullptr) {
         qDebug() << "IconView::resizeEvent"
@@ -1259,7 +1177,7 @@ void IconView::bestAspect()
     The function is called after a new folder is selected and the datamodel icon data has
     been loaded. Both thumbView and gridView have to be called.
 */
-    if (G::isLogger) G::log("IconView::bestAspect", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::bestAspect", objectName());
 
     bestAspectRatio = static_cast<double>(G::iconHMax) / G::iconWMax;
     thumbsFitTopOrBottom();
@@ -1287,7 +1205,7 @@ void IconView::thumbsFitTopOrBottom()
 
     For icon cell anatomy (see diagram at top of iconviewdelegate.cpp)
 */
-    if (G::isLogger) G::log("IconView::thumbsFitTopOrBottom", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsFitTopOrBottom", objectName());
 //    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName();
 
     /* thumbDockSplitterChange is set here, cleared in resize. Used to flag when to just scroll
@@ -1338,17 +1256,39 @@ void IconView::thumbsFitTopOrBottom()
     setSpacing(0);
 
     // check badge size fits
-    int pxAvail = iconViewDelegate->getCellWidthFromThumbWidth(iconWidth) * 0.8;
-    badgeSize = fitBadge(pxAvail);
+//    int pxAvail = iconViewDelegate->getCellWidthFromThumbWidth(iconWidth) * 0.8;
+//    badgeSize = fitBadge(pxAvail);
 
-    // this will change the icon size, which will trigger the resize event
+    // midVisible
+//    QModelIndex midIdx = dm->sf->index(midVisibleCell, 0);
+
+//    setThumbParameters();
+//    qDebug() << "IconView::thumbsFitTopOrBottom" << "midVisibleCell =" << midVisibleCell;
+//    scrollTo(midIdx, ScrollHint::PositionAtCenter);
+    updateVisible();
+
+//    // this will change the icon size, which will trigger the resize event
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
-                                         showIconLabels, labelChoice, badgeSize);
+                                         showIconLabels, labelChoice,
+                                         badgeSize, iconNumberSize);
+//    QModelIndex scrollToIndex;
+//    int currentRow = currentIndex().row();
+//    if (currentRow >= firstVisibleCell && currentRow <= lastVisibleCell)
+//        scrollToIndex = currentIndex();
+//    else
+//        scrollToIndex = dm->sf->index(midVisibleCell, 0);
+//    G::ignoreScrollSignal = true;
+//    scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
+}
+
+void IconView::repaintView()
+{
+    repaint();
 }
 
 void IconView::updateLayout()
 {
-    if (G::isLogger) G::log("IconView::updateLayout", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::updateLayout", objectName());
     QEvent event{QEvent::LayoutRequest};
     QListView::updateGeometries();
     QListView::event(&event);
@@ -1359,14 +1299,14 @@ void IconView::updateView()
 /*
     Force the view delegate to update.
 */
-    if (G::isLogger) G::log("IconView::updateView", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::updateView", objectName());
     update();
 //    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
 }
 
 void IconView::scrollDown(int /*step*/)
 {
-    if (G::isLogger) G::log("IconView::scrollDown", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollDown", objectName());
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
     }
@@ -1377,7 +1317,7 @@ void IconView::scrollDown(int /*step*/)
 
 void IconView::scrollUp(int /*step*/)
 {
-    if (G::isLogger) G::log("IconView::scrollUp", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollUp", objectName());
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
     }
@@ -1388,7 +1328,7 @@ void IconView::scrollUp(int /*step*/)
 
 void IconView::scrollPageDown(int /*step*/)
 {
-    if (G::isLogger) G::log("IconView::scrollPageDown", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollPageDown", objectName());
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepAdd);
     }
@@ -1399,7 +1339,7 @@ void IconView::scrollPageDown(int /*step*/)
 
 void IconView::scrollPageUp(int /*step*/)
 {
-    if (G::isLogger) G::log("IconView::scrollPageUp", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollPageUp", objectName());
     if(isWrapping()) {
         verticalScrollBar()->triggerAction(QAbstractSlider::SliderPageStepSub);
     }
@@ -1420,7 +1360,7 @@ void IconView::scrollToRow(int row, QString source)
 
     source is the calling function and is used for debugging.
 */
-    if (G::isLogger) G::log("IconView::scrollToRow", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollToRow", objectName());
     /*
     qDebug() << "IconView::scrollToRow" << objectName() << "row =" << row
              << "requested by" << source;
@@ -1432,7 +1372,7 @@ void IconView::scrollToRow(int row, QString source)
 
 void IconView::scrollToCurrent()
 {
-    if (G::isLogger) G::log("IconView::scrollToCenter", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollToCenter", objectName());
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
@@ -1443,13 +1383,13 @@ void IconView::waitUntilScrollReady()  // can get into infinite loop
     When the viewport resizes it can take a bit before the scrollbars are ready to
     accept new values.
 */
-    if (G::isLogger) G::log("IconView::scrollToCenter", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::scrollToCenter", objectName());
     while (!readyToScroll()) {}
 }
 
 bool IconView::readyToScroll()
 {
-    if (G::isLogger) G::log("IconView::readyToScroll", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::readyToScroll", objectName());
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << "IconView::okToScroll" << objectName()
@@ -1467,7 +1407,7 @@ int IconView::getHorizontalScrollBarOffset(int row)
 {
     // not being used
 
-    if (G::isLogger) G::log("IconView::getHorizontalScrollBarOffset", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getHorizontalScrollBarOffset", objectName());
     int pageWidth = viewport()->width();
     int thumbWidth = getCellSize().width();
 
@@ -1506,7 +1446,7 @@ int IconView::getVerticalScrollBarOffset(int row)
 {
     // not being used
 
-    if (G::isLogger) G::log("IconView::getVerticalScrollBarOffset", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getVerticalScrollBarOffset", objectName());
     if (objectName() == "Thumbnails") return 0;
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
@@ -1562,7 +1502,7 @@ int IconView::getHorizontalScrollBarMax()
 /*
 
 */
-    if (G::isLogger) G::log("IconView::getHorizontalScrollBarMax", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getHorizontalScrollBarMax", objectName());
     int pageWidth = viewport()->width();
     int thumbWidth = getCellSize().width();
     if (thumbWidth == 0) return 0;
@@ -1578,7 +1518,7 @@ int IconView::getVerticalScrollBarMax()
 /*
 
 */
-    if (G::isLogger) G::log("IconView::getVerticalScrollBarMax", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::getVerticalScrollBarMax", objectName());
     int pageWidth = viewport()->width();
     int pageHeight = viewport()->height();
     int thumbCellWidth = getCellSize().width();
@@ -1602,7 +1542,7 @@ int IconView::getVerticalScrollBarMax()
 
 void IconView::leaveEvent(QEvent *event)
 {
-    if (G::isLogger) G::log("IconView::leaveEvent", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::leaveEvent", objectName());
 //    qDebug() << "IconView::leaveEvent" << event << QWidget::mapFromGlobal(QCursor::pos());
     mouseOverThumbView = false;
     setCursor(Qt::ArrowCursor);
@@ -1612,7 +1552,7 @@ void IconView::leaveEvent(QEvent *event)
 
 void IconView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) G::log("IconView::wheelEvent", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::wheelEvent", objectName());
 //    qDebug() << "IconView::wheelEvent" << event;
     QListView::wheelEvent(event);
 }
@@ -1621,7 +1561,7 @@ bool IconView::event(QEvent *event) {
 /*
      Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-//    if (G::isLogger) G::log("IconView::event");
+//    if (isDebug || G::isLogger) G::log("IconView::event");
 //    qDebug() << "IconView::event" << event;
     if (event->type() == QEvent::NativeGesture) {
 //        qDebug() << "IconView::event" << event;
@@ -1657,82 +1597,6 @@ bool IconView::event(QEvent *event) {
     return true;
 }
 
-void IconView::mousePress(QMouseEvent *event)
-{
-/*
-    Captures the position of the mouse click within the thumbnail. This is sent
-    to imageView, which pans to the same center in zoom view. This is handy
-    when the user wants to view a specific part of another image that is in a
-    different position than the current image.
-*/
-    if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
-    qDebug() << "IconView::mousePressEvent";
-
-    // record modifier (used in IconView::selectionChanged)
-    modifiers = event->modifiers();
-
-    // is start tab currently visible
-    if (m2->centralLayout->currentIndex() == m2->StartTab)
-        m2->centralLayout->setCurrentIndex(m2->LoupeTab);
-
-    if (event->button() == Qt::RightButton) {
-        // save mouse over index for toggle pick
-        mouseOverIndex = indexAt(event->pos());
-        // make available for MW::copyImagePathFromContext
-        m2->mouseOverIdx = mouseOverIndex;
-        return;
-    }
-
-    // forward and back buttons
-    if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
-        QModelIndex idx = indexAt(event->pos());
-        if (idx.isValid()) {
-             m2->togglePickMouseOverItem(idx);
-        }
-        return;
-    }
-
-    // must be after button events but preceed left button event
-    QListView::mousePressEvent(event);
-
-    // left button or touch
-    if (event->button() == Qt::LeftButton) {
-        QModelIndex idx = indexAt(event->pos());
-        if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
-        else G::fileSelectionChangeSource =  "ThumbMouseClick";
-        QString src = "IconView::mousePressEvent " + objectName();
-
-        // unmodified click or touch
-        if (!modifiers) {
-            m2->fileSelectionChange(idx, QModelIndex(), false, src);
-
-            // thumb resizing
-            isLeftMouseBtnPressed = true;
-            /* Capture the percent coordinates of the mouse click within the thumbnail
-               so that the full scale image can be zoomed to the same point.  */
-            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
-            QPoint mousePt = event->pos();
-            QPoint iconPt = mousePt - iconRect.topLeft();
-            xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
-            yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
-            /*
-            qDebug() << "IconView::mousePressEvent"
-                     << "\n currentIndex =" << currentIndex()
-                     << "\n currPosIdx   =" << currPosIdx
-                     << "\n iconRect     =" << iconRect
-                     << "\n mousePt      =" << mousePt
-                     << "\n iconPt       =" << iconPt
-                     << "\n xPct         =" << xPct
-                     << "\n yPct         =" << yPct;
-            //*/
-            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-                //signal sent to ImageView
-                emit thumbClick(xPct, yPct);
-            }
-        }
-    }
-}
-
 void IconView::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -1741,8 +1605,8 @@ void IconView::mousePressEvent(QMouseEvent *event)
     when the user wants to view a specific part of another image that is in a
     different position than the current image.
 */
-    if (G::isLogger) G::log("IconView::mousePressEvent", objectName());
-    qDebug() << "IconView::mousePressEvent";
+    if (isDebug || G::isLogger) G::log("IconView::mousePressEvent", objectName());
+//    qDebug() << "IconView::mousePressEvent";
 //    return;
 
     // record modifier (used in IconView::selectionChanged)
@@ -1750,7 +1614,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
     // index clicked
     QModelIndex idx = indexAt(event->pos());
     // mouse position
-    origin = event->pos();
+    mousePressPos = event->pos();
 
     // is start tab currently visible
     if (m2->centralLayout->currentIndex() == m2->StartTab)
@@ -1791,45 +1655,20 @@ void IconView::mousePressEvent(QMouseEvent *event)
         // Shift modifier = select span
         if (event->modifiers() & Qt::ShiftModifier) {
             // check attempt to deselect only selected item (must always be one selected)
-            m2->sel->select(idx, shiftAnchor);
-            shiftAnchor = QModelIndex();
+            m2->sel->select(idx, shiftAnchorIndex);
+            shiftAnchorIndex = QModelIndex();
             dragQueue.append(idx.row());
-        }
-
-        // unmodified click or touch
-        if (!modifiers) {
-            // Capture the percent coordinates of the mouse click within the thumbnail
-            // so that the full scale image can be zoomed to the same point.
-            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
-            QPoint mousePt = event->pos();
-            QPoint iconPt = mousePt - iconRect.topLeft();
-            xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
-            yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
-            /* debug
-            qDebug() << "IconView::mousePressEvent"
-                     << "\n currentIndex =" << currentIndex()
-                     << "\n currPosIdx   =" << currPosIdx
-                     << "\n iconRect     =" << iconRect
-                     << "\n mousePt      =" << mousePt
-                     << "\n iconPt       =" << iconPt
-                     << "\n xPct         =" << xPct
-                     << "\n yPct         =" << yPct;
-            //*/
-            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-                //signal sent to ImageView
-                emit thumbClick(xPct, yPct);
-            }
         }
     }
 }
 
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("IconView::mouseMoveEvent", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::mouseMoveEvent", objectName());
     if (isLeftMouseBtnPressed) {
         // allow small 'jiggle' tolerance before start drag
-        int deltaX = qAbs(origin.x() - event->pos().x());
-        int deltaY = qAbs(origin.y() - event->pos().y());
+        int deltaX = qAbs(mousePressPos.x() - event->pos().x());
+        int deltaY = qAbs(mousePressPos.y() - event->pos().y());
         if (deltaX > 2)  isMouseDrag = true;
         if (deltaY > 2)  isMouseDrag = true;
         if (isMouseDrag) {
@@ -1845,48 +1684,10 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
-void IconView::mouseRelease(QMouseEvent *event)
-{
-    if (G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
-    qDebug() << "IconView::mouseReleaseEvent";
-
-//    QListView::mouseReleaseEvent(event);
-
-    QModelIndex idx = indexAt(event->pos());
-
-    /*
-    qDebug() << "\nIconView::mouseReleaseEvent"
-             << "\n" << "idx =" << idx
-             << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
-             << "\n" << "row =" << idx.row()
-             << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
-             << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
-             << "\n" << "dm selected =" << dm->isSelected(idx.row())
-             << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
-                ;
-                //*/
-
-    if (event->modifiers() & Qt::ControlModifier) {
-        // check attempt to deselect only selected item (must always be one selected)
-        m2->sel->chkForDeselection(idx.row());
-    }
-
-    if  (!event->modifiers() && isMouseDrag) {
-        QString src = "IconView::mouseReleaseEvent";
-        m2->fileSelectionChange(idx, QModelIndex(), true, src);
-    }
-
-    isLeftMouseBtnPressed = false;
-    isMouseDrag = false;
-    // if icons scroll after mouse click, redraw cursor for new icon
-//    zoomCursor(indexAt(event->pos()), "IconView::mouseReleaseEvent", /*forceUpdate=*/true, event->pos());
-    if (!event->modifiers()) emit thumbClick(xPct, yPct);
-}
-
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
-    qDebug() << "IconView::mouseReleaseEvent";
+    if (isDebug || G::isLogger) G::log("IconView::mouseReleaseEvent", objectName());
+//    qDebug() << "IconView::mouseReleaseEvent" << event->modifiers() << Qt::NoModifier;
     QModelIndex idx = indexAt(event->pos());
 
     /* debug
@@ -1901,18 +1702,34 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
                 ;
                 //*/
 
-    if  (!event->modifiers() && !isMouseDrag) {
-        m2->sel->current(idx);
+    if (!event->modifiers()) {
+//        if  (event->modifiers() == Qt::NoModifier/*&& isMouseDrag*/) {
         QString src = "IconView::mouseReleaseEvent";
+        m2->sel->current(idx);  // req'd when click on current with others also selected
         m2->fileSelectionChange(idx, QModelIndex(), true, src);
+        // Capture the percent coordinates of the mouse click within the thumbnail
+        // so that the full scale image can be zoomed to the same point.
+        QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
+        QPoint iconPt = event->pos() - iconRect.topLeft();
+        xPct = iconPt.x() * 1.0 / iconRect.width();
+        yPct = iconPt.y() * 1.0 / iconRect.height();
+        /* debug
+        qDebug() << "IconView::mousePressEvent"
+                 << "\n currentIndex =" << currentIndex()
+                 << "\n iconRect     =" << iconRect
+                 << "\n mousePt      =" << event->pos()
+                 << "\n iconPt       =" << iconPt
+                 << "\n xPct         =" << xPct
+                 << "\n yPct         =" << yPct;
+        //*/
+        if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+            //signal sent to ImageView
+            emit thumbClick(xPct, yPct);
+        }
     }
 
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
-    dragQueue.clear();
-    shiftAnchor = idx;
-
-    if (!event->modifiers()) emit thumbClick(xPct, yPct);
 }
 
 void IconView::mouseDoubleClickEvent(QMouseEvent *event)
@@ -1922,8 +1739,8 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     center.
 */
 //    qDebug() << "IconView::mouseDoubleClickEvent";
-    if (G::isLogger) G::log("IconView::mouseDoubleClickEvent", objectName());
-    // prevents rapidly toggle ctrl click select/deselect issue
+    if (isDebug || G::isLogger) G::log("IconView::mouseDoubleClickEvent", objectName());
+    // required to rapidly toggle ctrl click select/deselect without a delay
     QListView::mouseDoubleClickEvent(event);
     // display in loupe if Gridview
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
@@ -1947,7 +1764,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     called when there is a window resize MW::resizeEvent that will change the
     centralWidget geometry.
 */
-    if (G::isLogger) G::log("IconView::zoomCursor", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::zoomCursor", objectName());
     /*
     qDebug() << "IconView::zoomCursor"
              << "src =" << src
@@ -2144,7 +1961,7 @@ void IconView::startDrag(Qt::DropActions)
 /*
     Drag and drop thumbs to another program.
 */
-    if (G::isLogger) G::log("IconView::startDrag", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::startDrag", objectName());
 //    qDebug() << "IconView::startDrag";
 
     isMouseDrag = false;

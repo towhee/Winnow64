@@ -913,34 +913,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     */
 
-    // THUMBVIEW / GRIDVIEW MOUSE PRESS
-    {
-    /*
-
-    */
-//    if (event->type() == QEvent::MouseButtonPress) {
-//        if (obj->objectName() == "ThumbnailsViewPort") {
-//            qDebug() << "MW::eventFilter MouseButtonPress" << event << obj;
-//            thumbView->mousePress(static_cast<QMouseEvent *>(event));
-//        }
-//        if (obj->objectName() == "GridViewPort") {
-//            qDebug() << "MW::eventFilter MouseButtonPress" << event << obj;
-//            gridView->mousePress(static_cast<QMouseEvent *>(event));
-//        }
-//    }
-//    if (event->type() == QEvent::MouseButtonRelease) {
-//        if (obj->objectName() == "ThumbnailsViewPort") {
-//            qDebug() << "MW::eventFilter MouseButtonRelease" << event << obj;
-//            thumbView->mouseRelease(static_cast<QMouseEvent *>(event));
-//        }
-//        if (obj->objectName() == "GridViewPort") {
-//            qDebug() << "MW::eventFilter MouseButtonRelease" << event << obj;
-//            gridView->mouseRelease(static_cast<QMouseEvent *>(event));
-//        }
-//    }
-
-    } // end of section
-
     // CONTEXT MENU
     {
     /*
@@ -1045,7 +1017,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
             int i = tabBar->tabAt(e->pos());
             if (tabBar->tabText(i) == filterDockTabText) {
-                qDebug() << "MW::eventFilter FILTERDOCK CLICKED";
+                // qDebug() << "MW::eventFilter FILTERDOCK CLICKED";
                 filterDockTabMousePress();
             }
         }
@@ -1910,7 +1882,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentDmRow = dm->currentDmIdx.row();
     // select
     if (clearSelection) sel->current(current);
-//    if (clearSelection) dm->select(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1920,6 +1891,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+
+    // update anchor for shift click mouse contiguous selections
+    thumbView->shiftAnchorIndex = current;
+    gridView->shiftAnchorIndex = current;
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
@@ -2069,7 +2044,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
             if (dm->proxyIndexFromPath(fPath).isValid()) {
                 sel->current(fPath);
                 dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
-                fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::folderAndFileSelectionChange");
+                fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, true, "MW::folderAndFileSelectionChange");
             }
             return;
         }
@@ -2392,11 +2367,11 @@ void MW::loadConcurrent(int sfRow)
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));
+    qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-//            updateIconRange(dm->currentSfRow, "MW::loadConcurrent");
             metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent"); // also emit option
 //            emit startMetaRead(sfRow, "MW::loadConcurrent");
         }
@@ -2490,7 +2465,7 @@ void MW::loadConcurrentStartImageCache(QString src)
             dm->currentSfIdx = dm->sf->index(0,0);
         }
 
-        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::loadConcurrentStartImageCache");
+        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, true, "MW::loadConcurrentStartImageCache");
     }
 
     // update image cache after all metadata has been read and cache item list is complete
@@ -2691,10 +2666,12 @@ void MW::thumbHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
     if (G::isInitializing || !G::isNewFolderLoaded) return;
+//    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(-1, "MW::thumbHasScrolled");
+        int mvc = thumbView->midVisibleCell;
         if (gridView->isVisible())
             gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         if (tableView->isVisible())
@@ -2702,7 +2679,8 @@ void MW::thumbHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
             if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-            else loadConcurrent(thumbView->midVisibleCell);
+            else loadConcurrent(mvc);
+            // else QTimer::singleShot(50, [this, mvc]() {loadConcurrent(mvc);});
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -3318,13 +3296,15 @@ void MW::showHiddenFiles()
 
 void MW::thumbsEnlarge()
 {
+
     if (G::isLogger) G::log("MW::thumbsEnlarge");
     if (gridView->isVisible()) gridView->justify(IconView::JustifyAction::Enlarge);
     if (thumbView->isVisible())  {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
         else thumbView->thumbsEnlarge();
     }
-    scrollToCurrentRow();
+//    return;
+//    scrollToCurrentRow();
     // may be less icons to cache
     numberIconsVisibleChange();
 
@@ -3345,6 +3325,7 @@ void MW::thumbsShrink()
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Shrink);
         else thumbView->thumbsShrink();
     }
+    return;
     scrollToCurrentRow();
     // may be more icons to cache
     numberIconsVisibleChange();
@@ -3586,13 +3567,24 @@ void MW::setClassificationBadgeImageDiam(int d)
     imageView->setClassificationBadgeImageDiam(d);
 }
 
-void MW::setClassificationBadgeThumbDiam(int d)
+void MW::setClassificationBadgeSizeFactor(int d)
 {
     if (G::isLogger) G::log("MW::setClassificationBadgeThumbDiam");
     qDebug() << "MW::setClassificationBadgeThumbDiam";
-    classificationBadgeInThumbDiameter = d;
+    classificationBadgeSizeFactor = d;
     thumbView->badgeSize = d;
     gridView->badgeSize = d;
+    thumbView->setThumbParameters();
+    gridView->setThumbParameters();
+}
+
+void MW::setIconNumberSize(int d)
+{
+    if (G::isLogger) G::log("MW::setIconNumberSize");
+    qDebug() << "MW::setIconNumberSize";
+    iconNumberSize = d;
+    thumbView->iconNumberSize = d;
+    gridView->iconNumberSize = d;
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
 }
@@ -4206,7 +4198,8 @@ void MW::writeSettings()
     setting->setValue("backgroundShade", G::backgroundShade);
     setting->setValue("fontSize", G::strFontSize);
     setting->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
-    setting->setValue("classificationBadgeInThumbDiameter", classificationBadgeInThumbDiameter);
+    setting->setValue("classificationBadgeSizeFactor", classificationBadgeSizeFactor);
+    setting->setValue("iconNumberSize", iconNumberSize);
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
@@ -4487,7 +4480,9 @@ bool MW::loadSettings()
         G::strFontSize = "12";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
-        classificationBadgeInThumbDiameter = 16;
+        classificationBadgeSizeFactor = 14;
+        iconNumberSize = 24;
+
         isRatingBadgeVisible = false;
         isIconNumberVisible = true;
 
@@ -4616,7 +4611,10 @@ bool MW::loadSettings()
 
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
     if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
-    if (setting->contains("classificationBadgeInThumbDiameter")) classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
+    if (setting->contains("classificationBadgeSizeFactor")) classificationBadgeSizeFactor = setting->value("classificationBadgeSizeFactor").toInt();
+    else classificationBadgeSizeFactor = 14;
+    if (setting->contains("iconNumberSize")) iconNumberSize = setting->value("iconNumberSize").toInt();
+    else iconNumberSize = 26;
     if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
     if (setting->contains("isIconNumberVisible")) isIconNumberVisible = setting->value("isIconNumberVisible").toBool();
     else isIconNumberVisible = true;
@@ -4864,7 +4862,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
         rejectAction->setShortcut(QKeySequence("X"));
-        refineAction->setShortcut(QKeySequence("R"));
         pickAction->setShortcut(QKeySequence("`"));
         pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
         pick1Action->setShortcut(QKeySequence("P"));
@@ -5396,7 +5393,7 @@ void MW::ejectUsb(QString path)
         // drive was ejected
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            setCentralMessage("Removable drive " + driveName + " has been ejected.");
+            // setCentralMessage("Removable drive " + driveName + " has been ejected.");
         }
         // drive ejection failed
         else

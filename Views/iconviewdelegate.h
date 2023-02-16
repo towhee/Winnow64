@@ -29,7 +29,8 @@ public:
                    const QModelIndex &/*index*/ ) const override;
 
     void setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize,
-          bool showThumbLabels, QString labelChoice, int badgeSize);
+                            bool showThumbLabels, QString labelChoice,
+                            int badgeSize, int iconNumberSize);
 
     QSize getCellSize();
     QSize getCellSize(QSize icon);
@@ -98,6 +99,7 @@ private:
     int textHeadroom;
     int textHeight;
     int badgeSize;
+    int iconNumberSize;
     int cacheDiam = 6;
     int cacheOffset = 3;
     int ratingDiam;

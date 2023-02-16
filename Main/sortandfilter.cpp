@@ -157,16 +157,16 @@ void MW::quickFilter()
 void MW::quickFilterComplete()
 {
     if (G::isLogger) G::log("MW::quickFilter");
-    filters->checkRating("1", filterRating1Action->isChecked());
-    filters->checkRating("2", filterRating2Action->isChecked());
-    filters->checkRating("3", filterRating3Action->isChecked());
-    filters->checkRating("4", filterRating4Action->isChecked());
-    filters->checkRating("5", filterRating5Action->isChecked());
-    filters->checkLabel("Red", filterRedAction->isChecked());
-    filters->checkLabel("Yellow", filterYellowAction->isChecked());
-    filters->checkLabel("Green", filterGreenAction->isChecked());
-    filters->checkLabel("Blue", filterBlueAction->isChecked());
-    filters->checkLabel("Purple", filterPurpleAction->isChecked());
+    filters->setRatingState("1", filterRating1Action->isChecked());
+    filters->setRatingState("2", filterRating2Action->isChecked());
+    filters->setRatingState("3", filterRating3Action->isChecked());
+    filters->setRatingState("4", filterRating4Action->isChecked());
+    filters->setRatingState("5", filterRating5Action->isChecked());
+    filters->setLabelState("Red", filterRedAction->isChecked());
+    filters->setLabelState("Yellow", filterYellowAction->isChecked());
+    filters->setLabelState("Green", filterGreenAction->isChecked());
+    filters->setLabelState("Blue", filterBlueAction->isChecked());
+    filters->setLabelState("Purple", filterPurpleAction->isChecked());
 
     filters->setEachCatTextColor();
     filterChange("MW::quickFilter");
@@ -290,92 +290,6 @@ void MW::filterLastDay()
     }
 
     filterChange("MW::filterLastDay");
-}
-
-void MW::refine()
-{
-/*
-    Clears refine for all rows, sets refine = true if pick = true, and clears pick
-    for all rows.
-*/
-    if (G::isLogger) G::log("MW::refine");
-    // if slideshow then do not refine
-    if (G::isSlideShow) return;
-
-    // Are there any picks to refine?
-    bool isPick = false;
-    int pickCount = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "Picked") {
-            isPick = true;
-            pickCount++;
-            if (pickCount > 1) break;
-        }
-    }
-
-    if (pickCount == 1) {
-        G::popUp->showPopup("There is only one image picked, so refine cancelled", 2000);
-        return;
-    }
-
-    if (!isPick) {
-        G::popUp->showPopup("There are no picks to refine", 2000);
-        return;
-    }
-
-    QMessageBox msgBox;
-    int msgBoxWidth = 300;
-    QString txt = "<font color=\"red\">"
-                  "WARNING: all your picks will be reset"
-                  "</font><p>"
-                  "This operation will filter to show only your picks "
-                  "and then reset picks so you can refine what was initially "
-                  "picked.<p>"
-                  "When done, clear the filters (Shortcut Shift + C) to see all "
-                  "your images again.<BR>"
-                  ;
-    msgBox.setWindowTitle("Refine Picks");
-    msgBox.setText(txt);
-    msgBox.setInformativeText("Do you want continue?");
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-    msgBox.setDefaultButton(QMessageBox::Yes);
-    msgBox.setIcon(QMessageBox::Warning);
-    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                "QPushButton:default {background-color: rgb(68,95,118);}";
-    msgBox.setStyleSheet(s);
-    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
-    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-    int ret = msgBox.exec();
-    if (ret == QMessageBox::Cancel) return;
-
-    clearAllFilters();
-    QString src = "MW::refine";
-    // clear refine = pick
-    pushPick("Begin multiple select");
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        if (dm->index(row, G::PickColumn).data() == "Picked") {
-            // save pick history
-            QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-            pushPick(fPath, "Picked");
-//            pushPick(fPath, "true");
-            // clear picks
-            emit setValue(dm->index(row, G::RefineColumn), true, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-            emit setValue(dm->index(row, G::PickColumn), "Unpicked", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-        }
-        else {
-            emit setValue(dm->index(row, G::RefineColumn), false, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-        }
-    }
-    pushPick("End multiple select");
-
-    // reset filters
-//    launchBuildFilters();
-    filters->uncheckAllFilters();
-//    filters->checkItem(filters->refine, "true");
-    filters->refineTrue->setCheckState(0, Qt::Checked);
-
-    filterChange("MW::refine");
 }
 
 void MW::sortChangeFromAction()

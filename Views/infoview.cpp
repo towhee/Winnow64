@@ -226,8 +226,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         }
 
         // update filters
-        if (field == "Title*") emit updateFilter(BuildFilters::TitleEdit);
-        if (field == "Creator*") emit updateFilter(BuildFilters::CreatorEdit);
+        if (field == "Title*") emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
+        if (field == "Creator*") emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
     }
     count++;
     if (count > 1) count = 0;

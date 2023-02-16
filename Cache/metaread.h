@@ -33,6 +33,7 @@ public:
 
 signals:
     void stopped(QString src);
+    void updateScroll();
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -64,7 +65,7 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
-    bool changeStartRowWhileRunning;
+    bool abortCleanup;
     bool interrupted;
     int interruptedRow;
 
@@ -89,7 +90,7 @@ private:
 
     QList<int> rowsWithIcon;
 
-    bool debugCaching = false;
+    bool isDebug = false;
     QElapsedTimer t;
     QElapsedTimer tAbort;
     quint32 ms;

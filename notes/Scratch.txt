@@ -1,9 +1,72 @@
-Thumb::loadThumb Instance = 1 "MetaRead::readIcon" "/Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4"
-FrameDecoder::addToQueue               row = 0 queue size = 1 status = 0    "/Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4"
-FrameDecoder::getNextThumbNail         row = 0 status = 1    "/Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4"   src = "addToQueue"
-Thumb::loadThumb Instance = 1 "MetaRead::readIcon" "/Users/roryhill/Pictures/_test1/2022-10-20_0001.JPG"
-Thumb::loadThumb Instance = 1 "MetaRead::readIcon" "/Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG"
-Thumb::loadThumb Instance = 1 "MetaRead::readIcon" "/Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg"
-FrameDecoder::getNextThumbNail         row = 0 status = 1    "/Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4"   src = "frameChanged"
-DataModel::setIconFromVideoFrame instance = 1 fromInstance = 1 row = 0 "/Users/roryhill/Pictures/_test1"
-FrameDecoder::getNextThumbNail quiting queue.isEmpty() = true   abort = false
+
+6,363,821 MW::focusChange                                    Previous = Thumbnails
+        1 MW::focusChange                                     Current = Thumbnails
+2,904,353 MW::enableGoKeyActions
+        3 MW::thumbsEnlarge
+        0 IconView::thumbsEnlarge                            Thumbnails
+        1 IconView::setThumbSize                             Thumbnails
+        0 IconView::getCellSize
+IconView::setThumbSize currentRow = 0 firstVisibleCell = 11 lastVisibleCell = 18 midVisibleCell = 15 scrollToIndex.row() = 15
+      166 IconView::fitBadge                                 Thumbnails
+        1 IconView::setThumbParameters                       Thumbnails
+        6 MW::setThumbDockHeight
+      284 MW::setThumbDockFeatures
+
+MW::thumbHasScrolled true
+        4 MW::thumbHasScrolled
+        3 MW::scrollToCurrentRow
+        8 IconView::scrollToRow                              Thumbnails
+
+MW::thumbHasScrolled true
+        5 MW::thumbHasScrolled
+        1 MW::updateIconRange                                src = MW::scrollToCurrentRow row = 0
+        0 IconView::updateVisibleCells                       Thumbnails
+        3 IconView::getCellSize
+        1 MetadataCache::scrollChange                        called by =MW::scrollToCurrentRow
+        0 MetadataCache::setRange
+      309 MetadataCache::anyItemsToLoad
+      283 MW::updateMetadataThreadRunStatus
+        1 MW::numberIconsVisibleChange
+      338 MW::updateIconRange                                src = MW::numberIconsVisibleChange row = 0
+        0 MetadataCache::run                                 Scroll
+        0 IconView::updateVisibleCells                       Thumbnails
+    2,712 IconView::getCellSize
+       41 DockWidget::moveEvent                              FoldersDock
+        0 FSTree::resizeEvent
+      101 FSTree::resizeColumns
+       63 DockWidget::resizeEvent
+    1,795 DockWidget::moveEvent                              thumbDock
+        0 IconView::resizeEvent                              Thumbnails
+        0 IconView::setThumbParameters                       Thumbnails
+        0 MW::setThumbDockHeight
+       35 MW::setThumbDockFeatures
+        0 MW::numberIconsVisibleChange
+        0 MW::updateIconRange                                src = MW::numberIconsVisibleChange row = 0
+        0 IconView::updateVisibleCells                       Thumbnails
+        7 IconView::getCellSize
+       51 DockWidget::resizeEvent
+       31 ImageView::resizeEvent
+        0 ImageView::getFitScaleFactor
+        0 ImageView::setFitZoom
+        0 ImageView::scale
+       15 ImageView::setFitZoom
+        4 ImageView::placeClassificationBadge
+      185 ImageView::setShootingInfo
+        1 MW::updateStatus
+        2 IconView::getCurrentFilePath
+        7 DataModel::rowFromPath
+        2 MW::getZoom
+        3 MW::getPosition
+       27 IconView::getSelectedCount                         Thumbnails
+      331 MW::getPicked
+        4 MW::getPosition
+        9 MW::getZoom
+        5 MW::metadataChanged
+       19 InfoView::showOrHide
+        7 MW::getSelectedFileSize
+       13 MW::memoryReqdForSelection
+       47 MW::getPicked
+        0 ImageView::placeClassificationBadge
+      448 ImageView::setShootingInfo
+  213,726 MW::updateMetadataThreadRunStatus
+30,549,332 MW::keyReleaseEvent

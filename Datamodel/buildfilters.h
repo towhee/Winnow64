@@ -55,7 +55,8 @@ signals:
 public slots:
     void build(BuildFilters::AfterAction newAction = NoAfterAction);
     void update();
-    void updateCategory(BuildFilters::Category category);
+    void updateCategory(BuildFilters::Category category,
+                        BuildFilters::AfterAction newAction = NoAfterAction);
 
 private:
     void abortIfRunning();
