@@ -1875,7 +1875,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
-    thumbViewActions->append(diagnosticsErrorsAction);
+//    thumbViewActions->append(diagnosticsErrorsAction);
 
 //    // imageview/tableview/gridview/compareview context menu
 //    imageView->addAction(pickAction);
