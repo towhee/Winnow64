@@ -2367,13 +2367,13 @@ void MW::loadConcurrent(int sfRow)
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));
-    qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
+    // qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
             metaReadThread->setCurrentRow(sfRow, "MW::loadConcurrent"); // also emit option
-//            emit startMetaRead(sfRow, "MW::loadConcurrent");
+            // emit startMetaRead(sfRow, "MW::loadConcurrent");
         }
     }
 }

@@ -405,8 +405,8 @@ void MW::createThumbView()
         thumbView->labelFontSize = 12;
         thumbView->showIconLabels = false;
         thumbView->showZoomFrame = true;
-        thumbView->badgeSize = classificationBadgeSizeFactor;
-        thumbView->iconNumberSize = iconNumberSize;
+        thumbView->badgeSize = 13;
+        thumbView->iconNumberSize = 24;
         thumbView->visibleCellCount = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
