@@ -904,7 +904,7 @@ void Preferences::addItems()
     i.key = "iconChunkSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
-    i.min = 100;
+    i.min = 1000;
     i.max = 10000;
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
