@@ -61,9 +61,6 @@ void Selection::current(QModelIndex sfIdx)
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-//        QItemSelection selection;
-//        selection.select(sfIdx, sfIdx);
-//        sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         // MW::fileSelectionChange
         emit currentChanged(sfIdx, QModelIndex(), true, "Selection::select");
     }
@@ -94,7 +91,18 @@ void Selection::toggleSelect(QModelIndex sfIdx)
 {
     if (G::isLogger) G::log("Selection::toggleSelect");
     // current index is always selected
-    if (sfIdx == dm->currentSfIdx) return;
+    if (sfIdx == dm->currentSfIdx) {
+        QModelIndex nextIdx = nearestSelectedIndex(sfIdx.row());
+        if (nextIdx.isValid()) {
+            qDebug() << "Selection::toggleSelect  nextIdx =" << nextIdx;
+            thumbView->setCurrentIndex(nextIdx);
+            gridView->setCurrentIndex(nextIdx);
+            tableView->setCurrentIndex(nextIdx);
+            sm->setCurrentIndex(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            emit currentChanged(nextIdx, QModelIndex(), false, "Selection::toggleSelect");
+        }
+        else return;
+    }
     QItemSelection toggleSelection;
     toggleSelection.select(sfIdx, sfIdx);
     sm->select(toggleSelection, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
@@ -221,8 +229,8 @@ void Selection::random()
 QModelIndex Selection::nearestSelectedIndex(int sfRow)
 {
     if (G::isLogger) G::log("Selection::nearestSelectedIndex");
-    int frwd = sfRow;
-    int back = frwd;
+    int frwd = sfRow + 1;
+    int back = sfRow - 1;
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
     while (back >= 0 || frwd < rowCount) {

@@ -20,6 +20,7 @@ public:
 
 public slots:
     void filterChange();
+    void suspend(bool suspendFiltering);
 
 private slots:
 
@@ -32,6 +33,7 @@ private:
     Filters *filters;
     bool &combineRawJpg;
     bool isFinished;
+    bool suspendFiltering;
 };
 
 class DataModel : public QStandardItemModel
