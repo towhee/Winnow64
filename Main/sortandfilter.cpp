@@ -37,7 +37,7 @@ void MW::updateAllFilters()
 {
     if (G::isLogger) G::log("MW::updateAllFilters");
     qDebug() << "MW::updateAllFilters buildFilters->build(BuildFilters::Update)";
-    buildFilters->update();
+    buildFilters->build();
 //    buildFilters->build(BuildFilters::Update);
 }
 
@@ -582,12 +582,12 @@ void MW::setRating()
     // update ImageView classification badge
     updateClassification();
 
-    // refresh the filter
-    dm->sf->filterChange();
-
     // update filter list and counts
     qDebug() << "MW::set Rating buildFilters->build(BuildFilters::Action::RatingEdit)";
     buildFilters->updateCategory(BuildFilters::RatingEdit);
+
+    // refresh the filter
+    dm->sf->filterChange();
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -751,13 +751,11 @@ void MW::setColorClass()
     // update ImageView classification badge
     updateClassification();
 
-    // refresh the filter
-    dm->sf->filterChange();
-
     // update filter counts
     qDebug() << "MW::setColorClass buildFilters->build(BuildFilters::Action::LabelEdit)";
     buildFilters->updateCategory(BuildFilters::LabelEdit);
 
+    // refresh the filter
     dm->sf->filterChange();
 
     if (G::useSidecar) {

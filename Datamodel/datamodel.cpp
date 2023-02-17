@@ -2367,6 +2367,9 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     as categories, and each category has one or more filter items.  Categories
     map to columns in the data model ie Picked, Rating, Label ...
 */
+    // Suspend?
+    if (suspendFiltering) return true;
+
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
@@ -2374,6 +2377,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     }
 
     if (!G::isNewFolderLoaded) return true;
+    //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
 
     static int counter = 0;
     counter++;
@@ -2474,5 +2478,12 @@ void SortFilter::filterChange()
     filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     if (G::isLogger) G::log("SortFilter::filterChange");
+    //qDebug() << "SortFilter::filterChange";
     invalidateFilter();
+}
+
+void SortFilter::suspend(bool suspendFiltering)
+{
+    if (G::isLogger) G::log("SortFilter::suspend");
+    this->suspendFiltering = suspendFiltering;
 }

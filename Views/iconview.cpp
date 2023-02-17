@@ -1606,8 +1606,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
     different position than the current image.
 */
     if (isDebug || G::isLogger) G::log("IconView::mousePressEvent", objectName());
-//    qDebug() << "IconView::mousePressEvent";
-//    return;
+    //qDebug() << "IconView::mousePressEvent";
 
     // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();

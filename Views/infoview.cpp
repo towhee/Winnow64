@@ -157,6 +157,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     if (count == 0) {
         bool isEditable = ok->itemFromIndex(idx1)->isEditable();
         QString field;
+        dm->sf->suspend(true);
         if (isEditable) {
             QModelIndexList selection = thumbView->selectionModel()->selectedRows();
             QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
@@ -169,7 +170,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 G::popUp->setProgressMax(n + 1);
                 QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
                               "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-//                G::popUp->showPopup(txt, 0, true, 1);
+                //G::popUp->showPopup(txt, 0, true, 1);
             }
 
             for (int i = 0; i < n; i++) {
@@ -179,23 +180,23 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                     QString s = idx1.data().toString();
                     dm->setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
                     dm->setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
-//                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
-//                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
-//                    /*
+                    //emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
+                    //emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    /*
                     qDebug() << "InfoView::dataChanged Title"
                              << "dm->currentRow =" << dm->currentSfRow
                              << "idx0.data() =" << idx0.data()
                              << "idx1.data() =" << idx1.data()
                              << "isEditable =" << isEditable
                                 ;
-    //                            */
+                                //*/
                 }
                 if (field == "Creator*") {
                     QString s = idx1.data().toString();
                     dm->setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
                     dm->setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
-//                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
-//                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    //emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
+                    //emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Copyright*") {
                     QString s = idx1.data().toString();
@@ -215,16 +216,18 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
                 // write to sidecar
                 if (G::useSidecar) {
-//                    qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
+                    // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
                     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
                     metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
                     G::popUp->setProgress(i+1);
                 }
             }
 
+            // Update embellished text fields - Embel::refreshTexts
             emit dataEdited();
         }
 
+        dm->sf->suspend(false);
         // update filters
         if (field == "Title*") emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
         if (field == "Creator*") emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);

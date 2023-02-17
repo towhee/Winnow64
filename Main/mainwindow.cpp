@@ -1817,7 +1817,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::stop) return;
     G::isNewSelection = false;
 
-   /*
+//   /*
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2363,7 +2363,8 @@ void MW::loadConcurrentNewFolder()
 
 void MW::loadConcurrent(int sfRow)
 /*
-    Called after scroll event in IconView or TableView.
+    Called after a scroll event in IconView or TableView by thumbHasScrolled,
+    gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));

@@ -1,7 +1,6 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Refresh icons after filtering
 - bool Usb::isUsb(QString path) not done for MacOS
 - IconView splitter resize not working optimally
 - Occasionally Winnow starts as small window on main monitor
@@ -77,6 +76,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Cannot unselect current in multiselect
+- Edit multiple filtered Creator or Title not working (requires suspend filtering)
 - Icon scrolling delayed when MetaRead::iconChunkSize < dm->sf->rowCount
 - Tweaked tooltip style (larger font, margin, border, color)
 - If change picks, ratings, label before showing filters then filters fail

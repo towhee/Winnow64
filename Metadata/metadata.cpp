@@ -841,12 +841,13 @@ bool Metadata::parseSidecar()
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
-    /*
+    /* debug
     qDebug() << "Metadata::parseSidecar"
              << "sidecarPath" << sidecarPath
              << "sidecarFile.exists()" << sidecarFile.exists()
                 ;
                 //*/
+
     // no sidecar file
     if (!sidecarFile.exists()) {
         return false;
@@ -878,25 +879,27 @@ bool Metadata::parseSidecar()
         sidecarFile.close();
         return false;
     }
+
     // extract metadata from sidecar xmp
-    else {
-        if (p.instance != G::dmInstance)
-            qWarning() << "WARNING"
-                       << "Metadata::parseSidecar  Instance conflict"
-                       << "p.instance =" << p.instance
-                       << "G::dmInstance =" << G::dmInstance
-                       << "sidecarPath" << sidecarPath
-                       << "sidecarFile.exists()" << sidecarFile.exists()
-                          ;
-        QString s;
-        s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
-        s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
-        s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
-        s = xmp.getItem("creator"); if (!s.isEmpty()) {m.creator = s; m._creator = s;}
-        s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
-        s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
-        s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
-    }
+    if (p.instance != G::dmInstance)
+        qWarning() << "WARNING"
+                   << "Metadata::parseSidecar  Instance conflict"
+                   << "p.instance =" << p.instance
+                   << "G::dmInstance =" << G::dmInstance
+                   << "sidecarPath" << sidecarPath
+                   << "sidecarFile.exists()" << sidecarFile.exists()
+                      ;
+    QString s;
+    s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
+    s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
+    s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
+    s = xmp.getItem("creator"); if (!s.isEmpty()) {m.creator = s; m._creator = s;}
+    s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
+    s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
+    s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
+    /*
+    qDebug() << "Metadata::parseSidecar" << s << sidecarPath;
+    //*/
 
     sidecarFile.close();
     return true;
@@ -1062,19 +1065,21 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
-//        QFile(path).setPermissions(oldPermissions);
+        //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
             qWarning() << "WARNING" << "Metadata::readMetadata" << "Could not close" << path << "after format was read";
         }
-        if (G::useSidecar) {
-            parseSidecar();
-        }
+
         if (!parsed) {
             p.file.close();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
             qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
             return false;
+        }
+
+        if (G::useSidecar) {
+            parseSidecar();
         }
     }
     else {  // not open file
@@ -1086,7 +1091,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     return true;
 
-    // not all files have thumb or small jpg embedded
+    /* not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {
         G::error("Metadata::readMetadata", path, "No embedded JPG found.");
     }
@@ -1095,24 +1100,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         m.offsetFull = m.offsetThumb;
         m.lengthFull = m.lengthThumb;
     }
-
-//    if (m.lengthThumb == 0 && m.lengthFull > 0) {
-//        m.offsetThumb = m.offsetFull;
-//        m.lengthThumb = m.lengthFull;
-//    }
-
-    // error flags
-//    thumbUnavailable = imageUnavailable = false;
-//    if (m.lengthFull == 0) {
-//        imageUnavailable = true;
-//        G::error("Metadata::readMetadata", path, "No embedded preview found.");
-//    }
-//    if (m.lengthThumb == 0) {
-//        thumbUnavailable = true;
-//        G::error("Metadata::readMetadata", path, "No embedded thumbnail or preview found.");
-//    }
-
-    return true;
+    //*/
 }
 
 bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
