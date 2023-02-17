@@ -554,8 +554,9 @@ void InfoView::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::LeftButton) {
         QModelIndex idx = indexAt(event->pos());
+        // qDebug() << "InfoView::mousePressEvent" << idx.parent() << idx.parent().isValid();
+
         // check if click on category row. If so, expand or collapse branch
-        qDebug() << "InfoView::mousePressEvent" << idx.parent() << idx.parent().isValid();
         if (!idx.parent().isValid()) isExpanded(idx) ? collapse(idx) : expand(idx);
 
         else if (idx.column() == 1) { // column you want to use for one click
@@ -568,7 +569,8 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                               selectedCount + " selected images.";
                 G::popUp->showPopup(msg, 3000);
             }
-            qDebug() << "InfoView::mousePressEvent" << "selected =" << selectedCount;
+            // qDebug() << "InfoView::mousePressEvent" << "selected =" << selectedCount;
+
             // alternating colors
             int row = idx.row();
             int a = G::backgroundShade + 5;

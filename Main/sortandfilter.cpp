@@ -24,7 +24,7 @@
 void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
-    qDebug() << "MW::filterDockTabMousePress" << "filterDock->isVisible() =" << filterDock->isVisible();
+    // qDebug() << "MW::filterDockTabMousePress" << "filterDock->isVisible() =" << filterDock->isVisible();
 
     // Clicking on the filter dock tab toggles visibility before this function is called,
     // so test for the opposite.
@@ -69,7 +69,8 @@ void MW::filterChange(QString source)
     parameters are recalculated and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange", "Src: " + source);
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    // qDebug() << "MW::filterChange" << "called from:" << source;
+
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);

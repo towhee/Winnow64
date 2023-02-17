@@ -369,7 +369,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconSize = icon.actualSize(thumbSize);
     double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
-    /*
+//    /*
     if (aspectRatio > 0) {
         if (aspectRatio > 1) {
             iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
