@@ -663,6 +663,7 @@ bool Heic::nextHeifBox(quint32 &length, QString &type)
     if (length < 2) length = static_cast<quint32>(eof - offset);
     type = file->read(4);
     if (isDebug) {
+        qDebug() << " ";
         qDebug() << "Heic::nextHeifBox"
                  << "offset:" << offset
                  << "length:" << length
@@ -853,6 +854,7 @@ bool Heic::urnBox(quint32 &offset, quint32 &length)
                  << "location =" << location;
         }
     offset += length;
+    file->seek(offset);
     return true;
 }
 
@@ -1030,33 +1032,43 @@ bool Heic::infeBox(quint32 &offset, quint32 &length)
     quint16 item_ID = Utilities::get16(file->read(2));
     quint16 item_protection_index = Utilities::get16(file->read(2));
     QString item_name = Utilities::getCString(*file);
-//    qDebug() << "Heic::infeBox after item_name"
-//             << "file->pos() =" << file->pos()
-//             << "endOfBox =" << endOfBox
-//                ;
-    QString content_type = Utilities::getCString(*file);
-    QString content_encoding = Utilities::getCString(*file);
-//    QString content_type = "";
-//    QString content_encoding = "";
-//    if (file->pos() + 1 < endOfBox) {
+//    QString content_type = Utilities::getCString(*file);
+//    QString content_encoding = Utilities::getCString(*file);
+
+    QString content_type = "";
+    QString content_encoding = "";
+    if (file->pos() + 1 < endOfBox) {
 //        file->seek(file->pos() + 1);
-//        content_type = Utilities::getCString(*file);
-//        if (content_type.length() && file->pos() + 1 < endOfBox) {
+        content_type = Utilities::getCString(*file);
+        if (content_type.length() && file->pos() + 1 < endOfBox) {
 //            file->seek(file->pos() + 1);
-//            content_encoding = Utilities::getCString(*file);
-//        }
-//    }
+            content_encoding = Utilities::getCString(*file);
+        }
+    }
 
     if (item_name == "Exif") exifItemID = item_ID;
 
-//    if (isDebug)
-//        qDebug() << "   " << "Heic::infeBox"
-//                 << "length =" << length
-//                 << "item_ID =" << item_ID
-//                 << "item_protection_index =" << item_protection_index
-//                 << "item_name =" << item_name
-//                 << "content_type =" << content_type
-//                 << "content_encoding =" << content_encoding;
+    file->seek(endOfBox);
+
+//    qDebug() << "Heic::infeBox"
+//             << "file->pos() =" << file->pos()
+//             << "endOfBox =" << endOfBox
+//             << "item_name =" << item_name
+//             << "content_type =" << content_type
+//             << "content_encoding =" << content_encoding
+//                ;
+
+    if (isDebug)
+        qDebug() << "   " << "Heic::infeBox"
+                 << "item_ID =" << item_ID
+                 << "length =" << length
+//                 << "file->pos() =" << file->pos()
+                 << "endOfBox =" << endOfBox
+                 << "item_protection_index =" << item_protection_index
+                 << "item_name =" << item_name
+                 << "content_type =" << content_type
+                 << "content_encoding =" << content_encoding
+                    ;
     return true;
 }
 

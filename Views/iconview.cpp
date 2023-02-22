@@ -1181,11 +1181,7 @@ void IconView::bestAspect()
     if (isDebug || G::isLogger) G::log("IconView::bestAspect", objectName());
 
     bestAspectRatio = static_cast<double>(G::iconWMax) / G::iconHMax;
-    qDebug() << "IconView::bestAspect"
-             << "G::iconWMax =" << G::iconWMax
-             << "G::iconHMax =" << G::iconHMax
-             << "bestAspectRatio =" << bestAspectRatio
-                ;
+//    bestAspectRatio = 1.0;
     thumbsFitTopOrBottom();
 
      /*
@@ -1214,11 +1210,6 @@ void IconView::thumbsFitTopOrBottom()
     if (isDebug || G::isLogger) G::log("IconView::thumbsFitTopOrBottom", objectName());
 //    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName();
 
-    /* thumbDockSplitterChange is set here, cleared in resize. Used to flag when to just scroll
-    the thumbView when the thumbdock splitter triggers this function and when the resize
-    event is from another event.  */
-//    thumbDockSplitterChange = true;
-
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
 
@@ -1242,7 +1233,7 @@ void IconView::thumbsFitTopOrBottom()
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-//        /*
+        /*
         qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
                  << "newViewportHt =" << newViewportHt
                  << "maxCellHeight =" << maxCellHeight
@@ -1258,34 +1249,14 @@ void IconView::thumbsFitTopOrBottom()
                     ;
     //    */
 
-    // this is critical - otherwise thumbs bunch up
-//    setSpacing(0);
-
-    // check badge size fits
-//    int pxAvail = iconViewDelegate->getCellWidthFromThumbWidth(iconWidth) * 0.8;
-//    badgeSize = fitBadge(pxAvail);
-
-    // midVisible
-//    QModelIndex midIdx = dm->sf->index(midVisibleCell, 0);
-
-//    setThumbParameters();
-//    qDebug() << "IconView::thumbsFitTopOrBottom" << "midVisibleCell =" << midVisibleCell;
-//    scrollTo(midIdx, ScrollHint::PositionAtCenter);
     updateVisible();
 
-//    // this will change the icon size, which will trigger the resize event
+    // this will change the icon size, which will trigger the resize event
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
+    // force update IconViewDelegate::sizeHint
     setSpacing(0);
-//    QModelIndex scrollToIndex;
-//    int currentRow = currentIndex().row();
-//    if (currentRow >= firstVisibleCell && currentRow <= lastVisibleCell)
-//        scrollToIndex = currentIndex();
-//    else
-//        scrollToIndex = dm->sf->index(midVisibleCell, 0);
-//    G::ignoreScrollSignal = true;
-//    scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
 }
 
 void IconView::repaintView()
