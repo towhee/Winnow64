@@ -202,7 +202,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     textHtOffset.setX(0);
     textHtOffset.setY(fPad + textHeight - textHeadroom);
 
-//    /* debug
+    /* debug
     qDebug() << "IconViewDelegate::setThumbDimensions"
              << "cellSize =" << cellSize
              << "frameSize =" << frameSize
@@ -310,10 +310,11 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
 {
     QFont font = QApplication::font();
     QFontMetrics fm(font);
+    /*
     qDebug() << "IconViewDelegate::sizeHint  "
              << "row =" << index.row()
              << "cellSize =" << cellSize
-                ;
+                ; //*/
     return cellSize;
 }
 
@@ -351,8 +352,8 @@ void IconViewDelegate::paint(QPainter *painter,
     // get data from model
     int row = index.row();
     QModelIndex sfIdx0 = index.model()->index(row, 0);
-//    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-//    QString title = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
+    //QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+    //QString title = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
     QString labelText;
     if (labelChoice == "Title") {
         labelText = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
@@ -377,7 +378,6 @@ void IconViewDelegate::paint(QPainter *painter,
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconSize = icon.actualSize(thumbSize);
     double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
-//    /*
     if (aspectRatio > 0) {
         if (aspectRatio > 1) {
             iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
@@ -388,7 +388,6 @@ void IconViewDelegate::paint(QPainter *painter,
             iconSize.setHeight(thumbSize.height());
         }
     }
-    //*/
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
@@ -401,13 +400,13 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconSize.width(), iconSize.height());
 
-//    /* debug
+    /* debug
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow
-//             << "selected =" << isSelected
+             << "selected =" << isSelected
              << "cellRect =" << cellRect
-//             << "frameRect =" << frameRect
+             << "frameRect =" << frameRect
              << "thumbSize =" << thumbSize
              << "iconsize =" << iconSize
              << "thumbRect =" << thumbRect

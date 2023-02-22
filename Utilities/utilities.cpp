@@ -498,8 +498,9 @@ template double Utilities::getReal_s<QBuffer>(QBuffer&, quint32 offset, bool isB
 QString Utilities::getCString(QFile &file)
 {
     quint32 offset = static_cast<quint32>(file.pos());
-//    qDebug() << "Utilities::getCString"
-//             << "offset =" << offset;
+    /*
+    qDebug() << "Utilities::getCString"
+             << "offset =" << offset; //*/
     uint byte = 1;
     int length = -1;
     while (byte) {
@@ -508,14 +509,10 @@ QString Utilities::getCString(QFile &file)
     }
     if (length) {
         file.seek(offset);
-        return(file.read(length));
-//        QString s = file.read(length);
-//        qDebug() << "Utilities::getCString"
-//                 << "offset =" << offset
-//                 << "length =" << length
-//                 << "CString =" << s
-//                    ;
-//        return(s);
+        QString s = file.read(length);
+        // advance for null termination of string
+        file.seek(file.pos() + 1);
+        return(s);
     }
     else {
         file.seek(offset + 1);

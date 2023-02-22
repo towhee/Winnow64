@@ -1,5 +1,3 @@
-
-
 Heic::parseHeic "/Users/roryhill/Pictures/_test2/HEIC IPhone.heic"
 
 
@@ -38,457 +36,335 @@ Heic::iinfBox iint entry count = 65 146
  Heic::nextHeifBox offset: 146 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  1
 Utilities::getCString offset = 162
-Utilities::getCString offset = 166
-Utilities::getCString offset = 167
-Heic::infeBox file->pos() = 167 endOfBox = 167 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 1 length = 21 endOfBox = 167 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 167 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  2
 Utilities::getCString offset = 183
-Utilities::getCString offset = 187
-Utilities::getCString offset = 188
-Heic::infeBox file->pos() = 188 endOfBox = 188 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 2 length = 21 endOfBox = 188 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 188 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  3
 Utilities::getCString offset = 204
-Utilities::getCString offset = 208
-Utilities::getCString offset = 209
-Heic::infeBox file->pos() = 209 endOfBox = 209 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 3 length = 21 endOfBox = 209 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 209 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  4
 Utilities::getCString offset = 225
-Utilities::getCString offset = 229
-Utilities::getCString offset = 230
-Heic::infeBox file->pos() = 230 endOfBox = 230 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 4 length = 21 endOfBox = 230 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 230 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  5
 Utilities::getCString offset = 246
-Utilities::getCString offset = 250
-Utilities::getCString offset = 251
-Heic::infeBox file->pos() = 251 endOfBox = 251 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 5 length = 21 endOfBox = 251 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 251 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  6
 Utilities::getCString offset = 267
-Utilities::getCString offset = 271
-Utilities::getCString offset = 272
-Heic::infeBox file->pos() = 272 endOfBox = 272 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 6 length = 21 endOfBox = 272 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 272 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  7
 Utilities::getCString offset = 288
-Utilities::getCString offset = 292
-Utilities::getCString offset = 293
-Heic::infeBox file->pos() = 293 endOfBox = 293 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 7 length = 21 endOfBox = 293 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 293 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  8
 Utilities::getCString offset = 309
-Utilities::getCString offset = 313
-Utilities::getCString offset = 314
-Heic::infeBox file->pos() = 314 endOfBox = 314 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 8 length = 21 endOfBox = 314 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 314 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  9
 Utilities::getCString offset = 330
-Utilities::getCString offset = 334
-Utilities::getCString offset = 335
-Heic::infeBox file->pos() = 335 endOfBox = 335 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 9 length = 21 endOfBox = 335 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 335 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  10
 Utilities::getCString offset = 351
-Utilities::getCString offset = 355
-Utilities::getCString offset = 356
-Heic::infeBox file->pos() = 356 endOfBox = 356 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 10 length = 21 endOfBox = 356 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 356 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  11
 Utilities::getCString offset = 372
-Utilities::getCString offset = 376
-Utilities::getCString offset = 377
-Heic::infeBox file->pos() = 377 endOfBox = 377 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 11 length = 21 endOfBox = 377 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 377 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  12
 Utilities::getCString offset = 393
-Utilities::getCString offset = 397
-Utilities::getCString offset = 398
-Heic::infeBox file->pos() = 398 endOfBox = 398 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 12 length = 21 endOfBox = 398 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 398 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  13
 Utilities::getCString offset = 414
-Utilities::getCString offset = 418
-Utilities::getCString offset = 419
-Heic::infeBox file->pos() = 419 endOfBox = 419 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 13 length = 21 endOfBox = 419 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 419 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  14
 Utilities::getCString offset = 435
-Utilities::getCString offset = 439
-Utilities::getCString offset = 440
-Heic::infeBox file->pos() = 440 endOfBox = 440 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 14 length = 21 endOfBox = 440 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 440 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  15
 Utilities::getCString offset = 456
-Utilities::getCString offset = 460
-Utilities::getCString offset = 461
-Heic::infeBox file->pos() = 461 endOfBox = 461 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 15 length = 21 endOfBox = 461 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 461 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  16
 Utilities::getCString offset = 477
-Utilities::getCString offset = 481
-Utilities::getCString offset = 482
-Heic::infeBox file->pos() = 482 endOfBox = 482 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 16 length = 21 endOfBox = 482 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 482 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  17
 Utilities::getCString offset = 498
-Utilities::getCString offset = 502
-Utilities::getCString offset = 503
-Heic::infeBox file->pos() = 503 endOfBox = 503 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 17 length = 21 endOfBox = 503 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 503 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  18
 Utilities::getCString offset = 519
-Utilities::getCString offset = 523
-Utilities::getCString offset = 524
-Heic::infeBox file->pos() = 524 endOfBox = 524 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 18 length = 21 endOfBox = 524 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 524 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  19
 Utilities::getCString offset = 540
-Utilities::getCString offset = 544
-Utilities::getCString offset = 545
-Heic::infeBox file->pos() = 545 endOfBox = 545 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 19 length = 21 endOfBox = 545 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 545 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  20
 Utilities::getCString offset = 561
-Utilities::getCString offset = 565
-Utilities::getCString offset = 566
-Heic::infeBox file->pos() = 566 endOfBox = 566 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 20 length = 21 endOfBox = 566 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 566 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  21
 Utilities::getCString offset = 582
-Utilities::getCString offset = 586
-Utilities::getCString offset = 587
-Heic::infeBox file->pos() = 587 endOfBox = 587 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 21 length = 21 endOfBox = 587 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 587 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  22
 Utilities::getCString offset = 603
-Utilities::getCString offset = 607
-Utilities::getCString offset = 608
-Heic::infeBox file->pos() = 608 endOfBox = 608 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 22 length = 21 endOfBox = 608 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 608 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  23
 Utilities::getCString offset = 624
-Utilities::getCString offset = 628
-Utilities::getCString offset = 629
-Heic::infeBox file->pos() = 629 endOfBox = 629 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 23 length = 21 endOfBox = 629 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 629 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  24
 Utilities::getCString offset = 645
-Utilities::getCString offset = 649
-Utilities::getCString offset = 650
-Heic::infeBox file->pos() = 650 endOfBox = 650 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 24 length = 21 endOfBox = 650 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 650 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  25
 Utilities::getCString offset = 666
-Utilities::getCString offset = 670
-Utilities::getCString offset = 671
-Heic::infeBox file->pos() = 671 endOfBox = 671 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 25 length = 21 endOfBox = 671 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 671 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  26
 Utilities::getCString offset = 687
-Utilities::getCString offset = 691
-Utilities::getCString offset = 692
-Heic::infeBox file->pos() = 692 endOfBox = 692 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 26 length = 21 endOfBox = 692 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 692 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  27
 Utilities::getCString offset = 708
-Utilities::getCString offset = 712
-Utilities::getCString offset = 713
-Heic::infeBox file->pos() = 713 endOfBox = 713 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 27 length = 21 endOfBox = 713 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 713 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  28
 Utilities::getCString offset = 729
-Utilities::getCString offset = 733
-Utilities::getCString offset = 734
-Heic::infeBox file->pos() = 734 endOfBox = 734 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 28 length = 21 endOfBox = 734 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 734 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  29
 Utilities::getCString offset = 750
-Utilities::getCString offset = 754
-Utilities::getCString offset = 755
-Heic::infeBox file->pos() = 755 endOfBox = 755 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 29 length = 21 endOfBox = 755 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 755 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  30
 Utilities::getCString offset = 771
-Utilities::getCString offset = 775
-Utilities::getCString offset = 776
-Heic::infeBox file->pos() = 776 endOfBox = 776 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 30 length = 21 endOfBox = 776 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 776 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  31
 Utilities::getCString offset = 792
-Utilities::getCString offset = 796
-Utilities::getCString offset = 797
-Heic::infeBox file->pos() = 797 endOfBox = 797 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 31 length = 21 endOfBox = 797 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 797 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  32
 Utilities::getCString offset = 813
-Utilities::getCString offset = 817
-Utilities::getCString offset = 818
-Heic::infeBox file->pos() = 818 endOfBox = 818 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 32 length = 21 endOfBox = 818 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 818 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  33
 Utilities::getCString offset = 834
-Utilities::getCString offset = 838
-Utilities::getCString offset = 839
-Heic::infeBox file->pos() = 839 endOfBox = 839 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 33 length = 21 endOfBox = 839 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 839 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  34
 Utilities::getCString offset = 855
-Utilities::getCString offset = 859
-Utilities::getCString offset = 860
-Heic::infeBox file->pos() = 860 endOfBox = 860 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 34 length = 21 endOfBox = 860 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 860 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  35
 Utilities::getCString offset = 876
-Utilities::getCString offset = 880
-Utilities::getCString offset = 881
-Heic::infeBox file->pos() = 881 endOfBox = 881 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 35 length = 21 endOfBox = 881 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 881 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  36
 Utilities::getCString offset = 897
-Utilities::getCString offset = 901
-Utilities::getCString offset = 902
-Heic::infeBox file->pos() = 902 endOfBox = 902 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 36 length = 21 endOfBox = 902 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 902 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  37
 Utilities::getCString offset = 918
-Utilities::getCString offset = 922
-Utilities::getCString offset = 923
-Heic::infeBox file->pos() = 923 endOfBox = 923 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 37 length = 21 endOfBox = 923 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 923 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  38
 Utilities::getCString offset = 939
-Utilities::getCString offset = 943
-Utilities::getCString offset = 944
-Heic::infeBox file->pos() = 944 endOfBox = 944 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 38 length = 21 endOfBox = 944 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 944 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  39
 Utilities::getCString offset = 960
-Utilities::getCString offset = 964
-Utilities::getCString offset = 965
-Heic::infeBox file->pos() = 965 endOfBox = 965 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 39 length = 21 endOfBox = 965 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 965 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  40
 Utilities::getCString offset = 981
-Utilities::getCString offset = 985
-Utilities::getCString offset = 986
-Heic::infeBox file->pos() = 986 endOfBox = 986 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 40 length = 21 endOfBox = 986 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 986 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  41
 Utilities::getCString offset = 1002
-Utilities::getCString offset = 1006
-Utilities::getCString offset = 1007
-Heic::infeBox file->pos() = 1007 endOfBox = 1007 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 41 length = 21 endOfBox = 1007 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1007 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  42
 Utilities::getCString offset = 1023
-Utilities::getCString offset = 1027
-Utilities::getCString offset = 1028
-Heic::infeBox file->pos() = 1028 endOfBox = 1028 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 42 length = 21 endOfBox = 1028 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1028 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  43
 Utilities::getCString offset = 1044
-Utilities::getCString offset = 1048
-Utilities::getCString offset = 1049
-Heic::infeBox file->pos() = 1049 endOfBox = 1049 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 43 length = 21 endOfBox = 1049 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1049 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  44
 Utilities::getCString offset = 1065
-Utilities::getCString offset = 1069
-Utilities::getCString offset = 1070
-Heic::infeBox file->pos() = 1070 endOfBox = 1070 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 44 length = 21 endOfBox = 1070 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1070 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  45
 Utilities::getCString offset = 1086
-Utilities::getCString offset = 1090
-Utilities::getCString offset = 1091
-Heic::infeBox file->pos() = 1091 endOfBox = 1091 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 45 length = 21 endOfBox = 1091 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1091 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  46
 Utilities::getCString offset = 1107
-Utilities::getCString offset = 1111
-Utilities::getCString offset = 1112
-Heic::infeBox file->pos() = 1112 endOfBox = 1112 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 46 length = 21 endOfBox = 1112 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1112 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  47
 Utilities::getCString offset = 1128
-Utilities::getCString offset = 1132
-Utilities::getCString offset = 1133
-Heic::infeBox file->pos() = 1133 endOfBox = 1133 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 47 length = 21 endOfBox = 1133 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1133 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  48
 Utilities::getCString offset = 1149
-Utilities::getCString offset = 1153
-Utilities::getCString offset = 1154
-Heic::infeBox file->pos() = 1154 endOfBox = 1154 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 48 length = 21 endOfBox = 1154 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1154 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  49
 Utilities::getCString offset = 1170
-Utilities::getCString offset = 1174
-Utilities::getCString offset = 1175
-Heic::infeBox file->pos() = 1175 endOfBox = 1175 item_name = "grid" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 49 length = 21 endOfBox = 1175 item_protection_index = 0 item_name = "grid" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1175 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  50
 Utilities::getCString offset = 1191
-Utilities::getCString offset = 1195
-Utilities::getCString offset = 1196
-Heic::infeBox file->pos() = 1196 endOfBox = 1196 item_name = "Exif" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 50 length = 21 endOfBox = 1196 item_protection_index = 0 item_name = "Exif" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1196 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  51
 Utilities::getCString offset = 1212
-Utilities::getCString offset = 1216
 Utilities::getCString offset = 1217
-Heic::infeBox file->pos() = 1237 endOfBox = 1237 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 51 length = 41 endOfBox = 1237 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1237 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  52
 Utilities::getCString offset = 1253
-Utilities::getCString offset = 1257
-Utilities::getCString offset = 1258
-Heic::infeBox file->pos() = 1258 endOfBox = 1258 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 52 length = 21 endOfBox = 1258 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1258 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  53
 Utilities::getCString offset = 1274
-Utilities::getCString offset = 1278
 Utilities::getCString offset = 1279
-Heic::infeBox file->pos() = 1299 endOfBox = 1299 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 53 length = 41 endOfBox = 1299 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1299 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  54
 Utilities::getCString offset = 1315
-Utilities::getCString offset = 1319
-Utilities::getCString offset = 1320
-Heic::infeBox file->pos() = 1320 endOfBox = 1320 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 54 length = 21 endOfBox = 1320 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1320 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  55
 Utilities::getCString offset = 1336
-Utilities::getCString offset = 1340
 Utilities::getCString offset = 1341
-Heic::infeBox file->pos() = 1361 endOfBox = 1361 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 55 length = 41 endOfBox = 1361 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1361 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  56
 Utilities::getCString offset = 1377
-Utilities::getCString offset = 1381
-Utilities::getCString offset = 1382
-Heic::infeBox file->pos() = 1382 endOfBox = 1382 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 56 length = 21 endOfBox = 1382 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1382 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  57
 Utilities::getCString offset = 1398
-Utilities::getCString offset = 1402
 Utilities::getCString offset = 1403
-Heic::infeBox file->pos() = 1423 endOfBox = 1423 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 57 length = 41 endOfBox = 1423 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1423 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  58
 Utilities::getCString offset = 1439
-Utilities::getCString offset = 1443
-Utilities::getCString offset = 1444
-Heic::infeBox file->pos() = 1444 endOfBox = 1444 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 58 length = 21 endOfBox = 1444 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1444 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  59
 Utilities::getCString offset = 1460
-Utilities::getCString offset = 1464
 Utilities::getCString offset = 1465
-Heic::infeBox file->pos() = 1485 endOfBox = 1485 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 59 length = 41 endOfBox = 1485 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1485 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  60
 Utilities::getCString offset = 1501
-Utilities::getCString offset = 1505
-Utilities::getCString offset = 1506
-Heic::infeBox file->pos() = 1506 endOfBox = 1506 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 60 length = 21 endOfBox = 1506 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1506 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  61
 Utilities::getCString offset = 1522
-Utilities::getCString offset = 1526
 Utilities::getCString offset = 1527
-Heic::infeBox file->pos() = 1547 endOfBox = 1547 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 61 length = 41 endOfBox = 1547 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1547 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  62
 Utilities::getCString offset = 1563
-Utilities::getCString offset = 1567
-Utilities::getCString offset = 1568
-Heic::infeBox file->pos() = 1568 endOfBox = 1568 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 62 length = 21 endOfBox = 1568 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1568 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  63
 Utilities::getCString offset = 1584
-Utilities::getCString offset = 1588
 Utilities::getCString offset = 1589
-Heic::infeBox file->pos() = 1609 endOfBox = 1609 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 63 length = 41 endOfBox = 1609 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1609 length: 21 type: "infe"
 Heic::iinfBox    Item Info Entry  64
 Utilities::getCString offset = 1625
-Utilities::getCString offset = 1629
-Utilities::getCString offset = 1630
-Heic::infeBox file->pos() = 1630 endOfBox = 1630 item_name = "hvc1" content_type = "" content_encoding = ""
+    Heic::infeBox item_ID = 64 length = 21 endOfBox = 1630 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
 
  Heic::nextHeifBox offset: 1630 length: 41 type: "infe"
 Heic::iinfBox    Item Info Entry  65
 Utilities::getCString offset = 1646
-Utilities::getCString offset = 1650
 Utilities::getCString offset = 1651
-Heic::infeBox file->pos() = 1671 endOfBox = 1671 item_name = "mime" content_type = "" content_encoding = "application/rdf+xml"
+    Heic::infeBox item_ID = 65 length = 41 endOfBox = 1671 item_protection_index = 0 item_name = "mime" content_type = "application/rdf+xml" content_encoding = ""
 
  Heic::nextHeifBox offset: 1671 length: 344 type: "iref"
 Heic::getHeifBox type = "iref" offset = 1671 length = 344
@@ -1395,5 +1271,4 @@ Heic::ilocBox file->pos() 5464
 Heic::getHeifBox type = "mdat" offset = 5464 length = 993454
 Heic::mdatBox offset = 5464
 Heic::parseHeic exifItemID = 50 exifOffset = 5480
-qt.qpa.fonts: Populating font family aliases took 172 ms. Replace uses of missing font family "Courier" with one that exists to avoid this cost.
-2023-02-22 09:22:42.644 Winnow[5466:25840296] TSMSendMessageToUIServer: CFMessagePortSendRequest FAILED(-1) to send to port com.apple.tsm.uiserver
+qt.qpa.fonts: Populating font family aliases took 170 ms. Replace uses of missing font family "Courier" with one that exists to avoid this cost.
