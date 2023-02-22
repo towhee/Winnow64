@@ -27,7 +27,7 @@
         • append unique items for categories (build filter tree)
         • count occurrances of items in the datamodel dm (unfiltered)
         • count occurrances of items in the proxy sf (filtered)
-        • update items if values edited in DataModel
+        • update items if values edited in DataModel (ie ∆ rating or edit title)
 
     Filters visibility
 
@@ -50,7 +50,7 @@ BuildFilters::BuildFilters(QObject *parent,
     this->metadata = metadata;
 
     this->filters = filters;
-    afterAction = NoAfterAction;
+    afterAction = AfterAction::NoAfterAction;
     debugBuildFilters = false;
     reportTime = false;
 }
@@ -69,17 +69,14 @@ void BuildFilters::stop()
         mutex.unlock();
         wait();
         abort = false;
-        filters->removeChildrenDynamicFilters();
-        filters->clearAll();
-        filters->filtersBuilt = false;
-        filters->buildingFilters = false;
-        filters->filterLabel->setVisible(false);
-//        filters->bfProgressBar->setVisible(false);
-//        filters->disableColorZeroCountItems();
-        filters->setEnabled(true);
-        filters->collapseAll();
-//        emit updateIsRunning(false);
     }
+    filters->removeChildrenDynamicFilters();
+    filters->clearAll();
+    filters->filtersBuilt = false;
+    filters->buildingFilters = false;
+    filters->filterLabel->setVisible(false);
+    filters->setEnabled(true);
+    filters->collapseAll();
     if (G::stop) emit stopped("BuildFilters");
 }
 
@@ -131,7 +128,7 @@ void BuildFilters::build(AfterAction newAction)
     // while the DataModel metadata was being loaded then the previous afterAction will
     // still be defined and should be honoured unless the new call to build has a defined
     // newAction.
-    if (newAction != NoAfterAction) {
+    if (newAction != AfterAction::NoAfterAction) {
         afterAction = newAction;
     }
 
@@ -139,7 +136,7 @@ void BuildFilters::build(AfterAction newAction)
     if (filters->filtersBuilt) return;
 
     // define action for BuildFilters::run
-    action = Reset;
+    action = Action::Reset;
     abortIfRunning();
     instance = dm->instance;
     filters->startBuildFilters(isReset);
@@ -157,12 +154,11 @@ void BuildFilters::update()
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::update"
+            << "filters->filtersBuilt =" << filters->filtersBuilt
                ;
     abortIfRunning();
-    abortIfRunning();
-    this->category = category;
     if (filters->filtersBuilt) {
-        action = Update;
+        action = Action::Update;
         if (G::allMetadataLoaded) start(NormalPriority);
     }
     else build();
@@ -174,18 +170,28 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     Called when a category item has been edited.  The old name is removed from the
     category items, the new one is appended and the items are resorted.  The item
     counts for this category only are updated.
+
+    DataModel filtering (SortFilter::filterAcceptsRow) must be suspended while
+    category items are being removed or appended, becasue it iterates through all
+    the category items and will crash with a bad memory access when it tries to
+    access a removed item.
 */
     if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::update");
     if (debugBuildFilters)
     {
         qDebug()
-                << "BuildFilters::update"
+                << "BuildFilters::updateCategory"
+                << "category =" << category
+                << "afterAction =" << newAction
+                << "filters->filtersBuilt =" << filters->filtersBuilt
                    ;
     }
+    dm->sf->suspend(true);
     abortIfRunning();
+    afterAction = newAction;
     this->category = category;
     if (filters->filtersBuilt) {
-        action = UpdateCategory;
+        action = Action::UpdateCategory;
         if (G::allMetadataLoaded) start(NormalPriority);
     }
     else build();
@@ -198,16 +204,19 @@ void BuildFilters::done()
     {
         qDebug()
             << "BuildFilters::done"
+            << "afterAction =" << afterAction
                ;
     }
+    dm->sf->suspend(false);
     isReset = false;
     filters->filtersBuilt = true;
     emit updateProgress(-1);        // clear progress msg
     if (!abort) emit finishedBuildFilters();
-    if (afterAction == QuickFilter) emit quickFilter();
-    if (afterAction == MostRecentDay) emit filterLastDay();
-    if (afterAction == Search) emit searchTextEdit();
-    afterAction = NoAfterAction;
+    if (afterAction == AfterAction::QuickFilter) emit quickFilter();
+    if (afterAction == AfterAction::MostRecentDay) emit filterLastDay();
+    if (afterAction == AfterAction::Search) emit searchTextEdit();
+    afterAction = AfterAction::NoAfterAction;
+    dm->sf->filterChange();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
@@ -226,7 +235,7 @@ void BuildFilters::reset()
     isReset = true;
     filters->filtersBuilt = false;
     action = Action::Reset;
-    afterAction = NoAfterAction;
+    afterAction = AfterAction::NoAfterAction;
     filters->activeCategory = nullptr;
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
@@ -336,23 +345,23 @@ void BuildFilters::updateCategoryItems()
     QTreeWidgetItem *cat = nullptr;
     int col = 0;
     switch (category) {
-    case PickEdit:
+    case Category::PickEdit:
         col = G::PickColumn;
         cat = filters->picks;
         break;
-    case RatingEdit:
+    case Category::RatingEdit:
         col = G::RatingColumn;
         cat = filters->ratings;
         break;
-    case LabelEdit:
+    case Category::LabelEdit:
         col = G::LabelColumn;
         cat = filters->labels;
         break;
-    case TitleEdit:
+    case Category::TitleEdit:
         col = G::TitleColumn;
         cat = filters->titles;
         break;
-    case CreatorEdit:
+    case Category::CreatorEdit:
         col = G::CreatorColumn;
         cat = filters->creators;
         break;
@@ -507,14 +516,14 @@ void BuildFilters::run()
     }
 
     switch (action) {
-    case Reset:
+    case Action::Reset:
         if (!abort && !filters->filtersBuilt) appendUniqueItems();
         break;
-    case Update:
+    case Action::Update:
         if (!abort) updateFilteredCounts();
         break;
     // category item edited
-    case UpdateCategory:
+    case Action::UpdateCategory:
         if (!abort) updateCategoryItems();
     }
 

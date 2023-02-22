@@ -1007,7 +1007,7 @@ void IconView::rejustify()
     wCell = wRow / tpr;
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
-    iconHeight = static_cast<int>(iconWidth * bestAspectRatio);
+    iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
     /*
     qDebug() << "IconView::rejustify" << objectName()
              << "assignedIconWidth =" << assignedIconWidth
@@ -1064,7 +1064,7 @@ void IconView::justify(JustifyAction action)
     if (wCell > G::maxIconSize) wCell = wRow / ++tpr;
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
-    iconHeight = static_cast<int>(iconWidth * bestAspectRatio);
+    iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
     /*
     qDebug() << "IconView::justify"
              << "wRow =" << wRow
@@ -1166,10 +1166,11 @@ void IconView::resizeEvent(QResizeEvent *)
 void IconView::bestAspect()
 {
 /*
-    When a new folder is loaded MetadataCache::loadIcon calls MetadataCache::iconMax for
-    each icon in the datamodel to find the greatest height and width of the icons, stored
-    in G::iconWMax and G::iconHMax. This is used to define the thumb size in
-    IconViewDelegate.
+    When a new folder is loaded: (1. Linear loading - MetadataCache::loadIcon calls
+    MetadataCache::iconMax for each icon in the datamodel or 2. Concureent loading -
+    MetaRead::setIcon signals DataModel::setIcon, which calls DataModel::setIconMax) to
+    find the greatest height and width of the icons, stored in G::iconWMax and
+    G::iconHMax. This is used to define the thumb size in IconViewDelegate.
 
     The resulting max width and height are sent to IconViewDelegate to define the
     thumbRect that holds each icon. This is also the most compact container available.
@@ -1179,7 +1180,12 @@ void IconView::bestAspect()
 */
     if (isDebug || G::isLogger) G::log("IconView::bestAspect", objectName());
 
-    bestAspectRatio = static_cast<double>(G::iconHMax) / G::iconWMax;
+    bestAspectRatio = static_cast<double>(G::iconWMax) / G::iconHMax;
+    qDebug() << "IconView::bestAspect"
+             << "G::iconWMax =" << G::iconWMax
+             << "G::iconHMax =" << G::iconHMax
+             << "bestAspectRatio =" << bestAspectRatio
+                ;
     thumbsFitTopOrBottom();
 
      /*
@@ -1234,9 +1240,9 @@ void IconView::thumbsFitTopOrBottom()
 
     // newViewportHt is okay, set icon size
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
-    iconWidth = static_cast<int>(iconHeight / bestAspectRatio);
+    iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-        /*
+//        /*
         qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
                  << "newViewportHt =" << newViewportHt
                  << "maxCellHeight =" << maxCellHeight
@@ -1253,7 +1259,7 @@ void IconView::thumbsFitTopOrBottom()
     //    */
 
     // this is critical - otherwise thumbs bunch up
-    setSpacing(0);
+//    setSpacing(0);
 
     // check badge size fits
 //    int pxAvail = iconViewDelegate->getCellWidthFromThumbWidth(iconWidth) * 0.8;
@@ -1271,6 +1277,7 @@ void IconView::thumbsFitTopOrBottom()
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
+    setSpacing(0);
 //    QModelIndex scrollToIndex;
 //    int currentRow = currentIndex().row();
 //    if (currentRow >= firstVisibleCell && currentRow <= lastVisibleCell)

@@ -1,9 +1,13 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Sort is not sticky
+- Shift Left arrow not working
+- If try to open Winnow when already open then next time does not remember location/size
+- Cmd Del = delete all rejected
+- Cmd+Opt+R = reject all unpicked and unpick all picked
 - bool Usb::isUsb(QString path) not done for MacOS
 - IconView splitter resize not working optimally
-- Occasionally Winnow starts as small window on main monitor
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
@@ -76,6 +80,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ∆ label unfilters DataModel
+- Embellish right click rename template opens rename style dialog
+- Crash when rapidly toggle rating or label
 - Cannot unselect current in multiselect
 - Edit multiple filtered Creator or Title not working (requires suspend filtering)
 - Icon scrolling delayed when MetaRead::iconChunkSize < dm->sf->rowCount

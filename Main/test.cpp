@@ -107,10 +107,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
-    loadConcurrent(dm->currentSfRow);
-    return;
-    centralLayout->setCurrentIndex(GridTab);
-//    gridView->setVisible(!gridView->isVisible());
+    reportHueCount();
     return;
 
     qDebug() << "MW::testNewFileFormat";
@@ -122,7 +119,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    diagnosticsMetadataCache();
+
+    qDebug()
+            << "BuildFilters::Action::Reset =" << BuildFilters::Action::Reset
+            << "BuildFilters::Reset =" << BuildFilters::Reset
+            << "BuildFilters::Action::Update =" << BuildFilters::Action::Update
+            << "BuildFilters::Update =" << BuildFilters::Update
+            << "BuildFilters::Action::UpdateCategory =" << BuildFilters::Action::UpdateCategory
+            << "BuildFilters::UpdateCategory =" << BuildFilters::UpdateCategory
+               ;
     return;
 
     QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"

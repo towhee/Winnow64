@@ -53,19 +53,19 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
 
     expandAllAction = new QAction(tr("Expand all"), this);
     expandAllAction->setShortcutVisibleInContextMenu(true);
-    expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
+//    expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
     addAction(expandAllAction);
     connect(expandAllAction, &QAction::triggered, this, &PreferencesDlg::expand);
 
     collapseAllAction = new QAction(tr("Collapse all"), this);
     collapseAllAction->setShortcutVisibleInContextMenu(true);
-    collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
+//    collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, this, &PreferencesDlg::collapse);
 
     soloAction = new QAction(tr(" Solo "), this);
     soloAction->setShortcutVisibleInContextMenu(true);
-    soloAction->setShortcut(QKeySequence("Ctrl+*"));
+//    soloAction->setShortcut(QKeySequence("Ctrl+*"));
     soloAction->setCheckable(true);
     addAction(soloAction);
     soloAction->setChecked(isSolo);

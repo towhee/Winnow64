@@ -637,6 +637,9 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         }
     }
 
+    // XMP
+    m.isXmp = false;
+
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
@@ -969,7 +972,7 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
                      << "extent_count" << extent_count;
         }
         if (extent_count > 100) {
-            QString err = "Quiting because extent_count has reached " + extent_count;
+            QString err = "Quitting because extent_count has reached " + extent_count;
             G::error("Heic::ilocBox", fPath, err);
             qWarning() << "Heic::ilocBox" << "*** Quiting because extent_count =" << extent_count;
             offset += length;
@@ -992,7 +995,7 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
                 exifOffset = extent_offset;
                 exifLength = extent_length;
                 if (isDebug) {
-                    qDebug() <<"Heic::ilocBox" << "    EXIF item_ID:" << i + 1
+                    qDebug() << "Heic::ilocBox" << "    EXIF item_ID:" << i + 1
                              << "exifOffset" << exifOffset
                              << "exifLength" << exifLength;
                 }
@@ -1022,25 +1025,38 @@ bool Heic::infeBox(quint32 &offset, quint32 &length)
     Find exifItemID which establishes which iloc to used to get the exifOffset
     and exifLength for the embedded EXIF data.
 */
+    int endOfBox = offset + length;
     file->seek(offset + 12);
     quint16 item_ID = Utilities::get16(file->read(2));
     quint16 item_protection_index = Utilities::get16(file->read(2));
     QString item_name = Utilities::getCString(*file);
+//    qDebug() << "Heic::infeBox after item_name"
+//             << "file->pos() =" << file->pos()
+//             << "endOfBox =" << endOfBox
+//                ;
     QString content_type = Utilities::getCString(*file);
-    QString content_encoding;
-    if (content_type.length()) content_encoding = Utilities::getCString(*file);
-    else content_encoding = "";
+    QString content_encoding = Utilities::getCString(*file);
+//    QString content_type = "";
+//    QString content_encoding = "";
+//    if (file->pos() + 1 < endOfBox) {
+//        file->seek(file->pos() + 1);
+//        content_type = Utilities::getCString(*file);
+//        if (content_type.length() && file->pos() + 1 < endOfBox) {
+//            file->seek(file->pos() + 1);
+//            content_encoding = Utilities::getCString(*file);
+//        }
+//    }
 
     if (item_name == "Exif") exifItemID = item_ID;
 
-    if (isDebug) {
-        qDebug() << "   " << "Heic::infeBox"
-                 << "item_ID =" << item_ID
-                 << "item_protection_index =" << item_protection_index
-                 << "item_name =" << item_name
-                 << "content_type =" << content_type
-                 << "content_encoding =" << content_encoding;
-    }
+//    if (isDebug)
+//        qDebug() << "   " << "Heic::infeBox"
+//                 << "length =" << length
+//                 << "item_ID =" << item_ID
+//                 << "item_protection_index =" << item_protection_index
+//                 << "item_name =" << item_name
+//                 << "content_type =" << content_type
+//                 << "content_encoding =" << content_encoding;
     return true;
 }
 

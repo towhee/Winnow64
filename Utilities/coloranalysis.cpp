@@ -28,6 +28,10 @@ void ColorAnalysis::process(QStringList &fPathList)
     rpt << "Hue    Count      Total    File\n";
     for (int f = 0; f < count; f++) {
         QImage img(fPathList.at(f));
+        if (img.isNull()) {
+            rpt << "INVALID FILE FORMAT (ONLY JPG, PNG, TIF)   " << fPathList.at(f) << "\n";
+            continue;
+        }
         effects.hueCount(img, hues);
         G::popUp->setProgress(f+1);
         qApp->processEvents();

@@ -373,7 +373,8 @@ DISTFILES += Docs/ingestautopath \
     notes/Create help dialog.rtf \
     notes/Create help dialog.rtf \
     notes/Create help dialog.txt \
-    notes/Create_help_dialog.txt
+    notes/Create_help_dialog.txt \
+    notes/VideoScripts
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html

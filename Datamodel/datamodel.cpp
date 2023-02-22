@@ -2446,15 +2446,17 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
 
             if (!isMatch) return false;   // no match in category
 
-            /* prepare for category items filter match.  If no item is checked
-            or one checked item matches the data then the row is okay to show
+            /*
+            Prepare for category items filter match.  If no item is checked
+            or one checked item matches the data, then the row is okay to show
+            the top level items contain reference to the data model column.
             */
-            // the top level items contain reference to the data model column
             dataModelColumn = (*filter)->data(0, G::ColumnRole).toInt();
             isCategoryUnchecked = true;
             isMatch = false;
             itemCategory = (*filter)->text(0);      // for debugging
         }
+        if (suspendFiltering) return false;
         ++filter;
     }
     // check results of category items filter match for the last group

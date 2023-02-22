@@ -563,6 +563,7 @@ void Effects::arrayToImage(QImage &img, int *a, quint32 bytes)
 
 void Effects::hueCount(QImage &img, QVector<int> &hues)
 {
+    //qDebug() << "Effects::hueCount";
     QVector<QVector<QRgb>> s(img.height());
     imageToVector2D(img, s);
     hues.fill(0);
@@ -572,14 +573,15 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
             QColor hsl = rgb.toHsl();
             int hue = hsl.hslHue();
             if (hue >= 0 && hue < 360) hues[hue]++;
-//            if (y == 0 && x == 0) {
-//                qDebug() << "Effects::hueCount"
-//                         << "s[y][x] =" << s[y][x]
-//                         << "rgb =" << rgb
-//                         << "hsl =" << hsl
-//                         << "hue =" << hue
-//                            ;
-//            }
+            /* debug
+            if (y == 0 && x == 0) {
+                qDebug() << "Effects::hueCount"
+                         << "s[y][x] =" << s[y][x]
+                         << "rgb =" << rgb
+                         << "hsl =" << hsl
+                         << "hue =" << hue
+                            ;
+            } */
         }
     }
 }

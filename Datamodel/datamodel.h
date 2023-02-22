@@ -192,7 +192,7 @@ private:
     QString buildSteps = "3";
     int step;
 
-    bool isDebug = true;
+    bool isDebug = false;
     QString lastFunction = "";
     ImageMetadata mCopy;
     int line;

@@ -144,11 +144,14 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     Updates the datamodel for info items that can be edited: title, creator, copyright, email
     and url (at present).  This is used in Embel (ie image title) and "Show shooting data".
 
-    The dataChanged signal is triggered twice for the same edit so count is used to only
-    process once.
+    dataChanged is triggered twice for the same edit so count is used to only process
+    once.
 
     The signal dataEdited is emitted, which triggers Embel to update the text fields. This
     will only work if Embel::isRemote == false.
+
+    The signal updateFilter is emitted, which triggers BuildFilters to rebuild category items
+    in the filter criterea tree (Filters).
 */
     if (ignoreDataChange || G::isInitializing) return;
     bool usedPopUp = false;

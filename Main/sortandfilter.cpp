@@ -55,7 +55,7 @@ void MW::launchBuildFilters()
     }
     if (filters->filtersBuilt) return;
 
-    qDebug() << "MW::launchBuildFilters buildFilters->build()";
+    //qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
 }
 
@@ -522,24 +522,37 @@ void MW::setRating()
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
+    qDebug() << "MW::setRating" << rating
+             << "selection.count() =" << selection.count()
+                ;
     // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
-        if(idx.data(Qt::EditRole) != rating) {
+        bool isDifferent = idx.data(Qt::EditRole).toString() != rating;
+        qDebug() << "MW::setRating isAlreadyRating"
+                 << "selection iter =" << i
+                 << "row = " << selection.at(i).row()
+                 << "value =" << idx.data(Qt::EditRole)
+                 << "isDiffernt =" << isDifferent
+                    ;
+        if (idx.data(Qt::EditRole).toString() != rating) {
             isAlreadyRating = false;
+            break;
         }
     }
-    if (isAlreadyRating) rating = "";     // invert the label(s)
+    if (isAlreadyRating) rating = "";     // invert the rating(s)
 
     int n = selection.count();
-//    if (G::useSidecar) {
-//        G::popUp->setProgressVisible(true);
-//        G::popUp->setProgressMax(n + 1);
-//        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-//                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-//        G::popUp->showPopup(txt, 0, true, 1);
-//    }
+    /*
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(true);
+        G::popUp->setProgressMax(n + 1);
+        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+        G::popUp->showPopup(txt, 0, true, 1);
+    }
+    //*/
 
     // set the rating in the datamodel
     QString src = "MW::setRating";
@@ -583,11 +596,7 @@ void MW::setRating()
     updateClassification();
 
     // update filter list and counts
-    qDebug() << "MW::set Rating buildFilters->build(BuildFilters::Action::RatingEdit)";
-    buildFilters->updateCategory(BuildFilters::RatingEdit);
-
-    // refresh the filter
-    dm->sf->filterChange();
+    buildFilters->updateCategory(BuildFilters::RatingEdit, BuildFilters::NoAfterAction);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -692,8 +701,9 @@ void MW::setColorClass()
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
-        if(idx.data(Qt::EditRole) != colorClass) {
+        if(idx.data(Qt::EditRole).toString() != colorClass) {
             isAlreadyLabel = false;
+            break;
         }
     }
     if (isAlreadyLabel) colorClass = "";     // invert the label
@@ -753,10 +763,7 @@ void MW::setColorClass()
 
     // update filter counts
     qDebug() << "MW::setColorClass buildFilters->build(BuildFilters::Action::LabelEdit)";
-    buildFilters->updateCategory(BuildFilters::LabelEdit);
-
-    // refresh the filter
-    dm->sf->filterChange();
+    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);

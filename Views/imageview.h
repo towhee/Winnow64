@@ -95,6 +95,7 @@ public slots:
     void quitRubberBand();
 
 signals:
+    void tryAgain(QString fPath);
     void togglePick();
     void updateStatus(bool, QString, QString);
     void setCentralMessage(QString msg);

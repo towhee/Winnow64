@@ -740,8 +740,11 @@ void Filters::finishedBuildFilters()
 {
     if (G::isLogger) G::log("Filters::finishedBuildFilters");
     if (debugFilters)
-        qDebug() << "Filters::finishedBuildFilters"
-                    ;
+    {
+        qDebug() << "Filters::finishedBuildFilters";
+        qDebug() << "\n";
+    }
+
     filtersBuilt = true;
     buildingFilters = false;
     filterLabel->setVisible(false);
@@ -998,11 +1001,14 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
                  << "category =" << category->text(0)
                     ;
 
-    // remove existing category items in filters from itemMap
+    // if true then filtering will be cancelled
+    bool oldItemChecked = false;
+
+    // remove existing category items in filters if no longer in itemMap
     if (category->childCount()) {
         for (int i = category->childCount() - 1; i >= 0 ; i--) {
             QString s = category->child(i)->text(0);
-            // remove from unique itemList
+            // count and remove from itemMap
             if (itemMap.contains(s)) {
                 // update unfiltered item count
                 category->child(i)->setData(3, Qt::EditRole, itemMap[s]);
@@ -1010,7 +1016,10 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
             }
             // remove from filter tree unless checked item
             else {
+                if (category->child(i)->checkState(0) == Qt::Checked)
+                    oldItemChecked = true;
                 category->removeChild(category->child(i));
+//                break;
             }
         }
     }
@@ -1022,7 +1031,8 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         i.next();
         item = new QTreeWidgetItem(category);
         item->setText(0, i.key());
-        item->setCheckState(0, Qt::Unchecked);
+        if (oldItemChecked) item->setCheckState(0, Qt::Checked);
+        else item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, i.key());
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight);
@@ -1031,6 +1041,11 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
 
     // sort the result
     category->sortChildren(0, Qt::AscendingOrder);
+
+    // clear selection if anyRemovedItemsChecked = true
+    if (oldItemChecked) {
+
+    }
 }
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)

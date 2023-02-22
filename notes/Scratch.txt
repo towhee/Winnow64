@@ -1,72 +1,976 @@
 
-6,363,821 MW::focusChange                                    Previous = Thumbnails
-        1 MW::focusChange                                     Current = Thumbnails
-2,904,353 MW::enableGoKeyActions
-        3 MW::thumbsEnlarge
-        0 IconView::thumbsEnlarge                            Thumbnails
-        1 IconView::setThumbSize                             Thumbnails
-        0 IconView::getCellSize
-IconView::setThumbSize currentRow = 0 firstVisibleCell = 11 lastVisibleCell = 18 midVisibleCell = 15 scrollToIndex.row() = 15
-      166 IconView::fitBadge                                 Thumbnails
-        1 IconView::setThumbParameters                       Thumbnails
-        6 MW::setThumbDockHeight
-      284 MW::setThumbDockFeatures
+WARNING Metadata::readMetadata "Unable to parse metadata for /Users/roryhill/Pictures/_test2/IMG_3492.HEIC. "
+WARNING Metadata::loadImageMetadata  Metadata not loaded for "/Users/roryhill/Pictures/_test2/IMG_3492.HEIC"
+WARNING DataModel::imMetadata Metadata not loaded to model for "/Users/roryhill/Pictures/_test2/IMG_3492.HEIC"
 
-MW::thumbHasScrolled true
-        4 MW::thumbHasScrolled
-        3 MW::scrollToCurrentRow
-        8 IconView::scrollToRow                              Thumbnails
+Heic::parseHeic "/Users/roryhill/Pictures/_test2/IMG_3492.HEIC"
 
-MW::thumbHasScrolled true
-        5 MW::thumbHasScrolled
-        1 MW::updateIconRange                                src = MW::scrollToCurrentRow row = 0
-        0 IconView::updateVisibleCells                       Thumbnails
-        3 IconView::getCellSize
-        1 MetadataCache::scrollChange                        called by =MW::scrollToCurrentRow
-        0 MetadataCache::setRange
-      309 MetadataCache::anyItemsToLoad
-      283 MW::updateMetadataThreadRunStatus
-        1 MW::numberIconsVisibleChange
-      338 MW::updateIconRange                                src = MW::numberIconsVisibleChange row = 0
-        0 MetadataCache::run                                 Scroll
-        0 IconView::updateVisibleCells                       Thumbnails
-    2,712 IconView::getCellSize
-       41 DockWidget::moveEvent                              FoldersDock
-        0 FSTree::resizeEvent
-      101 FSTree::resizeColumns
-       63 DockWidget::resizeEvent
-    1,795 DockWidget::moveEvent                              thumbDock
-        0 IconView::resizeEvent                              Thumbnails
-        0 IconView::setThumbParameters                       Thumbnails
-        0 MW::setThumbDockHeight
-       35 MW::setThumbDockFeatures
-        0 MW::numberIconsVisibleChange
-        0 MW::updateIconRange                                src = MW::numberIconsVisibleChange row = 0
-        0 IconView::updateVisibleCells                       Thumbnails
-        7 IconView::getCellSize
-       51 DockWidget::resizeEvent
-       31 ImageView::resizeEvent
-        0 ImageView::getFitScaleFactor
-        0 ImageView::setFitZoom
-        0 ImageView::scale
-       15 ImageView::setFitZoom
-        4 ImageView::placeClassificationBadge
-      185 ImageView::setShootingInfo
-        1 MW::updateStatus
-        2 IconView::getCurrentFilePath
-        7 DataModel::rowFromPath
-        2 MW::getZoom
-        3 MW::getPosition
-       27 IconView::getSelectedCount                         Thumbnails
-      331 MW::getPicked
-        4 MW::getPosition
-        9 MW::getZoom
-        5 MW::metadataChanged
-       19 InfoView::showOrHide
-        7 MW::getSelectedFileSize
-       13 MW::memoryReqdForSelection
-       47 MW::getPicked
-        0 ImageView::placeClassificationBadge
-      448 ImageView::setShootingInfo
-  213,726 MW::updateMetadataThreadRunStatus
-30,549,332 MW::keyReleaseEvent
+Heic::nextHeifBox offset: 0 length: 40 type: "ftyp"
+Heic::getHeifBox type = "ftyp" offset = 0 length = 40
+Heic::nextHeifBox offset: 40 length: 5057 type: "meta"
+Heic::getHeifBox type = "meta" offset = 40 length = 5057
+Heic::metaBox offset = 52 length = 5057
+Heic::nextHeifBox offset: 52 length: 34 type: "hdlr"
+Heic::getHeifBox type = "hdlr" offset = 52 length = 34
+Heic::hdlrBox hdlrType = "pict"
+Heic::nextHeifBox offset: 86 length: 36 type: "dinf"
+Heic::getHeifBox type = "dinf" offset = 86 length = 36
+Heic::dinfBox offset = 86
+Heic::nextHeifBox offset: 94 length: 28 type: "dref"
+Heic::getHeifBox type = "dref" offset = 94 length = 28
+Heic::drefBox entry_count = 1
+Heic::nextHeifBox offset: 110 length: 12 type: "url "
+Heic::drefBox entry# 0
+Heic::getHeifBox type = "url " offset = 94 length = 12
+Heic::urlBox     location = ""
+Heic::nextHeifBox offset: 122 length: 14 type: "pitm"
+Heic::getHeifBox type = "pitm" offset = 122 length = 14
+Heic::pitmBox pitmId = 1374
+Heic::nextHeifBox offset: 136 length: 1374 type: "iinf"
+Heic::getHeifBox type = "iinf" offset = 136 length = 1374
+Heic::iinfBox iint entry count = 60 150
+Heic::nextHeifBox offset: 150 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  1
+    Heic::infeBox item_ID = 1 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 171 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  2
+    Heic::infeBox item_ID = 2 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 192 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  3
+    Heic::infeBox item_ID = 3 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 213 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  4
+    Heic::infeBox item_ID = 4 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 234 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  5
+    Heic::infeBox item_ID = 5 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 255 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  6
+    Heic::infeBox item_ID = 6 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 276 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  7
+    Heic::infeBox item_ID = 7 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 297 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  8
+    Heic::infeBox item_ID = 8 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 318 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  9
+    Heic::infeBox item_ID = 9 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 339 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  10
+    Heic::infeBox item_ID = 10 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 360 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  11
+    Heic::infeBox item_ID = 11 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 381 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  12
+    Heic::infeBox item_ID = 12 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 402 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  13
+    Heic::infeBox item_ID = 13 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 423 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  14
+    Heic::infeBox item_ID = 14 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 444 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  15
+    Heic::infeBox item_ID = 15 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 465 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  16
+    Heic::infeBox item_ID = 16 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 486 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  17
+    Heic::infeBox item_ID = 17 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 507 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  18
+    Heic::infeBox item_ID = 18 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 528 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  19
+    Heic::infeBox item_ID = 19 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 549 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  20
+    Heic::infeBox item_ID = 20 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 570 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  21
+    Heic::infeBox item_ID = 21 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 591 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  22
+    Heic::infeBox item_ID = 22 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 612 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  23
+    Heic::infeBox item_ID = 23 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 633 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  24
+    Heic::infeBox item_ID = 24 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 654 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  25
+    Heic::infeBox item_ID = 25 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 675 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  26
+    Heic::infeBox item_ID = 26 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 696 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  27
+    Heic::infeBox item_ID = 27 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 717 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  28
+    Heic::infeBox item_ID = 28 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 738 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  29
+    Heic::infeBox item_ID = 29 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 759 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  30
+    Heic::infeBox item_ID = 30 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 780 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  31
+    Heic::infeBox item_ID = 31 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 801 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  32
+    Heic::infeBox item_ID = 32 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 822 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  33
+    Heic::infeBox item_ID = 33 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 843 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  34
+    Heic::infeBox item_ID = 34 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 864 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  35
+    Heic::infeBox item_ID = 35 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 885 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  36
+    Heic::infeBox item_ID = 36 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 906 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  37
+    Heic::infeBox item_ID = 37 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 927 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  38
+    Heic::infeBox item_ID = 38 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 948 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  39
+    Heic::infeBox item_ID = 39 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 969 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  40
+    Heic::infeBox item_ID = 40 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 990 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  41
+    Heic::infeBox item_ID = 41 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1011 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  42
+    Heic::infeBox item_ID = 42 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1032 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  43
+    Heic::infeBox item_ID = 43 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1053 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  44
+    Heic::infeBox item_ID = 44 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1074 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  45
+    Heic::infeBox item_ID = 45 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1095 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  46
+    Heic::infeBox item_ID = 46 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1116 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  47
+    Heic::infeBox item_ID = 47 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1137 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  48
+    Heic::infeBox item_ID = 48 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1158 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  49
+    Heic::infeBox item_ID = 49 item_protection_index = 0 item_name = "grid" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1179 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  50
+    Heic::infeBox item_ID = 50 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1200 length: 21 type: "infe"
+Heic::iinfBox    Item Info Entry  51
+    Heic::infeBox item_ID = 51 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1221 length: 41 type: "infe"
+Heic::iinfBox    Item Info Entry  52
+    Heic::infeBox item_ID = 52 item_protection_index = 0 item_name = "mime" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1242 length: 1634758764 type: "icat"
+Heic::iinfBox    Item Info Entry  53
+    Heic::infeBox item_ID = 53 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1283 length: 41 type: "infe"
+Heic::iinfBox    Item Info Entry  54
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1634760040 length: 2663225490 type: ""
+Heic::iinfBox    Item Info Entry  55
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1634760081 length: 2663225449 type: ""
+Heic::iinfBox    Item Info Entry  56
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 3018275 length: 4294967255 type: ""
+Heic::iinfBox    Item Info Entry  57
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 2666243724 length: 1631741806 type: ""
+Heic::iinfBox    Item Info Entry  58
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 2666243683 length: 1631741847 type: ""
+Heic::iinfBox    Item Info Entry  59
+    Heic::infeBox item_ID = 8192 item_protection_index = 3 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 3018197 length: 50331651 type: "\u0000\u0000\u0003\u0000"
+Heic::iinfBox    Item Info Entry  60
+    Heic::infeBox item_ID = 0 item_protection_index = 0 item_name = "" content_type = "" content_encoding = ""
+Heic::nextHeifBox offset: 1510 length: 274 type: "iref"
+Heic::getHeifBox type = "iref" offset = 1510 length = 274
+Heic::irefBox offset = 1510 length = 274 sitrOffset 1522
+Heic::nextHeifBox offset: 1522 length: 108 type: "dimg"
+Heic::sitrBox from_item_ID = 49 reference_count = 48
+Heic::sitrBox 0 : to_item_ID = 65538
+Heic::sitrBox 1 : to_item_ID = 196612
+Heic::sitrBox 2 : to_item_ID = 327686
+Heic::sitrBox 3 : to_item_ID = 458760
+Heic::sitrBox 4 : to_item_ID = 589834
+Heic::sitrBox 5 : to_item_ID = 720908
+Heic::sitrBox 6 : to_item_ID = 851982
+Heic::sitrBox 7 : to_item_ID = 983056
+Heic::sitrBox 8 : to_item_ID = 1114130
+Heic::sitrBox 9 : to_item_ID = 1245204
+Heic::sitrBox 10 : to_item_ID = 1376278
+Heic::sitrBox 11 : to_item_ID = 1507352
+Heic::sitrBox 12 : to_item_ID = 1638426
+Heic::sitrBox 13 : to_item_ID = 1769500
+Heic::sitrBox 14 : to_item_ID = 1900574
+Heic::sitrBox 15 : to_item_ID = 2031648
+Heic::sitrBox 16 : to_item_ID = 2162722
+Heic::sitrBox 17 : to_item_ID = 2293796
+Heic::sitrBox 18 : to_item_ID = 2424870
+Heic::sitrBox 19 : to_item_ID = 2555944
+Heic::sitrBox 20 : to_item_ID = 2687018
+Heic::sitrBox 21 : to_item_ID = 2818092
+Heic::sitrBox 22 : to_item_ID = 2949166
+Heic::sitrBox 23 : to_item_ID = 3080240
+Heic::sitrBox 24 : to_item_ID = 14
+Heic::sitrBox 25 : to_item_ID = 1953000802
+Heic::sitrBox 26 : to_item_ID = 3276801
+Heic::sitrBox 27 : to_item_ID = 3211264
+Heic::sitrBox 28 : to_item_ID = 942453
+Heic::sitrBox 29 : to_item_ID = 2020343859
+Heic::sitrBox 30 : to_item_ID = 65585
+Heic::sitrBox 31 : to_item_ID = 14
+Heic::sitrBox 32 : to_item_ID = 1667527523
+Heic::sitrBox 33 : to_item_ID = 3407873
+Heic::sitrBox 34 : to_item_ID = 3342336
+Heic::sitrBox 35 : to_item_ID = 942453
+Heic::sitrBox 36 : to_item_ID = 2020343861
+Heic::sitrBox 37 : to_item_ID = 65585
+Heic::sitrBox 38 : to_item_ID = 14
+Heic::sitrBox 39 : to_item_ID = 1667527523
+Heic::sitrBox 40 : to_item_ID = 3538945
+Heic::sitrBox 41 : to_item_ID = 3473408
+Heic::sitrBox 42 : to_item_ID = 942453
+Heic::sitrBox 43 : to_item_ID = 2020343863
+Heic::sitrBox 44 : to_item_ID = 65585
+Heic::sitrBox 45 : to_item_ID = 14
+Heic::sitrBox 46 : to_item_ID = 1667527523
+Heic::sitrBox 47 : to_item_ID = 3670017
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1630
+Heic::nextHeifBox offset: 1630 length: 14 type: "thmb"
+Heic::sitrBox from_item_ID = 50 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1644
+Heic::nextHeifBox offset: 1644 length: 14 type: "auxl"
+Heic::sitrBox from_item_ID = 51 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1658
+Heic::nextHeifBox offset: 1658 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 52 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3342336
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1672
+Heic::nextHeifBox offset: 1672 length: 14 type: "auxl"
+Heic::sitrBox from_item_ID = 53 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1686
+Heic::nextHeifBox offset: 1686 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 54 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3473408
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1700
+Heic::nextHeifBox offset: 1700 length: 14 type: "auxl"
+Heic::sitrBox from_item_ID = 55 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1714
+Heic::nextHeifBox offset: 1714 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 56 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3604480
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1728
+Heic::nextHeifBox offset: 1728 length: 14 type: "auxl"
+Heic::sitrBox from_item_ID = 57 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1742
+Heic::nextHeifBox offset: 1742 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 58 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3735552
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1756
+Heic::nextHeifBox offset: 1756 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 59 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1770
+Heic::nextHeifBox offset: 1770 length: 14 type: "cdsc"
+Heic::sitrBox from_item_ID = 60 reference_count = 1
+Heic::sitrBox 0 : to_item_ID = 3211264
+Heic::irefBox irefEndOffset = 1784 sitrOffset 1784
+Heic::nextHeifBox offset: 1784 length: 2321 type: "iprp"
+Heic::getHeifBox type = "iprp" offset = 1784 length = 2321
+Heic::iprpBox offset = 1784
+Heic::nextHeifBox offset: 1792 length: 1958 type: "ipco"
+Heic::nextHeifBox offset: 1800 length: 548 type: "colr"
+Heic::getHeifBox type = "colr" offset = 1800 length = 548
+Heic::colrBox colrType = "prof"
+Heic::colrBox "\x00\x00\x02\x18""appl\x04\x00\x00\x00mntrRGB XYZ \x07\xE6\x00\x01\x00\x01\x00\x00\x00\x00\x00\x00""acspAPPL\x00\x00\x00\x00""APPL\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xF6\xD6\x00\x01\x00\x00\x00\x00\xD3-appl\xEC\xFD\xA3\x8E""8\x85G\xC3m\xB4\xBDOz\xDA\x18/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\ndesc\x00\x00\x00\xFC\x00\x00\x00""0cprt\x00\x00\x01,\x00\x00\x00Pwtpt\x00\x00\x01|\x00\x00\x00\x14rXYZ\x00\x00\x01\x90\x00\x00\x00\x14gXYZ\x00\x00\x01\xA4\x00\x00\x00\x14""bXYZ\x00\x00\x01\xB8\x00\x00\x00\x14rTRC\x00\x00\x01\xCC\x00\x00\x00 chad\x00\x00\x01\xEC\x00\x00\x00,bTRC\x00\x00\x01\xCC\x00\x00\x00 gTRC\x00\x00\x01\xCC\x00\x00\x00 mluc\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\fenUS\x00\x00\x00\x14\x00\x00\x00\x1C\x00""D\x00i\x00s\x00p\x00l\x00""a\x00y\x00 \x00P\x00""3mluc\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\fenUS\x00\x00\x00""4\x00\x00\x00\x1C\x00""C\x00o\x00p\x00y\x00r\x00i\x00g\x00h\x00t\x00 \x00""A\x00p\x00p\x00l\x00""e\x00 \x00I\x00n\x00""c\x00.\x00,\x00 \x00""2\x00""0\x00""2\x00""2XYZ \x00\x00\x00\x00\x00\x00\xF6\xD5\x00\x01\x00\x00\x00\x00\xD3,XYZ \x00\x00\x00\x00\x00\x00\x83\xDF\x00\x00=\xBF\xFF\xFF\xFF\xBBXYZ \x00\x00\x00\x00\x00\x00J\xBF\x00\x00\xB1""7\x00\x00\n\xB9XYZ \x00\x00\x00\x00\x00\x00(8\x00\x00\x11\x0B\x00\x00\xC8\xB9para\x00\x00\x00\x00\x00\x03\x00\x00\x00\x02""ff\x00\x00\xF2\xA7\x00\x00\rY\x00\x00\x13\xD0\x00\x00\n[sf32\x00\x00\x00\x00\x00\x01\fB\x00\x00\x05\xDE\xFF\xFF\xF3&\x00\x00\x07\x93\x00\x00\xFD\x90\xFF\xFF\xFB\xA2\xFF\xFF\xFD\xA3\x00\x00\x03\xDC\x00\x00\xC0n\x00\x00\x00p"
+Heic::nextHeifBox offset: 2348 length: 112 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 2348 length = 112
+Heic::hvcCBox file position: 2356
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 3
+Heic::hvcCBox general_profile_compatibility_flags = 1879048192
+Heic::hvcCBox general_constraint_indicator_flags = 193514046488576
+Heic::hvcCBox general_level_idc = 90
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 1
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 34
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 2348 length: 112 offset + length 2460 file position: 2460
+Heic::nextHeifBox offset: 2460 length: 20 type: "ispe"
+Heic::getHeifBox type = "ispe" offset = 2460 length = 20
+Heic::ispeBox image_width = 512
+Heic::ispeBox image_height = 512
+
+Heic::nextHeifBox offset: 2480 length: 20 type: "ispe"
+Heic::getHeifBox type = "ispe" offset = 2480 length = 20
+Heic::ispeBox image_width = 4032
+Heic::ispeBox image_height = 3024
+
+Heic::nextHeifBox offset: 2500 length: 9 type: "irot"
+Heic::getHeifBox type = "irot" offset = 2500 length = 9
+Heic::irotBox angle = 0 angle degrees = 0
+Heic::nextHeifBox offset: 2509 length: 16 type: "pixi"
+Heic::getHeifBox type = "pixi" offset = 2509 length = 16
+Heic::pixiBox channel# 0 bits_per_channel = 8
+Heic::pixiBox channel# 1 bits_per_channel = 8
+Heic::pixiBox channel# 2 bits_per_channel = 8
+Heic::nextHeifBox offset: 2525 length: 111 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 2525 length = 111
+Heic::hvcCBox file position: 2533
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 3
+Heic::hvcCBox general_profile_compatibility_flags = 1879048192
+Heic::hvcCBox general_constraint_indicator_flags = 193514046488576
+Heic::hvcCBox general_level_idc = 60
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 1
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 33
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 2525 length: 111 offset + length 2636 file position: 2636
+Heic::nextHeifBox offset: 2636 length: 20 type: "ispe"
+Heic::getHeifBox type = "ispe" offset = 2636 length = 20
+Heic::ispeBox image_width = 320
+Heic::ispeBox image_height = 240
+
+Heic::nextHeifBox offset: 2656 length: 368 type: "colr"
+Heic::getHeifBox type = "colr" offset = 2656 length = 368
+Heic::colrBox colrType = "prof"
+Heic::colrBox "\x00\x00\x01""dappl\x02\x10\x00\x00mntrGRAYXYZ \x07\xE0\x00\x01\x00\x01\x00\x00\x00\x00\x00\x00""acspAPPL\x00\x00\x00\x00""APPL\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xF6\xD6\x00\x01\x00\x00\x00\x00\xD3-appl\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04""desc\x00\x00\x00\xB4\x00\x00\x00""fcprt\x00\x00\x01\x1C\x00\x00\x00#wtpt\x00\x00\x01@\x00\x00\x00\x14kTRC\x00\x00\x01T\x00\x00\x00\x0E""desc\x00\x00\x00\x00\x00\x00\x00\fLinear Gray\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00text\x00\x00\x00\x00""Copyright Apple Inc., 2016\x00\x00XYZ \x00\x00\x00\x00\x00\x00\xF6\xD6\x00\x01\x00\x00\x00\x00\xD3-curv\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00q"
+Heic::nextHeifBox offset: 3024 length: 113 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 3024 length = 113
+Heic::hvcCBox file position: 3032
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 4
+Heic::hvcCBox general_profile_compatibility_flags = 134217728
+Heic::hvcCBox general_constraint_indicator_flags = 210865714364416
+Heic::hvcCBox general_level_idc = 150
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 0
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 35
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 3024 length: 113 offset + length 3137 file position: 3137
+Heic::nextHeifBox offset: 3137 length: 20 type: "ispe"
+Heic::getHeifBox type = "ispe" offset = 3137 length = 20
+Heic::ispeBox image_width = 2016
+Heic::ispeBox image_height = 1512
+
+Heic::nextHeifBox offset: 3157 length: 14 type: "pixi"
+Heic::getHeifBox type = "pixi" offset = 3157 length = 14
+Heic::pixiBox channel# 0 bits_per_channel = 8
+Heic::nextHeifBox offset: 3171 length: 62 type: "auxC"
+Heic::getHeifBox type = "auxC" offset = 3171 length = 62
+WARNING Heic::getHeifBox Failed to get box for type = "auxC"
+Heic::nextHeifBox offset: 3233 length: 113 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 3233 length = 113
+Heic::hvcCBox file position: 3241
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 4
+Heic::hvcCBox general_profile_compatibility_flags = 134217728
+Heic::hvcCBox general_constraint_indicator_flags = 210865714364416
+Heic::hvcCBox general_level_idc = 150
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 0
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 35
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 3233 length: 113 offset + length 3346 file position: 3346
+Heic::nextHeifBox offset: 3346 length: 59 type: "auxC"
+Heic::getHeifBox type = "auxC" offset = 3346 length = 59
+WARNING Heic::getHeifBox Failed to get box for type = "auxC"
+Heic::nextHeifBox offset: 3405 length: 113 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 3405 length = 113
+Heic::hvcCBox file position: 3413
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 4
+Heic::hvcCBox general_profile_compatibility_flags = 134217728
+Heic::hvcCBox general_constraint_indicator_flags = 210865714364416
+Heic::hvcCBox general_level_idc = 150
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 0
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 35
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 3405 length: 113 offset + length 3518 file position: 3518
+Heic::nextHeifBox offset: 3518 length: 59 type: "auxC"
+Heic::getHeifBox type = "auxC" offset = 3518 length = 59
+WARNING Heic::getHeifBox Failed to get box for type = "auxC"
+Heic::nextHeifBox offset: 3577 length: 113 type: "hvcC"
+Heic::getHeifBox type = "hvcC" offset = 3577 length = 113
+Heic::hvcCBox file position: 3585
+Heic::hvcCBox configurationVersion = 1
+Heic::hvcCBox general_profile_space = 0
+Heic::hvcCBox general_tier_flag = 0
+Heic::hvcCBox general_profile_idc = 4
+Heic::hvcCBox general_profile_compatibility_flags = 134217728
+Heic::hvcCBox general_constraint_indicator_flags = 210865714364416
+Heic::hvcCBox general_level_idc = 150
+Heic::hvcCBox min_spatial_segmentation_idc = 0
+Heic::hvcCBox parallelismType = 0
+Heic::hvcCBox chroma_format_idc = 0
+Heic::hvcCBox bit_depth_luma_minus8 = 0
+Heic::hvcCBox bit_depth_chroma_minus8 = 0
+Heic::hvcCBox avgFrameRate = 0
+Heic::hvcCBox constantFrameRate = 0
+Heic::hvcCBox numTemporalLayers = 1
+Heic::hvcCBox temporalIdNested = 0
+Heic::hvcCBox lengthSizeMinusOne = 3
+Heic::hvcCBox numOfArrays = 3
+Heic::hvcCBox     array # = 0
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 32
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 23
+Heic::hvcCBox     array # = 1
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 33
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 35
+Heic::hvcCBox     array # = 2
+Heic::hvcCBox     array_completeness = 2
+Heic::hvcCBox     NAL_unit_type = 34
+Heic::hvcCBox     numNalus = 1
+Heic::hvcCBox         nalUnitLength = 9
+Heic::hvcCBox offset: 3577 length: 113 offset + length 3690 file position: 3690
+Heic::nextHeifBox offset: 3690 length: 60 type: "auxC"
+Heic::getHeifBox type = "auxC" offset = 3690 length = 60
+WARNING Heic::getHeifBox Failed to get box for type = "auxC"
+Heic::nextHeifBox offset: 3750 length: 355 type: "ipma"
+Heic::getHeifBox type = "ipma" offset = 3750 length = 355
+Heic::ipmaBox entry_count = 54
+    entry# 0 item_ID = 1 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 1 item_ID = 2 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 2 item_ID = 3 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 3 item_ID = 4 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 4 item_ID = 5 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 5 item_ID = 6 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 6 item_ID = 7 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 7 item_ID = 8 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 8 item_ID = 9 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 9 item_ID = 10 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 10 item_ID = 11 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 11 item_ID = 12 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 12 item_ID = 13 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 13 item_ID = 14 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 14 item_ID = 15 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 15 item_ID = 16 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 16 item_ID = 17 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 17 item_ID = 18 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 18 item_ID = 19 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 19 item_ID = 20 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 20 item_ID = 21 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 21 item_ID = 22 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 22 item_ID = 23 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 23 item_ID = 24 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 24 item_ID = 25 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 25 item_ID = 26 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 26 item_ID = 27 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 27 item_ID = 28 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 28 item_ID = 29 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 29 item_ID = 30 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 30 item_ID = 31 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 31 item_ID = 32 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 32 item_ID = 33 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 33 item_ID = 34 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 34 item_ID = 35 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 35 item_ID = 36 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 36 item_ID = 37 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 37 item_ID = 38 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 38 item_ID = 39 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 39 item_ID = 40 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 40 item_ID = 41 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 41 item_ID = 42 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 42 item_ID = 43 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 43 item_ID = 44 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 44 item_ID = 45 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 45 item_ID = 46 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 46 item_ID = 47 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 47 item_ID = 48 association_count = 3
+        association# 0 essential = 1 property_index = 3
+        association# 1 essential = 1 property_index = 1
+        association# 2 essential = 1 property_index = 2
+    entry# 48 item_ID = 49 association_count = 4
+        association# 0 essential = 1 property_index = 1
+        association# 1 essential = 0 property_index = 4
+        association# 2 essential = 1 property_index = 5
+        association# 3 essential = 0 property_index = 6
+    entry# 49 item_ID = 50 association_count = 5
+        association# 0 essential = 1 property_index = 1
+        association# 1 essential = 1 property_index = 7
+        association# 2 essential = 0 property_index = 8
+        association# 3 essential = 1 property_index = 5
+        association# 4 essential = 0 property_index = 6
+    entry# 50 item_ID = 51 association_count = 6
+        association# 0 essential = 1 property_index = 9
+        association# 1 essential = 1 property_index = 10
+        association# 2 essential = 0 property_index = 11
+        association# 3 essential = 1 property_index = 5
+        association# 4 essential = 0 property_index = 12
+        association# 5 essential = 1 property_index = 13
+    entry# 51 item_ID = 53 association_count = 6
+        association# 0 essential = 1 property_index = 9
+        association# 1 essential = 1 property_index = 14
+        association# 2 essential = 0 property_index = 11
+        association# 3 essential = 1 property_index = 5
+        association# 4 essential = 0 property_index = 12
+        association# 5 essential = 1 property_index = 15
+    entry# 52 item_ID = 55 association_count = 6
+        association# 0 essential = 1 property_index = 9
+        association# 1 essential = 1 property_index = 16
+        association# 2 essential = 0 property_index = 11
+        association# 3 essential = 1 property_index = 5
+        association# 4 essential = 0 property_index = 12
+        association# 5 essential = 1 property_index = 17
+    entry# 53 item_ID = 57 association_count = 6
+        association# 0 essential = 1 property_index = 9
+        association# 1 essential = 1 property_index = 18
+        association# 2 essential = 0 property_index = 11
+        association# 3 essential = 1 property_index = 5
+        association# 4 essential = 0 property_index = 12
+        association# 5 essential = 1 property_index = 19
+Heic::ipmaBox offset: 3750 length: 355 offset + length 4105 file position: 4105
+Heic::nextHeifBox offset: 4105 length: 16 type: "idat"
+Heic::getHeifBox type = "idat" offset = 4105 length = 16
+Heic::idatBox offset = 4105
+Heic::nextHeifBox offset: 4121 length: 976 type: "iloc"
+Heic::getHeifBox type = "iloc" offset = 4121 length = 976
+Heic::ilocBox ilocOffsetSize = 4 ilocLengthSize = 4 ilocBaseOffsetSize = 0 ilocItemCount = 60
+Heic::ilocBox Item: 0 itemId 1 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 1 extent_offset 32901 extent_length 49133
+Heic::ilocBox Item: 1 itemId 2 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 2 extent_offset 82034 extent_length 51473
+Heic::ilocBox Item: 2 itemId 3 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 3 extent_offset 133507 extent_length 76764
+Heic::ilocBox Item: 3 itemId 4 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 4 extent_offset 210271 extent_length 85236
+Heic::ilocBox Item: 4 itemId 5 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 5 extent_offset 295507 extent_length 64246
+Heic::ilocBox Item: 5 itemId 6 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 6 extent_offset 359753 extent_length 59666
+Heic::ilocBox Item: 6 itemId 7 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 7 extent_offset 419419 extent_length 68338
+Heic::ilocBox Item: 7 itemId 8 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 8 extent_offset 487757 extent_length 42485
+Heic::ilocBox Item: 8 itemId 9 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 9 extent_offset 530242 extent_length 64300
+Heic::ilocBox Item: 9 itemId 10 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 10 extent_offset 594542 extent_length 70698
+Heic::ilocBox Item: 10 itemId 11 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 11 extent_offset 665240 extent_length 72085
+Heic::ilocBox Item: 11 itemId 12 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 12 extent_offset 737325 extent_length 73036
+Heic::ilocBox Item: 12 itemId 13 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 13 extent_offset 810361 extent_length 71585
+Heic::ilocBox Item: 13 itemId 14 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 14 extent_offset 881946 extent_length 71859
+Heic::ilocBox Item: 14 itemId 15 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 15 extent_offset 953805 extent_length 72698
+Heic::ilocBox Item: 15 itemId 16 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 16 extent_offset 1026503 extent_length 74327
+Heic::ilocBox Item: 16 itemId 17 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 17 extent_offset 1100830 extent_length 64742
+Heic::ilocBox Item: 17 itemId 18 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 18 extent_offset 1165572 extent_length 68556
+Heic::ilocBox Item: 18 itemId 19 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 19 extent_offset 1234128 extent_length 65199
+Heic::ilocBox Item: 19 itemId 20 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 20 extent_offset 1299327 extent_length 49859
+Heic::ilocBox Item: 20 itemId 21 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 21 extent_offset 1349186 extent_length 54380
+Heic::ilocBox Item: 21 itemId 22 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 22 extent_offset 1403566 extent_length 51252
+Heic::ilocBox Item: 22 itemId 23 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 23 extent_offset 1454818 extent_length 101268
+Heic::ilocBox Item: 23 itemId 24 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 24 extent_offset 1556086 extent_length 90503
+Heic::ilocBox Item: 24 itemId 25 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 25 extent_offset 1646589 extent_length 53976
+Heic::ilocBox Item: 25 itemId 26 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 26 extent_offset 1700565 extent_length 49767
+Heic::ilocBox Item: 26 itemId 27 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 27 extent_offset 1750332 extent_length 55273
+Heic::ilocBox Item: 27 itemId 28 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 28 extent_offset 1805605 extent_length 69024
+Heic::ilocBox Item: 28 itemId 29 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 29 extent_offset 1874629 extent_length 72032
+Heic::ilocBox Item: 29 itemId 30 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 30 extent_offset 1946661 extent_length 62023
+Heic::ilocBox Item: 30 itemId 31 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 31 extent_offset 2008684 extent_length 75274
+Heic::ilocBox Item: 31 itemId 32 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 32 extent_offset 2083958 extent_length 75068
+Heic::ilocBox Item: 32 itemId 33 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 33 extent_offset 2159026 extent_length 56101
+Heic::ilocBox Item: 33 itemId 34 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 34 extent_offset 2215127 extent_length 60193
+Heic::ilocBox Item: 34 itemId 35 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 35 extent_offset 2275320 extent_length 61791
+Heic::ilocBox Item: 35 itemId 36 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 36 extent_offset 2337111 extent_length 60693
+Heic::ilocBox Item: 36 itemId 37 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 37 extent_offset 2397804 extent_length 57195
+Heic::ilocBox Item: 37 itemId 38 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 38 extent_offset 2454999 extent_length 61842
+Heic::ilocBox Item: 38 itemId 39 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 39 extent_offset 2516841 extent_length 66123
+Heic::ilocBox Item: 39 itemId 40 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 40 extent_offset 2582964 extent_length 56496
+Heic::ilocBox Item: 40 itemId 41 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 41 extent_offset 2639460 extent_length 66802
+Heic::ilocBox Item: 41 itemId 42 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 42 extent_offset 2706262 extent_length 47962
+Heic::ilocBox Item: 42 itemId 43 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 43 extent_offset 2754224 extent_length 41455
+Heic::ilocBox Item: 43 itemId 44 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 44 extent_offset 2795679 extent_length 39548
+Heic::ilocBox Item: 44 itemId 45 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 45 extent_offset 2835227 extent_length 43351
+Heic::ilocBox Item: 45 itemId 46 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 46 extent_offset 2878578 extent_length 53491
+Heic::ilocBox Item: 46 itemId 47 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 47 extent_offset 2932069 extent_length 44510
+Heic::ilocBox Item: 47 itemId 48 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 48 extent_offset 2976579 extent_length 34372
+Heic::ilocBox Item: 48 itemId 49 data_reference_index 1 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 49 extent_offset 0 extent_length 8
+Heic::ilocBox Item: 49 itemId 50 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 50 extent_offset 5113 extent_length 20021
+Heic::ilocBox Item: 50 itemId 51 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 51 extent_offset 3010951 extent_length 2571
+Heic::ilocBox Item: 51 itemId 52 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 52 extent_offset 25134 extent_length 758
+Heic::ilocBox Item: 52 itemId 53 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 53 extent_offset 3013522 extent_length 902
+Heic::ilocBox Item: 53 itemId 54 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 54 extent_offset 25892 extent_length 453
+Heic::ilocBox Item: 54 itemId 55 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 55 extent_offset 3014424 extent_length 2937
+Heic::ilocBox Item: 55 itemId 56 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 56 extent_offset 26345 extent_length 453
+Heic::ilocBox Item: 56 itemId 57 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 57 extent_offset 3017361 extent_length 873
+Heic::ilocBox Item: 57 itemId 58 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 58 extent_offset 26798 extent_length 453
+Heic::ilocBox Item: 58 itemId 59 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 59 extent_offset 27251 extent_length 2452
+Heic::ilocBox Item: 59 itemId 60 data_reference_index 0 base_offset 0 extent_count 1
+Heic::ilocBox     Extent: 60 extent_offset 29703 extent_length 3198
+Heic::ilocBox file->pos() 5097
+Heic::nextHeifBox offset: 5097 length: 3013137 type: "mdat"
+Heic::getHeifBox type = "mdat" offset = 5097 length = 3013137
+Heic::mdatBox offset = 5097
+Heic::parseHeic exifItemID = -1 exifOffset = 0
+WARNING Metadata::readMetadata "Unable to parse metadata for /Users/roryhill/Pictures/_test2/IMG_3492.HEIC. "
+
+
+IconViewDelegate::setThumbDimensions cellSize = QSize(56, 56) frameSize = QSize(48, 48) thumbSize = QSize(40, 40)
+IconViewDelegate::setThumbDimensions cellSize = QSize(56, 56) frameSize = QSize(48, 48) thumbSize = QSize(40, 40)
+IconView::thumbsFitTopOrBottom "Thumbnails" newViewportHt = 134 maxCellHeight = 274 minCellHeight = 58 bestAspectRatio = 1 iconHeight = 116 iconWidth = 116 hMax = 256 hMin = 40 G::iconWMax = 0 G::iconHMax = 0 G::maxIconSize = 256
+IconViewDelegate::setThumbDimensions cellSize = QSize(132, 132) frameSize = QSize(124, 124) thumbSize = QSize(116, 116)
+IconViewDelegate::sizeHint   row = 2 cellSize = QSize(132, 132)
+IconViewDelegate::paint  row = 0 currentRow = 0 cellRect = QRect(0,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(8,8 116x116) iconRect = QRect(66,66 -1x-1)
+IconViewDelegate::paint  row = 1 currentRow = 0 cellRect = QRect(132,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(140,8 116x116) iconRect = QRect(198,66 -1x-1)
+IconViewDelegate::paint  row = 2 currentRow = 0 cellRect = QRect(264,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(272,8 116x116) iconRect = QRect(330,66 -1x-1)
+IconViewDelegate::paint  row = 0 currentRow = 0 cellRect = QRect(0,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(8,8 116x116) iconRect = QRect(66,66 -1x-1)
+IconViewDelegate::paint  row = 1 currentRow = 0 cellRect = QRect(132,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(140,8 116x116) iconRect = QRect(198,66 -1x-1)
+IconViewDelegate::paint  row = 2 currentRow = 0 cellRect = QRect(264,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(-1, -1) thumbRect = QRect(272,8 116x116) iconRect = QRect(330,66 -1x-1)
+IconViewDelegate::paint  row = 1 currentRow = 0 cellRect = QRect(132,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(116, 77) thumbRect = QRect(140,8 116x116) iconRect = QRect(140,27 116x77)
+IconViewDelegate::paint  row = 2 currentRow = 0 cellRect = QRect(264,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(77, 116) thumbRect = QRect(272,8 116x116) iconRect = QRect(291,8 77x116)
+IconView::bestAspect G::iconWMax = 256 G::iconHMax = 256 bestAspectRatio = 1
+IconView::bestAspect G::iconWMax = 256 G::iconHMax = 256 bestAspectRatio = 1
+IconView::thumbsFitTopOrBottom "Thumbnails" newViewportHt = 134 maxCellHeight = 274 minCellHeight = 58 bestAspectRatio = 1 iconHeight = 116 iconWidth = 116 hMax = 256 hMin = 40 G::iconWMax = 256 G::iconHMax = 256 G::maxIconSize = 256
+IconViewDelegate::sizeHint   row = 2 cellSize = QSize(132, 132)
+IconViewDelegate::setThumbDimensions cellSize = QSize(132, 132) frameSize = QSize(124, 124) thumbSize = QSize(116, 116)
+IconViewDelegate::paint  row = 0 currentRow = 0 cellRect = QRect(0,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(116, 77) thumbRect = QRect(8,8 116x116) iconRect = QRect(8,27 116x77)
+IconViewDelegate::paint  row = 1 currentRow = 0 cellRect = QRect(132,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(116, 77) thumbRect = QRect(140,8 116x116) iconRect = QRect(140,27 116x77)
+IconViewDelegate::paint  row = 2 currentRow = 0 cellRect = QRect(264,0 132x132) thumbSize = QSize(116, 116) iconsize = QSize(77, 116) thumbRect = QRect(272,8 116x116) iconRect = QRect(291,8 77x116)
