@@ -71,6 +71,10 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
+    qDebug() << "Thumb::loadFromEntireFile"
+             << "thumbMax =" << thumbMax
+             << fPath
+                ;
 
     QImageReader thumbReader(fPath);
     thumbReader.setAutoTransform(true);
@@ -83,6 +87,11 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return false;
     }
     double a = w * 1.0 / h;
+    qDebug() << "Thumb::loadFromEntireFile"
+             << "w =" << w
+             << "h =" << h
+             << "a =" << a
+                ;
     QString src = "Thumb::loadFromEntireFile";
 
     emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
@@ -92,6 +101,10 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src);
 
     image = image.scaled(thumbMax, Qt::KeepAspectRatio);
+    qDebug() << "Thumb::loadFromEntireFile"
+             << "image.width() =" << image.width()
+             << "image.height() =" << image.height()
+                ;
     if (image.isNull()) {
         G::error("loadFromEntireFile", fPath, "Could not read thumb using thumbReader.");
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;

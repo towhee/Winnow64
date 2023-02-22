@@ -1479,11 +1479,16 @@ void ImageCache::cacheImage(int id, int cacheKey)
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
     Do not cache video files, but do show them as cached for the cache status display.
 */
-    if (debugCaching) {
+//    if (debugCaching)
+    {
         QString k = QString::number(cacheKey).leftJustified((4));
+        if (debugCaching)
         qDebug().noquote() << "ImageCache::cacheImage"
                            << "     decoder" << id
-                           << "row =" << k;
+                           << "row =" << k
+                           << "decoder[id]->fPath =" << decoder[id]->fPath
+                           << "dm->currentFilePath =" << dm->currentFilePath
+                              ;
     }
 
     if (decoder[id]->status != ImageDecoder::Status::Video) {
@@ -1501,6 +1506,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
         // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
             // load in ImageView
+            //qDebug().noquote() << "ImageCache::cacheImage  emit loadImage";
             emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
             // revert central view
             emit imageCachePrevCentralView();

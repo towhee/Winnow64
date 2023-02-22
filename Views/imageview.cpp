@@ -125,34 +125,30 @@ ImageView::ImageView(QWidget *parent,
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
     isFirstImageNewFolder = true;
+    isBusy = false;
 }
 
 bool ImageView::loadImage(QString fPath, QString src)
 {
 /*
-    There are two sources for the image (pixmap): a file or the cache.
+    All image decoding and loading into memory happens in ImageCache in a separate thread
+    to maximise performance.  This function scales the loaded image in a graphicsView.
 
-    The first choice is the image cache. In the cache two versions of the image are stored:
-    the full scale and a preview scaled to dimensions defined in the preferences. The preview
-    is used if it is large enough to fit in the window (viewport) without scaling larger than
-    1. If the preview is too small then the full size is used.
+    The image shown in ImageView is always the current image.
 
-    If the image has not been cached (usually the case for the first image to be shown, as the
-    caching is just starting) then the full size image is read from the file.
+    Flow:
 
-    Previews are used to maximise performance paging through all the images. However, to
-    examine an image in detail, the full scale image is much better. As soon as the preview
-    has been loaded a timer is started. If the user moves on to the next image before a timer
-    interval has elapsed then the timer is reset. Otherwise, when the timer interval occurs
-    (loadFullSizeTimer->setInterval(500)) then the full scale pixmap from the cache is set as
-    the item pixmap in the scene.
+        • Event triggers MW::fileSelectionChange (click on thumbnail, next, etc)
+            • This function is called
+                • Nothing happens if image not cached, otherwise scaled and shown
+            * Image path is sent to Image Cache
+                • If not cached then add to cache
+                * If it is the current image then signal this function
 
-    Moving from one image to the next, the scenario where the currrent image is full scale and
-    the next is a preview, requires the zoom factor to be normalized to prevent jarring
-    changes in perceived scale by the user.
+    Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageView::loadImage", fPath + " Src:" + src);
-//    qDebug() << "ImageView::loadImage: << fPath << src;
+    //qDebug() << "ImageView::loadImage:" << fPath << src;
 
     // No folder selected yet
     if (!fPath.length()) {
@@ -168,6 +164,9 @@ bool ImageView::loadImage(QString fPath, QString src)
         qWarning() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
         return false;
     }
+
+    // set busy in case tryAgain attempt after already moved on to another image
+    isBusy = true;
 
     /* important to keep currentImagePath. It is used to check if there isn't an image (when
     currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
@@ -195,6 +194,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
+            isBusy = false;
         }
         else {
             // set null pixmap
@@ -214,9 +214,20 @@ bool ImageView::loadImage(QString fPath, QString src)
     int sfRow = dm->proxyRowFromModelRow(dmRow);
     if (sfRow == -1) return false;
     bool isCached = false;
+    bool isCaching = false;
     if (icd->cacheItemList.size() >= sfRow) {
         isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
     }
+    /* try again
+    if (!isCached) {
+        isCaching = icd->cacheItemList.at(sfRow).isCaching || src == "ImageCache::cacheImage";
+        if (isCaching) {
+            qDebug() << "ImageView::loadImage   emit tryAgain" << fPath;
+            isBusy = false;
+            emit tryAgain(fPath);
+        }
+    }
+    //*/
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
         bool imageAvailable = icd->imCache.find(fPath, image);
@@ -265,6 +276,8 @@ bool ImageView::loadImage(QString fPath, QString src)
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
     }
+
+    isBusy = false;
 
     if (isLoaded) return true;
     else {

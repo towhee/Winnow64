@@ -207,7 +207,8 @@ private:
 
     void flash(QModelIndex idx);
     // redirect from action to relevent function (use currentIdx)
-    void rename();
+    void renameTemplate();
+    void renameStyle();
     void moveUp();
     void moveDown();
     void copy();
@@ -285,7 +286,8 @@ private:
     QAction *collapseAllAction;
     QAction *soloAction;
     QAction *expandRecursivelyAction;
-    QAction *renameAction;
+    QAction *renameTemplateAction;
+    QAction *renameStyleAction;
     QAction *readTemplateFromFileAction;
     QAction *saveTemplateToFileAction;
     QAction *newTemplateAction;

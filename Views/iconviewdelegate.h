@@ -26,7 +26,7 @@ public:
                const QModelIndex &index) const override;
 
     QSize sizeHint(const QStyleOptionViewItem &option,
-                   const QModelIndex &/*index*/ ) const override;
+                   const QModelIndex &index ) const override;
 
     void setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize,
                             bool showThumbLabels, QString labelChoice,

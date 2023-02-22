@@ -75,8 +75,6 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
     titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
-//    int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.2;
-//    setFixedHeight(h);
 }
 
 void DockTitleBar::setTitle(QString title)

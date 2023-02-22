@@ -1799,7 +1799,8 @@ void MW::createMenus()
     fsTreeActions->append(addBookmarkActionFromContext);
     fsTreeActions->append(separatorAction3);
 
-    // bookmarks context menu
+    // BOOKMARKS CONTEXT MENU
+
     QList<QAction *> *favActions = new QList<QAction *>;
     favActions->append(refreshBookmarkAction);
     favActions->append(revealFileActionFromContext);
@@ -1831,9 +1832,13 @@ void MW::createMenus()
     metadataActions->append(separatorAction);
     metadataActions->append(reportMetadataAction);
     metadataActions->append(prefInfoAction);
-    metadataActions->append(separatorAction1);
+//    metadataActions->append(separatorAction1);
 //    metadataActions->append(metadataDockLockAction);
-    metadataActions->append(metadataFixedSizeAction);
+//    metadataActions->append(metadataFixedSizeAction);
+
+    // EMBELLISH CONTEXT MENU - see EmbelProperties::mousePressEvent
+
+    // THUMBVIEW CONTEXT MENU
 
     // append group actions for thumbView context menu
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
@@ -1841,7 +1846,6 @@ void MW::createMenus()
     QAction *embelExportGroupAct = new QAction(tr("Embellish export..."), this);
     embelExportGroupAct->setMenu(embelExportMenu);
 
-    // THUMBVIEW CONTEXT MENU
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
 //    thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(pickAction);

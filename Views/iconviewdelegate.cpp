@@ -202,7 +202,13 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     textHtOffset.setX(0);
     textHtOffset.setY(fPad + textHeight - textHeadroom);
 
-//    reportThumbAttributes();
+//    /* debug
+    qDebug() << "IconViewDelegate::setThumbDimensions"
+             << "cellSize =" << cellSize
+             << "frameSize =" << frameSize
+             << "thumbSize =" << thumbSize
+                ;
+                //*/
 }
 
 QString IconViewDelegate::diagnostics()
@@ -299,13 +305,15 @@ void IconViewDelegate::setCurrentRow(int row)
     currentRow = row;               // not used
 }
 
-QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
-                              const QModelIndex& /*index*/) const
+QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
+                                 const QModelIndex& index) const
 {
-//    qDebug() << "IconViewDelegate::sizeHint  "
-//             << "row =" << index.row();
     QFont font = QApplication::font();
     QFontMetrics fm(font);
+    qDebug() << "IconViewDelegate::sizeHint  "
+             << "row =" << index.row()
+             << "cellSize =" << cellSize
+                ;
     return cellSize;
 }
 
@@ -393,7 +401,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    iconSize.width(), iconSize.height());
 
-    /* debug
+//    /* debug
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow

@@ -199,13 +199,13 @@ void EmbelProperties::initialize()
     // CONTEXT MENU
     expandAllAction = new QAction(tr("Expand all"), this);
     expandAllAction->setShortcutVisibleInContextMenu(true);
-    expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
+    //expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
     addAction(expandAllAction);
     connect(expandAllAction, &QAction::triggered, this, &EmbelProperties::expandAllRows);
 
     collapseAllAction = new QAction(tr("Collapse all"), this);
     collapseAllAction->setShortcutVisibleInContextMenu(true);
-    collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
+    //collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, this, &EmbelProperties::collapseAllRows);
 
@@ -233,9 +233,13 @@ void EmbelProperties::initialize()
     separatorAction0->setSeparator(true);
     addAction(separatorAction0);
 
-    renameAction = new QAction(tr("Rename template"), this);
-    addAction(renameAction);
-    connect(renameAction, &QAction::triggered, this, &EmbelProperties::rename);
+    renameTemplateAction = new QAction(tr("Rename template"), this);
+    addAction(renameTemplateAction);
+    connect(renameTemplateAction, &QAction::triggered, this, &EmbelProperties::renameTemplate);
+
+    renameStyleAction = new QAction(tr("Rename style"), this);
+    addAction(renameStyleAction);
+    connect(renameStyleAction, &QAction::triggered, this, &EmbelProperties::renameStyle);
 
     copyTemplateAction = new QAction(tr("Copy template"), this);
     addAction(copyTemplateAction);
@@ -700,11 +704,14 @@ void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 }
 */
 
-void EmbelProperties::rename() {
+void EmbelProperties::renameTemplate() {
     if (G::isLogger) G::log("EmbelProperties::rename");
-    if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
-    if (currentIdx == templateIdx) renameCurrentTemplate();
-    if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
+    renameCurrentTemplate();
+}
+
+void EmbelProperties::renameStyle() {
+    if (G::isLogger) G::log("EmbelProperties::rename");
+    renameCurrentStyle();
 }
 
 void EmbelProperties::copy() {
@@ -778,6 +785,9 @@ void EmbelProperties::renameCurrentStyle()
     // cleanup remove oldName from styleMap
     if (styleMap.contains(oldName)) {
         styleMap.remove(oldName);
+    }
+    if (styleList.contains(oldName)) {
+        styleList.remove(styleList.indexOf(oldName));
     }
 }
 
@@ -5289,7 +5299,8 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     }
 
     if (event->button() == Qt::RightButton) {
-        renameAction->setVisible(false);
+        renameTemplateAction->setVisible(false);
+        renameStyleAction->setVisible(false);
         copyTemplateAction->setVisible(false);
         newTemplateAction->setVisible(false);
         readTemplateFromFileAction->setVisible(false);
@@ -5302,7 +5313,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
 
 //        QModelIndex idx = indexAt(event->pos());
 //        currentIdx = model->index(idx.row(), 0, idx.parent());
-        /*
+//        /*
         qDebug() << "EmbelProperties::mousePressEvent"
                  << currentIdx.data().toString()
                  << currentIdx.parent().data().toString()
@@ -5311,7 +5322,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
 //                    */
 
         if (currentIdx.parent() == templateIdx || currentIdx == templateIdx) {
-            renameAction->setVisible(true);
+            renameTemplateAction->setVisible(true);
             copyTemplateAction->setVisible(true);
             newTemplateAction->setVisible(true);
             readTemplateFromFileAction->setVisible(true);
@@ -5319,7 +5330,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
         }
 
         if (currentIdx.parent() == stylesIdx) {
-            renameAction->setVisible(true);
+            renameStyleAction->setVisible(true);
             copyStyleAction->setVisible(true);
         }
 

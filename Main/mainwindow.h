@@ -353,6 +353,7 @@ public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
+    void tryLoadImageAgain(QString fPath);
     bool reset(QString src = "");
     void nullFiltration();
     void filterLastDay();

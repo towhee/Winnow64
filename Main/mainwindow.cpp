@@ -1817,7 +1817,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::stop) return;
     G::isNewSelection = false;
 
-//   /*
+   /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -1994,6 +1994,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
+            //qDebug() << "MW::fileSelectionChange emit setImageCachePosition" << dm->currentFilePath;
             emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
         }
     }
@@ -2022,6 +2023,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fsTree->scrollToCurrent();
 
     if (G::isLogger) G::log("MW::fileSelectionChange", "Finished " + fPath);
+}
+
+void MW::tryLoadImageAgain(QString fPath)
+{
+/*
+
+*/
+    if (G::isLogger) G::log("MW::tryLoadImageAgain", fPath);
+    QTimer::singleShot(500, [this, fPath]() {
+//                           if (!imageView->isBusy)
+                               imageView->loadImage(fPath, "MW::tryLoadImageAgain");
+                      });
 }
 
 void MW::folderAndFileSelectionChange(QString fPath, QString src)
@@ -2519,7 +2532,6 @@ void MW::loadLinearNewFolder()
 
     // re-enable sorting and filtering
     if (filters->isVisible()) {
-        qDebug() << "MW::loadLinearNewFolder launchBuildFilters())";
         launchBuildFilters();
     }
     filters->setEnabled(true);
