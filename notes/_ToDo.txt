@@ -1,6 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Make sure HEIC also works on PC including thumbs
+- Remove ImageView loadImage tryagain/isBusy
+- When add new workspace the menu shortcut is not updated until reopen app
+- folderAndFileSelectionChange does not show folder highlight change
 - Sort is not sticky
 - Shift Left arrow not working
 - If try to open Winnow when already open then next time does not remember location/size
@@ -80,6 +84,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- TableView default column widths not working
 - ∆ label unfilters DataModel
 - Embellish right click rename template opens rename style dialog
 - Crash when rapidly toggle rating or label

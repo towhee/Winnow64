@@ -13,6 +13,9 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
 
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
+
     connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
@@ -26,24 +29,38 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     QTransform trans;
     int row = dm->rowFromPath(fPath);
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-    /* debug
-    qDebug() << "Thumb::checkOrientation"
-             << "row =" << row
-             << "orientation =" << orientation
-             << fPath;//*/
-    switch(orientation) {
+    int degrees = 0;
+    int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+    switch (orientation) {
         case 3:
-            trans.rotate(180);
+            degrees = rotationDegrees + 180;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 6:
-            trans.rotate(90);
+            degrees = rotationDegrees + 90;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 8:
-            trans.rotate(270);
+            degrees = rotationDegrees + 270;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
+    }
+
+    if (isDebug)
+    {
+    qDebug().noquote()
+             << "Thumb::checkOrientation"
+             << "orientation =" << orientation
+             << "rotationDegrees   =" << rotationDegrees
+             << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
+             << "fPath   =" << fPath
+                ;
     }
 }
 
@@ -53,13 +70,15 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     see top of FrameDecoder.cpp for documentation
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
-//    /*
+
     if (isDebug)
+    {
     qDebug() << "Thumb::loadFromVideo                  "
              << "row =" << dmRow
              << fPath
                 ;
-                //*/
+    }
+
     QModelIndex dmIdx = dm->index(dmRow, 0);
     emit videoFrameDecode(fPath, dmIdx, dm->instance);
 }
@@ -69,12 +88,14 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     if (G::isLogger) G::log("Thumb::loadFromEntireFile", fPath);
     if (instance != dm->instance) return false;
 
-    thumbMax.setWidth(G::maxIconSize);
-    thumbMax.setHeight(G::maxIconSize);
+//    QImageReader thumbReader(fPath);
+//    thumbReader.setAutoTransform(true);
+//    image = thumbReader.read();
+    if (!image.load(fPath)) {
+        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using QImage::load." << fPath;
+        return false;
+    }
 
-    QImageReader thumbReader(fPath);
-    thumbReader.setAutoTransform(true);
-    image = thumbReader.read();
     QFile(fPath).setPermissions(oldPermissions);
     int w = image.width();
     int h = image.height();
@@ -85,11 +106,15 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     double a = w * 1.0 / h;
     QString src = "Thumb::loadFromEntireFile";
 
+    int alignRight = Qt::AlignRight | Qt::AlignVCenter;
+    qDebug() << "Thumb::loadFromEntireFile  alignRight =" << alignRight
+             << "G::AspectRatioColumn =" << G::AspectRatioColumn;
+
     emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
     emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
     emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
     emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
-    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src);
+    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
 
     image = image.scaled(thumbMax, Qt::KeepAspectRatio);
     if (image.isNull()) {
@@ -97,14 +122,14 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
+
     return true;
 }
 
 bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log("Thumb::loadFromJpgData", fPath);
-    thumbMax.setWidth(G::maxIconSize);
-    thumbMax.setHeight(G::maxIconSize);
+
     bool success = false;
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -188,6 +213,19 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     return success;
 }
 
+bool Thumb::loadFromHeic(QString &fPath, QImage &image)
+{
+    if (G::isLogger) G::log("Thumb::loadFromHeic", fPath);
+
+    #ifdef Q_OS_MAC
+    if (image.load(fPath)) {
+        image = image.scaled(thumbMax, Qt::KeepAspectRatio);
+        return true;
+    }
+    return false;
+    #endif
+}
+
 bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 {
 /*
@@ -197,7 +235,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
-    if (isDebug) qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
+    //if (isDebug) qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         return false;
     }
@@ -231,7 +269,11 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     // Heic natively supported on Mac
     #ifdef Q_OS_MAC
     if (ext == "heic") {
-        return loadFromEntireFile(fPath, image, dmRow);
+        if (loadFromHeic(fPath, image)) {
+            if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
+            return true;
+        }
+        else return false;
     }
     #endif
 
@@ -282,7 +324,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             }
 //            qDebug() << "Thumb::loadThumb" << fPath << "Loaded thumb by resampling tiff";
         }
-        // rgh remove heic
+        // rgh windows only??
         else if (ext == "heic") {
             ImageMetadata m = dm->imMetadata(fPath);
             #ifdef Q_OS_WIN

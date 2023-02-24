@@ -364,7 +364,7 @@ void ImageView::scale()
 
     isMouseDoubleClick = false;
 
-    /*
+    /* debug
     qDebug() << "ImageView::scale"
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
@@ -709,7 +709,7 @@ void ImageView::rotateImage(int degrees)
     ImageDecoder, Pixmap or Thumb, depending on where the load image is called from.
 */
     if (G::isLogger) G::log("ImageView::rotateImage");
-    qDebug() << "ImageView::rotateImage" << degrees;
+    qDebug() << "ImageView::rotateImage degrees =" << degrees;
 
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
@@ -732,6 +732,8 @@ void ImageView::rotateImage(int degrees)
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
+    // not being used
+
     if (G::isLogger) G::log("ImageView::rotateByExifRotation", imageFullPath);
     qDebug() << "ImageView::rotateByExifRotation" << imageFullPath;
 

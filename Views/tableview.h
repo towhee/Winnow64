@@ -31,6 +31,7 @@ public slots:
     void selectPageUp();    // rgh req'd?
     void selectPageDown();  // rgh req'd?
     void updateVisible();
+    void resizeColumns();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -40,7 +41,6 @@ protected:
 //    int defaultCulumnWidth(int column) const override;
 
 private:
-    void resizeColumns();
     IconView *thumbView;
     DataModel *dm;
     void createOkToShow();
