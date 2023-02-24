@@ -39,6 +39,7 @@ private:
 
     bool loadFromJpgData(QString &fPath, QImage &image);
     bool loadFromTiffData(QString &fPath, QImage &image);
+    bool loadFromHeic(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QString &fPath, QImage &image);

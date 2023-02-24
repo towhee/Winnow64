@@ -119,14 +119,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    workspaceActions.at(5)->setText("Wide test");
+    QString m = workspaceActions.at(5)->text();
     qDebug()
-            << "BuildFilters::Action::Reset =" << BuildFilters::Action::Reset
-            << "BuildFilters::Reset =" << BuildFilters::Reset
-            << "BuildFilters::Action::Update =" << BuildFilters::Action::Update
-            << "BuildFilters::Update =" << BuildFilters::Update
-            << "BuildFilters::Action::UpdateCategory =" << BuildFilters::Action::UpdateCategory
-            << "BuildFilters::UpdateCategory =" << BuildFilters::UpdateCategory
+            << m
                ;
     return;
 

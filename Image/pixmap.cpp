@@ -252,12 +252,12 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     // Successfully loaded to a QImage
 
-    // rotate if portrait image
+    // rotate
     if (metadata->rotateFormats.contains(ext)) {
         QTransform trans;
         int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
         int rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
-        int degrees;
+        int degrees = 0;
         if (orientation) {
             switch(orientation) {
             case 3:
@@ -284,6 +284,16 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             trans.rotate(rotationDegrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
         }
+
+        /* debug
+        qDebug().noquote()
+                 << "Pixmap::load"
+                 << "orientation =" << orientation
+                 << "rotationDegrees   =" << rotationDegrees
+                 << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
+                 << "fPath   =" << fPath
+                    ;
+                    //*/
     }
 
     // color manage if available

@@ -32,15 +32,16 @@ void MW::newWorkspace()
     if (G::isLogger) G::log("MW::newWorkspace");
     int n = workspaces->count();
     if (n > 9) {
-        QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\nto delete or reassign workspaces.";
+        QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\n"
+                      "to delete or reassign workspaces.";
         QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
         return;
     }
     bool ok;
     QInputDialog *wsNew = new QInputDialog;
     QString workspaceName = wsNew->getText(this, tr("New Workspace"),
-        tr("Name:                                                            "),
-        QLineEdit::Normal, "", &ok);
+                                           tr("Name:                                                            "),
+                                           QLineEdit::Normal, "", &ok);
 
     // duplicate names illegal
     workspaceName = fixDupWorkspaceName(workspaceName);
@@ -51,6 +52,7 @@ void MW::newWorkspace()
         workspaceActions.at(n)->setText(workspaceName);
         workspaceActions.at(n)->setObjectName("workspace" + QString::number(n));
         workspaceActions.at(n)->setToolTip("workspace" + QString::number(n));
+        workspaceActions.at(n)->setShortcutVisibleInContextMenu(true);
         workspaceActions.at(n)->setShortcut(QKeySequence("Ctrl+" + QString::number(n)));
         workspaceActions.at(n)->setVisible(true);
     }

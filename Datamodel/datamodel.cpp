@@ -1105,6 +1105,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
     setData(index(row, G::LoadMsecPerMpColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::OrientationColumn), QString::number(m.orientation));
+    setData(index(row, G::OrientationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));
     setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
@@ -1247,17 +1248,19 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                     ;
         return;
     }
-    QModelIndex cIdx = index(dmIdx.row(),dmIdx.column());
-    /*
+//    QModelIndex cIdx = index(dmIdx.row(),dmIdx.column());
+//    /*
     qDebug() << "DataModel::setValue"
-             << "Instance =" << instance
-             << "this Instance =" << this->instance
-             << "G::stop =" << G::stop
+//             << "Instance =" << instance
+//             << "this Instance =" << this->instance
+//             << "G::stop =" << G::stop
              << "src =" << src
              << "dmIdx =" << dmIdx
-             << "cIdx =" << cIdx
-             << "rowCount() =" << rowCount()
+//             << "cIdx =" << cIdx
+//             << "rowCount() =" << rowCount()
              << "value =" << value
+             << "column = =" << dmIdx.column()
+             << "align =" << align
              << currentFolderPath;
     //*/
     mutex.lock();

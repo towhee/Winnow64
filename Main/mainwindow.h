@@ -277,6 +277,9 @@ public:
     } fullScreenDocks;
     bool isNormalScreen;
 
+    // first use
+    bool isFirstTimeTableViewVisible = true;
+
     // tooltip for tabs in docked and tabified panels
 //    int prevTabIndex= -1;
 

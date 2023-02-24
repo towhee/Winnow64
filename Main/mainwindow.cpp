@@ -2532,6 +2532,7 @@ void MW::loadLinearNewFolder()
 
     // re-enable sorting and filtering
     if (filters->isVisible()) {
+        //qDebug() << "MW::loadLinearNewFolder launchBuildFilters())";
         launchBuildFilters();
     }
     filters->setEnabled(true);
@@ -4082,6 +4083,8 @@ void MW::setRotation(int degrees)
     The rotation is updated in the image file EXIF using exifTool in separate threads.
 */
     if (G::isLogger) G::log("MW::setRotation");
+    qDebug() << "MW::setRotation degrees =" << degrees;
+
     // rotate current loupe view image
     imageView->rotateImage(degrees);
 
@@ -4111,7 +4114,9 @@ void MW::setRotation(int degrees)
         emit setValueSf(orientationIdx, newOrientation, dm->instance,
                         "MW::setRotation", Qt::EditRole);
 
-        // rotate thumbnail
+        // rotate thumbnail(s)
+        QTransform trans;
+        trans.rotate(degrees);
         QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
@@ -4140,6 +4145,71 @@ void MW::setRotation(int degrees)
             QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
         }
     }
+
+    /* release 1.32 version
+    if (G::isLogger) G::log(__FUNCTION__);
+    // rotate current loupe view image
+    imageView->rotateImage(degrees);
+
+    // iterate selection
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    for (int i = 0; i < selection.count(); ++i) {
+        // update rotation amount in the data model
+        int row = selection.at(i).row();
+        QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
+        int orientation = orientationIdx.data(Qt::EditRole).toInt();
+        int prevRotation = 0;
+        switch (orientation) {
+        case 6: prevRotation = 90;  break;
+        case 3: prevRotation = 180; break;
+        case 8: prevRotation = 270; break;
+        }
+
+        int newRotation = prevRotation + degrees;
+        if (newRotation >= 360) newRotation = newRotation - 360;
+        int newOrientation = 0;
+        switch (newRotation) {
+        case 90:  newOrientation = 6; break;
+        case 180: newOrientation = 3; break;
+        case 270: newOrientation = 8; break;
+        }
+
+        dm->sf->setData(orientationIdx, newOrientation);
+
+        // rotate thumbnail(s)
+        QTransform trans;
+        trans.rotate(degrees);
+        QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
+        QString fPath = thumbIdx.data(G::PathRole).toString();
+        QStandardItem *item = new QStandardItem;
+        item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
+        QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
+        pm = pm.transformed(trans, Qt::SmoothTransformation);
+        item->setIcon(pm);
+        thumbView->refreshThumbs();
+        QApplication::processEvents();
+
+        // rotate selected cached full size images
+        QImage image;
+        if (icd->imCache.find(fPath, image)) {
+            image = image.transformed(trans, Qt::SmoothTransformation);
+            icd->imCache.insert(fPath, image);
+        }
+
+        // update exif in image
+        QString orient;
+        switch (newRotation) {
+        case 0:   orient = "1"; break;
+        case 90:  orient = "6"; break;
+        case 180: orient = "3"; break;
+        case 270: orient = "8"; break;
+        }
+        if (orient.length() && G::modifySourceFiles) {
+            // note that Metadata::writeOrientation must be static!
+            QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
+        }
+    }
+    //*/
 }
 
 bool MW::isValidPath(QString &path)

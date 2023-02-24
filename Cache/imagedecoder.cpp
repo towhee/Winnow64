@@ -194,9 +194,6 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        QImageReader imageReader(fPath);
-        imageReader.setAutoTransform(true);
-        image = imageReader.read();
         if (!image.load(fPath)) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
@@ -266,7 +263,7 @@ bool ImageDecoder::load()
         imFile.close();
     }
 
-    // check for null image
+    // image loaded, check for null image
     if (image.width() == 0 || image.height() == 0) {
         status = Status::Failed;
         return false;
@@ -293,9 +290,9 @@ void ImageDecoder::rotate()
 //        mutex.unlock();
     }
     QTransform trans;
-    int degrees;
+    int degrees = 0;
     if (n.orientation > 0) {
-        switch(n.orientation) {
+        switch (n.orientation) {
         case 3:
             degrees = n.rotationDegrees + 180;
             if (degrees > 360) degrees = degrees - 360;
@@ -320,6 +317,14 @@ void ImageDecoder::rotate()
         trans.rotate(n.rotationDegrees);
         image = image.transformed(trans, Qt::SmoothTransformation);
     }
+    /* debug
+    qDebug().noquote()
+             << "ImageDecoder::rotate "
+             << "n.orientation =" << n.orientation
+             << "n.rotationDegrees =" << n.rotationDegrees
+             << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
+             << "n.fPath =" << n.fPath
+                ;//*/
 }
 
 void ImageDecoder::colorManage()
@@ -359,7 +364,6 @@ void ImageDecoder::run()
         status = Status::Done;
     }
 
-//    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
     if (G::isLogger) {
         mutex.lock();
         G::log("ImageDecoder::run", "Thread Done" + QString::number(threadId) + " done");
