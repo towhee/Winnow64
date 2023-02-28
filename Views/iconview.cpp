@@ -1279,7 +1279,6 @@ void IconView::updateView()
 */
     if (isDebug || G::isLogger) G::log("IconView::updateView", objectName());
     update();
-//    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
 }
 
 void IconView::scrollDown(int /*step*/)

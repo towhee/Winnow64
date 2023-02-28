@@ -252,7 +252,14 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     // read metadata from file into metadata->m
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     QFileInfo fileInfo(fPath);
-    metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
+    bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
+    if (!isMetaLoaded) {
+        qDebug() << "MetaRead::readMetadata"
+                 << "ow =" << sfIdx.row()
+                 << "Load meta failed"
+                 ;
+    }
+
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
 
@@ -367,10 +374,11 @@ void MetaRead::readRow(int sfRow)
         }
         return;
     }
+//    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
     // load metadata
     QString fPath = sfIdx.data(G::PathRole).toString();
-    if (!G::allMetadataLoaded && G::useReadMetadata) {
+    if (!G::allMetadataLoaded /*&& !isVideo*/ && G::useReadMetadata) {
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded /*&& !abort*/) {
             if (!abort) {

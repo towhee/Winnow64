@@ -102,7 +102,6 @@ void MW::filterChange(QString source)
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    qDebug() << "MW::filterChange buildFilters->build(BuildFilters::Update)";
     buildFilters->update();
 
     // recover sort after filtration
@@ -335,7 +334,10 @@ void MW::sortChange(QString source)
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
-        /*
+    QList<G::dataModelColumns> coreSorts;
+    coreSorts << G::NameColumn << G::TypeColumn << G::SizeColumn << G::CreatedColumn << G::ModifiedColumn;
+
+    /*
     qDebug() << "MW::sortChange" << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "G::isInitializing =" << G::isInitializing
@@ -343,11 +345,12 @@ void MW::sortChange(QString source)
              << "sortColumn =" << sortColumn
              << "isReverseSort =" << isReverseSort
              << "prevIsReverseSort =" << prevIsReverseSort
+             << "coreSorts =" << coreSorts
                 ;
 //                */
 
     // reset sort to file name if was sorting on non-core metadata while folder still loading
-    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) {
+    if (!G::isNewFolderLoaded && !coreSorts.contains(sortColumn)) {
         prevSortColumn = G::NameColumn;
         updateSortColumn(G::NameColumn);
     }

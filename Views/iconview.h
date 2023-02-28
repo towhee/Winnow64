@@ -50,7 +50,6 @@ public:
                     QPoint mousePos = QPoint(-1, -1));
 
     void updateLayout();
-    void updateView();
     bool readyToScroll();
 
     IconViewDelegate *iconViewDelegate;
@@ -86,6 +85,7 @@ public:
     double bestAspectRatio;
 
 public slots:
+    void updateView();
     void repaintView();
     void scrollDown(int);
     void scrollUp(int);

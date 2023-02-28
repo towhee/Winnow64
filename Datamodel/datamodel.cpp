@@ -1249,7 +1249,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
         return;
     }
 //    QModelIndex cIdx = index(dmIdx.row(),dmIdx.column());
-//    /*
+    /*
     qDebug() << "DataModel::setValue"
 //             << "Instance =" << instance
 //             << "this Instance =" << this->instance

@@ -38,11 +38,21 @@ private:
     QFileDevice::Permissions oldPermissions;
 
     bool loadFromJpgData(QString &fPath, QImage &image);
-    bool loadFromTiffData(QString &fPath, QImage &image);
+    bool loadFromTiff(QString &fPath, QImage &image, int row);
     bool loadFromHeic(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QString &fPath, QImage &image);
+
+    // status flags
+    bool isThumbOffset;
+    bool isThumbLength;
+    bool isDimensions;
+    bool isAspectRatio;
+    bool isEmbeddedThumb;
+
+    uint offsetThumb = 0;
+    uint lengthThumb = 0;
 
     bool isDebug;
 };

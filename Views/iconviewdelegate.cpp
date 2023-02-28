@@ -333,13 +333,18 @@ void IconViewDelegate::paint(QPainter *painter,
                        width or height will have to be centered inside the thumbRect
     textRect         = a rectangle below itemRect
 */
+    // Ignore paint before icon has been loaded into DataModel
+    if (index.data(Qt::DecorationRole).isNull()) return;
+
     painter->save();
-    /*
+    /* debug
     qDebug() << "IconViewDelegate::paint  "
              << "row =" << index.row()
-             << painter
              << "option.state =" << option.state
-             << "option.type =" << option.type
+//             << "option.state just enabled =" << enabled
+//             << "option.type =" << option.type
+//             << "option.features =" << option.features
+//             << "option.index =" << option.index
                 ;
             //*/
 
@@ -351,9 +356,6 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // get data from model
     int row = index.row();
-    QModelIndex sfIdx0 = index.model()->index(row, 0);
-    //QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-    //QString title = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
     QString labelText;
     if (labelChoice == "Title") {
         labelText = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
@@ -374,50 +376,39 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
 
-    // icon size
-//    QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-//    QSize iconSize = icon.actualSize(thumbSize);
-//    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
-//    if (aspectRatio > 0) {
-//        if (aspectRatio > 1) {
-//            iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
-//            iconSize.setWidth(thumbSize.width());
-//        }
-//        else {
-//            iconSize.setWidth(thumbSize.width() * aspectRatio);
-//            iconSize.setHeight(thumbSize.height());
-//        }
-//    }
-
-    // Make the item border rect smaller to accommodate the border.
+    // Cell structure (see IconViewDelegate Anatomy at top of file).
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
 
-     // the icon rect is aligned within the thumb rect
-//    int alignVertPad = (thumbRect.height() - iconSize.height()) / 2;
-//    int alignHorPad = (thumbRect.width() - iconSize.width()) / 2;
-//    QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
-//                   iconSize.width(), iconSize.height());
-    // release 1.32 version
+    // get icon (thumbnail) from the datamodel
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-    QSize iconSize = icon.actualSize(thumbSize);
-    int alignVertPad = (thumbRect.height() - iconSize.height()) / 2;
-    int alignHorPad = (thumbRect.width() - iconSize.width()) / 2;
+    // get the icon dimensions to fit into G::maxIconSize.  Must start with largest size
+    // to prevent scaling glitches.
+    QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
+    // convert to a QPixmap
+    QPixmap pm = icon.pixmap(maxSize);
+    // scale the pixmap to fit in the thumbRect
+    pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
+    // define iconSize for reporting
+    QSize iconSize = QSize(pm.width(), pm.height());
+    // center the iconRect in the thumbRect
+    int alignVertPad = (thumbRect.height() - pm.height()) / 2;
+    int alignHorPad = (thumbRect.width() - pm.width()) / 2;
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
-                   iconSize.width(), iconSize.height());
-
+                   pm.width(), pm.height());
     /* debug
+    if (row == 0)
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row
              << "currentRow =" << currentRow
              << "selected =" << isSelected
              << "cellRect =" << cellRect
              << "frameRect =" << frameRect
-             << "thumbSize =" << thumbSize
-             << "iconsize =" << iconSize
              << "thumbRect =" << thumbRect
              << "iconRect =" << iconRect
+             << "thumbSize =" << thumbSize
+             << "iconsize =" << iconSize
                 ;
 //             */
 
@@ -445,9 +436,10 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawText(textRect, Qt::AlignHCenter, labelText);
     }
 
+    // icon/thumbnail image
     painter->setClipping(true);
     painter->setClipPath(iconPath);
-    painter->drawPixmap(iconRect, icon.pixmap(iconSize.width(),iconSize.height()));
+    painter->drawPixmap(iconRect, pm);
     painter->setClipping(false);
 
     // default thumb border

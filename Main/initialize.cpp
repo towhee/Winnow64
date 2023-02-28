@@ -57,7 +57,8 @@ void MW::initialize()
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
-
+    sortColumn = G::NameColumn;
+    isReverseSort = false;
 }
 
 void MW::setupPlatform()
@@ -372,7 +373,8 @@ void MW::createImageCache()
 
     // add to image cache list
     connect(metaReadThread, &MetaRead::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata/*,
+            Qt::BlockingQueuedConnection*/);
     // signal ImageCache refresh
     connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);
 //    connect(metaRead, &MetaRead::setImageCachePosition,

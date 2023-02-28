@@ -274,8 +274,11 @@ void ImageCache::setTargetRange()
             continue;
         }
         sumMB += icd->cacheItemList.at(i).sizeMB;
+        if (i == 78) {
+            int x=0;
+        }
         if (sumMB < icd->cache.maxMB) {
-            /*
+            /* debug
             qDebug() << "ImageCache::setTargetRange"
                      << i
                      << icd->cacheItemList.at(i).sizeMB
@@ -290,7 +293,6 @@ void ImageCache::setTargetRange()
             icd->cacheItemList[i].isTarget = false;
         }
     }
-//    qDebug() << "ImageCache::setTargetRange" << sumMB << icd->cache.maxMB;
 
     // return order to key - same as dm->sf (sorted or filtered datamodel)
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::keySort);
@@ -1315,7 +1317,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
     if(dm->sf->rowCount() == 0) return;
 
-//    /*
+    /*
     qDebug() << "ImageCache::rebuildImageCacheParameters" << "Source:" << source;
     // std::cout << diagnostics().toStdString() << std::flush;
     //*/
