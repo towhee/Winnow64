@@ -1040,6 +1040,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check abort
     if (G::dmEmpty && !isRemote) return false;
 
+    //QElapsedTimer t;
+    //t.restart();
+
     // check instance up-to-date
     if (instance != G::dmInstance) {
         qWarning() << "WARNING" << "Metadata::loadImageMetadata"
@@ -1089,6 +1092,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
             }
         }
 //        return parsedSidcar;
+        //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         return true;
     }
 
@@ -1103,6 +1107,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     if (!m.metadataLoaded) {
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
         if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
+        //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         return false;
     }
 
@@ -1118,7 +1123,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
 //    m.thumbUnavailable = thumbUnavailable;
 //    m.imageUnavailable = imageUnavailable;
-
+    //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
     return m.metadataLoaded;
 }
 

@@ -1,117 +1,23 @@
-if (G::isLogger) G::log("MW::setRotation");
-// rotate current loupe view image
-imageView->rotateImage(degrees);
-
-// iterate selection
-QModelIndexList selection = dm->selectionModel->selectedRows();
-for (int i = 0; i < selection.count(); ++i) {
-    // update rotation amount in the data model
-    int row = selection.at(i).row();
-    QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
-    int orientation = orientationIdx.data(Qt::EditRole).toInt();
-    int prevRotation = 0;
-    switch (orientation) {
-    case 6: prevRotation = 90;  break;
-    case 3: prevRotation = 180; break;
-    case 8: prevRotation = 270; break;
-    }
-
-    int newRotation = prevRotation + degrees;
-    if (newRotation >= 360) newRotation = newRotation - 360;
-    int newOrientation = 0;
-    switch (newRotation) {
-    case 90:  newOrientation = 6; break;
-    case 180: newOrientation = 3; break;
-    case 270: newOrientation = 8; break;
-    }
-
-    emit setValueSf(orientationIdx, newOrientation, dm->instance,
-                    "MW::setRotation", Qt::EditRole);
-
-    // rotate thumbnail
-    QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
-    QStandardItem *item = new QStandardItem;
-    item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-    QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
-    pm = pm.transformed(QTransform().rotate(degrees));
-    item->setIcon(pm);
-
-    // rotate selected cached full size images
-    QString fPath = thumbIdx.data(G::PathRole).toString();
-    QImage image;
-    if (icd->imCache.find(fPath, image)) {
-        image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
-        icd->imCache.insert(fPath, image);
-    }
-
-    // update exif in image
-    QString orient;
-    switch (newRotation) {
-        case 0:   orient = "1"; break;
-        case 90:  orient = "6"; break;
-        case 180: orient = "3"; break;
-        case 270: orient = "8"; break;
-    }
-    if (orient.length() && G::modifySourceFiles) {
-        // note that Metadata::writeOrientation must be static!
-        QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
-    }
-}    if (G::isLogger) G::log("MW::setRotation");
-// rotate current loupe view image
-imageView->rotateImage(degrees);
-
-// iterate selection
-QModelIndexList selection = dm->selectionModel->selectedRows();
-for (int i = 0; i < selection.count(); ++i) {
-    // update rotation amount in the data model
-    int row = selection.at(i).row();
-    QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
-    int orientation = orientationIdx.data(Qt::EditRole).toInt();
-    int prevRotation = 0;
-    switch (orientation) {
-    case 6: prevRotation = 90;  break;
-    case 3: prevRotation = 180; break;
-    case 8: prevRotation = 270; break;
-    }
-
-    int newRotation = prevRotation + degrees;
-    if (newRotation >= 360) newRotation = newRotation - 360;
-    int newOrientation = 0;
-    switch (newRotation) {
-    case 90:  newOrientation = 6; break;
-    case 180: newOrientation = 3; break;
-    case 270: newOrientation = 8; break;
-    }
-
-    emit setValueSf(orientationIdx, newOrientation, dm->instance,
-                    "MW::setRotation", Qt::EditRole);
-
-    // rotate thumbnail
-    QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
-    QStandardItem *item = new QStandardItem;
-    item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-    QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
-    pm = pm.transformed(QTransform().rotate(degrees));
-    item->setIcon(pm);
-
-    // rotate selected cached full size images
-    QString fPath = thumbIdx.data(G::PathRole).toString();
-    QImage image;
-    if (icd->imCache.find(fPath, image)) {
-        image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
-        icd->imCache.insert(fPath, image);
-    }
-
-    // update exif in image
-    QString orient;
-    switch (newRotation) {
-        case 0:   orient = "1"; break;
-        case 90:  orient = "6"; break;
-        case 180: orient = "3"; break;
-        case 270: orient = "8"; break;
-    }
-    if (orient.length() && G::modifySourceFiles) {
-        // note that Metadata::writeOrientation must be static!
-        QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
-    }
-}
+2,555,000 MW::focusChange                                    Previous = Thumbnails
+        1 MW::focusChange                                     Current = Thumbnails
+2,220,056 MW::enableGoKeyActions
+1,111,482 MW::keyPressEvent
+        4 TableView::selectionChanged
+        0 MW::updateStatus
+        2 IconView::getCurrentFilePath
+        7 DataModel::rowFromPath
+        3 MW::getZoom
+        4 MW::getPosition
+       38 IconView::getSelectedCount                         Thumbnails
+       27 MW::getPicked
+       13 MW::getPosition
+        3 MW::metadataChanged
+       29 InfoView::showOrHide
+        1 MW::getZoom
+       11 MW::getSelectedFileSize
+       20 MW::memoryReqdForSelection
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+   59,680 MW::getPicked
+6,656,773 MW::keyReleaseEvent
+3,598,648 MW::keyReleaseEvent

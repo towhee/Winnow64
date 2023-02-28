@@ -105,6 +105,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->setupUi(this);
     setStyleSheet(css);
 
+
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 
@@ -1518,6 +1519,7 @@ void IngestDlg::on_helpBtn_clicked()
     QDialog *dlg = new QDialog;
     Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
     ui->setupUi(dlg);
+    ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Ingest Automatic Path Help");
     dlg->setStyleSheet(G::css);
     dlg->exec();

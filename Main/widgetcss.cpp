@@ -3,7 +3,8 @@
 QString WidgetCSS::css()
 {
     fg = G::textShade;
-    bg = widgetBackgroundColor.red();   // desaturate
+    bg = G::backgroundShade;
+//    bg = widgetBackgroundColor.red();   // desaturate
     mb = bg + 15;
     fm = bg + 35;
     g0 = bg - 10;
@@ -119,9 +120,8 @@ QString WidgetCSS::dialog()
 {
     return
     "QDialog {"
-        "background: " + QColor(d10,d10,d10).name() + ";"
-//        "background: blue;"
-//        "background: " + QColor(l10,l10,l10).name() + ";"
+//        "background: " + QColor(d10,d10,d10).name() + ";"
+        "background: " + QColor(bg,bg,bg).name() + ";"
     "}";
 }
 

@@ -963,7 +963,7 @@ bool ImageView::event(QEvent *event) {
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("ImageView::mouseDoubleClickEvent");
-    qDebug() << "ImageView::mouseDoubleClickEvent";
+    //qDebug() << "ImageView::mouseDoubleClickEvent";
     return;
 }
 

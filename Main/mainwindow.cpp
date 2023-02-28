@@ -487,13 +487,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         embelProperties->doNotEmbellish();
     }
 
-    // if previous sort was not by filename or reverse order then sort
-//    qDebug() << "MW::MW  sortColumn =" << sortColumn;
-    updateSortColumn(sortColumn);
-    if (isReverseSort) toggleSortDirection(Tog::on);
-    else toggleSortDirection(Tog::off);
-    if (sortColumn != G::NameColumn || isReverseSort) sortChange("MW::MW");
-
     qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
@@ -1620,6 +1613,8 @@ void MW::folderSelectionChange()
         G::log("MW::folderSelectionChange");
     }
 
+    G::t.restart();
+
     stop("MW::folderSelectionChange()");
 
     dm->abortLoadingModel = false;
@@ -1719,17 +1714,6 @@ void MW::folderSelectionChange()
     G::includeSubfolders = false;
     subFoldersAction->setChecked(false);
     updateStatusBar();
-
-    // update FSTree count column for folder in case it has changed
-//    fsTree->refreshModel();
-
-    // reset sort if necessary (DataModel loads sorted by name in ascending order)
-    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
-        sortColumn = G::NameColumn;
-        sortFileNameAction->setChecked(true);
-        sortReverseAction->setChecked(false);
-//        sortChange("MW::folderSelectionChange");
-    }
 
     // datamodel loaded - invalidate indexes (set in MW::fileSelectionChange)
     dm->currentSfRow = -1;
@@ -1918,9 +1902,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
 
-    // update delegates to show current
-    if (thumbView->isVisible()) thumbView->updateView();
+    // update delegates to show current and set focus to enable shift + direction keys
     if (gridView->isVisible()) gridView->updateView();
+    if (thumbView->isVisible()) thumbView->updateView();
+
+    // set focus to enable shift + direction keys
+    if (gridView->isVisible()) gridView->setFocus();
+    if (thumbView->isVisible()) thumbView->setFocus();
 
 //    // icons may require resizing to fit
 //    if (thumbView->isVisible()) thumbView->repaint();
@@ -2028,12 +2016,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 void MW::tryLoadImageAgain(QString fPath)
 {
 /*
+    Not being used.
 
+    This is triggered from ImageView::loadImage when attempting to load a cache image
+    that is still being cached.  After a delay, try to load ImageView again.
 */
     if (G::isLogger) G::log("MW::tryLoadImageAgain", fPath);
     QTimer::singleShot(500, [this, fPath]() {
-//                           if (!imageView->isBusy)
-                               imageView->loadImage(fPath, "MW::tryLoadImageAgain");
+                        if (!imageView->isBusy)
+                            imageView->loadImage(fPath, "MW::tryLoadImageAgain");
                       });
 }
 
@@ -2352,24 +2343,26 @@ void MW::loadConcurrentNewFolder()
     else {
         dm->currentSfRow = 0;
     }
-    if (reset(src + "1")) return;
+    if (reset(src)) return;
     updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
-    if (reset(src + "2")) return;
+    if (reset(src)) return;
 
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    if (reset(src + "3")) return;
+    if (reset(src)) return;
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
+
     // no sorting or filtering until all metadata loaded
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-    if (reset(src + "4")) return;
+    if (reset(src)) return;
+
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
-    if (reset(src + "5")) return;
+    if (reset(src)) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     metaReadThread->setCurrentRow(dm->currentSfRow, "MW::loadConcurrentNewFolder");
 }
@@ -2401,6 +2394,8 @@ void MW::loadConcurrentMetaDone()
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
 
+    qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms" << dm->currentFolderPath;
+
     if (reset()) return;
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
@@ -2408,6 +2403,10 @@ void MW::loadConcurrentMetaDone()
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
+
+    // finalize image cache target range. Probably started to cache images before
+    // all the metadata was read in MetaRead, so icd->cacheItemList not finished.
+    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
@@ -4260,8 +4259,8 @@ void MW::writeSettings()
 //    setting->setValue("mouseClickScroll", mouseClickScroll);
     setting->setValue("toggleZoomValue", imageView->toggleZoom);
     setting->setValue("limitFit100Pct", imageView->limitFit100Pct);
-    setting->setValue("sortColumn", sortColumn);
-    setting->setValue("sortReverse", sortReverseAction->isChecked());
+//    setting->setValue("sortColumn", sortColumn);
+//    setting->setValue("sortReverse", sortReverseAction->isChecked());
     setting->setValue("autoAdvance", autoAdvance);
     setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
@@ -4627,9 +4626,9 @@ bool MW::loadSettings()
     // Get settings saved from last session
 
     // general
-    sortColumn = setting->value("sortColumn").toInt();
-    prevSortColumn = sortColumn;
-    isReverseSort = setting->value("sortReverse").toBool();
+//    sortColumn = setting->value("sortColumn").toInt();
+//    prevSortColumn = sortColumn;
+//    isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
 //    if (setting->contains("isLogger"))

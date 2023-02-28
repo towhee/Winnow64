@@ -32,10 +32,13 @@ int main(int argc, char *argv[])
     }
     // if (G::isFileLogger) Utilities::log("WinnowMain", args);
 
+    // terminate if Winnow already open and no arguments to pass
+    if (args == "" && instance.isRunning()) return 0;
+
     // instance already running
     if (instance.sendMessage(args)) {
         if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
-        // qDebug() << "main  instance already running, sent args";
+        //qDebug() << "main" << "instance already running, sent args";
         return 0;
     }
 

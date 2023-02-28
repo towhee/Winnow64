@@ -2,12 +2,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Make sure HEIC also works on PC including thumbs
-- Remove ImageView loadImage tryagain/isBusy
-- When add new workspace the menu shortcut is not updated until reopen app
 - folderAndFileSelectionChange does not show folder highlight change
-- Sort is not sticky
-- Shift Left arrow not working
-- If try to open Winnow when already open then next time does not remember location/size
 - Cmd Del = delete all rejected
 - Cmd+Opt+R = reject all unpicked and unpick all picked
 - bool Usb::isUsb(QString path) not done for MacOS
@@ -15,16 +10,12 @@ BUGS / TO DO
 - Fast video thumbnail generation
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
-- HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
 - Convert path to windows \ for copy path to clipboard
 - Extract frame from video
 - Update use of current image for video frame
-- IPhone image/video creation date
-- PNG no image or icon (-test1)
 - Add G::showWarnings
 - Make ImageDecoder warnings context specific is hasMetadata
-- Olympus subfolders not showing for USB drive in FSTree
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
@@ -50,6 +41,7 @@ BUGS / TO DO
 - Cannot delete heic files on PC
 - Add hif file format
 - Rotate heic files
+- Slideshow only load metadata for current image
 - Slideshow of all images on F drive eventually crashed (85000+ images)
 
 CAMERAS NOT SUPPORTED
@@ -75,6 +67,8 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- When add new workspace the menu shortcut is not updated until reopen app
+- Heic thumb rotation wrong
 - Portrait aspect ratios wrong
 - Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
@@ -84,6 +78,11 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Update image cache target range in MW::loadConcurrentMetaDon
+- Ignore IconViewDelegate paint before icon has been loaded into DataModel
+- IconViewDelegate icon scaling glitches
+- HEIC metadata on mac
+- If try to open Winnow when already open then next time does not remember location/size
 - TableView default column widths not working
 - ∆ label unfilters DataModel
 - Embellish right click rename template opens rename style dialog

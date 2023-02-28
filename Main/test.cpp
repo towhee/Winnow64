@@ -119,11 +119,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    workspaceActions.at(5)->setText("Wide test");
-    QString m = workspaceActions.at(5)->text();
-    qDebug()
-            << m
-               ;
+    if (tableView->isVisible()) tableView->setFocus();
+
     return;
 
     QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"
