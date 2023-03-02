@@ -4,32 +4,22 @@
     MetaRead, runing in a separate thread, loads the metadata and icons into the
     datamodel (dm) for a folder. All the metadata will be loaded, and icons will be
     loaded up to either the iconChunkSize or visibleIcons, depending on the preferences.
-
     MetaRead::setCurrentRow is called when:
-
         • a new folder is selected
         • a new image is selected
         • thumbnails are scrolled
         • the gridView or thumbView are resized
-
     Steps:
-
         • Build the priority queue.  The queue lists the dm->sf rows, starting with the
           current row and alternating one ahead and one behind.
-
         • Cleanup (remove) icons exceeding amount set in preferences.  If loadOnlyVisibleIcons
           then remove all icons except those visible in either thumbView or gridView.  Other-
           wise, remove icons exceeding iconChunkSize based on the priorityQueue.
-
         • Iterate through the priorityQueue, loading the metadata and icons.  Part way through
           the queue start the ImageCache.
-
         • Abort and restart when a new setCurrentRow is called.
-
     Note: All data in the DataModel must be set using a queued connection.  When subsequent
     actions are dependent on the data being set use Qt::BlockingQueuedConnection.
-
-
 */
 
 MetaRead::MetaRead(QObject *parent,
@@ -192,13 +182,10 @@ void MetaRead::cleanupIcons()
 /*
     Remove icons not in icon range after start row change, iconChunkSize change or
     MW::deleteFiles.
-
     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
     the current datamodel row dm->currentSfRow.
-
     For efficiency, the currently cached icons are tracked in the QList rowsWithIcon.
     Each item in rowsWithIcon is the dmRow in the datamodel.
-
     If a new startRow is sent to setStartPosition while running then the icon
     cleanup is interrupted.
 */

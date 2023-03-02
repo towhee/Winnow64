@@ -50,24 +50,26 @@ QT += multimediawidgets
 QT += concurrent
 #QT += network
 
-HEADERS += Cache/cachedata.h \
-    Datamodel/selection.h \
-    Dialogs/imagedlg.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/metaread.h
+HEADERS += Cache/metaread2.h
+HEADERS += Cache/reader.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += Datamodel/HashMap.h
 HEADERS += Datamodel/HashNode.h
+HEADERS += Datamodel/selection.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
 HEADERS += Dialogs/editlistdlg.h
+HEADERS += Dialogs/imagedlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/ingesterrors.h
 HEADERS += Dialogs/loadusbdlg.h
@@ -171,22 +173,23 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Datamodel/selection.cpp \
-    Dialogs/imagedlg.cpp \
-    Main/pick.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Cache/metaread.cpp
+SOURCES += Cache/metaread2.cpp
+SOURCES += Cache/reader.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
+SOURCES += Datamodel/selection.cpp
 SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
 SOURCES += Dialogs/editlistdlg.cpp
+SOURCES += Dialogs/imagedlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/ingesterrors.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
@@ -267,8 +270,8 @@ SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
 SOURCES += Main/menusandactions.cpp
 SOURCES += Main/navigate.cpp
-SOURCES += \
-    Main/selection_.cpp
+SOURCES += Main/pick.cpp
+SOURCES += Main/selection_.cpp
 SOURCES += Main/setandupdate.cpp
 SOURCES += Main/slideshow.cpp
 SOURCES += Main/sortandfilter.cpp

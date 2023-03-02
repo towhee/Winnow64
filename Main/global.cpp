@@ -43,6 +43,7 @@ namespace G
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
     bool tryConcurrentLoading = true;   // show/hide option to use concurrent MetaRead
+    QString metaReadInUse;
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
