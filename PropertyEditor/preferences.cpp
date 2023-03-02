@@ -266,6 +266,7 @@ itemChange, which is subclassed here.
 
     if (source == "tryConcurrentLoading") {
         G::isLinearLoading = !v.toBool();
+        if (G::isLinearLoading)  G::metaReadInUse = "Linear metadata and thumbnail loading";
     }
 
     if (source == "isLogger") {

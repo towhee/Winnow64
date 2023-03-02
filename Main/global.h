@@ -14,6 +14,9 @@
 #include "Utilities/utilities.h"
 //#include <QMetaObject>
 
+// one or the other:
+#define METAREAD       // METAREAD or METAREAD2
+
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
 #define EXISTS if (p.file.exists())
@@ -161,6 +164,7 @@ namespace G
     extern bool useReadIcons;
     extern bool useReadMetadata;
     extern bool tryConcurrentLoading;  // show/hide option to use concurrent MetaRead
+    extern QString metaReadInUse;;
 
     extern QSettings *settings;
 

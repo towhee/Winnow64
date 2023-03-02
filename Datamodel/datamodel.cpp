@@ -1363,7 +1363,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-    if (isDebug)
+//    if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame      "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance

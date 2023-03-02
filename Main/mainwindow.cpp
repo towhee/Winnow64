@@ -455,8 +455,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createFrameDecoder();       // dependent on DataModel
-    createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
+    createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
     createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
@@ -2108,13 +2108,22 @@ bool MW::stop(QString src)
     QString oldFolder = G::currRootFolder;
 
     // clear queued signals from MetaRead
+#ifdef METAREAD
     disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
     disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
     disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-
+    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
+#endif
+#ifdef METAREAD2
+    disconnect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon);
+    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
+    disconnect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
+    disconnect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+    connect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
+#endif
     /*
        Program interrupt flags used to stop all folder loading activity.  If
        the activity is happening in another thread then it stops when the thread
@@ -2342,6 +2351,7 @@ void MW::loadConcurrentNewFolder()
     }
     else {
         dm->currentSfRow = 0;
+        dm->currentFilePath = dm->sf->index(0, 0).data(G::PathRole).toString();
     }
     if (reset(src)) return;
     updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
@@ -2374,7 +2384,7 @@ void MW::loadConcurrent(int sfRow)
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));
-    // qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
+    qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
@@ -2447,7 +2457,7 @@ void MW::loadConcurrentStartImageCache(QString src)
 //    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentStartImageCache");
-    // qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
+    qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
 
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();

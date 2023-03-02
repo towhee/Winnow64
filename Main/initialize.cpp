@@ -252,10 +252,33 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             sel, &Selection::first);
 
+    // MetaRead and MetaRead2
+    if (isSettings) {
+        if (setting->contains("iconChunkSize")) {
+            dm->defaultIconChunkSize = setting->value("iconChunkSize").toInt();
+            if (dm->defaultIconChunkSize < 1000)
+                dm->defaultIconChunkSize = 3000;
+        }
+        else {
+            dm->defaultIconChunkSize = 3000;
+        }
+    }
+    else {
+        setting->setValue("iconChunkSize", dm->defaultIconChunkSize);
+    }
+    dm->iconChunkSize = dm->defaultIconChunkSize;
 
+    /*
+        Switching between MetaRead and MetaRead2:
+            - METAREAD vs METAREAD2 in global.h
+    */
+
+#ifdef METAREAD
     // MetaRead
+    G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-
+    metaReadThread->iconChunkSize = dm->iconChunkSize;
+    metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
 //    // delete thread when finished
 //    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
@@ -265,6 +288,8 @@ void MW::createMDCache()
 //    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
     // read metadata
     connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
+    // pause waits until isRunning == false
+    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt);
     // add metadata to datamodel
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
@@ -289,26 +314,51 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::centralMsg, this, &MW::setCentralMessage);
     // update filters metaread progress
     connect(metaReadThread, &MetaRead::updateProgress, filters, &Filters::updateProgress);
-    // pause waits until isRunning == false
-    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt/*, Qt::BlockingQueuedConnection*/);
+#endif
 
-
-    if (isSettings) {
-        if (setting->contains("iconChunkSize")) {
-            dm->defaultIconChunkSize = setting->value("iconChunkSize").toInt();
-            if (dm->defaultIconChunkSize < 1000)
-                dm->defaultIconChunkSize = 3000;
-        }
-        else {
-            dm->defaultIconChunkSize = 3000;
-        }
-    }
-    else {
-        setting->setValue("iconChunkSize", dm->defaultIconChunkSize);
-    }
-    dm->iconChunkSize = dm->defaultIconChunkSize;
+#ifdef METAREAD2
+    // MetaRead2
+    // Runs multiple reader threads to load metadata and thumbnails
+    G::metaReadInUse = "Concurrent2 multi-threaded metadata and thumbnail loading";
+    metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCacheThread);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
+
+//    // delete thread when finished
+//    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
+    // signal to stop MetaRead2
+    connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead2::stop);
+    // signal stopped when abort completed
+//    connect(metaReadThread, &MetaRead2::stopped, this, &MW::reset);
+    // read metadata
+    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);
+    // pause waits until isRunning == false
+    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead2::interrupt);
+    // add metadata to datamodel
+    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
+    // update thumbView in case scrolling has occurred
+    connect(metaReadThread, &MetaRead2::updateScroll, thumbView, &IconView::repaintView,
+            Qt::BlockingQueuedConnection);
+    // update gridView in case scrolling has occurred
+    connect(metaReadThread, &MetaRead2::updateScroll, gridView, &IconView::repaintView,
+            Qt::BlockingQueuedConnection);
+    // add icon to datamodel
+    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon,
+            Qt::BlockingQueuedConnection);
+    // message metadata reading completed
+    connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentMetaDone);
+    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
+    connect(metaReadThread, &MetaRead2::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
+    // check icons visible is correct
+    connect(metaReadThread, &MetaRead2::updateIconBestFit, this, &MW::updateIconBestFit);
+    // update statusbar metadata active light
+    connect(metaReadThread, &MetaRead2::runStatus, this, &MW::updateMetadataThreadRunStatus);
+    // update loading metadata in central window
+    connect(metaReadThread, &MetaRead2::centralMsg, this, &MW::setCentralMessage);
+    // update filters MetaRead2 progress
+    connect(metaReadThread, &MetaRead2::updateProgress, filters, &Filters::updateProgress);
+#endif // end of MetaRead2
 }
 
 void MW::createImageCache()
@@ -372,9 +422,14 @@ void MW::createImageCache()
     // concurrent load
 
     // add to image cache list
-    connect(metaReadThread, &MetaRead::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata/*,
-            Qt::BlockingQueuedConnection*/);
+#ifdef METAREAD
+        connect(metaReadThread, &MetaRead::addToImageCache,
+                imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+#endif
+#ifdef METAREAD2
+        connect(metaReadThread, &MetaRead2::addToImageCache,
+                imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+#endif
     // signal ImageCache refresh
     connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);
 //    connect(metaRead, &MetaRead::setImageCachePosition,
@@ -901,7 +956,7 @@ void MW::createStatusBar()
     // label to show metadataThreadRunning status
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Turns red when metadata/icon caching in progress";
+    QString mtrl = "Turns red when metadata/icon caching in progress\n" + G::metaReadInUse;
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");

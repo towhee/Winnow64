@@ -8,10 +8,8 @@
 #include "Main/global.h"
 #include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
-#include "Metadata/metadata.h"
-#include "Datamodel/datamodel.h"
 #include "Metadata/imagemetadata.h"
-#include "ImageFormats/Jpeg/jpeg.h"
+#include "Datamodel/datamodel.h"
 #include "Utilities/icc.h"
 #ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
@@ -26,7 +24,6 @@ public:
                  DataModel *dm,
                  Metadata *metadata);
     void decode(ImageCacheData::CacheItem item, int instance);
-//    void decode(QString fPath);
     void setReady();
     void stop();
 

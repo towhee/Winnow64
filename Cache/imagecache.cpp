@@ -1161,6 +1161,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     icd->cacheItemList[row].iccBuf = m.iccBuf;
 //    icd->cache.folderMB += icd->cacheItemList[row].sizeMB; // req'd?  Only used for diagnostics
     mutex.unlock();
+    qDebug() << "ImageCache::addCacheItemImageMetadata" << m.fPath;
 }
 
 void ImageCache::buildImageCacheList()

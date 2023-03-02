@@ -41,6 +41,7 @@
 
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
+#include "Cache/metaread2.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
@@ -1015,7 +1016,12 @@ private:
     CompareImages *compareImages;
 
     MetadataCache *metadataCacheThread;
+#ifdef METAREAD
     MetaRead *metaReadThread;
+#endif
+#ifdef METAREAD2
+    MetaRead2 *metaReadThread;
+#endif
     ImageCache *imageCacheThread;
     FrameDecoder *frameDecoder;
 
