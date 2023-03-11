@@ -34,7 +34,8 @@ public:
         RatingEdit,
         LabelEdit,
         TitleEdit,
-        CreatorEdit
+        CreatorEdit,
+        MissingThumbEdit
     } category;
 
     void stop();

@@ -13,6 +13,7 @@
 #include "Metadata/gps.h"
 #include "Metadata/xmp.h"
 #include "Metadata/metareport.h"
+#include "Metadata/ExifTool.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -42,6 +43,8 @@ public:
     void decodeScan(MetadataParameters &p);
     void decodeScan(QFile &file, QImage &image);
     void decodeScan(QByteArray &ba, QImage &image);
+
+    void embedThumbnail(ImageMetadata &m);
 
 private:
     Utilities u;

@@ -98,6 +98,11 @@ void Metadata::initSupportedFiles()
                         << "tif"
                            ;
 
+    canEmbedThumb       << "jpg"
+                        << "jpeg"
+                        << "tif"
+                           ;
+
     // rotate based on metadata for orientation (heif/hif rotated by library)
     rotateFormats       << "arw"
                         << "cr2"
@@ -419,6 +424,21 @@ QString Metadata::diagnostics(QString fPath)
     return reportString;
 }
 
+void Metadata::missingThumbnailWarning()
+{
+    return;
+    QString msg =
+            "JPG and/or TIFF files were found without embedded thumbnails.<p>"
+            "Add missing thumbnails is turned off in preferences.<p>"
+            "Turning on add missing thumbnails will dramatically improve<br>"
+            "folder loading performance.<p>"
+            "WARNING: this will change your TIFF/JPG file.  Please make<br>"
+            "sure you have backups until you are sure this does not corrupt<br>"
+            "your images.<p>"
+            "Press ESC to continue.";
+    G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+}
+
 int Metadata::getNewOrientation(int orientation, int rotation)
 {
     if (G::isLogger) G::log("Metadata::getNewOrientation");
@@ -731,6 +751,13 @@ bool Metadata::parseJPG(quint32 startOffset)
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
     if (ok && p.report) reportMetadata();
+
+    // fix missing thumbnail (use external program ExifTool)
+    if (ok && m.isEmbeddedThumbMissing && G::modifySourceFiles && m.isReadWrite) {
+        p.file.close();
+        jpeg->embedThumbnail(m);
+    }
+
     return ok;
 }
 
@@ -966,6 +993,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     // check file permissions
     QFileDevice::Permissions oldPermissions = fileInfo.permissions();
+    m.permissions = oldPermissions;
+    m.isReadWrite = (oldPermissions & QFileDevice::ReadUser) && (oldPermissions & QFileDevice::WriteUser);
     if (!(oldPermissions & QFileDevice::ReadUser)) {
         QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
         QFile(path).setPermissions(newPermissions);
@@ -1073,6 +1102,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
+    m.type = ext;
 
     m.video = videoFormats.contains(ext);
 

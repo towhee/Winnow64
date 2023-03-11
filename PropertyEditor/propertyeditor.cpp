@@ -235,10 +235,10 @@ in the model.
 QWidget*  PropertyEditor::addItem(ItemInfo &i)
 {
 /*
-Adds a row to the properties tree (model).  The necessary elements of the ItemInfo struct are
-supplied by the calling function.  Each row has two columns: caption and value.  The caption is
-a description of the value.  The value is a propertyWidget custom editor (ComboBoxEditor,
-SliderEditor, LineEditor etc).
+    Adds a row to the properties tree (model). The necessary elements of the ItemInfo
+    struct are supplied by the calling function. Each row has two columns: caption and
+    value. The caption is a description of the value. The value is a propertyWidget
+    custom editor (ComboBoxEditor, SliderEditor, LineEditor etc).
 */
     if (G::isLogger) G::log("PropertyEditor::addItem");
     int row;
@@ -305,6 +305,8 @@ SliderEditor, LineEditor etc).
     model->setData(capIdx, itemIndex, UR_ItemIndex);
     model->setData(capIdx, false, UR_isHidden);
     model->setData(valIdx, false, UR_isHidden);
+    model->setData(capIdx, true, UR_isEnabled);
+    model->setData(valIdx, true, UR_isEnabled);
     model->setData(capIdx, i.key, UR_Source);           // key = "effect" for sortOrder
 
     // if no value associated (header item or spacer etc) then we are done
@@ -374,6 +376,48 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
     i.index = QModelIndex();
     i.parIdx = QModelIndex();
+}
+
+void PropertyEditor::setItemEnabled(QString name, bool state)
+{
+    if (G::isLogger) G::log("PropertyEditor::setItemEnabled");
+    QModelIndex capIdx = findIndex(name);
+    model->setData(capIdx, state, UR_isEnabled);
+    model->dataChanged(capIdx,capIdx);
+    QModelIndex idx = model->index(capIdx.row(), ValColumn, capIdx.parent());
+    int type = model->data(idx, UR_DelegateType).toInt();
+    if (type == DT_Label) {
+        auto editor = static_cast<LabelEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_LineEdit) {
+        auto editor = static_cast<LineEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_Spinbox) {
+        auto editor = static_cast<SpinBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_DoubleSpinbox) {
+        auto editor = static_cast<DoubleSpinBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_Checkbox) {
+        auto editor = static_cast<CheckBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_Combo) {
+        auto editor = static_cast<ComboBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_Slider) {
+        auto editor = static_cast<SliderEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
+    if (type == DT_Color) {
+        auto editor = static_cast<ColorEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setEnabled(state);
+    }
 }
 
 void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)

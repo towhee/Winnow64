@@ -86,6 +86,7 @@ namespace G
         UrlColumn,
         KeywordsColumn,
         MetadataLoadedColumn,
+        MissingThumbColumn,
         // original values
         _RatingColumn,
         _LabelColumn,
@@ -163,7 +164,6 @@ namespace G
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;
     extern bool useReadMetadata;
-    extern bool tryConcurrentLoading;  // show/hide option to use concurrent MetaRead
     extern QString metaReadInUse;;
 
     extern QSettings *settings;
@@ -249,8 +249,9 @@ namespace G
     extern bool isEmbellish;
     extern bool colorManage;
     extern bool modifySourceFiles;
+    extern bool backupBeforeModifying;
     extern bool useSidecar;
-    extern bool embedTifThumb;
+//    extern bool embedTifJpgThumb;
     extern bool isLinearLoading;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;

@@ -3,8 +3,10 @@
 void MW::setCentralMessage(QString message)
 {
     if (G::isLogger) G::log("MW::setCentralMessage", message);
-    msg.msgLabel->setText(message);
+    centralLayout->setCurrentIndex(BlankTab);
     centralLayout->setCurrentIndex(MessageTab);
+    msg.msgLabel->setText(message);
+    //qApp->processEvents();
 }
 
 /**********************************************************************************************
@@ -573,3 +575,15 @@ void MW::updateClassification()
                                             thumbView->currentIndex());
 }
 
+void MW::setIgnoreAddThumbnailsDlg()
+{
+    qDebug() << "MW::setIgnoreAddThumbnailsDlg";
+    setting->setValue("ignoreAddThumbnailsDlg", true);
+    ignoreAddThumbnailsDlg = true;
+}
+
+void MW::setBackupModifiedFiles(bool isBackup)
+{
+    qDebug() << "MW::setBackupModifiedFiles";
+    G::backupBeforeModifying = isBackup;
+}

@@ -25,17 +25,17 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 void Preferences::itemChange(QModelIndex idx)
 {
 /*
-When the user changes a value in the editor (the control in the value column of the tree)
-this slot is triggered to update the associated value in the application.  The model index
-of the value is used to recall:
+    When the user changes a value in the editor (the control in the value column of the
+    tree) this slot is triggered to update the associated value in the application. The
+    model index of the value is used to recall:
 
-    v      - the value of the property
-    source - the name of the value, which is used to figure out which associated app value
-             to update with v.
-    index  - is used where the associated value is in another model
+        v      - the value of the property
+        source - the name of the value, which is used to figure out which associated
+                 app value to update with v.
+        index  - is used where the associated value is in another model
 
-The connection is defined in the parent PropertyEditor to fire the virtual function
-itemChange, which is subclassed here.
+    The connection is defined in the parent PropertyEditor to fire the virtual function
+    itemChange, which is subclassed here.
 */
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
@@ -121,6 +121,13 @@ itemChange, which is subclassed here.
         mw->setClassificationBadgeImageDiam(value);
     }
 
+    if (source == "showThumbNailSymbolHelp") {
+        bool value = v.toBool();
+        mw->dm->setShowThumbNailSymbolHelp(value);
+        mw->setting->setValue("showThumbNailSymbolHelp", value);
+
+    }
+
     if (source == "showCacheProgressBar") {
         mw->isShowCacheProgressBar = v.toBool();
         mw->setImageCacheParameters();
@@ -157,6 +164,10 @@ itemChange, which is subclassed here.
     if (source == "thumbnailCacheStrategy") {
         if (v.toString() == "All") mw->metadataCacheThread->cacheAllIcons = true;
         else mw->metadataCacheThread->cacheAllIcons = false;
+    }
+
+    if (source == "cacheMethod") {
+        mw->setCacheMethod(v.toString());
     }
 
     if (source == "imageCacheStrategy") {
@@ -250,23 +261,25 @@ itemChange, which is subclassed here.
 
     if (source == "modifySourceFiles") {
         G::modifySourceFiles = v.toBool();
+//        mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+//        setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+//        setItemEnabled("addMissingThumbnails", G::modifySourceFiles);
+    }
+
+    if (source == "backupBeforeModify") {
+        G::backupBeforeModifying = v.toBool();
     }
 
     if (source == "useSidecar") {
         G::useSidecar = v.toBool();
     }
 
-    if (source == "addMissingThumbnailToTif") {
-        G::embedTifThumb = v.toBool();
-    }
+//    if (source == "addMissingThumbnails") {
+//        G::embedTifJpgThumb = v.toBool();
+//    }
 
     if (source == "renderVideoThumb") {
         G::renderVideoThumb = v.toBool();
-    }
-
-    if (source == "tryConcurrentLoading") {
-        G::isLinearLoading = !v.toBool();
-        if (G::isLinearLoading)  G::metaReadInUse = "Linear metadata and thumbnail loading";
     }
 
     if (source == "isLogger") {
@@ -381,45 +394,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    // Allow source files to be changed
-    i.name = "modifySourceFiles";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Modify source file orientation";
-    i.tooltip = "If you edit the rotation or orientation it will modify\n"
-                "the source file with this option turned on."
-                ;
-//    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
-//                "copyright, email, url and orientation) the changes will be\n"
-//                "written to the source image file.  This data can be read by\n"
-//                "Winnow and other programs like Lightroom."
-//            ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::modifySourceFiles;
-    i.key = "modifySourceFiles";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-//    addItem(i);       // cancel this for version 1.32 release
-
-    // Write metadata edits to sidecar XMP file
-    i.name = "useSidecar";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Use xmp sidecars";
-    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email and url) the change will be written to\n"
-                "a XMP sidecar file.  This data can be read by Winnow and\n"
-                " other programs like Lightroom.\n\n"
-                "Note this will impact performance, as it will take longer to\n"
-                "initially read all the metadata when a folder is loaded.\n"
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useSidecar;
-    i.key = "useSidecar";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
     {
     // Remember last folder
     i.name = "rememberLastDir";
@@ -503,25 +477,6 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Add missing thumbnails to TIFF files
-    i.name = "addMissingThumbnailToTif";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Add missing thumbnails to TIFF files";
-    i.tooltip = "WARNING: this will change your TIFF file.  Please make sure\n"
-                "you have backups until you are sure this does not corrupt\n"
-                "your images.\n\n"
-                "Turning this on will dramatically improve future thumbnail\n"
-                "load times.\n\n"
-                "This setting is independent of the modify source image setting."
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::embedTifThumb;
-    i.key = "addMissingThumbnailToTif";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
     // Render video thumbnails
     i.name = "renderVideoThumb";
     i.parentName = "GeneralHeader";
@@ -538,22 +493,6 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-
-    // Concurrent loading
-    i.name = "tryConcurrentLoading";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Concurrent load new folder.";
-    i.tooltip = "When you click on a new folder, the metadata, icons and images\n"
-                "will be loaded concurrently.  For larger folders, this will\n"
-                "allow you to browse full size images almost immediately."
-            ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = !G::isLinearLoading;
-    i.key = "tryConcurrentLoading";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    if (G::tryConcurrentLoading) addItem(i);
 
     // Logger
     i.name = "isLogger";
@@ -585,7 +524,86 @@ void Preferences::addItems()
     i.type = "bool";
 //    addItem(i);
 
-    // Thumbnails Header (Root) ---------------------------------------------------------------
+    // General header  > File modification header
+    i.name = "FileModificationHeader";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Source file modification";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // Allow source files to be changed
+    i.name = "modifySourceFiles";
+    i.parentName = "FileModificationHeader";
+    i.captionText = "Permit image file modification";
+    i.tooltip = "Permit file modification to change image orientation\n"
+                "or embed thumbnails automatically without notification."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::modifySourceFiles;
+    i.key = "modifySourceFiles";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);       // cancel this for version 1.32 release
+
+    // Backup before modifying
+    i.name = "backupBeforeModify";
+    i.parentName = "FileModificationHeader";
+    i.captionText = "Backup before modify files";
+    i.tooltip = "All image files about to be modified will be copied to a\n"
+                "subfolder called 'backup'"
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::backupBeforeModifying;
+    i.key = "backupBeforeModify";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+//    // Add missing thumbnails to TIFF files
+//    i.name = "addMissingThumbnails";
+//    i.parentName = "FileModificationHeader";
+//    i.captionText = "Embed missing thumbnails";
+//    i.tooltip = "Enabling this will dramatically improve future thumbnail\n"
+//                "load times.\n\n"
+//                "WARNING: this will modify your TIFF/JPG files.  Please make\n"
+//                "sure you have backups until you are sure this does not corrupt\n"
+//                "your images.  FYI, no corruption has been reported by users."
+//                ;
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = G::embedTifJpgThumb;
+//    i.key = "addMissingThumbnails";
+//    i.delegateType = DT_Checkbox;
+//    i.type = "bool";
+//    addItem(i);
+
+    // Write metadata edits to sidecar XMP file
+    i.name = "useSidecar";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Use xmp sidecars";
+    i.tooltip = "This will NOT MODIFY your source image file.\n\n"
+                "If you edit metadata (rating, color class, title, creator,\n"
+                "copyright, email and url) the change will be written to\n"
+                "a XMP sidecar file.  This data can be read by Winnow and\n"
+                "other programs like Lightroom.\n\n"
+                "Note this will slightly impact performance, as it will take \n"
+                "longer to initially read all the metadata when a folder is \n"
+                "loaded."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useSidecar;
+    i.key = "useSidecar";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // UserInterfaceHeader Header (Root) ---------------------------------------------------------------
     i.name = "UserInterfaceHeader";
     i.parentName = "";
     i.isHeader = true;
@@ -633,7 +651,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Font size header
+    // UserInterfaceHeader > Font size header
     i.name = "FontSizeHeader";
     i.parentName = "UserInterfaceHeader";
     i.captionText = "Font size";
@@ -830,6 +848,19 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
+    // Show IconView tooltip symbol help
+    i.name = "showThumbNailSymbolHelp";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Show thumbnail symbol help";
+    i.tooltip = "Show or hide the symbol help in the thumbnail tooltip.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->dm->showThumbNailSymbolHelp;
+    i.key = "showThumbNailSymbolHelp";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     }
 
     // Cache Header (Root)
@@ -895,10 +926,11 @@ void Preferences::addItems()
     i.name = "iconChunkSize";
     i.parentName = "CacheHeader";
     i.captionText = "Maximum thumbnails to cache";
-    i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.\n"
-                "If the grid is displaying a larger number then the larger number will \n"
-                "be used to make sure they are all shown.  You can experiment to see \n"
-                "what works best.  250 is the default amount.";
+    i.tooltip = "Enter the minimum number of thumbnails you want to cache.\n"
+                "For the best performance this should be greater than the\n"
+                "number of images in the folder.\n"
+                "•  1000 thumbnails consumes approximately 18 MB of RAM\n"
+                "•  3000 is the default amount.\n";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->dm->defaultIconChunkSize;
@@ -910,7 +942,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
 
-    // Load icons just in time (only visible icons)
+    /* Load icons just in time (only visible icons) (not used)
     i.name = "loadOnlyVisibleIcons";
     i.parentName = "CacheHeader";
     i.captionText = "Only load visible thumbnails";
@@ -922,9 +954,9 @@ void Preferences::addItems()
     i.key = "loadOnlyVisibleIcons";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-//    addItem(i);
+//    addItem(i);  //*/
 
-    // Maximum icon size (not used)
+    /* Maximum icon size (not used)
     i.name = "maxIconSize";
     i.parentName = "CacheThumbnailHeader";
     i.captionText = "Maximum Icon Size";
@@ -943,18 +975,18 @@ void Preferences::addItems()
     i.min = 40;
     i.max = 640;
     i.fixedWidth = 50;
-//    addItem(i);   // set to 256
+//    addItem(i);   // set to 256 //*/
 
-    // Cache Full Image Header (not used)
+    /* Cache Full Image Header (not used)
     i.name = "CacheImagesHeader";
     i.parentName = "CacheHeader";
     i.captionText = "Full size images";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-//    addItem(i);
+//    addItem(i); //*/
 
-    // Memory required for the metadata cache (includes thumbnails)
+    /* Memory required for the metadata cache (includes thumbnails)
     i.name = "metaCacheReqd";
     i.parentName = "CacheHeader";
     i.captionText = "Metadata and thumb memory used";
@@ -966,32 +998,24 @@ void Preferences::addItems()
     i.delegateType = DT_Label;
     i.type = "QString";
     i.color = "#1b8a83";
-    availMBMsgWidget = addItem(i);
+    availMBMsgWidget = addItem(i);  //*/
 
-    // Available memory for caching
-    i.name = "availableMBToCache";
+    // Cache method
+    i.name = "cacheMethod";
     i.parentName = "CacheHeader";
-    i.captionText = "Image cache / Available memory";
-    i.tooltip = "The total amount of available memory in MB.";
+    i.captionText = "Caching method";
+    i.tooltip = "Linear: slower - loads all metadata, then loads all icons and \n"
+                "finally loads full size images.\n\n"
+                "Concurrent: faster. Loads everything together\n";
     i.hasValue = true;
     i.captionIsEditable = false;
-    // get available memory
-    #ifdef Q_OS_WIN
-    Win::availableMemory();     // sets G::availableMemoryMB
-    #endif
-    #ifdef Q_OS_MAC
-    Mac::availableMemory();     // sets G::availableMemoryMB
-    #endif
-    int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
-    i.value = QString::number(mw->cacheMaxMB) + " of " +
-            QString::number(memAvail) + " available MB";
-
-//    i.value = QString::number(mw->cacheMaxMB) + " of " + QString::number(G::availableMemoryMB) + " MB";
-    i.key = "availableMBToCache";
-    i.delegateType = DT_Label;
+    i.value = mw->cacheMethod;
+    i.key = "cacheMethod";
+    i.delegateType = DT_Combo;
     i.type = "QString";
-    i.color = "#1b8a83";
-    availMBMsgWidget = addItem(i);
+    i.dropList << "Linear"
+               << "Concurrent";
+    addItem(i);
 
     // Image cache size strategy
     i.name = "imageCacheStrategy";
@@ -1003,7 +1027,7 @@ void Preferences::addItems()
                 "Greedy   = 90% of available memory";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->cacheSizeMethod;
+    i.value = mw->cacheSizeStrategy;
     i.key = "imageCacheStrategy";
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1039,6 +1063,36 @@ void Preferences::addItems()
                << "64 GB"
                 ;
     addItem(i);
+
+    // Available memory for caching
+    i.name = "availableMBToCache";
+    i.parentName = "CacheHeader";
+    i.captionText = "Image cache / Available memory";
+    i.tooltip = "The total amount of available memory in MB.  On some\n"
+                "systems, including Mac M chips, you can allocate more\n"
+                "than available, due to excellent memory swapping\n"
+                "performance."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    // get available memory
+    #ifdef Q_OS_WIN
+    Win::availableMemory();     // sets G::availableMemoryMB
+    #endif
+    #ifdef Q_OS_MAC
+    Mac::availableMemory();     // sets G::availableMemoryMB
+    #endif
+    int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
+    i.value = QString::number(mw->cacheMaxMB) + " of " +
+            QString::number(memAvail) + " available MB";
+
+//    i.value = QString::number(mw->cacheMaxMB) + " of " + QString::number(G::availableMemoryMB) + " MB";
+    i.key = "availableMBToCache";
+    i.delegateType = DT_Label;
+    i.type = "QString";
+    i.color = G::disabledColor.name();
+//    i.color = "#1b8a83";
+    availMBMsgWidget = addItem(i);
 
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";

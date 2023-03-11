@@ -130,6 +130,13 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log("Thumb::loadFromJpgData", fPath);
 
+    /*
+    qDebug() << "Thumb::loadFromJpgData"
+             << "offsetThumb =" << offsetThumb
+             << "lengthThumb =" << lengthThumb
+             << "fPath =" << fPath
+                ;
+                //*/
     bool success = false;
 
     QFile imFile(fPath);
@@ -234,6 +241,13 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     isThumbLength = dm->index(dmRow, G::LengthThumbColumn).data().toInt() > 0;
     offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
     lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+    /*
+    qDebug() << "Thumb::loadThumb"
+             << "dmRow =" << dmRow
+             << "offsetThumb =" << offsetThumb
+             << "lengthThumb =" << lengthThumb
+                ;
+                //*/
     isEmbeddedThumb = offsetThumb && lengthThumb;
     bool isVideo = metadata->videoFormats.contains(ext);
     // req'd ??
@@ -249,6 +263,11 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         bool success = true;
     }
 
+    // raw image file or tiff with embedded jpg
+    else if (isEmbeddedThumb) {
+        success = loadFromJpgData(fPath, image);
+    }
+
     // The image type might not have metadata we can read, so load entire image and resize
     else if (!metadata->hasMetadataFormats.contains(ext)) {
         success = loadFromEntireFile(fPath, image, dmRow);
@@ -260,11 +279,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     else if (ext == "tif") {
         success = loadFromTiff(fPath, image, dmRow);
-    }
-
-    // raw image file with embedded jpg
-    else if (isEmbeddedThumb) {
-        success = loadFromJpgData(fPath, image);
     }
 
     // all other image files
@@ -297,11 +311,71 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     return success;
 }
 
-void Thumb::insertThumbnails(QModelIndexList &selection)
+void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
 {
 /*
     Fix missing thumbnails in JPG
 */
+    qDebug() << "Thumb::insertThumbnailsInJpg";
+    int count = selection.count();
+
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(count);
+    QString txt = "Embedding thumbnail(s) for " + QString::number(count) +
+                  " JPG images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+    G::popUp->showPopup(txt, 0, true, 1);
+    insertingThumbnails = true;
+
+
+    ExifTool et;
+    et.setOverWrite(true);
+    QStringList thumbList;
+    for (int i = 0; i < count; ++i) {
+        G::popUp->setProgress(i+1);
+        if (abort) break;
+
+        // check if already a thumbnail
+        int offsetThumb = selection.at(i).data(G::OffsetThumbColumn).toInt();
+        int offsetFull = selection.at(i).data(G::OffsetFullColumn).toInt();
+        if (offsetThumb != offsetFull) continue;
+
+        // collect path information
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QFileInfo info(fPath);
+        QString folder = info.dir().path();
+        QString base = info.baseName();
+        QString thumbPath = folder + "/" + base + "_thumb.jpg";
+
+        // add this thumbPath to the list
+        thumbList << thumbPath;
+
+//        qDebug() << "Thumb::insertThumbnails" << i
+//                 << "fPath =" << fPath
+//                 << "thumbPath =" << thumbPath
+//                 ;
+//        continue;
+
+        // create a thumbnail size jpg
+        QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
+        thumb.save(thumbPath, "JPG", 60);
+
+        // add the thumb.jpg to the source file
+        et.addThumb(thumbPath, fPath);
+    }
+    et.close();
+    insertingThumbnails = false;
+
+    // delete the thumbnail files
+    for (int i = 0; i < thumbList.length(); ++i) {
+        QFile::remove(thumbList.at(i));
+    }
+    G::popUp->setProgressVisible(false);
+    G::popUp->end();
+}
+
+/*
+void Thumb::insertThumbnails(QModelIndexList &selection)
+{
     if (G::isLogger) G::log("Thumb::insertThumbnails");
 
     int count = selection.count();
@@ -378,5 +452,5 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
     }
     G::popUp->setProgressVisible(false);
     G::popUp->end();
-}
+} */
 

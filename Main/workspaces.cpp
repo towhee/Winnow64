@@ -127,7 +127,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     gridView->setThumbParameters();
     if (w.isColorManage) toggleColorManage(Tog::on);
     else toggleColorManage(Tog::off);
-    cacheSizeMethod = w.cacheSizeMethod;
+    cacheSizeStrategy = w.cacheSizeMethod;
     sortColumn = w.sortColumn;
     updateSortColumn(sortColumn);
     if (w.isReverseSort) toggleSortDirection(Tog::on);
@@ -178,7 +178,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
     wsd.isColorManage = G::colorManage;
-    wsd.cacheSizeMethod = cacheSizeMethod;
+    wsd.cacheSizeMethod = cacheSizeStrategy;
     wsd.sortColumn = sortColumn;
     wsd.isReverseSort = sortReverseAction->isChecked();
 }

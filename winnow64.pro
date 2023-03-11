@@ -50,7 +50,8 @@ QT += multimediawidgets
 QT += concurrent
 #QT += network
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Dialogs/addthumbnailsdlg.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -173,7 +174,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Dialogs/addthumbnailsdlg.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -260,8 +262,8 @@ SOURCES += Lcms2/cmsvirt.c
 SOURCES += Lcms2/cmswtpnt.c
 SOURCES += Lcms2/cmsxform.c
 
-# all part of MW
 SOURCES += Main/main.cpp
+# all part of MW (mainwindow)
 SOURCES += Main/mainwindow.cpp
 SOURCES += Main/diagnostics.cpp
 SOURCES += Main/draganddrop.cpp
@@ -273,6 +275,7 @@ SOURCES += Main/navigate.cpp
 SOURCES += Main/pick.cpp
 SOURCES += Main/selection_.cpp
 SOURCES += Main/setandupdate.cpp
+SOURCES += Main/settings.cpp
 SOURCES += Main/slideshow.cpp
 SOURCES += Main/sortandfilter.cpp
 SOURCES += Main/status.cpp
@@ -331,6 +334,7 @@ SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/addthumbnailsdlg.ui \
     Dialogs/imagedlg.ui \
     Help/filtershelp.ui \
     Help/filtershelp_copy.ui
@@ -378,7 +382,8 @@ DISTFILES += Docs/ingestautopath \
     notes/Create help dialog.txt \
     notes/Create_help_dialog.txt \
     notes/Scratch2.txt \
-    notes/VideoScripts
+    notes/VideoScripts \
+    notes/_Symbols
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html

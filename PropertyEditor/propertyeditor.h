@@ -82,6 +82,7 @@ public:
     void setItemValue(QModelIndex idx, int type, QVariant value);
     void getItemInfo(QModelIndex &idx, ItemInfo &copy);
     void clearItemInfo(ItemInfo &i);
+    void setItemEnabled(QString name, bool state);
     void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QModelIndex findIndex(QString name);

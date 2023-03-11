@@ -48,6 +48,7 @@ public:
     void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
+    bool refreshMetadataForItem(int row, int instance);
     void clearDataModel();
     bool hasFolderChanged();
     bool contains(QString &path);
@@ -67,11 +68,12 @@ public:
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
+    bool missingThumbnails();
     bool subFolderImagesLoaded = false;
     bool isAllMetadataLoaded();
     int iconCount();
     void clearAllIcons();
-    void setIconRange(int first, int last);
+    void setIconRange(int firstVisible, int lastVisible, int first, int last);
     void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
@@ -106,6 +108,9 @@ public:
     int currentDmRow;                     // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
+    int firstVisibleIcon;
+    int lastVisibleIcon;
+    int visibleIcons;
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
     int midIconRange;                   // used to determine MetaRead priority queue
@@ -115,6 +120,7 @@ public:
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
+    bool isMissingEmbeddedThumb;        // jpg/tiff only
 
     // rgh check if reqd still
     bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true
@@ -126,6 +132,9 @@ public:
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
     bool abortLoadingModel;
+
+    bool showThumbNailSymbolHelp;
+    void setShowThumbNailSymbolHelp(bool showHelp);
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
@@ -197,6 +206,26 @@ private:
     ImageMetadata mCopy;
     int line;
     int rowCountChk;
+
+    QString redMedBullet = "<font color=\"red\"><b>●</b></font>";
+    QString yellowMedBullet = "<font color=\"yellow\"><b>●</b></font>";
+    QString lockSym = "🔒";
+//    QString header = "<p>table><tr><th colspan=\"2\">SYMBOLS</th></tr>";
+    QString header = "<p>Thumbnail symbols:<table>";
+    QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
+    QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
+    QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
+    QString endTable = "</table>";
+    QString footnote = "<p>Show/hide this symbol help in Preferences > User Interface";
+    QString thumbnailHelp =
+            header +
+            row1 +
+            row2 +
+            row3 +
+            endTable +
+            footnote
+            ;
+
 };
 
 #endif // DATAMODEL_H

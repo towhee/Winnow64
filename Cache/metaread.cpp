@@ -116,6 +116,9 @@ void MetaRead::initialize()
     instance = dm->instance;
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
+    imageCacheTriggerCount = 20;
+//    imageCacheTriggerCount = dm->visibleIcons;
+    qDebug() << "MetaRead::initialize imageCacheTriggerCount =" << imageCacheTriggerCount;
 }
 
 QString MetaRead::diagnostics()
@@ -127,38 +130,33 @@ QString MetaRead::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead Diagnostics");
     rpt << "\n" ;
-    rpt << "\n" << "Load algorithm:        " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
-    rpt << "\n" << "instance:              " << instance;
-    rpt << "\n" << "abort:              " << (abort ? "true" : "false");
-    rpt << "\n" << "isRunning:          " << (isRunning() ? "true" : "false");
+    rpt << "\n" << "Load algorithm:         " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "\n" << "instance:               " << instance;
+    rpt << "\n" << "abort:                  " << (abort ? "true" : "false");
+    rpt << "\n" << "isRunning:              " << (isRunning() ? "true" : "false");
     rpt << "\n";
-    rpt << "\n" << "imageCacheTriggerCount:" << imageCacheTriggerCount;
-    rpt << "\n" << "expansionFactor:       " << expansionFactor;
+    rpt << "\n" << "imageCacheTriggerCount: " << imageCacheTriggerCount;
+    rpt << "\n" << "expansionFactor:        " << expansionFactor;
     rpt << "\n";
-//    rpt << "\n" << "visibleIconCount:      " << visibleIconCount;
-    rpt << "\n" << "sfRowCount:            " << sfRowCount;
-    rpt << "\n" << "dm->currentSfRow:      " << dm->currentSfRow;
+    rpt << "\n" << "folder path:            " << folderPath;
+    rpt << "\n" << "sfRowCount:             " << sfRowCount;
+    rpt << "\n" << "dm->currentSfRow:       " << dm->currentSfRow;
     rpt << "\n";
-    rpt << "\n" << "defaultIconChunkSize:  " << dm->defaultIconChunkSize;
-    rpt << "\n" << "iconChunkSize:         " << iconChunkSize;
-    rpt << "\n" << "iconLimit:             " << iconLimit;
-    rpt << "\n" << "firstIconRow:          " << firstIconRow;
-    rpt << "\n" << "lastIconRow:           " << lastIconRow;
-    rpt << "\n" << "rowsWithIcon:          " << rowsWithIcon.size();
-    rpt << "\n" << "dm->iconCount:         " << dm->iconCount();
+    rpt << "\n" << "defaultIconChunkSize:   " << dm->defaultIconChunkSize;
+    rpt << "\n" << "iconChunkSize:          " << iconChunkSize;
+    rpt << "\n" << "iconLimit:              " << iconLimit;
+    rpt << "\n" << "firstIconRow:           " << firstIconRow;
+    rpt << "\n" << "lastIconRow:            " << lastIconRow;
+    rpt << "\n" << "rowsWithIcon:           " << rowsWithIcon.size();
+    rpt << "\n" << "dm->iconCount:          " << dm->iconCount();
     rpt << "\n";
-    rpt << "rowsWithIcon in datamodel:";
-    rpt.setFieldAlignment(QTextStream::AlignRight);
-    rpt.setFieldWidth(9);
-    for (int i = 0; i < dm->rowCount(); i++) {
-//        if (dm->index(i,0).data(Qt::DecorationRole).isNull()) continue;
-        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
-        rpt << "\n" << i;
-    }
-//    for (int i = 0; i < rowsWithIcon.size(); i++) {
-//        rpt << "\n" << i << rowsWithIcon.at(i);
+//    rpt << "rowsWithIcon in datamodel:";
+//    rpt.setFieldAlignment(QTextStream::AlignRight);
+//    rpt.setFieldWidth(9);
+//    for (int i = 0; i < dm->rowCount(); i++) {
+//        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
+//        rpt << "\n" << i;
 //    }
-//    rpt << reportMetaCache();
 
     rpt << "\n\n" ;
     return reportString;
@@ -236,13 +234,15 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         return false;
     }
 
+    static bool embeddedThumbnailAlreadyFound = false;
+
     // read metadata from file into metadata->m
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     if (!isMetaLoaded) {
         qDebug() << "MetaRead::readMetadata"
-                 << "ow =" << sfIdx.row()
+                 << "row =" << sfIdx.row()
                  << "Load meta failed"
                  ;
     }
@@ -262,6 +262,13 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << "abort =" << abort
                  ;
     }
+    /*
+    qDebug() << "MetaRead::readMetadata"
+             << "row =" << sfIdx.row()
+             << "metadata->m.type =" << metadata->m.type
+             << "metadata->m.offsetThumb =" << metadata->m.offsetThumb
+             << "metadata->m.lengthThumb =" << metadata->m.lengthThumb
+                ; //*/
 
     // add metadata->m to DataModel dm
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
@@ -308,6 +315,12 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     bool isVideo = false;
     isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
 
+    if (isDebug)
+    {
+        qDebug().noquote() << "MetaRead::readIcon"
+                           << "load   row =" << sfIdx.row()
+                              ;
+    }
     // get thumbnail
     QImage image;
     bool thumbLoaded = false;
@@ -468,6 +481,9 @@ void MetaRead::run()
         }
 
         // do something with row
+        if (row == 82) {
+            int x = 1;
+        }
         readRow(row);
 
         // delayed start ImageCache
@@ -507,7 +523,6 @@ void MetaRead::run()
     G::allMetadataLoaded = true;
     cleanupIcons();
 
-    emit updateIconBestFit();
     // refresh image cache in case not up-to-date (usually issue is target range)
     if (sfRowCount > imageCacheTriggerCount) {
 //        emit triggerImageCache("Final");

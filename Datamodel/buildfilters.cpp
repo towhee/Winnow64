@@ -15,6 +15,7 @@
          *lenses;
          *keywords;
          *creators;
+         *missingThumbs;
          *focalLengths;
          *years;
          *days;
@@ -315,6 +316,11 @@ void BuildFilters::updateFilteredCounts()
     filters->addFilteredCountPerItem(map, filters->creators);
     map.clear();
 
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    filters->addFilteredCountPerItem(map, filters->missingThumbs);
+    map.clear();
+
     for (int row = 0; row < rows; row++) {
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
@@ -364,6 +370,10 @@ void BuildFilters::updateCategoryItems()
     case Category::CreatorEdit:
         col = G::CreatorColumn;
         cat = filters->creators;
+        break;
+    case Category::MissingThumbEdit:
+        col = G::MissingThumbColumn;
+        cat = filters->missingThumbs;
         break;
     }
 
@@ -470,6 +480,13 @@ void BuildFilters::appendUniqueItems()
         map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->creators);
     time("Initialize creators");
+    emit updateProgress(progress += progressInc);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    filters->addCategoryItems(map, filters->missingThumbs);
+    time("Initialize missing thumbs");
     emit updateProgress(progress += progressInc);
     map.clear();
 

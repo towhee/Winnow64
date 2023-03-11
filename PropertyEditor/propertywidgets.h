@@ -40,6 +40,7 @@ enum UserRole
     UR_isDecoration,                    // show expand/collapse decoration
     UR_isBackgroundGradient,            // make the root rows dark gray gradiant
     UR_isHidden,                        // flag to hide/show row in tree
+    UR_isEnabled,                       // flag to show disabled in tree
     UR_Source,                          // name of property/variable being edited = i.key
     UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate

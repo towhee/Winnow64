@@ -18,7 +18,8 @@ public:
     explicit Thumb(DataModel *dm, Metadata *metadata,
                    FrameDecoder *frameDecoder);
     bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
-    void insertThumbnails(QModelIndexList &selection);
+    void insertThumbnails(QList<int> &missingJpg);
+    void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
     bool abort = false;
 
