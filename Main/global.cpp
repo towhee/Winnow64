@@ -42,7 +42,8 @@ namespace G
     bool useMultimedia = true;
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
-    bool tryConcurrentLoading = true;   // show/hide option to use concurrent MetaRead
+
+    // metadata/icon read method
     QString metaReadInUse;
 
     // system display
@@ -120,9 +121,10 @@ namespace G
     bool isEmbellish;
     bool colorManage;
     bool modifySourceFiles;
+    bool backupBeforeModifying;
     bool useSidecar;
-    bool embedTifThumb;
-    bool isLinearLoading;               // = !tryConcurrentLoading;
+//    bool embedTifJpgThumb;
+    bool isLinearLoading;
     bool renderVideoThumb;
     bool includeSubfolders;
 

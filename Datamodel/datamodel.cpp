@@ -229,6 +229,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
 
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_CreatorColumn, new QStandardItem("_Creator")); horizontalHeaderItem(G::_CreatorColumn)->setData(true, G::GeekRole);
@@ -282,6 +283,8 @@ void DataModel::clearDataModel()
     fileInfoList.clear();
     // reset iconChunkSize
     iconChunkSize = defaultIconChunkSize;
+    // reset missing thumb (jpg/tiff)
+    isMissingEmbeddedThumb = false;
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -648,7 +651,7 @@ bool DataModel::addFileData()
             }
         }
     }
-    if (rowCount() >0) {
+    if (rowCount() > 0) {
         QModelIndex par = index(0,0).parent();
 //        qDebug() << "INSTANCE =" << instance
 //                 << "index(0,0) =" << index(0,0)
@@ -660,7 +663,8 @@ bool DataModel::addFileData()
 //                 << "p =" << &par
 //                    ;
     }
-    return true;
+
+   return true;
 }
 
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
@@ -684,7 +688,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 
     mutex.lock();
     setData(index(row, G::PathColumn), fPath, G::PathRole);
-    QString tip = QString::number(row) + ": " + fPath;  //fileInfo.absoluteFilePath();
+    QString tip = fPath;  //fileInfo.absoluteFilePath();
+    if (showThumbNailSymbolHelp) tip += thumbnailHelp;
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     setData(index(row, G::PathColumn), false, G::CachedRole);
@@ -822,6 +827,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();
     m.metadataLoaded = index(row, G::MetadataLoadedColumn).data().toBool();
+    m.permissions = index(row, G::PermissionsColumn).data().toUInt();
+    m.isReadWrite = index(row, G::ReadWriteColumn).data().toBool();
 
     m.width = index(row, G::WidthColumn).data().toInt();
     m.height = index(row, G::HeightColumn).data().toInt();
@@ -945,6 +952,7 @@ void DataModel::addAllMetadata()
     }
     setAllMetadataLoaded(true);
     emit centralMsg("Metadata loaded");
+    qApp->processEvents();
     endLoad(true);
     /*
     qint64 ms = G::t.elapsed();
@@ -982,17 +990,18 @@ bool DataModel::readMetadataForItem(int row, int instance)
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
     // load metadata
-//     qDebug() << "DataModel::readMetadataForItem"
-//              << "Metadata loaded ="
-//              << index(row, G::MetadataLoadedColumn).data().toBool()
-//              << fPath;
+     qDebug() << "DataModel::readMetadataForItem"
+              << "Metadata loaded ="
+              << index(row, G::MetadataLoadedColumn).data().toBool()
+              << fPath;
+
     if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
 
         // only read metadata from files that we know how to
         QString ext = fileInfo.suffix().toLower();
         if (metadata->hasMetadataFormats.contains(ext)) {
-//            qDebug() << "DataModel::readMetadataForItem" << fPath;
+            qDebug() << "DataModel::readMetadataForItem" << fPath;
             if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
                 metadata->m.row = row;
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
@@ -1019,6 +1028,65 @@ bool DataModel::readMetadataForItem(int row, int instance)
     return true;
 }
 
+bool DataModel::refreshMetadataForItem(int row, int instance)
+{
+/*
+    Reads the image metadata into the datamodel for the row.
+*/
+    lastFunction = "";
+    if (G::isLogger) G::log("DataModel::refreshMetadataForItem", index(row, 0).data(G::PathRole).toString());
+//    qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::refreshMetadataForItem" << "instance =" << instance
+                          << "row =" << row
+                          << currentFolderPath;
+
+    // might be called from previous folder during folder change
+    if (instance != this->instance) {
+        qWarning() << "WARNING" << "DataModel::readMetadataForItem" << row << "Instance conflict = "
+                 << "DM instance =" << this->instance
+                 << "Src instance =" << instance
+                    ;
+        return true;
+    }
+    if (G::stop) return false;
+
+    QString fPath = index(row, 0).data(G::PathRole).toString();
+
+    // load metadata
+     qDebug() << "DataModel::refreshMetadataForItem"
+              << "Metadata loaded ="
+              << index(row, G::MetadataLoadedColumn).data().toBool()
+              << fPath;
+
+    QFileInfo fileInfo(fPath);
+
+    // only read metadata from files that we know how to
+    QString ext = fileInfo.suffix().toLower();
+    if (metadata->hasMetadataFormats.contains(ext)) {
+        qDebug() << "DataModel::readMetadataForItem" << fPath;
+        if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
+            metadata->m.row = row;
+            addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
+        }
+        else {
+            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
+            G::error("", fPath, "Failed to load metadata.");
+            mutex.unlock();
+            return false;
+        }
+    }
+    // cannot read this file type, load empty metadata
+    else {
+        qWarning() << "WARNING" << "DataModel::refreshMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
+//            G::error("DataModel::readMetadataForItem", fPath, "Cannot read file type.");
+        metadata->clearMetadata();
+        metadata->m.row = row;
+        addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
+        return false;
+    }
+    return true;
+}
+
 bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 {
 /*
@@ -1032,7 +1100,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 */    
     lastFunction = "";
     mCopy = m;
-    line = 973;
     if (G::isLogger) G::log("DataModel::addMetadataForItem");
     /*
     qDebug() << "DataModel::addMetadataForItem"
@@ -1040,7 +1107,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
              << "m.instance =" << m.instance
              << currentFolderPath;
     //*/
-    line = 980;  rowCountChk = rowCount();
+    rowCountChk = rowCount();
     if (G::stop) return false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
@@ -1186,11 +1253,19 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
+    setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
+    // check for missing thumbnail in jpg/tiif
+    if (m.isReadWrite)
+        if (metadata->canEmbedThumb.contains(m.type.toLower()))
+            if (m.isEmbeddedThumbMissing) {
+                isMissingEmbeddedThumb = true;
+            }
+
     // req'd for 1st image, probably loaded before metadata cached
-    line = 1128; if (row == 0) emit updateClassification();
+    if (row == 0) emit updateClassification();
 //    mutex.unlock();
     mLock = false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
@@ -1205,6 +1280,14 @@ bool DataModel::metadataLoaded(int dmRow)
                           << "row =" << dmRow
                           << currentFolderPath;
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
+}
+
+bool DataModel::missingThumbnails()
+{
+    for (int row = 0; row < sf->rowCount(); row++) {
+        if (index(row, G::MissingThumbColumn).data().toBool()) return true;
+    }
+    return false;
 }
 
 bool DataModel::instanceClash(QModelIndex idx, QString src)
@@ -1557,11 +1640,14 @@ void DataModel::clearAllIcons()
     mutex.unlock();
 }
 
-void DataModel::setIconRange(int first, int last)
+void DataModel::setIconRange(int firstVisible, int lastVisible, int first, int last)
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::setIconRange" << "instance =" << instance << currentFolderPath;
     mutex.lock();
+    firstVisibleIcon = firstVisible;
+    lastVisibleIcon = lastVisible;
+    visibleIcons = lastVisible - firstVisible;
     startIconRange = first;
     endIconRange = last;
     midIconRange = first + (last - first) / 2;
@@ -2178,10 +2264,26 @@ void DataModel::clearPicks()
     if (G::isLogger) G::log("DataModel::clearPicks");
     if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance << currentFolderPath;
     mutex.lock();
-    for(int row = 0; row < sf->rowCount(); row++) {
+    for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
     mutex.unlock();
+}
+
+void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
+{
+    if (G::isLogger) G::log("DataModel::setShowThumbNailSymbolHelp");
+    showThumbNailSymbolHelp = showHelp;
+    qDebug() << "DataModel::setShowThumbNailSymbolHelp showThumbNailSymbolHelp ="
+             << showThumbNailSymbolHelp;
+    // refresh datamodel
+    for (int row = 0; row < rowCount(); row++) {
+        QModelIndex dmIdx = index(row, G::PathColumn);
+        QString fPath = dmIdx.data(G::PathRole).toString();
+        QString tip = fPath;  //fileInfo.absoluteFilePath();
+        if (showThumbNailSymbolHelp) tip += thumbnailHelp;
+        setData(dmIdx, tip, Qt::ToolTipRole);
+    }
 }
 
 QString DataModel::diagnosticsErrors()

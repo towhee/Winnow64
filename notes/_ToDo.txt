@@ -1,6 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Add modify on icon to statusbar
+- TableView to LoupView scroll thumbView
+- Remove settings deprecated items MW::removeDeprecatedSettings()
+- Suggest embed thumbnails when missing
 - Make sure HEIC also works on PC including thumbs
 - folderAndFileSelectionChange does not show folder highlight change
 - Cmd Del = delete all rejected
@@ -78,6 +82,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Thumbnail symbol help in IconView tooltip
+- Delete does not move to trash or recycle bin
+- Occasional torquoise header text in preferences
+- Thumb not loading Tiff with embedded JPG, getting from full size
 - Update image cache target range in MW::loadConcurrentMetaDon
 - Ignore IconViewDelegate paint before icon has been loaded into DataModel
 - IconViewDelegate icon scaling glitches

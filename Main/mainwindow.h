@@ -18,6 +18,7 @@
 #include "Main/widgetcss.h"
 
 #include "appdlg.h"
+#include "addthumbnailsdlg.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Datamodel/filters.h"
@@ -253,7 +254,8 @@ public:
     QStack<QString> *slideshowRandomHistoryStack;
 
     // preferences: cache
-    QString cacheSizeMethod;
+    QString cacheMethod;
+    QString cacheSizeStrategy;
     QString cacheMinSize;
     int cacheSizePercentOfAvailable;
     int cacheMinMB = 2000;
@@ -295,7 +297,8 @@ public:
         GridTab,        // 4
         StartTab,       // 5
         MessageTab,     // 6
-        EmbelTab        // 7    rgh req'd? for coord help?
+        BlankTab,       // 7
+        EmbelTab        // 8    rgh req'd? for coord help?
     };
 
     enum Tog {
@@ -347,6 +350,35 @@ protected:
     void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
 
+signals:
+    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
+    void restartMetaRead(int newRow);
+    void interruptMetaRead(bool flag);
+    void startMetaRead(int sfRow, QString src);
+    void startIconCache(int sfRow, QString src);
+    void setImageCachePosition(QString, QString);
+    void setImageCachePosition2(QString);
+    void refreshImageCache();
+    void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
+    void closeZoomDlg();
+    void aSyncGo(int);  // rgh req'd?
+    void needToShow();
+    void abortMetaRead();
+    void abortMDCache();
+    void abortImageCache();
+    void abortBuildFilters();
+    void abortFrameDecoder();
+    void abortEmbelExport();
+    void abortHueReport();
+    void abortStackOperation();
+
+    void testAddToDM(ImageMetadata m, QString src);
+
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
     void restoreLastSessionGeometryState();
@@ -379,35 +411,6 @@ public slots:
     void slideShowResetSequence();
     void slideshowHelpMsg();
     void imageCachePrevCentralView();
-
-signals:
-    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void restartMetaRead(int newRow);
-    void interruptMetaRead(bool flag);
-    void startMetaRead(int sfRow, QString src);
-    void startIconCache(int sfRow, QString src);
-    void setImageCachePosition(QString, QString);
-    void setImageCachePosition2(QString);
-    void refreshImageCache();
-    void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
-    void closeZoomDlg();
-    void aSyncGo(int);  // rgh req'd?
-    void needToShow();
-    void abortMetaRead();
-    void abortMDCache();
-    void abortImageCache();
-    void abortBuildFilters();
-    void abortFrameDecoder();
-    void abortEmbelExport();
-    void abortHueReport();
-    void abortStackOperation();
-
-    void testAddToDM(ImageMetadata m, QString src);
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -570,6 +573,7 @@ private slots:
     void nextSlide();
     void prevRandomSlide();
 //    void updateImageCacheSize(int mb);
+    void setCacheMethod(QString method);
     void setImageCacheParameters();
     void setImageCacheMinSize(QString size);
     void setImageCacheSize(QString method);
@@ -589,6 +593,9 @@ private slots:
 
     void addIngestHistoryFolder(QString fPath);
     void ingestFinished();
+
+    void setIgnoreAddThumbnailsDlg();
+    void setBackupModifiedFiles(bool isBackup);
 
     void setCentralView();
 
@@ -742,7 +749,7 @@ private:
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
-    QAction *addThumbnailsAction;
+    QAction *embedThumbnailsAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
@@ -953,6 +960,7 @@ private:
 
     QScrollArea *welcome;       // welcome screen for first time use
     QWidget *messageView;
+    QWidget *blankView = new QWidget;
     Ui::message msg;
     QLineEdit *filterBar;
     QProgressBar *progressBar;
@@ -970,7 +978,7 @@ private:
     QPixmap *progressPixmap;
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
-    QLabel *metadataThreadRunningLabel;
+    QLabel *metadataThreadRunningLabel = new QLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
     QLabel *cacheAmountLabel;
@@ -1094,7 +1102,7 @@ private:
 
     bool isZoomDlgVisible = false;
 
-//    bool timeToQuit;
+    bool ignoreAddThumbnailsDlg = false;
 
     bool sortMenuUpdateToMatchTable = false;
 
@@ -1172,12 +1180,10 @@ private:
     void initialize();
     void setupPlatform();
     void setfsModelFlags();
+    void removeDeprecatedSettings();
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
-//    void saveSelection();
-//    void recoverSelection();
-//    bool getSelection(QStringList &list);
     void openLog();
     void closeLog();
     void clearLog();
@@ -1211,7 +1217,9 @@ private:
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
-    void insertThumbnails();
+    QString embedThumbnails();
+    void embedThumbnailsFromAction();
+    void chkMissingEmbeddedThumbnails(QString src = "FromLoading");
 
     QRect testR;
 

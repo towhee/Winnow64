@@ -41,18 +41,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString base = "";
     QString spacer = "   ";
 
-    /* Possible status info
-
-    QString fName = idx.data(Qt::EditRole).toString();
-    QString fPath = idx.data(G::PathRole).toString();
-    QString shootingInfo = metadata->getShootingInfo(fPath);
-    QString err = metadata->getErr(fPath);
-    QString magnify = "🔎🔍";
-    QString fileSym = "📁📂📗🕎📷🎨👍";
-    QString camera = "📈📌🔈📎🔗🔑🧾🛈";
-    //    https://www.vertex42.com/ExcelTips/unicode-symbols.html
-    QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞🚫";
-//        */
 
     // update G::availableMemory
 #ifdef Q_OS_WIN
@@ -232,14 +220,25 @@ void MW::updateProgressBarWidth()
 
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QString calledBy)
 {
-//    return;  //rghmacdelay
     if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
-//    qDebug() << "MW::updateMetadataThreadRunStatus" << isRunning;
+    /*
+    qDebug() << "MW::updateMetadataThreadRunStatus"
+             << "isRunning =" << isRunning
+             << "G::isLinearLoading =" << G::isLinearLoading;
+             //*/
     if (isRunning) {
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
-        #ifdef Q_OS_WIN
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;font-size: 24px;}");
-        #endif
+        if (G::isLinearLoading) {
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;}");
+            #ifdef Q_OS_WIN
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;font-size: 24px;}");
+            #endif
+        }
+        else {
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;}");
+            #ifdef Q_OS_WIN
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;font-size: 24px;}");
+            #endif
+        }
     }
     else {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
@@ -429,9 +428,9 @@ void MW::toggleImageCacheMethod()
         return;
     }
 
-    if (cacheSizeMethod == "Thrifty") setImageCacheSize("Moderate");
-    else if (cacheSizeMethod == "Moderate") setImageCacheSize("Greedy");
-    else if (cacheSizeMethod == "Greedy") setImageCacheSize("Thrifty");
+    if (cacheSizeStrategy == "Thrifty") setImageCacheSize("Moderate");
+    else if (cacheSizeStrategy == "Moderate") setImageCacheSize("Greedy");
+    else if (cacheSizeStrategy == "Greedy") setImageCacheSize("Thrifty");
     setImageCacheParameters();
 }
 

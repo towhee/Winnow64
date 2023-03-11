@@ -119,11 +119,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    diagnosticsMetadataCache();
-
+    QFile("/Users/roryhill/Pictures/_test4/1990-05-01_0002Neg.jpg").moveToTrash();
     return;
-
-    QString s = "🚫";  // "❓❌ 🇨🇦 🪰 🦬🐎🪰🪳🦟🪲🦥🦞🦤🐻‍❄️🦩🪱🦨"
-                       // "🦦🦫🐫🐪🦎🦋🕷️🐌🦭🦧🦣"
-    qDebug() << s;
+    qDebug()
+            << "dm->showThumbNailSymbolHelp =" << dm->showThumbNailSymbolHelp
+            << "setting->contains showThumbNailSymbolHelp =" << setting->contains("showThumbNailSymbolHelp")
+            << "setting->value(showThumbNailSymbolHelp).toBool() =" << setting->value("showThumbNailSymbolHelp").toBool()
+               ;
+    return;
+    diagnosticsMetadataCache();
 }

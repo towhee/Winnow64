@@ -359,10 +359,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     font.setPointSize(fontSize);
     painter->setFont(font);
 
-    QPen catPen(QColor(t,t,t));         // root items same other items
-    QPen regPen(QColor(t,t,t));         // other items have silver text
-    QPen selPen("#1b8a83");             // selected items have torqouis text
-    QPen brdPen(QColor(c,c,c));         // border color
+    QPen catPen(QColor(t,t,t));             // root items same other items
+    QPen regPen(QColor(t,t,t));             // other items have silver text
+    QPen selPen("#1b8a83");                 // selected items have torquoise text
+    QPen disPen(G::disabledColor.name());   // disabled items have gray text
+    QPen brdPen(QColor(c,c,c));             // border color
 
     QString text = index.data().toString();
     QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, r.width());
@@ -392,8 +393,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 }
             }
             // caption text and no borders for root item
-            if (isSelected) painter->setPen(selPen);
-            else painter->setPen(catPen);
+//            if (isSelected) painter->setPen(selPen);
+//            else painter->setPen(catPen);
+            painter->setPen(catPen);
             if (index.data(UR_isDecoration).toBool()) {
                 painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);
             }
@@ -423,7 +425,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // caption text and cell borders
         if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r0, valueRowBackground);
-            if (isSelected) painter->setPen(selPen);
+//            if (isSelected) painter->setPen(selPen);
+            // disabled?
+            if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
             // indent the text (maybe not if not a header)
             if (index.data((UR_isIndent)).toBool())
                 painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);

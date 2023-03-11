@@ -158,6 +158,16 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     } while (fileAlreadyExists);
 }
 
+void Utilities::backup(QString fPath, QString subfolderName)
+{
+    QString fName = QFileInfo(fPath).fileName();
+    QString backupFolder = QFileInfo(fPath).dir().path() + "/" + subfolderName;
+    QString backupPath = backupFolder + "/" + fName;
+    if (!QDir(backupFolder).exists()) QDir().mkpath(backupFolder);
+    uniqueFilePath(backupPath);
+    QFile::copy(fPath, backupPath);
+}
+
 QString Utilities::inputText(QString title, QString description,
                              QStringList doNotUse, QString old)
 {

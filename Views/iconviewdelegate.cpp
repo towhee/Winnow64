@@ -112,6 +112,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(Qt::red);
+    missingThumbColor = QColor(Qt::yellow);
     cacheBorderColor = QColor(Qt::lightGray);
     videoTextcolor = G::textColor;
     numberTextColor = QColor(l40,l40,l40);
@@ -372,6 +373,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isSelected = dm->isSelected(row);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
+    bool isMissingThumb = index.model()->index(row, G::MissingThumbColumn).data().toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
@@ -413,12 +415,18 @@ void IconViewDelegate::paint(QPainter *painter,
 //             */
 
     // cached rect located bottom right as containment for circle
-    int cacheDiam = 6;
-    int cacheOffset = 3;
-    QPoint cacheTopLeft(thumbRect.right() - cacheDiam - cacheOffset,
-                        thumbRect.bottom() - cacheDiam - cacheOffset);
-    QPoint cacheBottomRight(thumbRect.right() - cacheOffset, thumbRect.bottom() - cacheOffset);
+    int dotDiam = 6;
+    int dotOffset = 3;
+    QPoint cacheTopLeft(thumbRect.right() - dotDiam - dotOffset,
+                        thumbRect.bottom() - dotDiam - dotOffset);
+    QPoint cacheBottomRight(thumbRect.right() - dotOffset, thumbRect.bottom() - dotOffset);
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
+
+    // missing thumb rect located bottom left as containment for circle
+    QPoint missingThumbTopLeft(thumbRect.left() + dotDiam - dotOffset,
+                        thumbRect.bottom() - dotDiam - dotOffset);
+    QPoint missingThumbBottomRight(thumbRect.left() + dotDiam + dotOffset, thumbRect.bottom() - dotOffset);
+    QRect missingThumbRect(missingThumbTopLeft, missingThumbBottomRight);
 
     QPainterPath iconPath;
     iconPath.addRoundedRect(iconRect, 6, 6);
@@ -576,7 +584,10 @@ void IconViewDelegate::paint(QPainter *painter,
         lockFont.setPixelSize(lockSize);
         painter->setFont(lockFont);
         QRectF bRect;
-        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
+        QRect lockRect(missingThumbRect.right() + 2, thumbRect.bottom() - lockSize,
+                       lockSize, lockSize);
+        painter->drawText(lockRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
+//        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
         painter->drawText(bRect, "🔒");
         /*
         qDebug() << "IconViewDelegate::paint "
@@ -597,6 +608,13 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);
+    }
+
+    // draw the missing thumb circle
+    if (isMissingThumb && !G::isSlideShow) {
+        painter->setPen(cacheBorderColor);
+        painter->setBrush(missingThumbColor);
+        painter->drawEllipse(missingThumbRect);
     }
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to

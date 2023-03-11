@@ -103,6 +103,7 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(gridView);
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(messageView);
+    centralLayout->addWidget(blankView);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -140,6 +141,10 @@ void MW::createDataModel()
     else combineRawJpg = false;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
+
+    if (setting->contains("showThumbNailSymbolHelp"))
+        dm->showThumbNailSymbolHelp = setting->value("showThumbNailSymbolHelp").toBool();
+    else dm->showThumbNailSymbolHelp = true;
 
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
@@ -245,7 +250,9 @@ void MW::createMDCache()
             this, &MW::updateMetadataThreadRunStatus);
 
     connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-            this, &MW::setCentralMessage, Qt::DirectConnection);
+            this, &MW::setCentralMessage);
+//    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
+//            this, &MW::setCentralMessage, Qt::DirectConnection);
 
 //    connect(metadataCacheThread, &MetadataCache::selectFirst,
 //            thumbView, &IconView::selectFirst);
@@ -955,9 +962,11 @@ void MW::createStatusBar()
 
     // label to show metadataThreadRunning status
     int runLabelWidth = 13;
-    metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Turns red when metadata/icon caching in progress\n" + G::metaReadInUse;
-    metadataThreadRunningLabel->setToolTip(mtrl);
+    //metadataThreadRunningLabel = new QLabel;
+    // sets tooltip
+    setCacheMethod(cacheMethod);
+//    QString mtrl = "Turns orange/red when metadata/icon caching in progress\n" + G::metaReadInUse;
+//    metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
@@ -972,7 +981,7 @@ void MW::createStatusBar()
     // label to show cache amount
 //    cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
     // setImageCacheSize sets icon
-    setImageCacheSize(cacheSizeMethod);
+    setImageCacheSize(cacheSizeStrategy);
     statusBar()->addPermanentWidget(cacheMethodBtn);
     cacheMethodBtn->show();
 

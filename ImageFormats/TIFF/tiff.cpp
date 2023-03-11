@@ -262,7 +262,7 @@ bool Tiff::parse(MetadataParameters &p,
        - if IFD tiff thumb found then:  m.offsetThumb != m.offsetFull
     */
     // IRB:  Get embedded JPG thumbnail if available
-    bool foundJpgThumb = false;
+//    bool foundJpgThumb = false;
     if (ifdPhotoshopOffset) {
         if (p.report) {
             p.hdr = "IRB";
@@ -273,7 +273,6 @@ bool Tiff::parse(MetadataParameters &p,
         p.offset = ifdPhotoshopOffset;
         irb->readThumb(p, m);    // rgh need to add IRB for DNG
         if (m.lengthThumb) {
-            foundJpgThumb = true;
             // assign arbitrary value to thumbLongside less than 512
             thumbLongside = 256;
             if (p.report) {
@@ -306,7 +305,7 @@ bool Tiff::parse(MetadataParameters &p,
         }
     }
     else {
-        while (nextIFDOffset > 0 && !foundJpgThumb) {
+        while (nextIFDOffset > 0 && !m.isEmbeddedThumbMissing) {
             count++;
             p.hdr = "IFD" + QString::number(count);
             p.offset = nextIFDOffset;
@@ -352,7 +351,7 @@ bool Tiff::parse(MetadataParameters &p,
         }
 
     }
-    if (!p.report && ifdsubIFDOffset && !foundJpgThumb) {
+    if (!p.report && ifdsubIFDOffset && !m.isEmbeddedThumbMissing) {
         while (nextIFDOffset && count < 10) {
             count ++;
             p.hdr = "SubIFD " + QString::number(count);
@@ -374,8 +373,7 @@ bool Tiff::parse(MetadataParameters &p,
         }
     }
 
-    // Add a thumbnail if missing
-    if (G::embedTifThumb && m.offsetThumb == m.offsetFull && thumbLongside > 512) {
+    if (G::modifySourceFiles && m.offsetThumb == m.offsetFull && thumbLongside > 512) {
         p.offset = m.offsetThumb;        // Smallest preview to use
         encodeThumbnail(p, m, ifd);
         // write thumbnail added to xmp sidecar if writing sidecars
@@ -388,6 +386,9 @@ bool Tiff::parse(MetadataParameters &p,
             }
         }
     }
+
+    // Identify thumbnail is missing
+    m.isEmbeddedThumbMissing = m.offsetThumb == m.offsetFull;
 
     // EXIF: *******************************************************************
 
@@ -600,17 +601,22 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     // strip byte counts
     if (ifd->ifdDataHash.contains(279)) {
         int stripCount = ifd->ifdDataHash.value(279).tagCount;
-        stripByteCounts.resize(stripCount);
-        if (stripCount == 1) {
-            stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
-        }
-        else {
-            quint32 offset = ifd->ifdDataHash.value(279).tagValue;
-            p.file.seek(offset);
-            for (int i = 0; i < stripCount; ++i) {
-                stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
+//        if (stripCount < 100000) {
+            stripByteCounts.resize(stripCount);
+            if (stripCount == 1) {
+                stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
             }
-        }
+            else {
+                quint32 offset = ifd->ifdDataHash.value(279).tagValue;
+                p.file.seek(offset);
+                for (int i = 0; i < stripCount; ++i) {
+                    stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
+                }
+            }
+//        }
+//        else {
+//            err = "stripCount > 100000.  \n";
+//        }
     }
     else {
         err = "No StripByteCounts.  \n";
@@ -696,12 +702,12 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (err != "") G::error("Tiff::parseForDecoding", p.fPath, err);
     if (err != "" && !isReport) return false;
 
-    // rgh used for debugging - req'd?
-//    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
-//                  " Compression:" + QString::number(compression) +
-//                  " Predictor:" + QString::number(predictor) +
-//                  " PlanarConfiguration:" + QString::number(planarConfiguration)
-//                    ;
+    /* rgh used for debugging - req'd?
+    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
+                  " Compression:" + QString::number(compression) +
+                  " Predictor:" + QString::number(predictor) +
+                  " PlanarConfiguration:" + QString::number(planarConfiguration)
+                    ; //*/
 
     if (p.report) {
         int w1 = 25;
@@ -936,13 +942,13 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
 /*
     If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
-    thumbnail with a longside of G::maxIconSize to the tiff file.  This involves appending an
-    IFD to the end of the IFD chain and sampling the smallest existing IFD preview (source) to
-    the new thumbnail.
+    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
+    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
+    (source) to the new thumbnail.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD will
-          be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
+          will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -964,8 +970,8 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         - subsample image down to thumbnail resolution
         - write strip pixels rgb at offset StripOffsets
 
-    p.offset must be set to ifdOffset that describes the source image to be sampled to create
-    the thumbnail before calling this function.
+    p.offset must be set to ifdOffset that describes the source image to be sampled to
+    create the thumbnail before calling this function.
 */
     // get decoding parameters from source IFD (p.offset must be preset)
     if (!parseForDecoding(p, ifd)) {
@@ -974,6 +980,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
     p.file.close();
+    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
     p.file.open(QIODevice::ReadWrite);
 
     // go to last main IFD offset and replace with offset to new IFD at end of file

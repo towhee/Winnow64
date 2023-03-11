@@ -521,11 +521,11 @@ void MW::createActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
-    addThumbnailsAction = new QAction(tr("Fix missing thumbnails in JPG"), this);
-    addThumbnailsAction->setObjectName("addThumbnails");
-    addThumbnailsAction->setShortcutVisibleInContextMenu(true);
-    addAction(addThumbnailsAction);
-    connect(addThumbnailsAction, &QAction::triggered, this, &MW::insertThumbnails);
+    embedThumbnailsAction = new QAction(tr("Embed missing thumbnails  "), this);
+    embedThumbnailsAction->setObjectName("embedThumbnails");
+    embedThumbnailsAction->setShortcutVisibleInContextMenu(true);
+    addAction(embedThumbnailsAction);
+    connect(embedThumbnailsAction, &QAction::triggered, this, &MW::embedThumbnailsFromAction);
 
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
@@ -1475,6 +1475,9 @@ void MW::createActions()
     pasteAction->setShortcutVisibleInContextMenu(true);
     addAction(pasteAction);
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
+
+    // initially enable/disable actions
+    //embedThumbnailsAction->setEnabled(G::modifySourceFiles);
 }
 
 void MW::createMenus()
@@ -1577,7 +1580,7 @@ void MW::createMenus()
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
     utilitiesMenu = editMenu->addMenu("Utilities");
-    utilitiesMenu->addAction(addThumbnailsAction);
+    utilitiesMenu->addAction(embedThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
@@ -1877,8 +1880,12 @@ void MW::createMenus()
     thumbViewActions->append(saveAsFileAction);
     thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
+    thumbViewActions->append(embedThumbnailsAction);
+    thumbViewActions->append(separatorAction6);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
+    thumbViewActions->append(diagnosticsMetadataCacheAction);
+    thumbViewActions->append(diagnosticsImageCacheAction);
 //    thumbViewActions->append(diagnosticsErrorsAction);
 
 //    // imageview/tableview/gridview/compareview context menu

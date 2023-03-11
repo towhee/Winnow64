@@ -388,6 +388,8 @@ void MetadataCache::updateIconLoadingProgress(int count, int end)
             QString msg = "Loading thumbnails: ";
             msg += QString::number(count) + " of " + QString::number(end);
             emit showCacheStatus(msg);
+            //qDebug() << "MetadataCache::updateIconLoadingProgress" << msg;
+            qApp->processEvents();
         }
     }
 //    if (G::dmEmpty) {
@@ -470,6 +472,11 @@ void MetadataCache::readIconChunk()
     int start = startRow;
     int end = endRow;
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
+    int n = end - start;
+    if (n < 100) countInterval = 1;
+    else if (n < 1000) countInterval = 10;
+    else if (n >= 1000) countInterval = 100;
+
     if (cacheAllIcons) {
         start = 0;
         end = dm->sf->rowCount();
@@ -490,7 +497,7 @@ void MetadataCache::readIconChunk()
             return;
         }
         loadIcon(row);
-//        updateIconLoadingProgress(count++, end);
+        updateIconLoadingProgress(count++, end);
     }
 
     // process icons before visible range
@@ -501,7 +508,7 @@ void MetadataCache::readIconChunk()
                 return;
             }
             loadIcon(row);
-//            updateIconLoadingProgress(count++, end);
+            updateIconLoadingProgress(count++, end);
         }
     }
 
@@ -513,7 +520,7 @@ void MetadataCache::readIconChunk()
                 return;
             }
             loadIcon(row);
-//            updateIconLoadingProgress(count++, end);
+            updateIconLoadingProgress(count++, end);
         }
     }
 }
@@ -525,6 +532,7 @@ void MetadataCache::readMetadataChunk()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MetadataCache::readMetadataChunk");
 
+    static bool embeddedThumbnailAlreadyFound = false;
     int tryAgain = 0;
     bool metadataLoadFailed;
     do {
@@ -555,6 +563,7 @@ void MetadataCache::readMetadataChunk()
                             //*/
             }
             QString fPath = idx.data(G::PathRole).toString();
+
             /*
             if (G::isLogger || G::isFlowLogger)
             {

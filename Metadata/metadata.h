@@ -80,6 +80,7 @@ public:
     QStringList hasJpg;
     QStringList hasHeic;
     QStringList sidecarFormats;
+    QStringList canEmbedThumb;
     QStringList hasMetadataFormats;
     QStringList rotateFormats;
     QStringList embeddedICCFormats;
@@ -121,6 +122,8 @@ public:
     bool foundTifThumb;
 
     QString nikonLensCode;
+
+    void missingThumbnailWarning();
 
 private:
     QMutex mutex;

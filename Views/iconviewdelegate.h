@@ -83,6 +83,7 @@ private:
     QColor rejectColor;
     QColor ingestedColor;
     QColor cacheColor;
+    QColor missingThumbColor;
     QColor cacheBorderColor;
     QColor videoTextcolor;
     QColor numberTextColor;

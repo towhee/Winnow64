@@ -249,6 +249,7 @@ bool Jpeg::parse(MetadataParameters &p,
         m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset/*12*/;
         m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
     }
+    m.isEmbeddedThumbMissing = (m.offsetThumb == 0);
 
     // read EXIF
     p.hdr = "IFD Exif";
@@ -1454,17 +1455,50 @@ void Jpeg::rptRGB(int col, int row)
         qDebug().noquote() << " " << srow;
         srow = "";
     }
-//    qDebug();
-//    srow = "";
-//    for (int y = 0; y != 8; ++y) {
-//        for (int x = 0; x != 8; ++x) {
-//            QString sR = QString::number(rgb[0][y][x]).toUpper().leftJustified(3);
-//            QString sG = QString::number(rgb[1][y][x]).toUpper().leftJustified(3);
-//            QString sB = QString::number(rgb[2][y][x]).toUpper().leftJustified(3);
-//            QString sRGB = sR + "," + sG + "," + sB + "  ";
-//            srow += sRGB;
-//        }
-//        qDebug().noquote() << " " << srow;
-//        srow = "";
-//    }
+    /*
+    qDebug();
+    srow = "";
+    for (int y = 0; y != 8; ++y) {
+        for (int x = 0; x != 8; ++x) {
+            QString sR = QString::number(rgb[0][y][x]).toUpper().leftJustified(3);
+            QString sG = QString::number(rgb[1][y][x]).toUpper().leftJustified(3);
+            QString sB = QString::number(rgb[2][y][x]).toUpper().leftJustified(3);
+            QString sRGB = sR + "," + sG + "," + sB + "  ";
+            srow += sRGB;
+        }
+        qDebug().noquote() << " " << srow;
+        srow = "";
+    }
+    //*/
+}
+
+void Jpeg::embedThumbnail(ImageMetadata &m)
+{
+    if (G::isLogger) G::log("Jpeg::embedThumbnail", m.fPath);
+
+    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+
+    ExifTool et;
+    et.setOverWrite(true);
+
+    // create path for temp jpg thumbnail file = thumbPath
+    QFileInfo info(m.fPath);
+    QString folder = info.dir().path();
+    QString base = info.baseName();
+    QString thumbPath = folder + "/" + base + "_thumb.jpg";
+
+    // create a thumbnail size jpg
+    QImage thumb = QImage(m.fPath).scaled(160, 160, Qt::KeepAspectRatio);
+    thumb.save(thumbPath, "JPG", 60);
+
+    // add the thumb.jpg to the source file
+    et.addThumb(thumbPath, m.fPath);
+
+    et.close();
+
+    // delete the temp thumbnail file
+    QFile::remove(thumbPath);
+
+    // update datamodel thumb information
+    m.isEmbeddedThumbMissing = false;
 }

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AddThumbnailsDlg</class>
+ <widget class="QDialog" name="AddThumbnailsDlg">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>525</width>
+    <height>384</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Missing Thumbnails</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;There are JPG and/or TIFF images in this folder (identified with a yellow dot in the thumbnails) that do not have embedded thumbnails. This can have a dramatic impact on thumbnail loading performance. &lt;/p&gt;&lt;p&gt;If you enable 'Permit file modification' in preferences then you will not see this dialog and thumbnails will be added silently in the future.&lt;/p&gt;&lt;p&gt;If you choose to not show this dialog again, you can still embed thumbnails by selecting the images with missing thumbnails and then selecting 'Embed missing thumbnails' from the filmstrip context menu or 'Edit &amp;gt; Utilities &amp;gt; Embed missing thumbnails' in the main menu.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; color:#941100;&quot;&gt;WARNING:&lt;/span&gt;&lt;span style=&quot; font-weight:700;&quot;&gt; This will modify the images.&lt;/span&gt; No image corruption has been reported to date by users. You can make a backup of the images until you are confident this process is safe.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Preferred</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QCheckBox" name="backupChk">
+       <property name="text">
+        <string>Create a subfolder called 'backup' with a copy of the images</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="ignoreChk">
+       <property name="text">
+        <string>Do not show this dialog again</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="addBtn">
+       <property name="text">
+        <string>Embed Thumbnails</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

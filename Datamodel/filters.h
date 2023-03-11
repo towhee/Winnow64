@@ -23,10 +23,11 @@ public:
     QTreeWidgetItem *titles;
     QTreeWidgetItem *lenses;
     QTreeWidgetItem *keywords;
-    QTreeWidgetItem *creators;
     QTreeWidgetItem *focalLengths;
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
+    QTreeWidgetItem *creators;
+    QTreeWidgetItem *missingThumbs;
 
     QTreeWidgetItem *activeCategory;   // category just filtered
 
@@ -43,6 +44,7 @@ public:
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
+    QString catMissingThumbs = "Missing thumbs";
 
     QMap<QString,int> filterCategoryToDmColumn;
 //    QHash<QString,QString>categories;

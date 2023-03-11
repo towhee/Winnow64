@@ -158,6 +158,7 @@ int TableView::defaultCulumnWidth(int column)
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
     if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Metadata Loaded=").width();
+    if (column == G::MissingThumbColumn) return fm.boundingRect("=Missing Thumb=").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
     if (column == G::WidthPreviewColumn) return fm.boundingRect("=WidthPreview=").width();

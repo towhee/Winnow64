@@ -157,7 +157,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     }
 
     // could be a popup from a prior uncached image being loaded
-    G::popUp->end();
+    //G::popUp->end();
 
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) {
@@ -1172,7 +1172,7 @@ void ImageView::dragEnterEvent(QDragEnterEvent *event)
     Empty function required to propagate drop event (not sure why)
 */
     if (G::isLogger) G::log("ImageView::dragEnterEvent");
-    qDebug() << "ImageView::dragEnterEvent";
+    //qDebug() << "ImageView::dragEnterEvent";
 }
 
 QString ImageView::diagnostics()

@@ -1,23 +1,16 @@
-2,555,000 MW::focusChange                                    Previous = Thumbnails
-        1 MW::focusChange                                     Current = Thumbnails
-2,220,056 MW::enableGoKeyActions
-1,111,482 MW::keyPressEvent
-        4 TableView::selectionChanged
-        0 MW::updateStatus
-        2 IconView::getCurrentFilePath
-        7 DataModel::rowFromPath
-        3 MW::getZoom
-        4 MW::getPosition
-       38 IconView::getSelectedCount                         Thumbnails
-       27 MW::getPicked
-       13 MW::getPosition
-        3 MW::metadataChanged
-       29 InfoView::showOrHide
-        1 MW::getZoom
-       11 MW::getSelectedFileSize
-       20 MW::memoryReqdForSelection
-        0 MW::metadataChanged
-        3 InfoView::showOrHide
-   59,680 MW::getPicked
-6,656,773 MW::keyReleaseEvent
-3,598,648 MW::keyReleaseEvent
+Locals
+        [statics]
+        dmIdx	@0x1703fe858	QModelIndex
+        dmRow	82	int
+        fPath	"/Users/roryhill/Pictures/Zenfolio/2008-08-20_0072.tif"	QString
+        image	(invalid)	QImage
+        isVideo	false	bool
+        pm	<not accessible>	QPixmap
+        sfIdx	@0x1703feaf0	QModelIndex
+        this	@0x600003e06d00	MetaRead
+        thumbLoaded	false	bool
+Inspector
+Expressions
+        G::isInitializing	false	bool
+Return Value
+Tooltip

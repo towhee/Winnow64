@@ -134,6 +134,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
     filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
+    filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
 
     createPredefinedFilters();
     createDynamicFilters();
@@ -232,6 +233,7 @@ void Filters::createDynamicFilters()
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
+    missingThumbs = new QTreeWidgetItem(this);
 
     createFilter(picks, catPick);
     createFilter(ratings, catRating);
@@ -245,6 +247,7 @@ void Filters::createDynamicFilters()
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
+    createFilter(missingThumbs, catMissingThumbs);
 }
 
 void Filters::setCategoryBackground(QTreeWidgetItem *cat)
@@ -284,8 +287,9 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(lenses);
     setCategoryBackground(focalLengths);
     setCategoryBackground(titles);
-    setCategoryBackground(creators);
     setCategoryBackground(keywords);
+    setCategoryBackground(creators);
+    setCategoryBackground(missingThumbs);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -311,6 +315,7 @@ void Filters::removeChildrenDynamicFilters()
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
+    missingThumbs->takeChildren();
 }
 
 void Filters::setPicksState()
@@ -903,6 +908,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
+    collapse(indexFromItem(missingThumbs));
 }
 
 void Filters::toggleExpansion()

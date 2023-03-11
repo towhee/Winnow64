@@ -141,7 +141,6 @@ void MW::gridDisplay()
     bool interrupted = false;
     if (metaReadThread->isRunning()) {
         interruptedRow = metaReadThread->interrupt();
-        qDebug() << "MW::gridDisplay" << "interruptedRow =" << interruptedRow;
         interrupted = true;
     }
 
@@ -150,7 +149,6 @@ void MW::gridDisplay()
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     if (!metaReadThread->isRunning()) {
-        qDebug() << "MW::gridDisplay" << "Hide the thumbdock";
         thumbDock->setVisible(false);
         thumbDockVisibleAction->setChecked(false);
     }
