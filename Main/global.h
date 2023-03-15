@@ -250,6 +250,7 @@ namespace G
     extern bool colorManage;
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
+    extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
 //    extern bool embedTifJpgThumb;
     extern bool isLinearLoading;

@@ -1477,7 +1477,7 @@ void MW::createActions()
 //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
 
     // initially enable/disable actions
-    //embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+    embedThumbnailsAction->setEnabled(G::modifySourceFiles);
 }
 
 void MW::createMenus()

@@ -175,6 +175,7 @@ DataModel::DataModel(QWidget *parent,
     dir = new QDir();
     fileFilters = new QStringList;          // eligible image file types
     emptyImg.load(":/images/no_image.png");
+    setThumbnailLegend();
 
     lastFunction = "";
     isDebug = false;
@@ -2270,6 +2271,43 @@ void DataModel::clearPicks()
     mutex.unlock();
 }
 
+void DataModel::setThumbnailLegend()
+{
+    QString yellowSquare = "<font size=5 color=\"yellow\"><b>□</b></font>";
+    QString whiteSquare = "<font size=5 color=\"white\"><b>□</b></font>";
+    QString greenSquare = "<font size=5 color=\"green\"><b>□</b></font>";
+    QString blueSquare = "<font size=5 color=\"blue\"><b>□</b></font>";
+    QString redSquare = "<font size=5 color=\"red\"><b>□</b></font>";
+    QString redMedBullet = "<font color=\"red\"><b>●</b></font>";
+    QString yellowMedBullet = "<font color=\"yellow\"><b>●</b></font>";
+    QString lockSym = "🔒";
+//    QString header = "<p>table><tr><th colspan=\"2\">SYMBOLS</th></tr>";
+    QString header = "<p>THUMBNAIL LEGEND:<table>";
+    QString rowa = "<tr><td><center>" + yellowSquare    + "</center></td><td valign=\"middle\">Current image</td></tr>";
+    QString rowb = "<tr><td><center>" + whiteSquare     + "</center></td><td valign=\"middle\">Selected</td></tr>";
+    QString rowc = "<tr><td><center>" + greenSquare     + "</center></td><td valign=\"middle\">Picked</td></tr>";
+    QString rowd = "<tr><td><center>" + blueSquare      + "</center></td><td valign=\"middle\">Ingested</td></tr>";
+    QString rowe= "<tr><td><center>" + redSquare        + "</center></td><td valign=\"middle\">Rejected</td></tr>";
+    QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
+    QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
+    QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
+    QString endTable = "</table>";
+    QString footnote = "<p>Show/hide this tooltip legend in Preferences > User Interface";
+    thumbnailHelp =
+            header +
+            rowa +
+            rowb +
+            rowc +
+            rowd +
+            rowe +
+            row1 +
+            row2 +
+            row3 +
+            endTable +
+            footnote
+            ;
+}
+
 void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
 {
     if (G::isLogger) G::log("DataModel::setShowThumbNailSymbolHelp");
@@ -2593,4 +2631,5 @@ void SortFilter::suspend(bool suspendFiltering)
 {
     if (G::isLogger) G::log("SortFilter::suspend");
     this->suspendFiltering = suspendFiltering;
+    if (!suspendFiltering) invalidateFilter();
 }

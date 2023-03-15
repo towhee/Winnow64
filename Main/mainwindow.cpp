@@ -2411,7 +2411,7 @@ void MW::loadConcurrentMetaDone()
                 ;
                 //*/
 
-    if (!ignoreAddThumbnailsDlg || G::modifySourceFiles)
+    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
         chkMissingEmbeddedThumbnails();
 
     if (reset()) return;
@@ -5022,6 +5022,7 @@ QString MW::embedThumbnails()
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return "Nothing selected";
+    int n = selection.size();
 
     QString txt = "Embedding thumbnail(s) for " + QString::number(selection.size()) +
                   " images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
@@ -5029,32 +5030,47 @@ QString MW::embedThumbnails()
     G::popUp->showPopup(txt, 0, true, 1);
     qApp->processEvents();
 
+    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    QList<int> rows;
+    for (int i = 0; i < n; ++i) {
+        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        rows.append(dmRow);
+    }
+
     bool lockEncountered = false;
     bool embeddingHappened = false;
 
+    // set flags for Tiff::parse to call Tiff::encodeThumbnail
     bool okToModify = G::modifySourceFiles;
+    bool autoAdd = G::autoAddMissingThumbnails;
     G::modifySourceFiles = true;
-    for (int i = 0; i < selection.size(); i++) {
+    G::autoAddMissingThumbnails = true;
+    for (int i = 0; i < n; i++) {
         G::popUp->setProgress(i+1);
         qApp->processEvents();
-        int row = selection.at(i).row();
-        QString fileType = dm->sf->index(row, G::TypeColumn).data().toString().toLower();
+        int dmRow = rows.at(i);
+        QString fileType = dm->index(dmRow, G::TypeColumn).data().toString().toLower();
         if (!metadata->canEmbedThumb.contains(fileType)) continue;
-        QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-        bool isMissing = dm->sf->index(row, G::MissingThumbColumn).data().toBool();
-        bool isReadWrite = dm->sf->index(row, G::ReadWriteColumn).data().toBool();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        bool isMissing = dm->index(dmRow, G::MissingThumbColumn).data().toBool();
+        bool isReadWrite = dm->index(dmRow, G::ReadWriteColumn).data().toBool();
         if (!isReadWrite) lockEncountered = true;
         if (isMissing && isReadWrite) {
             if (G::backupBeforeModifying) {
                 Utilities::backup(fPath, "backup");
             }
-            dm->refreshMetadataForItem(row, dm->instance);
+            dm->refreshMetadataForItem(dmRow, dm->instance);
             embeddingHappened = true;
         }
     }
+    // reset flags
     G::modifySourceFiles = okToModify;
+    G::autoAddMissingThumbnails = autoAdd;
 
     refreshBookmarks();
+
+    // update filter list and counts
+    buildFilters->updateCategory(BuildFilters::MissingThumbEdit, BuildFilters::NoAfterAction);
 
     G::popUp->setProgressVisible(false);
     G::popUp->end();

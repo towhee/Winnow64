@@ -9,6 +9,7 @@ AddThumbnailsDlg::AddThumbnailsDlg(QWidget *parent) :
     ui->setupUi(this);
     setStyleSheet(G::css);
     ui->backupChk->setChecked(G::backupBeforeModifying);
+    if (!G::modifySourceFiles) ui->addBtn->setEnabled(false);
 }
 
 AddThumbnailsDlg::~AddThumbnailsDlg()
@@ -27,6 +28,12 @@ void AddThumbnailsDlg::on_ignoreChk_clicked()
 {
     qDebug() << "AddThumbnailsDlg::on_ignoreChk_clicked";
     emit ignore();
+}
+
+void AddThumbnailsDlg::on_cancelBtn_clicked()
+{
+    qDebug() << "AddThumbnailsDlg::on_cancelBtn_clicked";
+    reject();
 }
 
 void AddThumbnailsDlg::on_addBtn_clicked()

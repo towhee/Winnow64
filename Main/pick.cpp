@@ -9,15 +9,24 @@ void MW::togglePickUnlessRejected()
     Push the changes onto the pick history stack.
 */
     if (G::isLogger) G::log("MW::togglePickUnlessRejected");
-    QModelIndex idx;
-    QModelIndexList idxList = dm->selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    qint64 n = selection.count();
+
+    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    QList<int> rows;
+    for (int i = 0; i < n; ++i) {
+        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        rows.append(dmRow);
+    }
+
     QString pickStatus;
     QString newPickStatus;
 
     bool foundFalse = false;
     // check if any images are not picked in the selection
-    foreach (idx, idxList) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+    int dmRow;
+    foreach (dmRow, rows) {
+        QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         foundFalse = (pickStatus == "Unpicked");
         if (foundFalse) break;
@@ -25,22 +34,22 @@ void MW::togglePickUnlessRejected()
     foundFalse ? newPickStatus = "Picked" : newPickStatus = "Unpicked";
 
     // add multiple selection flag to pick history
-    if (idxList.length() > 1) pushPick("Begin multiple select");
+    if (n > 1) pushPick("Begin multiple select");
 
     // set pick status for selection
-    foreach (idx, idxList) {
+    foreach (dmRow, rows) {
         // save pick history
-        QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
-        QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
         pushPick(fPath, priorPickStatus);
         // set pick status
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+        QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         if (pickStatus != "Rejected") {
-            emit setValueSf(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
+            emit setValue(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
         }
     }
-    if (idxList.length() > 1) pushPick("End multiple select");
+    if (n > 1) pushPick("End multiple select");
 
     updateClassification();
     thumbView->refreshThumbs();
@@ -108,37 +117,45 @@ void MW::togglePick()
 
 */
     if (G::isLogger) G::log("MW::togglePick");
-    QModelIndex idx;
-    QModelIndexList idxList = dm->selectionModel->selectedRows();
-    qDebug() << "MW::togglePick" << idxList;
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    qint64 n = selection.count();
+    //qDebug() << "MW::togglePick" << selection;
+
+    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    QList<int> rows;
+    for (int i = 0; i < n; ++i) {
+        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        rows.append(dmRow);
+    }
+
     QString pickStatus;
 
     bool foundFalse = false;
     // check if any images are not picked in the selection
-    foreach (idx, idxList) {
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+    int dmRow;
+    foreach (dmRow, rows) {
+        QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         foundFalse = (pickStatus == "Unpicked");
         if (foundFalse) break;
     }
     foundFalse ? pickStatus = "Picked" : pickStatus = "Unpicked";
-//    foundFalse ? pickStatus = "true" : pickStatus = "false";
 
     // add multiple selection flag to pick history
-    if (idxList.length() > 1) pushPick("Begin multiple select");
+    if (n > 1) pushPick("Begin multiple select");
 
     // set pick status for selection
-    foreach (idx, idxList) {
+    foreach (dmRow, rows) {
         // save pick history
-        QString fPath = dm->sf->index(idx.row(), G::PathColumn).data(G::PathRole).toString();
-        QString priorPickStatus = dm->sf->index(idx.row(), G::PickColumn).data().toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
         pushPick(fPath, priorPickStatus);
         // set pick status
-        QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePick", Qt::EditRole);
+        QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
+        emit setValue(pickIdx, pickStatus, dm->instance, "MW::togglePick", Qt::EditRole);
         updatePickLog(fPath, pickStatus);
     }
-    if (idxList.length() > 1) pushPick("End multiple select");
+    if (n > 1) pushPick("End multiple select");
 
     updateClassification();
     thumbView->refreshThumbs();

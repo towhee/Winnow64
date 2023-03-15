@@ -1,12 +1,14 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- When load folder and jump to end last image not added to image cache
 - Add modify on icon to statusbar
 - TableView to LoupView scroll thumbView
-- Remove settings deprecated items MW::removeDeprecatedSettings()
+- Ignore filtering while editing the datamodel
 - Suggest embed thumbnails when missing
 - Make sure HEIC also works on PC including thumbs
 - folderAndFileSelectionChange does not show folder highlight change
+- Remove settings deprecated items MW::removeDeprecatedSettings()
 - Cmd Del = delete all rejected
 - Cmd+Opt+R = reject all unpicked and unpick all picked
 - bool Usb::isUsb(QString path) not done for MacOS
@@ -82,6 +84,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Bulk changes not working when filter panel is open
 - Thumbnail symbol help in IconView tooltip
 - Delete does not move to trash or recycle bin
 - Occasional torquoise header text in preferences

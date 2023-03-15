@@ -753,7 +753,9 @@ bool Metadata::parseJPG(quint32 startOffset)
     if (ok && p.report) reportMetadata();
 
     // fix missing thumbnail (use external program ExifTool)
-    if (ok && m.isEmbeddedThumbMissing && G::modifySourceFiles && m.isReadWrite) {
+    if (ok && m.isEmbeddedThumbMissing && m.isReadWrite &&
+        G::modifySourceFiles && G::autoAddMissingThumbnails)
+    {
         p.file.close();
         jpeg->embedThumbnail(m);
     }

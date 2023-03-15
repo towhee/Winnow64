@@ -261,22 +261,27 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "modifySourceFiles") {
         G::modifySourceFiles = v.toBool();
-//        mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
-//        setItemEnabled("backupBeforeModify", G::modifySourceFiles);
-//        setItemEnabled("addMissingThumbnails", G::modifySourceFiles);
+        mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+        setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+        setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
+        setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
     }
 
     if (source == "backupBeforeModify") {
         G::backupBeforeModifying = v.toBool();
     }
 
+    if (source == "autoAddMissingThumbnails") {
+        G::autoAddMissingThumbnails = v.toBool();
+    }
+
+    if (source == "ignoreAddThumbnailsDlg") {
+        mw->ignoreAddThumbnailsDlg = v.toBool();
+    }
+
     if (source == "useSidecar") {
         G::useSidecar = v.toBool();
     }
-
-//    if (source == "addMissingThumbnails") {
-//        G::embedTifJpgThumb = v.toBool();
-//    }
 
     if (source == "renderVideoThumb") {
         G::renderVideoThumb = v.toBool();
@@ -552,7 +557,7 @@ void Preferences::addItems()
     // Backup before modifying
     i.name = "backupBeforeModify";
     i.parentName = "FileModificationHeader";
-    i.captionText = "Backup before modify files";
+    i.captionText = "   Backup before modify files";
     i.tooltip = "All image files about to be modified will be copied to a\n"
                 "subfolder called 'backup'"
                 ;
@@ -563,24 +568,45 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+    setItemEnabled("backupBeforeModify", G::modifySourceFiles);
 
-//    // Add missing thumbnails to TIFF files
-//    i.name = "addMissingThumbnails";
-//    i.parentName = "FileModificationHeader";
-//    i.captionText = "Embed missing thumbnails";
-//    i.tooltip = "Enabling this will dramatically improve future thumbnail\n"
-//                "load times.\n\n"
-//                "WARNING: this will modify your TIFF/JPG files.  Please make\n"
-//                "sure you have backups until you are sure this does not corrupt\n"
-//                "your images.  FYI, no corruption has been reported by users."
-//                ;
-//    i.hasValue = true;
-//    i.captionIsEditable = false;
-//    i.value = G::embedTifJpgThumb;
-//    i.key = "addMissingThumbnails";
-//    i.delegateType = DT_Checkbox;
-//    i.type = "bool";
-//    addItem(i);
+    // Automatically and silently add missing thumbnails to TIFF and JPG files
+    i.name = "autoAddMissingThumbnails";
+    i.parentName = "FileModificationHeader";
+    i.captionText = "   Silently embed missing thumbnails";
+    i.tooltip = "This silently embeds thumbnail if missing from TIFF and\n"
+                "JPG image files.\n\n"
+                "Enabling this will dramatically improve future thumbnail\n"
+                "load times.  Modify source files must also be enabled.\n\n"
+                "WARNING: this will modify your TIFF/JPG files.  Please make\n"
+                "sure you have backups until you are sure this does not corrupt\n"
+                "your images.  FYI, no corruption has been reported by users."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoAddMissingThumbnails;
+    i.key = "autoAddMissingThumbnails";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+    setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
+
+    // Ignore the missing thumbnails dialog
+    i.name = "ignoreAddThumbnailsDlg";
+    i.parentName = "FileModificationHeader";
+    i.captionText = "   Ignore missing thumbnails dialog";
+    i.tooltip = "If enabled, the missing thumbnails dialog will be shown\n"
+                "is there are any missing thumbnails for TIFF or JPG files\n"
+                "in the folder and Modify source files is enabled."
+            ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->ignoreAddThumbnailsDlg;
+    i.key = "ignoreAddThumbnailsDlg";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+    setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
 
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";
@@ -591,9 +617,9 @@ void Preferences::addItems()
                 "copyright, email and url) the change will be written to\n"
                 "a XMP sidecar file.  This data can be read by Winnow and\n"
                 "other programs like Lightroom.\n\n"
-                "Note this will slightly impact performance, as it will take \n"
-                "longer to initially read all the metadata when a folder is \n"
-                "loaded."
+                "Note this could slightly impact performance, as it might\n"
+                "take longer to initially read all the metadata when a\n"
+                "folder is being loaded."
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -848,11 +874,11 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Show IconView tooltip symbol help
+    // Show IconView tooltip legend help
     i.name = "showThumbNailSymbolHelp";
     i.parentName = "UserInterfaceHeader";
-    i.captionText = "Show thumbnail symbol help";
-    i.tooltip = "Show or hide the symbol help in the thumbnail tooltip.";
+    i.captionText = "Show thumbnail tooltip legend";
+    i.tooltip = "Show or hide the legend in the thumbnail tooltip.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->dm->showThumbNailSymbolHelp;

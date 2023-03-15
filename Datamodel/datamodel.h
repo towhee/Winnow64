@@ -207,25 +207,8 @@ private:
     int line;
     int rowCountChk;
 
-    QString redMedBullet = "<font color=\"red\"><b>●</b></font>";
-    QString yellowMedBullet = "<font color=\"yellow\"><b>●</b></font>";
-    QString lockSym = "🔒";
-//    QString header = "<p>table><tr><th colspan=\"2\">SYMBOLS</th></tr>";
-    QString header = "<p>Thumbnail symbols:<table>";
-    QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
-    QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
-    QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
-    QString endTable = "</table>";
-    QString footnote = "<p>Show/hide this symbol help in Preferences > User Interface";
-    QString thumbnailHelp =
-            header +
-            row1 +
-            row2 +
-            row3 +
-            endTable +
-            footnote
-            ;
-
+    void setThumbnailLegend();
+    QString thumbnailHelp;
 };
 
 #endif // DATAMODEL_H

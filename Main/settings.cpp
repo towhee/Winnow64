@@ -21,8 +21,9 @@ void MW::writeSettings()
     setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
     setting->setValue("modifySourceFiles", G::modifySourceFiles);
-    setting->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
     setting->setValue("backupBeforeModifying", G::backupBeforeModifying);
+    setting->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
+    setting->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
     setting->setValue("useSidecar", G::useSidecar);
 //    setting->setValue("embedTifThumb", G::embedTifJpgThumb);
     setting->setValue("renderVideoThumb", G::renderVideoThumb);
@@ -316,6 +317,7 @@ bool MW::loadSettings()
         G::wheelSensitivity = 40;
         G::modifySourceFiles = false;
         G::backupBeforeModifying = false;
+        G::autoAddMissingThumbnails = false;
         ignoreAddThumbnailsDlg = false;
 
         // appearance
@@ -419,6 +421,11 @@ bool MW::loadSettings()
     else
         G::backupBeforeModifying = false;
 
+    if (setting->contains("autoAddMissingThumbnails"))
+        G::autoAddMissingThumbnails = setting->value("autoAddMissingThumbnails").toBool();
+    else
+        G::autoAddMissingThumbnails = false;
+
     if (setting->contains("ignoreAddThumbnailsDlg"))
         ignoreAddThumbnailsDlg = setting->value("ignoreAddThumbnailsDlg").toBool();
     else
@@ -428,11 +435,6 @@ bool MW::loadSettings()
         G::useSidecar = setting->value("useSidecar").toBool();
     else
         G::useSidecar = false;
-
-//    if (setting->contains("embedTifThumb"))
-//        G::embedTifJpgThumb = setting->value("embedTifThumb").toBool();
-//    else
-//        G::embedTifJpgThumb = false;
 
     if (setting->contains("renderVideoThumb"))
         G::renderVideoThumb = setting->value("renderVideoThumb").toBool();
