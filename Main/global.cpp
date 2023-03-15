@@ -122,6 +122,7 @@ namespace G
     bool colorManage;
     bool modifySourceFiles;
     bool backupBeforeModifying;
+    bool autoAddMissingThumbnails;
     bool useSidecar;
 //    bool embedTifJpgThumb;
     bool isLinearLoading;

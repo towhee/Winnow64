@@ -533,12 +533,13 @@ void MW::setRating()
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
         bool isDifferent = idx.data(Qt::EditRole).toString() != rating;
+        /*
         qDebug() << "MW::setRating isAlreadyRating"
                  << "selection iter =" << i
                  << "row = " << selection.at(i).row()
                  << "value =" << idx.data(Qt::EditRole)
                  << "isDiffernt =" << isDifferent
-                    ;
+                    ; //*/
         if (idx.data(Qt::EditRole).toString() != rating) {
             isAlreadyRating = false;
             break;
@@ -557,27 +558,34 @@ void MW::setRating()
     }
     //*/
 
+    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    QList<int> rows;
+    for (int i = 0; i < n; ++i) {
+        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        rows.append(dmRow);
+    }
+
     // set the rating in the datamodel
     QString src = "MW::setRating";
     for (int i = 0; i < n; ++i) {
-        int row = selection.at(i).row();
-        QModelIndex ratingIdx = dm->sf->index(row, G::RatingColumn);
-        emit setValueSf(ratingIdx, rating, dm->instance, src, Qt::EditRole);
+        int dmRow = rows.at(i);
+        QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
+        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
         // update rating crash log
-        QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateRatingLog(fPath, rating);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
-            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+            QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set rating for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                row = rawIdx.row();
-                ratingIdx = dm->index(row, G::RatingColumn);
-                emit setValueSf(ratingIdx, rating, dm->instance, src, Qt::EditRole);
+                int rowDup = rawIdx.row();
+                ratingIdx = dm->index(rowDup, G::RatingColumn);
+                emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
                 // update rating crash log
-                QString jpgPath  = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
             }
         }
@@ -586,8 +594,8 @@ void MW::setRating()
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)
-            QModelIndex _ratingIdx = dm->sf->index(row, G::_RatingColumn);
-            emit setValueSf(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
+            QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
+            emit setValue(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }
@@ -712,37 +720,45 @@ void MW::setColorClass()
     if (isAlreadyLabel) colorClass = "";     // invert the label
 
     int n = selection.count();
+    /*
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(true);
+        G::popUp->setProgressMax(n + 1);
+        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+        G::popUp->showPopup(txt, 0, true, 1);
+    }
+    //*/
 
-//    if (G::useSidecar) {
-//        G::popUp->setProgressVisible(true);
-//        G::popUp->setProgressMax(n + 1);
-//        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-//                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-//        G::popUp->showPopup(txt, 0, true, 1);
-//    }
+    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    QList<int> rows;
+    for (int i = 0; i < n; ++i) {
+        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        rows.append(dmRow);
+    }
 
     // update the data model
     QString src = "MW::setColorClass";
     for (int i = 0; i < n; ++i) {
-        int row = selection.at(i).row();
-        QModelIndex labelIdx = dm->sf->index(row, G::LabelColumn);
-        emit setValueSf(labelIdx, colorClass, dm->instance, src, Qt::EditRole);
+        int dmRow = rows.at(i);
+        QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
+        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole);
         // update color class crash log
-        QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateColorClassLog(fPath, colorClass);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
-            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+            QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
             if (idx.data(G::DupIsJpgRole).toBool()) {
                 // set color class (label) for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                row = rawIdx.row();
-                labelIdx = dm->index(row, G::LabelColumn);
+                int rowDup = rawIdx.row();
+                labelIdx = dm->index(rowDup, G::LabelColumn);
                 QString src = "MW::setColorClass";
                 emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
                 // update color class crash log
-                QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                QString jpgPath = dm->sf->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
             }
         }
@@ -751,8 +767,8 @@ void MW::setColorClass()
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
             // update _Label (used to check what metadata has changed in metadata->writeXMP)
-            QModelIndex _labelIdx = dm->sf->index(row, G::_LabelColumn);
-            emit setValueSf(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
+            QModelIndex _labelIdx = dm->index(dmRow, G::_LabelColumn);
+            emit setValue(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }

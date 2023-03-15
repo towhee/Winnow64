@@ -22,6 +22,7 @@ signals:
 private slots:
     void on_backupChk_clicked();
     void on_ignoreChk_clicked();
+    void on_cancelBtn_clicked();
     void on_addBtn_clicked();
 
 private:

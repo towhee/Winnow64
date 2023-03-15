@@ -125,7 +125,7 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     // metadata fields that can be edited
     editFields << "Title*" << "Creator*" << "Copyright*" << "Email*" << "Url*";
 
-    connect(this, &InfoView::setValueSf, dm, &DataModel::setValueSf);
+    connect(this, &InfoView::setValue, dm, &DataModel::setValue);
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
@@ -163,10 +163,18 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         dm->sf->suspend(true);
         if (isEditable) {
             QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+            int n = selection.count();
+
+            // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+            QList<int> rows;
+            for (int i = 0; i < n; ++i) {
+                int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+                rows.append(dmRow);
+            }
+
             QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
             field = idx0.data().toString();
 
-            int n = selection.count();
             if (G::useSidecar) {
                 usedPopUp = true;
                 G::popUp->setProgressVisible(true);
@@ -177,44 +185,32 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             }
 
             for (int i = 0; i < n; i++) {
-                int row = selection.at(i).row();
-                QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                int dmRow = selection.at(i).row();
+                QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
                 if (field == "Title*") {
                     QString s = idx1.data().toString();
-                    dm->setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
-                    dm->setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
-                    //emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
-                    //emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
-                    /*
-                    qDebug() << "InfoView::dataChanged Title"
-                             << "dm->currentRow =" << dm->currentSfRow
-                             << "idx0.data() =" << idx0.data()
-                             << "idx1.data() =" << idx1.data()
-                             << "isEditable =" << isEditable
-                                ;
-                                //*/
+                    dm->setValue(dm->index(dmRow, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
+                    dm->setValue(dm->index(dmRow, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Creator*") {
                     QString s = idx1.data().toString();
-                    dm->setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
-                    dm->setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
-                    //emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
-                    //emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    dm->setValue(dm->index(dmRow, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
+                    dm->setValue(dm->index(dmRow, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Copyright*") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    emit setValue(dm->index(dmRow, G::CopyrightColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValue(dm->index(dmRow, G::CopyrightColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Email*") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    emit setValue(dm->index(dmRow, G::EmailColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValue(dm->index(dmRow, G::EmailColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Url*") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::ToolTipRole);
+                    emit setValue(dm->index(dmRow, G::UrlColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValue(dm->index(dmRow, G::UrlColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
 
                 // write to sidecar

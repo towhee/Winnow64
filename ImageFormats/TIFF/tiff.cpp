@@ -373,7 +373,9 @@ bool Tiff::parse(MetadataParameters &p,
         }
     }
 
-    if (G::modifySourceFiles && m.offsetThumb == m.offsetFull && thumbLongside > 512) {
+    if (G::modifySourceFiles && G::autoAddMissingThumbnails &&
+        m.offsetThumb == m.offsetFull && thumbLongside > 512)
+    {
         p.offset = m.offsetThumb;        // Smallest preview to use
         encodeThumbnail(p, m, ifd);
         // write thumbnail added to xmp sidecar if writing sidecars
