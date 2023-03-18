@@ -454,6 +454,10 @@ void InfoView::updateInfo(const int &row)
         metadata->m.row = row;
         metadata->m.instance = dm->instance;
         if (!dm->addMetadataForItem(metadata->m, "InfoView::updateInfo")) return;
+//        if (G::useImageCache) {
+//            emit addToImageCache(metadata->m);
+//            //emit setCurrentPosition(fPath, "InfoView::updateInfo");
+//        }
     }
 
     QString s;

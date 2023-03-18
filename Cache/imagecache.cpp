@@ -1134,13 +1134,16 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         return;
     }
 
-    /* cacheItemList is a list of cacheItem used to track the current cache status and
-    make future caching decisions for each image.
-    */
-
+    // cacheItemList is a list of cacheItem used to track the current cache status and
+    // make future caching decisions for each image.
     int w, h;
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+
+    if (row == 2339) qDebug() << "ImageCache::addCacheItemImageMetadata"
+                              << "row =" << row
+                              << "w =" << w << "h =" << h;
+
     mutex.lock();
     float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
     if (sizeMB > 0) {
@@ -1414,7 +1417,8 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
+    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
+             "src = " + src + " " + path);
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
         qWarning() << "WARNING"
                    << "ImageCache::setCurrentPosition"
@@ -1444,7 +1448,20 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     currentPath = path;
     mutex.unlock();
 
-    if (!isRunning()) {
+    if (isRunning()) {
+        stop();
+        start();
+//        mutex.lock();
+//        // reset target range
+//        setKeyToCurrent();
+//        setDirection();
+//        icd->cache.currMB = getImCacheSize();
+//        setPriorities(icd->cache.key);
+//        setTargetRange();
+//        fixOrphans();
+//        mutex.unlock();
+    }
+    else {
         start();
     }
 }
@@ -1482,10 +1499,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
     Do not cache video files, but do show them as cached for the cache status display.
 */
-//    if (debugCaching)
+    if (debugCaching)
     {
         QString k = QString::number(cacheKey).leftJustified((4));
-        if (debugCaching)
         qDebug().noquote() << "ImageCache::cacheImage"
                            << "     decoder" << id
                            << "row =" << k

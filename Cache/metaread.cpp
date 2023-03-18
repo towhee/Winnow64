@@ -52,14 +52,18 @@ void MetaRead::setCurrentRow(int row, QString src)
         QString s = "row = " + QString::number(row) + " src = " + src + " isRunning = " + running;
         G::log("MetaRead::setCurrentRow", s);
     }
-
+    //qDebug() << "MetaRead::setCurrentRow row =" << row << "src =" << src;
     this->src = src;
+
     mutex.lock();
     iconChunkSize = dm->iconChunkSize;
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
+    startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
+    count = 0;
     abortCleanup = isRunning();
     mutex.unlock();
+
     if (!isRunning()) {
         start();
     }
@@ -110,15 +114,17 @@ int MetaRead::interrupt()
 
 void MetaRead::initialize()
 {
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead::initialize");
+    imageCacheTriggerCount = 20;
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        G::log("MetaRead::initialize",
+               "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
     rowsWithIcon.clear();
     imageCachingStarted = false;
     instance = dm->instance;
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
-    imageCacheTriggerCount = 20;
 //    imageCacheTriggerCount = dm->visibleIcons;
-    qDebug() << "MetaRead::initialize imageCacheTriggerCount =" << imageCacheTriggerCount;
+    //qDebug() << "MetaRead::initialize imageCacheTriggerCount =" << imageCacheTriggerCount;
 }
 
 QString MetaRead::diagnostics()
@@ -234,10 +240,10 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         return false;
     }
 
-    static bool embeddedThumbnailAlreadyFound = false;
 
     // read metadata from file into metadata->m
     int dmRow = dm->sf->mapToSource(sfIdx).row();
+    if (dmRow > 2334) qDebug() << "MetaRead::readMetadata row =" << dmRow;
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     if (!isMetaLoaded) {
@@ -285,12 +291,12 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         emit addToImageCache(metadata->m);
     }
 
-    if (isDebug) {
+    if (isDebug || sfIdx.row() > 2334)
         qDebug() << "MetaRead::readMetadata"
                  << "addToImageCache row =" << sfIdx.row()
                  << "abort =" << abort
                  ;
-    }
+
     return true;
 }
 
@@ -363,15 +369,17 @@ void MetaRead::readRow(int sfRow)
     emit updateScroll();
 
     // range check
-    if (sfRow >= dm->sf->rowCount()) return;
+    if (sfRow >= dm->sf->rowCount()) {
+        qWarning() << "WARNING MetaRead::readRow row =" << sfRow << "FAILED RANGE CHECK";
+        return;
+    }
     // valid index check
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     if (!sfIdx.isValid()) {
-        if (isDebug) {
-            qDebug().noquote() << "MetaRead::readRow  "
+//        if (isDebug)
+            qWarning().noquote() << "WARNING MetaRead::readRow  "
                                << "invalid sfidx =" << sfIdx
                                   ;
-        }
         return;
     }
 //    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
@@ -380,14 +388,18 @@ void MetaRead::readRow(int sfRow)
     QString fPath = sfIdx.data(G::PathRole).toString();
     if (!G::allMetadataLoaded /*&& !isVideo*/ && G::useReadMetadata) {
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+        if (sfRow > 2334) qDebug() << "MetaRead::readRow row =" << sfRow
+                                   << "metaLoaded =" << metaLoaded;
         if (!metaLoaded /*&& !abort*/) {
             if (!abort) {
+                if (sfRow > 2334) qDebug() << "MetaRead::readRow row =" << sfRow;
                 if (!readMetadata(sfIdx, fPath)) {
                     return;
                 }
             }
             if (abort) return;
         }
+
     }
 
     // load icon
@@ -419,7 +431,7 @@ void MetaRead::run()
     Loads the metadata and icons into the datamodel (dm) for a folder.  The iteration
     proceeds from the start row in an ahead/behind progression.
 */
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead::read", src);
+    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead::run", src);
 
     folderPath = dm->currentFolderPath;
     sfRowCount = dm->sf->rowCount();
@@ -436,8 +448,9 @@ void MetaRead::run()
 
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead::run");
 
+//    QString startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
     int row = startRow;
-    int count = -1;                     // used to delay start ImageCache
+    count = -1;                     // used to delay start ImageCache
     bool ahead = true;
     int lastRow = sfRowCount - 1;
     bool moreAhead = row < lastRow;
@@ -481,19 +494,20 @@ void MetaRead::run()
         }
 
         // do something with row
-        if (row == 82) {
-            int x = 1;
-        }
+        //if (row > 2334) qDebug() << "MetaRead::run row =" << row;
         readRow(row);
 
         // delayed start ImageCache
-        if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
+        if (/*!G::allMetadataLoaded && !imageCachingStarted && */!abort) {
             count++;
             if (count == sfRowCount - 1 || count == imageCacheTriggerCount) {
                 // start image caching thread after head start
-                emit triggerImageCache("Initial");
+                if (isDebug || G::isLogger || G::isFlowLogger)
+                    G::log("MetaRead::run", "emit triggerImageCache " + startPath);
+                //qDebug() << "MetaRead::run emit triggerImageCache" << startPath;
+                emit triggerImageCache(startPath, "MetaRead::run imageCacheTriggerCount");
                 imageCachingStarted = true;
-//                if (G::isFileLogger) Utilities::log("MetaRead::run", "start image caching");
+                //if (G::isFileLogger) Utilities::log("MetaRead::run", "start image caching");
             }
         }
 
@@ -503,7 +517,7 @@ void MetaRead::run()
             if (moreAhead) {
                 ++rowAhead;
                 row = rowAhead;
-                moreAhead = rowAhead <= sfRowCount;
+                moreAhead = rowAhead < lastRow;
             }
         }
         else {

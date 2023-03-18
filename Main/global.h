@@ -147,7 +147,7 @@ namespace G
     extern bool dmEmpty;
     extern bool isNewFolderLoaded;
     extern bool isInitializing;
-    extern bool isNewSelection;
+    extern bool isNewFileSelection;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
 

@@ -512,7 +512,7 @@ private slots:
     void loadConcurrent(int sfRow = 0);
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();
-    void loadConcurrentStartImageCache(QString src);
+    void loadConcurrentStartImageCache(QString path, QString src);
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
