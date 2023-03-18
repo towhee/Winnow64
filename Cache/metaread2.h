@@ -43,7 +43,7 @@ signals:
     void addToDatamodel(ImageMetadata m, QString src);// decoder
     void addToImageCache(ImageMetadata m);// decoder
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);  // decoder
-    void triggerImageCache(QString src);
+    void triggerImageCache(QString startPath, QString src);
 
     void updateIconBestFit();  // req'd?
     void done();

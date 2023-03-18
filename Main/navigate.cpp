@@ -101,6 +101,13 @@ void MW::keyEnd()
 
 */
     if (G::isLogger) G::log("MW::keyEnd");
+    if (!G::isLinearLoading) {
+        qDebug() << "MW::keyEnd";
+        if (G::mode == "Compare") compareImages->go("End");
+        G::ignoreScrollSignal = true;
+        sel->last();
+        return;
+    }
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
         if (G::isLinearLoading) metadataCacheThread->stop();
         if (G::mode == "Compare") compareImages->go("End");

@@ -294,7 +294,7 @@ void MW::createMDCache()
     // signal stopped when abort completed
 //    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
     // read metadata
-    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
+//    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // pause waits until isRunning == false
     connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt);
     // add metadata to datamodel
@@ -312,7 +312,9 @@ void MW::createMDCache()
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
+//    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
+    connect(metaReadThread, &MetaRead::triggerImageCache,
+            imageCacheThread, &ImageCache::setCurrentPosition);
     // check icons visible is correct
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
@@ -426,9 +428,14 @@ void MW::createImageCache()
     connect(imageCacheThread, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
     connect(imageCacheThread, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 
-    // concurrent load
-
+    // start image cache
+    connect(infoView, &InfoView::setCurrentPosition,
+            imageCacheThread, &ImageCache::setCurrentPosition);
     // add to image cache list
+    connect(infoView, &InfoView::addToImageCache,
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+
+    // concurrent load
 #ifdef METAREAD
         connect(metaReadThread, &MetaRead::addToImageCache,
                 imageCacheThread, &ImageCache::addCacheItemImageMetadata);
@@ -585,7 +592,7 @@ void MW::createSelection()
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
     connect(sel, &Selection::currentChanged, this, &MW::fileSelectionChange);
-
+    connect(sel, &Selection::setCurrentRow, metaReadThread, &MetaRead::setCurrentRow);
 }
 
 void MW::createVideoView()

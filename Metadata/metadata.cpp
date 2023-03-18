@@ -1071,6 +1071,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check abort
     if (G::dmEmpty && !isRemote) return false;
 
+//    if (fileInfo.filePath() == "Volumes/Untitled/DCIM/100MSDCF/A1_07767.ARW")
+//        qDebug() << "Metadata::loadImageMetadata  src =" << source
+//                 << fileInfo.filePath();
+
     //QElapsedTimer t;
     //t.restart();
 

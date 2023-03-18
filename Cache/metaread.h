@@ -40,7 +40,7 @@ signals:
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void triggerImageCache(QString src);
+    void triggerImageCache(QString startPath, QString src);
 
     void updateIconBestFit();  //r req'd?
     void done();               // not being used - req'd?
@@ -80,9 +80,12 @@ private:
     int metaReadCount;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
-    int imageCacheTriggerCount = 50;
+    int imageCacheTriggerCount = 20;
+//    int imageCacheTriggerCount = 50;
 
     int startRow = 0;
+    QString startPath = "";
+    int count;
     QString src;
     QString folderPath;
 

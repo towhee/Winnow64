@@ -158,17 +158,6 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-//    void selectAll();
-//    void selectFirst();
-//    void selectLast();
-//    void select(QModelIndex sfIdx);
-//    void select(int sfRow);
-//    void select(QString &fPath);
-//    void selectNext();
-//    void selectPrev();
-//    void selectRandom();
-//    void selectNextPick();
-//    void selectPrevPick();
 
 private:
     QWidget *mw;

@@ -5,7 +5,6 @@ BUGS / TO DO
 - Add modify on icon to statusbar
 - TableView to LoupView scroll thumbView
 - Ignore filtering while editing the datamodel
-- Suggest embed thumbnails when missing
 - Make sure HEIC also works on PC including thumbs
 - folderAndFileSelectionChange does not show folder highlight change
 - Remove settings deprecated items MW::removeDeprecatedSettings()
@@ -84,6 +83,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Suggest embed thumbnails when missing
 - Bulk changes not working when filter panel is open
 - Thumbnail symbol help in IconView tooltip
 - Delete does not move to trash or recycle bin

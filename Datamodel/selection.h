@@ -46,6 +46,7 @@ signals:
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
                         QString src = "Selection::currentChanged") ;
+    void setCurrentRow(int row, QString src);
 
 private:
     DataModel *dm;

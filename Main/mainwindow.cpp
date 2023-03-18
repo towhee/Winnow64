@@ -98,10 +98,33 @@ Following is out of date:
       the image priority queues, the target range and limit the cache to the assigned
       maximum size.
 
+PROGRAM FLOW - CONCURRENT - SITUATIONS
+
+    • New folder selected.
+    • While still concurrent loading metadata:
+        • New image selected (current changed)
+        • View is scrolled but no new image is selected.
+
+
 PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
 
+    • Selecting a new folder in the Folders or Bookmarks panel calls MW::folderSelectionChange.
+
+    • All threads are stopped, the DataModel is cleared and all parameters are reset.
+
+    • The DataModel is loaded with the OS file system info in dm->load and dm->addFileData.
+
+    • MW::loadConcurrentNewFolder sets the current file path, initializes the imageCacheThread
+      and metaReadThread, and calls metaReadThread->setCurrentRow.  This starts the
+      metaReadThread, which iterates through the DataModel, adding all the image metadata and
+      thumbnail icons.  For each item, the metadata is also signalled to the imageCacheThread
+      ImageCache::addCacheItemImageMetadata.
+
+    • As the metaReadThread iterates, when it reaches a imageCacheTriggerCount, it signals
+      the imageCacheThread to start loading the cache.
+
+PROGRAM FLOW - CONCURRENT - NEW IMAGE SELECTED
 PROGRAM FLOW - FOLDER AND FILE SELECTED
-PROGRAM FLOW - NEW IMAGE SELECTED
 
     A new image is selected which triggers fileSelectionChange:
 
@@ -173,7 +196,7 @@ Flow Flags:
     G::ignoreScrollSignal
     isCurrentFolderOkay
     isFilterChange
-    G::isNewSelection
+    G::isNewFileSelection
 
 Current model row:
 
@@ -1548,7 +1571,7 @@ Flow Flags:
     G::ignoreScrollSignal
     isCurrentFolderOkay
     isFilterChange
-    G::isNewSelection
+    G::isNewFileSelection
 
 Current model row:
 
@@ -1801,7 +1824,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) return;
-    G::isNewSelection = false;
+    G::isNewFileSelection = false;
 
    /* debug
     qDebug() << "MW::fileSelectionChange"
@@ -1820,12 +1843,24 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 ;
                 //*/
 
+//    // new file selection while still concurrent loading
+//    if (!G::isLinearLoading && !G::isInitializing) {
+//        int row = current.row();
+//        if (metaReadThread->isRunning()) {
+//            //qDebug() << "MW::fileSelectionChange call MetaRead row =" << row;
+//            metaReadThread->setCurrentRow(row, "MW::fileSelectionChange");
+//        }
+//    }
+
     if (!rememberLastDir)
         if (!isCurrentFolderOkay
                 || G::isInitializing
                 || isFilterChange
                 || !G::isNewFolderLoaded)
+        {
+            //qDebug() << "MW::fileSelectionChange  current.row() == -1  so return";
             return;
+        }
 
     if (!currRootDir.exists()) {
         refreshFolders();
@@ -1836,12 +1871,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // if starting program, set first image to display
     if (current.row() == -1) {
         sel->current(0);
+        //qDebug() << "MW::fileSelectionChange  current.row() == -1  so return";
         return;
     }
 
     // check if current selection = current index.  If so, nothng to do
     if (current == dm->currentSfIdx) {
-        // qDebug() << "MW::fileSelectionChange  current selection = current index";
+        //qDebug() << "MW::fileSelectionChange  current selection = current index  so return";
         return;
     }
     /*
@@ -1867,7 +1903,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
     // select
-    if (clearSelection) sel->current(current);
+    if (clearSelection && src != "Selection::select") sel->current(current);
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1881,6 +1917,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update anchor for shift click mouse contiguous selections
     thumbView->shiftAnchorIndex = current;
     gridView->shiftAnchorIndex = current;
+
+//    qDebug() << "MW::fileSelectionChange call MetaRead row =" << dm->currentSfRow
+//             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
+//    if (!G::isLinearLoading && metaReadThread->isRunning()) {
+//        qDebug() << "MW::fileSelectionChange call MetaRead row =" << dm->currentSfRow;
+//        metaReadThread->setCurrentRow(dm->currentSfRow, "MW::fileSelectionChange");
+//    }
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
@@ -2180,7 +2223,7 @@ bool MW::reset(QString src)
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::isNewFolderLoaded = false;
-    G::isNewSelection = false;
+    G::isNewFileSelection = false;
     G::currRootFolder = "";
 
     imageView->clear();
@@ -2377,6 +2420,7 @@ void MW::loadConcurrentNewFolder()
     if (reset(src)) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     metaReadThread->setCurrentRow(dm->currentSfRow, "MW::loadConcurrentNewFolder");
+    G::isNewFolderLoaded = true;
 }
 
 void MW::loadConcurrent(int sfRow)
@@ -2405,7 +2449,7 @@ void MW::loadConcurrentMetaDone()
 //    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
-//    /*
+    /*
     qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
                 ;
@@ -2419,6 +2463,7 @@ void MW::loadConcurrentMetaDone()
     updateIconBestFit();
     if (reset()) return;
 
+    G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
 
@@ -2456,7 +2501,7 @@ void MW::loadConcurrentMetaDone()
 //    blocker.unblock();
 }
 
-void MW::loadConcurrentStartImageCache(QString src)
+void MW::loadConcurrentStartImageCache(QString path, QString src)
 {
 /*
     Signalled from MetaRead after delay of MetaRead::imageCacheTriggerCount and again
@@ -2475,13 +2520,15 @@ void MW::loadConcurrentStartImageCache(QString src)
 //    tableView->resizeColumnsToContents();
 //    tableView->setColumnWidth(G::PathColumn, 24+8);
 
-    G::isNewFolderLoaded = true;
+//    G::isNewFolderLoaded = true;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
     folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
     the file to select in the new folder; otherwise the first file in dm->sf will be
     selected. */
+
+
     QString fPath = "";
     if (src == "Initial") {
         fPath = folderAndFileChangePath;
@@ -2690,7 +2737,7 @@ void MW::thumbHasScrolled()
     syncing with another view then we do not want to process again and get into a loop.
 
     Also, we do not need to process scrolling if it was the result of a new selection,
-    which will trigger a thumbnail update in MW::fileSelectionChange. G::isNewSelection
+    which will trigger a thumbnail update in MW::fileSelectionChange. G::isNewFileSelection
     is set true in IconView when a selection is made, and set false in
     fileSelectionChange.
 
@@ -2716,15 +2763,15 @@ void MW::thumbHasScrolled()
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(-1, "MW::thumbHasScrolled");
-        int mvc = thumbView->midVisibleCell;
+        int midVisibleCell = thumbView->midVisibleCell;
         if (gridView->isVisible())
             gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) {
+        if (!G::isNewFileSelection) {
             if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-            else loadConcurrent(mvc);
+            else loadConcurrent(midVisibleCell);
             // else QTimer::singleShot(50, [this, mvc]() {loadConcurrent(mvc);});
         }
         // update thumbnail zoom frame cursor
@@ -2747,7 +2794,7 @@ void MW::gridHasScrolled()
     another view then we do not want to process again and get into a loop.
 
     Also, we do not need to process scrolling if it was the result of a new selection, which
-    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
+    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewFileSelection is set true
     in IconView when a selection is made, and set false in fileSelectionChange.
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
@@ -2774,7 +2821,7 @@ void MW::gridHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection && gridView->isVisible()) {
+        if (!G::isNewFileSelection && gridView->isVisible()) {
             if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::gridHasScrolled");
             else loadConcurrent(gridView->midVisibleCell);
         }
@@ -2793,7 +2840,7 @@ void MW::tableHasScrolled()
     syncing with another view then we do not want to process again and get into a loop.
 
     Also, we do not need to process scrolling if it was the result of a new selection, which
-    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
+    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewFileSelection is set true
     in IconView when a selection is made, and set false in fileSelectionChange.
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
@@ -2820,7 +2867,7 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) {
+        if (!G::isNewFileSelection) {
             if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::tableHasScrolled");
             else loadConcurrent(tableView->midVisibleRow);
 //            else scrollChange(tableView->midVisibleRow, "MW::tableHasScrolled");

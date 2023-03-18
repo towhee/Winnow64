@@ -37,30 +37,35 @@ Selection::Selection(QWidget *parent, DataModel *dm, IconView *thumbView, IconVi
 
 void Selection::current(QString &fPath)
 {
-    if (G::isLogger) G::log("Selection::select QString");
+    if (G::isLogger) G::log("Selection::current QString");
     current(dm->proxyIndexFromPath(fPath));
 }
 
 void Selection::current(int sfRow)
 {
-    if (G::isLogger) G::log("Selection::select row");
+    if (G::isLogger) G::log("Selection::current row");
     current(dm->sf->index(sfRow, 0));
 }
 
 void Selection::current(QModelIndex sfIdx)
 {
-    if (G::isLogger) G::log("Selection::select QModelIndex");
-    /*
+    if (G::isLogger || G::isFlowLogger) G::log("Selection::current QModelIndex", "row = " + QString::number(sfIdx.row()));
+//    /*
     if (isDebug)
-        qDebug() << "Selection::select QModelIndex" << "instance =" << dm->instance
-                          << "idx =" << sfIdx
-                          << dm->currentFolderPath;
+        qDebug() << "Selection::current current"
+                 //<< "instance ="
+                 //<< dm->instance
+                 //<< "idx =" << sfIdx
+                 << "row =" << sfIdx.row()
+                 << dm->currentFolderPath;
     //*/
     if (sfIdx.isValid()) {
+        G::isNewFileSelection = true;
         thumbView->setCurrentIndex(sfIdx);
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//        if (!G::isLinearLoading) emit setCurrentRow(sfIdx.row(), "Selection::current");
         // MW::fileSelectionChange
         emit currentChanged(sfIdx, QModelIndex(), true, "Selection::select");
     }

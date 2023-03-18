@@ -290,7 +290,7 @@ void MetaRead2::decodeThumbs(int id)
         // delayed start ImageCache
         if (metaReadCount == sfRowCount || metaReadCount == imageCacheTriggerCount) {
             // start image caching thread after head start
-            emit triggerImageCache("Initial");
+            emit triggerImageCache("Change to startPath","Initial");
             imageCachingStarted = true;
             qDebug() << "MetaRead2::decodeThumbs triggerImageCache"
                      << metaReadCount
