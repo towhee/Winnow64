@@ -509,7 +509,7 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrent(int sfRow = 0);
+    void loadConcurrent(int sfRow, bool scrollOnly);
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();
     void loadConcurrentStartImageCache(QString path, QString src);

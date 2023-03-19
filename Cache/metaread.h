@@ -40,14 +40,15 @@ signals:
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void triggerImageCache(QString startPath, QString src);
+//    void triggerImageCache(QString startPath, QString src);
+    void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection, QString src);
 
     void updateIconBestFit();  //r req'd?
     void done();               // not being used - req'd?
 
 public slots:
     void initialize();
-    void setCurrentRow(int row = 0, QString src = "");
+    void setCurrentRow(int row = 0, bool scrollOnly = false, QString src = "");
     int interrupt();
 
 protected:
@@ -80,10 +81,11 @@ private:
     int metaReadCount;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
-    int imageCacheTriggerCount = 20;
-//    int imageCacheTriggerCount = 50;
+    int imageCacheTriggerCount;
 
+    bool scrollOnly;
     int startRow = 0;
+    int targetRow = 0;
     QString startPath = "";
     int count;
     QString src;

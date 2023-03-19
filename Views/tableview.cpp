@@ -246,7 +246,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
     if (idx.isValid()) {
         QTableView::mousePressEvent(event);
         G::fileSelectionChangeSource = "TableMouseClick";
-            emit fileSelectionChange(idx);
+        emit fileSelectionChange(idx);
     }
 }
 

@@ -1346,55 +1346,55 @@ void MW::createActions()
     addAction(diagnosticsErrorsAction);
     connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::errorReport);
 
-    diagnosticsMainAction = new QAction(tr("Main"), this);
+    diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsMainAction);
     connect(diagnosticsMainAction, &QAction::triggered, this, &MW::diagnosticsMain);
 
-    diagnosticsGridViewAction = new QAction(tr("GridView"), this);
+    diagnosticsGridViewAction = new QAction(tr("GridView diagnostics"), this);
     diagnosticsGridViewAction->setObjectName("diagnosticsGridView");
     diagnosticsGridViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsGridViewAction);
     connect(diagnosticsGridViewAction, &QAction::triggered, this, &MW::diagnosticsGridView);
 
-    diagnosticsThumbViewAction = new QAction(tr("ThumbView"), this);
+    diagnosticsThumbViewAction = new QAction(tr("ThumbView diagnostics"), this);
     diagnosticsThumbViewAction->setObjectName("diagnosticsThumbView");
     diagnosticsThumbViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsThumbViewAction);
     connect(diagnosticsThumbViewAction, &QAction::triggered, this, &MW::diagnosticsThumbView);
 
-    diagnosticsImageViewAction = new QAction(tr("ImageView"), this);
+    diagnosticsImageViewAction = new QAction(tr("ImageView diagnostics"), this);
     diagnosticsImageViewAction->setObjectName("diagnosticsImageView");
     diagnosticsImageViewAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsImageViewAction);
     connect(diagnosticsImageViewAction, &QAction::triggered, this, &MW::diagnosticsImageView);
 
-    diagnosticsMetadataAction = new QAction(tr("Metadata"), this);
+    diagnosticsMetadataAction = new QAction(tr("Metadata diagnostics"), this);
     diagnosticsMetadataAction->setObjectName("diagnosticsMetadata");
     diagnosticsMetadataAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsMetadataAction);
     connect(diagnosticsMetadataAction, &QAction::triggered, this, &MW::diagnosticsMetadata);
 
-    diagnosticsDataModelAction = new QAction(tr("DataModel"), this);
+    diagnosticsDataModelAction = new QAction(tr("DataModel diagnostics"), this);
     diagnosticsDataModelAction->setObjectName("diagnosticsDataModel");
     diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsDataModelAction);
     connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
 
-    diagnosticsMetadataCacheAction = new QAction(tr("MetadataCache"), this);
+    diagnosticsMetadataCacheAction = new QAction(tr("MetadataCache diagnostics"), this);
     diagnosticsMetadataCacheAction->setObjectName("diagnosticsMetadataCache");
     diagnosticsMetadataCacheAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsMetadataCacheAction);
     connect(diagnosticsMetadataCacheAction, &QAction::triggered, this, &MW::diagnosticsMetadataCache);
 
-    diagnosticsImageCacheAction = new QAction(tr("ImageCache"), this);
+    diagnosticsImageCacheAction = new QAction(tr("ImageCache diagnostics"), this);
     diagnosticsImageCacheAction->setObjectName("diagnosticsImageCache");
     diagnosticsImageCacheAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsImageCacheAction);
     connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
 
-    diagnosticsEmbellishAction = new QAction(tr("Embellish"), this);
+    diagnosticsEmbellishAction = new QAction(tr("Embellish diagnostics"), this);
     diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
     diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsEmbellishAction);

@@ -151,7 +151,7 @@ void MetadataCache::scrollChange(QString source)
             return;
         }
     }
-    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    if (G::isInitializing || !G::isLinearLoadDone) return;
     abort = false;
     instance = dm->instance;
     action = Action::Scroll;
@@ -383,7 +383,7 @@ void MetadataCache::updateIconLoadingProgress(int count, int end)
     if (G::isLogger) G::log("MetadataCache::updateIconLoadingProgress");
     if (G::dmEmpty) return;
     // show progress
-    if (!G::isNewFolderLoaded && !G::stop) {
+    if (!G::isLinearLoadDone && !G::stop) {
         if (count % countInterval == 0) {
             QString msg = "Loading thumbnails: ";
             msg += QString::number(count) + " of " + QString::number(end);

@@ -1,10 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- When load folder and jump to end last image not added to image cache
 - Add modify on icon to statusbar
-- TableView to LoupView scroll thumbView
-- Ignore filtering while editing the datamodel
 - Make sure HEIC also works on PC including thumbs
 - folderAndFileSelectionChange does not show folder highlight change
 - Remove settings deprecated items MW::removeDeprecatedSettings()
@@ -83,6 +80,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Ignore filtering while editing the datamodel
+- Redo concurrent load flow
+- When load folder and jump to end last image not added to image cache
 - Suggest embed thumbnails when missing
 - Bulk changes not working when filter panel is open
 - Thumbnail symbol help in IconView tooltip

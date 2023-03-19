@@ -518,7 +518,7 @@ int IconView::getThumbsPerPage()
     visibleCellCount = tpr * rpp;
     /*qDebug() << "IconView::getThumbsPerPage" << objectName()
              << "G::isInitializing" << G::isInitializing
-             << "| G::isNewFolderLoaded" << G::isNewFolderLoaded
+             << "| G::isLinearLoadDone" << G::isLinearLoadDone
              << "| isVisible = " << isVisible()
              << "| page size =" << vp
              << "| cell size =" << cell
@@ -1133,14 +1133,14 @@ void IconView::resizeEvent(QResizeEvent *)
              << "thumbDockSplitterChange =" << thumbDockSplitterChange
              << "isWrapping =" << isWrapping()
              << "G::isInitializing =" << G::isInitializing
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isLinearLoadDone =" << G::isLinearLoadDone
              << "m2->gridDisplayFirstOpen =" <<  m2->gridDisplayFirstOpen
              << "midVisibleCell =" <<  midVisibleCell
                 ;
 //    */
 
     // must come after width parameters
-    if (G::isInitializing || !G::isNewFolderLoaded /*|| m2->gridDisplayFirstOpen*/) {
+    if (G::isInitializing ||(G::isLinearLoading && !G::isLinearLoadDone) /*|| m2->gridDisplayFirstOpen*/) {
         prevWidth = width();
         return;
     }
@@ -1681,8 +1681,8 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     if (!event->modifiers()) {
 //        if  (event->modifiers() == Qt::NoModifier/*&& isMouseDrag*/) {
         QString src = "IconView::mouseReleaseEvent";
-        m2->sel->current(idx);  // req'd when click on current with others also selected
-        m2->fileSelectionChange(idx, QModelIndex(), true, src);
+        m2->sel->currentIndex(idx);  // req'd when click on current with others also selected
+//        m2->fileSelectionChange(idx, QModelIndex(), true, src);
         // Capture the percent coordinates of the mouse click within the thumbnail
         // so that the full scale image can be zoomed to the same point.
         QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
@@ -1752,7 +1752,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     if (G::isEmbellish) failReason = "G::isEmbellish";
     if (G::isInitializing) failReason = "G::isInitializing";
     if (G::stop) failReason = "G::stop";
-    if (!G::isNewFolderLoaded) failReason = "!G::isNewFolderLoaded";
+    if (G::isLinearLoading && !G::isLinearLoadDone) failReason = "!G::isLinearLoadDone";
     bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) failReason = "isVideo";
 

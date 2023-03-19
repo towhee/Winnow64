@@ -238,7 +238,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         else { // not available
             // MacOS: if showPopup thumbs do not scroll when hold arrow key down
             #ifdef Q_OS_WIN
-                if (G::isNewFolderLoaded) {
+                if (G::isLinearLoadDone) {
                     G::popUp->showPopup("Buffering image");
                 }
             #endif
@@ -513,7 +513,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     /*
     qDebug() << "ImageView::resizeEvent"
              << "G::isInitializing =" << G::isInitializing
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isLinearLoadDone =" << G::isLinearLoadDone
              << "isFirstImageNewFolder =" << isFirstImageNewFolder;
     //    */
     if (G::isInitializing) return;

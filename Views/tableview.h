@@ -52,10 +52,11 @@ private slots:
 signals:
     void displayLoupe();
     void selectionChange(bool, QString, QString);
-    void fileSelectionChange(QModelIndex idx,
-                             QModelIndex idx2 = QModelIndex(),
-                             bool clearSelection = false,
-                             QString src = "TableView::fileSelectionChange") ;
+    void fileSelectionChange(QModelIndex idx);
+//    void fileSelectionChange(QModelIndex idx,
+//                             QModelIndex idx2 = QModelIndex(),
+//                             bool clearSelection = false,
+//                             QString src = "TableView::fileSelectionChange");
 };
 
 #include <QStyledItemDelegate>

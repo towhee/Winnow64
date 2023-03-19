@@ -313,8 +313,9 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
 //    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
-    connect(metaReadThread, &MetaRead::triggerImageCache,
-            imageCacheThread, &ImageCache::setCurrentPosition);
+//    connect(metaReadThread, &MetaRead::triggerImageCache,
+//            imageCacheThread, &ImageCache::setCurrentPosition);
+    connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
     // check icons visible is correct
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
@@ -492,7 +493,7 @@ void MW::createThumbView()
 //            this, SLOT(setThumbDockHeight()));
 
     // trigger fileSelectionChange
-    connect(thumbView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
+//    connect(thumbView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
 
     connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
 
@@ -535,7 +536,7 @@ void MW::createGridView()
     }
 
     // trigger fileSelectionChange
-    connect(gridView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
+//    connect(gridView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
     // double mouse click fires displayLoupe
     connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
     // update metadata and icons if not loaded for new images when scroll
@@ -583,16 +584,17 @@ void MW::createTableView()
             this, &MW::tableHasScrolled);
     // update status bar when selection count changes
     connect(tableView, &TableView::selectionChange, this, &MW::updateStatus);
-    // update fileSelectionChange when table selection changes
-    connect(tableView, &TableView::fileSelectionChange, this, &MW::fileSelectionChange);
 }
 
 void MW::createSelection()
 {
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
-    connect(sel, &Selection::currentChanged, this, &MW::fileSelectionChange);
-    connect(sel, &Selection::setCurrentRow, metaReadThread, &MetaRead::setCurrentRow);
+    connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
+    connect(tableView, &TableView::fileSelectionChange, sel, &Selection::currentIndex);
+//    connect(sel, &Selection::currentChanged, this, &MW::fileSelectionChange);
+//    connect(sel, &Selection::setCurrentRow, metaReadThread, &MetaRead::setCurrentRow);
+    connect(sel, &Selection::loadConcurrent, this, &MW::loadConcurrent);
 }
 
 void MW::createVideoView()

@@ -72,7 +72,7 @@ void MW::filterChange(QString source)
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
-    if (!G::isNewFolderLoaded) {
+    if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
@@ -129,9 +129,10 @@ void MW::filterChange(QString source)
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
-    bool clearSelection = true;
-    dm->currentSfIdx = QModelIndex();   // allow fileSelectionChange()
-    fileSelectionChange(newSfIdx, QModelIndex(), clearSelection,  "MW::filterChange");
+//    bool clearSelection = true;
+//    dm->currentSfIdx = QModelIndex();   // allow fileSelectionChange()
+//    fileSelectionChange(newSfIdx, QModelIndex(), clearSelection,  "MW::filterChange");
+    sel->currentIndex(newSfIdx);
 
     QApplication::restoreOverrideCursor();
 }
@@ -332,14 +333,14 @@ void MW::sortChange(QString source)
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::sortChange", "Src: " + source);
 
-    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    if (G::isInitializing || !G::allMetadataLoaded) return;
 
     QList<G::dataModelColumns> coreSorts;
     coreSorts << G::NameColumn << G::TypeColumn << G::SizeColumn << G::CreatedColumn << G::ModifiedColumn;
 
     /*
     qDebug() << "MW::sortChange" << "source =" << source
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isLinearLoadDone =" << G::isLinearLoadDone
              << "G::isInitializing =" << G::isInitializing
              << "prevSortColumn =" << prevSortColumn
              << "sortColumn =" << sortColumn
@@ -350,7 +351,7 @@ void MW::sortChange(QString source)
 //                */
 
     // reset sort to file name if was sorting on non-core metadata while folder still loading
-    if (!G::isNewFolderLoaded && !coreSorts.contains(sortColumn)) {
+    if (!G::allMetadataLoaded && !coreSorts.contains(sortColumn)) {
         prevSortColumn = G::NameColumn;
         updateSortColumn(G::NameColumn);
     }
@@ -367,11 +368,11 @@ void MW::sortChange(QString source)
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;
-    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
         doNotSort = true;
-    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
+    if (!G::allMetadataLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
         doNotSort = true;
-    if (G::isNewFolderLoaded && !sortHasChanged)
+    if (G::allMetadataLoaded && !sortHasChanged)
         doNotSort = true;
     if (doNotSort) return;
 
@@ -401,7 +402,7 @@ void MW::sortChange(QString source)
              ;
 //             */
 
-    if (G::isNewFolderLoaded) {
+    if (G::allMetadataLoaded) {
         G::popUp->showPopup("Sorting...", 0);
     }
     else {
@@ -413,7 +414,7 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    if (G::isNewFolderLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
@@ -436,7 +437,8 @@ void MW::sortChange(QString source)
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
-    fileSelectionChange(idx, idx, true, "MW::sortChange");
+//    fileSelectionChange(idx, idx, true, "MW::sortChange");
+    sel->currentIndex(idx);
 
     scrollToCurrentRow();
     G::popUp->end();

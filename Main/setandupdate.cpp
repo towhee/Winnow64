@@ -190,7 +190,7 @@ void MW::setThumbDockVisibity()
 {
     if (G::isLogger) G::log("MW::setThumbDockVisibity");
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    sel->current(dm->currentSfRow);
+    sel->currentRow(dm->currentSfRow);
 }
 
 void MW::toggleFolderDockVisibility()
@@ -425,7 +425,7 @@ void MW::setIngested()
 void MW::setCombineRawJpg()
 {
     if (G::isLogger) G::log("MW::setCombineRawJpg");
-    if (!G::isNewFolderLoaded) {
+    if (!G::allMetadataLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popUp->showPopup(msg, 2000);
         return;
