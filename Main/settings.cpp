@@ -371,7 +371,8 @@ bool MW::loadSettings()
         // filters
 
         // cache
-        //G::isLinearLoading = false;
+        G::isLinearLoading = false;
+        G::isConcurrentLoading = true;
         cacheMethod = "Concurrent";
         cacheSizeStrategy = "Moderate";
         cacheMinSize = "  2 GB";

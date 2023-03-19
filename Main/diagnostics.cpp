@@ -10,7 +10,7 @@ void MW::reportState(QString title)
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
-        << "\nG::isNewFolderLoaded                   " << G::isNewFolderLoaded
+        << "\nG::isLinearLoadDone                   " << G::isLinearLoadDone
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
         << "\nG::isNewSelection                      " << G::isNewFileSelection
@@ -141,7 +141,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::isNewFolderLoaded = " << G::s(G::isNewFolderLoaded);
+    rpt << "\n" << "G::isLinearLoadDone = " << G::s(G::isLinearLoadDone);
     rpt << "\n" << "G::isNewFileSelection = " << G::s(G::isNewFileSelection);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);

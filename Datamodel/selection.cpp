@@ -35,22 +35,38 @@ Selection::Selection(QWidget *parent, DataModel *dm, IconView *thumbView, IconVi
     isDebug = false;
 }
 
-void Selection::current(QString &fPath)
+//void Selection::currentChanged(QModelIndex idx, QModelIndex idx2)
+//{
+//    qDebug() << "Selection::currentChanged" << idx;
+//}
+
+void Selection::currentPath(QString &fPath)
 {
     if (G::isLogger) G::log("Selection::current QString");
-    current(dm->proxyIndexFromPath(fPath));
+    currentIndex(dm->proxyIndexFromPath(fPath));
 }
 
-void Selection::current(int sfRow)
+void Selection::currentRow(int sfRow)
 {
     if (G::isLogger) G::log("Selection::current row");
-    current(dm->sf->index(sfRow, 0));
+    currentIndex(dm->sf->index(sfRow, 0));
 }
 
-void Selection::current(QModelIndex sfIdx)
+void Selection::currentIndex(QModelIndex sfIdx)
+/*
+    This is the start for the core program flow (see top of mainwindow.cpp)
+
+    • Set all view current index
+
+    • if AllMetadataLoaded signal fileSelectionChange
+
+    • if Concurrent (still loading in progress):
+        - MetaRead::setCurrentRow
+            - MW::fileSelectionChange
+*/
 {
     if (G::isLogger || G::isFlowLogger) G::log("Selection::current QModelIndex", "row = " + QString::number(sfIdx.row()));
-//    /*
+    /*
     if (isDebug)
         qDebug() << "Selection::current current"
                  //<< "instance ="
@@ -60,27 +76,29 @@ void Selection::current(QModelIndex sfIdx)
                  << dm->currentFolderPath;
     //*/
     if (sfIdx.isValid()) {
+        if (G::isConcurrentLoading && !G::allMetadataLoaded) {
+            emit loadConcurrent(sfIdx.row());
+            return;
+        }
         G::isNewFileSelection = true;
         thumbView->setCurrentIndex(sfIdx);
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-//        if (!G::isLinearLoading) emit setCurrentRow(sfIdx.row(), "Selection::current");
-        // MW::fileSelectionChange
-        emit currentChanged(sfIdx, QModelIndex(), true, "Selection::select");
+        emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
     }
 }
 
 void Selection::select(QString &fPath)
 {
     if (G::isLogger) G::log("Selection::select QString");
-    current(dm->proxyIndexFromPath(fPath));
+    currentIndex(dm->proxyIndexFromPath(fPath));
 }
 
 void Selection::select(int sfRow)
 {
     if (G::isLogger) G::log("Selection::select row");
-    current(dm->sf->index(sfRow, 0));
+    currentIndex(dm->sf->index(sfRow, 0));
 }
 
 void Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)
@@ -104,7 +122,7 @@ void Selection::toggleSelect(QModelIndex sfIdx)
             gridView->setCurrentIndex(nextIdx);
             tableView->setCurrentIndex(nextIdx);
             sm->setCurrentIndex(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-            emit currentChanged(nextIdx, QModelIndex(), false, "Selection::toggleSelect");
+            emit fileSelectionChange(nextIdx, QModelIndex(), false, "Selection::toggleSelect");
         }
         else return;
     }
@@ -119,7 +137,7 @@ void Selection::next()
     int row = dm->currentSfRow;
     if (row < dm->sf->rowCount() - 1)
         row++;
-    current(row);
+    currentRow(row);
 }
 
 void Selection::prev()
@@ -128,28 +146,28 @@ void Selection::prev()
     int row = dm->currentSfRow;
     if (row > 0)
         row--;
-    current(row);
+    currentRow(row);
 }
 
 void Selection::up()
 {
     if (G::isLogger) G::log("Selection::up");
     if (gridView->isVisible()) {
-        current(gridView->upIndex());
+        currentIndex(gridView->upIndex());
         return;
     }
     if (tableView->isVisible()) {
         prev();
         return;
     }
-    current(thumbView->pageUpIndex());
+    currentIndex(thumbView->pageUpIndex());
 }
 
 void Selection::down()
 {
     if (G::isLogger) G::log("Selection::down");
     if (gridView->isVisible()) {
-        current(gridView->downIndex());
+        currentIndex(gridView->downIndex());
         return;
     }
     if (tableView->isVisible()) {
@@ -162,53 +180,53 @@ void Selection::down()
 void Selection::first()
 {
     if (G::isLogger) G::log("Selection::home");
-    current(0);
+    currentRow(0);
 }
 
 void Selection::last()
 {
     if (G::isLogger) G::log("Selection::end");
-    current(dm->sf->rowCount() - 1);
+    currentRow(dm->sf->rowCount() - 1);
 }
 
 void Selection::prevPage()
 {
     if (G::isLogger) G::log("Selection::prevPage");
     if (gridView->isVisible()) {
-        current(gridView->pageUpIndex());
+        currentIndex(gridView->pageUpIndex());
         return;
     }
     if (tableView->isVisible()) {
-        current(tableView->pageUpIndex());
+        currentIndex(tableView->pageUpIndex());
         return;
     }
-    current(thumbView->pageUpIndex());
+    currentIndex(thumbView->pageUpIndex());
 }
 
 void Selection::nextPage()
 {
     if (G::isLogger) G::log("Selection::nextPage");
     if (gridView->isVisible()) {
-        current(gridView->pageDownIndex());
+        currentIndex(gridView->pageDownIndex());
         return;
     }
     if (tableView->isVisible()) {
-        current(tableView->pageDownIndex());
+        currentIndex(tableView->pageDownIndex());
         return;
     }
-    current(thumbView->pageDownIndex());
+    currentIndex(thumbView->pageDownIndex());
 }
 
 void Selection::nextPick()
 {
     if (G::isLogger) G::log("Selection::nextPick");
-    current(dm->nextPick());
+    currentRow(dm->nextPick());
 }
 
 void Selection::prevPick()
 {
     if (G::isLogger) G::log("Selection::prevPick");
-    current(dm->prevPick());
+    currentRow(dm->prevPick());
 }
 
 void Selection::all()
@@ -228,7 +246,7 @@ void Selection::all()
 void Selection::random()
 {
     if (G::isLogger) G::log("Selection::random");
-    current(QRandomGenerator::global()->generate() % static_cast<int>(dm->sf->rowCount()));
+    currentRow(QRandomGenerator::global()->generate() % static_cast<int>(dm->sf->rowCount()));
 }
 
 QModelIndex Selection::nearestSelectedIndex(int sfRow)
@@ -262,7 +280,7 @@ void Selection::invert()
     QModelIndex idx = nearestSelectedIndex(dm->currentSfRow);
     // MW::fileSelectionChange (updates DataModel current indexes, rows)
     // qDebug() << "Selection::invert" << idx.isValid() << dm->currentSfIdx;
-    if (idx.isValid()) emit currentChanged(idx);
+    if (idx.isValid()) emit fileSelectionChange(idx);
     if (sm->selectedRows().isEmpty()) select(dm->currentSfIdx);
 }
 
@@ -305,7 +323,7 @@ void Selection::chkForDeselection(int sfRow)
             if (idx == dm->currentSfIdx) {
                 // just deselected current index, move current index to nearest selected
                 QModelIndex nearestIdx = nearestSelectedIndex(sfRow);
-                emit currentChanged(nearestIdx, QModelIndex(), false);
+                emit fileSelectionChange(nearestIdx, QModelIndex(), false);
             }
         }
     }

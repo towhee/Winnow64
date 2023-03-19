@@ -1225,13 +1225,14 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "column =" << column
                  << "item =" << item->text(0)
                  << "parent =" << item->parent()->text(0)
-                 << "itemCheckStateHasChanged" << itemCheckStateHasChanged             << "!G::isNewFolderLoaded =" << !G::isNewFolderLoaded
+                 << "itemCheckStateHasChanged" << itemCheckStateHasChanged
+                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::isNewFolderLoaded ||
+        !G::allMetadataLoaded ||
         buildingFilters)
     {
         return;

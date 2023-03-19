@@ -145,7 +145,7 @@ namespace G
     // flow
     extern bool stop;
     extern bool dmEmpty;
-    extern bool isNewFolderLoaded;
+    extern bool isLinearLoadDone;
     extern bool isInitializing;
     extern bool isNewFileSelection;
     extern bool allMetadataLoaded;
@@ -254,6 +254,7 @@ namespace G
     extern bool useSidecar;
 //    extern bool embedTifJpgThumb;
     extern bool isLinearLoading;
+    extern bool isConcurrentLoading;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;
 

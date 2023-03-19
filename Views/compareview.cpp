@@ -666,7 +666,7 @@ void CompareView::select()
     dm->currentSfIdx = imageIndex;
     dm->currentSfRow = imageIndex.row();
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    sel->current(imageIndex);
+    sel->currentIndex(imageIndex);
     // prevent user selection in thumbView while comparing
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
     this->setStyleSheet("QGraphicsView  {"

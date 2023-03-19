@@ -65,7 +65,7 @@ void MW::loupeDisplay()
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
         }
-        sel->current(dm->currentSfRow);
+        sel->currentRow(dm->currentSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
@@ -247,7 +247,7 @@ void MW::tableDisplay()
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-            sel->current(dm->currentSfRow);
+            sel->currentRow(dm->currentSfRow);
         }
         if(!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);

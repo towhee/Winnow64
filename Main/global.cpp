@@ -6,7 +6,7 @@ namespace G
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
-    bool isFlowLogger = true;          // Writes key program flow points to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
     bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isTestLogger = false;          // Writes test points to file or console
@@ -24,7 +24,7 @@ namespace G
                                         // new dataset
     bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
                                         // all new folder processes.
-    bool isNewFolderLoaded;
+    bool isLinearLoadDone;
     bool isNewFileSelection;
     bool allMetadataLoaded;
     bool allIconsLoaded;
@@ -126,6 +126,7 @@ namespace G
     bool useSidecar;
 //    bool embedTifJpgThumb;
     bool isLinearLoading;
+    bool isConcurrentLoading;
     bool renderVideoThumb;
     bool includeSubfolders;
 

@@ -1140,10 +1140,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
 
-    if (row == 2339) qDebug() << "ImageCache::addCacheItemImageMetadata"
-                              << "row =" << row
-                              << "w =" << w << "h =" << h;
-
     mutex.lock();
     float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
     if (sizeMB > 0) {

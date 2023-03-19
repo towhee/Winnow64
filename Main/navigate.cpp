@@ -31,7 +31,7 @@ void MW::keyRight()
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->current(compareImages->go("Right"));
+        sel->currentIndex(compareImages->go("Right"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next();
@@ -44,7 +44,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->current(compareImages->go("Left"));
+        sel->currentIndex(compareImages->go("Left"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev();
@@ -89,7 +89,14 @@ void MW::keyHome()
 
 */
     if (G::isLogger) G::log("MW::keyHome");
-    if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
+    if (G::isInitializing) return;
+    if (G::isLinearLoading) {
+        if (G::isLinearLoadDone) {
+            if (G::mode == "Compare") compareImages->go("Home");
+            else sel->first();
+        }
+    }
+    else {
         if (G::mode == "Compare") compareImages->go("Home");
         else sel->first();
     }
@@ -100,16 +107,17 @@ void MW::keyEnd()
 /*
 
 */
-    if (G::isLogger) G::log("MW::keyEnd");
-    if (!G::isLinearLoading) {
-        qDebug() << "MW::keyEnd";
-        if (G::mode == "Compare") compareImages->go("End");
-        G::ignoreScrollSignal = true;
-        sel->last();
-        return;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
+    if (G::isInitializing) return;
+    if (G::isLinearLoading) {
+        if (G::isLinearLoadDone) {
+            metadataCacheThread->stop();
+            if (G::mode == "Compare") compareImages->go("End");
+            else sel->last();
+        }
     }
-    if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
-        if (G::isLinearLoading) metadataCacheThread->stop();
+    else {
+        G::ignoreScrollSignal = true;
         if (G::mode == "Compare") compareImages->go("End");
         else sel->last();
     }

@@ -16,9 +16,9 @@ public:
     void select(QModelIndex sfIdx, QModelIndex sfIdx2 = QModelIndex());
     void select(int sfRow);
     void select(QString &fPath);
-    void current(QModelIndex sfIdx);
-    void current(int sfRow);
-    void current(QString &fPath);
+    void currentIndex(QModelIndex sfIdx);
+    void currentRow(int sfRow);
+    void currentPath(QString &fPath);
     void toggleSelect(QModelIndex sfIdx);
     void next();
     void prev();
@@ -42,11 +42,16 @@ public:
     QModelIndexList selectedRows;
 
 signals:
-    void currentChanged(QModelIndex idx,
+    void fileSelectionChange(QModelIndex idx,
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
                         QString src = "Selection::currentChanged") ;
-    void setCurrentRow(int row, QString src);
+//    void setCurrentRow(int row, QString src);
+    void loadConcurrent(int sfRow, bool scrollOnly = false);
+
+public slots:
+//    void currentChanged(QModelIndex idx, QModelIndex idx2 = QModelIndex());
+//    void current(QModelIndex sfIdx);
 
 private:
     DataModel *dm;

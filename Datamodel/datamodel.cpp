@@ -2329,7 +2329,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
         if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
 
-    if (!G::isNewFolderLoaded) return true;
+    if (!G::allMetadataLoaded) return true;
     //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
 
     static int counter = 0;
