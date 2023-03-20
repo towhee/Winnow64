@@ -895,6 +895,7 @@ void Metadata::clearMetadata()
     m.iccSegmentOffset = 0;
     m.iccSegmentLength = 0;
     m.iccBuf.clear();
+    m.isEmbeddedThumbMissing = false;
     m.width = 0;
     m.height = 0;
     m.orientation = 1;

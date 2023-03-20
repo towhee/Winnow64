@@ -1,7 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Add modify on icon to statusbar
+- Get thumbnail from HEIC.
+- Warn when rotate thumbs if modify images = false
 - Make sure HEIC also works on PC including thumbs
 - folderAndFileSelectionChange does not show folder highlight change
 - Remove settings deprecated items MW::removeDeprecatedSettings()
@@ -80,6 +81,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Add modify on icon to statusbar
 - Ignore filtering while editing the datamodel
 - Redo concurrent load flow
 - When load folder and jump to end last image not added to image cache

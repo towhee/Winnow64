@@ -79,13 +79,15 @@ public:
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void copyTemplate(QString name);
     QVariant getItemValue(QString name, QModelIndex parent);
-    void setItemValue(QModelIndex idx, int type, QVariant value);
+    bool setItemValue(QString name, QVariant val);
+    void setItemValue(QModelIndex idx, QVariant value);
     void getItemInfo(QModelIndex &idx, ItemInfo &copy);
     void clearItemInfo(ItemInfo &i);
     void setItemEnabled(QString name, bool state);
     void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
-    QModelIndex findIndex(QString name);
+    QModelIndex findCaptionIndex(QString name);
+    QModelIndex findValueIndex(QString name);
     int uniqueItemIndex(QModelIndex parentIdx = QModelIndex());
     QModelIndex getItemIndex(int itemIndex, QModelIndex parentIdx = QModelIndex());
     void updateHiddenRows(QModelIndex parent);

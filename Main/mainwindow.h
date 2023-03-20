@@ -460,9 +460,11 @@ private slots:
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
     void toggleSortDirection(Tog n = toggle);
+    void toggleModifyImagesClick();
+    void toggleModifyImages();
     void toggleColorManageClick();
     void toggleColorManage(Tog n = toggle);
-    void toggleImageCacheMethod();
+    void toggleImageCacheStrategy();
     void allPreferences();
     void infoViewPreferences();
     void cachePreferences();
@@ -967,6 +969,7 @@ private:
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
     BarBtn *colorManageToggleBtn;
+    BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;

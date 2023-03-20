@@ -29,28 +29,40 @@ void MW::initialize()
     setAcceptDrops(true);
     setMouseTracking(true);
     QString msg;
+
+    modifyImagesBtn = new BarBtn();
+    msg = "Toggle permit modify images on/off.";
+    modifyImagesBtn->setToolTip(msg);
+    connect(modifyImagesBtn, &BarBtn::clicked, this, &MW::toggleModifyImagesClick);
+
     colorManageToggleBtn = new BarBtn();
     msg = "Toggle color manage on/off.";
     colorManageToggleBtn->setToolTip(msg);
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
+
     cacheMethodBtn = new BarBtn();
     msg = "Toggle cache size Thrifty > Moderate > Greedy > Thrifty... \n"
           "Ctrl + Click to open cache preferences.";
     cacheMethodBtn->setToolTip(msg);
-    connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheMethod);
+    connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheStrategy);
+
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::toggleSortDirectionClick);
+
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
+
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
+
     rawJpgStatusLabel = new QLabel;
     rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing.  "
                                   "Shortcut to toggle: Opt/Alt + J");
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
+
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
@@ -1007,6 +1019,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(progressBar);
 
     // add status icons to left side of statusBar
+    statusBar()->addWidget(modifyImagesBtn);
     statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));

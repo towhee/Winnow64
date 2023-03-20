@@ -24,6 +24,42 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     For example, if the thumbnail size is increased then the IconView function to do this is
     called.  Use setItemValue to access and change the value held in a custom widget.
 
+Property Model
+    row = unique property
+    col 0 = caption describing property
+    col 1 = widget to edit property value
+
+    The values and propeties of each item in the model are stored by user role:
+    UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_ItemIndex,                       // unique, consistent index for all items
+    UR_SortOrder,                       // override appended order ie for effects, borders
+    UR_DefaultValue,                    // when created or double click
+    UR_SettingsPath,                    // settings path
+    UR_Editor,                          // pointer to custom editor created
+    UR_DelegateType,                    // type of custom widget
+    UR_hasValue,                        // if no value then value column is empty
+    UR_CaptionIsEditable,               // can edit caption
+    UR_isIndent,                        // indent column 0 in QTreeView
+    UR_isHeader,                        // header item in QTreeView
+    UR_okToCollapseRoot,                // collapse root item when collapseAll
+    UR_isDecoration,                    // show expand/collapse decoration
+    UR_isBackgroundGradient,            // make the root rows dark gray gradiant
+    UR_isHidden,                        // flag to hide/show row in tree
+    UR_isEnabled,                       // flag to show disabled in tree
+    UR_Source,                          // name of property/variable being edited = i.key
+    UR_QModelIndex,                     // index from another model ie infoView->ok
+    UR_Type,                            // the data type required by the delegate
+    UR_Min,                             // validate minimum value
+    UR_Max,                             // validate maximum value
+    UR_Div,                             // Divide slider value by amount to get double from int
+    UR_DivPx,                           // Slider singlestep = one pixel
+    UR_FixedWidth,                      // fixed label width in custom widget
+    UR_StringList,                      // list of items for comboBox
+    UR_IconList,                        // list of icons for comboBox
+    UR_IsBtn,                           // button to run a secondary widget or help
+    UR_BtnText,                         // button text
+    UR_Color                            // QColor for text in LineEdit, LabelEdit
+
 Parameters to override as required when subclass:
 
     setIndentation
@@ -188,11 +224,21 @@ QModelIndex PropertyEditor::getItemIndex(int itemIndex, QModelIndex /*parentIdx*
     else return QModelIndex();
 }
 
-QModelIndex PropertyEditor::findIndex(QString name)
+QModelIndex PropertyEditor::findCaptionIndex(QString name)
 {
     QModelIndex start = model->index(0,0,QModelIndex());
     QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
     if (list.size() > 0) return list.at(0);
+    else return QModelIndex();
+}
+
+QModelIndex PropertyEditor::findValueIndex(QString name)
+{
+    QModelIndex start = model->index(0,0,QModelIndex());
+    QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
+    if (list.size() > 0) {
+        return model->index(list.at(0).row(), 1, list.at(0).parent());
+    }
     else return QModelIndex();
 }
 
@@ -206,9 +252,9 @@ QVariant PropertyEditor::getItemValue(QString name, QModelIndex parent)
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
 {
 /*
-Searches column 0 of the model for the text searchName in the role UR_Name and returns the
-index.  The role UR_Name is used as the display values could be duplicated in several rows
-in the model.
+    Searches column 0 of the model for the text searchName in the role UR_Name and
+    returns the index. The role UR_Name is used as the display values could be duplicated
+    in several rows in the model.
 */
     foundIdx = QModelIndex();
     for(int r = 0; r < model->rowCount(parent); ++r) {
@@ -252,7 +298,7 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     itemIndex++;
 
     if (i.parIdx.isValid()) parIdx = i.parIdx;
-    else parIdx = findIndex(i.parentName);
+    else parIdx = findCaptionIndex(i.parentName);
     parItem = model->itemFromIndex(parIdx);
     /*
     qDebug()
@@ -381,7 +427,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
 void PropertyEditor::setItemEnabled(QString name, bool state)
 {
     if (G::isLogger) G::log("PropertyEditor::setItemEnabled");
-    QModelIndex capIdx = findIndex(name);
+    QModelIndex capIdx = findCaptionIndex(name);
     model->setData(capIdx, state, UR_isEnabled);
     model->dataChanged(capIdx,capIdx);
     QModelIndex idx = model->index(capIdx.row(), ValColumn, capIdx.parent());
@@ -449,13 +495,25 @@ void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
     copy.parIdx = capIdx.parent();
 }
 
-void PropertyEditor::setItemValue(QModelIndex idx, int type, QVariant value)
+bool PropertyEditor::setItemValue(QString name, QVariant val)
+{
+    if (G::isLogger) G::log("PropertyEditor::setItemValue(QString name, QVariant val)", name);
+    QModelIndex valIdx = findValueIndex(name);
+    if (valIdx.isValid()) {
+        setItemValue(valIdx, val);
+        return true;
+    }
+    return false;
+}
+
+void PropertyEditor::setItemValue(QModelIndex idx, QVariant value)
 {
 /*
 
 */
-    if (G::isLogger) G::log("PropertyEditor::setItemValue");
+    if (G::isLogger) G::log("PropertyEditor::(QModelIndex idx, int type, QVariant value)");
     if (value.toString() == "__Ignore__") return;
+    int type = idx.data(UR_DelegateType).toInt();
     if (type == DT_Label) {
         auto editor = static_cast<LabelEditor*>(idx.data(UR_Editor).value<void*>());
         editor->setValue(value);
@@ -517,7 +575,7 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
     QVariant value = idx.data(UR_DefaultValue);
     if (idx.data(UR_DelegateType).toInt() == DT_Slider)
         value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
-    setItemValue(idx, idx.data(UR_DelegateType).toInt(), value);
+    setItemValue(idx, value);
 }
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
@@ -659,6 +717,8 @@ void PropertyEditor::diagnosticProperties(QModelIndex parent)
         QString n = idx0.data(UR_Name).toString();
         QVariant v = idx1.data(Qt::EditRole);
         QString s = idx0.data(UR_Source).toString();
+        qDebug().noquote() << "Caption index                      " << idx0;
+        qDebug().noquote() << "Value index                        " << idx1;
         qDebug().noquote() << "Caption UR_Name                    " << idx0.data(UR_Name).toString();
         qDebug().noquote() << "Caption Parent                     " << parent.data(UR_Name).toString();
         qDebug().noquote() << "Caption UR_Source                  " << idx0.data(UR_Source).toString();
@@ -693,7 +753,7 @@ void PropertyEditor::diagnosticProperties(QModelIndex parent)
         qDebug().noquote() << "Value   UR_StringList              " << idx1.data(UR_StringList).toString();
         qDebug().noquote() << "Value   UR_QModelIndex             " << idx1.data(UR_QModelIndex).toString();
 
-        qDebug();
+        qDebug() << " ";
 
         // iterate children
         if (model->hasChildren(idx0)) {

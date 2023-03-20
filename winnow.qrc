@@ -179,5 +179,8 @@
         <file>Docs/filtershelp.fld/filelist.xml</file>
         <file>Docs/filtershelp.fld/themedata.thmx</file>
         <file>Docs/images/filters2.png</file>
+        <file>images/icon16/delta_red_16.png</file>
+        <file>images/icon16/danger_red_16.png</file>
+        <file>images/icon16/delta_bw_16.png</file>
     </qresource>
 </RCC>

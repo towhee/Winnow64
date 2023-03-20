@@ -132,7 +132,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->isShowCacheProgressBar = v.toBool();
         mw->setImageCacheParameters();
         // hide/show progressWidthSlider in preferences
-        QModelIndex capIdx = findIndex("progressWidthSlider");
+        QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
         if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
         else setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
@@ -262,6 +262,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "modifySourceFiles") {
         G::modifySourceFiles = v.toBool();
         mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+        mw->toggleModifyImages();
         setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
         setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
@@ -933,7 +934,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
     // hide/show progressWidthSlider in preferences
-    QModelIndex idx = findIndex("showCacheProgressBar");
+    QModelIndex idx = findCaptionIndex("showCacheProgressBar");
     if (model->index(idx.row(), 1, idx.parent()).data().toBool())
         setRowHidden(capIdx.row(), capIdx.parent(), false);
     else
