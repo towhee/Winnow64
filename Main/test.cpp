@@ -106,11 +106,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-
-    reportHueCount();
-    return;
-
-    qDebug() << "MW::testNewFileFormat";
+    qDebug() << "G::modifySourceFiles =" << G::modifySourceFiles;
     bounceFoldersStressTest(50, 10000);
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
@@ -123,6 +119,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
             << "G::modifySourceFiles =" << G::modifySourceFiles
             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                ;
+
     return;
     diagnosticsMetadataCache();
 }

@@ -13,7 +13,7 @@ public:
     Preferences(QWidget *parent);
 
 public slots:
-    void itemChange(QModelIndex idx);
+    void itemChange(QModelIndex idx) override;
 
 private:
     void addItems();

@@ -107,6 +107,9 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log("MW::updateStatusBar");
 
+    if (G::modifySourceFiles) modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
+    else modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
+
     if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
 
@@ -130,6 +133,7 @@ int MW::availableSpaceForProgressBar()
     if (G::isLogger) G::log("MW::availableSpaceForProgressBar");
     int w = 0;
     int s = statusBar()->layout()->spacing();
+    if (modifyImagesBtn->isVisible()) w += s + modifyImagesBtn->width();
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
     if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
@@ -375,9 +379,34 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     resortImageCache();
 }
 
-void MW::toggleColorManageClick()
+void MW::toggleModifyImagesClick()
 {
 /*
+    This is called by connect signals from the menu action and the color manage button.  The
+    call is redirected to toggleColorManage, which has a parameter which is not supported
+    by the action and button signals.
+*/
+    if (G::isLogger) G::log("MW::toggleModifyImagesClick");
+    G::modifySourceFiles = !G::modifySourceFiles;
+    toggleModifyImages();
+    if (preferencesDlg == nullptr) return;
+    pref->setItemValue("modifySourceFiles", G::modifySourceFiles);
+}
+
+void MW::toggleModifyImages()
+{
+    if (G::isLogger) G::log("MW::setModifyImages");
+    if (G::modifySourceFiles) {
+        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
+    }
+    else {
+        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
+    }
+}
+
+void MW::toggleColorManageClick()
+{
+    /*
     This is called by connect signals from the menu action and the color manage button.  The
     call is redirected to toggleColorManage, which has a parameter which is not supported
     by the action and button signals.
@@ -416,7 +445,7 @@ void MW::toggleColorManage(Tog n)
     imageCacheThread->colorManageChange();
 }
 
-void MW::toggleImageCacheMethod()
+void MW::toggleImageCacheStrategy()
 {
 /*
     Called by cacheSizeBtn press
@@ -427,10 +456,14 @@ void MW::toggleImageCacheMethod()
         cachePreferences();
         return;
     }
-
-    if (cacheSizeStrategy == "Thrifty") setImageCacheSize("Moderate");
-    else if (cacheSizeStrategy == "Moderate") setImageCacheSize("Greedy");
-    else if (cacheSizeStrategy == "Greedy") setImageCacheSize("Thrifty");
+    QString strategy;
+    if (cacheSizeStrategy == "Thrifty") strategy = "Moderate";
+    else if (cacheSizeStrategy == "Moderate") strategy = "Greedy";
+    else if (cacheSizeStrategy == "Greedy") strategy = "Thrifty";
+    setImageCacheSize("Thrifty");
     setImageCacheParameters();
+    if (preferencesDlg == nullptr) return;
+    pref->setItemValue("imageCacheStrategy", strategy);
+
 }
 

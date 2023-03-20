@@ -31,6 +31,8 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
     int degrees = 0;
     int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+    qDebug() << "Thumb::checkOrientation"
+             << "orientation =" << orientation << fPath;
     switch (orientation) {
         case 3:
             degrees = rotationDegrees + 180;
@@ -295,7 +297,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             image.convertTo(QImage::Format_RGB32);
 
             // rotate if there is orientation metadata
-            if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
+            //if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
         }
         else {
             // show bad image png
@@ -306,6 +308,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         }
     }
 
+    /*if (metadata->rotateFormats.contains(ext)) */checkOrientation(fPath, image);
     QFile(fPath).setPermissions(oldPermissions);
 
     return success;
