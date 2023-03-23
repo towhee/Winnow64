@@ -56,7 +56,7 @@ void Selection::currentIndex(QModelIndex sfIdx)
 /*
     This is the start for the core program flow (see top of mainwindow.cpp)
 
-    • Set all view current index
+    • Set all views current index
 
     • if AllMetadataLoaded signal fileSelectionChange
 
@@ -65,7 +65,8 @@ void Selection::currentIndex(QModelIndex sfIdx)
             - MW::fileSelectionChange
 */
 {
-    if (G::isLogger || G::isFlowLogger) G::log("Selection::current QModelIndex", "row = " + QString::number(sfIdx.row()));
+    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
+        G::log("Selection::current QModelIndex", "row = " + QString::number(sfIdx.row()));
     /*
     if (isDebug)
         qDebug() << "Selection::current current"

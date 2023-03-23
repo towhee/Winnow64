@@ -31,8 +31,9 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
     int degrees = 0;
     int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
+    /*
     qDebug() << "Thumb::checkOrientation"
-             << "orientation =" << orientation << fPath;
+             << "orientation =" << orientation << fPath; //*/
     switch (orientation) {
         case 3:
             degrees = rotationDegrees + 180;

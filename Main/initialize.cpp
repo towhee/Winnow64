@@ -952,6 +952,7 @@ void MW::createStatusBar()
 
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
+    progressLabel->setObjectName("StatusProgressLabel");
 
     // progressBar created in MW::createDataModel, where it is first req'd
 
@@ -971,6 +972,7 @@ void MW::createStatusBar()
     progressToolTip += "  • DarkGray:   \timages targeted to be cached\n";
     progressToolTip += "  • Green:      \timages that are cached\n";
     progressToolTip += "  • LightGreen: \tcurrent image";
+    progressToolTip += "\n\nMouse click on cache status progress to open cache preferences.";
     progressLabel->setToolTip(progressToolTip);
     progressLabel->setToolTipDuration(100000);
     statusBar()->addPermanentWidget(progressLabel, 1);

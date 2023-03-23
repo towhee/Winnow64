@@ -32,6 +32,7 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 {
     // ProgressBar is a friend of MW
     m1 = qobject_cast<MW*>(parent);
+    setObjectName("Status ProgressBar");
 
     htOffset = 9;               // the offset from the top of pnt to the progress bar
     ht = 8;                     // the height of the progress bar
@@ -153,17 +154,17 @@ void ProgressBar::updateProgress(int fromItem,
     int pxStart, pxWidth;
 
     // to and from can be mixed depending on direction of travel
-    if(fromItem < toItem) {
+    if (fromItem < toItem) {
         pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;
         pxStart = qRound(fromItem * itemWidth);
-        if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+        if (pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
     }
     else {
         pxWidth = qRound((fromItem - toItem) * itemWidth) + 1;
         pxStart = qRound(toItem * itemWidth);
     }
-    if(pxWidth < 2) pxWidth = 2;
-    if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
+    if (pxWidth < 2) pxWidth = 2;
+    if (pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
 
 /*    qDebug() << "Target range from =" << fromItem
              << "to" << toItem

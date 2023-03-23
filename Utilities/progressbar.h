@@ -35,10 +35,6 @@ public:
     QLinearGradient currentColorGradient;
     QLinearGradient targetColorGradient;
 
-signals:
-
-public slots:
-
 private:
     QPixmap state;
 

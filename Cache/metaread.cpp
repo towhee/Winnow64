@@ -60,6 +60,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
 
     mutex.lock();
     iconChunkSize = dm->iconChunkSize;
+    int rows = dm->sf->rowCount();
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
     targetRow = startRow;
@@ -68,6 +69,8 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
     count = 0;
     abortCleanup = isRunning();
     mutex.unlock();
+    qDebug() << "MetaRead::setCurrentRow targetRow =" << targetRow
+             << "startPath =" << startPath;
 
     if (!isRunning()) {
         start();
@@ -267,7 +270,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << "abort =" << abort
                  ;
     }
-    /*
+//    /*
     qDebug() << "MetaRead::readMetadata"
              << "row =" << sfIdx.row()
              << "metadata->m.type =" << metadata->m.type
@@ -370,7 +373,10 @@ void MetaRead::readRow(int sfRow)
 
     // range check
     if (sfRow >= dm->sf->rowCount()) {
-        qWarning() << "WARNING MetaRead::readRow row =" << sfRow << "FAILED RANGE CHECK";
+        qWarning() << "WARNING MetaRead::readRow"
+                      << "dm->sf->rowCount() =" << dm->sf->rowCount()
+                      << "row =" << sfRow << "FAILED RANGE CHECK"
+                      ;
         return;
     }
     // valid index check
@@ -468,10 +474,10 @@ void MetaRead::run()
             return;
         }
 
-        // check if start row has changed
+        // check if start row has changed while iterating
         if (startRow != -1) {
             row = startRow;
-            moreAhead = row < lastRow + 1;
+            moreAhead = row < lastRow;
             moreBehind = row > 0;
             rowAhead = row;
             rowBehind = row;
@@ -490,12 +496,13 @@ void MetaRead::run()
         }
 
         // do something with row
+        qDebug() << "MetaRead::run row =" << row;
         readRow(row);
 
         // delayed start ImageCache
         if (!scrollOnly && !abort) {
             count++;
-            if (count == sfRowCount - 1 || count == imageCacheTriggerCount) {
+            if (count == lastRow || count == imageCacheTriggerCount) {
                 // start image caching thread after head start
                 if (isDebug || G::isLogger || G::isFlowLogger)
                     G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
@@ -512,14 +519,14 @@ void MetaRead::run()
             if (moreBehind) ahead = false;
             if (moreAhead) {
                 row = ++rowAhead;
-                moreAhead = rowAhead < lastRow + 1;
+                moreAhead = rowAhead < sfRowCount;
             }
         }
         else {
             if (moreAhead) ahead = true;
             if (moreBehind) {
                 row = --rowBehind;
-                moreBehind = row > 0;
+                moreBehind = row > -1;
             }
         }
     } // end loop processing rows

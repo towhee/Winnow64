@@ -28,7 +28,7 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loupeDisplay");
+    if (!G::isInitializing && (G::isLogger || G::isFlowLogger)) G::log("MW::loupeDisplay");
 
     if (!G::isInitializing && !G::allMetadataLoaded) {
         G::mode = "Loupe";

@@ -79,12 +79,8 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
-    QModelIndex oldIdx = dm->currentDmIdx;
-
     // if filter chnage source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
-
-//    imageCacheThread->pauseImageCache();
 
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
@@ -129,9 +125,7 @@ void MW::filterChange(QString source)
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
-//    bool clearSelection = true;
-//    dm->currentSfIdx = QModelIndex();   // allow fileSelectionChange()
-//    fileSelectionChange(newSfIdx, QModelIndex(), clearSelection,  "MW::filterChange");
+    // selection, fileSelectionChange, renew image cache
     sel->currentIndex(newSfIdx);
 
     QApplication::restoreOverrideCursor();

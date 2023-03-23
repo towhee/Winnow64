@@ -1156,6 +1156,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+    } // end section    
+
+    // CACHE PROGRESSBAR MOUSE CLICK
+    {
+    /*
+    Show cache preferences.
+    */
+
+    if (event->type() == QEvent::MouseButtonPress) {
+        if (obj->objectName() == "StatusProgressLabel") {
+            preferences("CacheHeader");
+        }
+    }
     } // end section
 
     /*
@@ -1836,8 +1849,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     and delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
+//    qDebug() << "MW::fileSelectionChange" << "*CONTINUE 0*" << current;
 
-    if (G::stop) return;
+    if (G::stop) {
+        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
+            "G::stop so exit");
+        return;
+    }
+
     G::isNewFileSelection = false;
 
    /* debug
@@ -1884,13 +1903,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // check if current selection = current index.  If so, nothng to do
-    if (current == dm->currentSfIdx) {
-        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-            "Already current file selection so exit");
-        //qDebug() << "MW::fileSelectionChange  current selection = current index  so return";
-        return;
-    }
+//    // check if current selection = current index.  If so, nothng to do
+//    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
+//        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
+//            "Already current file selection so exit");
+//        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
+//        dm->currentSfRow = current.row();
+//        dm->currentSfIdx = dm->sf->index(current.row(), 0);
+//        return;
+//    }
     /*
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
@@ -1907,6 +1928,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         isDragDrop = false;
     }
     */
+
+    //qDebug() << "MW::fileSelectionChange" << "*CONTINUE *" << current;
 
     // record current proxy row (dm->sf) as it is used to sync everything
     dm->currentSfRow = current.row();
@@ -1964,6 +1987,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // reset table, grid or thumb item clicked
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
+
+    // check if current selection = current index.  If so, do not update loupe,
+    // image cache
+//    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
+//        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
+//            "Already current file selection so exit");
+//        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
+//        return;
+//    }
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
@@ -2219,7 +2251,10 @@ bool MW::reset(QString src)
 */
     if (G::isLogger) G::log("MW::reset", "Source: " + src);
 
-    if (!G::dmEmpty /*|| !G::stop*/) return false;
+    if (!G::dmEmpty /*|| !G::stop*/) {
+        //qDebug() << "MW::reset G::dmEmpty == false";
+        return false;
+    }
 
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
@@ -2395,13 +2430,12 @@ void MW::loadConcurrentNewFolder()
     int targetRow;
     if (folderAndFileChangePath != "") {
         targetRow = dm->rowFromPath(folderAndFileChangePath);
-//        dm->currentSfRow = dm->rowFromPath(folderAndFileChangePath);
-//        dm->currentFilePath = folderAndFileChangePath;
+        folderAndFileChangePath = "";
+
     }
     else {
         targetRow = 0;
-//        dm->currentSfRow = 0;
-//        dm->currentFilePath = dm->sf->index(0, 0).data(G::PathRole).toString();
+
     }
     if (reset(src)) return;
     updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
@@ -2425,9 +2459,6 @@ void MW::loadConcurrentNewFolder()
     if (reset(src)) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     sel->currentRow(targetRow);
-//    metaReadThread->setCurrentRow(targetRow, "MW::loadConcurrentNewFolder");
-//    metaReadThread->setCurrentRow(dm->currentSfRow, "MW::loadConcurrentNewFolder");
-//    G::isLinearLoadDone = true;
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly)
@@ -2436,17 +2467,17 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly)
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
 */
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow));
-    //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow;
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow) +
+        " scrollOnly = " + QVariant(scrollOnly).toString());
+    //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow << "scrollOnly =" << scrollOnly;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-//            dm->currentSfRow = sfRow;
-//            dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-            metaReadThread->setCurrentRow(sfRow, scrollOnly, "MW::loadConcurrent"); // also emit option
-            // emit startMetaRead(sfRow, "MW::loadConcurrent");
-//            G::isLinearLoadDone = true;
+            dm->currentSfRow = sfRow;
+            dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+            metaReadThread->setCurrentRow(sfRow, scrollOnly, "MW::loadConcurrent");
         }
     }
 }
@@ -3039,7 +3070,10 @@ void MW::updateImageCacheStatus(QString instruction,
         return;
     }
 
-    int rows = cache.totFiles;
+//    int rows = cache.totFiles;
+    int rows = icd->cacheItemList.size();
+
+    //if (rows > )
 
     if (instruction == "Update all rows") {
         // clear progress
@@ -3048,7 +3082,7 @@ void MW::updateImageCacheStatus(QString instruction,
         int tFirst = cache.targetFirst;
         int tLast = cache.targetLast + 1;
         cacheProgressBar->updateProgress(tFirst, tLast, rows,
-                                    cacheProgressBar->targetColorGradient);
+                                         cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
 //            bool metaLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
