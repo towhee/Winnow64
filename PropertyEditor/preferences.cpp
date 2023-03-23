@@ -531,18 +531,19 @@ void Preferences::addItems()
 //    addItem(i);
 
     // General header  > File modification header
-    i.name = "FileModificationHeader";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Source file modification";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    i.delegateType = DT_None;
-    addItem(i);
+//    i.name = "FileModificationHeader";
+//    i.parentName = "GeneralHeader";
+//    i.captionText = "Source file modification";
+//    i.tooltip = "";
+//    i.hasValue = false;
+//    i.captionIsEditable = false;
+//    i.delegateType = DT_None;
+//    addItem(i);
 
     // Allow source files to be changed
     i.name = "modifySourceFiles";
-    i.parentName = "FileModificationHeader";
+    i.parentName = "GeneralHeader";
+//    i.parentName = "FileModificationHeader";
     i.captionText = "Permit image file modification";
     i.tooltip = "Permit file modification to change image orientation\n"
                 "or embed thumbnails automatically without notification."
@@ -557,7 +558,8 @@ void Preferences::addItems()
 
     // Backup before modifying
     i.name = "backupBeforeModify";
-    i.parentName = "FileModificationHeader";
+    i.parentName = "modifySourceFiles";
+//    i.parentName = "FileModificationHeader";
     i.captionText = "   Backup before modify files";
     i.tooltip = "All image files about to be modified will be copied to a\n"
                 "subfolder called 'backup'"
@@ -573,7 +575,8 @@ void Preferences::addItems()
 
     // Automatically and silently add missing thumbnails to TIFF and JPG files
     i.name = "autoAddMissingThumbnails";
-    i.parentName = "FileModificationHeader";
+    i.parentName = "modifySourceFiles";
+//    i.parentName = "FileModificationHeader";
     i.captionText = "   Silently embed missing thumbnails";
     i.tooltip = "This silently embeds thumbnail if missing from TIFF and\n"
                 "JPG image files.\n\n"
@@ -594,7 +597,8 @@ void Preferences::addItems()
 
     // Ignore the missing thumbnails dialog
     i.name = "ignoreAddThumbnailsDlg";
-    i.parentName = "FileModificationHeader";
+    i.parentName = "modifySourceFiles";
+//    i.parentName = "FileModificationHeader";
     i.captionText = "   Ignore missing thumbnails dialog";
     i.tooltip = "If enabled, the missing thumbnails dialog will be shown\n"
                 "is there are any missing thumbnails for TIFF or JPG files\n"

@@ -1,9 +1,22 @@
 WHAT'S NEW
+- Stabilized concurrent caching method
+- Delete file or folder now moves to trash or recycle bin
+- Emphasis on controlling / permitting file modification
+- currently rotation and thumbnail embedding
+    - dialog
+    - preferences
+- Significant work on filters
+    - fix missing picked images
+    - new missing thumbnails category
+- Tweaked thumbnail ratings/colorlabel badge
+- Shortuct shift+command mouse click to load subfolders
+- Removed refine
+- tweaked tooltips
 
 BUGS / TO DO
-- Get thumbnail from HEIC.
 - Warn when rotate thumbs if modify images = false
 - Make sure HEIC also works on PC including thumbs
+- Get thumbnail from HEIC.
 - folderAndFileSelectionChange does not show folder highlight change
 - Remove settings deprecated items MW::removeDeprecatedSettings()
 - Cmd Del = delete all rejected
@@ -136,6 +149,7 @@ DONE/FIXED
 - Concurrent metadata crash reading rapid folder changing fixed
 - Refine not working
 - Filters not including picked images
+
 - Release 1.33.1
 - Embellish not working on windows (setmonitorProfile return issue)
 - Release 1.33

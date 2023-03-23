@@ -115,6 +115,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    folderAndFileSelectionChange("/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0005.arw");
+//    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2023-03-22_0014_Zen2048.JPG");
+    return;
+
     qDebug()
             << "G::modifySourceFiles =" << G::modifySourceFiles
             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails

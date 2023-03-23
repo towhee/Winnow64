@@ -1,16 +1,63 @@
-Locals
-        [statics]
-        dmIdx	@0x1703fe858	QModelIndex
-        dmRow	82	int
-        fPath	"/Users/roryhill/Pictures/Zenfolio/2008-08-20_0072.tif"	QString
-        image	(invalid)	QImage
-        isVideo	false	bool
-        pm	<not accessible>	QPixmap
-        sfIdx	@0x1703feaf0	QModelIndex
-        this	@0x600003e06d00	MetaRead
-        thumbLoaded	false	bool
-Inspector
-Expressions
-        G::isInitializing	false	bool
-Return Value
-Tooltip
+
+
+0 MW::folderSelectionChange
+8 MW::stop                                           /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora
+2 Filters::removeChildrenDynamicFilters
+1,393 Filters::clearAll
+24,726 DataModel::clearDataModel
+1 Filters::removeChildrenDynamicFilters
+0 Filters::clearAll
+262 MetaRead::stop
+20,481 DataModel::clearDataModel
+2 Filters::removeChildrenDynamicFilters
+918 Filters::clearAll
+19,127 DataModel::clearDataModel
+1 Filters::removeChildrenDynamicFilters
+871 Filters::clearAll
+0 DataModel::load                                    /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora
+19,150 DataModel::clearDataModel
+1 Filters::removeChildrenDynamicFilters
+884 Filters::clearAll
+0 DataModel::addFileData
+2 DataModel::addFileDataForRow                       6 images
+0 BuildFilters::reset
+0 Filters::removeChildrenDynamicFilters
+1 MW::loadConcurrentNewFolder
+1 MW::updateIconRange                                src = MW::loadConcurrentNewFolder row = -1
+35 IconView::updateVisibleCells                       Thumbnails
+21,168 ImageCache::initImageCache
+113 ImageCache::buildImageCacheList
+2 MetaRead::initialize                               imageCacheTriggerCount = 20
+3 Selection::current QModelIndex                     row = 0
+91 MW::loadConcurrent                                 Row = 0 scrollOnly = false
+MetaRead::setCurrentRow targetRow = 0 startPath = "/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0001.arw"
+81 MetaRead::setCurrentRow                            row = 0 src = MW::loadConcurrent isRunning = false
+MetaRead::run row = 0
+MetaRead::readMetadata row = 0 metadata->m.type = "arw" metadata->m.offsetThumb = 43934 metadata->m.lengthThumb = 11346
+MetaRead::run row = 1
+MetaRead::readMetadata row = 1 metadata->m.type = "arw" metadata->m.offsetThumb = 43934 metadata->m.lengthThumb = 12963
+MetaRead::run row = 2
+MetaRead::readMetadata row = 2 metadata->m.type = "arw" metadata->m.offsetThumb = 44008 metadata->m.lengthThumb = 12990
+MetaRead::run row = 3
+MetaRead::readMetadata row = 3 metadata->m.type = "arw" metadata->m.offsetThumb = 44008 metadata->m.lengthThumb = 12173
+MetaRead::run row = 4
+MetaRead::readMetadata row = 4 metadata->m.type = "arw" metadata->m.offsetThumb = 43934 metadata->m.lengthThumb = 12237
+MetaRead::run row = 5
+MetaRead::readMetadata row = 5 metadata->m.type = "arw" metadata->m.offsetThumb = 44008 metadata->m.lengthThumb = 9277
+38,176 MetaRead::run                                      MW::loadConcurrent
+978 MetaRead::run                                      emit fileSelectionChange /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0001.arw
+459 MW::fileSelectionChange                            MetaRead::run /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0001.arw
+52 ImageView::loadImage                               /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0001.arw Src:MW::fileSelectionChange
+1 MW::updateIconRange                                src = MW::fileSelectionChange row = 0
+
+67 ImageCache::setCurrentPosition                     src = MW::fileSelectionChange /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0001.arw
+ImageCache::setTargetRange count = 0 key = 0 metadataLoaded = true
+ImageCache::setTargetRange count = 1 key = 1 metadataLoaded = true
+ImageCache::setTargetRange count = 2 key = 2 metadataLoaded = true
+ImageCache::setTargetRange count = 3 key = 3 metadataLoaded = true
+ImageCache::setTargetRange count = 4 key = 4 metadataLoaded = true
+ImageCache::setTargetRange count = 5 key = 5 metadataLoaded = true
+818 ImageCache::run
+1 MW::loadConcurrentMetaDone
+1 MW::updateIconBestFit
+1,305,525 IconView::updateVisibleCells                       Thumbnails
