@@ -322,18 +322,18 @@ void MW::toggleThumbDockVisibity()
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
-//        qDebug() << "MW::toggleThumbDockVisibity" << dm->currentSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
-//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::");
     }
 
     if (G::mode != "Grid" && isNormalScreen) {
         wasThumbDockVisible = thumbDock->isVisible();
     }
-/*    qDebug() << "MW::toggleThumbDockVisibity"
+//    /*
+      qDebug() << "MW::toggleThumbDockVisibity"
              << "wasThumbDockVisible =" << wasThumbDockVisible
              << "G::mode =" << G::mode
              << "isNormalScreen =" << isNormalScreen
-             << "thumbDock->isVisible() =" << thumbDock->isVisible();*/
+             << "thumbDock->isVisible() =" << thumbDock->isVisible();
+    //*/
 }
 
 void MW::toggleEmbelDockVisibility() {

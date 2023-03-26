@@ -82,6 +82,7 @@ bool ImageDecoder::load()
 
     // null fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  Null file path" << fPath;
         status = Status::NoFile;
         return false;
@@ -90,6 +91,7 @@ bool ImageDecoder::load()
     // get image type (extension)
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  File does not exist" << fPath;
         status = Status::NoFile;
         return false;
@@ -102,19 +104,25 @@ bool ImageDecoder::load()
         return false;
     }
 
-    QFile imFile(fPath);
-
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded" << fPath;
+        if (G::isWarningLogger)
+        qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
+                   << "threadId =" << threadId
+                   << fPath;
         status = Status::NoMetadata;
+        // pause for metadata to be loaded
+        msleep(10);
         return false;
     }
 
     if (abort) quit();
 
+    QFile imFile(fPath);
+
     // is file already open by another process
     if (imFile.isOpen()) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  File already open" << fPath;
         status = Status::FileOpen;
         return false;
@@ -123,6 +131,7 @@ bool ImageDecoder::load()
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  Could not open file for image" << fPath;
         G::error("ImageDecoder::load", fPath, "Could not open file for image.");
         // check if drive ejected or folder deleted by another app
@@ -130,6 +139,7 @@ bool ImageDecoder::load()
         if (!dir.exists()) {
             status = Status::NoDir;
             errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
         }
         else {
@@ -143,6 +153,7 @@ bool ImageDecoder::load()
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
             status = Status::Failed;
             return false;
@@ -151,6 +162,7 @@ bool ImageDecoder::load()
         // try to read the data
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load Illegal offset to image " << fPath;
             status = Status::Failed;
             return false;
@@ -158,6 +170,7 @@ bool ImageDecoder::load()
 
         QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Zero JPG buffer" << fPath;
             imFile.close();
             status = Status::Failed;
@@ -168,6 +181,7 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  image.loadFromData failed"
                        << "instance =" << instance
                        << fPath;
@@ -196,6 +210,7 @@ bool ImageDecoder::load()
         #ifdef Q_OS_MAC
         if (!image.load(fPath)) {
             imFile.close();
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
             status = Status::Failed;
             return false;
@@ -211,6 +226,7 @@ bool ImageDecoder::load()
             imFile.close();
             QString err = "Could not read tiff because " + QString::number(n.samplesPerPixel)
                     + " samplesPerPixel > 3.";
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load " << err << fPath;
 //            G::error("ImageDecoder::load", fPath, err);
             status = Status::Failed;
@@ -224,6 +240,7 @@ bool ImageDecoder::load()
             QString err = "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode" + fPath + ". ";
 //            G::error("ImageDecoder::load", fPath, err);
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load "
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
@@ -231,6 +248,7 @@ bool ImageDecoder::load()
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
                 imFile.close();
+                if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //                QString err = "Could not decode using Qt.";
 //                G::error("ImageDecoder::load", fPath, err);
@@ -255,6 +273,7 @@ bool ImageDecoder::load()
                     //*/
         if (!image.load(fPath)) {
             imFile.close();
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
             status = Status::Failed;
@@ -352,6 +371,7 @@ void ImageDecoder::run()
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::run  Instance clash" << fPath;
         if (!abort) emit done(threadId);
         return;
@@ -366,7 +386,7 @@ void ImageDecoder::run()
 
     if (G::isLogger) {
         mutex.lock();
-        G::log("ImageDecoder::run", "Thread Done" + QString::number(threadId) + " done");
+        G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
         mutex.unlock();
     }
     if (!abort) emit done(threadId);

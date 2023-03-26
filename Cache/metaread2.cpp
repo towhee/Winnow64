@@ -145,7 +145,7 @@ QString MetaRead2::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead2 Diagnostics");
     rpt << "\n" ;
-    rpt << "\n" << "Load algorithm:        " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "\n" << "Load algorithm:        " << (G::isLinearCache == true ? "Linear" : "Concurrent");
     rpt << "\n" << "instance:              " << instance;
     rpt << "\n" << "abort:              " << (abort ? "true" : "false");
     rpt << "\n" << "isRunning:          " << (isRunning() ? "true" : "false");

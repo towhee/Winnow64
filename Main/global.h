@@ -147,7 +147,7 @@ namespace G
     extern bool dmEmpty;
     extern bool isLinearLoadDone;
     extern bool isInitializing;
-    extern bool isNewFileSelection;
+//    extern bool isNewFileSelection;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
 
@@ -169,9 +169,10 @@ namespace G
     extern QSettings *settings;
 
     extern bool isLogger;
+    extern bool isFlowLogger;
+    extern bool isWarningLogger;
     extern bool isFileLogger;
     extern bool isErrorLogger;
-    extern bool isFlowLogger;
     extern bool isTestLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
@@ -253,8 +254,8 @@ namespace G
     extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
 //    extern bool embedTifJpgThumb;
-    extern bool isLinearLoading;
-    extern bool isConcurrentLoading;
+    extern bool isLinearCache;
+    extern bool isConcurrentCache;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;
 

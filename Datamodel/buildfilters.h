@@ -41,6 +41,8 @@ public:
     void stop();
     void reset();
 
+    bool is = true;
+
 protected:
     void run() Q_DECL_OVERRIDE;
 

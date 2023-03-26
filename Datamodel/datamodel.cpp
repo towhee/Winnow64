@@ -470,7 +470,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     loadingModel = true;
     subFolderImagesLoaded = false;
 
-    if (G::isLinearLoading) {
+    if (G::isLinearCache) {
         emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
         qApp->processEvents();
     }
@@ -538,7 +538,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
                 // report file progress within folder
-                if (G::isLinearLoading && imageCount % countInterval == 0 && imageCount > 0) {
+                if (G::isLinearCache && imageCount % countInterval == 0 && imageCount > 0) {
                     QString s = step +
                                 QString::number(imageCount) + " found so far in " +
                                 QString::number(folderCount) + " folders" +
@@ -641,7 +641,7 @@ bool DataModel::addFileData()
         }
 
         // Load folder progress
-        if (G::isLinearLoading) {
+        if (G::isLinearCache) {
             if (row % 100 == 0) {
                 QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                             " system file info loaded.";
@@ -1707,7 +1707,7 @@ int DataModel::rowFromPath(QString fPath)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentFolderPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
-   if (fPathRow.contains(fPath.toLower())) return fPathRow[fPath.toLower()];
+    if (fPathRow.contains(fPath.toLower())) return fPathRow[fPath.toLower()];
     else return -1;
 }
 

@@ -420,7 +420,7 @@ void MetadataCache::readAllMetadata()
             count++;
         }
 
-        if (G::isLinearLoading) {
+        if (G::isLinearCache) {
             if (row % countInterval == 0) {
                 QString msg = "Reading metadata: ";
                 msg += QString::number(row) + " of " + QString::number(rows);
@@ -573,7 +573,7 @@ void MetadataCache::readMetadataChunk()
                 G::log("MetadataCache::readMetadataChunk", msg);
             }
             //*/
-            if (G::isLinearLoading) {
+            if (G::isLinearCache) {
                 if (row % countInterval == 0) {
                     QString msg = "Reading metadata: ";
                     msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;

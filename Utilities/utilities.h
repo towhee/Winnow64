@@ -14,6 +14,7 @@ public:
     // File/folder path operations
     static QString getDrive(QString path);
     static QString getFileName(QString srcPath);
+    static QString getFolderPath(QString fPath);
     static QString replaceFileName(QString srcPath, QString newName);
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getPossibleSidecars(QString srcPath);

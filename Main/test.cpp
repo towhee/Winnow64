@@ -120,8 +120,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     return;
 
     qDebug()
-            << "G::modifySourceFiles =" << G::modifySourceFiles
-            << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
+            << "Folder =" << Utilities::getFolderPath("/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0005.arw")
                ;
 
     return;

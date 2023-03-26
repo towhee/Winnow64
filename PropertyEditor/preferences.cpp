@@ -581,7 +581,7 @@ void Preferences::addItems()
     i.tooltip = "This silently embeds thumbnail if missing from TIFF and\n"
                 "JPG image files.\n\n"
                 "Enabling this will dramatically improve future thumbnail\n"
-                "load times.  Modify source files must also be enabled.\n\n"
+                "loading times.  Modify source files must also be enabled.\n\n"
                 "WARNING: this will modify your TIFF/JPG files.  Please make\n"
                 "sure you have backups until you are sure this does not corrupt\n"
                 "your images.  FYI, no corruption has been reported by users."
@@ -601,7 +601,7 @@ void Preferences::addItems()
 //    i.parentName = "FileModificationHeader";
     i.captionText = "   Ignore missing thumbnails dialog";
     i.tooltip = "If enabled, the missing thumbnails dialog will be shown\n"
-                "is there are any missing thumbnails for TIFF or JPG files\n"
+                "if there are any missing thumbnails for TIFF or JPG files\n"
                 "in the folder and Modify source files is enabled."
             ;
     i.hasValue = true;
@@ -619,7 +619,7 @@ void Preferences::addItems()
     i.captionText = "Use xmp sidecars";
     i.tooltip = "This will NOT MODIFY your source image file.\n\n"
                 "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email and url) the change will be written to\n"
+                "copyright, email, url) the change will be written to\n"
                 "a XMP sidecar file.  This data can be read by Winnow and\n"
                 "other programs like Lightroom.\n\n"
                 "Note this could slightly impact performance, as it might\n"

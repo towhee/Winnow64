@@ -30,6 +30,7 @@
 class ImageCache : public QThread
 {
     Q_OBJECT
+
 public:
     ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm);
     ~ImageCache() override;
@@ -103,7 +104,7 @@ private:
     bool filterOrSortHasChanged = false;
     bool refreshCache;
     QString currentPath;
-    int maxAttemptsToCacheImage = 100;
+    int maxAttemptsToCacheImage = 10000;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
 

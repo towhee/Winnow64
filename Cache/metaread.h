@@ -40,7 +40,7 @@ signals:
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-//    void triggerImageCache(QString startPath, QString src);
+    void triggerImageCache(QString startPath, QString src);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection, QString src);
 
     void updateIconBestFit();  //r req'd?
