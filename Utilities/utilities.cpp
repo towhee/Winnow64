@@ -59,6 +59,14 @@ QString Utilities::getFileName(QString srcPath)
     return fileInfo.fileName();
 }
 
+QString Utilities::getFolderPath(QString fPath)
+{
+    if (G::isLogger) G::log("Utilities::getFolderPath");
+//    QFileInfo fileInfo(fPath);
+//    return fileInfo.dir().absolutePath();
+    return QFileInfo((fPath)).dir().absolutePath();
+}
+
 QString Utilities::replaceFileName(QString srcPath, QString newName)
 {
     if (G::isLogger) G::log("Utilities::replaceFileName");

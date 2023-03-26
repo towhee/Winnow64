@@ -1672,8 +1672,8 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-//    qDebug() << " ";
-//    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
+    qDebug() << " ";
+    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
 //    if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
@@ -1820,7 +1820,7 @@ void MW::folderSelectionChange()
     // start loading new folder
     G::t.restart();
     buildFilters->reset();
-    if (G::isLinearLoading) {
+    if (G::isLinearCache) {
         // metadata and icons loaded in GUI thread
         //qDebug() << "MW::folderSelectionChange loadLinearNewFolder";
         loadLinearNewFolder();
@@ -1857,7 +1857,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    G::isNewFileSelection = false;
+//    G::isNewFileSelection = false;
 
    /* debug
     qDebug() << "MW::fileSelectionChange"
@@ -1880,7 +1880,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (!isCurrentFolderOkay
                 || G::isInitializing
                 || isFilterChange
-                || (G::isLinearLoading && !G::isLinearLoadDone))
+                || (G::isLinearCache && !G::isLinearLoadDone))
         {
             if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
                 "Initializing or invalid row so exit");
@@ -1930,6 +1930,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     */
 
     //qDebug() << "MW::fileSelectionChange" << "*CONTINUE *" << current;
+//    folderAndFileChangePath = "";
 
     // record current proxy row (dm->sf) as it is used to sync everything
     dm->currentSfRow = current.row();
@@ -2032,10 +2033,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     */
 
     // update caching if folder has been loaded
-    if ((G::isLinearLoading && G::isLinearLoadDone) || G::isConcurrentLoading) {
+    if ((G::isLinearCache && G::isLinearLoadDone) || G::isConcurrentCache) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
-        if (G::isLinearLoading) {
+        if (G::isLinearCache) {
             metadataCacheThread->fileSelectionChange();
         }
 
@@ -2182,6 +2183,7 @@ bool MW::stop(QString src)
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::stop", G::currRootFolder);
 
+    G::stop = true;
     dm->instance++;
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
@@ -2210,37 +2212,65 @@ bool MW::stop(QString src)
        any GUI functions that were interrupted, such as MW::loadLinearNewFolder.
        The flag "G::dmEmpty is checked to terminate these processes.
     */
-    G::stop = true;
     dm->abortLoad();
     G::dmEmpty = true;
 
-//    G::t.restart();
+
+    bool isDebugStopping = false;
+    QElapsedTimer tStop;
+    tStop.restart();
+
+    G::t.restart();
     buildFilters->stop();
-//    qDebug() << "MW::stop" << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
+    if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop buildFilters:        "
+             << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
+             << G::t.elapsed() << "ms";
 
-    G::t.restart();
-    metaReadThread->stop();
-//    qDebug() << "MW::stop" << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
+    if (G::isConcurrentCache) {
+        G::t.restart();
+        metaReadThread->stop();
+        if (isDebugStopping)
+        qDebug() << "MW::stop" << "Stop metaReadThread:      "
+                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
+                 << G::t.elapsed() << "ms";
+    }
 
-    G::t.restart();
-    metadataCacheThread->stop();
-//    qDebug() << "MW::stop" << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
+    if (G::isLinearCache) {
+        G::t.restart();
+        metadataCacheThread->stop();
+        qDebug() << "MW::stop" << "Stop metadataCacheThread: "
+                 << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
+                 << G::t.elapsed() << "ms";
+    }
 
     G::t.restart();
     imageCacheThread->stop();
-//    qDebug() << "MW::stop" << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
+    if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop imageCacheThread:    "
+             << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
+             << G::t.elapsed() << "ms";
 
     G::t.restart();
     frameDecoder->stop();
-//    qDebug() << "MW::stop" << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
+    if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop frameDecoder:        "
+             << "                 "
+             << G::t.elapsed() << "ms";
 
-    reset("MW::stop");
+    //if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop total:               "
+             << "                 "
+             << tStop.elapsed() << "ms";
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted for\n" + oldFolder);
         qApp->processEvents();
     }
 
+    reset("MW::stop");
+
+    G::stop = false;
     return true;
 }
 
@@ -2256,11 +2286,13 @@ bool MW::reset(QString src)
         return false;
     }
 
+    qDebug() << "MW::reset src =" << src;
+
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::isLinearLoadDone = false;
-    G::isNewFileSelection = false;
+//    G::isNewFileSelection = false;
     G::currRootFolder = "";
 
     imageView->clear();
@@ -2296,7 +2328,7 @@ bool MW::reset(QString src)
 
     setCentralMessage("Image loading has been aborted");
 
-    G::stop = false;
+//    G::stop = false;
     return true;
 }
 
@@ -2414,6 +2446,7 @@ void MW::loadConcurrentNewFolder()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentNewFolder");
 
     QString src = "MW::loadConcurrentNewFolder ";
+    int count = 0;
 
     // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
@@ -2430,21 +2463,20 @@ void MW::loadConcurrentNewFolder()
     int targetRow;
     if (folderAndFileChangePath != "") {
         targetRow = dm->rowFromPath(folderAndFileChangePath);
-        folderAndFileChangePath = "";
-
+//        folderAndFileChangePath = "";
     }
     else {
         targetRow = 0;
 
     }
-    if (reset(src)) return;
+    if (reset(src + QString::number(count++))) return;
     updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
-    if (reset(src)) return;
+    if (reset(src + QString::number(count++))) return;
 
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    if (reset(src)) return;
+    if (reset(src + QString::number(count++))) return;
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
 
@@ -2452,11 +2484,11 @@ void MW::loadConcurrentNewFolder()
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-    if (reset(src)) return;
+    if (reset(src + QString::number(count++))) return;
 
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
-    if (reset(src)) return;
+    if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     sel->currentRow(targetRow);
 }
@@ -2475,7 +2507,7 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly)
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-            dm->currentSfRow = sfRow;
+//            dm->currentSfRow = sfRow;
             dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
             metaReadThread->setCurrentRow(sfRow, scrollOnly, "MW::loadConcurrent");
         }
@@ -2490,6 +2522,8 @@ void MW::loadConcurrentMetaDone()
 //    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
+    QString src = "MW::loadConcurrentMetaDone ";
+    int count = 0;
     /*
     qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
@@ -2499,10 +2533,10 @@ void MW::loadConcurrentMetaDone()
     if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
         chkMissingEmbeddedThumbnails();
 
-    if (reset()) return;
+    if (reset(src + QString::number(count++))) return;
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
-    if (reset()) return;
+    if (reset(src + QString::number(count++))) return;
 
 //    G::isLinearLoadDone = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
@@ -2520,16 +2554,16 @@ void MW::loadConcurrentMetaDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-    if (reset()) return;
+    if (reset(src + QString::number(count++))) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
         qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
         launchBuildFilters();   // new folder = true
     }
 
-    if (reset()) return;
+    if (reset(src + QString::number(count++))) return;
     updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMetaDone");
     // resize table columns with all data loaded
-    if (reset()) return;
+    if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
@@ -2799,7 +2833,7 @@ void MW::thumbHasScrolled()
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
-    if (G::isInitializing || (G::isLinearLoading && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
 //    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
     if (G::ignoreScrollSignal == false) {
@@ -2811,11 +2845,11 @@ void MW::thumbHasScrolled()
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewFileSelection) {
-            if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
+//        if (!G::isNewFileSelection) {
+            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
             else loadConcurrent(midVisibleCell, true);
             // else QTimer::singleShot(50, [this, mvc]() {loadConcurrent(mvc);});
-        }
+//        }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -2854,7 +2888,7 @@ void MW::gridHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::gridHasScrolled", "Visible (0 = false) = " + QString::number(gridView->isVisible()));
-    if (G::isInitializing || (G::isLinearLoading && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
     if (gridView->isHidden()) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -2863,10 +2897,10 @@ void MW::gridHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewFileSelection && gridView->isVisible()) {
-            if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::gridHasScrolled");
+//        if (!G::isNewFileSelection && gridView->isVisible()) {
+            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::gridHasScrolled");
             else loadConcurrent(gridView->midVisibleCell, true);
-        }
+//        }
     }
     G::ignoreScrollSignal = false;
 }
@@ -2901,7 +2935,7 @@ void MW::tableHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::tableHasScrolled");
-    if (G::isInitializing || (G::isLinearLoading && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -2909,11 +2943,11 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewFileSelection) {
-            if (G::isLinearLoading) metadataCacheThread->scrollChange("MW::tableHasScrolled");
+//        if (!G::isNewFileSelection) {
+            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::tableHasScrolled");
             else loadConcurrent(tableView->midVisibleRow, true);
 //            else scrollChange(tableView->midVisibleRow, "MW::tableHasScrolled");
-        }
+//        }
     }
     G::ignoreScrollSignal = false;
 }
@@ -2926,7 +2960,7 @@ void MW::numberIconsVisibleChange()
     scrolling.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::numberIconsVisibleChange");
-    if (G::isInitializing || (G::isLinearLoading && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
     bool chunkSizeChanged = updateIconRange(dm->currentSfRow, "MW::numberIconsVisibleChange");
     /*
     qDebug() << "MW::numberIconsVisibleChange"
@@ -2935,7 +2969,7 @@ void MW::numberIconsVisibleChange()
                 ;
                 */
     if (chunkSizeChanged) {
-        if (G::isLinearLoading)
+        if (G::isLinearCache)
             metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
         else
             loadConcurrent(dm->midIconRange, true);
@@ -2965,7 +2999,7 @@ void MW::loadMetadataCacheAfterDelay()
     if (G::isLogger) G::log("MW::loadMetadataCacheAfterDelay");
     static int previousRow = 0;
 
-    if (G::isInitializing || (G::isLinearLoading && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
 
     // has a new image been selected.  Caching will be started from MW::fileSelectionChange
     if (previousRow != dm->currentSfRow) {
@@ -3295,16 +3329,16 @@ void MW::setCacheMethod(QString method)
 
     cacheMethod = method;
     if (method == "Linear") {
-        G::isLinearLoading = true;
-        G::isConcurrentLoading = false;
+        G::isLinearCache = true;
+        G::isConcurrentCache = false;
         G::metaReadInUse = "Linear metadata and thumbnail loading";
         QString mtrl = "Turns yellow when metadata/icon caching in progress\n" +
                 G::metaReadInUse;
         metadataThreadRunningLabel->setToolTip(mtrl);
     }
     else {
-        G::isLinearLoading = false;
-        G::isConcurrentLoading = true;
+        G::isLinearCache = false;
+        G::isConcurrentCache = true;
         #ifdef METAREAD
         G::metaReadInUse = "Concurrent metadata and thumbnail loading";
         #endif
@@ -3429,31 +3463,31 @@ void MW::setImageCacheParameters()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    if ((G::isLinearLoading && G::isLinearLoadDone) || G::isConcurrentLoading)
+    if ((G::isLinearCache && G::isLinearLoadDone) || G::isConcurrentCache)
         imageCacheThread->cacheSizeChange();
 }
 
-void MW::scrollToCurrentRow()
-{
-/*
-    Called after a sort or when thumbs shrink/enlarge. The current image may no longer be
-    visible hence need to scroll to the current row.
-*/
-    if (G::isLogger) G::log("MW::scrollToCurrentRow");
-    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
-    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-//    G::wait(100);
+//void MW::scrollToCurrentRow()
+//{
+///*
+//    Called after a sort or when thumbs shrink/enlarge. The current image may no longer be
+//    visible hence need to scroll to the current row.
+//*/
+//    if (G::isLogger) G::log("MW::scrollToCurrentRow");
+//    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+//    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
+////    G::wait(100);
 
-    G::ignoreScrollSignal = true;
-    if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (tableView->isVisible()) tableView->scrollTo(idx,
-         QAbstractItemView::ScrollHint::PositionAtCenter);
-    G::ignoreScrollSignal = false;
+//    G::ignoreScrollSignal = true;
+//    if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+//    if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+//    if (tableView->isVisible()) tableView->scrollTo(idx,
+//         QAbstractItemView::ScrollHint::PositionAtCenter);
+//    G::ignoreScrollSignal = false;
 
-    updateIconRange(dm->currentSfRow, "MW::scrollToCurrentRow");
-    metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
-}
+//    updateIconRange(dm->currentSfRow, "MW::scrollToCurrentRow");
+//    metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
+//}
 
 void MW::showHiddenFiles()
 {
@@ -5592,7 +5626,7 @@ void MW::deleteFiles(QStringList paths)
 //    dm->refreshRowFromPathHash();
 
     // cleanup G::rowsWithIcon
-    if (G::isConcurrentLoading) metaReadThread->cleanupIcons();
+    if (G::isConcurrentCache) metaReadThread->cleanupIcons();
 
     // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);

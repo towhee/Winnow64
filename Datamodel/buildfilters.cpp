@@ -52,6 +52,7 @@ BuildFilters::BuildFilters(QObject *parent,
 
     this->filters = filters;
     afterAction = AfterAction::NoAfterAction;
+    isReset = true;
     debugBuildFilters = false;
     reportTime = false;
 }
@@ -64,6 +65,7 @@ void BuildFilters::stop()
             << "BuildFilters::stop"
                ; //*/
     if (isRunning()) {
+        qDebug() << "BuildFilters::stop  isRunning = true";
         mutex.lock();
         abort = true;
         condition.wakeOne();
@@ -71,14 +73,8 @@ void BuildFilters::stop()
         wait();
         abort = false;
     }
-    filters->removeChildrenDynamicFilters();
-    filters->clearAll();
-    filters->filtersBuilt = false;
-    filters->buildingFilters = false;
-    filters->filterLabel->setVisible(false);
-    filters->setEnabled(true);
-    filters->collapseAll();
-    if (G::stop) emit stopped("BuildFilters");
+    if (!isReset) reset();
+    //if (G::stop) emit stopped("BuildFilters");
 }
 
 void BuildFilters::abortIfRunning()
@@ -235,11 +231,16 @@ void BuildFilters::reset()
                ;
     isReset = true;
     filters->filtersBuilt = false;
+    filters->buildingFilters = false;
+    filters->filterLabel->setVisible(false);
+    filters->setEnabled(true);
+    filters->collapseAll();
     action = Action::Reset;
     afterAction = AfterAction::NoAfterAction;
     filters->activeCategory = nullptr;
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
+    filters->clearAll();
 }
 
 void BuildFilters::updateFilteredCounts()

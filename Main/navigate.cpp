@@ -90,15 +90,17 @@ void MW::keyHome()
 */
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
-    if (G::isLinearLoading) {
+    if (G::isLinearCache) {
         if (G::isLinearLoadDone) {
+            metadataCacheThread->stop();
             if (G::mode == "Compare") compareImages->go("Home");
             else sel->first();
         }
     }
     else {
+//        G::ignoreScrollSignal = true;
         if (G::mode == "Compare") compareImages->go("Home");
-        else sel->first();
+        sel->first();
     }
 }
 
@@ -109,7 +111,7 @@ void MW::keyEnd()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
-    if (G::isLinearLoading) {
+    if (G::isLinearCache) {
         if (G::isLinearLoadDone) {
             metadataCacheThread->stop();
             if (G::mode == "Compare") compareImages->go("End");
@@ -117,7 +119,7 @@ void MW::keyEnd()
         }
     }
     else {
-        G::ignoreScrollSignal = true;
+//        G::ignoreScrollSignal = true;
         if (G::mode == "Compare") compareImages->go("End");
         else sel->last();
     }
@@ -149,5 +151,27 @@ void MW::keyScrollPageUp()
     if (G::isLogger) G::log("MW::keyScrollPageUp");
     if (G::mode == "Grid") gridView->scrollPageUp(0);
     if (thumbView->isVisible()) thumbView->scrollPageUp(0);
+}
+
+void MW::scrollToCurrentRow()
+{
+/*
+    Called after a sort or when thumbs shrink/enlarge. The current image may no longer be
+    visible hence need to scroll to the current row.
+*/
+    if (G::isLogger) G::log("MW::scrollToCurrentRow");
+    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
+//    G::wait(100);
+
+    G::ignoreScrollSignal = true;
+    if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+    if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+    if (tableView->isVisible()) tableView->scrollTo(idx,
+         QAbstractItemView::ScrollHint::PositionAtCenter);
+    G::ignoreScrollSignal = false;
+
+    updateIconRange(dm->currentSfRow, "MW::scrollToCurrentRow");
+    metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
 }
 

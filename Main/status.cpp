@@ -231,7 +231,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
              << "G::isLinearLoading =" << G::isLinearLoading;
              //*/
     if (isRunning) {
-        if (G::isLinearLoading) {
+        if (G::isLinearCache) {
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;}");
             #ifdef Q_OS_WIN
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;font-size: 24px;}");

@@ -28,15 +28,8 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (!G::isInitializing && (G::isLogger || G::isFlowLogger)) G::log("MW::loupeDisplay");
-
-    if (!G::isInitializing && !G::allMetadataLoaded) {
-        G::mode = "Loupe";
-        asLoupeAction->setChecked(true);
-        centralLayout->setCurrentIndex(LoupeTab);
-        prevCentralView = LoupeTab;
-        return;
-    }
+    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
+        G::log("MW::loupeDisplay", "wasThumbDockVisible = " + QVariant(wasThumbDockVisible).toString());
 
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
@@ -60,12 +53,12 @@ void MW::loupeDisplay()
 
     /* recover thumbdock if it was visible before as gridView and full screen can
     hide the thumbdock */
-    if(isNormalScreen && wasThumbDockVisible) {
-        if (!metaReadThread->isRunning()) {
+    if (isNormalScreen && wasThumbDockVisible) {
+//        if (!metaReadThread->isRunning()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
-        }
-        sel->currentRow(dm->currentSfRow);
+//        }
+//        sel->currentRow(dm->currentSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
@@ -137,21 +130,23 @@ void MW::gridDisplay()
     // save selection as gridView is hidden and not synced
     sel->save();
 
-    int interruptedRow;
-    bool interrupted = false;
-    if (metaReadThread->isRunning()) {
-        interruptedRow = metaReadThread->interrupt();
-        interrupted = true;
-    }
+//    int interruptedRow;
+//    bool interrupted = false;
+//    if (metaReadThread->isRunning()) {
+//        interruptedRow = metaReadThread->interrupt();
+//        interrupted = true;
+//    }
 
-//    thumbDock->setVisible(false);
-//    thumbDockVisibleAction->setChecked(false);
+//    bool wasVisible = thumbDock->isVisible();
+    thumbDock->setVisible(false);
+    thumbDockVisibleAction->setChecked(false);
+//    wasThumbDockVisible = wasVisible;
 
-    // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    if (!metaReadThread->isRunning()) {
-        thumbDock->setVisible(false);
-        thumbDockVisibleAction->setChecked(false);
-    }
+//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
+//    if (!metaReadThread->isRunning()) {
+//        thumbDock->setVisible(false);
+//        thumbDockVisibleAction->setChecked(false);
+//    }
 
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
@@ -198,7 +193,7 @@ void MW::gridDisplay()
     prevMode = "Grid";
     gridDisplayFirstOpen = false;
 
-    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
+//    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
 
 void MW::tableDisplay()

@@ -115,10 +115,10 @@ void ImageCache::stop()
     if (G::isLogger) G::log("ImageCache::stop");
     abort = true;
 
-    // stop decoder threads
-    for (int id = 0; id < decoderCount; ++id) {
-        decoder[id]->stop();
-    }
+//    // stop decoder threads
+//    for (int id = 0; id < decoderCount; ++id) {
+//        decoder[id]->stop();
+//    }
 
     // stop imagecache thread
     if (isRunning()) {
@@ -129,8 +129,14 @@ void ImageCache::stop()
         wait();
         abort = false;
     }
+
+    // stop decoder threads
+    for (int id = 0; id < decoderCount; ++id) {
+        decoder[id]->stop();
+    }
+
     // signal MW all stopped if a folder change
-    if (G::stop) emit stopped("ImageCache");
+    //if (G::stop) emit stopped("ImageCache");
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
@@ -180,6 +186,7 @@ void ImageCache::setKeyToCurrent()
             return;
         }
     }
+    if (G::isWarningLogger)
     qWarning() << "WARNING" << "ImageCache::setKeyToCurrent" << "FPATH NOT FOUND:" << currentPath;
 }
 
@@ -403,10 +410,11 @@ void ImageCache::setTargetRange()
     int items = icd->cacheItemList.length();
     int memCap = icd->cache.maxMB;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        /*
         qDebug() << "ImageCache::setTargetRange count =" << i << "key ="
                  << icd->cacheItemList.at(i).key
                  << "metadataLoaded =" << icd->cacheItemList.at(i).metadataLoaded
-                    ;
+                    ; //*/
         if (icd->cacheItemList.at(i).isVideo) {
             icd->cacheItemList[i].isTarget = false;
             continue;
@@ -493,7 +501,9 @@ bool ImageCache::nextToCache(int id)
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
         return false;
     }
+
     if (priorityList.size() > icd->cacheItemList.size()) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING"
                    << "ImageCache::nextToCache"
                    << "priorityList is out of date"
@@ -502,94 +512,23 @@ bool ImageCache::nextToCache(int id)
                       ;
         return false;
     }
+
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort || G::stop) return false;
         int i = priorityList.at(p);
-//        if (i >= icd->cacheItemList.length()) break;   ƒ // debugging
-        bool isCaching = icd->cacheItemList.at(i).isCaching;
-        bool isCached = icd->cacheItemList.at(i).isCached;
-        int attempts = icd->cacheItemList.at(i).attempts;
-        if (attempts == maxAttemptsToCacheImage)
-            qWarning() << "WARNING" << "ImageCache::nextToCache"
-                       << "Exceeded maxAttemptsToCacheImage" << "Row" << i
-                       <<  icd->cacheItemList.at(i).fPath;
-        int threadId = icd->cacheItemList.at(i).threadId;
-        if (!isCached && attempts < maxAttemptsToCacheImage) {
-            if (!isCaching || (isCaching && id == threadId)) {
-                if (debugCaching) {
-                    QString k = QString::number(i).leftJustified((4));
-                    qDebug().noquote()
-                         << "ImageCache::nextToCache"
-                         << "    decoder" << id
-                         << "row =" << k
-                         << "threadId =" << threadId
-                         << "priority =" << p
-                         << "isCaching =" << isCaching
-                         << "isCached =" << isCached
-                         << "attempts =" << attempts
-                            ;
-                }
-                icd->cache.toCacheKey = i;
-                return true;
-            }
-        }
+
+        if (icd->cacheItemList.at(i).isCached) continue;
+//        if (icd->cacheItemList.at(i).metadataLoaded) continue;
+        if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage &&
+            !G::allMetadataLoaded) continue;
+        if (icd->cacheItemList.at(i).isCaching && id != icd->cacheItemList.at(i).threadId) continue;
+
+        icd->cache.toCacheKey = i;
+        return true;
     }
     icd->cache.toCacheKey = -1;
     return false;
 
-
-//    int lastPriority = icd->cacheItemList.length();
-    int lastPriority = icd->cacheItemList.at(icd->cache.targetFirst).priority;
-    int key = -1;
-    // find next priority item
-    for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
-        if (i >= icd->cacheItemList.length()) break;
-        int priority = icd->cacheItemList.at(i).priority;
-        if (priority >= lastPriority) continue;
-        bool isCaching = icd->cacheItemList.at(i).isCaching;
-        bool isCached = icd->cacheItemList.at(i).isCached;
-        int attempts = icd->cacheItemList.at(i).attempts;
-        int threadId = icd->cacheItemList.at(i).threadId;
-        // chk orphaned items rgh what about imCache - maybe still in imCache
-        if (debugCaching) {
-            qDebug() << "ImageCache::nextToCache"
-                     << "    decoder" << id
-                     << "row =" << i
-                     << "threadId =" << threadId
-                     << "priority =" << priority
-                     << "lastPriority =" << lastPriority
-                     << "isCaching =" << isCaching
-                     << "isCached =" << isCached
-                     << "attempts =" << attempts
-                        ;
-        }
-        if (!isCached && attempts < maxAttemptsToCacheImage) {
-            if (!isCaching || (isCaching && id == threadId)) {
-                // higher priorities are lower numbers (highest = 0)
-                if (priority < lastPriority) {
-                    lastPriority = priority;
-                    key = i;
-                    break;
-                }
-            }
-        }
-    }
-    if (key > -1) {
-        icd->cache.toCacheKey = key;
-        if (debugCaching) {
-            QString k = QString::number(key).leftJustified((4));
-            qDebug().noquote() << "ImageCache::nextToCache"
-                               << "    decoder" << id
-                               << "key =" << k
-                               << icd->cacheItemList.at(key).fPath
-                                  ;
-        }
-        return true;
-    }
-    // Nothing found
-    QString k = QString::number(key).leftJustified((4));
-    qWarning().noquote() << "WARNING ImageCache::nextToDecache" << "  decoder" << id << "key =" << k << "FAILED";
-    return false;
 }
 
 void ImageCache::fixOrphans()
@@ -773,7 +712,7 @@ QString ImageCache::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
     rpt << "\n\n";
-    rpt << "Load algorithm: " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "Load algorithm: " << (G::isLinearCache == true ? "Linear" : "Concurrent");
     rpt << "\n";
     rpt << reportCacheParameters();
     rpt << reportCache("");
@@ -804,7 +743,7 @@ QString ImageCache::reportCacheParameters()
     rpt << "currMB Check             = " << getImCacheSize() << "\n";
     rpt << "maxMB                    = " << icd->cache.maxMB << "\n";
     rpt << "minMB                    = " << icd->cache.minMB << "\n";
-    rpt << "folderMB                 = " << icd->cache.folderMB << "\n";
+    rpt << "folderMB                 = " << icd->cache.folderMB << "          (if all metadata loaded)\n";
     rpt << "targetFirst              = " << icd->cache.targetFirst << "\n";
     rpt << "targetLast               = " << icd->cache.targetLast << "\n";
     rpt << "decoderCount             = " << icd->cache.decoderCount << "\n";
@@ -836,13 +775,14 @@ QString ImageCache::reportCache(QString title)
             rpt
                 << "Key"
                 << "Priority"
+                << "Thread"
                 << "Target"
                 << "Attempts"
                 << "Caching"
-                << "Thread"
                 << "Cached"
-                << "imCache"
+                << "imCached"
                 << "dmCached"
+                << "Metadata"
                 << "Video"
                 << "SizeMB"
                 << "Estimate"
@@ -862,13 +802,14 @@ QString ImageCache::reportCache(QString title)
         rpt
             << icd->cacheItemList.at(i).key
             << icd->cacheItemList.at(i).priority
+            << icd->cacheItemList.at(i).threadId
             << (icd->cacheItemList.at(i).isTarget ? "true" : "false")
             << icd->cacheItemList.at(i).attempts
             << (icd->cacheItemList.at(i).isCaching ? "true" : "false")
-            << icd->cacheItemList.at(i).threadId
             << (icd->cacheItemList.at(i).isCached ? "true" : "false")
             << (icd->imCache.contains(icd->cacheItemList.at(i).fPath) ? "true" : "false")
             << (dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool() ? "true" : "false")
+            << (icd->cacheItemList.at(i).metadataLoaded ? "true" : "false")
             << (icd->cacheItemList.at(i).isVideo ? "true" : "false")
             << icd->cacheItemList.at(i).sizeMB
             << icd->cacheItemList.at(i).estSizeMB
@@ -926,7 +867,7 @@ QString ImageCache::reportImCache()
     int mem = 0;
     icd->imCache.getKeys(keys);
     if (keys.size() == 0) {
-        rpt << "icd->imCache is empty";
+        rpt << "\nicd->imCache is empty";
         return reportString;
     }
 
@@ -1080,6 +1021,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         return;
     }
     if (!cacheKeyHash.contains(m.fPath)) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
                    << "cacheKeyHash does not contain" << m.fPath;
         return;
@@ -1087,6 +1029,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
     int row = cacheKeyHash[m.fPath];
     if (row >= icd->cacheItemList.size()) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
                    << "row =" << row
                    << "exceeds icd->cacheItemList.size() of" << icd->cacheItemList.size();
@@ -1169,6 +1112,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
+        icd->cacheItem.metadataLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
         if ((G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
@@ -1315,32 +1259,32 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         if (fPath == currentImageFullPath) icd->cache.key = row;
         // update cacheItemList for images already cached
         if (icd->imCache.contains(fPath)) icd->cacheItemList[row].isCached = true;
-        qDebug() << "ImageCache::rebuildImageCacheParameters"
-                 << "row =" << row
-                 << "icd->cache.key =" << icd->cache.key
-                 << "isCached =" << icd->cacheItemList[row].isCached
-                    ;
+//        qDebug() << "ImageCache::rebuildImageCacheParameters"
+//                 << "row =" << row
+//                 << "icd->cache.key =" << icd->cache.key
+//                 << "isCached =" << icd->cacheItemList[row].isCached
+//                    ;
     }
 
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before remove surplus" << reportImCache();
+//    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before remove surplus" << reportImCache();
     // remove surplus images in icd->imCache
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
-            qDebug() << "ImageCache::rebuildImageCacheParameters"
-                     << "remove image =" << keys.at(i);
+//            qDebug() << "ImageCache::rebuildImageCacheParameters"
+//                     << "remove image =" << keys.at(i);
             icd->imCache.remove(keys.at(i));
         }
     }
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters after remove surplus" << reportImCache();
+//    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters after remove surplus" << reportImCache();
 
     // if the sort has been reversed
     if (source == "SortChange") icd->cache.isForward = !icd->cache.isForward;
 
     setPriorities(icd->cache.key);
     setTargetRange();
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters" << diagnostics();
+//    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters" << diagnostics();
 
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
@@ -1402,6 +1346,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
              "src = " + src + " " + path);
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING"
                    << "ImageCache::setCurrentPosition"
                    << "Instance clash"
@@ -1411,6 +1356,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
         return;
     }
     if (keyFromPath(path) == -1) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING"
                    << "ImageCache::setCurrentPosition"
                    << "src =" << src
@@ -1427,6 +1373,8 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     mutex.lock();
     currentPath = path;
     mutex.unlock();
+
+//    start();
 
     if (isRunning()) {
         mutex.lock();
@@ -1455,20 +1403,22 @@ void ImageCache::decodeNextImage(int id)
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].threadId = id;
     icd->cacheItemList[row].attempts += 1;
-    if (debugCaching) {
+    if (debugCaching)
+    {
         QString k = QString::number(row).leftJustified((4));
         qDebug().noquote()
             << "ImageCache::decodeNextImage"
             << "decoder" << id
             << "row =" << k
             << "threadId =" << icd->cacheItemList.at(row).threadId
+            << "isMetadata =" << icd->cacheItemList.at(row).metadataLoaded
             << "isCaching =" << icd->cacheItemList.at(row).isCaching
             << "isCached =" << icd->cacheItemList.at(row).isCached
             << "attempts =" << icd->cacheItemList.at(row).attempts
             << icd->cacheItemList.at(row).fPath
               ;
     }
-    decoder[id]->decode(icd->cacheItemList.at(row), instance);
+    if (!abort) decoder[id]->decode(icd->cacheItemList.at(row), instance);
 }
 
 void ImageCache::cacheImage(int id, int cacheKey)
@@ -1553,7 +1503,7 @@ void ImageCache::fillCache(int id)
       - nextToDecache
 */
 
-    if (abort) return;
+//    if (abort) return;
 
     int cacheKey;       // row for image in cacheKeyHash
     cacheKey = -1;      // default = no image
@@ -1565,91 +1515,98 @@ void ImageCache::fillCache(int id)
 
     // Error checking
     {
-//        // DM instance check
-//        if (decoder[id]->instance != dm->instance) {
-//            cacheKey = -1;
-//            if (debugCaching)
-//                if (decoder[id]->fPath != "")
-//                qWarning() << "WARNING" << "ImageCache::fillCache DataModel instance clash:"
-//                           << "Decoder DM instance" << decoder[id]->instance
-//                           << "DM instance" << dm->instance
-//                           << "Decoder id =" << id
-//                           << decoder[id]->fPath
-//                              ;
-//        }
+        // DM instance check
+        if (decoder[id]->instance != dm->instance) {
+            cacheKey = -1;
+            if (debugCaching)
+                if (decoder[id]->fPath != "")
+                if (G::isWarningLogger)
+                qWarning() << "WARNING" << "ImageCache::fillCache DataModel instance clash:"
+                           << "Decoder DM instance" << decoder[id]->instance
+                           << "DM instance" << dm->instance
+                           << "Decoder id =" << id
+                           << decoder[id]->fPath
+                              ;
+        }
 
-//        // range check
-//        if (cacheKey != -1 && cacheKey >= icd->cacheItemList.length()) {
-//            if (icd->cacheItemList.length() > 0) {
-//                qWarning() << "WARNING" << "ImageCache::fillCache  Out of range error:"
-//                           << "Decoder" << id << decoder[id]->fPath
-//                           << "cacheKey =" << cacheKey
-//                           << "EXCEEDS icd->cacheItemList.length() of"
-//                           << icd->cacheItemList.length()
-//                              ;
-//                QString err = "cacheKey = " + QString::number(cacheKey) +
-//                              " exceeds icd->cacheItemList.length() of " +
-//                              QString::number(icd->cacheItemList.length());
-//                G::error("ImageCache::fillCache", decoder[id]->fPath, err);
-//            }
-//            cacheKey = -1;
-//        }
+        // range check
+        if (cacheKey != -1 && cacheKey >= icd->cacheItemList.length()) {
+            if (icd->cacheItemList.length() > 0) {
+                if (G::isWarningLogger)
+                qWarning() << "WARNING" << "ImageCache::fillCache  Out of range error:"
+                           << "Decoder" << id << decoder[id]->fPath
+                           << "cacheKey =" << cacheKey
+                           << "EXCEEDS icd->cacheItemList.length() of"
+                           << icd->cacheItemList.length()
+                              ;
+                QString err = "cacheKey = " + QString::number(cacheKey) +
+                              " exceeds icd->cacheItemList.length() of " +
+                              QString::number(icd->cacheItemList.length());
+                G::error("ImageCache::fillCache", decoder[id]->fPath, err);
+            }
+            cacheKey = -1;
+        }
 //        /*
-//        // File does not exist
-//        if (decoder[id]->status == ImageDecoder::Status::NoFile) {
-//            cacheKey = -1;
-//            if (debugCaching)
-//                if (decoder[id]->fPath != "")
-//                qWarning() << "WARNING" << "ImageCache::fillCache File does not exist:"
-//                           << "Decoder id =" << id
-//                           << decoder[id]->fPath
-//                              ;
-//        }
+        // File does not exist
+        if (decoder[id]->status == ImageDecoder::Status::NoFile) {
+            cacheKey = -1;
+            if (debugCaching)
+                if (G::isWarningLogger)
+                if (decoder[id]->fPath != "")
+                qWarning() << "WARNING" << "ImageCache::fillCache File does not exist:"
+                           << "Decoder id =" << id
+                           << decoder[id]->fPath
+                              ;
+        }
 
-//        // unassigned decoder check
-//        if (cacheKey != -1 && decoder[id]->fPath == "") {
-//            cacheKey = -1;
-//            if (debugCaching)
-//                qWarning() << "WARNING" << "ImageCache::fillCache Unassigned decoder:"
-//                           << "Decoder id =" << id
-//                           << "Decoder path =" << decoder[id]->fPath
-//                              ;
-//        }
+        // unassigned decoder check
+        if (cacheKey != -1 && decoder[id]->fPath == "") {
+            cacheKey = -1;
+            if (debugCaching)
+                if (G::isWarningLogger)
+                qWarning() << "WARNING" << "ImageCache::fillCache Unassigned decoder:"
+                           << "Decoder id =" << id
+                           << "Decoder path =" << decoder[id]->fPath
+                              ;
+        }
 
-//        // null image check
-//        if (decoder[id]->status != ImageDecoder::Status::Video) {
-//            if (cacheKey != -1 && decoder[id]->image.width() == 0) {
-//                cacheKey = -1;
-//                {
-//                    qWarning() << "WARNING" << "ImageCache::fillCache  Null image:"
-//                               << "Decoder" << id
-//                               << "Image width = 0"
-//                               << "Decoder path =" << decoder[id]->fPath
-//                                  ;
-//                }
-//            }
-//        }
+        // null image check
+        if (decoder[id]->status != ImageDecoder::Status::Video) {
+            if (cacheKey != -1 && decoder[id]->image.width() == 0) {
+                cacheKey = -1;
+                {
+                    if (G::isWarningLogger)
+                    qWarning() << "WARNING" << "ImageCache::fillCache  Null image:"
+                               << "Decoder" << id
+                               << "Image width = 0"
+                               << "Decoder path =" << decoder[id]->fPath
+                                  ;
+                }
+            }
+        }
 
-//        // folder does not exist
-//        if (decoder[id]->status == ImageDecoder::Status::NoDir) {
-//            cacheKey = -1;
-//            qWarning() << "WARNING" << "ImageCache::fillCache  Folder does not exist:"
-//                       << "Decoder" << id
-//                       << "Decoder path =" << decoder[id]->fPath
-//                          ;
-//            emit centralMsg(decoder[id]->errMsg);
-//        }
+        // folder does not exist
+        if (decoder[id]->status == ImageDecoder::Status::NoDir) {
+            cacheKey = -1;
+            if (G::isWarningLogger)
+            qWarning() << "WARNING" << "ImageCache::fillCache  Folder does not exist:"
+                       << "Decoder" << id
+                       << "Decoder path =" << decoder[id]->fPath
+                          ;
+            emit centralMsg(decoder[id]->errMsg);
+        }
 
-//        // other
-//        if (decoder[id]->status != ImageDecoder::Status::Done && decoder[id]->fPath != "") {
-//            cacheKey = -1;
-//            qWarning() << "WARNING" << "ImageCache::fillCache  Decoder status not = Done:"
-//                       << "Decoder" << id
-//                       << "Decoder status enum =" << decoder[id]->status
-//                       << "Decoder path =" << decoder[id]->fPath
-//                          ;
-//        }
-//        //*/
+        // other
+        if (decoder[id]->status != ImageDecoder::Status::Done && decoder[id]->fPath != "") {
+            cacheKey = -1;
+            if (G::isWarningLogger)
+            qWarning() << "WARNING" << "ImageCache::fillCache  Decoder status not = Done:"
+                       << "Decoder" << id
+                       << "Decoder status enum =" << decoder[id]->status
+                       << "Decoder path =" << decoder[id]->fPath
+                          ;
+        }
+        //*/
 
     }
 
@@ -1666,7 +1623,7 @@ void ImageCache::fillCache(int id)
             qDebug().noquote() << "ImageCache::fillCache"
                      << "      decoder" << id
                      << "row =" << k    // row = key
-//                     << "decoder isRunning =" << decoder[id]->isRunning()
+                     << "decoder isRunning =" << decoder[id]->isRunning()
                      << decoder[id]->fPath
                         ;
         }
@@ -1678,7 +1635,7 @@ void ImageCache::fillCache(int id)
     }
 
     // get next image to cache (nextToCache() defines cache.toCacheKey)
-    if (nextToCache(id) && isValidKey(icd->cache.toCacheKey)) {
+    if (!abort && nextToCache(id) && isValidKey(icd->cache.toCacheKey)) {
         decodeNextImage(id);
     }
     else { // caching completed

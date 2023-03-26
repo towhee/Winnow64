@@ -51,7 +51,7 @@ void FrameDecoder::stop()
 {
     mediaPlayer->stop();
     clear();
-    emit stopped("FrameDecoder");
+    //emit stopped("FrameDecoder");
 }
 
 void FrameDecoder::clear()

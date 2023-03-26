@@ -6,7 +6,8 @@ namespace G
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
-    bool isFlowLogger = true;          // Writes key program flow points to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
+    bool isWarningLogger = false;       // Writes warnings to qDebug
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
     bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isTestLogger = false;          // Writes test points to file or console
@@ -25,7 +26,7 @@ namespace G
     bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
                                         // all new folder processes.
     bool isLinearLoadDone;
-    bool isNewFileSelection;
+//    bool isNewFileSelection;
     bool allMetadataLoaded;
     bool allIconsLoaded;
 
@@ -125,8 +126,8 @@ namespace G
     bool autoAddMissingThumbnails;
     bool useSidecar;
 //    bool embedTifJpgThumb;
-    bool isLinearLoading;
-    bool isConcurrentLoading;
+    bool isLinearCache;
+    bool isConcurrentCache;
     bool renderVideoThumb;
     bool includeSubfolders;
 

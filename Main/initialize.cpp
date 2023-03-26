@@ -296,6 +296,7 @@ void MW::createMDCache()
     // MetaRead
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
+    metaReadThread->setPriority(QThread::TimeCriticalPriority);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
@@ -325,8 +326,8 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
 //    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
-//    connect(metaReadThread, &MetaRead::triggerImageCache,
-//            imageCacheThread, &ImageCache::setCurrentPosition);
+    connect(metaReadThread, &MetaRead::triggerImageCache,
+            imageCacheThread, &ImageCache::setCurrentPosition);
     connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
     // check icons visible is correct
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
@@ -397,6 +398,7 @@ void MW::createImageCache()
 
 //    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
+    imageCacheThread->setPriority(QThread::LowestPriority);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */

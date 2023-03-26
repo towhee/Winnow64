@@ -77,15 +77,20 @@ void Selection::currentIndex(QModelIndex sfIdx)
                  << dm->currentFolderPath;
     //*/
     if (sfIdx.isValid()) {
-        if (G::isConcurrentLoading && !G::allMetadataLoaded) {
-            emit loadConcurrent(sfIdx.row());
-            return;
-        }
-        G::isNewFileSelection = true;
+//        if (G::isConcurrentCache && !G::allMetadataLoaded) {
+//            emit loadConcurrent(sfIdx.row());
+//            return;
+//        }
+        G::ignoreScrollSignal = true;
+//        G::isNewFileSelection = true;
         thumbView->setCurrentIndex(sfIdx);
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        if (G::isConcurrentCache && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
+            emit loadConcurrent(sfIdx.row());
+            return;
+        }
         emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
     }
 }
