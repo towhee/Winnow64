@@ -254,8 +254,8 @@ namespace G
     extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
 //    extern bool embedTifJpgThumb;
-    extern bool isLinearCache;
-    extern bool isConcurrentCache;
+    extern bool isLoadLinear;
+    extern bool isLoadConcurrent;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;
 

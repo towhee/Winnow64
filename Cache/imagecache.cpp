@@ -712,7 +712,7 @@ QString ImageCache::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
     rpt << "\n\n";
-    rpt << "Load algorithm: " << (G::isLinearCache == true ? "Linear" : "Concurrent");
+    rpt << "Load algorithm: " << (G::isLoadLinear == true ? "Linear" : "Concurrent");
     rpt << "\n";
     rpt << reportCacheParameters();
     rpt << reportCache("");

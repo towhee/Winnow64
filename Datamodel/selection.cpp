@@ -72,26 +72,68 @@ void Selection::currentIndex(QModelIndex sfIdx)
         qDebug() << "Selection::current current"
                  //<< "instance ="
                  //<< dm->instance
-                 //<< "idx =" << sfIdx
+                 << "idx =" << sfIdx
                  << "row =" << sfIdx.row()
                  << dm->currentFolderPath;
     //*/
     if (sfIdx.isValid()) {
-//        if (G::isConcurrentCache && !G::allMetadataLoaded) {
-//            emit loadConcurrent(sfIdx.row());
-//            return;
-//        }
         G::ignoreScrollSignal = true;
 //        G::isNewFileSelection = true;
+
+        // update cursor
+        dm->currentSfIdx = sfIdx;
+        dm->currentSfRow = sfIdx.row();
         thumbView->setCurrentIndex(sfIdx);
         gridView->setCurrentIndex(sfIdx);
         tableView->setCurrentIndex(sfIdx);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-        if (G::isConcurrentCache && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
-            emit loadConcurrent(sfIdx.row());
-            return;
+
+        // update delegates so they can highlight the current item
+        thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+        gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+
+        // update anchor for shift click mouse contiguous selections
+        thumbView->shiftAnchorIndex = sfIdx;
+        gridView->shiftAnchorIndex = sfIdx;
+
+        // don't scroll if mouse click source (screws up double clicks and disorients users)
+        if (G::fileSelectionChangeSource == "TableMouseClick") {
+            G::ignoreScrollSignal = true;
+            if (gridView->isVisible()) gridView->scrollToCurrent();
+            if (thumbView->isVisible()) thumbView->scrollToCurrent();
         }
-        emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
+        else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+            G::ignoreScrollSignal = true;
+            if (gridView->isVisible()) gridView->scrollToCurrent();
+            if (tableView->isVisible()) tableView->scrollToCurrent();
+        }
+        else if (G::fileSelectionChangeSource == "GridMouseClick") {
+            G::ignoreScrollSignal = true;
+            if (thumbView->isVisible()) thumbView->scrollToCurrent();
+            if (tableView->isVisible()) tableView->scrollToCurrent();
+        }
+        else {
+            if (gridView->isVisible()) gridView->scrollToCurrent();
+            if (thumbView->isVisible())  thumbView->scrollToCurrent();
+            if (tableView->isVisible()) tableView->scrollToCurrent();
+        }
+        G::fileSelectionChangeSource = "";
+        G::ignoreScrollSignal = false;
+
+        // update delegates to show current and set focus to enable shift + direction keys
+        if (thumbView->isVisible()) thumbView->updateView();
+        if (gridView->isVisible()) gridView->updateView();
+
+        // set focus to enable shift + direction keys
+        if (gridView->isVisible()) gridView->setFocus();
+        if (thumbView->isVisible()) thumbView->setFocus();
+
+        if (G::isLoadConcurrent && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
+            emit loadConcurrent(sfIdx.row());
+        }
+        else {
+            emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
+        }
     }
 }
 

@@ -6,7 +6,7 @@ void MW::reportState(QString title)
     qDebug()
         << "\nWINNOW STATE" << title
         << "\nFLAGS:"
-        << "\nG::isLinearLoading                    " << G::isLinearCache
+        << "\nG::isLinearLoading                    " << G::isLoadLinear
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded

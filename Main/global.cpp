@@ -126,8 +126,8 @@ namespace G
     bool autoAddMissingThumbnails;
     bool useSidecar;
 //    bool embedTifJpgThumb;
-    bool isLinearCache;
-    bool isConcurrentCache;
+    bool isLoadLinear;
+    bool isLoadConcurrent;
     bool renderVideoThumb;
     bool includeSubfolders;
 

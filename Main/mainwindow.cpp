@@ -1820,7 +1820,7 @@ void MW::folderSelectionChange()
     // start loading new folder
     G::t.restart();
     buildFilters->reset();
-    if (G::isLinearCache) {
+    if (G::isLoadLinear) {
         // metadata and icons loaded in GUI thread
         //qDebug() << "MW::folderSelectionChange loadLinearNewFolder";
         loadLinearNewFolder();
@@ -1880,7 +1880,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (!isCurrentFolderOkay
                 || G::isInitializing
                 || isFilterChange
-                || (G::isLinearCache && !G::isLinearLoadDone))
+                || (G::isLoadLinear && !G::isLinearLoadDone))
         {
             if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
                 "Initializing or invalid row so exit");
@@ -1943,51 +1943,52 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
 
-    // update delegates so they can highlight the current item
-    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+//    // update delegates so they can highlight the current item
+//    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+//    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
-    // update anchor for shift click mouse contiguous selections
-    thumbView->shiftAnchorIndex = current;
-    gridView->shiftAnchorIndex = current;
+//    // update anchor for shift click mouse contiguous selections
+//    thumbView->shiftAnchorIndex = current;
+//    gridView->shiftAnchorIndex = current;
 
-    // don't scroll if mouse click source (screws up double clicks and disorients users)
-    if (G::fileSelectionChangeSource == "TableMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCurrent();
-        if (thumbView->isVisible()) thumbView->scrollToCurrent();
-    }
-    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCurrent();
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
-    else if (G::fileSelectionChangeSource == "GridMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToCurrent();
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
-    else {
-        if (gridView->isVisible()) gridView->scrollToCurrent();
-        if (thumbView->isVisible())  thumbView->scrollToCurrent();
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
+//    MOVED TO Selection::currentIndex
+//    // don't scroll if mouse click source (screws up double clicks and disorients users)
+//    if (G::fileSelectionChangeSource == "TableMouseClick") {
+//        G::ignoreScrollSignal = true;
+//        if (gridView->isVisible()) gridView->scrollToCurrent();
+//        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+//    }
+//    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+//        G::ignoreScrollSignal = true;
+//        if (gridView->isVisible()) gridView->scrollToCurrent();
+//        if (tableView->isVisible()) tableView->scrollToCurrent();
+//    }
+//    else if (G::fileSelectionChangeSource == "GridMouseClick") {
+//        G::ignoreScrollSignal = true;
+//        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+//        if (tableView->isVisible()) tableView->scrollToCurrent();
+//    }
+//    else {
+//        if (gridView->isVisible()) gridView->scrollToCurrent();
+//        if (thumbView->isVisible())  thumbView->scrollToCurrent();
+//        if (tableView->isVisible()) tableView->scrollToCurrent();
+//    }
 
-    // update delegates to show current and set focus to enable shift + direction keys
-    if (gridView->isVisible()) gridView->updateView();
-    if (thumbView->isVisible()) thumbView->updateView();
+//    // update delegates to show current and set focus to enable shift + direction keys
+//    if (gridView->isVisible()) gridView->updateView();
+//    if (thumbView->isVisible()) thumbView->updateView();
 
-    // set focus to enable shift + direction keys
-    if (gridView->isVisible()) gridView->setFocus();
-    if (thumbView->isVisible()) thumbView->setFocus();
+//    // set focus to enable shift + direction keys
+//    if (gridView->isVisible()) gridView->setFocus();
+//    if (thumbView->isVisible()) thumbView->setFocus();
 
 //    // icons may require resizing to fit
 //    if (thumbView->isVisible()) thumbView->repaint();
 //    if (gridView->isVisible()) gridView->repaint();
 
     // reset table, grid or thumb item clicked
-    G::fileSelectionChangeSource = "";
-    G::ignoreScrollSignal = false;
+//    G::fileSelectionChangeSource = "";
+//    G::ignoreScrollSignal = false;
 
     // check if current selection = current index.  If so, do not update loupe,
     // image cache
@@ -2033,10 +2034,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     */
 
     // update caching if folder has been loaded
-    if ((G::isLinearCache && G::isLinearLoadDone) || G::isConcurrentCache) {
+    if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
-        if (G::isLinearCache) {
+        if (G::isLoadLinear) {
             metadataCacheThread->fileSelectionChange();
         }
 
@@ -2227,7 +2228,7 @@ bool MW::stop(QString src)
              << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
 
-    if (G::isConcurrentCache) {
+    if (G::isLoadConcurrent) {
         G::t.restart();
         metaReadThread->stop();
         if (isDebugStopping)
@@ -2236,7 +2237,7 @@ bool MW::stop(QString src)
                  << G::t.elapsed() << "ms";
     }
 
-    if (G::isLinearCache) {
+    if (G::isLoadLinear) {
         G::t.restart();
         metadataCacheThread->stop();
         qDebug() << "MW::stop" << "Stop metadataCacheThread: "
@@ -2491,6 +2492,7 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     sel->currentRow(targetRow);
+    //loadConcurrent(0, false);
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly)
@@ -2529,6 +2531,7 @@ void MW::loadConcurrentMetaDone()
              << dm->currentFolderPath
                 ;
                 //*/
+    if (reset(src + QString::number(count++))) return;
 
     if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
         chkMissingEmbeddedThumbnails();
@@ -2536,6 +2539,11 @@ void MW::loadConcurrentMetaDone()
     if (reset(src + QString::number(count++))) return;
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
+    G::ignoreScrollSignal = true;
+    if (thumbView->isVisible()) thumbView->scrollToCurrent();
+    if (gridView->isVisible()) gridView->scrollToCurrent();
+    if (tableView->isVisible()) tableView->scrollToCurrent();
+    G::ignoreScrollSignal = false;
     if (reset(src + QString::number(count++))) return;
 
 //    G::isLinearLoadDone = true;
@@ -2833,7 +2841,7 @@ void MW::thumbHasScrolled()
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
-    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 //    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
     if (G::ignoreScrollSignal == false) {
@@ -2846,7 +2854,7 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
 //        if (!G::isNewFileSelection) {
-            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
+            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
             else loadConcurrent(midVisibleCell, true);
             // else QTimer::singleShot(50, [this, mvc]() {loadConcurrent(mvc);});
 //        }
@@ -2888,7 +2896,7 @@ void MW::gridHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::gridHasScrolled", "Visible (0 = false) = " + QString::number(gridView->isVisible()));
-    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
     if (gridView->isHidden()) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -2898,7 +2906,7 @@ void MW::gridHasScrolled()
             thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
 //        if (!G::isNewFileSelection && gridView->isVisible()) {
-            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::gridHasScrolled");
+            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
             else loadConcurrent(gridView->midVisibleCell, true);
 //        }
     }
@@ -2935,7 +2943,7 @@ void MW::tableHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::tableHasScrolled");
-    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -2944,7 +2952,7 @@ void MW::tableHasScrolled()
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
 //        if (!G::isNewFileSelection) {
-            if (G::isLinearCache) metadataCacheThread->scrollChange("MW::tableHasScrolled");
+            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
             else loadConcurrent(tableView->midVisibleRow, true);
 //            else scrollChange(tableView->midVisibleRow, "MW::tableHasScrolled");
 //        }
@@ -2960,7 +2968,7 @@ void MW::numberIconsVisibleChange()
     scrolling.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::numberIconsVisibleChange");
-    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
     bool chunkSizeChanged = updateIconRange(dm->currentSfRow, "MW::numberIconsVisibleChange");
     /*
     qDebug() << "MW::numberIconsVisibleChange"
@@ -2969,7 +2977,7 @@ void MW::numberIconsVisibleChange()
                 ;
                 */
     if (chunkSizeChanged) {
-        if (G::isLinearCache)
+        if (G::isLoadLinear)
             metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
         else
             loadConcurrent(dm->midIconRange, true);
@@ -2999,7 +3007,7 @@ void MW::loadMetadataCacheAfterDelay()
     if (G::isLogger) G::log("MW::loadMetadataCacheAfterDelay");
     static int previousRow = 0;
 
-    if (G::isInitializing || (G::isLinearCache && !G::isLinearLoadDone)) return;
+    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 
     // has a new image been selected.  Caching will be started from MW::fileSelectionChange
     if (previousRow != dm->currentSfRow) {
@@ -3329,16 +3337,16 @@ void MW::setCacheMethod(QString method)
 
     cacheMethod = method;
     if (method == "Linear") {
-        G::isLinearCache = true;
-        G::isConcurrentCache = false;
+        G::isLoadLinear = true;
+        G::isLoadConcurrent = false;
         G::metaReadInUse = "Linear metadata and thumbnail loading";
         QString mtrl = "Turns yellow when metadata/icon caching in progress\n" +
                 G::metaReadInUse;
         metadataThreadRunningLabel->setToolTip(mtrl);
     }
     else {
-        G::isLinearCache = false;
-        G::isConcurrentCache = true;
+        G::isLoadLinear = false;
+        G::isLoadConcurrent = true;
         #ifdef METAREAD
         G::metaReadInUse = "Concurrent metadata and thumbnail loading";
         #endif
@@ -3463,7 +3471,7 @@ void MW::setImageCacheParameters()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    if ((G::isLinearCache && G::isLinearLoadDone) || G::isConcurrentCache)
+    if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent)
         imageCacheThread->cacheSizeChange();
 }
 
@@ -5626,7 +5634,7 @@ void MW::deleteFiles(QStringList paths)
 //    dm->refreshRowFromPathHash();
 
     // cleanup G::rowsWithIcon
-    if (G::isConcurrentCache) metaReadThread->cleanupIcons();
+    if (G::isLoadConcurrent) metaReadThread->cleanupIcons();
 
     // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);

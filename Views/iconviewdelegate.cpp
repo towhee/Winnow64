@@ -461,7 +461,8 @@ void IconViewDelegate::paint(QPainter *painter,
 //             */
 
     // current index item
-    if (row == dm->currentSfRow) {
+    if (row == currentRow) {
+//    if (row == dm->currentSfRow) {
         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
         painter->setPen(currentPen);
         painter->drawRoundedRect(currRect, 8, 8);

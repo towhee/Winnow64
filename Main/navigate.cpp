@@ -90,7 +90,7 @@ void MW::keyHome()
 */
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
-    if (G::isLinearCache) {
+    if (G::isLoadLinear) {
         if (G::isLinearLoadDone) {
             metadataCacheThread->stop();
             if (G::mode == "Compare") compareImages->go("Home");
@@ -111,7 +111,7 @@ void MW::keyEnd()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
-    if (G::isLinearCache) {
+    if (G::isLoadLinear) {
         if (G::isLinearLoadDone) {
             metadataCacheThread->stop();
             if (G::mode == "Compare") compareImages->go("End");
