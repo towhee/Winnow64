@@ -1140,7 +1140,7 @@ void IconView::resizeEvent(QResizeEvent *)
 //    */
 
     // must come after width parameters
-    if (G::isInitializing ||(G::isLinearCache && !G::isLinearLoadDone) /*|| m2->gridDisplayFirstOpen*/) {
+    if (G::isInitializing ||(G::isLoadLinear && !G::isLinearLoadDone) /*|| m2->gridDisplayFirstOpen*/) {
         prevWidth = width();
         return;
     }
@@ -1752,7 +1752,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     if (G::isEmbellish) failReason = "G::isEmbellish";
     if (G::isInitializing) failReason = "G::isInitializing";
     if (G::stop) failReason = "G::stop";
-    if (G::isLinearCache && !G::isLinearLoadDone) failReason = "!G::isLinearLoadDone";
+    if (G::isLoadLinear && !G::isLinearLoadDone) failReason = "!G::isLinearLoadDone";
     bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) failReason = "isVideo";
 

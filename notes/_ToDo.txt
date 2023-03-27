@@ -95,7 +95,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
-- USB crash when filer on day (caused by qDebug statements)
+- USB crash when filter on day (caused by qDebug statements)
 - Add modify on icon to statusbar
 - Ignore filtering while editing the datamodel
 - Redo concurrent load flow
