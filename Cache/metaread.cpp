@@ -69,7 +69,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
     count = 0;
     abortCleanup = isRunning();
     mutex.unlock();
-    /*
+//    /*
     qDebug() << "MetaRead::setCurrentRow targetRow =" << targetRow
              << "isRunning =" << isRunning()
              << "startPath =" << startPath;
@@ -504,12 +504,23 @@ void MetaRead::run()
         }
 
         // abort?
-        if (row >= dm->sf->rowCount()) abort = true;
-        else {
-            QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-            QString thisFolder = QFileInfo((fPath)).dir().absolutePath();
-            if (thisFolder != dm->currentFolderPath) abort = true;
+        if (row >= dm->sf->rowCount()) {
+            qDebug() << "MetaRead::run ** ABORT ** row" << row
+                     << ">= dm->sf->rowCount()" << dm->sf->rowCount();
+            abort = true;
         }
+//        else {
+//            QModelIndex idx = dm->sf->index(row, G::PathColumn);
+//            if (!idx.isValid()) continue;
+//            QString fPath = idx.data(G::PathRole).toString();
+//            QString thisFolder = fPath.first(fPath.lastIndexOf("/"));
+//            //qDebug() << "MetaRead::run fPath =" << fPath << thisFolder;
+//            if (thisFolder != dm->currentFolderPath) {
+//                qDebug() << "MetaRead::run ** ABORT ** thisFolder" << thisFolder
+//                         << "!=" << dm->currentFolderPath;
+//                abort = true;
+//            }
+//        }
         if (abort) {
             qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at row" << row;
             break;
