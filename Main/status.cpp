@@ -133,6 +133,7 @@ int MW::availableSpaceForProgressBar()
     if (G::isLogger) G::log("MW::availableSpaceForProgressBar");
     int w = 0;
     int s = statusBar()->layout()->spacing();
+    if (statusBarSpacer1->isVisible()) w += s + statusBarSpacer1->width();
     if (modifyImagesBtn->isVisible()) w += s + modifyImagesBtn->width();
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();

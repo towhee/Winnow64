@@ -112,7 +112,7 @@ bool ImageDecoder::load()
                    << fPath;
         status = Status::NoMetadata;
         // pause for metadata to be loaded
-        msleep(10);
+        msleep(100);
         return false;
     }
 

@@ -47,7 +47,7 @@ void MW::initialize()
     connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheStrategy);
 
     reverseSortBtn = new BarBtn();
-    reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
+    reverseSortBtn ->setToolTip("Toggle sort direction: Mouse click or shortcut Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::toggleSortDirectionClick);
 
     filterStatusLabel = new QLabel;
@@ -58,7 +58,7 @@ void MW::initialize()
 
     rawJpgStatusLabel = new QLabel;
     rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing.  "
-                                  "Shortcut to toggle: Opt/Alt + J");
+                                  "Toggle shortcut: Opt/Alt + J");
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
@@ -323,7 +323,7 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon,
             Qt::BlockingQueuedConnection);
     // message metadata reading completed
-    connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
+    connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
 //    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
     connect(metaReadThread, &MetaRead::triggerImageCache,
@@ -1023,6 +1023,9 @@ void MW::createStatusBar()
     statusBar()->addWidget(progressBar);
 
     // add status icons to left side of statusBar
+    statusBarSpacer1 = new QLabel;
+    statusBarSpacer1->setPixmap(QPixmap(1,5));
+    statusBar()->addWidget(statusBarSpacer1);
     statusBar()->addWidget(modifyImagesBtn);
     statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(reverseSortBtn);

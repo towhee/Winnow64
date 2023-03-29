@@ -513,7 +513,7 @@ private slots:
     // caching
     void loadConcurrent(int sfRow, bool scrollOnly);
     void loadConcurrentNewFolder();
-    void loadConcurrentMetaDone();
+    void loadConcurrentDone();
     void loadConcurrentStartImageCache(QString path, QString src);
 
     void loadLinearNewFolder();
@@ -981,6 +981,7 @@ private:
     QPixmap *progressPixmap;
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
+    QLabel *statusBarSpacer1;
     QLabel *metadataThreadRunningLabel = new QLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
