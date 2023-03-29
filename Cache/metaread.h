@@ -22,7 +22,7 @@ public:
              FrameDecoder *frameDecoder);
     ~MetaRead() override;
 
-    void stop();
+    bool stop();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
@@ -96,6 +96,7 @@ private:
     QList<int> rowsWithIcon;
 
     bool isDebug = false;
+    int debugRow;
     QElapsedTimer t;
     QElapsedTimer tAbort;
     quint32 ms;

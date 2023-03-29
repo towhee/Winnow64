@@ -1653,10 +1653,15 @@ void MW::folderSelectionChange()
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
+    if (G::stop) {
+        qDebug() << "MW::folderSelectionChange"
+                 << "**BUSY**" << getSelectedPath();
+        return;
+    }
+
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
 
-    if (G::stop) return;
 
     if (G::isLogger || G::isFlowLogger) {
         G::log("skipline");
@@ -1664,8 +1669,10 @@ void MW::folderSelectionChange()
     }
 
     G::t.restart();
+    qDebug() << "MW::folderSelectionChange"
+             << getSelectedPath();
 
-    stop("MW::folderSelectionChange()");
+    if (!stop("MW::folderSelectionChange()")) return;
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -2213,8 +2220,8 @@ bool MW::stop(QString src)
        any GUI functions that were interrupted, such as MW::loadLinearNewFolder.
        The flag "G::dmEmpty is checked to terminate these processes.
     */
-    dm->abortLoad();
-    G::dmEmpty = true;
+//    dm->abortLoad();
+//    G::dmEmpty = true;
 
 
     bool isDebugStopping = false;
@@ -2230,16 +2237,18 @@ bool MW::stop(QString src)
 
     if (G::isLoadConcurrent) {
         G::t.restart();
-        metaReadThread->stop();
-        if (isDebugStopping)
+        bool metaReadThreadStopped = metaReadThread->stop();
+//        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
                  << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
+//        if (!metaReadThreadStopped) return false;
     }
 
     if (G::isLoadLinear) {
         G::t.restart();
         metadataCacheThread->stop();
+        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metadataCacheThread: "
                  << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
@@ -2247,7 +2256,7 @@ bool MW::stop(QString src)
 
     G::t.restart();
     imageCacheThread->stop();
-    if (isDebugStopping)
+//    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
              << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
@@ -2269,9 +2278,12 @@ bool MW::stop(QString src)
         qApp->processEvents();
     }
 
-    reset("MW::stop");
+    dm->abortLoad();
+    G::dmEmpty = true;
 
+    reset("MW::stop");
     G::stop = false;
+
     return true;
 }
 
@@ -2282,10 +2294,13 @@ bool MW::reset(QString src)
 */
     if (G::isLogger) G::log("MW::reset", "Source: " + src);
 
-    if (!G::dmEmpty /*|| !G::stop*/) {
-        //qDebug() << "MW::reset G::dmEmpty == false";
+    if (!G::stop) {
         return false;
     }
+//    if (!G::dmEmpty /*|| !G::stop*/) {
+//        //qDebug() << "MW::reset G::dmEmpty == false";
+//        return false;
+//    }
 
     qDebug() << "MW::reset src =" << src;
 
@@ -2491,7 +2506,7 @@ void MW::loadConcurrentNewFolder()
     metaReadThread->initialize();     // only when change folders
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
-    sel->currentRow(targetRow);
+    if (!metaReadThread->isRunning()) sel->currentRow(targetRow);
     //loadConcurrent(0, false);
 }
 
@@ -2516,12 +2531,12 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly)
     }
 }
 
-void MW::loadConcurrentMetaDone()
+void MW::loadConcurrentDone()
 {
 /*
     Signalled from MetaRead::run when finished
 */
-//    QSignalBlocker blocker(bookmarks);
+    QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
     QString src = "MW::loadConcurrentMetaDone ";
@@ -2581,7 +2596,7 @@ void MW::loadConcurrentMetaDone()
 //    if (G::isFileLogger) Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
 //    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
-//    blocker.unblock();
+    blocker.unblock();
 }
 
 void MW::loadConcurrentStartImageCache(QString path, QString src)
@@ -3353,7 +3368,7 @@ void MW::setCacheMethod(QString method)
         #ifdef METAREAD2
         G::metaReadInUse = "Concurrent2 multi-threaded metadata and thumbnail loading";
         #endif
-        QString mtrl = "Turns red when metadata/icon caching in progress\n" +
+        QString mtrl = "Turns red when metadata / thumbnail caching in progress\n" +
                 G::metaReadInUse;
         metadataThreadRunningLabel->setToolTip(mtrl);
     }
