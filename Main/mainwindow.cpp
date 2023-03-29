@@ -2166,6 +2166,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     folderSelectionChange();
+    //sel->currentPath(fPath);
 
     return;
 }
@@ -2479,11 +2480,12 @@ void MW::loadConcurrentNewFolder()
     int targetRow;
     if (folderAndFileChangePath != "") {
         targetRow = dm->rowFromPath(folderAndFileChangePath);
+        dm->currentSfRow = targetRow;
 //        folderAndFileChangePath = "";
     }
     else {
         targetRow = 0;
-
+        dm->currentSfRow = 0;
     }
     if (reset(src + QString::number(count++))) return;
     updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
@@ -2507,7 +2509,6 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
     if (!metaReadThread->isRunning()) sel->currentRow(targetRow);
-    //loadConcurrent(0, false);
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly)

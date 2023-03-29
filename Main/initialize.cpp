@@ -320,8 +320,8 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // add icon to datamodel
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon,
-            Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon/*,
+            Qt::BlockingQueuedConnection*/);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange

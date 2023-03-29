@@ -37,7 +37,7 @@ MetaRead::MetaRead(QObject *parent,
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
     instance = 0;
-    isDebug = true;
+    isDebug = false;
 }
 
 MetaRead::~MetaRead()
@@ -485,24 +485,14 @@ void MetaRead::run()
 
     int row = startRow;
     count = -1;                     // used to delay start ImageCache
-    bool ahead = true;
     int lastRow = sfRowCount - 1;
-    bool moreAhead = row < lastRow;
-    bool moreBehind = row >= 0;
-    int rowAhead = row;
-    int rowBehind = row;
+    int a = 0;      // ahead
+    int b = 0;      // back
 
-    while (moreAhead || moreBehind) {
-
-        // check if start row has changed while iterating
+    while (a < sfRowCount || b >= 0) {
         if (startRow != -1) {
-            row = startRow;
-            moreAhead = row < lastRow;
-            moreBehind = row > 0;
-            rowAhead = row;
-            rowBehind = row;
-            moreAhead ? ahead = true : ahead = false;
-
+            a = startRow;
+            b = startRow - 1;
             // icon range in case changes ie thumb size change
             iconChunkSize = dm->iconChunkSize;
             iconLimit = static_cast<int>(iconChunkSize * 1.2);
@@ -515,36 +505,12 @@ void MetaRead::run()
             startRow = -1;
         }
 
-        // abort?
-        if (row >= dm->sf->rowCount()) {
-            qDebug() << "MetaRead::run ** ABORT ** row" << row
-                     << ">= dm->sf->rowCount()" << dm->sf->rowCount();
-            abort = true;
-        }
-//        else {
-//            QModelIndex idx = dm->sf->index(row, G::PathColumn);
-//            if (!idx.isValid()) continue;
-//            QString fPath = idx.data(G::PathRole).toString();
-//            QString thisFolder = fPath.first(fPath.lastIndexOf("/"));
-//            //qDebug() << "MetaRead::run fPath =" << fPath << thisFolder;
-//            if (thisFolder != dm->currentFolderPath) {
-//                qDebug() << "MetaRead::run ** ABORT ** thisFolder" << thisFolder
-//                         << "!=" << dm->currentFolderPath;
-//                abort = true;
-//            }
-//        }
-        if (abort) {
-            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at row" << row;
-            break;
-        }
+        if (abort) break;
 
-        // do something with row
-        qDebug() << "MetaRead::run row =" << row;
-        debugRow = row;
-        readRow(row);
-
-        // delayed start ImageCache
-        if (!scrollOnly && !abort) {
+        if (a < sfRowCount) {
+            qDebug() << "MetaRead::run row =" << a;
+            readRow(a);
+            a++;
             count++;
             if (count == lastRow || count == imageCacheTriggerCount) {
                 // start image caching thread after head start
@@ -552,37 +518,33 @@ void MetaRead::run()
                     G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
                 QModelIndex current = dm->sf->index(targetRow, 0);
                 emit fileSelectionChange(current, QModelIndex(), true, "MetaRead::run");
-                // bm1
-//                emit triggerImageCache(startPath, "MetaRead::run imageCacheTriggerCount");
                 imageCachingStarted = true;
-                //if (G::isFileLogger) Utilities::log("MetaRead::run", "start image caching");
             }
         }
 
-        // next row to process
-        if (ahead) {
-            if (moreBehind) ahead = false;
-            if (moreAhead) {
-                row = ++rowAhead;
-                moreAhead = rowAhead < sfRowCount;
+        if (b >= 0) {
+            qDebug() << "MetaRead::run row =" << b;
+            readRow(b);
+            b--;
+            count++;
+            if (count == lastRow || count == imageCacheTriggerCount) {
+                // start image caching thread after head start
+                if (isDebug || G::isLogger || G::isFlowLogger)
+                    G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
+                QModelIndex current = dm->sf->index(targetRow, 0);
+                emit fileSelectionChange(current, QModelIndex(), true, "MetaRead::run");
+                imageCachingStarted = true;
             }
         }
-        else {
-            if (moreAhead) ahead = true;
-            if (moreBehind) {
-                row = --rowBehind;
-                moreBehind = row > -1;
-            }
-        }
-    } // end loop processing rows
+    }
 
     if (isDebug)
         qDebug() << "MetaRead::run  Completed loop";    // finished or aborted
 
-    if (!abort)if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead::run");
-    if (!abort)G::allMetadataLoaded = true;
-    if (!abort)cleanupIcons();
-    if (!abort)emit done();
+    if (!abort) if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead::run");
+    if (!abort) G::allMetadataLoaded = true;
+    if (!abort) cleanupIcons();
+    if (!abort) emit done();
     if (isDebug) qDebug() << "MetaRead::run  Done.";
 
     abort = false;
