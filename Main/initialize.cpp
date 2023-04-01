@@ -304,33 +304,36 @@ void MW::createMDCache()
 //    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
-    // signal stopped when abort completed
-//    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
-    // read metadata
+   // read metadata
 //    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
-    // pause waits until isRunning == false
-    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt);
+
     // add metadata to datamodel
+    connect(metaReadThread, &MetaRead::addMetadataAndIconInDM, dm, &DataModel::addMetadataAndIconForItem,
+            Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::addToDatamodel2, dm, &DataModel::addMetadataForItem);
+
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
+
+    // add icon to datamodel (Qt::BlockingQueuedConnection sometimes prevents MetaRead::stop)
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
+
+    // add metadata to image cache item list
+    connect(metaReadThread, &MetaRead::addToImageCache,
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+
     // update thumbView in case scrolling has occurred
     connect(metaReadThread, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // update gridView in case scrolling has occurred
     connect(metaReadThread, &MetaRead::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
-    // add icon to datamodel
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon/*,
-            Qt::BlockingQueuedConnection*/);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-//    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
     connect(metaReadThread, &MetaRead::triggerImageCache,
             imageCacheThread, &ImageCache::setCurrentPosition);
     connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
-    // check icons visible is correct
-    connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window
@@ -450,15 +453,6 @@ void MW::createImageCache()
     connect(infoView, &InfoView::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
 
-    // concurrent load
-#ifdef METAREAD
-        connect(metaReadThread, &MetaRead::addToImageCache,
-                imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-#endif
-#ifdef METAREAD2
-        connect(metaReadThread, &MetaRead2::addToImageCache,
-                imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-#endif
     // signal ImageCache refresh
     connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);
 //    connect(metaRead, &MetaRead::setImageCachePosition,

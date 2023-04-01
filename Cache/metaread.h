@@ -6,7 +6,6 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-//#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
@@ -37,31 +36,32 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void centralMsg(QString message);
     void updateProgress(int progress);
+
+    void addMetadataAndIconInDM(ImageMetadata m, QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
+    void addToDatamodel2(ImageMetadata m, QString src);
+
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
+
     void triggerImageCache(QString startPath, QString src);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection, QString src);
 
-    void updateIconBestFit();  //r req'd?
     void done();               // not being used - req'd?
 
 public slots:
     void initialize();
     void setCurrentRow(int row = 0, bool scrollOnly = false, QString src = "");
-    int interrupt();
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 private:
-    void read(int startRow = 0, QString src = "");
+    void triggerCheck();
+    void read(int startRow);
     void readRow(int sfRow);
     bool readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
-//    void iconMax(QPixmap &thumb);
-//    bool isNotLoaded(int sfRow);
-//    bool inIconRange(int sfRow);
 
     QMutex mutex;
     QWaitCondition condition;
@@ -75,23 +75,22 @@ private:
     FrameDecoder *frameDecoder;
     Thumb *thumb;
     int instance;
-//    int visibleIconCount;
     int sfRowCount;
     int dmRowCount;
     int metaReadCount;
     double expansionFactor = 1.2;
-    int iconLimit;                  // iconChunkSize * expansionFactor
+    int iconLimit;                          // iconChunkSize * expansionFactor
     int imageCacheTriggerCount;
+    bool alreadyTriggered;
 
     bool scrollOnly;
     int startRow = 0;
     int targetRow = 0;
+    int lastRow;
     QString startPath = "";
     int count;
     QString src;
     QString folderPath;
-
-    bool imageCachingStarted = false;
 
     QList<int> rowsWithIcon;
 

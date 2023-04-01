@@ -96,6 +96,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Crash when report row diagnostics and no folder selected
 - USB crash when filter on day (caused by qDebug statements)
 - Add modify on icon to statusbar
 - Ignore filtering while editing the datamodel

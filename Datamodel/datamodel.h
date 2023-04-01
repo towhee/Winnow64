@@ -146,6 +146,8 @@ public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
+    bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
+                                   int fromInstance, QString src);
     bool addMetadataForItem(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,

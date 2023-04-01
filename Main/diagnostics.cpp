@@ -88,7 +88,8 @@ void MW::reportWorkspaceState()
 void MW::reportMetadata()
 {
     if (G::isLogger) G::log("MW::reportMetadata");
-    diagnosticsMetadata();
+    if (dm->rowCount()) diagnosticsMetadata();
+    else G::popUp->showPopup("No image selected");
 }
 
 // Diagnostic Reports

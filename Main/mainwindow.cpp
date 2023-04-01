@@ -1669,6 +1669,7 @@ void MW::folderSelectionChange()
     }
 
     G::t.restart();
+    qDebug() << " ";
     qDebug() << "MW::folderSelectionChange"
              << getSelectedPath();
 
@@ -1679,8 +1680,8 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-    qDebug() << " ";
-    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
+//    qDebug() << " ";
+//    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
 //    if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
@@ -2199,12 +2200,12 @@ bool MW::stop(QString src)
 
     // clear queued signals from MetaRead
 #ifdef METAREAD
-    disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-    disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
+//    disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
+//    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
+//    disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+//    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+//    disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+//    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
 #endif
 #ifdef METAREAD2
     disconnect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon);
@@ -2236,15 +2237,15 @@ bool MW::stop(QString src)
              << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
 
-    if (G::isLoadConcurrent) {
-        G::t.restart();
-        bool metaReadThreadStopped = metaReadThread->stop();
-//        if (isDebugStopping)
-        qDebug() << "MW::stop" << "Stop metaReadThread:      "
-                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
-//        if (!metaReadThreadStopped) return false;
-    }
+//    if (G::isLoadConcurrent) {
+//        G::t.restart();
+//        bool metaReadThreadStopped = metaReadThread->stop();
+////        if (isDebugStopping)
+//        qDebug() << "MW::stop" << "Stop metaReadThread:      "
+//                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
+//                 << G::t.elapsed() << "ms";
+////        if (!metaReadThreadStopped) return false;
+//    }
 
     if (G::isLoadLinear) {
         G::t.restart();
@@ -2508,7 +2509,8 @@ void MW::loadConcurrentNewFolder()
     metaReadThread->initialize();     // only when change folders
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
-    if (!metaReadThread->isRunning()) sel->currentRow(targetRow);
+//    if (!metaReadThread->isRunning())
+        sel->currentRow(targetRow);
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly)
@@ -2598,65 +2600,6 @@ void MW::loadConcurrentDone()
 //    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
     blocker.unblock();
-}
-
-void MW::loadConcurrentStartImageCache(QString path, QString src)
-{
-/*
-   Not being used
-    Signalled from MetaRead after delay of MetaRead::imageCacheTriggerCount and again
-    when MetaRead::run is finished.
-*/
-//    QSignalBlocker blocker(bookmarks);
-
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentStartImageCache");
-    //qDebug() << "MW::loadConcurrentStartImageCache" << "src =" << src;
-
-    if (isShowCacheProgressBar) {
-        cacheProgressBar->clearProgress();
-    }
-
-    // preliminary resize table columns
-//    tableView->resizeColumnsToContents();
-//    tableView->setColumnWidth(G::PathColumn, 24+8);
-
-//    G::isLinearLoadDone = true;
-
-    /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
-    including current index and file path req'd by mdCache and EmbelProperties...  If
-    folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
-    the file to select in the new folder; otherwise the first file in dm->sf will be
-    selected. */
-
-
-//    QString fPath = "";
-//    if (src == "Initial") {
-//        fPath = folderAndFileChangePath;
-//        // qDebug() << "MW::loadConcurrentStartImageCache  folderAndFileChangePath =" << folderAndFileChangePath;
-//        folderAndFileChangePath = "";
-//        if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-//            sel->current(fPath);
-//            dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
-//        }
-//        else {
-//            sel->first();
-//            dm->currentSfIdx = dm->sf->index(0,0);
-//        }
-
-//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, true, "MW::loadConcurrentStartImageCache");
-//    }
-
-//    // update image cache after all metadata has been read and cache item list is complete
-//    if (src == "Final") {
-//        /*
-//        qDebug() << "MW::loadConcurrentStartImageCache  src = Final"
-//                 << dm->currentFilePath
-//                    ;
-//                    //*/
-//        emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentStartImageCache");
-//    }
-
-//    blocker.unblock();
 }
 
 void MW::loadLinearNewFolder()

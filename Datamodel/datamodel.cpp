@@ -984,7 +984,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     }
     if (G::stop) return false;
 
-    mutex.lock();
+//    mutex.lock();
 
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
@@ -1009,7 +1009,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
             else {
                 qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
                 G::error("", fPath, "Failed to load metadata.");
-                mutex.unlock();
+//                mutex.unlock();
                 return false;
             }
         }
@@ -1020,11 +1020,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
             metadata->clearMetadata();
             metadata->m.row = row;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
-            mutex.unlock();
+//            mutex.unlock();
             return false;
         }
     }
-    mutex.unlock();
+//    mutex.unlock();
     return true;
 }
 
@@ -1085,6 +1085,16 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
         return false;
     }
+    return true;
+}
+
+bool DataModel::addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
+                                     int fromInstance, QString src)
+{
+    if (G::isLogger) G::log("DataModel::addMetadataForItem");
+    qDebug() << "DataModel::addMetadataAndIconForItem" << m.row;
+    addMetadataForItem(m, src);
+    setIcon(dmIdx, pm,fromInstance, src);
     return true;
 }
 
@@ -1447,7 +1457,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-//    if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame      "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
@@ -2202,19 +2212,23 @@ QString DataModel::diagnosticsForCurrentRow()
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::diagnosticsForCurrentRow");
     if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << currentFolderPath;
+
+    if (rowCount() == 0) {
+        G::popUp->showPopup("Empty folder or no folder selected");
+        return "";
+    }
+
+    if (currentSfRow < 0 || currentSfRow >= rowCount()) {
+        G::popUp->showPopup("Invalid row " + QString::number(currentSfRow));
+        return "";
+    }
+
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
-//    rpt << "\n" << G::sj("", 25)"currentFolderPath = " << G::s(currentFolderPath);
-//    rpt << "\n" << G::sj("", 25)"currentFilePath = " << G::s(currentFilePath);
-//    rpt << "\n" << G::sj("", 25)"currentRow = " << G::s(currentRow);
     rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
-//    rpt << "\n" << G::sj("", 25)"filtersBuilt = " << G::s(filtersBuilt);
-//    rpt << "\n" << G::sj("", 25)"timeToQuit = " << G::s(timeToQuit);
-//    rpt << "\n" << G::sj("", 25)"imageCount = " << G::s(imageCount);
-//    rpt << "\n" << G::sj("", 25)"countInterval = " << G::s(countInterval);
     getDiagnosticsForRow(currentSfRow, rpt);
     rpt << "\n\n" ;
     return reportString;
@@ -2225,6 +2239,17 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::getDiagnosticsForRow");
     if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << currentFolderPath;
+
+    if (rowCount() == 0) {
+        G::popUp->showPopup("Empty folder or no folder selected");
+        return;
+    }
+
+    if (row < 0 || row >= rowCount()) {
+        G::popUp->showPopup("Invalid row " + QString::number(row));
+        return;
+    }
+
     QString s = "";
     rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
     rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
