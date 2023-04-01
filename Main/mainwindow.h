@@ -358,7 +358,6 @@ signals:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void restartMetaRead(int newRow);
-    void interruptMetaRead(bool flag);
     void startMetaRead(int sfRow, QString src);
     void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
@@ -511,10 +510,9 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrent(int sfRow, bool scrollOnly);
     void loadConcurrentNewFolder();
+    void loadConcurrent(int sfRow, bool scrollOnly);
     void loadConcurrentDone();
-    void loadConcurrentStartImageCache(QString path, QString src);
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
