@@ -29,6 +29,7 @@ public:
     int iconChunkSize;
     int firstIconRow;
     int lastIconRow;
+    bool abort;
 
 signals:
     void stopped(QString src);
@@ -65,7 +66,7 @@ private:
 
     QMutex mutex;
     QWaitCondition condition;
-    bool abort;
+//    bool abort;
     bool abortCleanup;
     bool interrupted;
     int interruptedRow;

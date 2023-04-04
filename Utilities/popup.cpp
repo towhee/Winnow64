@@ -72,6 +72,7 @@ void PopUp::paintEvent(QPaintEvent *event)
 
 void PopUp::keyReleaseEvent(QKeyEvent *event)
 {
+    qDebug() << "PopUp::keyReleaseEvent";
     QWidget::keyReleaseEvent(event);
 }
 

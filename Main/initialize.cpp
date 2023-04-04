@@ -312,6 +312,7 @@ void MW::createMDCache()
             Qt::BlockingQueuedConnection);
     connect(metaReadThread, &MetaRead::addToDatamodel2, dm, &DataModel::addMetadataForItem);
 
+//    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
 

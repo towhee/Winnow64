@@ -78,7 +78,6 @@ void Selection::currentIndex(QModelIndex sfIdx)
     //*/
     if (sfIdx.isValid()) {
         G::ignoreScrollSignal = true;
-//        G::isNewFileSelection = true;
 
         // update cursor
         dm->currentSfIdx = sfIdx;

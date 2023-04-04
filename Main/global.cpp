@@ -26,7 +26,6 @@ namespace G
     bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
                                         // all new folder processes.
     bool isLinearLoadDone;
-//    bool isNewFileSelection;
     bool allMetadataLoaded;
     bool allIconsLoaded;
 
@@ -280,6 +279,7 @@ namespace G
     {
         bool clash = (dmInstance != instance);
         if (clash) {
+            if (isWarningLogger)
             qWarning() << "WARNING G::instanceClash"
                        << "instance =" << instance
                        << "DM instance =" << dmInstance
