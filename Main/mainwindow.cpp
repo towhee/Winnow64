@@ -210,7 +210,6 @@ Flow Flags:
     G::ignoreScrollSignal
     isCurrentFolderOkay
     isFilterChange
-    G::isNewFileSelection
 
 Current model row:
 
@@ -659,6 +658,7 @@ void MW::showEvent(QShowEvent *event)
 void MW::closeEvent(QCloseEvent *event)
 {
     if (G::isLogger) G::log("MW::closeEvent");
+    //qDebug() << "MW::closeEvent";
 
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
@@ -671,13 +671,10 @@ void MW::closeEvent(QCloseEvent *event)
     }
 
     // for debugging crash test
-//    if (testCrash) return;
+    //if (testCrash) return;
 
     setCentralMessage("Closing Winnow ...");
     stop("MW::closeEvent");
-//    metaReadThread->stop();
-//    imageCacheThread->stop();
-//    metadataCacheThread->stop();
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -763,14 +760,14 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-//    qDebug() << "MW::keyReleaseEvent" << event;
+    qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-        //qDebug() << "MW::keyReleaseEvent" << G::isLinearLoadDone;
+        qDebug() << "MW::keyReleaseEvent event->key() == Qt::Key_Escape";
         G::popUp->end();
         // stop loading a new folder
         if (!G::allMetadataLoaded) stop("Escape key");
@@ -1598,7 +1595,6 @@ Flow Flags:
     G::ignoreScrollSignal
     isCurrentFolderOkay
     isFilterChange
-    G::isNewFileSelection
 
 Current model row:
 
@@ -1654,8 +1650,8 @@ void MW::folderSelectionChange()
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
     if (G::stop) {
-        qDebug() << "MW::folderSelectionChange"
-                 << "**BUSY**" << getSelectedPath();
+        //qDebug() << "MW::folderSelectionChange"
+        //         << "**BUSY**" << getSelectedPath();
         return;
     }
 
@@ -1669,9 +1665,9 @@ void MW::folderSelectionChange()
     }
 
     G::t.restart();
-    qDebug() << " ";
-    qDebug() << "MW::folderSelectionChange"
-             << getSelectedPath();
+    //qDebug() << " ";
+    //qDebug() << "MW::folderSelectionChange"
+    //         << getSelectedPath();
 
     if (!stop("MW::folderSelectionChange()")) return;
 
@@ -1680,9 +1676,6 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-//    qDebug() << " ";
-//    qDebug() << "MW::folderSelectionChange" << "New folder =" << G::currRootFolder;
-//    if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", G::currRootFolder);
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1749,6 +1742,7 @@ void MW::folderSelectionChange()
     // load datamodel
     if (!dm->load(G::currRootFolder, G::includeSubfolders)) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
         enableSelectionDependentMenus();
         if (dm->abortLoadingModel) {
@@ -1864,8 +1858,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             "G::stop so exit");
         return;
     }
-
-//    G::isNewFileSelection = false;
 
    /* debug
     qDebug() << "MW::fileSelectionChange"
@@ -2237,15 +2229,14 @@ bool MW::stop(QString src)
              << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
 
-//    if (G::isLoadConcurrent) {
-//        G::t.restart();
-//        bool metaReadThreadStopped = metaReadThread->stop();
-////        if (isDebugStopping)
-//        qDebug() << "MW::stop" << "Stop metaReadThread:      "
-//                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
-//                 << G::t.elapsed() << "ms";
-////        if (!metaReadThreadStopped) return false;
-//    }
+    if (G::isLoadConcurrent) {
+        G::t.restart();
+        bool metaReadThreadStopped = metaReadThread->stop();
+        if (isDebugStopping)
+        qDebug() << "MW::stop" << "Stop metaReadThread:      "
+                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
+                 << G::t.elapsed() << "ms";
+    }
 
     if (G::isLoadLinear) {
         G::t.restart();
@@ -2258,7 +2249,7 @@ bool MW::stop(QString src)
 
     G::t.restart();
     imageCacheThread->stop();
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
              << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
@@ -2270,7 +2261,7 @@ bool MW::stop(QString src)
              << "                 "
              << G::t.elapsed() << "ms";
 
-    //if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop total:               "
              << "                 "
              << tStop.elapsed() << "ms";
@@ -2304,13 +2295,12 @@ bool MW::reset(QString src)
 //        return false;
 //    }
 
-    qDebug() << "MW::reset src =" << src;
+    //qDebug() << "MW::reset src =" << src;
 
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::isLinearLoadDone = false;
-//    G::isNewFileSelection = false;
     G::currRootFolder = "";
 
     imageView->clear();
@@ -2509,8 +2499,7 @@ void MW::loadConcurrentNewFolder()
     metaReadThread->initialize();     // only when change folders
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
-//    if (!metaReadThread->isRunning())
-        sel->currentRow(targetRow);
+    sel->currentRow(targetRow);
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly)
@@ -2779,11 +2768,6 @@ void MW::thumbHasScrolled()
     by G::ignoreScrollSignal == false. However, if the scroll change was caused by
     syncing with another view then we do not want to process again and get into a loop.
 
-    Also, we do not need to process scrolling if it was the result of a new selection,
-    which will trigger a thumbnail update in MW::fileSelectionChange. G::isNewFileSelection
-    is set true in IconView when a selection is made, and set false in
-    fileSelectionChange.
-
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
     metadataCacheThread (Linear) or metaReadThread (Concurrent).
@@ -2812,11 +2796,8 @@ void MW::thumbHasScrolled()
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-//        if (!G::isNewFileSelection) {
-            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-            else loadConcurrent(midVisibleCell, true);
-            // else QTimer::singleShot(50, [this, mvc]() {loadConcurrent(mvc);});
-//        }
+        if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
+        else loadConcurrent(midVisibleCell, true);
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -2864,10 +2845,8 @@ void MW::gridHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-//        if (!G::isNewFileSelection && gridView->isVisible()) {
-            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
-            else loadConcurrent(gridView->midVisibleCell, true);
-//        }
+        if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
+        else loadConcurrent(gridView->midVisibleCell, true);
     }
     G::ignoreScrollSignal = false;
 }
@@ -2910,11 +2889,8 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-//        if (!G::isNewFileSelection) {
-            if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
-            else loadConcurrent(tableView->midVisibleRow, true);
-//            else scrollChange(tableView->midVisibleRow, "MW::tableHasScrolled");
-//        }
+        if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
+        else loadConcurrent(tableView->midVisibleRow, true);
     }
     G::ignoreScrollSignal = false;
 }
@@ -5944,6 +5920,11 @@ void MW::reportHueCount()
 void MW::mediaReadSpeed()
 {
     if (G::isLogger) G::log("MW::mediaReadSpeed");
+    QMessageBox mBox;
+    mBox.setText("Select a file to test read speed");
+    mBox.setButtonText(QMessageBox::Ok, "Continue");
+    mBox.exec();
+
     QString fPath = QFileDialog::getOpenFileName(this,
                                                  tr("Select file for speed test"),
                                                  "/home"
@@ -5951,9 +5932,8 @@ void MW::mediaReadSpeed()
     QFile file(fPath);
     double MBPerSec = Performance::mediaReadSpeed(file) * 1024 / 8;
     if (static_cast<int>(MBPerSec) == -1) return;  // err
-    QString msg = "Media read speed: : " + QString::number(MBPerSec, 'f', 0) +
-                  " MB/sec.   Press Esc to continue.";
-    G::popUp->showPopup(msg, 0);
+    QString msg = "Media read speed: " + QString::number(MBPerSec, 'f', 0) + " MB/sec.";
+    QMessageBox::information(this, "", msg);
 }
 
 void MW::help()

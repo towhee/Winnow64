@@ -1532,7 +1532,7 @@ void MW::createMenus()
     fileMenu->addAction(saveAsFileAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
-    fileMenu->addAction(mediaReadSpeedAction);
+//    fileMenu->addAction(mediaReadSpeedAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
@@ -1580,6 +1580,7 @@ void MW::createMenus()
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
     utilitiesMenu = editMenu->addMenu("Utilities");
+    utilitiesMenu->addAction(mediaReadSpeedAction);
     utilitiesMenu->addAction(embedThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);

@@ -520,7 +520,7 @@ void TokenDlg::on_chkUseInLoupeView_checked(int state)
         else {
             ui->chkUseInLoupeView->setChecked(true);
             QString msg = "Select another template and then click checkbox to make it<br>"
-                          "the one used for the loupe view overlay info.  Press ESC to<br>"
+                          "the one used for the loupe view overlay info.<p>Press ESC to<br>"
                           "close this message.";
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
         }

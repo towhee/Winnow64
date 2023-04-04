@@ -115,6 +115,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    // undo freeze
+    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
+    // set the current index for all views that could be visible
+    tableView->setCurrentIndex(idx);
+    thumbView->setCurrentIndex(idx);
+    thumbView->setThumbParameters();
+    return;
     folderAndFileSelectionChange("/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0005.arw");
 //    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2023-03-22_0014_Zen2048.JPG");
     return;

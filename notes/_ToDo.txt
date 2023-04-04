@@ -14,6 +14,7 @@ WHAT'S NEW
 - tweaked tooltips
 
 BUGS / TO DO
+- G::isNewFileSelection req'd?
 - dmEmpty req'd?
 - Abort image cache before all decoders aborted
 - Warn when rotate thumbs if modify images = false
@@ -96,6 +97,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- PopUp does not return keyboard focus to Winnow, replaced with dialog
 - Crash when report row diagnostics and no folder selected
 - USB crash when filter on day (caused by qDebug statements)
 - Add modify on icon to statusbar

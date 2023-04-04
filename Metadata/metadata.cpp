@@ -746,6 +746,7 @@ bool Metadata::parseJPG(quint32 startOffset)
     }
     p.offset = startOffset;
     if (p.file.fileName() == "") {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::parseJPG" << "Blank file name";
         return false;
     }
@@ -814,6 +815,7 @@ bool Metadata::parseSidecar()
     }
 
     if (!sidecarFile.open(QIODevice::ReadOnly)) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::parseSidecar" << "Failed to open sidecar file" << sidecarPath;
         return false;
     }
@@ -838,6 +840,7 @@ bool Metadata::parseSidecar()
 
     // extract metadata from sidecar xmp
     if (p.instance != G::dmInstance)
+        if (G::isWarningLogger)
         qWarning() << "WARNING"
                    << "Metadata::parseSidecar  Instance conflict"
                    << "p.instance =" << p.instance
@@ -985,6 +988,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     p.fPath = path;
 
     if (p.file.isOpen()) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::readMetadata" << "File already open" << path;
         return false;
     }
@@ -1026,6 +1030,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         p.file.close();
         //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "Metadata::readMetadata" << "Could not close" << path << "after format was read";
         }
 
@@ -1033,6 +1038,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             p.file.close();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
             return false;
         }
@@ -1043,6 +1049,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     else {  // not open file
         QString msg =  "Unable to open file " + path + ".";
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
         G::error("Metadata::readMetadata", path, "Could not open p.file to read metadata.");
         return false;
@@ -1081,6 +1088,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     // check instance up-to-date
     if (instance != G::dmInstance) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata"
                    << "Instance clash"
                    << "this =" << instance
@@ -1095,6 +1103,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata"
                    << "NULL FILE REQUESTED FROM "
                    << source;
@@ -1142,6 +1151,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
         if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
