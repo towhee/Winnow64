@@ -57,9 +57,10 @@ public:
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
 //    void updateCategoryItems(QStringList itemList, QTreeWidgetItem *category);
+    void updateSearchCategoryCount(QMap<QString, int> itemMap, bool isFiltered);
     void updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
-    void addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
