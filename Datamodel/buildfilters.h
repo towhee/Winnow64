@@ -65,6 +65,7 @@ private:
     void abortIfRunning();
     void done();
     void appendUniqueItems();
+    void updateUnfilteredSearchCount();
     void updateFilteredCounts();
     void updateCategoryItems();
     void time(QString msg);
@@ -81,7 +82,7 @@ private:
 
     bool debugBuildFilters = false;
     bool reportTime = false;
-    quint64 totms = 0;
+    quint64 msTot = 0;
 
     // progress
     QMap <QString, int>uniqueItemCount;     // total unique items per category in filters

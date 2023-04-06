@@ -760,14 +760,14 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    qDebug() << "MW::keyReleaseEvent" << event;
+    //qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-        qDebug() << "MW::keyReleaseEvent event->key() == Qt::Key_Escape";
+        //qDebug() << "MW::keyReleaseEvent event->key() == Qt::Key_Escape";
         G::popUp->end();
         // stop loading a new folder
         if (!G::allMetadataLoaded) stop("Escape key");

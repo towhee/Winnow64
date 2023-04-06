@@ -986,6 +986,29 @@ void Filters::toggleExpansion()
 //    category->sortChildren(0, Qt::AscendingOrder);
 //}
 
+void Filters::updateSearchCategoryCount(QMap<QString, int> itemMap, bool isFiltered)
+{
+/*
+    Updates search category unfiltered counts.  The search items, "Search text" and
+    "No match" are predefined and not dynamically added by BuildFilters::appendUniqueItems.
+*/
+    int col;
+    if (isFiltered) col = 2;
+    else col = 3;
+
+    if (G::isLogger) G::log("Filters::updateSearchCategoryCount");
+
+    if (itemMap.contains("true"))
+        searchTrue->setData(col, Qt::EditRole, itemMap["true"]);
+    else
+        searchTrue->setData(col, Qt::EditRole, 0);
+
+    if (itemMap.contains("false"))
+        searchFalse->setData(col, Qt::EditRole, itemMap["false"]);
+    else
+        searchFalse->setData(col, Qt::EditRole, 0);
+}
+
 void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -1094,7 +1117,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
 //    category->sortChildren(0, Qt::AscendingOrder);
 }
 
-void Filters::addFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
+void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
     All the unique values for a category are collected into a QMap object in

@@ -855,6 +855,7 @@ void MW::searchTextEdit2()
     filters->expandItem(filters->search);
     filters->editItem(filters->searchTrue, 0);
 //    filters->update();
+    buildFilters->update();
     return;
 }
 void MW::searchTextEdit()

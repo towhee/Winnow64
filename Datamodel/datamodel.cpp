@@ -1815,9 +1815,10 @@ void DataModel::searchStringChange(QString searchString)
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::searchStringChange");
-    if (isDebug) qDebug() << "DataModel::searchStringChange" << "instance =" << instance
-                          << "searchString =" << searchString
-                          << currentFolderPath;
+    if (isDebug)
+         qDebug() << "DataModel::searchStringChange" << "instance =" << instance
+                  << "searchString =" << searchString
+                  << currentFolderPath;
     // update datamodel search string match
     mutex.lock();
     for (int row = 0; row < rowCount(); ++row)  {
@@ -2374,6 +2375,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     }
 
     if (!G::allMetadataLoaded) return true;
+    //if (!G::isNewFolderLoaded) return true;
     //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
 
     static int counter = 0;
@@ -2483,6 +2485,10 @@ void SortFilter::filterChange()
 
 void SortFilter::suspend(bool suspendFiltering)
 {
+/*
+    Sets the local suspendFiltering flag.  When true, filterAcceptsRow ignores calls.
+    When false the filtering is refreshed.
+*/
     if (G::isLogger) G::log("SortFilter::suspend");
     this->suspendFiltering = suspendFiltering;
     if (!suspendFiltering) invalidateFilter();
