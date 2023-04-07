@@ -491,11 +491,13 @@ bool ImageCache::nextToCache(int id)
     order to find the highest priority item to cache in the target range based on these
     criteria:
 
-    - isCaching and isCached are false.
+    • isCaching and isCached are false.
 
-    - decoderId matches item, isCaching is true and isCached = false. If this is the case
-      then we know the previous attempt failed, and we should try again, unless the
-      attempts are greater than maxAttemptsToCacheImage.
+    • decoderId matches item, isCaching is true and isCached = false. If this is the case
+      then we know the previous attempt failed, and we should try again if the failure was
+      because the file was already open, unless the attempts are greater than
+      maxAttemptsToCacheImage.
+
 */
     if (G::isLogger) G::log("ImageCache::nextToCache");
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
@@ -518,10 +520,19 @@ bool ImageCache::nextToCache(int id)
         int i = priorityList.at(p);
 
         if (icd->cacheItemList.at(i).isCached) continue;
-//        if (icd->cacheItemList.at(i).metadataLoaded) continue;
+        if (icd->cacheItemList.at(i).status == inValidImage) continue;
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage &&
             !G::allMetadataLoaded) continue;
         if (icd->cacheItemList.at(i).isCaching && id != icd->cacheItemList.at(i).threadId) continue;
+
+        // debug multi attempts
+        if (icd->cacheItemList.at(i).attempts > 0)
+            if (debugCaching)
+            qDebug() << "ImageCache::nextToCache"
+                     << "row =" << i
+                     << "attempt =" << icd->cacheItemList.at(i).attempts
+                     << "decoder status return =" << icd->cacheItemList.at(i).status
+                        ;
 
         icd->cache.toCacheKey = i;
         return true;
@@ -570,6 +581,7 @@ void ImageCache::fixOrphans()
         else {
             if (isCached) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
+            icd->cacheItemList[i].attempts = 0;
             if (inImageCache) icd->imCache.remove(fPath);
             emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
         }
@@ -626,7 +638,7 @@ void ImageCache::setSizeMB(int id, int cacheKey)
     After a decoder has converted the file into a QImage the sizeMB, dimensions (w,h) and
     target range are updated here.
 
-    If this is not done the ImageCache::makeRoom algorithm will not be updated correctly.
+    If this is not done the ImageCache::setTargetRange algorithm will not be updated correctly.
 */
     if (G::isLogger) G::log("ImageCache::setSizeMB");
     QImage *image = &decoder[id]->image;
@@ -646,7 +658,7 @@ void ImageCache::memChk()
     something else (another program) has used the system memory then reduce the size of the
     cache so it still fits.
 */
-    if (G::isLogger) G::log("ImageCache::makeRoom");
+    if (G::isLogger) G::log("ImageCache::memChk");
 
     // get available memory
     #ifdef Q_OS_WIN
@@ -758,6 +770,20 @@ QString ImageCache::reportCacheParameters()
 QString ImageCache::reportCache(QString title)
 {
     if (G::isLogger) G::log("ImageCache::reportCache");
+
+    QHash<int, QString> rptStatus;
+    rptStatus[0] = "Ready";
+    rptStatus[1] = "Busy";
+    rptStatus[2] = "Invalid";
+    rptStatus[3] = "Failed";
+    rptStatus[4] = "Video";
+    rptStatus[5] = "Clash";
+    rptStatus[6] = "NoDir";
+    rptStatus[7] = "NoFile";
+    rptStatus[8] = "NoMeta";
+    rptStatus[9] = "FileOpen";
+    rptStatus[10] = "Done";
+
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -780,6 +806,7 @@ QString ImageCache::reportCache(QString title)
                 << "Attempts"
                 << "Caching"
                 << "Cached"
+                << "Status"
                 << "imCached"
                 << "dmCached"
                 << "Metadata"
@@ -807,6 +834,7 @@ QString ImageCache::reportCache(QString title)
             << icd->cacheItemList.at(i).attempts
             << (icd->cacheItemList.at(i).isCaching ? "true" : "false")
             << (icd->cacheItemList.at(i).isCached ? "true" : "false")
+            << rptStatus[icd->cacheItemList.at(i).status]
             << (icd->imCache.contains(icd->cacheItemList.at(i).fPath) ? "true" : "false")
             << (dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool() ? "true" : "false")
             << (icd->cacheItemList.at(i).metadataLoaded ? "true" : "false")
@@ -1325,7 +1353,7 @@ void ImageCache::cacheSizeChange()
 {
     /*
     Called when changes are made to image cache parameters in preferences. The image cache
-    direction, priorities and target are reset.  makeRoom is executed.
+    direction, priorities and target are reset and orphans fixed.
     */
     if (G::isLogger) G::log("ImageCache::cacheSizeChange");
     mutex.lock();
@@ -1373,8 +1401,6 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     mutex.lock();
     currentPath = path;
     mutex.unlock();
-
-//    start();
 
     if (isRunning()) {
         mutex.lock();
@@ -1447,13 +1473,21 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cache.currMB = getImCacheSize();
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
+    QString errMsg = icd->cacheItemList[cacheKey].errMsg;
+    /*
+    QString k = QString::number(cacheKey).leftJustified((4));
+    qDebug().noquote() << "ImageCache::cacheImage"
+                       << "     decoder" << id
+                       << "row =" << k
+                       << "cache size =" << icd->cache.currMB
+                          ;
+                          */
     // set datamodel isCached = true
     emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
             // load in ImageView
-            //qDebug().noquote() << "ImageCache::cacheImage  emit loadImage";
             emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
             // revert central view
             emit imageCachePrevCentralView();
@@ -1496,19 +1530,21 @@ void ImageCache::fillCache(int id)
 
     Each decoder follows this basic pattern:
     - nextToCache
-    - decodeNextImage
-    - fillCache
-    - cacheImage
-      - makeRoom
-      - nextToDecache
+      - yes
+        - decodeNextImage
+        - fillCache
+        - cacheImage
+      - no
+        - fix orphans
 */
-
-//    if (abort) return;
 
     int cacheKey;       // row for image in cacheKeyHash
     cacheKey = -1;      // default = no image
 
     // check decoder return
+    int key = cacheKeyHash[decoder[id]->fPath];
+    icd->cacheItemList[key].errMsg = decoder[id]->errMsg;
+    icd->cacheItemList[key].status = static_cast<int>(decoder[id]->status);
     if (decoder[id]->status == ImageDecoder::Status::Done) {
          cacheKey = cacheKeyHash[decoder[id]->fPath];  // if not contains return -1
     }
@@ -1525,6 +1561,7 @@ void ImageCache::fillCache(int id)
                            << "Decoder DM instance" << decoder[id]->instance
                            << "DM instance" << dm->instance
                            << "Decoder id =" << id
+                           << "row =" << cacheKeyHash[decoder[id]->fPath]
                            << decoder[id]->fPath
                               ;
         }
@@ -1555,6 +1592,7 @@ void ImageCache::fillCache(int id)
                 if (decoder[id]->fPath != "")
                 qWarning() << "WARNING" << "ImageCache::fillCache File does not exist:"
                            << "Decoder id =" << id
+                           << "row =" << cacheKeyHash[decoder[id]->fPath]
                            << decoder[id]->fPath
                               ;
         }
@@ -1566,6 +1604,7 @@ void ImageCache::fillCache(int id)
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageCache::fillCache Unassigned decoder:"
                            << "Decoder id =" << id
+                           << "row =" << cacheKeyHash[decoder[id]->fPath]
                            << "Decoder path =" << decoder[id]->fPath
                               ;
         }
@@ -1579,6 +1618,7 @@ void ImageCache::fillCache(int id)
                     qWarning() << "WARNING" << "ImageCache::fillCache  Null image:"
                                << "Decoder" << id
                                << "Image width = 0"
+                               << "row =" << cacheKeyHash[decoder[id]->fPath]
                                << "Decoder path =" << decoder[id]->fPath
                                   ;
                 }
@@ -1591,6 +1631,7 @@ void ImageCache::fillCache(int id)
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageCache::fillCache  Folder does not exist:"
                        << "Decoder" << id
+                       << "row =" << cacheKeyHash[decoder[id]->fPath]
                        << "Decoder path =" << decoder[id]->fPath
                           ;
             emit centralMsg(decoder[id]->errMsg);
@@ -1603,10 +1644,18 @@ void ImageCache::fillCache(int id)
             qWarning() << "WARNING" << "ImageCache::fillCache  Decoder status not = Done:"
                        << "Decoder" << id
                        << "Decoder status enum =" << decoder[id]->status
+                       << "row =" << cacheKeyHash[decoder[id]->fPath]
                        << "Decoder path =" << decoder[id]->fPath
                           ;
         }
         //*/
+
+        // report error to ImageView::load
+        if (cacheKey == -1) {
+            if (decoder[id]->fPath == dm->currentFilePath) {
+                emit centralMsg(decoder[id]->errMsg);
+            }
+        }
 
     }
 
@@ -1679,7 +1728,6 @@ void ImageCache::run()
     setPriorities(icd->cache.key);
     setTargetRange();
     fixOrphans();
-    //if (cacheSizeHasChanged) makeRoom(0, 0);
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;

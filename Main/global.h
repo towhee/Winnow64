@@ -122,6 +122,7 @@ namespace G
         RotationDegreesColumn,
         ShootingInfoColumn,
         SearchTextColumn,
+        //LoadErrColumn,
         TotalColumns    // insert additional columns before this
     };
 

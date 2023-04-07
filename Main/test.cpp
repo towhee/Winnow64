@@ -115,6 +115,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    int s = ImageDecoder::Status::FileOpen;
+    int s1 = 9;
+    qDebug() << s << s1;
+    return;
+
     // undo freeze
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     // set the current index for all views that could be visible

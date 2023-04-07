@@ -45,6 +45,7 @@ public:
         int attempts;               // number of tries to cache item
         int threadId;               // decoder thread working on image
         bool isCached;              // has image been cached
+        int status;                 // decoder return status
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
         bool isVideo;               // videos are not cached
@@ -58,6 +59,7 @@ public:
         quint32 lengthFull;
         int samplesPerPixel;        // req'd for tiff
         QByteArray iccBuf;
+        QString errMsg;
         QString comment;            // for debugging
     } cacheItem;
 

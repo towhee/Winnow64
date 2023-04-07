@@ -37,6 +37,7 @@ public:
     enum Status {
         Ready,
         Busy,
+        Invalid,
         Failed,
         Video,
         InstanceClash,
@@ -46,6 +47,7 @@ public:
         FileOpen,
         Done
     } status;
+
 
 protected:
     void run() Q_DECL_OVERRIDE;
