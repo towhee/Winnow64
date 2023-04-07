@@ -207,7 +207,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     /* Get cached image. Must check if image has been cached before calling
     icd->imCache.find(fPath, image) to prevent a mismatch between the fPath
     index and the image in icd->imCache hash table. Also must check in case
-    where and ejected drive has resulted in clearing icd->cacheItemList. */
+    where an ejected drive has resulted in clearing icd->cacheItemList. */
 
     int dmRow = dm->rowFromPath(fPath);
     if (dmRow == -1) return false;
@@ -245,7 +245,8 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
     }
     else {
-//        setCentralMessage("Unable to decode " + fPath);
+        // report why no image cached
+        emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
     }
 
     /* When the program is opening or resizing it is possible this function could be called

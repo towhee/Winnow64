@@ -1903,15 +1903,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-//    // check if current selection = current index.  If so, nothng to do
-//    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
-//        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-//            "Already current file selection so exit");
-//        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
-//        dm->currentSfRow = current.row();
-//        dm->currentSfIdx = dm->sf->index(current.row(), 0);
-//        return;
-//    }
+    /* check if current selection = current index.  If so, nothng to do
+    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
+        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
+            "Already current file selection so exit");
+        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
+        dm->currentSfRow = current.row();
+        dm->currentSfIdx = dm->sf->index(current.row(), 0);
+        return;
+    }
+    */
+
     /*
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
@@ -1942,62 +1944,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
-
-//    // update delegates so they can highlight the current item
-//    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-//    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-
-//    // update anchor for shift click mouse contiguous selections
-//    thumbView->shiftAnchorIndex = current;
-//    gridView->shiftAnchorIndex = current;
-
-//    MOVED TO Selection::currentIndex
-//    // don't scroll if mouse click source (screws up double clicks and disorients users)
-//    if (G::fileSelectionChangeSource == "TableMouseClick") {
-//        G::ignoreScrollSignal = true;
-//        if (gridView->isVisible()) gridView->scrollToCurrent();
-//        if (thumbView->isVisible()) thumbView->scrollToCurrent();
-//    }
-//    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-//        G::ignoreScrollSignal = true;
-//        if (gridView->isVisible()) gridView->scrollToCurrent();
-//        if (tableView->isVisible()) tableView->scrollToCurrent();
-//    }
-//    else if (G::fileSelectionChangeSource == "GridMouseClick") {
-//        G::ignoreScrollSignal = true;
-//        if (thumbView->isVisible()) thumbView->scrollToCurrent();
-//        if (tableView->isVisible()) tableView->scrollToCurrent();
-//    }
-//    else {
-//        if (gridView->isVisible()) gridView->scrollToCurrent();
-//        if (thumbView->isVisible())  thumbView->scrollToCurrent();
-//        if (tableView->isVisible()) tableView->scrollToCurrent();
-//    }
-
-//    // update delegates to show current and set focus to enable shift + direction keys
-//    if (gridView->isVisible()) gridView->updateView();
-//    if (thumbView->isVisible()) thumbView->updateView();
-
-//    // set focus to enable shift + direction keys
-//    if (gridView->isVisible()) gridView->setFocus();
-//    if (thumbView->isVisible()) thumbView->setFocus();
-
-//    // icons may require resizing to fit
-//    if (thumbView->isVisible()) thumbView->repaint();
-//    if (gridView->isVisible()) gridView->repaint();
-
-    // reset table, grid or thumb item clicked
-//    G::fileSelectionChangeSource = "";
-//    G::ignoreScrollSignal = false;
-
-    // check if current selection = current index.  If so, do not update loupe,
-    // image cache
-//    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
-//        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-//            "Already current file selection so exit");
-//        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
-//        return;
-//    }
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
@@ -2546,20 +2492,10 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
-    G::ignoreScrollSignal = true;
-    if (thumbView->isVisible()) thumbView->scrollToCurrent();
-    if (gridView->isVisible()) gridView->scrollToCurrent();
-    if (tableView->isVisible()) tableView->scrollToCurrent();
-    G::ignoreScrollSignal = false;
     if (reset(src + QString::number(count++))) return;
 
-//    G::isLinearLoadDone = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
-
-    // finalize image cache target range. Probably started to cache images before
-    // all the metadata was read in MetaRead, so icd->cacheItemList not finished.
-//    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
@@ -2581,12 +2517,6 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-
-    // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
-//    emit refreshImageCache();
-//    if (reset()) return;
-//    if (G::isFileLogger) Utilities::log("MW::loadConcurrentMetaDone", "emit setImageCachePosition for " + dm->currentFilePath);
-//    emit setImageCachePosition(dm->currentFilePath, "MW::loadConcurrentMetaDone");
 
     blocker.unblock();
 }

@@ -858,6 +858,7 @@ void MW::searchTextEdit2()
     buildFilters->update();
     return;
 }
+
 void MW::searchTextEdit()
 {
     if (G::isLogger) G::log("MW::searchTextEdit");

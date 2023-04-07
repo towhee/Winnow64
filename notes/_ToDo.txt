@@ -14,9 +14,12 @@ WHAT'S NEW
 - tweaked tooltips
 
 BUGS / TO DO
+- undo datamodel LoadErrColumn
+- undo ImageView::load errMsg?
+
+- Select multiple folders
 - G::isNewFileSelection req'd?
 - dmEmpty req'd?
-- Abort image cache before all decoders aborted
 - Warn when rotate thumbs if modify images = false
 - Make sure HEIC also works on PC including thumbs
 - Get thumbnail from HEIC.
@@ -52,6 +55,7 @@ BUGS / TO DO
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - DNG without JPG preview: show TIFF?
 - DNG without jpg preview: add one similar to TIFF
+- TIF with more than 3 samplesperpixel
 - TIF LZW and predictor = 2 (crashes)
 - Tiff with compression = 7, 8 not supported /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
@@ -97,6 +101,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- New folder scroll to start after scrolled ahead
 - PopUp does not return keyboard focus to Winnow, replaced with dialog
 - Crash when report row diagnostics and no folder selected
 - USB crash when filter on day (caused by qDebug statements)

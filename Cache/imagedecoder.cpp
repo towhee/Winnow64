@@ -66,6 +66,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     fPath = n.fPath;
     cacheKey = n.key;       // used in ImageCache::fixOrphans
     this->instance = instance;
+    errMsg = "";
 //    qDebug() << "ImageDecoder::decode" << fPath;
     start();
 }
@@ -122,6 +123,7 @@ bool ImageDecoder::load()
 
     // is file already open by another process
     if (imFile.isOpen()) {
+        errMsg = "File already open.";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  File already open" << fPath;
         status = Status::FileOpen;
@@ -153,27 +155,30 @@ bool ImageDecoder::load()
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
+            errMsg = "Could not read embedded JPG because offset = 0.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
 
         // try to read the data
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
+            errMsg = "Could not read embedded JPG because offset is invalid.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load Illegal offset to image " << fPath;
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
 
         QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
+            errMsg = "Could not read embedded JPG because buffer length = 0.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Zero JPG buffer" << fPath;
             imFile.close();
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
 
@@ -181,12 +186,13 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
+            errMsg = "Could not read JPG because decoder failed.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  image.loadFromData failed"
                        << "instance =" << instance
                        << fPath;
             imFile.close();
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
         imFile.close();
@@ -209,10 +215,11 @@ bool ImageDecoder::load()
 
         #ifdef Q_OS_MAC
         if (!image.load(fPath)) {
+            errMsg = "Could not read because decoder failed.";
             imFile.close();
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
         imFile.close();
@@ -224,12 +231,11 @@ bool ImageDecoder::load()
         // check for sampling format we cannot read
         if (n.samplesPerPixel > 3) {
             imFile.close();
-            QString err = "Could not read tiff because " + QString::number(n.samplesPerPixel)
+            errMsg = "Could not read tiff because " + QString::number(n.samplesPerPixel)
                     + " samplesPerPixel > 3.";
             if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageDecoder::load " << err << fPath;
-//            G::error("ImageDecoder::load", fPath, err);
-            status = Status::Failed;
+            qWarning() << "WARNING" << "ImageDecoder::load " << errMsg << fPath;
+            status = Status::Invalid;
             return false;
         }
 
@@ -238,7 +244,7 @@ bool ImageDecoder::load()
         if (!tiff.decode(fPath, n.offsetFull, image)) {
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "
-                        "Trying Qt tiff library to decode" + fPath + ". ";
+                          "Trying Qt tiff library to decode" + fPath + ". ";
 //            G::error("ImageDecoder::load", fPath, err);
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load "
@@ -248,11 +254,12 @@ bool ImageDecoder::load()
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
                 imFile.close();
+                errMsg = "Could not read because decoder failed.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //                QString err = "Could not decode using Qt.";
 //                G::error("ImageDecoder::load", fPath, err);
-                status = Status::Failed;
+                status = Status::Invalid;
                 return false;
             }
         }
@@ -273,10 +280,11 @@ bool ImageDecoder::load()
                     //*/
         if (!image.load(fPath)) {
             imFile.close();
+            errMsg = "Could not read because decoder failed.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
 //            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
         imFile.close();
@@ -284,7 +292,7 @@ bool ImageDecoder::load()
 
     // image loaded, check for null image
     if (image.width() == 0 || image.height() == 0) {
-        status = Status::Failed;
+        status = Status::Invalid;
         return false;
     }
 

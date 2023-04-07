@@ -107,6 +107,8 @@ private:
     int maxAttemptsToCacheImage = 10000;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
+    int fileIsOpen = ImageDecoder::Status::FileOpen;
+    int inValidImage = ImageDecoder::Status::Invalid;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
