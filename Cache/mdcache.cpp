@@ -528,7 +528,7 @@ void MetadataCache::readIconChunk()
 void MetadataCache::readMetadataChunk()
 {
 /*
-    Load the metadata for all the image files in the target range.
+    Load the metadata for a4ll the image files in the target range.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MetadataCache::readMetadataChunk");
 

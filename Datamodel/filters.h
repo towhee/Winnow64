@@ -137,7 +137,7 @@ private:
     int indentation;
     bool hdrJustClicked;
     QModelIndex searchTrueIdx;
-    bool debugFilters;
+    bool debugFilters = false;
 };
 
 #endif // FILTERS_H

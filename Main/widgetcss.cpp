@@ -264,7 +264,7 @@ QString WidgetCSS::toolTip()
         "background-color: " + QColor(l20,l20,l20).name() + ";"
         "border: 1px solid gray;"
         "margin: 3px;"
-//        "color:black;"
+        "color: white;"
         "font-size:" + QString::number(fontSize) + "pt;"
     "}"
     ;
