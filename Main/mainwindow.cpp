@@ -5335,7 +5335,7 @@ void MW::shareFiles()
     }
 
     // Convert the file urls to native NSURLs  src snippets and chatGPT
-    Mac::share(urls);
+//    Mac::share(urls);
 }
 
 void MW::copyFiles()
@@ -5539,8 +5539,8 @@ void MW::deleteFolder()
         QString trash = "recycle bin";
         #endif
         #ifdef Q_OS_MAC
-        #endif
         QString trash = "trash";
+        #endif
         msgBox.setText("This operation will move the folder<br>"
                        + dirToDelete +
                        "<br>to the " + trash);

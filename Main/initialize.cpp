@@ -296,7 +296,7 @@ void MW::createMDCache()
     // MetaRead
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-    metaReadThread->setPriority(QThread::TimeCriticalPriority);
+    //metaReadThread->setPriority(QThread::TimeCriticalPriority);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
@@ -402,7 +402,7 @@ void MW::createImageCache()
 
 //    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
-    imageCacheThread->setPriority(QThread::LowestPriority);
+    //imageCacheThread->setPriority(QThread::LowestPriority);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -410,8 +410,10 @@ void MW::createImageCache()
     // LINEAR LOAD PROCESS CONNECTIONS
 
     // load image cache for a new folder
-    connect(metadataCacheThread, SIGNAL(loadImageCache()),
-            this, SLOT(loadImageCacheForNewFolder()));
+//    connect(metadataCacheThread, SIGNAL(loadImageCache()),
+//            this, SLOT(loadImageCacheForNewFolder()));
+//    connect(metadataCacheThread, &MetadataCache::loadImageCache,
+//            this, &MW::loadImageCacheForNewFolder);
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));

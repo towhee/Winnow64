@@ -406,9 +406,22 @@ void IconView::updateVisible(int sfRow)
 
         By iterating back and forth the firstVisible and lastVisible is determined.
 */
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("IconView::updateVisibleCells", objectName());
+    if (isDebug || G::isLogger || G::isFlowLogger) G::log("IconView::updateVisible", objectName());
 
     int n = dm->sf->rowCount() - 1;
+
+    if (G::isInitializing || n > 10000 || G::dmEmpty) {
+        firstVisibleCell = 0;
+        midVisibleCell = 0;
+        lastVisibleCell = 0;
+        visibleCellCount = 0;
+        return;
+    }
+
+//    qDebug() << "IconView::updateVisibleCells  row" << sfRow
+//             << "n =" << n
+//             << "G::dmEmpty =" << G::dmEmpty
+//                ;
 
     if (sfRow >= 0) {
         QSize cell = getCellSize();
