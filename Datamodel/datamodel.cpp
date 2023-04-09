@@ -476,8 +476,10 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 
     // do some initializing
     fileFilters->clear();
-    foreach (const QString &str, metadata->supportedFormats)
+    foreach (const QString &str, metadata->supportedFormats) {
             fileFilters->append("*." + str);
+            if (abortLoadingModel) return endLoad(false);
+    }
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
@@ -509,6 +511,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
+            qApp->processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }

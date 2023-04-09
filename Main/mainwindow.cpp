@@ -2132,6 +2132,7 @@ bool MW::stop(QString src)
     if (G::isLogger || G::isFlowLogger) G::log("MW::stop", G::currRootFolder);
 
     G::stop = true;
+    dm->abortLoadingModel = true;
     dm->instance++;
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
@@ -2276,6 +2277,7 @@ bool MW::reset(QString src)
     imageView->isFit = true;                // req'd for initial zoom cursor condition
     dm->currentSfRow = 0;
     dm->clearDataModel();
+    dm->abortLoadingModel = false;
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
