@@ -14,9 +14,6 @@ WHAT'S NEW
 - tweaked tooltips
 
 BUGS / TO DO
-- undo datamodel LoadErrColumn
-- undo ImageView::load errMsg?
-
 - Select multiple folders
 - G::isNewFileSelection req'd?
 - dmEmpty req'd?

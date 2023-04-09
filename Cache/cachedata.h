@@ -40,7 +40,7 @@ public:
         int key;                    // same as row in dm->sf (sorted and filtered datamodel)
         int origKey;                // the key of a previous filter or sort
         QString fPath;              // image full path
-//        bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
+        bool isUpdated;             // item updated by MetaRead or MDCache
         bool isCaching;             // decoder is working on image
         int attempts;               // number of tries to cache item
         int threadId;               // decoder thread working on image
@@ -59,6 +59,7 @@ public:
         quint32 lengthFull;
         int samplesPerPixel;        // req'd for tiff
         QByteArray iccBuf;
+        // messaging
         QString errMsg;
         QString comment;            // for debugging
     } cacheItem;

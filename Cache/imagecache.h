@@ -107,6 +107,7 @@ private:
     int maxAttemptsToCacheImage = 10000;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
+    bool isCacheItemListComplete = false;
     int fileIsOpen = ImageDecoder::Status::FileOpen;
     int inValidImage = ImageDecoder::Status::Invalid;
 
@@ -120,6 +121,8 @@ private:
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
+    bool cacheItemListComplete();
+    void updateTargets();
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
