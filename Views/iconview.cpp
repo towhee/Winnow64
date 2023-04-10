@@ -1692,7 +1692,6 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
                 //*/
 
     if (!event->modifiers()) {
-//        if  (event->modifiers() == Qt::NoModifier/*&& isMouseDrag*/) {
         QString src = "IconView::mouseReleaseEvent";
         m2->sel->currentIndex(idx);  // req'd when click on current with others also selected
 //        m2->fileSelectionChange(idx, QModelIndex(), true, src);

@@ -234,13 +234,6 @@ void MW::createMDCache()
         metadataCacheThread->cacheAllIcons = false;
     }
 
-//    if (setting->contains("iconChunkSize")) {
-//        metadataCacheThread->metadataChunkSize = setting->value("iconChunkSize").toInt();
-//    }
-//    else {
-//        metadataCacheThread->metadataChunkSize = 3000;
-//    }
-
     // not being used
     metadataCacheScrollTimer = new QTimer(this);
     metadataCacheScrollTimer->setSingleShot(true);
