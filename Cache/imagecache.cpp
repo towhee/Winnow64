@@ -1733,13 +1733,12 @@ void ImageCache::fillCache(int id)
         cacheImage(id, cacheKey);
     }
 
-//    if (!isCacheItemListComplete) updateTargets();
-
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (!abort && nextToCache(id) && isValidKey(icd->cache.toCacheKey)) {
         decodeNextImage(id);
     }
     else { // caching completed
+        // did caching start before cacheItemList was completed?
         if (!isCacheItemListComplete) updateTargets();
         decoder[id]->setReady();
         if (orphansFound) fixOrphans();
