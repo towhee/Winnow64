@@ -98,6 +98,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- IconView right click selecting image on PC
 - New folder scroll to start after scrolled ahead
 - PopUp does not return keyboard focus to Winnow, replaced with dialog
 - Crash when report row diagnostics and no folder selected
