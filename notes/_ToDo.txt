@@ -87,6 +87,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- Release 1.34
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
 - Portrait aspect ratios wrong
