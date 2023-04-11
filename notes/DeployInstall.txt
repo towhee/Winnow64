@@ -37,18 +37,21 @@ NORMAL DEPLOYMENT
           D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
         - If changes other than binary, update and save the releaseDate in
           D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
-        - Run the test batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallationtest.bat
-          to test installation works (download at http://winnow.ca/winnow_win/test/winnowinstalleronline.exe) or in
+		- TEST
+			- Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallationtest.bat
 			- changes drive to D:
 			- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
 			- copies winnow.exe from release to package
 			- recreates the repository in D:\My Projects\Winnow Project\WinnowInstallOnline
 			- creates a new binary installer winnowinstalleronline.exe
 			- runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe
-			  to http://165.227.46.158/winnow_win/current
-			- If installation works then either run onlineinstallation.bat (next item) or use WinSCP to duplicate
-			  in folder /var/www/html/winnow_win/  test to current and 1.xx where 1.xx = current version for history.
-        - Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+			  to http://165.227.46.158/winnow_win/test
+			- Run the test installer http://165.227.46.158/winnow_win/test/winnowinstalleronline.exe
+			- If winnow installs then either:
+			  - In WinSCP in http://165.227.46.158/winnow_win duplicate test to current
+			  - or follow RELEASE.
+		- RELEASE
+            - Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
 			- changes drive to D:
 			- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
 			- copies winnow.exe from release to package
