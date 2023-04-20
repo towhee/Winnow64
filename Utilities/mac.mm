@@ -1,7 +1,17 @@
 #include "mac.h"
 #import <Foundation/Foundation.h>
+#import <Social/Social.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <AppKit/NSSharingService.h>
+
+@interface SharingDelegate : NSObject<NSSharingServicePickerDelegate>
+@end
+
+@implementation SharingDelegate
+- (void)sharingServicePicker:(NSSharingServicePicker *)sharingServicePicker didChooseSharingService:(NSSharingService *)service {
+    NSLog(@"Sharing service chosen: %@", service);
+}
+@end
 
 void Mac::availableMemory()
 {
@@ -93,24 +103,22 @@ float Mac::getMouseCursorMagnification()
     return cur_scale;
 }
 
-void Mac::share(QList<QUrl> urls)
+void Mac::share(QList<QUrl> &urls, WId wId)
 {
     if (G::isLogger) G::log("Mac::share");
-
-    QWidget *nativeWidget = new QWidget;
-    NSView *view = reinterpret_cast<NSView *>(nativeWidget->winId());
+    NSView *view = reinterpret_cast<NSView *>(wId);
+    NSRect r = [view bounds];
+    NSRect rect = NSMakeRect(r.origin.x + r.size.width / 2,
+                             r.origin.y + r.size.height / 2,
+                             10, 10);
     NSMutableArray *nsFileUrls = [NSMutableArray array];
     for (const auto &url : urls) {
         NSURL *nsFileUrl = url.toNSURL();
         [nsFileUrls addObject:nsFileUrl];
     }
 
-    // Create an NSSharingServicePicker and present it
+    SharingDelegate *delegate = [[SharingDelegate alloc] init];
     NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:nsFileUrls];
-//    [picker setDelegate:nil];
-//    [picker setShowsServicesButton:NO];
-//    [picker setSourceRect:NSZeroRect];
-    [picker showRelativeToRect:view];
-//    [picker setSourceView:nativeWidgetView];
-//    [picker shareFiles:nsFileUrls];
+    [picker setDelegate:delegate];
+    [picker showRelativeToRect:rect ofView:view preferredEdge:NSMaxYEdge];
 }

@@ -371,6 +371,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
     if (duration.isNull()) duration = "XXX";
     bool isSelected = dm->isSelected(row);
+    bool isCurrentIndex = row == dm->currentSfIdx.row();
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool isMissingThumb = index.model()->index(row, G::MissingThumbColumn).data().toBool();
@@ -460,9 +461,14 @@ void IconViewDelegate::paint(QPainter *painter,
              << "selected item =" << option.state.testFlag(QStyle::State_Selected);
 //             */
 
+    qDebug() << "IconViewDelegate::paint"
+             << "row =" << row
+             << "dm->currentSfIdx.row() =" << dm->currentSfIdx.row()
+             << "isCurrentIndex" << isCurrentIndex
+        ;
     // current index item
-    if (row == currentRow) {
-//    if (row == dm->currentSfRow) {
+    if (isCurrentIndex) {
+        //if (row == currentRow) {
         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
         painter->setPen(currentPen);
         painter->drawRoundedRect(currRect, 8, 8);

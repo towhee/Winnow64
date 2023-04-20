@@ -264,6 +264,7 @@ void MW::createActions()
     ejectAction->setShortcutVisibleInContextMenu(true);
     addAction(ejectAction);
     connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromMainMenu);
+    connect(fsTree, &FSTree::renameEjectAction, this, &MW::renameEjectUsbMenu);
 
     ejectActionFromContextMenu = new QAction(tr("Eject Usb Drive"), this);
     ejectActionFromContextMenu->setObjectName("ingest");
@@ -424,26 +425,27 @@ void MW::createActions()
     addAction(deleteFSTreeFolderAction);
     connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
-    shareFilesAction = new QAction(tr("Share fil(s)"), this);
+    shareFilesAction = new QAction(tr("Share..."), this);
     shareFilesAction->setObjectName("shareFiles");
+    shareFilesAction->setShortcutVisibleInContextMenu(true);
     addAction(shareFilesAction);
     connect(shareFilesAction, &QAction::triggered, this, &MW::shareFiles);
 
-    copyFilesAction = new QAction(tr("Copy file(s)"), this);
+    copyFilesAction = new QAction(tr("Copy files"), this);
     copyFilesAction->setObjectName("copyFiles");
     copyFilesAction->setShortcutVisibleInContextMenu(true);
     copyFilesAction->setShortcut(QKeySequence("Ctrl+C"));
     addAction(copyFilesAction);
     connect(copyFilesAction, &QAction::triggered, this, &MW::copyFiles);
 
-    copyImageAction = new QAction(tr("Copy image"), this);
+    copyImageAction = new QAction(tr("Copy images"), this);
     copyImageAction->setObjectName("copyImage");
     copyImageAction->setShortcutVisibleInContextMenu(true);
     copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
     addAction(copyImageAction);
     connect(copyImageAction, &QAction::triggered, imageView, &ImageView::copyImage);
 
-    searchTextEditAction = new QAction(tr("Search for ..."), this);
+    searchTextEditAction = new QAction(tr("Search for..."), this);
     searchTextEditAction->setObjectName("searchTextEdit");
     searchTextEditAction->setShortcutVisibleInContextMenu(true);
     addAction(searchTextEditAction);
@@ -1544,6 +1546,9 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    #ifdef Q_OS_MAC
+    editMenu->addAction(shareFilesAction);
+    #endif
     editMenu->addAction(copyFilesAction);
     editMenu->addAction(copyImageAction);
     editMenu->addAction(copyImagePathFromContextAction);
@@ -1875,6 +1880,9 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction3);
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
+    #ifdef Q_OS_MAC
+    thumbViewActions->append(shareFilesAction);
+    #endif
     thumbViewActions->append(copyFilesAction);
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
@@ -2010,6 +2018,12 @@ void MW::enableEjectUsbMenu(QString path)
     if (G::isLogger) G::log("MW::enableEjectUsbMenu");
     if(Usb::isUsb(path)) ejectAction->setEnabled(true);
     else ejectAction->setEnabled(false);
+}
+
+void MW::renameEjectUsbMenu(QString path)
+{
+    qDebug() << "MW::renameEjectUsbMenu" << path;
+    ejectAction->setText("Eject Usb Drive ");
 }
 
 void MW::enableSelectionDependentMenus()

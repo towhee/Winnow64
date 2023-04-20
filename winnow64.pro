@@ -50,8 +50,7 @@ QT += multimediawidgets
 QT += concurrent
 #QT += network
 
-HEADERS += Cache/cachedata.h \
-    Dialogs/addthumbnailsdlg.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -67,6 +66,7 @@ HEADERS += Datamodel/HashMap.h
 HEADERS += Datamodel/HashNode.h
 HEADERS += Datamodel/selection.h
 HEADERS += Dialogs/aboutdlg.h
+HEADERS += Dialogs/addthumbnailsdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
 HEADERS += Dialogs/editlistdlg.h
@@ -101,6 +101,7 @@ HEADERS += File/ingest.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/stack.h
+HEADERS += Image/subject.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
 HEADERS += ImageFormats/Canon/canon.h
@@ -174,8 +175,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Dialogs/addthumbnailsdlg.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -188,6 +188,7 @@ SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
 SOURCES += Datamodel/selection.cpp
 SOURCES += Dialogs/aboutdlg.cpp
+SOURCES += Dialogs/addthumbnailsdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
 SOURCES += Dialogs/editlistdlg.cpp
@@ -220,6 +221,7 @@ SOURCES += File/ingest.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
+SOURCES += Image/subject.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
@@ -406,37 +408,20 @@ DISTFILES += notes/snippets.txt
 DISTFILES += notes/users.txt
 DISTFILES += notes/xmp.txt
 
-#include(Lib/zlib/zlib.pri)
-#include(Lib/libtiff/libtiff.pri)
-
-#macx:QMAKE_MAC_SDK = macosx10.14
-#macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.14
 macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
 #macx:LIBS += -framework ColorSync
 macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
-# lcms
-#macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
-#macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
-#macx: DEPENDPATH += $$PWD/Lib/lcms2/include
-#macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
-
-
-#win32:QMAKE_CXXFLAGS += /MD
+# opencv
+macx:INCLUDEPATH += "/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/include/opencv4"
+macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
 
 # zLib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
-
-# lcms not using compiled lib: compiling source in project using D:\My Projects\Winnow Project\Winnow64\Lcms2
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
-#win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-#win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
-
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
@@ -449,15 +434,3 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llib
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
-
-## libde265 (frame parallel)
-#CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-#else: CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
-#INCLUDEPATH += $$PWD/Lib/libde265/include
-#DEPENDPATH  += $$PWD/Lib/libde265/release
-
-## libheif
-#CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-#else: CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
-#INCLUDEPATH += $$PWD/Lib/libheif/include
-#DEPENDPATH +=  $$PWD/Lib/libheif/release

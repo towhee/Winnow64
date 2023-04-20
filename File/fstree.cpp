@@ -486,6 +486,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         rightClickIndex = indexAt(event->pos());
         if (rightClickIndex.isValid()) {
             rightMouseClickPath = rightClickIndex.data(Qt::ToolTipRole).toString();
+            qDebug() << "FSTree::mousePressEvent" << rightMouseClickPath;
+            emit renameEjectAction(rightMouseClickPath);
         }
         return;
     }
@@ -507,7 +509,7 @@ void FSTree::mouseReleaseEvent(QMouseEvent *event)
 void FSTree::mouseMoveEvent(QMouseEvent *event)
 {
     QTreeView::mouseMoveEvent(event);
-//    QModelIndex idx = indexAt(event->pos());
+    QModelIndex idx = indexAt(event->pos());
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)

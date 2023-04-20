@@ -231,11 +231,13 @@ bool ImageCache::cacheItemListComplete()
     if (G::isLogger) G::log("ImageCache::cacheItemListComplete");
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
         if (!icd->cacheItemList.at(i).isUpdated) {
+            /*
             qDebug().noquote() << "ImageCache::cacheItemListComplete"
                      << "first row" << i
                      << "found not updated"
                         ;
             return false;
+            //*/
         }
     }
     return true;

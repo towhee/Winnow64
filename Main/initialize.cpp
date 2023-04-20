@@ -499,7 +499,7 @@ void MW::createThumbView()
     // trigger fileSelectionChange
 //    connect(thumbView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
 
-    connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
+//    connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
@@ -556,7 +556,7 @@ void MW::createTableView()
     thumbView.
 */
     if (G::isLogger) G::log("MW::createTableView");
-    tableView = new TableView(dm);
+    tableView = new TableView(this, dm);
     tableView->setAutoScroll(false);
 
     if (isSettings) {
@@ -586,8 +586,6 @@ void MW::createTableView()
     // sync scrolling between tableview and thumbview
     connect(tableView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::tableHasScrolled);
-    // update status bar when selection count changes
-    connect(tableView, &TableView::selectionChange, this, &MW::updateStatus);
 }
 
 void MW::createSelection()
@@ -595,10 +593,9 @@ void MW::createSelection()
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
     connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
-    connect(tableView, &TableView::fileSelectionChange, sel, &Selection::currentIndex);
-//    connect(sel, &Selection::currentChanged, this, &MW::fileSelectionChange);
-//    connect(sel, &Selection::setCurrentRow, metaReadThread, &MetaRead::setCurrentRow);
     connect(sel, &Selection::loadConcurrent, this, &MW::loadConcurrent);
+    connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
+    connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
 }
 
 void MW::createVideoView()

@@ -16,6 +16,7 @@ public:
     void select(QModelIndex sfIdx, QModelIndex sfIdx2 = QModelIndex());
     void select(int sfRow);
     void select(QString &fPath);
+    void updateCurrentIndex(QModelIndex sfIdx);
     void currentIndex(QModelIndex sfIdx);
     void currentRow(int sfRow);
     void currentPath(QString &fPath);
@@ -40,6 +41,7 @@ public:
     void recover();
 
     QModelIndexList selectedRows;
+    QItemSelectionModel *sm;
 
 signals:
     void fileSelectionChange(QModelIndex idx,
@@ -48,17 +50,20 @@ signals:
                         QString src = "Selection::currentChanged") ;
 //    void setCurrentRow(int row, QString src);
     void loadConcurrent(int sfRow, bool scrollOnly = false);
+    void updateStatus(bool, QString, QString);
 
 public slots:
 //    void currentChanged(QModelIndex idx, QModelIndex idx2 = QModelIndex());
 //    void current(QModelIndex sfIdx);
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
 private:
     DataModel *dm;
     IconView *thumbView;
     IconView *gridView;
     TableView *tableView;
-    QItemSelectionModel *sm;
+//    QItemSelectionModel *sm;
+    QModelIndex shiftAnchorIndex;
 
     bool isDebug;
 };

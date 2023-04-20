@@ -73,6 +73,8 @@ public:
     bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;
 
+    void showRubber(QRect r);
+
     QString diagnostics();
 
 public slots:
