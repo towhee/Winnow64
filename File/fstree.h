@@ -94,6 +94,7 @@ signals:
     void folderSelection();
     void abortLoadDataModel();
     void deleteFiles(QStringList srcPaths);
+    void renameEjectAction(QString path);
 
 private:
 	QModelIndex dndOrigSelection;

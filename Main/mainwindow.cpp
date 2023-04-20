@@ -5333,11 +5333,11 @@ void MW::shareFiles()
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
-        qDebug() << "IconView::shareFiles" << fPath;
     }
 
-    // Convert the file urls to native NSURLs  src snippets and chatGPT
-//    Mac::share(urls);
+    WId wId = window()->winId();
+
+    Mac::share(urls, wId);
 }
 
 void MW::copyFiles()

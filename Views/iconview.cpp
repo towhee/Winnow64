@@ -1645,7 +1645,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
         if (event->modifiers() & Qt::ShiftModifier) {
             // check attempt to deselect only selected item (must always be one selected)
             m2->sel->select(idx, shiftAnchorIndex);
-            shiftAnchorIndex = QModelIndex();
+            shiftAnchorIndex = idx;
             dragQueue.append(idx.row());
         }
     }
@@ -1693,8 +1693,10 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 
     if (!event->modifiers() && event->button() == Qt::LeftButton) {
         QString src = "IconView::mouseReleaseEvent";
-        m2->sel->currentIndex(idx);  // req'd when click on current with others also selected
-//        m2->fileSelectionChange(idx, QModelIndex(), true, src);
+
+        // req'd when click on current with others also selected
+        m2->sel->currentIndex(idx);
+
         // Capture the percent coordinates of the mouse click within the thumbnail
         // so that the full scale image can be zoomed to the same point.
         QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();

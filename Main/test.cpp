@@ -115,26 +115,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int s = ImageDecoder::Status::FileOpen;
-    int s1 = 9;
-    qDebug() << s << s1;
-    return;
-
-    // undo freeze
-    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-    // set the current index for all views that could be visible
-    tableView->setCurrentIndex(idx);
-    thumbView->setCurrentIndex(idx);
-    thumbView->setThumbParameters();
-    return;
-    folderAndFileSelectionChange("/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0005.arw");
-//    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2023-03-22_0014_Zen2048.JPG");
-    return;
-
-    qDebug()
-            << "Folder =" << Utilities::getFolderPath("/Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0005.arw")
-               ;
-
-    return;
-    diagnosticsMetadataCache();
+    qDebug() << sel->sm->selectedRows();
+    QModelIndex idx = dm->sf->index(2,0);
+    dm->currentSfIdx = idx;
+//    QItemSelection s;
+//    QItemSelection s1;
+//    s.select(idx, idx);
+//    sel->sm->select(s, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    sel->sm->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//    tableView->selectionChanged(s, s1);
 }

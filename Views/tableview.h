@@ -2,22 +2,23 @@
 #define TABLEVIEW_H
 
 #include <QtWidgets>
-#include "Main/global.h"
+//#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
-#include "Utilities/utilities.h"
+//#include "Utilities/utilities.h"
 
 class TableView : public QTableView
 {
     Q_OBJECT
 
 public:
-    TableView(DataModel *dm);
+    TableView(QWidget *parent, DataModel *dm);
     void scrollToCurrent();
     void scrollToRow(int row, QString source);
     bool isRowVisible(int row);
     bool scrollWhenReady;
     QStandardItemModel *ok;
+    QModelIndex shiftAnchorIndex;
 
     int firstVisibleRow;
     int midVisibleRow;
@@ -28,8 +29,6 @@ public slots:
     void showOrHide();
     QModelIndex pageUpIndex();
     QModelIndex pageDownIndex();
-    void selectPageUp();    // rgh req'd?
-    void selectPageDown();  // rgh req'd?
     void updateVisible();
     void resizeColumns();
 
@@ -38,7 +37,6 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-//    int defaultCulumnWidth(int column) const override;
 
 private:
     IconView *thumbView;
@@ -46,27 +44,11 @@ private:
     void createOkToShow();
     int defaultCulumnWidth(int column);
 
-private slots:
-    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
-
 signals:
     void displayLoupe();
-    void selectionChange(bool, QString, QString);
-    void fileSelectionChange(QModelIndex idx);
-//    void fileSelectionChange(QModelIndex idx,
-//                             QModelIndex idx2 = QModelIndex(),
-//                             bool clearSelection = false,
-//                             QString src = "TableView::fileSelectionChange");
 };
 
 #include <QStyledItemDelegate>
-
-//class FileItemDelegate : public QStyledItemDelegate {
-//    Q_OBJECT
-//public:
-//    explicit FileItemDelegate(QObject* parent = 0);
-//    virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-//};
 
 class CreatedItemDelegate : public QStyledItemDelegate {
     Q_OBJECT

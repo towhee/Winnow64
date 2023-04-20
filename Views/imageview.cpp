@@ -482,6 +482,12 @@ void ImageView::placeClassificationBadge()
     classificationLabel->move(x - d - o, y - d - o);
 }
 
+void ImageView::showRubber(QRect r)
+{
+    rubberBand->setGeometry(r);
+    rubberBand->show();
+}
+
 void ImageView::activateRubberBand()
 {
     if (G::isLogger) G::log("ImageView::activateRubberBand");

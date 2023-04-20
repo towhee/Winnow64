@@ -7,21 +7,29 @@ NORMAL DEPLOYMENT
 
 	For Mac:
 	---------------------------------------------------------------------
-	Using an installer: (as of 2021-01-01)
+        Creating and uploading a dmg to server
         - Make sure release build qmake details x86 and arm are both checked (Universal build)
-          in Qt Creator project mode build config release > qmake > details
-        - Update version in mainwindow.h
-        - global.cpp: isLogger and isFlowLogger = false
-        - compile release mode
-        - Update ExifTool.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
+          in Qt Creator project mode build config release > qmake > details.
+        - Update version in mainwindow.h.
+        - In global.cpp set isLogger and isFlowLogger = false.
+        - Update ExifTool if necessary.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
           Winnow.app/Contents/MacOS.
-	- Duplicate current on http://165.227.46.158/winnow_mac as version number
-        - Compile Winnow in /Users/roryhill/Projects/Winnow64 as a universal binary
-	- Update version and test/current in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
-        - Update version in /Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/meta/package.xml.
-          This will make sure message is up-to-date when user is installing.
-	- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
-	- test download new version
+        - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
+        - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
+        - Run WinnowDeploy.command to add frameworks, sign app and copy to Install Winnow folder.
+        - In Disk Utility: File > New Image > Image form Folder...
+            - select /Users/roryhill/Projects/WinnowInstall/Winnow.
+            - save as Winnow.dmg (in  /Users/roryhill/Projects/WinnowInstall).
+        - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
+          or use FileZilla.
+        - Try http://www.winnow.ca/winnow_mac/test/winnow.dmg to make sure it works.
+        - Finally Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/current
+
+        Notes
+        - Codesign must be run as the last step when modifying Winnow.app.  Recompilation
+          does not require rerunning codesign.
+        - Using macdeployqt -dmg removes codesign, so must use Disk Utilities.app
+        - FileZilla requires Server > Reconnect
 
 	For Win: 
 	---------------------------------------------------------------------

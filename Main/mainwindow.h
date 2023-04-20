@@ -12,6 +12,7 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreServices/CoreServices.h>
 #include "CoreGraphics/CoreGraphics.h"
+//#include "AppKit/NSSharingService.h"
 #endif
 
 #include "Main/global.h"
@@ -67,6 +68,8 @@
 #include "Utilities/htmlwindow.h"
 #include "progressbar.h"
 
+#include "Image/subject.h"
+
 #include "Utilities/coloranalysis.h"
 #include "Image/stack.h"
 
@@ -99,11 +102,12 @@ class MW : public QMainWindow
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
     friend class InfoString;        // mw4
+    friend class TableView;         // mw5
 
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.34" ;
+    QString versionNumber = "1.35" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -422,6 +426,7 @@ private slots:
     void exportEmbel();
     void enableSelectionDependentMenus();
     void enableEjectUsbMenu(QString path);
+    void renameEjectUsbMenu(QString path);
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();

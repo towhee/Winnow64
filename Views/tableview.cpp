@@ -1,13 +1,20 @@
 #include "Views/tableview.h"
+#include "Main/mainwindow.h"
 
-TableView::TableView(DataModel *dm)
+extern MW *m5;
+MW *m5;
+
+TableView::TableView(QWidget *parent, DataModel *dm)
 {
 /*
 
 */
     if (G::isLogger) G::log("TableView::TableView");
     this->dm = dm;
-//    int ht = G::fontSize.toInt();
+
+    // this works because ThumbView is a friend class of MW.  It is used in the
+    // mousePressEvent to call MW::Selection::select
+    m5 = qobject_cast<MW*>(parent);
 
     setModel(dm->sf);
     setSortingEnabled(true);
@@ -15,7 +22,7 @@ TableView::TableView(DataModel *dm)
     horizontalHeader()->setSortIndicatorShown(false);
     horizontalHeader()->setSectionsMovable(true);
     horizontalHeader()->setStretchLastSection(true);
-//    horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    //horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     verticalHeader()->setVisible(false);
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
@@ -24,9 +31,9 @@ TableView::TableView(DataModel *dm)
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setTabKeyNavigation(false);
     setWordWrap(false);
-//    setIconSize(QSize(ht + 10, ht + 22));
-//    setIconSize(QSize(24, 24 + 12));
-//    verticalHeader()->setDefaultSectionSize(24);
+    //setIconSize(QSize(ht + 10, ht + 22));
+    //setIconSize(QSize(24, 24 + 12));
+    //verticalHeader()->setDefaultSectionSize(24);
 
     verticalScrollBar()->setObjectName("TableViewVerticalScrollBar");
 
@@ -109,7 +116,6 @@ void TableView::scrollToCurrent()
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
-//int TableView::sizeHintForColumn(int column) const
 int TableView::defaultCulumnWidth(int column)
 {
     QFontMetrics fm(this->font());
@@ -195,19 +201,6 @@ QModelIndex TableView::pageDownIndex()
     return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
-void TableView::selectPageUp()
-{
-    if (G::isLogger) G::log("TableView::selectPageUp");
-    setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
-}
-
-void TableView::selectPageDown()
-{
-    if (G::isLogger) G::log("TableView::selectPageDown");
-        qDebug() << "TableView::selectPageDown";
-    setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
-}
-
 bool TableView::eventFilter(QObject *obj, QEvent *event)
 {
     if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
@@ -239,31 +232,40 @@ void TableView::paintEvent(QPaintEvent *event)
 
 void TableView::mousePressEvent(QMouseEvent *event)
 {
+    QModelIndex idx = indexAt(event->pos());
+    // only interested in rows, so set index column = 0
+    idx = idx.model()->index(idx.row(), 0);
+
+    if (!idx.isValid()) return;
+
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
-    QModelIndex idx = indexAt(event->pos());
+
     // propogate mouse press if pressed in a table row, otherwise do nothing
-    if (idx.isValid()) {
-        QTableView::mousePressEvent(event);
+    if (event->button() == Qt::LeftButton) {
         G::fileSelectionChangeSource = "TableMouseClick";
-        emit fileSelectionChange(idx);
+
+        if (!event->modifiers()) {
+            m5->sel->currentIndex(idx);
+        }
+
+        if (event->modifiers() & Qt::ControlModifier) {
+            m5->sel->toggleSelect(idx);
+        }
+
+        if (event->modifiers() & Qt::ShiftModifier) {
+            m5->sel->select(idx, shiftAnchorIndex);
+            shiftAnchorIndex = idx;
+        }
     }
 }
 
-void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
+void TableView::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (G::isLogger) G::log("TableView::mouseDoubleClickEvent");
-    emit displayLoupe();
-}
-
-void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
-{
-    if (G::isLogger) G::log("TableView::selectionChanged");
-//    qDebug() << "TableView::selectionChanged";
-    QTableView::selectionChanged(selected, deselected);
-    if (G::isInitializing) return;
-    // update status bar
-    emit selectionChange(true, "", "TableView::selectionChanged");
+    if (!event->modifiers() && event->button() == Qt::LeftButton) {
+        emit displayLoupe();
+    }
 }
 
 void TableView::createOkToShow()

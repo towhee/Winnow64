@@ -1,19 +1,7 @@
 WHAT'S NEW
-- Stabilized concurrent caching method
-- Delete file or folder now moves to trash or recycle bin
-- Emphasis on controlling / permitting file modification
-- currently rotation and thumbnail embedding
-    - dialog
-    - preferences
-- Significant work on filters
-    - fix missing picked images
-    - new missing thumbnails category
-- Tweaked thumbnail ratings/colorlabel badge
-- Shortuct shift+command mouse click to load subfolders
-- Removed refine
-- tweaked tooltips
+- Share including airdrop for Macs
 
-BUGS / TO DO
+BUGS / TO
 - Select multiple folders
 - G::isNewFileSelection req'd?
 - dmEmpty req'd?
@@ -99,6 +87,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Cmd and Shift select in table view
+- Share including airdrop for Macs
+- Release 1.34
 - IconView right click selecting image on PC
 - New folder scroll to start after scrolled ahead
 - PopUp does not return keyboard focus to Winnow, replaced with dialog
