@@ -122,12 +122,12 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     currentPen.setWidth(currentWidth);
     selectedPen.setColor(selectedColor);
     selectedPen.setWidth(selectedWidth);
-    pickPen.setColor(pickColor);
-    pickPen.setWidth(pickWidth);
+    pickedPen.setColor(pickColor);
+    pickedPen.setWidth(pickWidth);
     notPickPen.setColor(defaultBorderColor);
     notPickPen.setWidth(pickWidth);
-    rejectPen.setColor(rejectColor);
-    rejectPen.setWidth(pickWidth);
+    rejectedPen.setColor(rejectColor);
+    rejectedPen.setWidth(pickWidth);
     ingestedPen.setColor(ingestedColor);
     ingestedPen.setWidth(pickWidth);
 
@@ -367,11 +367,13 @@ void IconViewDelegate::paint(QPainter *painter,
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     int ratingNumber = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toInt();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-    QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
     if (duration.isNull()) duration = "XXX";
     bool isSelected = dm->isSelected(row);
     bool isCurrentIndex = row == dm->currentSfIdx.row();
+    QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
+    bool isPicked = pickStatus == "Picked";
+    bool isRejected = pickStatus == "Rejected";
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool isMissingThumb = index.model()->index(row, G::MissingThumbColumn).data().toBool();
@@ -459,13 +461,13 @@ void IconViewDelegate::paint(QPainter *painter,
              << "row =" << row
              << "currentRow =" << currentRow
              << "selected item =" << option.state.testFlag(QStyle::State_Selected);
-//             */
 
     qDebug() << "IconViewDelegate::paint"
              << "row =" << row
              << "dm->currentSfIdx.row() =" << dm->currentSfIdx.row()
              << "isCurrentIndex" << isCurrentIndex
         ;
+//             */
     // current index item
     if (isCurrentIndex) {
         //if (row == currentRow) {
@@ -480,16 +482,17 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawRoundedRect(frameRect, 8, 8);
     }
 
-    // ingested item
+    // pick status
+    if (isPicked) {
+        painter->setPen(pickedPen);
+        painter->drawPath(iconPath);
+    }
     if (isIngested) {
         painter->setPen(ingestedPen);
         painter->drawPath(iconPath);
     }
-
-    // picked item
-    if (pickStatus != "Unpicked") {
-        if (pickStatus == "Picked") painter->setPen(pickPen);
-        else painter->setPen(rejectPen);
+    if (isRejected) {
+        painter->setPen(rejectedPen);
         painter->drawPath(iconPath);
     }
 

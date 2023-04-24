@@ -777,7 +777,6 @@ void MW::setColorClass()
     updateClassification();
 
     // update filter counts
-    qDebug() << "MW::setColorClass buildFilters->build(BuildFilters::Action::LabelEdit)";
     buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
 
     if (G::useSidecar) {

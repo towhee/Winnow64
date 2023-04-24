@@ -25,6 +25,7 @@ public:
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
+    void resetTrigger();
 
     int iconChunkSize;
     int firstIconRow;

@@ -442,6 +442,11 @@ void MetaRead::readRow(int sfRow)
     }
 }
 
+void MetaRead::resetTrigger()
+{
+    alreadyTriggered = false;
+}
+
 void MetaRead::triggerCheck()
 /*
     Signal MW::fileSelectionChange for the current selection, which will also

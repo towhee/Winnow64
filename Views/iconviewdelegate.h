@@ -88,8 +88,8 @@ private:
     QColor videoTextcolor;
     QColor numberTextColor;
 
-    QPen pickPen;
-    QPen rejectPen;
+    QPen pickedPen;
+    QPen rejectedPen;
     QPen ingestedPen;
     QPen notPickPen;
     QPen backPen;

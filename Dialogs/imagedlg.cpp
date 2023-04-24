@@ -1,12 +1,15 @@
 #include "imagedlg.h"
 #include "ui_imagedlg.h"
 
-ImageDlg::ImageDlg(QPixmap &pm, QString title, QWidget *parent) :
+ImageDlg::ImageDlg(const QImage &image, QString title, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ImageDlg)
 {
     ui->setupUi(this);
-    ui->label->setPixmap(pm);
+    QSize size(800,800);
+    resize(size);
+//    QPixmap pm = QPixmap::fromImage(image.scaled(size, Qt::KeepAspectRatio));
+    ui->label->setPixmap(QPixmap::fromImage(image.scaled(size, Qt::KeepAspectRatio)));
     setWindowTitle(title);
 }
 
