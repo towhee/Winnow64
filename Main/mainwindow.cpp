@@ -2102,6 +2102,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
+    //
+    metaReadThread->resetTrigger();
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     folderSelectionChange();

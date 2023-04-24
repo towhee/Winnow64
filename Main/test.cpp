@@ -115,13 +115,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << sel->sm->selectedRows();
-    QModelIndex idx = dm->sf->index(2,0);
-    dm->currentSfIdx = idx;
-//    QItemSelection s;
-//    QItemSelection s1;
-//    s.select(idx, idx);
-//    sel->sm->select(s, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    sel->sm->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-//    tableView->selectionChanged(s, s1);
+    QImage image("/Users/roryhill/Pictures/Subjects/2022-06-12_0005.jpg");
+    Subject subject;
+    QList<QPointF> pts;
+    subject.eyes(image, pts);
 }

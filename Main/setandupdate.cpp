@@ -401,7 +401,7 @@ void MW::setStatus(QString state)
 void MW::setIngested()
 {
 /*
-    Called after ingest to update the DataModel and the settings piclLog.
+    Called after ingest to update the DataModel, filter and the settings piclLog.
     The pickLog is used to recover the picked/ingested values in the datamodel
     after a crash recovery.
 */
@@ -412,14 +412,17 @@ void MW::setIngested()
         if (dm->sf->index(row, G::PickColumn).data().toString() == "Picked") {
             emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
                             dm->instance, "MW::setIngested", Qt::EditRole);
-            emit setValueSf(dm->sf->index(row, G::PickColumn), "Unpicked",
-                            dm->instance, "MW::setIngested", Qt::EditRole);
+            emit setValueSf(dm->sf->index(row, G::PickColumn), "Ingested",
+                            dm->instance, "MW::setIngested", Qt::EditRole, Qt::AlignCenter);
             // update pickLog
             sKey.replace("/", "🔸");
             setting->setValue(sKey, "ingested");
         }
     }
     setting->endGroup();
+
+    // update filter counts
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction);
 }
 
 void MW::setCombineRawJpg()
