@@ -2,6 +2,8 @@ WHAT'S NEW
 - Share including airdrop for Macs
 
 BUGS / TO
+- Sync bookmark and FSTree selection
+- After resize winnow scroll to current
 - Select multiple folders
 - G::isNewFileSelection req'd?
 - dmEmpty req'd?

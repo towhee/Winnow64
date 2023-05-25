@@ -439,3 +439,20 @@ version of Qt you are using, as there might be compatibility issues between diff
 versions. Also, make sure to update the library path and names in your .pro file if you
 update your OpenCV installation or move it to a different directory.
 
+----------------------------------------------------------------------------------------------
+
+How to create YOLOv7 object detector and include in qt c+++ project
+
+Src: https://www.hackster.io/spehj/deploy-yolov7-to-jetson-nano-for-object-detection-6728c3
+
+To create a YOLOv7 object detector and include it in a Qt C++ project, you can follow these steps:
+
+• First, create a folder for the YOLO project and clone the YOLOv7 repository using Git1.
+• Install OpenCV and CUDA on your system1.
+• Download the pre-trained weights for YOLOv7 from the official website
+  https://github.com/WongKinYiu/yolov7.
+• Convert the weights to a format that can be used by OpenCV using the following command:
+  python3 models.py --cfg cfg/yolov7.cfg --weights weights/yolov7.pt --output weights/yolov7.weights1.
+• Compile the YOLOv7 detector using CMake.
+• Create a new Qt C++ project and add the compiled detector as a library.
+• Use the library in your project by including its header files and linking it with your project.

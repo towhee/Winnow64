@@ -12,7 +12,7 @@ class ImageDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit ImageDlg(const QImage &image, QString title, QWidget *parent = nullptr);
+    explicit ImageDlg(const QImage &image, QSize size, QString title, QWidget *parent = nullptr);
     ~ImageDlg() override;
 
 private:

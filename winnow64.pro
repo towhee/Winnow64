@@ -383,6 +383,7 @@ DISTFILES += Docs/ingestautopath \
     notes/Create help dialog.rtf \
     notes/Create help dialog.txt \
     notes/Create_help_dialog.txt \
+    notes/Object_detection \
     notes/Scratch2.txt \
     notes/VideoScripts \
     notes/_Symbols
