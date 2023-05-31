@@ -68,7 +68,7 @@
 #include "Utilities/htmlwindow.h"
 #include "progressbar.h"
 
-#include "Image/subject.h"
+//#include "Image/subject.h"
 
 #include "Utilities/coloranalysis.h"
 #include "Image/stack.h"
@@ -911,8 +911,9 @@ private:
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
-    QAction *diagnosticsErrorsAction;
     QAction *diagnosticsMainAction;
+    QAction *diagnosticsErrorsAction;
+    QAction *diagnosticsLogAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsThumbViewAction;
     QAction *diagnosticsImageViewAction;
@@ -1196,7 +1197,7 @@ private:
     void clearLog();
     void openErrLog();
     void closeErrLog();
-    void clearErrLog();
+    void trimErrLog(QFile &errorLog, int daysToKeep);
     bool isDevelopment();
 
     bool isValidPath(QString &path);
@@ -1259,6 +1260,7 @@ private:
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString);
     void errorReport();
+    void logReport();
 
     void mediaReadSpeed();
     void reportHueCount();

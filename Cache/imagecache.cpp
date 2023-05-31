@@ -605,8 +605,8 @@ void ImageCache::fixOrphans()
                     // decoding is active, no action req'd
                 }
                 else {
-                    // reset isCaching to false
-                    icd->cacheItemList[i].isCaching = false;
+                    // reset isCaching to false unless video
+                    if (!icd->cacheItemList[i].isVideo) icd->cacheItemList[i].isCaching = false;
                     orphansFound = true;
                     if (debugCaching) {
                         QString k = QString::number(i).leftJustified((4));
@@ -620,7 +620,7 @@ void ImageCache::fixOrphans()
             }
         }
         else {
-            if (isCached) icd->cacheItemList[i].isCached = false;
+            if (isCached && !icd->cacheItemList[i].isVideo) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             icd->cacheItemList[i].attempts = 0;
             if (inImageCache) icd->imCache.remove(fPath);
@@ -1600,6 +1600,9 @@ void ImageCache::fillCache(int id)
     if (decoder[id]->status == ImageDecoder::Status::Done) {
          cacheKey = cacheKeyHash[decoder[id]->fPath];  // if not contains return -1
     }
+    if (decoder[id]->status == ImageDecoder::Status::Video) {
+        icd->cacheItemList[key].isCached = true;
+    }
 
     // Error checking
     {
@@ -1631,7 +1634,7 @@ void ImageCache::fillCache(int id)
                 QString err = "cacheKey = " + QString::number(cacheKey) +
                               " exceeds icd->cacheItemList.length() of " +
                               QString::number(icd->cacheItemList.length());
-                G::error("ImageCache::fillCache", decoder[id]->fPath, err);
+                G::error(err, "ImageCache::fillCache", decoder[id]->fPath);
             }
             cacheKey = -1;
         }
@@ -1642,7 +1645,7 @@ void ImageCache::fillCache(int id)
             if (debugCaching)
                 if (G::isWarningLogger)
                 if (decoder[id]->fPath != "")
-                qWarning() << "WARNING" << "ImageCache::fillCache File does not exist:"
+                qWarning() << "WARNING" << "ImageCache::fillCache  File does not exist:"
                            << "Decoder id =" << id
                            << "row =" << cacheKeyHash[decoder[id]->fPath]
                            << decoder[id]->fPath

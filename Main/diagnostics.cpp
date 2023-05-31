@@ -296,11 +296,31 @@ void MW::errorReport()
     md.setupUi(dlg);
     dlg->setWindowTitle("Winnow Error Log");
     md.textBrowser->setStyleSheet(G::css);
+    md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     G::errlogFile.seek(0);
     QString errString(G::errlogFile.readAll());
 //    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
     md.textBrowser->setText(errString);
+    dlg->show();
+}
+
+void MW::logReport()
+{
+//    if (G::isLogger) G::log("MW::errorReport");
+    QDialog *dlg = new QDialog;
+    dlg->setStyleSheet(G::css);
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    dlg->setWindowTitle("Winnow Log");
+    md.textBrowser->setStyleSheet(G::css);
+    md.textBrowser->setFontFamily("Monaco");
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    if (!G::logFile.isOpen()) openLog();
+    G::logFile.seek(0);
+    QString logString(G::logFile.readAll());
+    //    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
+    md.textBrowser->setText(logString);
     dlg->show();
 }
 

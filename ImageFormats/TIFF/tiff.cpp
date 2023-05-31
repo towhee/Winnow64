@@ -701,7 +701,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (planarConfiguration == 2 && compression == 5) {
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
-    if (err != "") G::error("Tiff::parseForDecoding", p.fPath, err);
+    if (err != "") G::error(err, "Tiff::parseForDecoding", p.fPath);
     if (err != "" && !isReport) return false;
 
     /* rgh used for debugging - req'd?
@@ -752,7 +752,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        G::error("Tiff::decode", fPath, "Unable to open file.");
+        G::error("Unable to open file.", "Tiff::decode", fPath);
         return false;
     }
 
@@ -781,7 +781,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     p.fPath = fPath;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        G::error("Tiff::decode", fPath, "Unable to open file.");
+        G::error("Unable to open file.", "Tiff::decode", fPath);
         return false;
     }
     p.offset = offset;

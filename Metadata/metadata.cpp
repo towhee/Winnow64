@@ -1051,7 +1051,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         QString msg =  "Unable to open file " + path + ".";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
-        G::error("Metadata::readMetadata", path, "Could not open p.file to read metadata.");
+        G::error("Could not open p.file to read metadata.", "Metadata::readMetadata", path);
         return false;
     }
 

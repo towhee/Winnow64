@@ -282,6 +282,18 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "useSidecar") {
         G::useSidecar = v.toBool();
+    }    
+
+    if (source == "activityLog") {
+        G::isLogger = v.toBool();
+        G::isFileLogger = v.toBool();
+        mw->setting->setValue("isFileLogger", v.toBool());
+    }
+
+    if (source == "errorLog") {
+        G::isLogger = v.toBool();
+        G::isErrorLogger = v.toBool();
+        mw->setting->setValue("isErrorLogger", v.toBool());
     }
 
     if (source == "renderVideoThumb") {
@@ -295,6 +307,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "isErrorLogger") {
         G::isErrorLogger = v.toBool();
+        G::isWarningLogger = v.toBool();
         if (G::isErrorLogger) mw->openLog();
     }
 
@@ -543,7 +556,6 @@ void Preferences::addItems()
     // Allow source files to be changed
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
-//    i.parentName = "FileModificationHeader";
     i.captionText = "Permit image file modification";
     i.tooltip = "Permit file modification to change image orientation\n"
                 "or embed thumbnails automatically without notification."
@@ -559,7 +571,6 @@ void Preferences::addItems()
     // Backup before modifying
     i.name = "backupBeforeModify";
     i.parentName = "modifySourceFiles";
-//    i.parentName = "FileModificationHeader";
     i.captionText = "   Backup before modify files";
     i.tooltip = "All image files about to be modified will be copied to a\n"
                 "subfolder called 'backup'"
@@ -576,7 +587,6 @@ void Preferences::addItems()
     // Automatically and silently add missing thumbnails to TIFF and JPG files
     i.name = "autoAddMissingThumbnails";
     i.parentName = "modifySourceFiles";
-//    i.parentName = "FileModificationHeader";
     i.captionText = "   Silently embed missing thumbnails";
     i.tooltip = "This silently embeds thumbnail if missing from TIFF and\n"
                 "JPG image files.\n\n"
@@ -598,7 +608,6 @@ void Preferences::addItems()
     // Ignore the missing thumbnails dialog
     i.name = "ignoreAddThumbnailsDlg";
     i.parentName = "modifySourceFiles";
-//    i.parentName = "FileModificationHeader";
     i.captionText = "   Ignore missing thumbnails dialog";
     i.tooltip = "If enabled, the missing thumbnails dialog will be shown\n"
                 "if there are any missing thumbnails for TIFF or JPG files\n"
@@ -630,6 +639,43 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.value = G::useSidecar;
     i.key = "useSidecar";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Loggers: on/off
+    i.name = "loggers";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Loggers";
+    i.tooltip = "Record activity or errors to a log file."                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::modifySourceFiles;
+    i.key = "loggers";
+    addItem(i);
+
+    // Activity log
+    i.name = "activityLog";
+    i.parentName = "loggers";
+    i.captionText = "   Log activity";
+    i.tooltip = "All activity is saved in the log file and can be reviewed in help."                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::isFileLogger;
+    i.key = "activityLog";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Error log
+    i.name = "errorLog";
+    i.parentName = "loggers";
+    i.captionText = "   Log errors";
+    i.tooltip = "Errors are saved in the error file and can be reviewed in help."                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::isErrorLogger;
+    i.key = "errorLog";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

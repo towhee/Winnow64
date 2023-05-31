@@ -312,7 +312,8 @@ bool MW::loadSettings()
         combineRawJpg = true;
         prevMode = "Loupe";
         G::mode = "Loupe";
-//        G::isLogger = false;
+        G::isLogger = false;
+        G::isFileLogger = false;
         G::isErrorLogger = false;
         G::wheelSensitivity = 40;
         G::modifySourceFiles = false;
@@ -398,12 +399,17 @@ bool MW::loadSettings()
 //    isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
-//    if (setting->contains("isLogger"))
-//        G::isLogger = setting->value("isLogger").toBool();
-//    else
-//        G::isLogger = false;
+
+    if (setting->contains("isFileLogger"))
+        G::isFileLogger = setting->value("isFileLogger").toBool();
+    else
+        G::isFileLogger = false;
     if (setting->contains("isErrorLogger"))
         G::isErrorLogger = setting->value("isErrorLogger").toBool();
+    else
+        G::isErrorLogger = false;
+    if (G::isFileLogger || G::isErrorLogger)
+        G::isLogger = true;
     else
         G::isLogger = false;
 

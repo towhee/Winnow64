@@ -291,8 +291,8 @@ namespace G
     extern void log(QString functionName = "",
                     QString comment = "",
                     bool zeroElapsedTime = false);
-    extern void errlog(QString functionName, QString fPath, QString err);
-    extern void error(QString functionName, QString fPath, QString err);
+    extern void errlog(QString err, QString functionName, QString fPath = "");
+    extern void error(QString err, QString functionName, QString fPath = "");
     extern int wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);

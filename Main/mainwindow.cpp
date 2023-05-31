@@ -472,7 +472,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setting->setValue("appPath", qApp->applicationDirPath());
 
 //    // Logger
-//    if (G::isLogger && G::sendLogToConsole == false) openLog();
+    if (G::isLogger && G::sendLogToConsole == false) openLog();
 
 //    // Error Logger
     if (G::isErrorLogger) openErrLog();
@@ -588,6 +588,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
         // crash log
         setting->setValue("hasCrashed", true);
+
+        G::log("MW::MW", "Winnow running");
     }
 }
 
@@ -658,7 +660,7 @@ void MW::showEvent(QShowEvent *event)
 void MW::closeEvent(QCloseEvent *event)
 {
     if (G::isLogger) G::log("MW::closeEvent");
-    //qDebug() << "MW::closeEvent";
+    setCentralMessage("Closing Winnow ...");
 
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
@@ -673,7 +675,6 @@ void MW::closeEvent(QCloseEvent *event)
     // for debugging crash test
     //if (testCrash) return;
 
-    setCentralMessage("Closing Winnow ...");
     stop("MW::closeEvent");
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -2401,7 +2402,8 @@ bool MW::updateIconRange(int row, QString src)
 
 void MW::loadConcurrentNewFolder()
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentNewFolder");
+    QString fun = "MW::loadConcurrentNewFolder";
+    if (G::isLogger || G::isFlowLogger) G::log(fun);
 
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;
@@ -2429,7 +2431,7 @@ void MW::loadConcurrentNewFolder()
         dm->currentSfRow = 0;
     }
     if (reset(src + QString::number(count++))) return;
-    updateIconRange(dm->currentSfRow, "MW::loadConcurrentNewFolder");
+    updateIconRange(dm->currentSfRow, fun);
     if (reset(src + QString::number(count++))) return;
 
     // set image cache parameters and build image cacheItemList
@@ -2448,7 +2450,7 @@ void MW::loadConcurrentNewFolder()
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
     if (reset(src + QString::number(count++))) return;
-    if (G::isFileLogger) Utilities::log("MW::loadConcurrentNewFolder", "metaReadThread->setCurrentRow");
+    if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
     sel->currentRow(targetRow);
 }
 
