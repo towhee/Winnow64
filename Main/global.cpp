@@ -9,9 +9,9 @@ namespace G
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isWarningLogger = false;       // Writes warnings to qDebug
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
-    bool isErrorLogger = false;         // Writes error log messages to file or console
+    bool isErrorLogger = true;         // Writes error log messages to file or console
     bool isTestLogger = false;          // Writes test points to file or console
-    bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
+    bool sendLogToConsole = false;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
     bool isDev;                         // Running from within Winnow Project/Winnow64
@@ -220,6 +220,8 @@ namespace G
              if (functionName.contains(doNotLog.at(i))) return;
         }
         //*/
+        QMutex mutex;
+        mutex.lock();
         static QString prevFunctionName = "";
         static QString prevComment = "";
         QString stop = "";
@@ -249,12 +251,15 @@ namespace G
         prevFunctionName = functionName;
         prevComment = comment;
         t.restart();
+        mutex.unlock();
     }
 
-    void errlog(QString functionName, QString fPath, QString err)
+    void errlog(QString err, QString functionName, QString fPath)
     {
         if (!isErrorLogger) return;
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+        QMutex mutex;
+        mutex.lock();
+        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
         QString f = functionName.leftJustified(40, '.') + " ";
         QString p = fPath;
         QString e = err.leftJustified(75, '.') + " ";
@@ -265,14 +270,16 @@ namespace G
             errlogFile.write(msg.toUtf8());
             errlogFile.flush();
         }
+        mutex.unlock();
     }
 
-    void error(QString functionName, QString fPath, QString err)
+    void error(QString err, QString functionName, QString fPath)
     {
         QString errMsg = functionName + " Error: " + err;
-        G::err[fPath].append(errMsg);
+        if (fPath.length()) G::err[fPath].append(errMsg);
+
         // add to errorLog ...
-        errlog(functionName, fPath, err);
+        errlog(err, functionName, fPath);
     }
 
     bool instanceClash(int instance, QString src)

@@ -68,7 +68,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             // err endian order not found
-            G::error("Heic::parseLibHeif", fPath, "Endian order not found.");
+            G::error("Endian order not found.", "Heic::parseLibHeif", fPath);
             p.buf.close();
             return false;
         }
@@ -483,7 +483,7 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         count++;
         if (count > 100) {
             // err endian order not found
-            G::error("Heic::parseLibHeif", fPath, "Endian order not found.");
+            G::error("Endian order not found.", "Heic::parseLibHeif", fPath);
             p.file.close();
             return false;
         }
@@ -703,7 +703,7 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
 
     // err
     QString err = "Box type " + type + " is unknown";
-    G::error("Heic::getHeifBox", fPath, err);
+    G::error(err, "Heic::getHeifBox", fPath);
     qWarning() << "WARNING Heic::getHeifBox"
              << "Failed to get box for type ="
              << type;
@@ -736,7 +736,7 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
     if (!isHeic) {
         // err
         QString err = "Brand heic or HEIC not found.";
-        G::error("Heic::ftypBox", fPath, err);
+        G::error(err, "Heic::ftypBox", fPath);
         qWarning() << "Heic::ftypBox" << "heic not found";
         return false;
     }
@@ -975,7 +975,7 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
         }
         if (extent_count > 100) {
             QString err = "Quitting because extent_count has reached " + extent_count;
-            G::error("Heic::ilocBox", fPath, err);
+            G::error(err, "Heic::ilocBox", fPath);
             qWarning() << "Heic::ilocBox" << "*** Quiting because extent_count =" << extent_count;
             offset += length;
             return false;
@@ -1324,7 +1324,7 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
         if (ipcoType != "ipco") {
             // err
             QString err = "Type ipco not found in iprp box.";
-            G::error("Heic::iprpBox", fPath, err);
+            G::error(err, "Heic::iprpBox", fPath);
             qDebug() << "Heic::iprpBox" << "ipco not found in iprp box";
             return false;
         }

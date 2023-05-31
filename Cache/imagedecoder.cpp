@@ -79,7 +79,8 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isLogger) G::log("ImageDecoder::load", fPath);
+    QString fun = "ImageDecoder::load";
+    if (G::isLogger) G::log(fun, fPath);
 
     // null fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
@@ -133,9 +134,10 @@ bool ImageDecoder::load()
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
+        QString errMsg = "Could not open file for image";
         if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::load  Could not open file for image" << fPath;
-        G::error("ImageDecoder::load", fPath, "Could not open file for image.");
+        qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
+        G::error(errMsg, fun, fPath);
         // check if drive ejected or folder deleted by another app
         QDir dir(fileInfo.dir());
         if (!dir.exists()) {
@@ -203,7 +205,8 @@ bool ImageDecoder::load()
         #ifdef Q_OS_WIN
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
-            G::error("ImageDecoder::load", fPath, "heic.decodePrimaryImage failed.");
+            QString errMsg = "heic.decodePrimaryImage failed";
+            G::error(errMsg, fun, fPath);
             imFile.close();
             status = Status::Failed;
             return false;
@@ -254,11 +257,10 @@ bool ImageDecoder::load()
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
                 imFile.close();
-                errMsg = "Could not read because decoder failed.";
+                errMsg = "Could not read because Qt tiff decoder failed.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-//                QString err = "Could not decode using Qt.";
-//                G::error("ImageDecoder::load", fPath, err);
+                G::error(errMsg, fun, fPath);
                 status = Status::Invalid;
                 return false;
             }
@@ -283,7 +285,7 @@ bool ImageDecoder::load()
             errMsg = "Could not read because decoder failed.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-//            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
+            G::error(errMsg, fun, fPath);
             status = Status::Invalid;
             return false;
         }

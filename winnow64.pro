@@ -101,7 +101,7 @@ HEADERS += File/ingest.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/stack.h
-HEADERS += Image/subject.h
+#HEADERS += Image/subject.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
 HEADERS += ImageFormats/Canon/canon.h
@@ -221,7 +221,7 @@ SOURCES += File/ingest.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
-SOURCES += Image/subject.cpp
+#SOURCES += Image/subject.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
@@ -416,8 +416,8 @@ macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
 # opencv
-macx:INCLUDEPATH += "/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/include/opencv4"
-macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
+#macx:INCLUDEPATH += "/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/include/opencv4"
+#macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
 
 # zLib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib

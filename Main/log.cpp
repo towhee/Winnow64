@@ -15,8 +15,9 @@ void MW::openLog()
     QDateTime lastModified = info.lastModified();
     QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
     if (lastModified < oneWeekAgo) clearLog();
+    qDebug() << "MW::openLog" << fPath;
     if (G::logFile.open(QIODevice::ReadWrite)) {
-        G::logFile.readAll();
+//        G::logFile.readAll();
     }
 }
 
@@ -41,17 +42,12 @@ void MW::openErrLog()
     if (!dir.exists()) dir.mkdir(path);
     if (G::errlogFile.isOpen()) G::errlogFile.close();
     QString fPath = path + "/WinnowErrorLog.txt";
-//    qDebug() << "MW::openErrLog" << fPath;
     G::errlogFile.setFileName(fPath);
-    // erase content if over one week since last modified
     QFileInfo info(G::errlogFile);
     QDateTime lastModified = info.lastModified();
     QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
-    if (lastModified < oneWeekAgo) clearErrLog();
-    if (G::errlogFile.open(QIODevice::ReadWrite)) {
-//        QString errString(G::errlogFile.readAll());
-//        qDebug() << "MW::openErrLog" << errString;
-    }
+    trimErrLog(G::errlogFile, 3);
+    G::errlogFile.open(QIODevice::ReadWrite);
 }
 
 void MW::closeErrLog()
@@ -60,10 +56,31 @@ void MW::closeErrLog()
     if (G::errlogFile.isOpen()) G::errlogFile.close();
 }
 
-void MW::clearErrLog()
+void MW::trimErrLog(QFile &errorLog, int daysToKeep)
 {
-    if (G::isLogger) G::log("MW::clearErrLog");
-    if (!G::errlogFile.isOpen()) openLog();
-    G::errlogFile.resize(0);
+    QString errFilePath = QFileInfo(errorLog).filePath();
+    QString tempFilePath = errFilePath + "temp";
+    QFile temp(tempFilePath);
+    if (G::errlogFile.open(QIODevice::ReadWrite)) {
+        QTextStream in(&errorLog);
+        QString line;
+        QString currentDate = QDate::currentDate().toString("yyyy-MM-dd");
+        QDate date;
+        if (temp.open(QIODevice::ReadWrite)) {
+            QTextStream out(&temp);
+            while (!in.atEnd()) {
+                line = in.readLine() + "\n";
+                date = QDate::fromString(line.left(10), "yyyy-MM-dd");
+                // lines to keep
+                if (date.daysTo(QDate::currentDate()) < daysToKeep) {
+                    out << line;
+                }
+            }
+        }
+    }
+    errorLog.close();
+    errorLog.remove();
+    temp.close();
+    temp.rename(errFilePath);
+    QFile::remove(tempFilePath);
 }
-

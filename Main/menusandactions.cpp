@@ -1342,11 +1342,17 @@ void MW::createActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
-    diagnosticsErrorsAction = new QAction(tr("Errors"), this);
+    diagnosticsErrorsAction = new QAction(tr("Error log"), this);
     diagnosticsErrorsAction->setObjectName("diagnosticsErrorsAction");
     diagnosticsErrorsAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsErrorsAction);
     connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::errorReport);
+
+    diagnosticsLogAction = new QAction(tr("Activity log"), this);
+    diagnosticsLogAction->setObjectName("diagnosticsLogAction");
+    diagnosticsLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsLogAction);
+    connect(diagnosticsLogAction, &QAction::triggered, this, &MW::logReport);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -1751,6 +1757,9 @@ void MW::createMenus()
 //    helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(diagnosticsErrorsAction);
+    helpMenu->addAction(diagnosticsLogAction);
 //    helpMenu->addSeparator();
 //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
@@ -1758,7 +1767,6 @@ void MW::createMenus()
     testMenu = helpDiagnosticsMenu->addMenu(tr("&Tests"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
-    helpDiagnosticsMenu->addAction(diagnosticsErrorsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);

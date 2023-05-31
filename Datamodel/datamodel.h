@@ -198,6 +198,8 @@ private:
     int line;
     int rowCountChk;
 
+    QString errMsg;
+
     void setThumbnailLegend();
     QString thumbnailHelp;
 };

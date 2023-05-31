@@ -88,7 +88,8 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
-    if (G::isLogger) G::log("Thumb::loadFromEntireFile", fPath);
+    QString fun = "Thumb::loadFromEntireFile";
+    if (G::isLogger) G::log(fun, fPath);
     if (instance != dm->instance) return false;
 
 //    QImageReader thumbReader(fPath);
@@ -121,7 +122,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 //    image = image.scaled(thumbMax, Qt::KeepAspectRatio);
 
     if (image.isNull()) {
-        G::error("loadFromEntireFile", fPath, "Could not read thumb using thumbReader.");
+        G::error("Could not read thumb using thumbReader", fun, fPath);
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
@@ -131,7 +132,8 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 
 bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log("Thumb::loadFromJpgData", fPath);
+    QString fun = "Thumb::loadFromJpgData";
+    if (G::isLogger) G::log(fun, fPath);
 
     /*
     qDebug() << "Thumb::loadFromJpgData"
@@ -160,7 +162,8 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 
 bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 {
-    if (G::isLogger) G::log("Thumb::loadFromTiffData", fPath);
+    QString fun = "Thumb::loadFromTiffData";
+    if (G::isLogger) G::log(fun, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) {
         qWarning() << "WARNING" << "Thumb::loadFromTiff" << fPath << "is already open - return";
@@ -171,7 +174,7 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     if (samplesPerPixel > 3) {
         QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
               + " samplesPerPixel > 3.";
-        G::error("Thumb::loadThumb", fPath, err);
+        G::error(err, fun, fPath);
         return false;
     }
 
@@ -304,7 +307,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             // show bad image png
             QString path = ":/images/badImage1.png";
             loadFromEntireFile(path, image, dmRow);
-            G::error("Thumb::loadThumb", fPath, "Could not load thumb.");
+            G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
             qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
         }
     }
