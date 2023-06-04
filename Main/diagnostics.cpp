@@ -316,7 +316,7 @@ void MW::logReport()
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    if (!G::logFile.isOpen()) openLog();
+    if (!G::logFile.isOpen()) startLog();
     G::logFile.seek(0);
     QString logString(G::logFile.readAll());
     //    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;

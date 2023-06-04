@@ -66,6 +66,8 @@ public:
     void rotateImage(int degrees);
     void setShootingInfo(QString infoString);
     void updateShootingInfo();
+    QPoint scene2CW(QPointF pctPt);
+    void focus();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
     QString shootingInfo;
     int infoOverlayFontSize;

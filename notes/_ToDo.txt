@@ -2,6 +2,7 @@ WHAT'S NEW
 - Share including airdrop for Macs
 
 BUGS / TO
+- Multi-export embellish same title on all
 - Sync bookmark and FSTree selection
 - After resize winnow scroll to current
 - Select multiple folders

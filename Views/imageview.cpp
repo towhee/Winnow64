@@ -276,6 +276,8 @@ bool ImageView::loadImage(QString fPath, QString src)
            local vs remote (ie exported from lightroom to embellish)  */
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
+
+        focus();
     }
 
     isBusy = false;
@@ -791,6 +793,64 @@ void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
+    qDebug() << "sceneOrigin =" << sceneOrigin
+             << "sceneBottomRight =" << mapFromScene(sceneRect().bottomRight())
+             << "scene_rect =" << scene_Rect
+             << "cwRect =" << cwRect;
+}
+
+QPoint ImageView::scene2CW(QPointF pctPt)
+{
+    QPoint origin = mapFromScene(0.0, 0.0);
+    QPoint bottomRight = mapFromScene(sceneRect().bottomRight());
+    int w = bottomRight.x() - origin.x();
+    int h = bottomRight.y() - origin.y();
+    int x = static_cast<int>(pctPt.x() * w) + origin.x();
+    int y = static_cast<int>(pctPt.y() * h) + origin.y();
+    qDebug() << "pctPt =" << pctPt
+             << "origin =" << origin
+             << "bottomRight =" << bottomRight
+             << "w =" << w
+             << "h =" << h
+             << "x =" << x
+             << "y =" << y
+                ;
+    return QPoint(x, y);
+}
+
+void ImageView::focus()
+{
+    if (G::isLogger) G::log("ImageView::focus");
+    int row = dm->fPathRow[dm->currentFilePath.toLower()];
+    int fX = dm->sf->index(row, G::FocusXColumn).data().toInt();
+    int fY = dm->sf->index(row, G::FocusYColumn).data().toInt();
+    int w = dm->sf->index(row, G::WidthColumn).data().toInt();
+    int h = dm->sf->index(row, G::HeightColumn).data().toInt();
+    int orient = dm->sf->index(row, G::OrientationColumn).data().toInt();
+    double x = fX * 1.0 / w;
+    double y = fY * 1.0 / h;
+    /*
+    double x=0,y=0;
+    if (orient == 1) {
+        x = fX * 1.0 / w;
+        y = fY * 1.0 / h;
+    }
+    if (orient == 8) {
+        x = fX * 1.0 / h;
+        y = fY * 1.0 / w;
+    }*/
+//    QPointF pct = QPointF(0,0);
+    QPointF pct = QPointF(x, y);
+    QPoint p = scene2CW(pct);
+    QRect r(p.x() - 10, p.y() - 10, 20, 20);
+    showRubber(r);
+    QString s = QString::number((int)(x*100)) + "," + QString::number((int)(y*100));
+    qDebug() << "x,y =" << s
+             << "fX =" << fX
+             << "fY =" << fY
+             << "w =" << w
+             << "g =" << h
+        ;
 }
 
 void ImageView::updateShootingInfo()
@@ -818,7 +878,7 @@ void ImageView::setShootingInfo(QString infoString)
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
-    // the top left of the image in veiwport coordinates
+    // the top left of the image in viewport coordinates
     QPoint viewportCoord = mapFromScene(pmItem->mapToScene(0,0));
     // if the scene is not as wide as the view
     if (viewportCoord.x() > 0)

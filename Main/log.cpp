@@ -1,8 +1,8 @@
 #include "Main/mainwindow.h"
 
-void MW::openLog()
+void MW::startLog()
 {
-    if (G::isLogger) G::log("MW::openLog");
+    if (!G::isLogger) return;
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     qDebug() << "MW::openLog" << path;
     QDir dir(path);
@@ -16,9 +16,10 @@ void MW::openLog()
     QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
     if (lastModified < oneWeekAgo) clearLog();
     qDebug() << "MW::openLog" << fPath;
-    if (G::logFile.open(QIODevice::ReadWrite)) {
-//        G::logFile.readAll();
-    }
+//    if (G::logFile.open(QIODevice::ReadWrite)) {
+//        if (G::isLogger) G::log("MW::startLog");
+////        G::logFile.readAll();
+//    }
 }
 
 void MW::closeLog()
@@ -30,11 +31,11 @@ void MW::closeLog()
 void MW::clearLog()
 {
     if (G::isLogger) G::log("MW::clearLog");
-    if (!G::logFile.isOpen()) openLog();
+//    if (!G::logFile.isOpen()) startLog();
     G::logFile.resize(0);
 }
 
-void MW::openErrLog()
+void MW::startErrLog()
 {
     if (G::isLogger) G::log("MW::openErrLog");
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
@@ -47,7 +48,7 @@ void MW::openErrLog()
     QDateTime lastModified = info.lastModified();
     QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
     trimErrLog(G::errlogFile, 3);
-    G::errlogFile.open(QIODevice::ReadWrite);
+//    G::errlogFile.open(QIODevice::ReadWrite);
 }
 
 void MW::closeErrLog()
