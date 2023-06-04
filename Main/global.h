@@ -63,6 +63,8 @@ namespace G
         CameraModelColumn,
         LensColumn,
         FocalLengthColumn,
+        FocusXColumn,
+        FocusYColumn,
         GPSCoordColumn,
         SizeColumn,
         WidthColumn,

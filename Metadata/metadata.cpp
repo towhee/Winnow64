@@ -915,6 +915,8 @@ void Metadata::clearMetadata()
     m.exposureCompensationNum = 0;  // crazy value so cane check if not found
     m.focalLength = "";
     m.focalLengthNum = 0;
+    m.focusX = 0;
+    m.focusY = 0;
     m.gpsCoord = "";
     m.keywords.clear();
     m.title = "";

@@ -495,6 +495,16 @@ bool Sony::parse(MetadataParameters &p,
         ifd->readIFD(p);
     }
 
+    // MakerNote: focus (width, height, x, y) each 16 bits
+
+    if (ifd->ifdDataHash.contains(8231)) {
+        quint32 focusOffset = ifd->ifdDataHash.value(8231).tagValue + 4;
+        p.file.seek(focusOffset);
+        m.focusX = u.get16(p.file.read(2), isBigEnd);
+        m.focusY = u.get16(p.file.read(2), isBigEnd);
+        qDebug() << "focusX =" << m.focusX;
+    }
+
     /* Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data
        MakernoteSubIFD with shuttercount is in 0x9050 subdirectory at offset 0x3A (58)  */
 

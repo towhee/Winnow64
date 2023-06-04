@@ -257,20 +257,22 @@ namespace G
     void errlog(QString err, QString functionName, QString fPath)
     {
         if (!isErrorLogger) return;
-        QMutex mutex;
-        mutex.lock();
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
-        QString f = functionName.leftJustified(40, '.') + " ";
-        QString p = fPath;
-        QString e = err.leftJustified(75, '.') + " ";
-        QString msg = d + e + f + p + "\n";
-        if (errlogFile.isOpen()) {
-            quint32 eof = errlogFile.size();
-            errlogFile.seek(eof);
-            errlogFile.write(msg.toUtf8());
-            errlogFile.flush();
+        if (G::errlogFile.open(QIODevice::WriteOnly  | QIODevice::Append)) {
+            QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+            QString f = functionName.leftJustified(40, '.') + " ";
+            QString p = fPath;
+            QString e = err.leftJustified(75, '.') + " ";
+            QString msg = d + e + f + p + "\n";
+//            if (errlogFile.isOpen()) {
+//                quint32 eof = errlogFile.size();
+//                errlogFile.seek(eof);
+//                errlogFile.write(msg.toUtf8());
+//                errlogFile.flush();
+//            }
+            QTextStream stream(&G::errlogFile);
+            stream << msg;
+            G::errlogFile.close();
         }
-        mutex.unlock();
     }
 
     void error(QString err, QString functionName, QString fPath)

@@ -472,10 +472,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setting->setValue("appPath", qApp->applicationDirPath());
 
 //    // Logger
-    if (G::isLogger && G::sendLogToConsole == false) openLog();
+    if (G::isLogger && G::sendLogToConsole == false) startLog();
 
 //    // Error Logger
-    if (G::isErrorLogger) openErrLog();
+    if (G::isErrorLogger) startErrLog();
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -5106,7 +5106,7 @@ void MW::metadataChanged(QStandardItem* item)
     in the image metadata, either internally or as a sidecar when ingesting. If raw+jpg
     are combined then the raw file rows are also updated in the data model.
 */
-     if (!G::useInfoView) return;
+    if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::metadataChanged");
     // if new folder is invalid no relevent data has changed
     if(!isCurrentFolderOkay) return;

@@ -1192,10 +1192,10 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
-    void openLog();
+    void startLog();
     void closeLog();
     void clearLog();
-    void openErrLog();
+    void startErrLog();
     void closeErrLog();
     void trimErrLog(QFile &errorLog, int daysToKeep);
     bool isDevelopment();
