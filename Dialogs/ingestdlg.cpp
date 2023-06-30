@@ -647,14 +647,14 @@ void IngestDlg::updateExistingSequence()
         Utilities::setOpacity(ui->spinBoxStartNumber, 0.5);
         ui->spinBoxStartNumber->setDisabled(true);
         ui->existingSequenceLabel->setVisible(false);
+        return;
     }
-    else {
-        // enable sequencing
-        Utilities::setOpacity(ui->startSeqLabel, 1.0);
-        Utilities::setOpacity(ui->spinBoxStartNumber, 1.0);
-        ui->spinBoxStartNumber->setDisabled(false);
-        ui->existingSequenceLabel->setVisible(true);
-    }
+
+    // enable sequencing
+    Utilities::setOpacity(ui->startSeqLabel, 1.0);
+    Utilities::setOpacity(ui->spinBoxStartNumber, 1.0);
+    ui->spinBoxStartNumber->setDisabled(false);
+    ui->existingSequenceLabel->setVisible(true);
 
     QDir dir(folderPath);
     if (dir.exists()) {
@@ -837,11 +837,13 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
             if (currentToken == "DD")
                 tokenResult = createdDate.date().toString("dd");
             if (currentToken == "HOUR")
-                tokenResult = createdDate.date().toString("hh");
+                tokenResult = createdDate.time().toString("hh");
             if (currentToken == "MINUTE")
-                tokenResult = createdDate.date().toString("mm");
+                tokenResult = createdDate.time().toString("mm");
             if (currentToken == "SECOND")
-                tokenResult = createdDate.date().toString("ss");
+                tokenResult = createdDate.time().toString("ss");
+            if (currentToken == "MILLISECOND")
+                tokenResult = createdDate.time().toString("zzz");
             if (currentToken == "TITLE")
                 tokenResult = m.title;
             if (currentToken == "CREATOR")

@@ -7,7 +7,7 @@
 #include "Main/global.h"
 
 namespace Ui {
-class About;
+    class About;
 }
 
 class AboutDlg : public QDialog

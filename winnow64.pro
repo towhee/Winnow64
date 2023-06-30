@@ -101,7 +101,6 @@ HEADERS += File/ingest.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/stack.h
-#HEADERS += Image/subject.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
 HEADERS += ImageFormats/Canon/canon.h
@@ -162,6 +161,7 @@ HEADERS += Utilities/inputdlg.h
 HEADERS += Utilities/performance.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
+HEADERS += Utilities/renamefile.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 HEADERS += Views/compareImages.h
@@ -221,7 +221,6 @@ SOURCES += File/ingest.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
-#SOURCES += Image/subject.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
@@ -321,6 +320,7 @@ macx:SOURCES += Utilities/mac.mm
 SOURCES += Utilities/performance.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
+SOURCES += Utilities/renamefile.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
 win32:SOURCES += Utilities/win.cpp
@@ -335,15 +335,13 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/addthumbnailsdlg.ui \
-    Dialogs/imagedlg.ui \
-    Help/filtershelp.ui \
-    Help/filtershelp_copy.ui
+FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui
 FORMS += Dialogs/editlistdlg.ui
+FORMS += Dialogs/imagedlg.ui
 FORMS += Dialogs/ingestdlg.ui
 FORMS += Dialogs/ingesterrors.ui
 #FORMS += Dialogs/ingestdlg_copy.ui
@@ -353,6 +351,7 @@ FORMS += Dialogs/manageimagesdlg.ui
 FORMS += Dialogs/managetilesdlg.ui
 FORMS += Dialogs/patterndlg.ui
 FORMS += Dialogs/renamedlg.ui
+FORMS += Dialogs/renamefiledlg.ui
 FORMS += Dialogs/saveasdlg.ui
 FORMS += Dialogs/selectionorpicksdlg.ui
 FORMS += Dialogs/testaligndlg.ui
@@ -364,6 +363,8 @@ FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Embellish/embelCoord.ui
+FORMS += Help/filtershelp.ui
+FORMS += Help/filtershelp_copy.ui
 FORMS += Help/helpform.ui
 FORMS += Help/helpingest.ui
 FORMS += Help/ingestautopath.ui
@@ -378,18 +379,13 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-    notes/Create help dialog.rtf \
-    notes/Create help dialog.rtf \
-    notes/Create help dialog.txt \
-    notes/Create_help_dialog.txt \
-    notes/Object_detection \
-    notes/Scratch2.txt \
-    notes/VideoScripts \
-    notes/_Symbols
+DISTFILES += Docs/ingestautopath
+DISTFILES += notes/Create help dialog.rtf
+DISTFILES += notes/Create help dialog.txt
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
+DISTFILES += notes/_Symbols
 DISTFILES += notes/_Notes
 DISTFILES += notes/_ToDo.txt
 DISTFILES += notes/DeployInstall.txt
@@ -398,15 +394,18 @@ DISTFILES += notes/git.txt
 DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/HelpDocCreation.txt
 DISTFILES += notes/HelpVideoNotes.txt
-DISTFILES += notes/ImageMagick
 DISTFILES += notes/hevcinfo
+DISTFILES += notes/ImageMagick
 DISTFILES += notes/Menu.txt
+DISTFILES += notes/Object_detection
 DISTFILES += notes/scratch.css
 DISTFILES += notes/scratch.html
 DISTFILES += notes/Scratch.txt
+DISTFILES += notes/Scratch2.txt
 DISTFILES += notes/Shortcuts.txt
 DISTFILES += notes/snippets.txt
 DISTFILES += notes/users.txt
+DISTFILES += notes/VideoScripts
 DISTFILES += notes/xmp.txt
 
 macx:LIBS += -framework ApplicationServices

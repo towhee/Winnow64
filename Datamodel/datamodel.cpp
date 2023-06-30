@@ -714,6 +714,11 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // G::CreatedColumn is extracted from the image metadata, not QFileInfo
+
+    // rghcreate
+    s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
+    setData(index(row, G::CreatedColumn), s);
+
     s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
@@ -733,7 +738,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
 {
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::updateFileData");
-//    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
+    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
     QString fPath = fileInfo.filePath();
     if (!fPathRow.contains(fPath.toLower())) return false;
     int row = fPathRow[fPath.toLower()];
@@ -743,6 +748,12 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     setData(index(row, G::ModifiedColumn), s);
+
+    // rghcreate
+    s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
+    setData(index(row, G::CreatedColumn), s);
+    qDebug() << "DataModel::updateFileData" << s;
+
     mutex.unlock();
     return true;
 }
@@ -1187,10 +1198,24 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     if (m._rating == "0") m.rating = "";
     setData(index(row, G::_RatingColumn), m._rating);
-    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
-    setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
-    setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
-     search += m.createdDate.toString("yyyy-MM-dd");
+
+    // rghcreate
+    QDateTime createdDT;
+//    if (index(row, G::CreatedColumn).data().toString().length())
+        createdDT = index(row, G::CreatedColumn).data().toDateTime();
+//    else
+//        createdDT = m.createdDate;
+//    if (createdDT.isValid()) {
+//        setData(index(row, G::CreatedColumn), createdDT.toString("yyyy-MM-dd hh:mm:ss.zzz"));
+        setData(index(row, G::YearColumn), createdDT.toString("yyyy"));
+        setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
+//    }
+
+//    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
+//    setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
+//    setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
+//    search += m.createdDate.toString("yyyy-MM-dd");
+
     setData(index(row, G::WidthColumn), QString::number(m.width));
     setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::HeightColumn), QString::number(m.height));

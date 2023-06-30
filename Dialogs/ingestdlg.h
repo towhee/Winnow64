@@ -75,13 +75,11 @@ public:
     ~IngestDlg() override;
     void test();
 
-//private:
     Ui::IngestDlg *ui;
     void initTokenList();
     void initExampleMap();
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
-//    static void backgroundIngest(IngestDlg *d);
     void ingest();
     void buildFileNameSequence();
     void updateExistingSequence();

@@ -559,11 +559,12 @@ bool MW::loadSettings()
     }
     setting->endGroup();
 
-    setting->beginGroup("FilenameTokens");
+    setting->beginGroup("FileNameTokens");
     keys = setting->childKeys();
     for (int i = 0; i < keys.size(); ++i) {
         QString key = keys.at(i);
         filenameTemplates[key] = setting->value(key).toString();
+        qDebug() << "Save FileNameTokens" << key;
     }
     setting->endGroup();
 
