@@ -48,13 +48,10 @@ signals:
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
                         QString src = "Selection::currentChanged") ;
-//    void setCurrentRow(int row, QString src);
     void loadConcurrent(int sfRow, bool scrollOnly = false);
     void updateStatus(bool, QString, QString);
 
 public slots:
-//    void currentChanged(QModelIndex idx, QModelIndex idx2 = QModelIndex());
-//    void current(QModelIndex sfIdx);
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
 private:
@@ -62,7 +59,6 @@ private:
     IconView *thumbView;
     IconView *gridView;
     TableView *tableView;
-//    QItemSelectionModel *sm;
     QModelIndex shiftAnchorIndex;
 
     bool isDebug;

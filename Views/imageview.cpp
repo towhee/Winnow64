@@ -277,7 +277,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
 
-        focus();
+        //focus();
     }
 
     isBusy = false;

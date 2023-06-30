@@ -471,11 +471,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
 
-//    // Logger
+    // Loggers
+    /*
     if (G::isLogger && G::sendLogToConsole == false) startLog();
-
-//    // Error Logger
     if (G::isErrorLogger) startErrLog();
+    */
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -1581,7 +1581,7 @@ void MW::selectionChange()
    - call MW::stop
    - all worker threads are stopped
    - resets all necessary info
-   - Finally, MW::folderSelectionChange is called
+   - finally, MW::folderSelectionChange is called
 
 Flow Flags:
 
@@ -5285,11 +5285,14 @@ void MW::refreshCurrentFolder()
                 dm->setIcon(dmIdx, pm, dm->instance, src);
             }
         }
-         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
+        if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
 //        metadataCacheThread->loadNewFolder(true);
         refreshCurrentAfterReload();
     }
-    else selectionChange();
+    // else selectionChange();
+    else  {
+        G::popUp->showPopup("There have been no changes to any images in the folder.", 2000);
+    }
 }
 
 void MW::refreshCurrentAfterReload()

@@ -643,6 +643,7 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
+    /*
     // Loggers: on/off
     i.name = "loggers";
     i.parentName = "GeneralHeader";
@@ -679,6 +680,7 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+    */
 
     // UserInterfaceHeader Header (Root) ---------------------------------------------------------------
     i.name = "UserInterfaceHeader";

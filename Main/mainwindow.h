@@ -68,8 +68,6 @@
 #include "Utilities/htmlwindow.h"
 #include "progressbar.h"
 
-//#include "Image/subject.h"
-
 #include "Utilities/coloranalysis.h"
 #include "Image/stack.h"
 
