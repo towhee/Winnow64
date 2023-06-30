@@ -126,7 +126,7 @@ int TableView::defaultCulumnWidth(int column)
     if (column == G::PermissionsColumn) return fm.boundingRect("=Permissions=").width();
     if (column == G::ReadWriteColumn) return fm.boundingRect("=false=").width();
     if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
-    if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
+    if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09.999=").width();
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
     if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
@@ -235,6 +235,10 @@ void TableView::paintEvent(QPaintEvent *event)
 void TableView::mousePressEvent(QMouseEvent *event)
 {
     QModelIndex idx = indexAt(event->pos());
+
+    // check mouse click was not in area after last row
+    if (!idx.isValid()) return;
+
     // only interested in rows, so set index column = 0
     idx = idx.model()->index(idx.row(), 0);
 
@@ -265,6 +269,11 @@ void TableView::mousePressEvent(QMouseEvent *event)
 void TableView::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (G::isLogger) G::log("TableView::mouseDoubleClickEvent");
+
+    // check mouse click was not in area after last row
+    QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid()) return;
+
     if (!event->modifiers() && event->button() == Qt::LeftButton) {
         emit displayLoupe();
     }
@@ -350,7 +359,7 @@ CreatedItemDelegate::CreatedItemDelegate(QObject* parent): QStyledItemDelegate(p
 
 QString CreatedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
-    return value.toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    return value.toDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
 }
 
 PickItemDelegate::PickItemDelegate(QObject* parent): QStyledItemDelegate(parent)

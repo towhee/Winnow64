@@ -171,6 +171,12 @@ void MW::createActions()
     addAction(copyImagePathFromContextAction);
     connect(copyImagePathFromContextAction, &QAction::triggered, this, &MW::copyImagePathFromContext);
 
+    renameAction = new QAction(tr("Rename images"), this);
+    renameAction->setObjectName("renameFiles");
+    renameAction->setShortcutVisibleInContextMenu(true);
+    addAction(renameAction);
+    connect(renameAction, &QAction::triggered, this, &MW::test);
+
     subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setShortcutVisibleInContextMenu(true);
@@ -288,14 +294,6 @@ void MW::createActions()
     else combineRawJpgAction->setChecked(false);
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
-
-    // Place keeper for now
-    renameAction = new QAction(tr("Rename selected images"), this);
-    renameAction->setObjectName("renameImages");
-    renameAction->setShortcutVisibleInContextMenu(true);
-//    renameAction->setShortcut(Qt::Key_F2);
-    addAction(renameAction);
-//    connect(renameAction, &QAction::triggered, this, &MW::renameImages);
 
     // Place keeper for now
     runDropletAction = new QAction(tr("Run Droplet"), this);
@@ -1537,6 +1535,7 @@ void MW::createMenus()
     fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
+    fileMenu->addAction(renameAction);
     fileMenu->addAction(saveAsFileAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
