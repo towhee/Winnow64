@@ -128,14 +128,4 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    QRect r(focusX - 2, focusY - 2, 4, 4);
     imageView->showRubber(r);
     qDebug() << w << h << x << y << pct << p << r << fX << fY;
-
-//    QImage image("/Users/roryhill/Pictures/Subjects/2022-06-12_0005.jpg");
-//    QImage image("/Users/roryhill/Pictures/Subjects/2023-04-14_0056.jpg");   // Nora face with eyes
-//    QImage image("/Users/roryhill/Pictures/YOLOv7/frame1.png");   // Potholes
-//    QImage image("/Users/roryhill/Pictures/YOLO_WildEyes/2006-04-17_0018.jpg");   // Ezra
-//    Subject subject;
-//    QList<QPointF> pts;
-//    subject.poi(image);
-//    subject.testYolov7("/Users/roryhill/Pictures/YOLO_WildEyes/2006-04-17_0018.jpg");
-//    subject.testYolov7("/Users/roryhill/Pictures/YOLOv7/frame1.png");
 }

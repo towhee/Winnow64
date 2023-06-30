@@ -40,7 +40,7 @@ Selection::Selection(QWidget *parent, DataModel *dm, IconView *thumbView, IconVi
     this->gridView = gridView;
     this->tableView = tableView;
     sm = dm->selectionModel;
-    isDebug = true;
+    isDebug = false;
 }
 
 //void Selection::currentChanged(QModelIndex idx, QModelIndex idx2)

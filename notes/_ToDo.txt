@@ -90,6 +90,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Release 1.35
 - Add pick status ingested to filters
 - FolderAndFileSelection not always scrolling IconView to current
 - Cmd and Shift select in table view

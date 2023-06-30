@@ -22,7 +22,9 @@ NORMAL DEPLOYMENT
             - save as Winnow.dmg (in  /Users/roryhill/Projects/WinnowInstall).
         - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
           or use FileZilla.
-        - Try http://www.winnow.ca/winnow_mac/test/winnow.dmg to make sure it works.
+        - Confirm is universal:
+          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.35.app/Contents/MacOS/Winnow
+        - Try http://www.winnow.ca/winnow_mac/test/Winnow1.35.dmg to make sure it works.
         - Finally Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/current
 
         Notes

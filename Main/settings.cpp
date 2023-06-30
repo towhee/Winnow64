@@ -399,7 +399,7 @@ bool MW::loadSettings()
 //    isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
-
+    /*
     if (setting->contains("isFileLogger"))
         G::isFileLogger = setting->value("isFileLogger").toBool();
     else
@@ -412,7 +412,7 @@ bool MW::loadSettings()
         G::isLogger = true;
     else
         G::isLogger = false;
-
+    */
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();
     else
