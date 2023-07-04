@@ -2264,6 +2264,17 @@ QString DataModel::diagnostics()
         getDiagnosticsForRow(row, rpt);
     }
     rpt << "\n\n" ;
+
+    // list fPathRow hash
+    QMap<int,QString> rowMap;
+    rpt << "fPathRow hash:\n";
+    for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i)
+        rowMap.insert(i.value(), i.key());
+    for (int i = 0; i < rowMap.count(); i++)
+        rpt << i << "\t" << rowMap[i]<< "\n";
+
+        //rpt << i.value() << "\t" << i.key()  << "\n";
+
     return reportString;
 }
 

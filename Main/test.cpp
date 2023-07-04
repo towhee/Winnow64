@@ -115,26 +115,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-<<<<<<< Updated upstream
-    int row = dm->fPathRow[dm->currentFilePath.toLower()];
-    int fX = dm->sf->index(row, G::FocusXColumn).data().toInt();
-    int fY = dm->sf->index(row, G::FocusYColumn).data().toInt();
-    int w = dm->sf->index(row, G::WidthColumn).data().toInt();
-    int h = dm->sf->index(row, G::HeightColumn).data().toInt();
-    double x = fX * 1.0 / w;
-    double y = fY * 1.0 / h;
-    QPointF pct = QPointF(x, y);
-    QPoint p = imageView->scene2CW(pct);
-    QRect r(p.x() - 10, p.y() - 10, 20, 20);
-//    QRect r(focusX - 2, focusY - 2, 4, 4);
-    imageView->showRubber(r);
-    qDebug() << w << h << x << y << pct << p << r << fX << fY;
-=======
     QString folderPath = G::currRootFolder;
-//    QString folderPath = "/Users/roryhill/Pictures/2023/202305/2023-05-28_Vancouver";
     QStringList selection;
     if (!dm->getSelection(selection)) return;
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata);
+    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCacheThread);
     rf.exec();
->>>>>>> Stashed changes
 }

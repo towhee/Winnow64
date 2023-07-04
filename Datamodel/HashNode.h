@@ -27,6 +27,7 @@ Class representing a templatized hash node
             next = nullptr;
         }
 
+        void setKey(K key_) {key = key_;}
         const K& getKey() const {return key;}
         void setValue(V value_) {value = value_;}
         const V& getValue() const {return value;}
@@ -118,6 +119,25 @@ bucket is always constructed with a dummy head node
             while (node != nullptr) {
                 if (node->getKey() == key) {
                     value = node->getValue();
+                    return true;
+                }
+                node = node->next;
+            }
+            return false;
+        }
+
+        bool rename(const K &key, const K &newKey)
+        /*
+
+        */
+        {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
+
+            while (node != nullptr) {
+                if (node->getKey() == key) {
+                    node->setKey(newKey);
                     return true;
                 }
                 node = node->next;
