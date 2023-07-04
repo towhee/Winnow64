@@ -47,6 +47,7 @@ public:
     bool cacheUpToDate();           // target range all cached
     bool isCached(int sfRow);
     void removeFromCache(QStringList &pathList);
+    void rename(QString oldPath, QString newPath);
 //    QSize getPreviewSize();
 
     QString diagnostics();

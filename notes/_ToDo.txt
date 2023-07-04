@@ -2,6 +2,7 @@ WHAT'S NEW
 - Share including airdrop for Macs
 
 BUGS / TO
+- Not opening in same monitor
 - Multi-export embellish same title on all
 - Sync bookmark and FSTree selection
 - After resize winnow scroll to current
@@ -78,7 +79,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Release 1.34
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
 - Portrait aspect ratios wrong
@@ -90,6 +90,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- After delete image cannot view last image in folder
+- Created date not including ms
+- Click below last row in TableView crashes
 - Release 1.35
 - Add pick status ingested to filters
 - FolderAndFileSelection not always scrolling IconView to current

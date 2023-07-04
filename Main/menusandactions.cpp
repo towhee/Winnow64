@@ -175,7 +175,7 @@ void MW::createActions()
     renameAction->setObjectName("renameFiles");
     renameAction->setShortcutVisibleInContextMenu(true);
     addAction(renameAction);
-    connect(renameAction, &QAction::triggered, this, &MW::test);
+    connect(renameAction, &QAction::triggered, this, &MW::renameSelectedFiles);
 
     subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
     subFoldersAction->setObjectName("subFolders");
@@ -1894,10 +1894,12 @@ void MW::createMenus()
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
-    thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
-    thumbViewActions->append(embedThumbnailsAction);
+    thumbViewActions->append(renameAction);
+    thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction6);
+    thumbViewActions->append(embedThumbnailsAction);
+    thumbViewActions->append(separatorAction7);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);

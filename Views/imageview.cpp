@@ -230,6 +230,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     //*/
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
+        qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
         bool imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));

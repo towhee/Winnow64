@@ -5399,6 +5399,17 @@ void MW::copyImagePathFromContext()
     G::popUp->showPopup(msg, 1500);
 }
 
+void MW::renameSelectedFiles()
+{
+    QString folderPath = G::currRootFolder;
+    QStringList selection;
+    if (!dm->getSelection(selection)) return;
+    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCacheThread);
+    rf.exec();
+    // may have renamed current image
+    setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
+}
+
 void MW::deleteSelectedFiles()
 {
 /*
@@ -5505,7 +5516,7 @@ void MW::deleteFiles(QStringList paths)
     }
 
     // refresh datamodel fPathRow hash
-//    dm->refreshRowFromPathHash();
+    dm->refreshRowFromPathHash();
 
     // cleanup G::rowsWithIcon
     if (G::isLoadConcurrent) metaReadThread->cleanupIcons();

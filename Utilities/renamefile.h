@@ -6,6 +6,7 @@
 #include "main/global.h"
 #include "Metadata/Metadata.h"
 #include "Datamodel/datamodel.h"
+#include "Cache/imagecache.h"
 #include "tokendlg.h"
 
 namespace Ui {
@@ -21,11 +22,13 @@ public:
                            QStringList &selection,
                            QMap<QString, QString>& filenameTemplates,
                            DataModel *dm,
-                           Metadata *metadata
+                           Metadata *metadata,
+                           ImageCache *imageCache
                            );
 
 private:
     Ui::RenameFiles *ui;
+    void appendAllSharingBaseName(QString path);
     void rename();
     void initTokenList();
     void initExampleMap();
@@ -34,16 +37,20 @@ private:
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
     void updateExample();
+    void debugShowDM(QString title);
 
     DataModel *dm;
     Metadata *metadata;
+    ImageCache *imageCache;
     QString &folderPath;
+    QList<QString> baseNamesUsed;
+    QList<QList<QString>> filesToRename;    // fPath,originalBasename
+//    QList<QString> filesToRename;
     QStringList &selection;
     QModelIndexList selectionIndexes;
     QMap<QString, QString> &filenameTemplatesMap;
     QMap<QString, QString> exampleMap;
     QStringList tokens;
-    bool isInitializing;
     QDateTime createdDate;
     QString currentToken;
     int tokenStart;
@@ -51,6 +58,8 @@ private:
     int seqWidth;
     int seqNum;
     QDate seqDate;
+
+    bool isDebug;
 
 private slots:
     void on_okBtn_clicked();

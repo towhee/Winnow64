@@ -1207,6 +1207,7 @@ private:
     void shareFiles();
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
+    void renameSelectedFiles();
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();

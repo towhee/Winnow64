@@ -77,6 +77,15 @@ class HashMap
             return hashTable[hashValue].find(key, value);
         }
 
+        bool rename(const K &key, const K &newKey) const
+        /*
+
+        */
+        {
+            size_t hashValue = hashFn(key) % hashSize;
+            return hashTable[hashValue].rename(key, newKey);
+        }
+
         void insert(const K &key, const V &value)
         /*
         Function to insert into the hash map. If key already exists, update the value,

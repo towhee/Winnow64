@@ -752,6 +752,18 @@ void ImageCache::removeFromCache(QStringList &pathList)
     }
 }
 
+void ImageCache::rename(QString oldPath, QString newPath)
+{
+    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        QString fPath = icd->cacheItemList.at(i).fPath;
+        if (fPath == oldPath) {
+            icd->cacheItemList[i].fPath = newPath;
+        }
+    }
+    qDebug() << "ImageCache::rename oldPath =" << oldPath << "to newPath =" << newPath;
+    icd->imCache.rename(oldPath, newPath);
+}
+
 void ImageCache::updateStatus(QString instruction, QString source)
 {
     emit showCacheStatus(instruction, icd->cache, source);

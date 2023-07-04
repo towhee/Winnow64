@@ -6,16 +6,17 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
                              QStringList &selection,
                              QMap<QString,QString> &filenameTemplates,
                              DataModel *dm,
-                             Metadata *metadata)
+                             Metadata *metadata,
+                             ImageCache *imageCache)
     : QDialog(parent),
       ui(new Ui::RenameFiles),
       dm(dm),
       metadata(metadata),
+      imageCache(imageCache),
       folderPath(folderPath),
       selection(selection),
       filenameTemplatesMap(filenameTemplates)
 {
-    isInitializing = false;
     ui->setupUi(this);
 
     QString n = QString::number(selection.count());
@@ -44,24 +45,108 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
 //    ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
 
     updateExample();
-//    updateExistingSequence();
-    isInitializing = false;
+    isDebug = true;
+}
+
+void RenameFileDlg::debugShowDM(QString title)
+{
+    qDebug() << title;
+    qDebug() << "dm->fPathRow hash:";
+    QMap<int,QString> rowMap;
+    for (auto i = dm->fPathRow.begin(), end = dm->fPathRow.end(); i != end; ++i)
+        qDebug() << i.value() << "\t" << i.key();
+        //rowMap.insert(i.value(), i.key());
+//    for (int i = 0; i < rowMap.count(); i++)
+//        qDebug() << i << "\t" << rowMap[i];
+    qDebug() << "Datamodel:";
+    for (int i = 0; i < dm->rowCount(); i++) {
+        QString path = dm->index(i, G::PathColumn).data(G::PathRole).toString();
+        QString name = dm->index(i, G::NameColumn).data().toString();
+        qDebug() << i << "\tPath =" << path << "Name =" << name;
+    }
+//    qDebug() << " ";
+}
+
+void RenameFileDlg::appendAllSharingBaseName(QString path)
+{
+    QFileInfo info(path);
+    QString baseName = info.baseName();
+    if (baseNamesUsed.contains(baseName)) return;
+
+    // append image file from datamodel selection (must come first)
+    filesToRename.append({path, baseName});
+    if (isDebug) {
+        qDebug() << "RenameFileDlg::appendAllSharingBaseName"
+                 << "base =" << baseName
+                 << "fileToAppend =" << path
+            ;
+    }
+
+    // append any auxillary or sidecar files sharing the basename
+    for (int i = 0; i < QDir(folderPath).entryInfoList().size(); i++) {
+        // ignore if source path
+//        qDebug() << QDir(folderPath).entryInfoList().at(i).filePath().toLower() << path.toLower();
+        if (QDir(folderPath).entryInfoList().at(i).filePath().toLower() == path.toLower())
+            continue;
+        QString base = QDir(folderPath).entryInfoList().at(i).baseName();
+        if (base == baseName) {
+            QString fileToAppend = QDir(folderPath).entryInfoList().at(i).filePath().toLower();
+            filesToRename.append({fileToAppend, baseName});
+            if (isDebug) {
+                qDebug() << "RenameFileDlg::appendAllSharingBaseName"
+                         << "base =" << base
+                         << "fileToAppend =" << fileToAppend
+                            ;
+            }
+        }
+    }
 }
 
 void RenameFileDlg::rename()
 {
+/*
+    Renames the base name for all the selected images.  Note that there could be multiple
+    images with the same base name but only one might be selected.  For example,: image.nef,
+    image.jpg and image.xmp.  Also, the renamed file could match an existing, but not
+    selected, file.
+
+    Structures:
+    Selection                   selectionIndexes
+    All files in folder         allFilesList
+    All files for base name     baseNamesList
+    All base names renamed      baseNamesUsedList
+    All files to rename         filesToRenameList
+
+    First iterate through the selection:
+    • create a unique basename to prevent duplicating an existing file
+*/
     QString tokenString = filenameTemplatesMap[ui->filenameTemplatesCB->currentText()];
     seqNum  = ui->spinBoxStartNumber->value();
+    int pathCol = 0;    // filesToRename.at(i).at(pathCol)
+    int baseCol = 1;    // filesToRename.at(i).at(baseCol)
 
-    // Assign unique names to selection
+    // Build list of all files to rename
+    if (isDebug)  qDebug() << "FILE LIST TO RENAME:";
+    filesToRename.clear();
     for (int i = 0; i < selectionIndexes.size(); i++) {
         int row = selectionIndexes.at(i).row();
-        QString oldPath = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
+        QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
+        appendAllSharingBaseName(path);
+    }
+
+    /*
+    // Assign unique names to filesToRename
+    if (isDebug) qDebug() << "ASSIGN UNIQUE NAMES:";
+    if (isDebug) debugShowDM("Before assign unique base names");
+//    int iBase = 0;
+//    QString prevOldPath = "";
+    for (int i = 0; i < filesToRename.size(); i++) {
+        QString oldPath = filesToRename.at(i).at(pathCol);
         QFileInfo info(oldPath);
         QString newPath = info.dir().path() + "/d78sn34_" + QString::number(i) + "." + info.suffix();
 
         if (oldPath.toLower() == newPath.toLower()) {
-            qDebug() << "RenameFileDlg::rename" << i << oldPath << newPath << "Nothing to do here";
+            if (isDebug) qDebug() << "RenameFileDlg::rename" << i << oldPath << newPath << "Nothing to do here";
             continue;
         }
         // if newPath already exists then get unique path using _x
@@ -70,37 +155,139 @@ void RenameFileDlg::rename()
             Utilities::uniqueFilePath(uniquePath, "_");
         }
 
-        // temp unique rename
+        // temp unique rename file
         QFile(oldPath).rename(uniquePath);
-        QModelIndex pathIdx = dm->sf->index(row, G::PathColumn);
-        QModelIndex nameIdx = dm->sf->index(row, G::NameColumn);
-        QString newName = Utilities::getFileName(uniquePath);
-        dm->sf->setData(pathIdx, uniquePath, G::PathRole);
-        dm->sf->setData(nameIdx, newName);
-        qDebug() << i << uniquePath;
+        QFile(oldPath).close();
+
+        // update datamodel
+        QModelIndex idx = dm->proxyIndexFromPath(oldPath);
+        // might be a sidecar file not in datamodel
+        if (idx.isValid()) {
+            int row = idx.row();
+            QModelIndex pathIdx = dm->sf->index(row, G::PathColumn);
+            QModelIndex nameIdx = dm->sf->index(row, G::NameColumn);
+            QString newName = Utilities::getFileName(uniquePath);
+            dm->sf->setData(pathIdx, uniquePath, G::PathRole);
+            dm->sf->setData(nameIdx, newName);
+            dm->fPathRow.remove(oldPath);
+            dm->fPathRow[uniquePath] = row;
+            // update imageCache
+            imageCache->rename(oldPath, uniquePath);
+        }
+        // update filesToRename
+        filesToRename[i][pathCol] = uniquePath;
+
+        if (isDebug)
+            qDebug() << "RenameFileDlg::rename unique:"
+                     << "oldPath =" << oldPath
+                     << "uniquePath =" << uniquePath
+                ;
     }
+    if (isDebug) debugShowDM("After assign unique base names");
+    */
 
-    for (int i = 0; i < selectionIndexes.size(); i++) {
-        int row = selectionIndexes.at(i).row();
-        QString oldPath = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
+    // Rename files using selected template
+    if (isDebug) qDebug() << "\nRENAME FILES:";
+    QString prevBaseName = "";
+//    QString prevBaseName = filesToRename.at(0).at(baseCol);
+    QString newBase = "";
 
-        // Generate new path and file name using selected template
+    for (int i = 0; i < filesToRename.size(); i++) {
+        QString iStr = QString::number(i);
+
+        QString oldPath = filesToRename.at(i).at(pathCol);
+        QString baseName = filesToRename.at(i).at(baseCol);
         QFileInfo info(oldPath);
-        QString newName = parseTokenString(info, tokenString) + "." + info.suffix();
+
+        // is file an image in datamodel
+        bool inDatamodel = dm->fPathRow.contains(oldPath.toLower());
+        bool baseNameChange = prevBaseName != baseName;
+
+        if (inDatamodel) {
+            newBase = parseTokenString(info, tokenString);
+        }
+
+        if (isDebug) {
+            qDebug()
+                 << "\nFILE =" << i
+                 << "oldPath =" << oldPath
+                 << "baseName =" << baseName
+                 << "prevBaseName =" << prevBaseName
+                 << "newBase =" << newBase
+                 << "baseNameChange =" << baseNameChange
+                 << "inDatamodel =" << inDatamodel
+                 << "seqNum =" << seqNum
+                   ;
+        }
+
+        QString newName = newBase + "." + info.suffix();
         QString newPath = info.dir().path() + "/" + newName;
 
-        if (ui->spinBoxStartNumber->isEnabled()) seqNum++;
+//        if (isDebug) debugShowDM(iStr + " File to rename = " + oldPath);
 
+        if (isDebug) {
+            qDebug() << "Renaming file"
+                     << "oldPath =" << oldPath << "to"
+                     << "newPath =" << newPath
+                ;
+        }
+
+        // File rename oldPath to newPath
         QFile(oldPath).rename(newPath);
-
+        QFile(oldPath).close();
+        /*
         // Update datamodel
-        QModelIndex pathIdx = dm->sf->index(row, G::PathColumn);
-        QModelIndex nameIdx = dm->sf->index(row, G::NameColumn);
-        dm->sf->setData(pathIdx, newPath, G::PathRole);
-        dm->sf->setData(nameIdx, newName);
+//        if (isDebug) debugShowDM("Check if dm->fPathRow contains " + oldPath);
 
-        qDebug() << "RenameFileDlg::rename" << i << oldPath << newPath;
+//        bool found = false;
+//        for (auto i = dm->fPathRow.begin(), end = dm->fPathRow.end(); i != end; ++i) {
+//            if (i.key() == oldPath) found = true;
+//            if (isDebug) qDebug()
+//                    << "i.key() =" << i.key()
+//                    << "oldPath =" << oldPath
+//                    << "i.value() =" << i.value()
+//                    << "found =" << found;
+//        }
+
+//        if (isDebug) qDebug() << "found =" << found << oldPath;  */
+
+        // update datamodel
+        if (inDatamodel) {
+            int row = dm->fPathRow[oldPath.toLower()];
+            QString rowStr = QString::number(row);
+//            qDebug() << oldPath << "found.  Datamodel row =" << row;
+
+            dm->fPathRow.remove(oldPath.toLower());
+            dm->fPathRow[newPath.toLower()] = row;
+
+//            if (isDebug) debugShowDM("Removed " + oldPath + " Added " + newPath + " row = " + rowStr);
+
+            if (isDebug) {
+                qDebug() << "RenameFileDlg::rename updating datamodel"
+                         << "newPath =" << newPath
+                         << "row =" << row
+                    ;
+            }
+            QModelIndex pathIdx = dm->index(row, G::PathColumn);
+            QModelIndex nameIdx = dm->index(row, G::NameColumn);
+            if (pathIdx.isValid()) dm->setData(pathIdx, newPath, G::PathRole);
+            if (nameIdx.isValid()) dm->setData(nameIdx, newName);
+
+//            debugShowDM("After DM update for row = " + rowStr);
+
+            // update imageCache
+            imageCache->rename(oldPath, newPath);
+//            debugShowDM("After DM update for row = " + rowStr);
+        }
+
+        if (baseNameChange) {
+            seqNum++;
+            prevBaseName = baseName;
+        }
     }
+
+    // update current image
+    dm->currentFilePath = dm->currentSfIdx.data(G::PathRole).toString();
 }
 
 int RenameFileDlg::getSequenceStart(const QString &path)
@@ -153,7 +340,7 @@ void RenameFileDlg::updateExistingSequence()
     in the file name template with XX... (ie dscn0001.jpg).
 */
     if (G::isLogger) G::log("IngestDlg::updateExistingSequence");
-    if (isInitializing) return;
+//    if (isInitializing) return;
 
     QString tokenKey = ui->filenameTemplatesCB->currentText();
     if(tokenKey.length() == 0) return;
@@ -178,7 +365,7 @@ void RenameFileDlg::updateExistingSequence()
     QDir dir(folderPath);
     if (dir.exists()) {
         int sequenceNum = getSequenceStart(folderPath);
-        if(ui->spinBoxStartNumber->value() < sequenceNum + 1)
+        if (ui->spinBoxStartNumber->value() < sequenceNum + 1)
             ui->spinBoxStartNumber->setValue(sequenceNum + 1);
         if (sequenceNum > 0)
             ui->existingSequenceLabel->setText("Folder exists and last image sequence found = "
@@ -360,7 +547,6 @@ bool RenameFileDlg::isToken(QString tokenString, int pos)
 
     // look forwards
     QString token;
-//    int n = tokenString.length();
     for (int i = pos; i < tokenString.length(); i++) {
         ch = tokenString.at(i);
         if (ch == '}') {                        // qt6.2 changed " to '
@@ -384,9 +570,13 @@ QString RenameFileDlg::parseTokenString(QFileInfo info, QString tokenString)
     QString fPath = info.absoluteFilePath();
     if (fPath == "") return "";
     ImageMetadata m = dm->imMetadata(fPath);
+
+    //return "Test_000" + QString::number(seqNum);
+
     createdDate = m.createdDate;
     QString s;
     int i = 0;
+
     while (i < tokenString.length()) {
         if (isToken(tokenString, i + 1)) {
             QString tokenResult;
