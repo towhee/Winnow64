@@ -369,8 +369,8 @@ void DataModel::remove(QString fPath)
     }
 
     // remove from fPathRow hash
-    if (fPathRow.contains(fPath.toLower())) {
-        fPathRow.remove(fPath.toLower());
+    if (fPathRow.contains(fPath)) {
+        fPathRow.remove(fPath);
     }
 }
 
@@ -684,7 +684,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 //    qDebug() << "DataModel::addFileDataForRow" << row << fPath;
     QString ext = fileInfo.suffix().toLower();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
-    fPathRow[fPath.toLower()] = row;
+    fPathRow[fPath] = row;
 
     // string to hold aggregated text for searching
     QString search = fPath;
@@ -740,8 +740,8 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     if (G::isLogger) G::log("DataModel::updateFileData");
     qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
     QString fPath = fileInfo.filePath();
-    if (!fPathRow.contains(fPath.toLower())) return false;
-    int row = fPathRow[fPath.toLower()];
+    if (!fPathRow.contains(fPath)) return false;
+    int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return false;
     mutex.lock();
     setData(index(row, G::SizeColumn), fileInfo.size());
@@ -776,7 +776,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int row = fPathRow[fPath.toLower()];
+    int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
@@ -1479,7 +1479,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     }
     if (G::stop) return;
 //    qDebug() << "DataModel::setValuePath" << "Instance =" << instance << currentFolderPath;
-    QModelIndex dmIdx = index(fPathRow[fPath.toLower()], col);
+    QModelIndex dmIdx = index(fPathRow[fPath], col);
     if (!dmIdx.isValid()) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::setValuePath" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
@@ -1774,7 +1774,7 @@ int DataModel::rowFromPath(QString fPath)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentFolderPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
-    if (fPathRow.contains(fPath.toLower())) return fPathRow[fPath.toLower()];
+    if (fPathRow.contains(fPath)) return fPathRow[fPath];
     else return -1;
 }
 
@@ -1786,7 +1786,7 @@ void DataModel::refreshRowFromPathHash()
     fPathRow.clear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
-        fPathRow[fPath.toLower()] = row;
+        fPathRow[fPath] = row;
     }
 }
 
@@ -1922,13 +1922,13 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (isDebug) qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
                           << "fPath =" << fPath
                           << currentFolderPath;
-    if (!fPathRow.contains(fPath.toLower())) {
+    if (!fPathRow.contains(fPath)) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Not in fPathrow";
         if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
-    int dmRow = fPathRow[fPath.toLower()];
+    int dmRow = fPathRow[fPath];
     QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
     if (sfIdx.isValid()) {
         return sfIdx;

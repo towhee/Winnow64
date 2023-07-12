@@ -2162,3 +2162,244 @@ void MW::enableSelectionDependentMenus()
     }
 }
 
+void MW::loadShortcuts(bool defaultShortcuts)
+{
+    if (G::isLogger) G::log("MW::loadShortcuts");
+    // Add customizable key shortcut actions
+    actionKeys[fullScreenAction->objectName()] = fullScreenAction;
+    actionKeys[escapeFullScreenAction->objectName()] = escapeFullScreenAction;
+    actionKeys[prefAction->objectName()] = prefAction;
+    actionKeys[exitAction->objectName()] = exitAction;
+    actionKeys[thumbsEnlargeAction->objectName()] = thumbsEnlargeAction;
+    actionKeys[thumbsShrinkAction->objectName()] = thumbsShrinkAction;
+    //    actionKeys[cutAction->objectName()] = cutAction;
+    //    actionKeys[copyAction->objectName()] = copyAction;
+    actionKeys[keyRightAction->objectName()] = keyRightAction;
+    actionKeys[keyLeftAction->objectName()] = keyLeftAction;
+    actionKeys[keyDownAction->objectName()] = keyDownAction;
+    actionKeys[keyUpAction->objectName()] = keyUpAction;
+    //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
+    //    actionKeys[keepZoomAct->objectName()] = keepZoomAct;
+    //    actionKeys[copyImageAction->objectName()] = copyImageAction;
+    //    actionKeys[pasteImageAction->objectName()] = pasteImageAction;
+    //    actionKeys[refreshAction->objectName()] = refreshAction;
+    //    actionKeys[pasteAction->objectName()] = pasteAction;
+    actionKeys[pickAction->objectName()] = pickAction;
+    actionKeys[filterPickAction->objectName()] = filterPickAction;
+    actionKeys[ingestAction->objectName()] = ingestAction;
+    actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
+    actionKeys[slideShowAction->objectName()] = slideShowAction;
+    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
+    actionKeys[keyEndAction->objectName()] = keyEndAction;
+    actionKeys[randomImageAction->objectName()] = randomImageAction;
+    actionKeys[openAction->objectName()] = openAction;
+    actionKeys[zoomOutAction->objectName()] = zoomOutAction;
+    actionKeys[zoomInAction->objectName()] = zoomInAction;
+    actionKeys[zoomToggleAction->objectName()] = zoomToggleAction;
+    actionKeys[rotateLeftAction->objectName()] = rotateLeftAction;
+    actionKeys[rotateRightAction->objectName()] = rotateRightAction;
+    //    actionKeys[moveRightAct->objectName()] = moveRightAct;
+    //    actionKeys[moveLeftAct->objectName()] = moveLeftAct;
+    //    actionKeys[copyToAction->objectName()] = copyToAction;
+    //    actionKeys[moveToAction->objectName()] = moveToAction;
+    //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
+    actionKeys[ratingBadgeVisibleAction->objectName()] = ratingBadgeVisibleAction;
+    actionKeys[iconNumberVisibleAction->objectName()] = iconNumberVisibleAction;
+    actionKeys[infoVisibleAction->objectName()] = infoVisibleAction;
+    //    actionKeys[toggleAllDocksAct->objectName()] = toggleAllDocksAct;
+    actionKeys[folderDockVisibleAction->objectName()] = folderDockVisibleAction;
+    actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
+    actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
+    actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
+    actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
+    //    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
+    actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
+    actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
+    //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
+    //    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
+
+    setting->beginGroup("Shortcuts");
+    QStringList groupKeys = setting->childKeys();
+
+    if (groupKeys.size() && !defaultShortcuts)
+    {
+        if (groupKeys.contains(exitAction->text())) //rgh find a better way
+        {
+            QMapIterator<QString, QAction *> key(actionKeys);
+            while (key.hasNext()) {
+                key.next();
+                if (groupKeys.contains(key.value()->text()))
+                {
+                    key.value()->setShortcut(setting->value(key.value()->text()).toString());
+                    setting->remove(key.value()->text());
+                    setting->setValue(key.key(), key.value()->shortcut().toString());
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < groupKeys.size(); ++i)
+            {
+                if (actionKeys.value(groupKeys.at(i)))
+                    actionKeys.value(groupKeys.at(i))->setShortcut
+                        (setting->value(groupKeys.at(i)).toString());
+            }
+        }
+    }
+    else    // default shortcuts
+    {
+        //    formats to set shortcut
+        //    keyRightAction->setShortcut(QKeySequence("Right"));
+        //    keyRightAction->setShortcut((Qt::Key_Right);
+
+        //        cutAction->setShortcut(QKeySequence("Ctrl+X"));
+        //        copyAction->setShortcut(QKeySequence("Ctrl+C"));
+        //        copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+        //        pasteImageAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
+        //        refreshAction->setShortcut(QKeySequence("Ctrl+F5"));
+        //        pasteAction->setShortcut(QKeySequence("Ctrl+V"));
+
+        // File
+        openAction->setShortcut(QKeySequence("O"));
+        refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
+        openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
+        ingestAction->setShortcut(QKeySequence("Q"));
+        showImageCountAction->setShortcut(QKeySequence("\\"));
+        combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
+        subFoldersAction->setShortcut(QKeySequence("B"));
+        revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
+        refreshFoldersAction->setShortcut(QKeySequence("F5"));
+        collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
+        reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+M"));
+        diagnosticsCurrentAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+D"));
+        exitAction->setShortcut(QKeySequence("Ctrl+Q"));
+
+        // Edit
+        selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
+        invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
+        rejectAction->setShortcut(QKeySequence("X"));
+        pickAction->setShortcut(QKeySequence("`"));
+        pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
+        pick1Action->setShortcut(QKeySequence("P"));
+        popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
+
+        searchTextEditAction->setShortcut(QKeySequence("F2"));
+
+        rate1Action->setShortcut(QKeySequence("1"));
+        rate2Action->setShortcut(QKeySequence("2"));
+        rate3Action->setShortcut(QKeySequence("3"));
+        rate4Action->setShortcut(QKeySequence("4"));
+        rate5Action->setShortcut(QKeySequence("5"));
+
+        label1Action->setShortcut(QKeySequence("6"));
+        label2Action->setShortcut(QKeySequence("7"));
+        label3Action->setShortcut(QKeySequence("8"));
+        label4Action->setShortcut(QKeySequence("9"));
+        label5Action->setShortcut(QKeySequence("0"));
+
+        rotateLeftAction->setShortcut(QKeySequence("Ctrl+["));
+        rotateRightAction->setShortcut(QKeySequence("Ctrl+]"));
+
+        prefAction->setShortcut(QKeySequence("Ctrl+,"));
+
+        // Go
+        keyRightAction->setShortcut(QKeySequence("Right"));
+        keyLeftAction->setShortcut(QKeySequence("Left"));
+        keyHomeAction->setShortcut(QKeySequence("Home"));
+        keyEndAction->setShortcut(QKeySequence("End"));
+        keyDownAction->setShortcut(QKeySequence("Down"));
+        keyUpAction->setShortcut(QKeySequence("Up"));
+        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
+        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
+
+        keyScrollLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
+        keyScrollRightAction->setShortcut(QKeySequence("Ctrl+Right"));
+        keyScrollUpAction->setShortcut(QKeySequence("Ctrl+Up"));
+        keyScrollDownAction->setShortcut(QKeySequence("Ctrl+Down"));
+
+        keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
+        keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
+        keyScrollPageUpAction->setShortcut(QKeySequence("Ctrl+Alt+Up"));
+        keyScrollPageDownAction->setShortcut(QKeySequence("Ctrl+Alt+Down"));
+
+        nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
+        prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));
+        randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
+
+        // Filters
+        filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
+        clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
+        filterPickAction->setShortcut(QKeySequence("Shift+`"));
+
+        filterSearchAction->setShortcut(QKeySequence("Shift+S"));
+
+        filterRating1Action->setShortcut(QKeySequence("Shift+1"));
+        filterRating2Action->setShortcut(QKeySequence("Shift+2"));
+        filterRating3Action->setShortcut(QKeySequence("Shift+3"));
+        filterRating4Action->setShortcut(QKeySequence("Shift+4"));
+        filterRating5Action->setShortcut(QKeySequence("Shift+5"));
+
+        filterRedAction->setShortcut(QKeySequence("Shift+6"));
+        filterYellowAction->setShortcut(QKeySequence("Shift+7"));
+        filterGreenAction->setShortcut(QKeySequence("Shift+8"));
+        filterBlueAction->setShortcut(QKeySequence("Shift+9"));
+        filterPurpleAction->setShortcut(QKeySequence("Shift+0"));
+
+        filterLastDayAction->setShortcut(QKeySequence("Shift+D"));
+
+        // Sort
+        sortReverseAction->setShortcut(QKeySequence("alt+S"));
+
+        // View
+        asLoupeAction->setShortcut(QKeySequence("E"));
+        asGridAction->setShortcut(QKeySequence("G"));
+        asTableAction->setShortcut(QKeySequence("T"));
+        asCompareAction->setShortcut(QKeySequence("C"));
+
+        slideShowAction->setShortcut(QKeySequence("S"));
+        fullScreenAction->setShortcut(QKeySequence("F"));
+        //        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
+
+        ratingBadgeVisibleAction->setShortcut(QKeySequence("Ctrl+I"));
+        iconNumberVisibleAction->setShortcut(QKeySequence("Ctrl+Shift+I"));
+        infoVisibleAction->setShortcut(QKeySequence("I"));
+
+        zoomToAction->setShortcut(QKeySequence("Z"));
+        zoomInAction->setShortcut(QKeySequence("+"));
+        zoomOutAction->setShortcut(QKeySequence("-"));
+        //        zoomToggleAction->setShortcut(QKeySequence("Space"));
+        zoomToggleAction->setShortcut(Qt::Key_Space);
+
+        //        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
+        thumbsEnlargeAction->setShortcut(QKeySequence("]"));
+        thumbsShrinkAction->setShortcut(QKeySequence("["));
+
+
+        // Window
+        newWorkspaceAction->setShortcut(QKeySequence("W"));
+        manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
+        defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
+
+        folderDockVisibleAction->setShortcut(QKeySequence("Shift+F3"));
+        favDockVisibleAction->setShortcut(QKeySequence("Shift+F4"));
+        filterDockVisibleAction->setShortcut(QKeySequence("Shift+F5"));
+        metadataDockVisibleAction->setShortcut(QKeySequence("Shift+F6"));
+        thumbDockVisibleAction->setShortcut(QKeySequence("Shift+F7"));
+        menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
+        statusBarVisibleAction->setShortcut(QKeySequence("Shift+F10"));
+
+        //        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
+        //        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
+        //        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
+        //        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
+        //        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
+        //        allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
+
+        // Help
+        helpAction->setShortcut(QKeySequence("?"));
+        //        toggleIconsListAction->setShortcut(QKeySequence("Ctrl+T"));
+    }
+
+    setting->endGroup();
+}
+

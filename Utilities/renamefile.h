@@ -28,7 +28,12 @@ public:
 
 private:
     Ui::RenameFiles *ui;
+    void renameFileBase(QString oldBase, QString newBase);
+    void makeExistingBaseUnique(QString newBase);
+    void renameDatamodel(QString oldPath, QString newPath, QString newName);
+    void renameAllSharingBaseName(QString oldBase, QString newBase);
     void appendAllSharingBaseName(QString path);
+    void resolveNameConflicts();
     void rename();
     void initTokenList();
     void initExampleMap();
@@ -37,14 +42,19 @@ private:
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
     void updateExample();
-    void debugShowDM(QString title);
+    void diagFiles();
+    void diagFilesToRename();
+    void diagBaseNames();
+    void diagDatamodel();
+    void diagBaseNamesUsed();
 
     DataModel *dm;
     Metadata *metadata;
     ImageCache *imageCache;
     QString &folderPath;
+    QList<QString> baseNames;
     QList<QString> baseNamesUsed;
-    QList<QList<QString>> filesToRename;    // fPath,originalBasename
+    QList<QList<QString>> filesToRename;    // fPath,originalBasename,done
 //    QList<QString> filesToRename;
     QStringList &selection;
     QModelIndexList selectionIndexes;

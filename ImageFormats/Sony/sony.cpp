@@ -502,7 +502,7 @@ bool Sony::parse(MetadataParameters &p,
         p.file.seek(focusOffset);
         m.focusX = u.get16(p.file.read(2), isBigEnd);
         m.focusY = u.get16(p.file.read(2), isBigEnd);
-        qDebug() << "focusX =" << m.focusX;
+        //qDebug() << "focusX =" << m.focusX;
     }
 
     /* Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data

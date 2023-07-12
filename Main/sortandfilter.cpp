@@ -359,6 +359,13 @@ void MW::sortChange(QString source)
     }
 
     // do not sort conditions
+    qDebug() << "MW::sortChange"
+             << "sortMenuUpdateToMatchTable =" << sortMenuUpdateToMatchTable
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded
+             << "sortColumn =" << sortColumn
+             << "G::NameColumn =" << G::NameColumn
+             << "sortHasChanged =" << sortHasChanged
+        ;
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;
@@ -439,6 +446,32 @@ void MW::sortChange(QString source)
 
 }
 
+void MW::sortReverse()
+/*
+    Experiment to reverse sort on the file name while a new folder is loading.
+*/
+{
+    thumbView->sortThumbs(G::NameColumn, isReverseSort);
+
+    //    if (!G::allMetadataLoaded) return;
+
+    // get the current selected item
+    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    else dm->currentSfRow = 0;
+
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
+    dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+    // the file path is used as an index in ImageView
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    // also update datamodel, used in MdCache and EmbelProperties
+    dm->currentFilePath = fPath;
+    sel->currentIndex(idx);
+
+    scrollToCurrentRow();
+}
+
 void MW::updateSortColumn(int sortColumn)
 {
     if (G::isLogger) G::log("MW::updateSortColumn");
@@ -473,6 +506,8 @@ void MW::toggleSortDirectionClick()
     if (G::isLogger) G::log("MW::toggleSortDirectionClick");
     toggleSortDirection(Tog::toggle);
     sortChange("MW::toggleSortDirectionClick");
+    // Experiment to reverse sort on the file name while a new folder is loading.
+    // sortReverse();
 }
 
 void MW::toggleSortDirection(Tog n)

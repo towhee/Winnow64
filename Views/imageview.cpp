@@ -230,7 +230,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     //*/
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
-        qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
+        //qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
         bool imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));
@@ -719,7 +719,7 @@ void ImageView::rotateImage(int degrees)
     ImageDecoder, Pixmap or Thumb, depending on where the load image is called from.
 */
     if (G::isLogger) G::log("ImageView::rotateImage");
-    qDebug() << "ImageView::rotateImage degrees =" << degrees;
+    //qDebug() << "ImageView::rotateImage degrees =" << degrees;
 
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
@@ -822,7 +822,7 @@ QPoint ImageView::scene2CW(QPointF pctPt)
 void ImageView::focus()
 {
     if (G::isLogger) G::log("ImageView::focus");
-    int row = dm->fPathRow[dm->currentFilePath.toLower()];
+    int row = dm->fPathRow[dm->currentFilePath];
     int fX = dm->sf->index(row, G::FocusXColumn).data().toInt();
     int fY = dm->sf->index(row, G::FocusYColumn).data().toInt();
     int w = dm->sf->index(row, G::WidthColumn).data().toInt();

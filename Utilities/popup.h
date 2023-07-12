@@ -43,10 +43,10 @@ public slots:
               bool isAutoSize = true,
               float opacity = 0.75,
               Qt::Alignment alignment = Qt::AlignHCenter);
-    void hide();
     void end();
 
 private slots:
+    void hide();
 
 private:
     QWidget *centralWidget;
@@ -54,7 +54,7 @@ private:
     bool okayToHide = true;
     float popupOpacity;
     Qt::Alignment popupAlignment;
-    QTimer *timer;
+    QTimer *hideTimer;
     int popupDuration = 2000;
     bool isProgressBar = false;
     QString popupText;

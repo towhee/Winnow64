@@ -115,9 +115,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString folderPath = G::currRootFolder;
-    QStringList selection;
-    if (!dm->getSelection(selection)) return;
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCacheThread);
-    rf.exec();
-}
+    qDebug() << "pos() =" << pos();
+    qDebug() << "QApplication::desktop ()->screenNumber (pos)) =" << QGuiApplication::screenAt(pos());
+    qDebug() << "geometry() =" << geometry();
+    qDebug() << "screen()->geometry() =" << screen()->geometry();
+    qDebug() << "screen()->availableGeometry() =" << screen()->availableGeometry();
+    qDebug() << "screen()->availableVirtualGeometry() ="<<  screen()->availableVirtualGeometry();
+
+//    Mac::spaces();
+    QList<QScreen *> screens = QGuiApplication::screens();
+    for (int i = 0; i < screens.size(); ++i) {
+        QRect screenGeometry = screens[i]->geometry();
+        qDebug() << "Screen" << i << "geometry:" << screenGeometry;
+    }}

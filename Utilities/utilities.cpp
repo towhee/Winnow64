@@ -286,6 +286,16 @@ QString Utilities::stringListToString(QStringList list)
     return s;
 }
 
+QString Utilities::pixmapToString(QPixmap &pixmap)
+{
+    QByteArray byteArray;
+    QBuffer buffer(&byteArray);
+    pixmap.save(&buffer, "PNG");
+    QString imgBase64 = QString::fromLatin1(byteArray.toBase64().data());
+    QString imgHtml = "<img src=\"data:image/png;base64," + imgBase64 + "\"/>";
+    return imgHtml;
+}
+
 // numbers: big endian = "MM" = 0x4D4D   little endian = "II" = 0x4949
 
 int Utilities::get4_1st(QByteArray c)
