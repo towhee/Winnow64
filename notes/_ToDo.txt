@@ -90,6 +90,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Add alert if rotate with filemodification disabled
+- Rename images using a template
+- Added Utilities::pixmapToString
 - After delete image cannot view last image in folder
 - Created date not including ms
 - Click below last row in TableView crashes

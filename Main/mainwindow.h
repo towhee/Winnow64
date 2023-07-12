@@ -459,6 +459,7 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChangeFromAction();
+    void sortReverse();
     void toggleSortDirectionClick();
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
@@ -1112,6 +1113,8 @@ private:
     bool ignoreAddThumbnailsDlg = false;
 
     bool sortMenuUpdateToMatchTable = false;
+
+    bool rotationAlertShown = false;
 
     QString imageCacheFilePath;
 

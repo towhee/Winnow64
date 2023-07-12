@@ -605,10 +605,10 @@ void Preferences::addItems()
     addItem(i);
     setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
 
-    // Ignore the missing thumbnails dialog
+    // Show missing thumbnails dialog
     i.name = "ignoreAddThumbnailsDlg";
     i.parentName = "modifySourceFiles";
-    i.captionText = "   Ignore missing thumbnails dialog";
+    i.captionText = "   Show missing thumbnails dialog";
     i.tooltip = "If enabled, the missing thumbnails dialog will be shown\n"
                 "if there are any missing thumbnails for TIFF or JPG files\n"
                 "in the folder and Modify source files is enabled."

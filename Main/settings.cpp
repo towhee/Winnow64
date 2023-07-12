@@ -100,8 +100,8 @@ void MW::writeSettings()
 
     // state
     setting->setValue("Geometry", saveGeometry());
-    setting->setValue("WindowLocation", geometry());
     setting->setValue("WindowState", saveState());
+    setting->setValue("WindowLocation", geometry());
     setting->setValue("isFullScreen", isFullScreen());
 
     setting->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
@@ -564,7 +564,7 @@ bool MW::loadSettings()
     for (int i = 0; i < keys.size(); ++i) {
         QString key = keys.at(i);
         filenameTemplates[key] = setting->value(key).toString();
-        qDebug() << "Save FileNameTokens" << key;
+        //qDebug() << "Save FileNameTokens" << key;
     }
     setting->endGroup();
 

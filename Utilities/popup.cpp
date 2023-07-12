@@ -47,8 +47,8 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     layout.addWidget(&progressBar, 1, 0);
     setLayout(&layout);
 
-    timer = new QTimer();
-    connect(timer, &QTimer::timeout, this, &PopUp::end);
+    hideTimer = new QTimer();
+    connect(hideTimer, &QTimer::timeout, this, &PopUp::end);
 }
 
 void PopUp::paintEvent(QPaintEvent *event)
@@ -87,7 +87,7 @@ void PopUp::showPopup(const QString &text,
                  float opacity,
                  Qt::Alignment alignment)
 {
-    timer->stop();
+    hideTimer->stop();
     okayToHide = true;
     hide();
     if (msDuration > 0) okayToHide = false;
@@ -116,7 +116,7 @@ void PopUp::showPopup(const QString &text,
     QWidget::show();
 
     // set popupDuration = 0 to keep open and manually close like a msgbox
-    if (popupDuration > 0) timer->start(popupDuration);
+    if (popupDuration > 0) hideTimer->start(popupDuration);
 }
 
 void PopUp::end()

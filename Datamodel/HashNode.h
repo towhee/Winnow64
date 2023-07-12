@@ -33,6 +33,7 @@ Class representing a templatized hash node
         const V& getValue() const {return value;}
 
         HashNode *next;             // Pointer to the next node in the same bucket
+
     private:
         K key;                      // the hash key
         V value;                    // the value corresponding to the key
@@ -60,7 +61,7 @@ bucket is always constructed with a dummy head node
         Return number of keys in the bucket
         */
         {
-            // A shared mutex is used to enable mutiple concurrent reads
+            // A shared mutex is used to enable multiple concurrent reads
             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
             HashNode<K, V> * node = head;
             int n = 0;
@@ -92,7 +93,7 @@ bucket is always constructed with a dummy head node
         function returns true. If key is not found, function returns false
         */
         {
-            // A shared mutex is used to enable mutiple concurrent reads
+            // A shared mutex is used to enable multiple concurrent reads
             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
             HashNode<K, V> * node = head;
 
@@ -126,25 +127,6 @@ bucket is always constructed with a dummy head node
             return false;
         }
 
-        bool rename(const K &key, const K &newKey)
-        /*
-
-        */
-        {
-            // A shared mutex is used to enable mutiple concurrent reads
-            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-            HashNode<K, V> * node = head;
-
-            while (node != nullptr) {
-                if (node->getKey() == key) {
-                    node->setKey(newKey);
-                    return true;
-                }
-                node = node->next;
-            }
-            return false;
-        }
-
         void insert(const K &key, const V &value)
         /*
         Function to insert into the bucket. If key already exists, update the value, else
@@ -164,7 +146,7 @@ bucket is always constructed with a dummy head node
             // New entry, create a node and add to bucket
             if (nullptr == node)
             {
-                if(nullptr == head) {
+                if (nullptr == head) {
                     head = new HashNode<K, V>(key, value);
                 }
                 else {
@@ -172,7 +154,7 @@ bucket is always constructed with a dummy head node
                 }
             }
             else {
-                node->setValue(value); //Key found in bucket, update the value
+                node->setValue(value); // Key found in bucket, update the value
             }
 
         }
@@ -196,9 +178,10 @@ bucket is always constructed with a dummy head node
             if (nullptr == node) {
                 return;
             }
+
             // Remove the node from the bucket
             else {
-                if(head == node) {
+                if (head == node) {
                     head = node->next;
                 }
                 else {
@@ -217,7 +200,7 @@ bucket is always constructed with a dummy head node
             std::unique_lock<std::shared_timed_mutex> lock(mutex_);
             HashNode<K, V> * prev = nullptr;
             HashNode<K, V> * node = head;
-            while(node != nullptr) {
+            while (node != nullptr) {
                 prev = node;
                 node = node->next;
                 delete prev;

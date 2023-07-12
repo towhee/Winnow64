@@ -77,13 +77,15 @@ class HashMap
             return hashTable[hashValue].find(key, value);
         }
 
-        bool rename(const K &key, const K &newKey) const
+        bool rename(const K &key, const K &newKey)
         /*
-
+        Function to rename a key.
         */
         {
-            size_t hashValue = hashFn(key) % hashSize;
-            return hashTable[hashValue].rename(key, newKey);
+            V value;
+            find(key, value);
+            insert(newKey, value);
+            remove(key);
         }
 
         void insert(const K &key, const V &value)
