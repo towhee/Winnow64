@@ -555,8 +555,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         }
 
         if (setting->value("hasCrashed").toBool()) {
-//            QFileInfo info(lastFileIfCrash);
-//            QString lastFolder = QFileInfo(lastFileIfCrash).dir().path();
             int picks = pickLogCount();
             int ratings = ratingLogCount();
             int colors = colorClassLogCount();
@@ -620,6 +618,13 @@ bool MW::isDevelopment()
 
 void MW::showEvent(QShowEvent *event)
 {
+/*
+    Functions used at startup for display
+    MW::moveEvent
+        MW::setDisplayResolution()
+        MW::updateDisplayResolution()
+    MW::restoreLastSessionGeometryState()
+*/
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 
     QMainWindow::showEvent(event);
@@ -635,6 +640,7 @@ void MW::showEvent(QShowEvent *event)
 
     // set initial visibility
     embelTemplateChange(embelProperties->templateId);
+
     // size columns after show if device pixel ratio > 1
     embelProperties->resizeColumns();
 
@@ -677,6 +683,7 @@ void MW::closeEvent(QCloseEvent *event)
     //if (testCrash) return;
 
     stop("MW::closeEvent");
+
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -708,7 +715,7 @@ void MW::closeEvent(QCloseEvent *event)
 
 void MW::moveEvent(QMoveEvent *event)
 {
-    /*
+/*
     When the main winnow window is moved the zoom dialog, if it is open, must be moved as
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
@@ -1124,10 +1131,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (e->button() == Qt::LeftButton) {
             isLeftMouseBtnPressed = false;
             isMouseDrag = false;
-            if (thumbView->thumbSplitDrag) {
-                thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
-                thumbView->thumbSplitDrag = false;
-            }
+//            if (thumbView->thumbSplitDrag) {
+//                thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
+//                thumbView->thumbSplitDrag = false;
+//            }
             /*
             qDebug() << "MW::eventFilter" << "MouseButtonRelease"
                      << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
@@ -1459,8 +1466,6 @@ void MW::handleStartupArgs(const QString &args)
         // get the folder where the files to embellish are located
         QFileInfo info(argList.at(3));
         QString folderPath = info.dir().absolutePath();
-//        QMessageBox::information(this, "MW::handleStartupArgs", folderPath);
-//        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", args);
 
         // list of all supported files in the folder
         QStringList fileFilters;
@@ -1541,7 +1546,7 @@ void MW::handleStartupArgs(const QString &args)
         }
 
         setCentralMessage("Loading Embellished ...");
-//        QApplication::processEvents();
+        //QApplication::processEvents();
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
@@ -1878,16 +1883,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
+    //qDebug() << "MW::fileSelectionChange";
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 //    qDebug() << "MW::fileSelectionChange" << "*CONTINUE 0*" << current;
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
             "G::stop so exit");
+        qDebug() << "MW::fileSelectionChange G::stop so exit";
         return;
     }
 
-   /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2010,7 +2017,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update caching if folder has been loaded
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-        updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
+//        updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
         if (G::isLoadLinear) {
             metadataCacheThread->fileSelectionChange();
         }
@@ -2349,9 +2356,6 @@ bool MW::updateIconRange(int row, QString src)
     visible. This is used in the metadataCacheThread or metaReadThread to determine the
     range of thumbnails to cache.
 
-    If row == -1 (scrolled to unknown row) then the isVisible() function uses the scrollbar
-    position to determine the visible thumbnails.
-
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
 */
@@ -2368,12 +2372,14 @@ bool MW::updateIconRange(int row, QString src)
         thumbView->updateVisible(row);
         if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
+
     }
 
     if (gridView->isVisible()) {
         gridView->updateVisible(row);
         if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
+
     }
 
     if (tableView->isVisible()) {
@@ -2471,7 +2477,7 @@ void MW::loadConcurrentNewFolder()
     // no sorting or filtering until all metadata loaded
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
-//    sortMenu->setEnabled(false);
+    sortMenu->setEnabled(false);
     if (reset(src + QString::number(count++))) return;
 
     // read metadata using MetaRead
@@ -2481,7 +2487,7 @@ void MW::loadConcurrentNewFolder()
     sel->currentRow(targetRow);
 }
 
-void MW::loadConcurrent(int sfRow, bool scrollOnly)
+void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTriggered)
 /*
     Called after a scroll event in IconView or TableView by thumbHasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
@@ -2497,7 +2503,8 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly)
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
 //            dm->currentSfRow = sfRow;
             dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-            metaReadThread->setCurrentRow(sfRow, scrollOnly, "MW::loadConcurrent");
+            metaReadThread->setCurrentRow(sfRow, scrollOnly, fileSelectionChangeTriggered,
+                                          "MW::loadConcurrent");
         }
     }
 }
@@ -2572,7 +2579,7 @@ void MW::loadLinearNewFolder()
 
     // no sorting or filtering until all metadata loaded
     filterMenu->setEnabled(false);
-//    sortMenu->setEnabled(false);
+    sortMenu->setEnabled(false);
     if (reset()) return;
 
     // add all metadata to datamodel
@@ -2755,9 +2762,9 @@ void MW::thumbHasScrolled()
         updateIconRange(-1, "MW::thumbHasScrolled");
         int midVisibleCell = thumbView->midVisibleCell;
         if (gridView->isVisible())
-            gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            gridView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
         if (tableView->isVisible())
-            tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            tableView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
         else loadConcurrent(midVisibleCell, true);
@@ -2805,11 +2812,12 @@ void MW::gridHasScrolled()
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(-1, "MW::gridHasScrolled");
+        int midVisibleCell = gridView->midVisibleCell;
         if (thumbView->isVisible())
-            thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
+            thumbView->scrollToRow(midVisibleCell, "MW::gridHasScrolled");
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
-        else loadConcurrent(gridView->midVisibleCell, true);
+        else loadConcurrent(midVisibleCell, true);
     }
     G::ignoreScrollSignal = false;
 }
@@ -2875,8 +2883,9 @@ void MW::numberIconsVisibleChange()
                 ;
                 */
     if (chunkSizeChanged) {
-        if (G::isLoadLinear)
+        if (G::isLoadLinear) {
             metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
+        }
         else
             loadConcurrent(dm->midIconRange, true);
     }

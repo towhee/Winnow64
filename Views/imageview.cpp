@@ -214,7 +214,6 @@ bool ImageView::loadImage(QString fPath, QString src)
     int sfRow = dm->proxyRowFromModelRow(dmRow);
     if (sfRow == -1) return false;
     bool isCached = false;
-    bool isCaching = false;
     if (icd->cacheItemList.size() >= sfRow) {
         isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
     }

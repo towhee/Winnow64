@@ -125,11 +125,15 @@ void Selection::currentIndex(QModelIndex sfIdx)
         if (gridView->isVisible()) gridView->setFocus();
         if (thumbView->isVisible()) thumbView->setFocus();
 
-        if (G::isLoadConcurrent && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
-            emit loadConcurrent(sfIdx.row());
-        }
-        else {
+        bool fileSelectionChangeTriggered = false;
+        if (dm->sf->index(dm->currentSfRow, G::MetadataLoadedColumn).data().toBool()) {
             emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
+            fileSelectionChangeTriggered = true;
+        }
+
+        bool scrollOnly = false;
+        if (G::isLoadConcurrent && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
+            emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered);
         }
     }
 }

@@ -53,9 +53,10 @@ MetaRead::~MetaRead()
     delete thumb;
 }
 
-void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
+void MetaRead::setCurrentRow(int row, bool scrollOnly,
+                             bool fileSelectionChangeTriggered, QString src)
 {
-    if (isDebug || G::isLogger || G::isFlowLogger) {
+    if (isDebug) {
         QString running;
         isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(row) + " src = " + src + " isRunning = " + running;
@@ -71,6 +72,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
     targetRow = startRow;
     startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
     this->scrollOnly = scrollOnly;
+    alreadyTriggered = fileSelectionChangeTriggered;
     count = 0;
     abortCleanup = isRunning();
     mutex.unlock();
@@ -82,7 +84,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly, QString src)
 
 bool MetaRead::stop()   // not being used
 {
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead::stop");
+    if (isDebug) G::log("MetaRead::stop");
 
     abort = true;
     for (int i = 0; i < 100; i++) {
@@ -118,8 +120,8 @@ void MetaRead::initialize()
     Called when change folders.
 */
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::initialize");
-    if (isDebug || G::isLogger || G::isFlowLogger)
+    if (isDebug) G::log("MetaRead::initialize");
+    if (isDebug)
         G::log("MetaRead::initialize",
                "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
     rowsWithIcon.clear();
@@ -132,7 +134,7 @@ void MetaRead::initialize()
 
 QString MetaRead::diagnostics()
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::diagnostics");
+    if (isDebug) G::log("MetaRead::diagnostics");
 
     QString reportString;
     QTextStream rpt;
@@ -173,7 +175,7 @@ QString MetaRead::diagnostics()
 
 QString MetaRead::reportMetaCache()
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::reportMetaCache");
+    if (isDebug) G::log("MetaRead::reportMetaCache");
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -196,7 +198,7 @@ void MetaRead::cleanupIcons()
     If a new startRow is sent to setStartPosition while running then the icon
     cleanup is interrupted.
 */
-    if (isDebug || G::isLogger) G::log("MetaRead::cleanupIcons");
+    if (isDebug) G::log("MetaRead::cleanupIcons");
 
     // check if datamodel size is less than assigned icon cache chunk size
     if (iconChunkSize >= sfRowCount) return;
@@ -226,7 +228,7 @@ void MetaRead::cleanupIcons()
 
 bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::readMetadata");
+    if (isDebug) G::log("MetaRead::readMetadata");
     if (isDebug)
     {
         qDebug() << "MetaRead::readMetadata"
@@ -252,7 +254,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     if (abort) return false;
     if (!isMetaLoaded) {
-        qDebug() << "MetaRead::readMetadata"
+        qWarning() << "WARNING MetaRead::readMetadata"
                  << "row =" << sfIdx.row()
                  << "Load meta failed"
                  ;
@@ -310,7 +312,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::readIcon");
+    if (isDebug) G::log("MetaRead::readIcon");
     if (isDebug) {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "start  row =" << sfIdx.row()
@@ -374,7 +376,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::readRow");
+    if (isDebug) G::log("MetaRead::readRow");
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readRow"
@@ -471,7 +473,7 @@ void MetaRead::run()
     Loads the metadata and icons into the datamodel (dm) for a folder.  The iteration
     proceeds from the start row in an ahead/behind progression.
 */
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead::run", src);
+    if (isDebug) G::log("MetaRead::run", src);
 
     if (isDebug)
     {

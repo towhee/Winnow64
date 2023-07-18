@@ -306,6 +306,13 @@ void IconViewDelegate::setCurrentRow(int row)
     currentRow = row;               // not used
 }
 
+void IconViewDelegate::resetFirstLastVisible()
+{
+    firstVisible = 99999999;
+    lastVisible = 0;
+    midVisible = 0;
+}
+
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
                                  const QModelIndex& index) const
 {
@@ -357,6 +364,12 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // get data from model
     int row = index.row();
+
+    // first/last visible (not being used at present)
+    if (row < firstVisible) firstVisible = row;
+    if (row > lastVisible) lastVisible = row;
+    midVisible = firstVisible + ((lastVisible - firstVisible) / 2);
+
     QString labelText;
     if (labelChoice == "Title") {
         labelText = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();

@@ -25,7 +25,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
                            Metadata *metadata)
     : QThread(parent)
 {
-    if (G::isLogger) G::log("ImageDecoder::ImageDecoder", "Thread " + QString::number(id));
+    if (isDebug) G::log("ImageDecoder::ImageDecoder", "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
     fPath = "";
@@ -33,6 +33,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     instance = 0;
     this->dm = dm;
     this->metadata = metadata;
+    isDebug = false;
 }
 
 void ImageDecoder::stop()
@@ -80,7 +81,7 @@ bool ImageDecoder::load()
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
     QString fun = "ImageDecoder::load";
-    if (G::isLogger) G::log(fun, fPath);
+    if (isDebug) G::log(fun, fPath);
 
     // null fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
@@ -303,7 +304,7 @@ bool ImageDecoder::load()
 
 void ImageDecoder::setReady()
 {
-    if (G::isLogger) {
+    if (isDebug) {
 //        mutex.lock();
 //        G::log("ImageDecoder::setRead", "Thread " + QString::number(threadId));
 //        mutex.unlock();
@@ -313,7 +314,7 @@ void ImageDecoder::setReady()
 
 void ImageDecoder::rotate()
 {
-    if (G::isLogger) {
+    if (isDebug) {
 //        mutex.lock();
 //        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
 //        mutex.unlock();
@@ -358,7 +359,7 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isLogger) {
+    if (isDebug) {
 //        mutex.lock();
 //        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
 //        mutex.unlock();
@@ -370,9 +371,9 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-//    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+//    if (isDebug) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
 //    /*
-    if (G::isLogger) {
+    if (isDebug) {
         mutex.lock();
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
         mutex.unlock();
@@ -388,13 +389,13 @@ void ImageDecoder::run()
     }
 
     if (load()) {
-        if (G::isLogger) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
+        if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         status = Status::Done;
     }
 
-    if (G::isLogger) {
+    if (isDebug) {
         mutex.lock();
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
         mutex.unlock();

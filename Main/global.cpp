@@ -2,7 +2,7 @@
 
 namespace G
 {
-    QSettings *settings;
+    QSettings *settings;//
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
@@ -11,7 +11,7 @@ namespace G
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
     bool isErrorLogger = true;         // Writes error log messages to file or console
     bool isTestLogger = false;          // Writes test points to file or console
-    bool sendLogToConsole = false;       // true: console, false: WinnowLog.txt
+    bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
     bool isDev;                         // Running from within Winnow Project/Winnow64

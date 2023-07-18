@@ -70,6 +70,7 @@ private:
     unsigned char *buf;
     QString ext;
     QString errImage = ":/images/badImage1.png";
+    bool isDebug = false;
 };
 
 #endif // IMAGEDECODER_H

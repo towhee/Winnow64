@@ -32,7 +32,7 @@ public:
     int firstVisibleCell;
     int midVisibleCell;
     int lastVisibleCell;
-    int visibleCellCount;
+    double visibleCellCount;
 
     bool thumbSplitDrag = false;
 
@@ -59,12 +59,17 @@ public:
     QSize getMinCellSize();
     QSize getMaxCellSize();
     QSize getCellSize();
+    double cellsInViewport();
+    int midVisible();
     int getThumbSpaceWidth(int thumbSpaceHeight);
     QStringList getSelectedThumbsList();        //used by tags, might be useful, move to selection
     QString getCurrentFilePath();       // used by MW::updateStatus to check for instance clash.  Is this needed?
     int getSelectedCount();             // used by MW::updateStatus - move to selection?
 
     void setThumbParameters();
+
+//    int firstRowFromScrollBars();
+//    int midRowFromScrollBars();
 
     int getHorizontalScrollBarOffset(int row);  // not being used
     int getVerticalScrollBarOffset(int row);    // not being used
@@ -100,7 +105,7 @@ public slots:
     void justify(JustifyAction action);
     void rejustify();
     void bestAspect();
-    void thumbsFitTopOrBottom();
+    void thumbsFitTopOrBottom(QString src = "");
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
     QModelIndex upIndex();
@@ -136,7 +141,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent*) override;
     void leaveEvent(QEvent *event) override;
-
+    void paintEvent(QPaintEvent *event) override;
 
 signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,

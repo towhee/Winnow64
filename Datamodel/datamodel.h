@@ -108,9 +108,9 @@ public:
     int currentDmRow;                     // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
-    int firstVisibleIcon;
-    int lastVisibleIcon;
-    int visibleIcons;
+    int firstVisibleIcon;               // not used
+    int lastVisibleIcon;                // not used
+    int visibleIcons;                   // not used
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
     int midIconRange;                   // used to determine MetaRead priority queue

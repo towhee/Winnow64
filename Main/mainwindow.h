@@ -516,7 +516,7 @@ private slots:
                                 QString source);
     // caching
     void loadConcurrentNewFolder();
-    void loadConcurrent(int sfRow, bool scrollOnly);
+    void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
     void loadConcurrentDone();
 
     void loadLinearNewFolder();

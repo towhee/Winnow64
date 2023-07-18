@@ -39,11 +39,15 @@ public:
     int getThumbWidthFromCellWidth(int cellWidth);
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);
+    void resetFirstLastVisible();
 
     QString diagnostics();
 
     QModelIndex currentIndex;
     int currentRow;
+    mutable int firstVisible;
+    mutable int lastVisible;
+    mutable int midVisible;
 
     const QRect r;
 
