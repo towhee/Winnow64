@@ -181,18 +181,15 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     }
     embellish->setRemote(true);
 
-//    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
+    //QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
     if (G::isFileLogger) Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));
 
     exportImages(pathList, true);
 
-//    embellish->setRemote(false);
-
-//    int n = pathList.length() - 1;
-//    QString fPath = pathList.at(n);
-//    QString exportFolder = exportSubfolderPath(fPath);
-//    QFileInfo info(fPath);
-//    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
+    // remove the temp image files used to create the embellished version
+    for (int i = 0; i < pathList.size(); i++) {
+        QFile(pathList.at(i)).remove();
+    }
 
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
     return lastFileExportedPath;

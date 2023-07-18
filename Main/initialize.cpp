@@ -12,7 +12,6 @@ void MW::initialize()
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
     G::dpi = 72;
-//    G::dpi = 96;
     G::ptToPx = G::dpi / 72;
     isNormalScreen = true;
     G::isSlideShow = false;
@@ -25,11 +24,14 @@ void MW::initialize()
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
     hasGridBeenActivated = true;
+
+    // window
     isDragDrop = false;
     setAcceptDrops(true);
     setMouseTracking(true);
     QString msg;
 
+    // status bar buttons / labels
     modifyImagesBtn = new BarBtn();
     msg = "Toggle permit modify images on/off.";
     modifyImagesBtn->setToolTip(msg);
@@ -493,17 +495,9 @@ void MW::createThumbView()
     // back and forward mouse buttons toggle pick
     connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
 
-//    connect(thumbView, SIGNAL(updateThumbDockHeight()),
-//            this, SLOT(setThumbDockHeight()));
-
-    // trigger fileSelectionChange
-//    connect(thumbView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
-
-//    connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
-
+    // scrolling
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
-
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
 }
@@ -539,8 +533,6 @@ void MW::createGridView()
         gridView->visibleCellCount = (width() / 200) * (height() / 200);
     }
 
-    // trigger fileSelectionChange
-//    connect(gridView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
     // double mouse click fires displayLoupe
     connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
     // update metadata and icons if not loaded for new images when scroll

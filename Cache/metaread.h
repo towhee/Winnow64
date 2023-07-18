@@ -53,7 +53,8 @@ signals:
 
 public slots:
     void initialize();
-    void setCurrentRow(int row = 0, bool scrollOnly = false, QString src = "");
+    void setCurrentRow(int row = 0, bool scrollOnly = false,
+                       bool fileSelectionChangeTriggered = false, QString src = "");
 
 protected:
     void run() Q_DECL_OVERRIDE;

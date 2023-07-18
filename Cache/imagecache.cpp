@@ -61,7 +61,7 @@ ImageCache::ImageCache(QObject *parent,
                        Metadata *metadata*/)
     : QThread(parent)
 {
-    if (G::isLogger) G::log("ImageCache::ImageCache");
+    if (debugCaching) G::log("ImageCache::ImageCache");
 
     // data is kept in ImageCacheData icd, a concurrent hash table
     this->icd = icd;
@@ -85,7 +85,7 @@ ImageCache::ImageCache(QObject *parent,
 ImageCache::~ImageCache()
 {
     mutex.lock();
-    if (G::isLogger) G::log("ImageCache::~ImageCache");
+    if (debugCaching) G::log("ImageCache::~ImageCache");
     abort = true;
     condition.wakeOne();
     mutex.unlock();
@@ -94,7 +94,7 @@ ImageCache::~ImageCache()
 
 void ImageCache::clearImageCache(bool includeList)
 {
-    if (G::isLogger) G::log("ImageCache::clearImageCache");
+    if (debugCaching) G::log("ImageCache::clearImageCache");
     mutex.lock();
     icd->imCache.clear();
     icd->cache.currMB = 0;
@@ -112,7 +112,7 @@ void ImageCache::stop()
     image caching thread without a new one starting when there has been a
     folder change. The cache status label in the status bar will be hidden.
 */
-    if (G::isLogger) G::log("ImageCache::stop");
+    if (debugCaching) G::log("ImageCache::stop");
     abort = true;
 
 //    // stop decoder threads
@@ -145,7 +145,7 @@ void ImageCache::stop()
 float ImageCache::getImCacheSize()
 {
     // return the current size of the cache
-    if (G::isLogger) G::log("ImageCache::getImCacheSize");
+    if (debugCaching) G::log("ImageCache::getImCacheSize");
     float cacheMB = 0;
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
         if (icd->cacheItemList.at(i).isCached) {
@@ -175,7 +175,7 @@ void ImageCache::setKeyToCurrent()
 /*
     cache.key is the index of the item in cacheItemList that matches dm->currentFilePath
 */
-    if (G::isLogger) G::log("ImageCache::setKeyToCurren");
+    if (debugCaching) G::log("ImageCache::setKeyToCurren");
     if (debugCaching) qDebug() << "ImageCache::setKeyToCurren";
     icd->cache.key = -1;
     for (int i = 0; i < icd->cacheItemList.count(); i++) {
@@ -193,7 +193,7 @@ void ImageCache::setKeyToCurrent()
 
 int ImageCache::keyFromPath(QString path)
 {
-    if (G::isLogger) G::log("ImageCache::keyFromPath");
+    if (debugCaching) G::log("ImageCache::keyFromPath");
     if (debugCaching) qDebug() << "ImageCache::keyFromPath";
     for (int i = 0; i < icd->cacheItemList.count(); i++) {
         if (icd->cacheItemList.at(i).fPath == path) {
@@ -211,7 +211,7 @@ bool ImageCache::isValidKey(int key)
 
 void ImageCache::updateTargets()
 {
-    if (G::isLogger) G::log("ImageCache::updateTargets");
+    if (debugCaching) G::log("ImageCache::updateTargets");
     if (debugCaching) qDebug() << "ImageCache::updateTargets";
     isCacheItemListComplete = cacheItemListComplete();
     if (debugCaching)
@@ -231,7 +231,7 @@ void ImageCache::updateTargets()
 
 bool ImageCache::cacheItemListComplete()
 {
-    if (G::isLogger) G::log("ImageCache::cacheItemListComplete");
+    if (debugCaching) G::log("ImageCache::cacheItemListComplete");
     if (debugCaching) qDebug() << "ImageCache::cacheItemListComplete";
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
         if (!icd->cacheItemList.at(i).isUpdated) {
@@ -255,7 +255,7 @@ void ImageCache::setDirection()
     prevents needless caching if the user justs reverses direction to check out the previous
     image
 */
-    if (G::isLogger) G::log("ImageCache::setDirection");
+    if (debugCaching) G::log("ImageCache::setDirection");
     if (debugCaching) {
         qDebug().noquote() << "ImageCache::setDirection";
     }
@@ -293,7 +293,7 @@ void ImageCache::setPriorities(int key)
     following the order (2 ahead, one behind) and assigned an increasing sort order key, which
     is used by setTargetRange to sort icd->cacheItemList by priority.
 */
-    if (G::isLogger) G::log("ImageCache::setPriorities", "key = " + QString::number(key));
+    if (debugCaching) G::log("ImageCache::setPriorities", "key = " + QString::number(key));
     if (debugCaching) {
         qDebug().noquote() << "ImageCache::setPriorities" << "  starting with row =" << key;  // row = key
     }
@@ -438,7 +438,7 @@ void ImageCache::setTargetRange()
     cacheItemList.
 */
 {
-    if (G::isLogger) G::log("ImageCache::setTargetRange");
+    if (debugCaching) G::log("ImageCache::setTargetRange");
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -536,7 +536,7 @@ bool ImageCache::nextToCache(int id)
       maxAttemptsToCacheImage.
 
 */
-    if (G::isLogger) G::log("ImageCache::nextToCache");
+    if (debugCaching) G::log("ImageCache::nextToCache");
     if (debugCaching) qDebug() << "ImageCache::nextToCache";
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
         return false;
@@ -629,6 +629,28 @@ void ImageCache::fixOrphans()
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             icd->cacheItemList[i].attempts = 0;
             if (inImageCache) icd->imCache.remove(fPath);
+            /* crash happened here 2023-07-17
+Thread 31 Crashed:: ImageCache
+0   libsystem_kernel.dylib        	       0x189fb4724 __pthread_kill + 8
+1   libsystem_pthread.dylib       	       0x189febc28 pthread_kill + 288
+2   libsystem_c.dylib             	       0x189ef9ae8 abort + 180
+3   libsystem_malloc.dylib        	       0x189e1ae28 malloc_vreport + 908
+4   libsystem_malloc.dylib        	       0x189e315d4 malloc_zone_error + 104
+5   libsystem_malloc.dylib        	       0x189e29148 nanov2_guard_corruption_detected + 44
+6   libsystem_malloc.dylib        	       0x189e28344 nanov2_allocate_outlined + 404
+7   libc++abi.dylib               	       0x189fa6924 operator new(unsigned long) + 32
+8   QtCore                        	       0x106aa8098 queued_activate(QObject*, int, QObjectPrivate::Connection*, void**) + 404 (qobject.cpp:3838)
+9   QtCore                        	       0x106aa1f58 void doActivate<false>(QObject*, int, void**) + 544 (qobject.cpp:3952)
+10  Winnow                        	       0x1049b8304 ImageCache::updateCacheOnThumbs(QString, bool, QString) + 64
+11  Winnow                        	       0x1045fc048 ImageCache::fixOrphans() + 1896
+12  Winnow                        	       0x1045fa414 ImageCache::updateTargets() + 740
+13  Winnow                        	       0x104605b80 ImageCache::run() + 420
+14  QtCore                        	       0x106bc8334 QThreadPrivate::start(void*)::$_0::operator()() const + 256 (qthread_unix.cpp:321) [inlined]
+15  QtCore                        	       0x106bc8334 void (anonymous namespace)::terminate_on_exception<QThreadPrivate::start(void*)::$_0>(QThreadPrivate::start(void*)::$_0&&) + 256 (qthread_unix.cpp:257) [inlined]
+16  QtCore                        	       0x106bc8334 QThreadPrivate::start(void*) + 332 (qthread_unix.cpp:280)
+17  libsystem_pthread.dylib       	       0x189febfa8 _pthread_start + 148
+18  libsystem_pthread.dylib       	       0x189fe6da0 thread_start + 8
+            */
             emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
         }
     }
@@ -686,7 +708,7 @@ void ImageCache::setSizeMB(int id, int cacheKey)
 
     If this is not done the ImageCache::setTargetRange algorithm will not be updated correctly.
 */
-    if (G::isLogger) G::log("ImageCache::setSizeMB");
+    if (debugCaching) G::log("ImageCache::setSizeMB");
     if (debugCaching) qDebug() << "ImageCache::setSizeMB";
     QImage *image = &decoder[id]->image;
     int w = image->width();
@@ -705,7 +727,7 @@ void ImageCache::memChk()
     something else (another program) has used the system memory then reduce the size of the
     cache so it still fits.
 */
-    if (G::isLogger) G::log("ImageCache::memChk");
+    if (debugCaching) G::log("ImageCache::memChk");
     if (debugCaching) qDebug() << "ImageCache::memChk";
 
     // get available memory
@@ -730,7 +752,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
 /*
     Called when delete image(s).
 */
-    if (G::isLogger) G::log("ImageCache::removeFromCache");
+    if (debugCaching) G::log("ImageCache::removeFromCache");
     if (debugCaching) qDebug() << "ImageCache::removeFromCache";
 
     // remove items from icd->cacheItemList, i
@@ -816,7 +838,7 @@ void ImageCache::updateStatus(QString instruction, QString source)
 
 QString ImageCache::diagnostics()
 {
-    if (G::isLogger) G::log("ImageCache::diagnostics");
+    if (debugCaching) G::log("ImageCache::diagnostics");
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -834,7 +856,7 @@ QString ImageCache::diagnostics()
 
 QString ImageCache::reportCacheParameters()
 {
-    if (G::isLogger) G::log("ImageCache::reportCacheParameters");
+    if (debugCaching) G::log("ImageCache::reportCacheParameters");
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -867,7 +889,7 @@ QString ImageCache::reportCacheParameters()
 
 QString ImageCache::reportCache(QString title)
 {
-    if (G::isLogger) G::log("ImageCache::reportCache");
+    if (debugCaching) G::log("ImageCache::reportCache");
 
     QHash<int, QString> rptStatus;
     rptStatus[0] = "Ready";
@@ -1098,7 +1120,7 @@ QString ImageCache::reportImCache()
 
 QString ImageCache::reportCacheProgress(QString action)
 {
-//    if (G::isLogger) {mutex.lock(); G::log("ImageCache::reportCacheProgress"); mutex.unlock();}
+//    if (debugCaching) {mutex.lock(); G::log("ImageCache::reportCacheProgress"); mutex.unlock();}
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -1358,7 +1380,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB,
 /*
     When various image cache parameters are changed in preferences they are updated here.
 */
-    if (G::isLogger) G::log("ImageCache::updateImageCacheParam");
+    if (debugCaching) G::log("ImageCache::updateImageCacheParam");
     if (debugCaching) qDebug() << "ImageCache::updateImageCacheParam";
     mutex.lock();
     icd->cache.maxMB = cacheSizeMB;
@@ -1443,7 +1465,7 @@ void ImageCache::refreshImageCache()
 /*
     Reload all images in the cache.
 */
-    if (G::isLogger) G::log("ImageCache::refreshImageCache");
+    if (debugCaching) G::log("ImageCache::refreshImageCache");
     if (debugCaching) qDebug() << "ImageCache::refreshImageCache";
     mutex.lock();
     // make all isCached = false
@@ -1464,7 +1486,7 @@ void ImageCache::colorManageChange()
 /*
     Called when color manage is toggled.  Reload all images in the cache.
 */
-    if (G::isLogger) G::log("ImageCache::colorManageChangeImageCache::colorManageChange");
+    if (debugCaching) G::log("ImageCache::colorManageChangeImageCache::colorManageChange");
     if (debugCaching) qDebug() << "ImageCache::colorManageChange";
     refreshImageCache();
 }
@@ -1475,7 +1497,7 @@ void ImageCache::cacheSizeChange()
     Called when changes are made to image cache parameters in preferences. The image cache
     direction, priorities and target are reset and orphans fixed.
     */
-    if (G::isLogger) G::log("ImageCache::cacheSizeChange");
+    if (debugCaching) G::log("ImageCache::cacheSizeChange");
     if (debugCaching) qDebug() << "ImageCache::cacheSizeChange";
     mutex.lock();
     cacheSizeHasChanged = true;

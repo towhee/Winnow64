@@ -115,6 +115,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << "IconView::updateVisibleCells"
+             << thumbView->objectName()
+             << "current row =" << thumbView->currentIndex().row()
+             << "firstVisibleCell =" << thumbView->firstVisibleCell
+             << "lastVisibleCell =" << thumbView->lastVisibleCell
+             << "midVisibleCell =" << thumbView->midVisibleCell
+             << "visibleCellCount =" << thumbView->visibleCellCount
+             << "bestAspectRatio =" << thumbView->bestAspectRatio;
+        ;
+    return;
+
+
     qDebug() << "pos() =" << pos();
     qDebug() << "QApplication::desktop ()->screenNumber (pos)) =" << QGuiApplication::screenAt(pos());
     qDebug() << "geometry() =" << geometry();

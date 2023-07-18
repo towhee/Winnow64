@@ -48,7 +48,7 @@ signals:
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
                         QString src = "Selection::currentChanged") ;
-    void loadConcurrent(int sfRow, bool scrollOnly = false);
+    void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
     void updateStatus(bool, QString, QString);
 
 public slots:
