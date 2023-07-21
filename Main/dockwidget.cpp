@@ -1,5 +1,37 @@
 #include "dockwidget.h"
 
+/*
+// RichTextTabBar *****************************************************************************
+//    Not being used.  Would require also subclassing QMainWindow to use this.
+
+void RichTextTabBar::setTabText(int index, const QString& text)
+{
+    QLabel* label = new QLabel(text);
+    label->setFixedSize(mTabWidth, mTabHeight);
+    label->setStyleSheet("padding-top:0px; padding-bottom:0px; padding-left:5px; padding-right:5px;");
+    setTabButton(index, QTabBar::LeftSide, label);
+}
+
+// RichTextTabWidget **************************************************************************
+//    Not being used.  Would require also subclassing QMainWindow to use this.
+
+
+RichTextTabWidget::RichTextTabWidget(QWidget* parent): QTabWidget(parent)
+{
+    setTabBar(new RichTextTabBar());
+}
+
+void RichTextTabWidget::setRichTextTabBar(RichTextTabBar *rtb)
+{
+    setTabBar(rtb);
+}
+void RichTextTabWidget::setTabText(int index, const QString &label)
+{
+    tabBar()->setTabText(index, label);
+}
+//*/
+
+
 /* DockTitleBtn *******************************************************************************
 A tool button that is placed in the DockTitleBar.  The styling is inherited from DockTitleBar,
 which has a border, and must be over-ridden.
@@ -65,13 +97,15 @@ QSize DockTitleBar::sizeHint() const
     return QSize(width(), h);
 }
 
-DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QFrame()
+DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
 {
     setStyle();
     setLayout(titleBarLayout);
     titleLabel = new QLabel;
+    titleLabel->setTextFormat(Qt::RichText);
     setTitle(title);
     titleLabel->setText(title);
+    //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
     titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
@@ -80,6 +114,7 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
 void DockTitleBar::setTitle(QString title)
 {
     titleLabel->setText(title);
+    //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
 }
 
 void DockTitleBar::setStyle()
@@ -140,7 +175,7 @@ bool DockWidget::event(QEvent *event)
         if (isFloating()) {
             move(dw.pos);
             dw.devicePixelRatio =  dw.devicePixelRatio =  this->screen()->devicePixelRatio();
-//            dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
+            //dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
             if (!qFuzzyCompare(dw.devicePixelRatio, prevDpr)) {
                 dprSize *= prevDpr;
                 dprSize /= dw.devicePixelRatio;
@@ -214,10 +249,10 @@ void DockWidget::resizeEvent(QResizeEvent *event)
     if (ignoreResize) return;
 
     if (isFloating()) {
-//        dw.screen = QApplication::desktop()->screenNumber(this);
+        //dw.screen = QApplication::desktop()->screenNumber(this);
         prevDpr = dw.devicePixelRatio;
         dw.devicePixelRatio =  this->screen()->devicePixelRatio();
-//        dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
+        //dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
         dw.size = event->size();
         dprSize = dw.size;
         /*
@@ -248,7 +283,7 @@ void DockWidget::moveEvent(QMoveEvent *event)
                     ;
                     //*/
     if (isFloating()) {
-//        dw.screen = QApplication::desktop()->screenNumber(this);
+        //dw.screen = QApplication::desktop()->screenNumber(this);
         dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
         /*
         qDebug() << "DockWidget::moveEvent" << "Redefine dw.pos:"

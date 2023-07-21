@@ -42,13 +42,14 @@ FrameDecoder::FrameDecoder(QObject *parent)
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
-    connect(mediaPlayer, &QMediaPlayer::playbackStateChanged, this, &FrameDecoder::stateChanged);
+//    connect(mediaPlayer, &QMediaPlayer::playbackStateChanged, this, &FrameDecoder::stateChanged);
 
-    isDebugging = false;
+    isDebugging = true;
 }
 
 void FrameDecoder::stop()
 {
+    // version 1.34 on
     mediaPlayer->stop();
     clear();
     //emit stopped("FrameDecoder");
@@ -164,6 +165,21 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log("FrameDecoder::frameChanged");
 
+    // code from version 1.33
+    mediaPlayer->stop();
+    QImage im = frame.toImage();
+    if (!im.isNull()) {
+        QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        qint64 duration = mediaPlayer->duration();
+        emit setFrameIcon(dmIdx, pm, dmInstance, duration);
+        //emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
+        int i = queueIndex(dmIdx);
+        if (i != -1) queue.remove(i);
+    }
+    getNextThumbNail("frameChanged");
+    return;
+
+    /* code in version 1.34 on
     frameChangedCount++;
     if (isDebugging)
     {
@@ -204,6 +220,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         }
         mediaPlayer->stop();
     }
+    //*/
 }
 
 void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)

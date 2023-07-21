@@ -57,6 +57,7 @@ void Selection::currentPath(QString &fPath)
 void Selection::currentRow(int sfRow)
 {
     if (G::isLogger || isDebug) G::log("Selection::current row");
+    if (G::isFlowLogger2) qDebug() << "Selection::currentRow" << "row =" << sfRow;
     currentIndex(dm->sf->index(sfRow, 0));
 }
 
@@ -73,6 +74,7 @@ void Selection::currentIndex(QModelIndex sfIdx)
             - MW::fileSelectionChange
 */
 {
+    if (G::isFlowLogger2) qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row();
     if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
         G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
     if (isDebug)

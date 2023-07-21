@@ -111,10 +111,33 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
+    if (G::isFlowLogger2) qDebug() << "";
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+    for (int i = 0; i < tabList.count(); i++) {
+        QTabBar* tabBar = tabList.at(i);
+        for (int j = 0; j < tabBar->count(); j++) {
+            qDebug() << "tabBar" << i
+                     << "tab" << j
+                     << "text" << tabBar->tabText(j)
+                ;
+        }
+    }
+    return;
+
+    QList<QDockWidget*> dockWidgets = tabifiedDockWidgets(metadataDock);
+    for (int i = 0; i < dockWidgets.size(); ++i) {
+        DockWidget *dw = qobject_cast<DockWidget*>(dockWidgets.at(i));
+        if (dw) {
+            // Do something with dw
+            qDebug() << dw->objectName();
+        }
+    }
+    return;
+
     qDebug() << "IconView::updateVisibleCells"
              << thumbView->objectName()
              << "current row =" << thumbView->currentIndex().row()

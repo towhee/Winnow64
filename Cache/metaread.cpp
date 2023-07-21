@@ -121,6 +121,7 @@ void MetaRead::initialize()
 */
 {
     if (isDebug) G::log("MetaRead::initialize");
+    if (G::isFlowLogger2) qDebug() << "MetaRead::initialize";
     if (isDebug)
         G::log("MetaRead::initialize",
                "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
@@ -229,6 +230,8 @@ void MetaRead::cleanupIcons()
 bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readMetadata");
+    if (G::isFlowLogger2) qDebug() << "MetaRead::readMetadata" << "row =" << sfIdx.row() << fPath;
+
     if (isDebug)
     {
         qDebug() << "MetaRead::readMetadata"
@@ -313,6 +316,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readIcon");
+    if (G::isFlowLogger2) qDebug() << "MetaRead::readIcon" << "row =" << sfIdx.row() << fPath;
     if (isDebug) {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "start  row =" << sfIdx.row()
@@ -377,6 +381,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 void MetaRead::readRow(int sfRow)
 {
     if (isDebug) G::log("MetaRead::readRow");
+    if (G::isFlowLogger2) qDebug() << "MetaRead::readRow" << "row =" << sfRow;
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readRow"
