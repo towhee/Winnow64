@@ -1,0 +1,15 @@
+MW::eventFilter event: QEvent(ZOrderChange, 0x16ef20638) 	 event->type: QEvent::ZOrderChange 	 obj: DockWidget(0x6000011c0060, name = "Image Info") 	 obj->objectName: "Image Info" object->metaObject()->className: DockWidget
+
+mainwindow.cpp:1089:39: No matching function for call to 'qobject_cast'
+qobject.h:437:10: candidate function template not viable: cannot convert argument of incomplete type 'void *' to 'QObject *' for 1st argument
+qsharedpointer_impl.h:38:3: candidate function template not viable: cannot convert argument of incomplete type 'void *' to 'const QObject *' for 1st argument
+qsharedpointer_impl.h:: candidate template ignored: could not match 'QSharedPointer<T>' against 'void *'
+qsharedpointer_impl.h:: candidate template ignored: could not match 'QWeakPointer<T>' against 'void *'
+
+mainwindow.cpp:1090:26: No matching function for call to 'qobject_cast'
+qobject.h:437:10: candidate function template not viable: cannot convert argument of incomplete type 'void *' to 'QObject *' for 1st argument
+qsharedpointer_impl.h:38:3: candidate function template not viable: cannot convert argument of incomplete type 'void *' to 'const QObject *' for 1st argument
+qsharedpointer_impl.h:: candidate template ignored: could not match 'QSharedPointer<T>' against 'void *'
+qsharedpointer_impl.h:: candidate template ignored: could not match 'QWeakPointer<T>' against 'void *'
+
+MW::eventFilter event: QChildEvent(ChildAdded, QAbstractAnimation(0x600003e20aa0)) 	 event->type: QEvent::ChildAdded 	 obj: QTabBar(0x600002646a80) 	 obj->objectName: "" object->metaObject()->className: QTabBar

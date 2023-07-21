@@ -1072,7 +1072,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
             int i = tabBar->tabAt(e->pos());
             if (tabBar->tabText(i) == filterDockTabText) {
-                // qDebug() << "MW::eventFilter FILTERDOCK CLICKED";
                 filterDockTabMousePress();
             }
         }
@@ -1085,7 +1084,34 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
                 if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
                 if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
-                if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
+                if (tabBar->tabText(i) == metadataDockTabText) {
+                    tip = "Metadata Panel";
+                    /*
+                    DockWidget *dw;
+//                    dw = qobject_cast<QDockWidget*>(tabBar->tabData(i).value<void*>());
+//                    bool found = metadataDock == qobject_cast<quintptr>(tabBar->tabData(i));
+//                    bool found = metadataDock == qobject_cast<DockWidget*>(tabBar->tabData(i).value<void*>());
+//                    QDockWidget *dw = qvariant_cast<QDockWidget*>(tabBar->tabData(i));
+//                    DockWidget *dw = qobject_cast<DockWidget*>(tabBar->tabData(i).value<void*>());
+                    QVariant v = tabBar->tabData(i);
+                    dw = qvariant_cast<DockWidget *>(tabBar->tabData(i));
+                    bool test = v.canConvert<QDockWidget>();
+//                    bool test = dw == nullptr;
+                    qulonglong ptr = reinterpret_cast<qulonglong>(obj);
+//                    quintptr ptr = reinterpret_cast<quintptr>(obj);
+                    qDebug() << "MW::eventFilter FILTERDOCK CLICKED"
+//                             << tabBar->tabData(i).value<void*>()
+                             << tabBar->tabData(i)
+                             << "metadataDock ptr =" << ptr
+//                             << "dw = nullptr" << test
+                             << metadataDock
+                            ;
+                    // 105,553,159,400,032
+//                    tabBar->setTabIcon(i, QIcon(":/images/icon16/anchor.png"));
+//                    qDebug() << "MW::eventFilter QTabBar"
+//                             << tabBar->
+                    */
+                }
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
                 prevTabIndex = i;
                 QFontMetrics fm(QToolTip::font());
@@ -1098,6 +1124,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::Leave) {
             prevTabIndex = -1;
         }
+        /* experimenting to maybe replace text with an icon
+        if (event->type() == QEvent::ChildAdded) {
+            QChildEvent *e = static_cast<QChildEvent*>(event);
+            QTabBar *tabBar = static_cast<QTabBar*>(obj);
+            qDebug() << "event =" << event
+                << "obj =" << obj
+                << "e =" << e
+                << "e->child()->children() =" << e->child()->children();
+            for (int j = 0; j < tabBar->count(); j++) {
+                qDebug()
+                         << "tab" << j
+                         << "text" << tabBar->tabText(j)
+                    ;
+            }
+        }
+
+        if (event->type() == QEvent::ChildRemoved) {
+            qDebug() << event << obj;
+        }
+        //*/
     }
     } // end section
 
@@ -1442,20 +1488,23 @@ void MW::handleStartupArgs(const QString &args)
     QStringList pathList;
     QString templateName;
     if (argList.at(1) == "Embellish") {
+        /* This means a remote embellish has been invoked.
+                arg 1 = Embellish
+                arg 2 = Embellish template name
+                arg 3 = Folder holding temp image files sent to embellish
+
+        The information is gathered and sent to EmbelExport::exportRemoteFiles, where the
+        images are embellished and saved in the manner defined by the embellish template
+        is a subfolder, and then the temp image files are deleted in the folder arg 3. */
+
         /* show main window now.  If we don't, then the update progress popup will not be
         visible.  If there is a significant delay, when a lot of images have to be processed,
         this would be confusing for the user.  */
         show();
-//        qApp->processEvents();
-        /* activate Winnow when receiving arguments - not working ...
-        raise();
-        setWindowFlags(Qt::WindowStaysOnTopHint);
-        this->activateWindow();
-        this->setFocus();
-        */
 
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
+
         // get the embellish template to use
         templateName = argList.at(2);
 
@@ -2436,6 +2485,7 @@ bool MW::updateIconRange(int row, QString src)
 void MW::loadConcurrentNewFolder()
 {
     QString fun = "MW::loadConcurrentNewFolder";
+    if (G::isFlowLogger2) qDebug() << fun << G::currRootFolder;
     if (G::isLogger || G::isFlowLogger) G::log(fun);
 
     QString src = "MW::loadConcurrentNewFolder ";
@@ -2453,11 +2503,12 @@ void MW::loadConcurrentNewFolder()
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // target image
-    int targetRow;
+    int targetRow = 0;
     if (folderAndFileChangePath != "") {
         targetRow = dm->rowFromPath(folderAndFileChangePath);
+        if (targetRow < 0) targetRow = 0;
         dm->currentSfRow = targetRow;
-//        folderAndFileChangePath = "";
+        folderAndFileChangePath = "";
     }
     else {
         targetRow = 0;
@@ -4183,7 +4234,8 @@ void MW::setRotation(int degrees)
     When there is a rotation action (rotateLeft or rotateRight) the current
     rotation amount (in degrees) is updated in the datamodel.
 
-    The rotation is updated in the image file EXIF using exifTool in separate threads.
+    The rotation is updated in the image file EXIF using exifTool in separate threads
+    if G::modifySourceFiles == true.
 */
     if (G::isLogger) G::log("MW::setRotation");
     qDebug() << "MW::setRotation degrees =" << degrees;

@@ -1329,6 +1329,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
                                 int &cacheWtAhead)
 {
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::initImageCache");
+    if (G::isFlowLogger2) qDebug() << "ImageCache::initImageCache";
     if (!G::useImageCache) return;   // rgh isolate image cache
 
     if (debugCaching) qDebug() << "ImageCache::initImageCache  dm->instance =" << dm->instance;

@@ -1235,10 +1235,20 @@ void MW::createMetadataDock()
 {
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::createMetadataDock");
+    // this does not work
+//    QPixmap pixmap(":/images/icon16/anchor.png");
+//    metadataDockTabText = Utilities::pixmapToString(pixmap);
     metadataDockTabText = "  📷  ";
     metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
+
+    /* Experimenting touse rich text in QTabWidget for docks
+    RichTextTabBar *tabBar = new RichTextTabBar();
+    RichTextTabWidget *tabWidget = new RichTextTabWidget(metadataDock);
+    tabWidget->setRichTextTabBar(tabBar);
+    metadataDock->setTabIcon
+    //*/
 
     // customize the metadataDock titlebar
     QHBoxLayout *metaTitleLayout = new QHBoxLayout();

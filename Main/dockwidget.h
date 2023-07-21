@@ -5,7 +5,34 @@
 #include "global.h"
 #include "widgetcss.h"
 
-/*-------------------------------------------------------------------------------------------*/
+/* Not being used.  Would require also subclassing QMainWindow to use this.
+//-------------------------------------------------------------------------------------------
+class RichTextTabBar : public QTabBar
+{
+    Q_OBJECT
+public:
+    void setTabText(int index, const QString& text);
+
+private:
+    int mTabWidth;
+    int mTabHeight;
+};
+
+//-------------------------------------------------------------------------------------------
+class RichTextTabWidget : public QTabWidget
+{
+    Q_OBJECT
+public:
+    RichTextTabWidget(QWidget* parent = nullptr);
+    void setRichTextTabBar(RichTextTabBar *rtb);
+    void setTabText(int index, const QString &label);
+
+private:
+    RichTextTabBar* tabBar() const;
+};
+*/
+
+//-------------------------------------------------------------------------------------------
 class BarBtn : public QToolButton
 {
     Q_OBJECT
@@ -28,8 +55,8 @@ private:
     QColor btnHover;
 };
 
-/*-------------------------------------------------------------------------------------------*/
-class DockTitleBar : public QFrame
+//-------------------------------------------------------------------------------------------
+class DockTitleBar : public QWidget
 {
     Q_OBJECT
 public:
@@ -44,7 +71,7 @@ private:
 
 };
 
-/*-------------------------------------------------------------------------------------------*/
+//-------------------------------------------------------------------------------------------
 class DockWidget : public QDockWidget
 {
     Q_OBJECT

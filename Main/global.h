@@ -172,6 +172,7 @@ namespace G
 
     extern bool isLogger;
     extern bool isFlowLogger;
+    extern bool isFlowLogger2;
     extern bool isWarningLogger;
     extern bool isFileLogger;
     extern bool isErrorLogger;
