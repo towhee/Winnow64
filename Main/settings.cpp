@@ -335,7 +335,6 @@ bool MW::loadSettings()
         // datamodel
         G::maxIconSize = 256;
         sortColumn = G::NameColumn;
-        dm->showThumbNailSymbolHelp = true;
 
         // files
         G::colorManage = true;

@@ -5123,6 +5123,7 @@ void MW::saveAsFile()
 
 void MW::shareFiles()
 {
+#ifdef Q_OS_MAC
     if (G::isLogger) G::log("MW::copy");
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
@@ -5137,6 +5138,7 @@ void MW::shareFiles()
     WId wId = window()->winId();
 
     Mac::share(urls, wId);
+#endif
 }
 
 void MW::copyFiles()

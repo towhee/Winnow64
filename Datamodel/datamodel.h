@@ -133,7 +133,7 @@ public:
        building filters too long */
     bool abortLoadingModel;
 
-    bool showThumbNailSymbolHelp;
+    bool showThumbNailSymbolHelp = true;
     void setShowThumbNailSymbolHelp(bool showHelp);
 
 signals:

@@ -557,7 +557,9 @@ QString Utilities::getString(T &io, quint32 offset, quint32 length)
     io.seek(offset);
 //    return(io.read(length));
     QString s = io.read(length);
-    if (s.endsWith('\0')) s.remove('\0');
+    QChar z = '\0';
+    if (s.endsWith(z)) s.remove(z);
+//    if (s.endsWith('\0')) s.remove('\0');
     return(s);
 }
 template QString Utilities::getString<QFile>(QFile&, quint32 offset, quint32 length);
