@@ -86,6 +86,7 @@ class HashMap
             find(key, value);
             insert(newKey, value);
             remove(key);
+            return true;
         }
 
         void insert(const K &key, const V &value)
