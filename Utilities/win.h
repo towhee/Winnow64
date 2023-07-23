@@ -7,6 +7,7 @@
 #include <Icm.h>                        // req'd by collectScreensInfo
 #include <sysinfoapi.h>                 // req'd by availableMemory
 #include <psapi.h>                      // req'd by availableMemory
+#include <dwmapi.h>                     // req'd by darkmode (win title bar)
 
 #include "Main/global.h"                // req'd by collectScreensInfo
 
@@ -19,6 +20,7 @@ class Win
 public:
     static void availableMemory();
     static void collectScreensInfo();
+    static void darkMode(WId hWnd);
 };
 
 #endif // WIN_H

@@ -610,7 +610,6 @@ void IconViewDelegate::paint(QPainter *painter,
         QRect lockRect(missingThumbRect.right() + 2, thumbRect.bottom() - lockSize,
                        lockSize, lockSize);
         painter->drawText(lockRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
-//        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
         painter->drawText(bRect, "🔒");
         /*
         qDebug() << "IconViewDelegate::paint "

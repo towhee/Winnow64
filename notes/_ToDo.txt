@@ -5,7 +5,6 @@ BUGS / TO
 - Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail
 - Not restoring to same monitor / mac space
-- Sync bookmark and FSTree selection
 - Select multiple folders
 - G::isNewFileSelection req'd?
 - dmEmpty req'd?
@@ -88,6 +87,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Link to winnow.ca in welcome screen
+- Windows set title bar to app background color
+- Windows with no pref (new user) crashing
 - Remove image files after remote embellish
 - Fixed skipping loupe showing images when hold direction key down
 - Smooth resize icons when drag thumbView separator
