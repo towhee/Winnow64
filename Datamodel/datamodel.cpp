@@ -453,17 +453,13 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     - after the metadataCacheThread has read all the metadata and thumbnails add
       the rest of the metadata to the datamodel.
 
-    - Note: build QMaps of unique field values for the filters is not done here, but
-      on demand when the user selects the filter panel or a menu filter command.
+    - Note: building QMaps of unique field values for the filters is not done here,
+      but on demand when the user selects the filter panel or a menu filter command.
 */
     lastFunction = "";
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
-//    while (mLock) {
-//        qDebug() << "waiting...";
-//    }
+
     clearDataModel();
-//    instance++;
-//    G::dmInstance = instance;
     if (isDebug) qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
@@ -501,9 +497,8 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     // bail if no images and not including subfolders
     if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
 
-    int folderCount = 1;
     // add supported images in folder to image list
-
+    int folderCount = 1;
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;

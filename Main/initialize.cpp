@@ -3,8 +3,8 @@
 void MW::initialize()
 {
     if (G::isLogger) G::log("MW::initialize");
-//    connect(windowHandle(), &QWindow::screenChanged, this, &MW::restoreLastSessionGeometryState);
-    this->setWindowTitle(winnowWithVersion);
+    //connect(windowHandle(), &QWindow::screenChanged, this, &MW::restoreLastSessionGeometryState);
+    setWindowTitle(winnowWithVersion);
     G::stop = false;
     G::dmEmpty = true;
     G::isProcessingExportedImages = false;
@@ -85,6 +85,7 @@ void MW::setupPlatform()
         setWindowIcon(QIcon(":/images/winnow.png"));
         Win::collectScreensInfo();
         Win::availableMemory();
+        Win::darkMode(winId());
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));

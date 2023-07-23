@@ -418,6 +418,9 @@ macx:LIBS += -framework Foundation
 #macx:INCLUDEPATH += "/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/include/opencv4"
 #macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
 
+# Windows SDK req'd to change window attributes
+win32:LIBS += -ldwmapi
+
 # zLib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 win32:INCLUDEPATH += $$PWD/Lib/zlib

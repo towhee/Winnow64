@@ -115,4 +115,12 @@ void Win::collectScreensInfo()
     }
 }
 
+void Win::darkMode(WId winId)
+{
+    HWND hWnd = reinterpret_cast<HWND>(winId);
+    int b = G::backgroundShade;
+    COLORREF color = RGB(b, b, b);
+    DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+}
+
 

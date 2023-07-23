@@ -106,6 +106,11 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    WId wId = winId();
+    Win::darkMode(winId());
+    return;
+
+
     qDebug() << "G::modifySourceFiles =" << G::modifySourceFiles;
     bounceFoldersStressTest(50, 10000);
     return;

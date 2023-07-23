@@ -323,6 +323,7 @@ bool MW::loadSettings()
 
         // appearance
         G::backgroundShade = 50;
+        G::backgroundColor = QColor(G::backgroundShade,G::backgroundShade,G::backgroundShade);
         G::strFontSize = "12";
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;

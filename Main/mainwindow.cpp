@@ -432,20 +432,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         isShiftOnOpen = true;
         G::isEmbellish = false;
     }
-    /* modifier & Qt::ControlModifier
-    if (modifier & Qt::ControlModifier) {
-        G::isLogger = true;
-        G::sendLogToConsole = false;  // write to winlog.txt
-//        openLog();
-        qDebug() << "MW::MW" << "command modifier";
-    }
-    //*/
 
     // check args to see if program was started by another process (winnet)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
     if (argList.length() > 1) isStartupArgs = true;
-//    if (G::isFileLogger) Utilities::log("MW::MW", QString::number(argList.length()) + " arguments");
 
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
@@ -457,9 +448,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // Initialize some variables
     initialize();
-
-    // platform specific settings
-    setupPlatform();
 
     // persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
@@ -506,10 +494,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
-
-
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
+
+    // platform specific settings (must follow dock creation)
+    setupPlatform();
 
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -536,22 +525,25 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
     else {
         // First use of app
-        if (!isSettings) centralLayout->setCurrentIndex(StartTab);
-
-        // process the persistant folder if available
-        if (rememberLastDir && !isShiftOnOpen) {
-            if (isFolderValid(lastDir, true, true)) {
-                stop("MW::MW rememberLastDir");
-                fsTree->select(lastDir);
-                folderSelectionChange();
-            }
+        if (!isSettings) {
+            centralLayout->setCurrentIndex(StartTab);
         }
-
-        // show start message
         else {
-            QString msg = "Select a folder or bookmark to get started.";
-            setCentralMessage(msg);
-            prevMode = "Loupe";
+            // process the persistant folder if available
+            if (rememberLastDir && !isShiftOnOpen) {
+                if (isFolderValid(lastDir, true, true)) {
+                    stop("MW::MW rememberLastDir");
+                    fsTree->select(lastDir);
+                    folderSelectionChange();
+                }
+            }
+
+            // show start message
+            else {
+                QString msg = "Select a folder or bookmark to get started.";
+                setCentralMessage(msg);
+                prevMode = "Loupe";
+            }
         }
 
         if (setting->value("hasCrashed").toBool()) {
@@ -587,21 +579,21 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         // crash log
         setting->setValue("hasCrashed", true);
 
-        G::log("MW::MW", "Winnow running");
+        if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "Winnow running");
     }
 }
 
 void MW::restoreLastSessionGeometryState()
 {
     if (G::isLogger) G::log("MW::restoreLastSessionGeometryState");
-    if (isSettings) {
+//    if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
-//        setGeometry(setting->value("WindowLocation").toByteArray());
+        //setGeometry(setting->value("WindowLocation").toByteArray());
         restoreState(setting->value("WindowState").toByteArray());
-    }
-    else {
-        defaultWorkspace();
-    }
+//    }
+//    else {
+//        defaultWorkspace();
+//    }
     setWindowOpacity(1);
 }
 
@@ -627,9 +619,11 @@ void MW::showEvent(QShowEvent *event)
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 
-    QMainWindow::showEvent(event);
+//    QMainWindow::showEvent(event);
 
     if (isSettings) restoreLastSessionGeometryState();
+    else defaultWorkspace();
+
     getDisplayProfile();
 
     // set thumbnail size to fit the thumbdock initial size
@@ -662,6 +656,8 @@ void MW::showEvent(QShowEvent *event)
 //    embelTemplateChange(embelProperties->templateId);
 //    // size columns after show if device pixel ratio > 1
 //    embelProperties->resizeColumns();
+
+    QMainWindow::showEvent(event);
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -4240,14 +4236,19 @@ void MW::setRotation(int degrees)
     if (G::isLogger) G::log("MW::setRotation");
     qDebug() << "MW::setRotation degrees =" << degrees;
 
-    // rotate current loupe view image
-    imageView->rotateImage(degrees);
+    // rotate current loupe view image unless it is a video
+    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+    if (!isVideo) {
+        imageView->rotateImage(degrees);
+    }
 
     // iterate selection
     QModelIndexList selection = dm->selectionModel->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         // update rotation amount in the data model
         int row = selection.at(i).row();
+        bool isVideo = dm->sf->index(row, G::VideoColumn).data().toBool();
+        if (isVideo) continue;
         QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
         int orientation = orientationIdx.data(Qt::EditRole).toInt();
         int prevRotation = 0;

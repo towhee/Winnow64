@@ -48,8 +48,8 @@
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
-//#ifdef Q_OS_WIN
-//#endif
+#ifdef Q_OS_WIN
+#endif
 
 #include "File/ingest.h"
 #include "ingestdlg.h"
