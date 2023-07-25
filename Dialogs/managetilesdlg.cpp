@@ -47,6 +47,9 @@ ManageTilesDlg::ManageTilesDlg(QSettings *setting, QWidget *parent) :
     textHasBeenEdited = false;
     textEditedIndex = 0;
     activate(0);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 ManageTilesDlg::~ManageTilesDlg()

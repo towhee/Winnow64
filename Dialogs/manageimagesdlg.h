@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Dialogs/patterndlg.h"
 #include "Main/global.h"
+#include "Utilities/win.h"
 
 namespace Ui {
     class ManageImagesDlg;

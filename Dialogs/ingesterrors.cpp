@@ -24,7 +24,9 @@ IngestErrors::IngestErrors(const QStringList &failedToCopy,
         }
     }
 
-
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 IngestErrors::~IngestErrors()

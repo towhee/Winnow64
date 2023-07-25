@@ -22,6 +22,9 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
 //                 << ui->workspaceCB->currentIndex();
     }
     editMode = true;
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 WorkspaceDlg::~WorkspaceDlg()

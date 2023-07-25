@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "Main/global.h"
+#include "Utilities/win.h"
 
 namespace Ui {
 class SelectionOrPicksDlg;

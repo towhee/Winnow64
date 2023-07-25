@@ -15,6 +15,9 @@ AboutDlg::AboutDlg(QWidget *parent,
     QString styleText = "QLabel {font-size: " + fontPointSize + "px;}";
     ui->title->setStyleSheet(styleText);
     adjustSize();
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 AboutDlg::~AboutDlg()

@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QMenu>
+#include "Utilities/win.h"
 
 namespace Ui {
 class Workspacedlg;

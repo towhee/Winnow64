@@ -23,6 +23,9 @@ InputDlg::InputDlg(QString windowTitle,
     connect(ui->inputText, &QLineEdit::textChanged, this, &InputDlg::checkDoNotUse);
     connect(ui->okBtn, &QPushButton::clicked, this, &InputDlg::ok);
     connect(ui->cancelBtn, &QPushButton::clicked, this, &InputDlg::cancel);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 InputDlg::~InputDlg()

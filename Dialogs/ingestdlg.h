@@ -9,6 +9,7 @@
 #include "ui_ingestautopath.h"
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
+#include "Utilities/win.h"
 #include "Dialogs/ingesterrors.h"
 #include "Dialogs/editlistdlg.h"
 #include "File/ingest.h"

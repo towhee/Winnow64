@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QDesktopServices>
 #include "Main/global.h"
+#include "Utilities/win.h"
 
 namespace Ui {
     class About;

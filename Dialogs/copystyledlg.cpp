@@ -1,5 +1,6 @@
 #include "copystyledlg.h"
 #include "Utilities/utilities.h"
+#include "Utilities/win.h"
 #include "ui_copystyledlg.h"
 
 CopyStyleDlg::CopyStyleDlg(QString style,
@@ -16,6 +17,9 @@ CopyStyleDlg::CopyStyleDlg(QString style,
     templateList.removeAt(0);
     ui->templateList->addItems(templateList);
     setStyleSheet(G::css);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 CopyStyleDlg::~CopyStyleDlg()

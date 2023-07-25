@@ -2,6 +2,7 @@
 #define UTILITIES_H
 
 #include <QtWidgets>
+#include "Utilities/win.h"
 #include "Utilities/inputdlg.h"
 //#include <bitset>
 

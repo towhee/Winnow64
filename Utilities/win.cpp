@@ -115,11 +115,10 @@ void Win::collectScreensInfo()
     }
 }
 
-void Win::darkMode(WId winId)
+void Win::setTitleBarColor(WId winId, QColor bgColor)
 {
     HWND hWnd = reinterpret_cast<HWND>(winId);
-    int b = G::backgroundShade;
-    COLORREF color = RGB(b, b, b);
+    COLORREF color = RGB(bgColor.red(), bgColor.green(), bgColor.blue());
     DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
 }
 

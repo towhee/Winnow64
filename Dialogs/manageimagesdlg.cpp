@@ -61,6 +61,10 @@ ManageImagesDlg::ManageImagesDlg(QString title,
             this, &ManageImagesDlg::itemChanged);
 
     isInitializing = false;
+
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 ManageImagesDlg::~ManageImagesDlg()

@@ -107,7 +107,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     WId wId = winId();
-    Win::darkMode(winId());
+    Win::setTitleBarColor(winId(), G::backgroundColor);
     return;
 
 

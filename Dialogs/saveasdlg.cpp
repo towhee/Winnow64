@@ -34,7 +34,9 @@ SaveAsDlg::SaveAsDlg(QModelIndexList &selection,
 
     ui->progressBar->setVisible(false);
 
-    qDebug() << "SaveAsDlg::SaveAsDlg" << ui->imageTypesCB->currentText();
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 SaveAsDlg::~SaveAsDlg()

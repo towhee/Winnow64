@@ -2,6 +2,7 @@
 #define MANAGETILESDLG_H
 
 #include <QtWidgets>
+#include "Utilities/win.h"
 
 namespace Ui {
 class ManageTilesDlg;

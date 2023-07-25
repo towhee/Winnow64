@@ -10,6 +10,9 @@ TestAlignDlg::TestAlignDlg(QImage *target, QImage *image, QWidget *parent) :
     p = QPixmap::fromImage(*target);
     ui->targetLbl->setPixmap(p.scaled(150, 150, Qt::KeepAspectRatio));
     ui->alignLbl->setPixmap(QPixmap::fromImage(*image));
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 TestAlignDlg::~TestAlignDlg()

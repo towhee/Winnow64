@@ -1,6 +1,7 @@
 #include "addthumbnailsdlg.h"
 #include "ui_addthumbnailsdlg.h"
 #include "main/global.h"
+#include "Utilities/win.h"
 
 AddThumbnailsDlg::AddThumbnailsDlg(QWidget *parent) :
     QDialog(parent),
@@ -10,6 +11,9 @@ AddThumbnailsDlg::AddThumbnailsDlg(QWidget *parent) :
     setStyleSheet(G::css);
     ui->backupChk->setChecked(G::backupBeforeModifying);
     if (!G::modifySourceFiles) ui->addBtn->setEnabled(false);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 AddThumbnailsDlg::~AddThumbnailsDlg()

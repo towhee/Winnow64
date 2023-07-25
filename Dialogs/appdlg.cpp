@@ -28,6 +28,7 @@ Appdlg::Appdlg(QList<G::App> &externalApps, QWidget *parent)
     #endif
     #ifdef Q_OS_WIN
         modifier = "Alt + ";
+        Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
     #ifdef Q_OS_MAC
         modifier = "Opt + ";
