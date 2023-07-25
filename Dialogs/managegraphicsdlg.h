@@ -2,6 +2,7 @@
 #define MANAGEGRAPHICSDLG_H
 
 #include <QtWidgets>
+#include "Utilities/win.h"
 
 namespace Ui {
 class ManageGraphicsDlg;

@@ -1,6 +1,9 @@
 WHAT'S NEW
 
 BUGS / TO
+- ToolTips not painting same way on windows vs macos
+- Help > Check for updates not working
+- Rename dlg from token editor ui fix req'd
 - Ingest make sure file name template selected!!
 - Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail

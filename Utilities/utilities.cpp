@@ -181,6 +181,9 @@ QString Utilities::inputText(QString title, QString description,
 {
     QString input = old;
     InputDlg d(title, description, input, doNotUse);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(d.winId());
+    #endif
     d.exec();
     return input;
 }

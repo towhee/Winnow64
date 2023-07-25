@@ -1401,12 +1401,13 @@ void MW::checkForUpdate()
     if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "readAllStandardError() = " + process.readAllStandardError());
     if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "exitCode() = " + QString::number(process.exitCode()));
 //    */
-    G::log("MW::checkForUpdate", "after check");
+    //G::log("MW::checkForUpdate", "after check");
 
     if (noUpdataAvailable.toBool())
     {
         QString msg = "No updates available";
         if(!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
+        qApp->processEvents();
         return;
     }
 
@@ -3644,10 +3645,10 @@ void MW::setShowImageCount()
 void MW::setFontSize(int fontPixelSize)
 {
 /*
-    The font size and container sizes are updated for all objects in Winnow.  For most objects
-    updating the font size in the QStyleSheet is sufficient.  For items in list and tree views
-    the sizehint needs to be triggered, either by refreshing all the values or calling
-    scheduleDelayedItemsLayout().
+    The font size and container sizes are updated for all objects in Winnow.
+    For most objects updating the font size in the QStyleSheet is sufficient.
+    For items in list and tree views the sizehint needs to be triggered, either
+    by refreshing all the values or calling scheduleDelayedItemsLayout().
 */
     if (G::isLogger) G::log("MW::setFontSize");
     G::fontSize = fontPixelSize;
@@ -3678,6 +3679,7 @@ void MW::setBackgroundShade(int shade)
 {
     if (G::isLogger) G::log("MW::setBackgroundShade");
     G::backgroundShade = shade;
+    G::backgroundColor = QColor(shade,shade,shade);
     int a = shade + 5;
     int b = shade - 15;
 //    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
@@ -3714,6 +3716,9 @@ void MW::setBackgroundShade(int shade)
     metaTitleBar->setStyle();
     statusBar()->setStyleSheet(css);
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 void MW::setInfoFontSize()

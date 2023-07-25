@@ -2148,21 +2148,20 @@ void DataModel::clearPicks()
 
 void DataModel::setThumbnailLegend()
 {
-    QString yellowSquare = "<font size=5 color=\"yellow\"><b>□</b></font>";
-    QString whiteSquare = "<font size=5 color=\"white\"><b>□</b></font>";
-    QString greenSquare = "<font size=5 color=\"green\"><b>□</b></font>";
-    QString blueSquare = "<font size=5 color=\"blue\"><b>□</b></font>";
-    QString redSquare = "<font size=5 color=\"red\"><b>□</b></font>";
+    QString yellow = "<font color=\"yellow\">Yellow </font>";
+    QString white = "<font color=\"white\">White </font>";
+    QString green = "<font color=\"green\">Green </font>";
+    QString blue = "<font color=\"blue\">Blue </font>";
+    QString red = "<font color=\"red\">Red </font>";
     QString redMedBullet = "<font color=\"red\"><b>●</b></font>";
     QString yellowMedBullet = "<font color=\"yellow\"><b>●</b></font>";
     QString lockSym = "🔒";
-//    QString header = "<p>table><tr><th colspan=\"2\">SYMBOLS</th></tr>";
     QString header = "<p>THUMBNAIL LEGEND:<table>";
-    QString rowa = "<tr><td><center>" + yellowSquare    + "</center></td><td valign=\"middle\">Current image</td></tr>";
-    QString rowb = "<tr><td><center>" + whiteSquare     + "</center></td><td valign=\"middle\">Selected</td></tr>";
-    QString rowc = "<tr><td><center>" + greenSquare     + "</center></td><td valign=\"middle\">Picked</td></tr>";
-    QString rowd = "<tr><td><center>" + blueSquare      + "</center></td><td valign=\"middle\">Ingested</td></tr>";
-    QString rowe= "<tr><td><center>" + redSquare        + "</center></td><td valign=\"middle\">Rejected</td></tr>";
+    QString rowa = "<tr><td align=\"right\">" + yellow + "</td><td>border = Primary selected</td></tr>";
+    QString rowb = "<tr><td align=\"right\">" + white + "</td><td>border = Other selected</td></tr>";
+    QString rowc = "<tr><td align=\"right\">" + green + "</td><td>border = Pickedd</td></tr>";
+    QString rowd = "<tr><td align=\"right\">" + blue + "</td><td>border = Ingested</td></tr>";
+    QString rowe = "<tr><td align=\"right\">" + red + "</td><td>border = Rejected</td></tr>";
     QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
     QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
     QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
@@ -2187,8 +2186,6 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
 {
     if (G::isLogger) G::log("DataModel::setShowThumbNailSymbolHelp");
     showThumbNailSymbolHelp = showHelp;
-    qDebug() << "DataModel::setShowThumbNailSymbolHelp showThumbNailSymbolHelp ="
-             << showThumbNailSymbolHelp;
     // refresh datamodel
     for (int row = 0; row < rowCount(); row++) {
         QModelIndex dmIdx = index(row, G::PathColumn);

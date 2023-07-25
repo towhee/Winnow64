@@ -13,6 +13,10 @@ UpdateApp::UpdateApp(QString &version, QString &css, QWidget *parent) :
     // req'd for hyperlink to open browser
     ui->viewVersionLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->viewVersionLabel->setOpenExternalLinks(true);
+
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 UpdateApp::~UpdateApp()

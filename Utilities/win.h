@@ -14,13 +14,14 @@
 #pragma comment(lib, "user32.lib")      // req'd by collectScreensInfo
 #pragma comment(lib, "Mscms.lib")       // req'd by collectScreensInfo
 #pragma comment(lib, "kernel32.lib")    // req'd by availableMemory
+#pragma comment(lib, "dwmapi.lib")      // req'd by setTitleBarColor
 
 class Win
 {
 public:
     static void availableMemory();
     static void collectScreensInfo();
-    static void darkMode(WId hWnd);
+    static void setTitleBarColor(WId hWnd, QColor bgColor = QColor(50,50,50));
 };
 
 #endif // WIN_H

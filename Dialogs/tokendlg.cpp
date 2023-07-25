@@ -341,6 +341,10 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->tokenEdit->exampleMap = exampleMap;
     ui->uniqueWarningLabel->setVisible(false);
 
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
+
     connect(ui->tokenEdit, SIGNAL(parseUpdated(QString)),
             this, SLOT(updateExample(QString)));
     connect(ui->tokenEdit, SIGNAL(isUnique(bool)),

@@ -2,6 +2,7 @@
 #define IMAGEDLG_H
 
 #include <QDialog>
+#include "Utilities/win.h"
 
 namespace Ui {
 class ImageDlg;

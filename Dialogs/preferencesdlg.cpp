@@ -75,6 +75,10 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     setContextMenuPolicy(Qt::ActionsContextMenu);
 
 //    pref->expandBranch("Metadata panel items");
+
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 PreferencesDlg::~PreferencesDlg()

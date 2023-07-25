@@ -25,6 +25,9 @@ ManageGraphicsDlg::ManageGraphicsDlg(QSettings *setting, QWidget *parent) :
     ui->setupUi(this);
     setStyleSheet(G::css);
 
+#ifdef Q_OS_WIN
+    Win::setTitleBarColor(winId(), G::backgroundColor);
+#endif
     // change ui->graphicsBox model to QStringList to facilitate debugging
 //    graphicsBoxModel = new QStringListModel;
 //    ui->graphicsBox->setModel(graphicsBoxModel);

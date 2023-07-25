@@ -3,6 +3,7 @@
 QString WidgetCSS::css()
 {
     fg = G::textShade;
+    fg = 255;
     bg = G::backgroundShade;
 //    bg = widgetBackgroundColor.red();   // desaturate
     mb = bg + 15;
@@ -31,6 +32,7 @@ QString WidgetCSS::css()
     l60 = bg + 60;
 
     textColor = QColor(fg,fg,fg);
+    //textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l40,l40,l40);
     G::disabledColor = QColor(l40,l40,l40);
     G::tabWidgetBorderColor = QColor(l60,l60,l60);
@@ -96,8 +98,7 @@ QString WidgetCSS::widget()
        "border-width: 0px;"
     "}"
     "QWidget:disabled {"
-//    "color:" + disabledColor.name() + ";"
-    "color:" + QColor(mb,mb,mb).name() + ";"
+        "color:" + QColor(mb,mb,mb).name() + ";"
     "}"
    ;
 }
@@ -261,12 +262,20 @@ QString WidgetCSS::toolTip()
 {
     return
     "QToolTip {"
-        "background-color: " + QColor(l20,l20,l20).name() + ";"
-        "border: 1px solid gray;"
-        "margin: 3px;"
-        "color: white;"
+        //"opacity: 100;"     // nada
+        "color: #ffffff;"     // nada
+        //"background-color: " + QColor(d10,d10,d10).name() + ";"
+        "background-color: " + QColor(d5,d5,d5).name() + ";"
+        //"border: 1px solid gray;"
+        "border-width: 1px;"
+        "border-style: solid;"
+        "border-color: " + QColor(d10,d10,d10).name() + ";"
+        "margin: 2px;"
         "font-size:" + QString::number(fontSize) + "pt;"
     "}"
+//    "QTooltip::inner {"
+//        "color: white;"
+//    "}"
     ;
 }
 

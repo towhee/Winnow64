@@ -200,6 +200,10 @@ IngestDlg::IngestDlg(QWidget *parent,
     isInitializing = false;
 
     updateFolderPaths();
+
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 IngestDlg::~IngestDlg()

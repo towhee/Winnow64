@@ -12,6 +12,9 @@ EditListDlg::EditListDlg(QStringListModel *model, QString title, QWidget *parent
     setWindowTitle(title);
     ui->listWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->listWidget->addItems(model->stringList());
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 EditListDlg::~EditListDlg()
@@ -27,7 +30,7 @@ void EditListDlg::on_deleteBtn_clicked()
     for (int i = 0; i < toDeleteList.length(); ++i) {
         QString string = toDeleteList.at(i)->text();
         QString sKey = "IngestDescriptionCompleter/" + string;
-        int modelRow =  getRow(string);
+        int modelRow = getRow(string);
         int listWidgetRow = ui->listWidget->row(toDeleteList.at(i));
         // remove from settings
         G::settings->remove(sKey);

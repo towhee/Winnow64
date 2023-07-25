@@ -85,7 +85,7 @@ void MW::setupPlatform()
         setWindowIcon(QIcon(":/images/winnow.png"));
         Win::collectScreensInfo();
         Win::availableMemory();
-        Win::darkMode(winId());
+        Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
@@ -1045,6 +1045,7 @@ void MW::createFolderDock()
     BarBtn *folderRefreshBtn = new BarBtn();
     folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     folderRefreshBtn->setToolTip("Refresh folders and image counts");
+    //folderRefreshBtn->setStyleSheet("QToolTip { color: red;}");
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
 

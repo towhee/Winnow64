@@ -30,6 +30,9 @@ PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget * /*parent*/)
     imageRect->setPen(pen);
     scene->addItem(imageRect);
     imageRect->show();
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 void PatternDlgView::hideSelection()

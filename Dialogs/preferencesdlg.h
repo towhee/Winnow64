@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "PropertyEditor/preferences.h"
+#include "Utilities/win.h"
 
 class PreferencesDlg  : public QDialog
 {

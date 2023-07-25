@@ -5,6 +5,7 @@
 #include <QTextDocument>
 #include <QTextEdit>
 #include "Main/global.h"
+#include "Utilities/win.h"
 
 namespace Ui {
 class IngestErrors;

@@ -10,6 +10,9 @@ ImageDlg::ImageDlg(const QImage &image, QSize size, QString title, QWidget *pare
 //    QPixmap pm = QPixmap::fromImage(image.scaled(size, Qt::KeepAspectRatio));
     ui->label->setPixmap(QPixmap::fromImage(image.scaled(size, Qt::KeepAspectRatio)));
     setWindowTitle(title);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 ImageDlg::~ImageDlg()

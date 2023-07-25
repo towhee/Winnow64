@@ -34,6 +34,10 @@ LoadUsbDlg::LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selecte
     ui->usbList->setCurrentRow(0);
 
     setScreenDependencies();
+
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 LoadUsbDlg::~LoadUsbDlg()

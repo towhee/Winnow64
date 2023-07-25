@@ -52,6 +52,9 @@ RenameDlg::RenameDlg(QString &name,
         existingNamesString.append(existingNames.at(i) + "\n");
     }
     ui->name->setToolTip(existingNamesString);
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 RenameDlg::~RenameDlg()
