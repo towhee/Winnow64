@@ -2,6 +2,7 @@
 #define EXIFTOOL_H
 
 #include <QtWidgets>
+#include "Main/global.h"
 #include "Utilities/utilities.h"
 
 class ExifTool : public QObject

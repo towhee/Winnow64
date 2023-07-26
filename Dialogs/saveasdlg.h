@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QtWidgets>
 #include "Image/pixmap.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 namespace Ui {
 class SaveAsDlg;

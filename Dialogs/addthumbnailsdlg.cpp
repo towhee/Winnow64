@@ -1,7 +1,9 @@
 #include "addthumbnailsdlg.h"
 #include "ui_addthumbnailsdlg.h"
 #include "main/global.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 AddThumbnailsDlg::AddThumbnailsDlg(QWidget *parent) :
     QDialog(parent),

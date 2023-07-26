@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QtWidgets>
 #include "Main/global.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 //class LoadUsbDelegate : public QStyledItemDelegate
 ////class LoadUsbDelegate : public QAbstractItemDelegate

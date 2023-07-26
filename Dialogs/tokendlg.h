@@ -4,7 +4,9 @@
 #include <QtWidgets>
 #include "main/global.h"
 #include "renamedlg.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 /*****************************************************************************/
 class TokenList : public QListWidget

@@ -2,8 +2,11 @@
 #define UTILITIES_H
 
 #include <QtWidgets>
-#include "Utilities/win.h"
+#include "Main/global.h"
 #include "Utilities/inputdlg.h"
+#ifdef Q_OS_WIN
+#include "Utilities/win.h"
+#endif
 //#include <bitset>
 
 class Utilities
