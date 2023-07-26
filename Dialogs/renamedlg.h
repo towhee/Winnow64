@@ -3,7 +3,9 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 /*****************************************************************************/
 class RenameEdit : public QLineEdit

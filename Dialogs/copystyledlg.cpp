@@ -1,7 +1,9 @@
 #include "copystyledlg.h"
 #include "Utilities/utilities.h"
-#include "Utilities/win.h"
 #include "ui_copystyledlg.h"
+#ifdef Q_OS_WIN
+#include "Utilities/win.h"
+#endif
 
 CopyStyleDlg::CopyStyleDlg(QString style,
                            QString &name,

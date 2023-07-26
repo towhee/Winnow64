@@ -5,7 +5,9 @@
 #include <QDialog>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 class PatternDlgView : public QGraphicsView
 {

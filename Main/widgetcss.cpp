@@ -262,20 +262,15 @@ QString WidgetCSS::toolTip()
 {
     return
     "QToolTip {"
-        //"opacity: 100;"     // nada
-        "color: #ffffff;"     // nada
-        //"background-color: " + QColor(d10,d10,d10).name() + ";"
+        "opacity: 200;"         // nada windows
+        "color: #ffffff;"       // nada windows
         "background-color: " + QColor(d5,d5,d5).name() + ";"
-        //"border: 1px solid gray;"
         "border-width: 1px;"
         "border-style: solid;"
-        "border-color: " + QColor(d10,d10,d10).name() + ";"
+        "border-color: " + QColor(l5,l5,l5).name() + ";"
         "margin: 2px;"
         "font-size:" + QString::number(fontSize) + "pt;"
     "}"
-//    "QTooltip::inner {"
-//        "color: white;"
-//    "}"
     ;
 }
 

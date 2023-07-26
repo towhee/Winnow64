@@ -3,7 +3,9 @@
 
 #include <QDialog>
 #include <QtWidgets>
+#ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#endif
 
 namespace Ui {
 class UpdateApp;
