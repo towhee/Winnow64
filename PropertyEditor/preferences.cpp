@@ -104,7 +104,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "thumbViewShowLabel") {
         mw->thumbView->showIconLabels = v.toBool();
         mw->thumbView->setThumbParameters();
-        mw->updateIconBestFit();
+        mw->thumbView->thumbsFitTopOrBottom("thumbViewShowLabel");
     }
 
     if (source == "showZoomFrame") {

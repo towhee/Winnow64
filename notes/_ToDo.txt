@@ -91,6 +91,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ThumbView not resizing correctly when change show filename/title
 - Link to winnow.ca in welcome screen
 - Windows set title bar to app background color
 - Windows with no pref (new user) crashing
