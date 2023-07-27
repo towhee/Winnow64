@@ -935,6 +935,16 @@ void MW::createStatusBar()
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
     progressLabel->setObjectName("StatusProgressLabel");
+    progressLabel->setStyleSheet("QToolTip {"
+                                 "opacity: 200;"         // nada windows
+                                 "color: #ffffff;"       // nada windows
+//                                 "background-color: blue;"
+//                                   "border-width: 1px;"
+//                                   "border-style: solid;"
+//                                   "border-color: " + QColor(l5,l5,l5).name() + ";"
+//                                   "margin: 2px;"
+//                                   "font-size:" + QString::number(fontSize) + "pt;"
+                                   "}");
 
     // progressBar created in MW::createDataModel, where it is first req'd
 

@@ -441,7 +441,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
-    simulateJustInstalled = false;
+    simulateJustInstalled = true;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer
@@ -3654,7 +3654,6 @@ void MW::setFontSize(int fontPixelSize)
     G::fontSize = fontPixelSize;
     G::strFontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
-//    emit widgetCSS.fontSizeChange(fontPixelSize);
     css = widgetCSS.css();
     G::css = css;
     setStyleSheet(css);

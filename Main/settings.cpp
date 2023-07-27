@@ -376,7 +376,8 @@ bool MW::loadSettings()
         G::isLoadConcurrent = true;
         cacheMethod = "Concurrent";
         cacheSizeStrategy = "Moderate";
-        cacheMinSize = "  2 GB";
+        cacheMinMB = 2000;
+        cacheMinSize = "2 GB";
         cacheSizePercentOfAvailable = 50;
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
         isShowCacheProgressBar = true;
