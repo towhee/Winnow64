@@ -117,6 +117,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    thumbView->thumbsFitTopOrBottom("labelChoiceChange");
+    return;
+
     QPalette palette = QGuiApplication::palette();
     palette.setColor(QPalette::Inactive, QPalette::ToolTipText, QColor("yellow"));
     QGuiApplication::setPalette(palette);

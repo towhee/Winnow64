@@ -1238,7 +1238,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     } // end section
 
-    /*
+    /* FiltersViewport
     if (obj->objectName() == "FiltersViewport") {
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -3606,11 +3606,14 @@ void MW::preferences(QString text)
         if (text != "") pref->expandBranch(text);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     }
+    #ifdef Q_OS_WIN
+        Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
+    #endif
     // non-modal
     preferencesDlg->setWindowModality(Qt::NonModal);
     preferencesDlg->show();
-    // modal
-    /*
+
+    /* modal
     preferencesDlg->exec();
     delete pref;
     delete preferencesDlg;

@@ -1305,14 +1305,19 @@ void IconView::bestAspect()
 void IconView::thumbsFitTopOrBottom(QString src)
 {
 /*
-    Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user
-    resizing the thumbDock. The thumb size is adjusted to fit the new thumbDock height
-    and scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks
-    and central widget) are resized.
+    The thumbnail size is adjusted to fit the thumbDock height and scrolled to
+    keep the midVisibleThumb in the middle. Other objects visible (docks and
+    central widget) are resized.
 
-    Also called by bestAspect.
+    Called by MW::eventFilter when a thumbDock resize event occurs triggered by
+    the user resizing the thumbDock.
 
-    For icon cell anatomy (see diagram at top of iconviewdelegate.cpp)
+    Called by bestAspect when the height change requires a thumbnail size
+    change to fit.
+
+    Called when thumbViewShowLabel is changed.
+
+    For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
 */
     if (isDebug) G::log("IconView::thumbsFitTopOrBottom", objectName());
 //    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName();
