@@ -441,7 +441,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
-    simulateJustInstalled = true;
+    simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer

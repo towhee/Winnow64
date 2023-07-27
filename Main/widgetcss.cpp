@@ -3,7 +3,6 @@
 QString WidgetCSS::css()
 {
     fg = G::textShade;
-    fg = 255;
     bg = G::backgroundShade;
     mb = bg + 15;
     fm = bg + 35;
@@ -31,7 +30,6 @@ QString WidgetCSS::css()
     l60 = bg + 60;
 
     textColor = QColor(fg,fg,fg);
-    //textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l40,l40,l40);
     G::disabledColor = QColor(l40,l40,l40);
     G::tabWidgetBorderColor = QColor(l60,l60,l60);
