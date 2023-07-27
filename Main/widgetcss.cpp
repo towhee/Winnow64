@@ -5,7 +5,6 @@ QString WidgetCSS::css()
     fg = G::textShade;
     fg = 255;
     bg = G::backgroundShade;
-//    bg = widgetBackgroundColor.red();   // desaturate
     mb = bg + 15;
     fm = bg + 35;
     g0 = bg - 10;
@@ -121,24 +120,12 @@ QString WidgetCSS::dialog()
 {
     return
     "QDialog {"
-//        "background: " + QColor(d10,d10,d10).name() + ";"
         "background: " + QColor(bg,bg,bg).name() + ";"
     "}";
 }
 
 QString WidgetCSS::frame()
 {
-    /*HLine and VLine*/
-//    return
-//    "QFrame[frameShape=""4""],"
-//    "QFrame[frameShape=""5""]"
-//    "{"
-//        "border-width: 5;"
-//        "border-color: blue;"
-//        "color: green;"
-//        "background-color: red;"
-//        // cannot assign line color here: see https://stackoverflow.com/questions/14581498/qt-stylesheet-for-hline-vline-color
-//    "}";
     return
     "QFrame[frameShape=""4""],"
     "QFrame[frameShape=""5""]"
@@ -155,7 +142,7 @@ QString WidgetCSS::graphicsView()
     return
     "QGraphicsView {"
         "border: none;"
-   "}";
+    "}";
 }
 
 QString WidgetCSS::statusBar()
@@ -199,7 +186,7 @@ QString WidgetCSS::menu()
     "}"
 
     "QMenu::item {"
-        "color: white;"
+        "color: white;"     // nada
         "background-color: transparent;"
     "}"
 
@@ -266,7 +253,7 @@ QString WidgetCSS::toolTip()
         "color: #ffffff;"       // nada windows
         "background-color: " + QColor(d5,d5,d5).name() + ";"
         "border-width: 1px;"
-        "border-style: solid;"
+        "border-style: none;"
         "border-color: " + QColor(l5,l5,l5).name() + ";"
         "margin: 2px;"
         "font-size:" + QString::number(fontSize) + "pt;"
