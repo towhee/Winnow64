@@ -72,6 +72,14 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     status = " " + base + s;
     statusLabel->setText(status);
+
+    // status label tooltip
+    QString tip;
+    if (G::isEmbellish) {
+        tip = "Embellish is active.";
+    }
+    statusLabel->setToolTip(tip);
+
     /*
     status = " " + base + s + spacer + ms;
     qDebug() << "Status:" << status;

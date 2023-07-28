@@ -1080,9 +1080,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
                 if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
                 if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
+                if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
+                if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                prevTabIndex = i;
+                QToolTip::showText(e->globalPos(), tip);
+                /*
                 if (tabBar->tabText(i) == metadataDockTabText) {
                     tip = "Metadata Panel";
-                    /*
                     DockWidget *dw;
 //                    dw = qobject_cast<QDockWidget*>(tabBar->tabData(i).value<void*>());
 //                    bool found = metadataDock == qobject_cast<quintptr>(tabBar->tabData(i));
@@ -1106,15 +1110,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //                    tabBar->setTabIcon(i, QIcon(":/images/icon16/anchor.png"));
 //                    qDebug() << "MW::eventFilter QTabBar"
 //                             << tabBar->
-                    */
                 }
-                if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
-                prevTabIndex = i;
-                QFontMetrics fm(QToolTip::font());
-                int h = fm.boundingRect(tip).height();
-                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h);
-                QToolTip::hideText();
-                QToolTip::showText(locPos, tip, tabBar);
+                    */
             }
         }
         if (event->type() == QEvent::Leave) {
@@ -2365,7 +2362,7 @@ bool MW::reset(QString src)
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
 
-    setCentralMessage("Image loading has been aborted");
+    //setCentralMessage("Image loading has been aborted");
 
 //    G::stop = false;
     return true;
@@ -3257,13 +3254,15 @@ void MW::embelTemplateChange(int id)
         setShootingInfoVisibility();
     }
     else {
-        loupeDisplay();
-        embelRunBtn->setVisible(true);
-        isRatingBadgeVisible = false;
-        thumbView->refreshThumbs();
-        gridView->refreshThumbs();
-        updateClassification();
-        imageView->infoOverlay->setVisible(false);
+        if (dm->rowCount()) {
+            loupeDisplay();
+            embelRunBtn->setVisible(true);
+            isRatingBadgeVisible = false;
+            thumbView->refreshThumbs();
+            gridView->refreshThumbs();
+            updateClassification();
+            imageView->infoOverlay->setVisible(false);
+        }
     }
 }
 
@@ -5632,7 +5631,6 @@ bool MW::isFolderValid(QString dirPath, bool report, bool isRemembered)
 
     if (!testDir.exists()) {
         if (report) {
-//            QMessageBox::critical(this, tr("Error"), tr("The folder does not exist or is not available"));
             if (isRemembered)
                 msg = "The last folder from your previous session (" + dirPath + ") does not exist or is not available";
             else

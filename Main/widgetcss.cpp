@@ -251,10 +251,11 @@ QString WidgetCSS::toolTip()
         "color: #ffffff;"       // nada windows
         "background-color: " + QColor(d5,d5,d5).name() + ";"
         "border-width: 1px;"
-        "border-style: none;"
-        "border-color: " + QColor(l5,l5,l5).name() + ";"
+        "border-style: solid;"
+        "border-color: " + QColor(l10,l10,l10).name() + ";"
         "margin: 2px;"
-        "font-size:" + QString::number(fontSize) + "pt;"
+        //"font-size:" + QString::number(30) + "px;"
+        //"font-size:" + QString::number(fontSize) + "px;"
     "}"
     ;
 }

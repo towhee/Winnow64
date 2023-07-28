@@ -1332,6 +1332,7 @@ void MW::createEmbelDock()
     embelProperties = new EmbelProperties(this, setting);
 
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
+    connect (embelProperties, &EmbelProperties::centralMsg, this, &MW::setCentralMessage);
     connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
     embelDockTabText = "  🎨  ";

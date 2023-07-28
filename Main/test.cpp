@@ -106,6 +106,13 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    QPalette pal = QToolTip::palette();
+    pal.setColor(QPalette::ToolTipText, Qt::red);
+//    QFont font;
+//    font.setPointSize(18);
+//    pal.setBrush(QPalette::ToolTipText, QBrush(Qt::red));
+    QToolTip::setPalette(pal);
+    return;
 
     qDebug() << "G::modifySourceFiles =" << G::modifySourceFiles;
     bounceFoldersStressTest(50, 10000);

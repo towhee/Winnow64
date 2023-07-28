@@ -139,6 +139,7 @@ public slots:
 
 signals:
     void templateChanged(int id);
+    void centralMsg(QString msg);
     void syncEmbellishMenu();
 //    void updateGraphicsList();
 
