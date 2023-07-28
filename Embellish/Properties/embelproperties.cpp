@@ -2038,8 +2038,15 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     setCurrentTemplate(v.toString());
 
     // update global for ImageView
-    if (templateId == 0) G::isEmbellish = false;
-    else G::isEmbellish = true;
+    if (templateId == 0) {
+        G::isEmbellish = false;
+    }
+    else {
+        G::isEmbellish = true;
+    }
+
+    QString msg = "An image must be selected in order to show embellishments";
+    if (G::dmEmpty) emit centralMsg(msg);
 
     // update Embellish menu
     emit templateChanged(templateId);

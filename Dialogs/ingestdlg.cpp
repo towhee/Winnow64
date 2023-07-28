@@ -325,13 +325,11 @@ void IngestDlg::quitIfNotEnoughSpace()
         QString msg =
             s + "not have sufficient space available to copy the ingesting images.  No images "
             "will be ingested.  Please resolve the disk space issue and try again.";
-        //        QMessageBox::warning(this, title, msg, QMessageBox::Ok);
 
         QMessageBox msgBox;
         int msgBoxWidth = 300;
         msgBox.setWindowTitle(title);
         msgBox.setText(msg);
-//        msgBox.setInformativeText("Do you want continue?");
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.setDefaultButton(QMessageBox::Ok);
         msgBox.setIcon(QMessageBox::Warning);
@@ -374,20 +372,8 @@ void IngestDlg::ingest()
 
     if (G::isLogger) G::log("IngestDlg::ingest");
 
-    quitIfNotEnoughSpace();
-
-//    // get rid of "/" at end of path for history (in file menu)
-//    QString historyPath = folderPath.left(folderPath.length() - 1);
-//    emit updateIngestHistory(historyPath);
-
     QString key = ui->filenameTemplatesCB->currentText();
-    QString tokenString;
-    if (filenameTemplatesMap.contains(key))
-        tokenString = filenameTemplatesMap[key];
-    else {
-        // add message explaining failure
-        return;
-    }
+    QString tokenString  = filenameTemplatesMap[key];
 
     // copy cycles req'd: 1 if no backup, 2 if backup
     int n;
@@ -410,7 +396,7 @@ void IngestDlg::ingest()
         //*/
         ui->progressBar->setValue(progress);
         emit updateProgress(progress);
-//        qApp->processEvents();
+        //qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
         QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
@@ -422,7 +408,7 @@ void IngestDlg::ingest()
         if (i > 0 && pickList.at(i).baseName() != pickList.at(i-1).baseName())
             seqNum++;
 
-        qDebug() << "Ingest::ingest  pickList =" << pickList;
+        //qDebug() << "Ingest::ingest  pickList =" << pickList;
         // rename destination file based on the file naming template
         QString destBaseName =  parseTokenString(pickList.at(i), tokenString);
         QString suffix = fileInfo.suffix().toLower();
@@ -548,6 +534,7 @@ void IngestDlg::ingest()
         QString s = QString::number(MBPerSec, 'f', 1) + " MB/sec";
         ui->gbsLabel->setText(s);
     }
+
     /*
     qDebug() << "IngestDlg::"
              << "bytesCopied =" << bytesCopied
@@ -558,7 +545,7 @@ void IngestDlg::ingest()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-    qDebug() << "IngestDlg::ingest" << seqDate<< G::ingestCount << G::ingestLastSeqDate;
+    //qDebug() << "IngestDlg::ingest" << seqDate<< G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
@@ -575,15 +562,15 @@ bool IngestDlg::parametersOk()
     if (G::isLogger) G::log("IngestDlg::parametersOk");
     QString errStr;
     bool err = false;
-//    bool backup = ui->backupChk->isChecked();
+    //bool backup = ui->backupChk->isChecked();
 
-    if(isAuto) {
-        if(rootFolderPath.length() == 0) {
+    if (isAuto) {
+        if (rootFolderPath.length() == 0) {
             err = true;
             errStr = "The primary location root folder is undefined";
         }
 
-        if(isBackup) {
+        if (isBackup) {
             if(rootFolderPath2.length() == 0) {
                 err = true;
                 errStr += "\nThe backup location root folder is undefined";
@@ -600,12 +587,12 @@ bool IngestDlg::parametersOk()
         }
     }
     else {
-        if(manualFolderPath.length() == 0) {
+        if (manualFolderPath.length() == 0) {
             err = true;
             errStr = "The primary location folder is undefined";
         }
 
-        if(isBackup) {
+        if (isBackup) {
             if(manualFolderPath2.length() == 0) {
                 err = true;
                 errStr += "\nThe backup location folder is undefined";
@@ -623,7 +610,7 @@ bool IngestDlg::parametersOk()
         }
     }
 
-    if(err) {
+    if (err) {
         QMessageBox::warning(this, tr("Error"), errStr);
         return false;
     }
@@ -1550,8 +1537,8 @@ void IngestDlg::on_helpBtn_clicked()
 void IngestDlg::on_cancelBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_cancelBtn_clicked");
-//    test();
-//    return;
+    //test();
+    //return;
     reject();
 }
 
@@ -1559,7 +1546,7 @@ void IngestDlg::on_okBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_okBtn_clicked");
     // check parameters
-    if(!parametersOk()) return;
+    if (!parametersOk()) return;
 
     // add description to completer list (move to after dialog closes)
     QString desc = ui->descriptionLineEdit->text();
@@ -1583,13 +1570,21 @@ void IngestDlg::on_okBtn_clicked()
     }
 
     // make sure the backup folder has been created
-    if(backup) {
+    if (backup) {
         QDir dir2(folderPath2);
         if (!dir2.mkpath(folderPath2)) {
             QMessageBox::warning(nullptr, tr("Error"),
                  "The folder \"" + folderPath2 + "\" was not created.");
             return;
         }
+    }
+
+    // make sure there is a file name template selected
+    QString key = ui->filenameTemplatesCB->currentText();
+    if (!filenameTemplatesMap.contains(key)) {
+        QMessageBox::warning(nullptr, tr("Error"),
+             "A file name template must be selected.");
+        return;
     }
 
     if (ui->backgroundIngestChk->isChecked()) {
@@ -1716,6 +1711,12 @@ void IngestDlg::keyPressEvent(QKeyEvent *event)
 void IngestDlg::test()
 {
     if (G::isLogger) G::log("IngestDlg::test");
-    ui->folderLabel->setStyleSheet("QLabel {color:" + G::disabledColor.name() + ";}");
+    //ui->folderLabel->setStyleSheet("QLabel {color:" + G::disabledColor.name() + ";}");
+    QString key = ui->filenameTemplatesCB->currentText();
+    qDebug() << "IngestDlg::test"
+             << "filenameTemplatesMap.contains(key) =" << filenameTemplatesMap.contains(key)
+             << "key =" << ui->filenameTemplatesCB->currentText()
+             << "filenameTemplatesMap =" << filenameTemplatesMap
+                ;
 }
 

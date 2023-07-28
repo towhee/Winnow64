@@ -47,9 +47,9 @@ RenameDlg::RenameDlg(QString &name,
     ui->nameLbl->setText(nameTitle);
     ui->name->setText(name);
 
-    QString existingNamesString = "Existing Names: \n";
+    QString existingNamesString = "Existing Names:<p>";
     for (int i = 0; i < existingNames.count(); ++i) {
-        existingNamesString.append(existingNames.at(i) + "\n");
+        existingNamesString.append("- " + existingNames.at(i) + "<br>");
     }
     ui->name->setToolTip(existingNamesString);
     #ifdef Q_OS_WIN

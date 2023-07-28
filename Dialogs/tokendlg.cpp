@@ -453,8 +453,7 @@ void TokenDlg::on_newBtn_clicked()
     }
     delete nameDlg;
 
-    qDebug() << "TokenDlg::on_newBtn_clicked" << newTemplate << existing;
-//    if (newTemplate)
+    //qDebug() << "TokenDlg::on_newBtn_clicked" << newTemplate << existing;
 
     ui->templatesCB->addItem(newTemplate);
     int i = ui->templatesCB->findText(newTemplate);
@@ -468,7 +467,7 @@ void TokenDlg::on_renameBtn_clicked()
 /*
     As noted in on_okBtn_clicked, renaming the template changes the QMap key.
 */
-    qDebug() << "TokenDlg::on_renameBtn_clicked";
+    //qDebug() << "TokenDlg::on_renameBtn_clicked";
     // current name
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
@@ -476,7 +475,7 @@ void TokenDlg::on_renameBtn_clicked()
     QStringList existing = existingTemplates(row);
     // get new name
     RenameDlg *nameDlg = new RenameDlg(name, existing,
-             "Rename Template", "Rename template name:", this);
+             "Rename Template", "Template:", this);
     if (!nameDlg->exec()) {
         delete nameDlg;
         return;

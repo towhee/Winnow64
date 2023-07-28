@@ -1,17 +1,13 @@
 WHAT'S NEW
 
 BUGS / TO
-- Embellish make sure an image is selected
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
-- Rename dlg from token editor ui fix req'd
-- Ingest make sure file name template selected!!
 - Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail
 - Not restoring to same monitor / mac space
 - Select multiple folders
 - G::isNewFileSelection req'd?
-- dmEmpty req'd?
 - Make sure HEIC also works on PC including thumbs
 - Get thumbnail from HEIC.
 - folderAndFileSelectionChange does not show folder highlight change
@@ -91,6 +87,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Ingest make sure file name template selected
+- Rename dlg from token editor ui fix req'd
+- Dock tab tooltips not always in correct location
+- Show warning if select an embellish template without an image
 - ThumbView not resizing correctly when change show filename/title
 - Link to winnow.ca in welcome screen
 - Windows set title bar to app background color
