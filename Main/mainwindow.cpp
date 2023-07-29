@@ -2564,9 +2564,11 @@ void MW::loadConcurrentDone()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
     QString src = "MW::loadConcurrentMetaDone ";
     int count = 0;
-    /*
+//    /*
     qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
+             << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
+             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                 ;
                 //*/
     if (reset(src + QString::number(count++))) return;
@@ -4786,8 +4788,22 @@ void MW::embedThumbnailsFromAction()
 }
 
 void MW::chkMissingEmbeddedThumbnails(QString src)
+/*
+    metadata->canEmbedThumb
+    m.isEmbeddedThumbMissing
+    dm->isMissingEmbeddedThumb
+    G::modifySourceFiles
+    G::autoAddMissingThumbnails
+    G::MissingThumbColumn
+    MW::embedThumbnails()
+*/
 {
     if (G::isLogger) G::log("MW::chkMissingEmbeddedThumbnails");
+//    /*
+    qDebug() << "MW::chkMissingEmbeddedThumbnails" << "src =" << src
+             << "dm->isMissingEmbeddedThumb =" << dm->isMissingEmbeddedThumb
+                ;
+    //*/
 
     if (!dm->isMissingEmbeddedThumb) return;
 //    if (G::modifySourceFiles) return;

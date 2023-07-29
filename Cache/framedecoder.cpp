@@ -44,7 +44,7 @@ FrameDecoder::FrameDecoder(QObject *parent)
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
 //    connect(mediaPlayer, &QMediaPlayer::playbackStateChanged, this, &FrameDecoder::stateChanged);
 
-    isDebugging = true;
+    isDebugging = false;
 }
 
 void FrameDecoder::stop()

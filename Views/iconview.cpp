@@ -1320,7 +1320,9 @@ void IconView::thumbsFitTopOrBottom(QString src)
     For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
 */
     if (isDebug) G::log("IconView::thumbsFitTopOrBottom", objectName());
-//    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName();
+    /*
+    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
+                ; //*/
 
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
@@ -1337,9 +1339,20 @@ void IconView::thumbsFitTopOrBottom(QString src)
     int maxCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMax);
     int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
 
+    bool exceedsLimits = newViewportHt > maxCellHeight || newViewportHt < minCellHeight;
+    /*
+    qDebug() << "IconView::thumbsFitTopOrBottom"
+             << "newViewportHt =" << newViewportHt
+             << "maxCellHeight =" << maxCellHeight
+             << "minCellHeight =" << minCellHeight
+             << "exceedsLimits =" << exceedsLimits
+                ;
+                //*/
+
     // do nothing if exceed limits
-    if (newViewportHt > maxCellHeight) return;
-    if (newViewportHt < minCellHeight) return;
+    if (exceedsLimits) return;
+//    if (newViewportHt > maxCellHeight) return;
+//    if (newViewportHt < minCellHeight) return;
 
     // newViewportHt is okay, set icon size
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
@@ -1362,7 +1375,7 @@ void IconView::thumbsFitTopOrBottom(QString src)
     //    */
 
     // bestAspectRatio == 1 therefore no thumbsize change
-    if (src == "bestAspect" && bestAspectRatio > 0.99999 && bestAspectRatio < 1.000001) return;
+//    if (src == "bestAspect" && bestAspectRatio > 0.99999 && bestAspectRatio < 1.000001) return;
     setThumbSize();
 }
 
