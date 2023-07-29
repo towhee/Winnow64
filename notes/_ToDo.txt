@@ -1,6 +1,7 @@
 WHAT'S NEW
 
-BUGS / TO
+BUGS / TODO
+- Check fix missing thumbs for jpg previews in raw images
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong

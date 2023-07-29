@@ -277,7 +277,7 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "ignoreAddThumbnailsDlg") {
-        mw->ignoreAddThumbnailsDlg = v.toBool();
+        mw->ignoreAddThumbnailsDlg = !v.toBool();
     }
 
     if (source == "useSidecar") {
@@ -618,7 +618,7 @@ void Preferences::addItems()
             ;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->ignoreAddThumbnailsDlg;
+    i.value = !mw->ignoreAddThumbnailsDlg;
     i.key = "ignoreAddThumbnailsDlg";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
