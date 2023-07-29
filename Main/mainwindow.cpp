@@ -2569,17 +2569,17 @@ void MW::loadConcurrentDone()
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
-    if (reset(src + QString::number(count++))) return;
-
-    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
-        chkMissingEmbeddedThumbnails();
 
     if (reset(src + QString::number(count++))) return;
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
+
     if (reset(src + QString::number(count++))) return;
+    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
+        chkMissingEmbeddedThumbnails();
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
