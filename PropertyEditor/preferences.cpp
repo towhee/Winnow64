@@ -265,7 +265,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->toggleModifyImages();
         setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
-        setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
+        //setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
     }
 
     if (source == "backupBeforeModify") {
@@ -274,6 +274,8 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "autoAddMissingThumbnails") {
         G::autoAddMissingThumbnails = v.toBool();
+        setItemEnabled("ignoreAddThumbnailsDlg", !v.toBool());
+        setItemValue("ignoreAddThumbnailsDlg", !v.toBool());
     }
 
     if (source == "ignoreAddThumbnailsDlg") {
@@ -594,7 +596,8 @@ void Preferences::addItems()
     i.tooltip = "This silently embeds thumbnail if missing from TIFF and\n"
                 "JPG image files.\n\n"
                 "Enabling this will dramatically improve future thumbnail\n"
-                "loading times.  Modify source files must also be enabled.\n\n"
+                "loading times.  Permit image file modification must also\n"
+                "be enabled.\n\n"
                 "WARNING: this will modify your TIFF/JPG files.  Please make\n"
                 "sure you have backups until you are sure this does not corrupt\n"
                 "your images.  FYI, no corruption has been reported by users."
@@ -623,7 +626,7 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
+    //setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
 
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";
