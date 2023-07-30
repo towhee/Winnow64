@@ -327,10 +327,8 @@ void MW::createMDCache()
             Qt::BlockingQueuedConnection);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentDone);
-    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaReadThread, &MetaRead::triggerImageCache,
-            imageCacheThread, &ImageCache::setCurrentPosition);
-    connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
+    // Signal to change selection, fileSelectionChange, update ImageCache
+    connect(metaReadThread, &MetaRead::select, sel, &Selection::selectRow);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window
