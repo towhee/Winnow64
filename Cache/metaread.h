@@ -9,6 +9,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
+#include "Utilities/utilities.h"
 
 class MetaRead : public QThread
 {
@@ -48,6 +49,7 @@ signals:
 
     void triggerImageCache(QString startPath, QString src);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection, QString src);
+    void select(int sfRow);
 
     void done();               // not being used - req'd?
 

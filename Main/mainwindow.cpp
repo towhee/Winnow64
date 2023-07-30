@@ -1489,7 +1489,7 @@ void MW::handleStartupArgs(const QString &args)
 
         The information is gathered and sent to EmbelExport::exportRemoteFiles, where the
         images are embellished and saved in the manner defined by the embellish template
-        is a subfolder, and then the temp image files are deleted in the folder arg 3. */
+        in a subfolder, and then the temp image files are deleted in the folder arg 3. */
 
         /* show main window now.  If we don't, then the update progress popup will not be
         visible.  If there is a significant delay, when a lot of images have to be processed,
@@ -2148,12 +2148,11 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
 
+    // handle drop
     if (src == "handleDropOnCentralView") {
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
                 sel->currentPath(fPath);
-//                dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
-//                fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, true, "MW::folderAndFileSelectionChange");
             }
             return;
         }
@@ -2167,6 +2166,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
                 ;
                 //*/
 
+    // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
         qWarning() << "WARNING" << "MW::folderAndFileSelectionChange" << "fsTree failed to select" << fPath;
         if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "fsTree failed to select " + fPath);
@@ -2185,7 +2185,6 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     folderSelectionChange();
-    //sel->currentPath(fPath);
 
     return;
 }
@@ -2485,13 +2484,13 @@ void MW::loadConcurrentNewFolder()
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;
 
-    // reset for bestAspect calc
+    // reset for bestAspect thumbnail calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
 
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
-       metadata ~20K  */
+       metadata ~20K per image */
     int rows = dm->rowCount();
     int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);

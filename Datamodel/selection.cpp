@@ -155,7 +155,7 @@ void Selection::select(QString &fPath)
     currentIndex(dm->proxyIndexFromPath(fPath));
 }
 
-void Selection::select(int sfRow)
+void Selection::selectRow(int sfRow)
 {
     if (G::isLogger || isDebug) G::log("Selection::select row");
     currentIndex(dm->sf->index(sfRow, 0));
@@ -168,6 +168,16 @@ void Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)
     QItemSelection selection;
     selection.select(sfIdx, sfIdx2);
     sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+}
+
+void Selection::trigger(QModelIndex sfIdx)
+/*
+    Signaled from MetaRead.  Called trigger to avoid ambiguity when tried to use select.
+*/
+{
+    if (G::isLogger || isDebug) G::log("Selection::select QModelIndex");
+    if (!sfIdx.isValid()) return;
+    currentIndex(sfIdx);
 }
 
 void Selection::toggleSelect(QModelIndex sfIdx)

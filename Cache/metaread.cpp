@@ -466,8 +466,10 @@ void MetaRead::triggerCheck()
         // start image caching thread after head start
         if (isDebug || G::isLogger || G::isFlowLogger)
             G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
-        QModelIndex current = dm->sf->index(targetRow, 0);
-        emit fileSelectionChange(current, QModelIndex(), true, "MetaRead::run");
+        //Utilities::log("MetaRead::run", "emit fileSelectionChange " + startPath);
+        //QModelIndex current = dm->sf->index(targetRow, 0);
+        emit select(targetRow);
+        //emit fileSelectionChange(current, QModelIndex(), true, "MetaRead::run");
         alreadyTriggered = true;
     }
 }
