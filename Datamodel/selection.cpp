@@ -43,11 +43,6 @@ Selection::Selection(QWidget *parent, DataModel *dm, IconView *thumbView, IconVi
     isDebug = false;
 }
 
-//void Selection::currentChanged(QModelIndex idx, QModelIndex idx2)
-//{
-//    qDebug() << "Selection::currentChanged" << idx;
-//}
-
 void Selection::currentPath(QString &fPath)
 {
     if (G::isLogger || isDebug) G::log("Selection::current QString");
@@ -64,14 +59,6 @@ void Selection::currentRow(int sfRow)
 void Selection::currentIndex(QModelIndex sfIdx)
 /*
     This is the start for the core program flow (see top of mainwindow.cpp)
-
-    • Set all views current index
-
-    • if AllMetadataLoaded signal fileSelectionChange
-
-    • if Concurrent (still loading in progress):
-        - MetaRead::setCurrentRow
-            - MW::fileSelectionChange
 */
 {
     if (G::isFlowLogger2) qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row();
@@ -79,64 +66,23 @@ void Selection::currentIndex(QModelIndex sfIdx)
         G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
     if (isDebug)
         G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
-    /*
-    if (isDebug)
-        qDebug() << "Selection::current current"
-                 //<< "instance ="
-                 //<< dm->instance
-                 << "idx =" << sfIdx
-                 << "row =" << sfIdx.row()
-                 << dm->currentFolderPath;
-    //*/
 
-    if (sfIdx.isValid()) {
-        G::ignoreScrollSignal = true;
+    if (!sfIdx.isValid()) return;
 
-        updateCurrentIndex(sfIdx);
-        sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    G::ignoreScrollSignal = true;
 
-        thumbView->shiftAnchorIndex = sfIdx;
-        gridView->shiftAnchorIndex = sfIdx;
-        tableView->shiftAnchorIndex = sfIdx;
+    updateCurrentIndex(sfIdx);
+    sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
-        // don't scroll if mouse click source (screws up double clicks and disorients users)
-        if (G::fileSelectionChangeSource == "TableMouseClick") {
-            G::ignoreScrollSignal = true;
-            if (gridView->isVisible()) gridView->scrollToCurrent();
-            if (thumbView->isVisible()) thumbView->scrollToCurrent();
-        }
-        else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-            G::ignoreScrollSignal = true;
-            if (gridView->isVisible()) gridView->scrollToCurrent();
-            if (tableView->isVisible()) tableView->scrollToCurrent();
-        }
-        else if (G::fileSelectionChangeSource == "GridMouseClick") {
-            G::ignoreScrollSignal = true;
-            if (thumbView->isVisible()) thumbView->scrollToCurrent();
-            if (tableView->isVisible()) tableView->scrollToCurrent();
-        }
-        else {
-            if (gridView->isVisible()) gridView->scrollToCurrent();
-            if (thumbView->isVisible())  thumbView->scrollToCurrent();
-            if (tableView->isVisible()) tableView->scrollToCurrent();
-        }
-        G::fileSelectionChangeSource = "";
-        G::ignoreScrollSignal = false;
+    bool fileSelectionChangeTriggered = false;
+    if (dm->sf->index(dm->currentSfRow, G::MetadataLoadedColumn).data().toBool()) {
+        emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
+        fileSelectionChangeTriggered = true;
+    }
 
-        // set focus to enable shift + direction keys
-        if (gridView->isVisible()) gridView->setFocus();
-        if (thumbView->isVisible()) thumbView->setFocus();
-
-        bool fileSelectionChangeTriggered = false;
-        if (dm->sf->index(dm->currentSfRow, G::MetadataLoadedColumn).data().toBool()) {
-            emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
-            fileSelectionChangeTriggered = true;
-        }
-
+    if (G::isLoadConcurrent && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
         bool scrollOnly = false;
-        if (G::isLoadConcurrent && (!G::allMetadataLoaded || !G::allIconsLoaded)) {
-            emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered);
-        }
+        emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered);
     }
 }
 
@@ -170,15 +116,6 @@ void Selection::select(QModelIndex sfIdx, QModelIndex sfIdx2)
     sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
-void Selection::trigger(QModelIndex sfIdx)
-/*
-    Signaled from MetaRead.  Called trigger to avoid ambiguity when tried to use select.
-*/
-{
-    if (G::isLogger || isDebug) G::log("Selection::select QModelIndex");
-    if (!sfIdx.isValid()) return;
-    currentIndex(sfIdx);
-}
 
 void Selection::toggleSelect(QModelIndex sfIdx)
 {

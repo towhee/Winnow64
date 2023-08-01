@@ -31,6 +31,9 @@ public:
     int iconChunkSize;
     int firstIconRow;
     int lastIconRow;
+
+    bool showProgressInStatusbar = true;
+
     bool abort;
 
 signals:
@@ -38,7 +41,8 @@ signals:
     void updateScroll();
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void centralMsg(QString message);
-    void updateProgress(int progress);
+    void updateProgressInFilter(int progress);
+    void updateProgressInStatusbar(int progress, int total);
 
     void addMetadataAndIconInDM(ImageMetadata m, QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToDatamodel2(ImageMetadata m, QString src);
@@ -47,10 +51,10 @@ signals:
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
 
-    void triggerImageCache(QString startPath, QString src);
-    void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection, QString src);
-    void select(int sfRow);
-
+    void fileSelectionChange(QModelIndex sfIdx,
+                             QModelIndex idx2 = QModelIndex(),
+                             bool clearSelection = false,
+                             QString src = "MetaRead::triggerCheck");
     void done();               // not being used - req'd?
 
 public slots:

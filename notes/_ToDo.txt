@@ -1,7 +1,6 @@
 WHAT'S NEW
 
 BUGS / TODO
-- Check fix missing thumbs for jpg previews in raw images
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
@@ -88,6 +87,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Check fix missing thumbs for jpg previews in raw images
+- IconView not always updating after remote embellish
 - Ingest make sure file name template selected
 - Rename dlg from token editor ui fix req'd
 - Dock tab tooltips not always in correct location
@@ -104,7 +105,7 @@ DONE/FIXED
 - Rename images using a template
 - Added Utilities::pixmapToString
 - After delete image cannot view last image in folder
-- Created date not including ms
+- Created date not including ms in token builder
 - Click below last row in TableView crashes
 - Release 1.35
 - Add pick status ingested to filters

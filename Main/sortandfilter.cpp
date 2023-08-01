@@ -359,6 +359,7 @@ void MW::sortChange(QString source)
     }
 
     // do not sort conditions
+    /*
     qDebug() << "MW::sortChange"
              << "sortMenuUpdateToMatchTable =" << sortMenuUpdateToMatchTable
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
@@ -366,6 +367,7 @@ void MW::sortChange(QString source)
              << "G::NameColumn =" << G::NameColumn
              << "sortHasChanged =" << sortHasChanged
         ;
+//*/
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;

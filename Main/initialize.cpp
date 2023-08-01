@@ -245,11 +245,14 @@ void MW::createMDCache()
 
     // signal to stop MetaCache
     connect(this, &MW::abortMDCache, metadataCacheThread, &MetadataCache::stop);
+
     // signal stopped when abort completed
     connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
+
     // add metadata to datamodel
     connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
+
     // update icon in datamodel
     connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon,
             Qt::DirectConnection);
@@ -259,6 +262,8 @@ void MW::createMDCache()
 
     connect(metadataCacheThread, &MetadataCache::showCacheStatus,
             this, &MW::setCentralMessage);
+
+
 //    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
 //            this, &MW::setCentralMessage, Qt::DirectConnection);
 
@@ -328,13 +333,16 @@ void MW::createMDCache()
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentDone);
     // Signal to change selection, fileSelectionChange, update ImageCache
-    connect(metaReadThread, &MetaRead::select, sel, &Selection::selectRow);
+    connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window
     connect(metaReadThread, &MetaRead::centralMsg, this, &MW::setCentralMessage);
     // update filters metaread progress
-    connect(metaReadThread, &MetaRead::updateProgress, filters, &Filters::updateProgress);
+    connect(metaReadThread, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
+    // update loading metadata in statusbar
+    connect(metaReadThread, &MetaRead::updateProgressInStatusbar,
+            cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
 #endif
 
 #ifdef METAREAD2

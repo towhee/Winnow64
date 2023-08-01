@@ -1926,9 +1926,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
-    //qDebug() << "MW::fileSelectionChange";
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
-//    qDebug() << "MW::fileSelectionChange" << "*CONTINUE 0*" << current;
+    //qDebug() << "MW::fileSelectionChange" << "*CONTINUE 0*" << current;
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
@@ -1974,43 +1973,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // if starting program, set first image to display
+    // if starting program, return
     if (current.row() == -1) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
             "Invalid row, select row 0 so exit");
         return;
     }
 
-    /* check if current selection = current index.  If so, nothng to do
-    if (dm->sf->mapToSource(current) == dm->currentDmIdx) {
-        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-            "Already current file selection so exit");
-        qDebug() << "MW::fileSelectionChange" << "Already current file selection so exit";
-        dm->currentSfRow = current.row();
-        dm->currentSfIdx = dm->sf->index(current.row(), 0);
-        return;
-    }
-    */
-
-    /*
-    qDebug() << "MW::fileSelectionChange"
-             << "src =" << src
-             << "row =" << current.row()
-             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
-                ;  //*/
-
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
-
-    /*
-    if (isDragDrop && dragDropFilePath.length() > 0) {
-        thumbView->selectThumb(dragDropFilePath);
-        isDragDrop = false;
-    }
-    */
-
-    //qDebug() << "MW::fileSelectionChange" << "*CONTINUE *" << current;
-//    folderAndFileChangePath = "";
 
     // record current proxy row (dm->sf) as it is used to sync everything
     dm->currentSfRow = current.row();
@@ -2022,6 +1993,39 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
+
+    // update views
+    thumbView->shiftAnchorIndex = current;
+    gridView->shiftAnchorIndex = current;
+    tableView->shiftAnchorIndex = current;
+
+    // don't scroll if mouse click source (screws up double clicks and disorients users)
+    if (G::fileSelectionChangeSource == "TableMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (gridView->isVisible()) gridView->scrollToCurrent();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+    }
+    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (gridView->isVisible()) gridView->scrollToCurrent();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
+    }
+    else if (G::fileSelectionChangeSource == "GridMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
+    }
+    else {
+        if (gridView->isVisible()) gridView->scrollToCurrent();
+        if (thumbView->isVisible())  thumbView->scrollToCurrent();
+        if (tableView->isVisible()) tableView->scrollToCurrent();
+    }
+    G::fileSelectionChangeSource = "";
+    G::ignoreScrollSignal = false;
+
+    // set focus to enable shift + direction keys
+    if (gridView->isVisible()) gridView->setFocus();
+    if (thumbView->isVisible()) thumbView->setFocus();
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
@@ -2339,7 +2343,7 @@ bool MW::reset(QString src)
     isDragDrop = false;
 
     updateStatus(false, "", "MW::reset");
-    cacheProgressBar->clearProgress();
+    cacheProgressBar->clearImageCacheProgress();
     progressLabel->setVisible(false);
     filterStatusLabel->setVisible(false);
     updateClassification();
@@ -2476,6 +2480,19 @@ bool MW::updateIconRange(int row, QString src)
 }
 
 void MW::loadConcurrentNewFolder()
+/*
+    MW::loadConcurrentNewFolder
+    - Estimate memory req'd for datamodel for new folder(s).
+    - The default image is the first one in the datamodel.  However, if
+      folderAndFileChangePath has been set by a drop operation or a
+      handleStartupArgs (ie embellish from Lightroom) then set the
+      target image accordingly.
+    - Update the icon range based on the target image.
+    - Set image cache parameters and build image cacheItemList.
+    - Signal Selection::selectRow
+
+    - See top of MainWindow for program flow
+*/
 {
     QString fun = "MW::loadConcurrentNewFolder";
     if (G::isFlowLogger2) qDebug() << fun << G::currRootFolder;
@@ -2511,6 +2528,9 @@ void MW::loadConcurrentNewFolder()
     updateIconRange(dm->currentSfRow, fun);
     if (reset(src + QString::number(count++))) return;
 
+    // reset metadata progress
+    cacheProgressBar->resetMetadataProgress();
+
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
@@ -2528,6 +2548,11 @@ void MW::loadConcurrentNewFolder()
     metaReadThread->initialize();     // only when change folders
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
+
+    /*
+        Maybe try to run metaread from here, then use triggerCheck to signal
+        Selection::selectRow, currentIndex and fileSelection
+    */
     sel->currentRow(targetRow);
 }
 
@@ -2545,7 +2570,7 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTrig
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-//            dm->currentSfRow = sfRow;
+            //dm->currentSfRow = sfRow;
             dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
             metaReadThread->setCurrentRow(sfRow, scrollOnly, fileSelectionChangeTriggered,
                                           "MW::loadConcurrent");
@@ -2563,7 +2588,7 @@ void MW::loadConcurrentDone()
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
     QString src = "MW::loadConcurrentMetaDone ";
     int count = 0;
-//    /*
+    /*
     qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
@@ -2728,7 +2753,7 @@ void MW::loadImageCacheForNewFolder()
 
     // clear the cache progress bar
     if (isShowCacheProgressBar) {
-        cacheProgressBar->clearProgress();
+        cacheProgressBar->clearImageCacheProgress();
     }
 
     // set image cache parameters and build image cacheItemList
@@ -3061,7 +3086,7 @@ void MW::updateImageCacheStatus(QString instruction,
 
     // just repaint the progress bar gray and return.
     if (instruction == "Clear") {
-        cacheProgressBar->clearProgress();
+        cacheProgressBar->clearImageCacheProgress();
         return;
     }
 
@@ -3072,18 +3097,18 @@ void MW::updateImageCacheStatus(QString instruction,
 
     if (instruction == "Update all rows") {
         // clear progress
-        cacheProgressBar->clearProgress();
+        cacheProgressBar->clearImageCacheProgress();
         // target range
         int tFirst = cache.targetFirst;
         int tLast = cache.targetLast + 1;
-        cacheProgressBar->updateProgress(tFirst, tLast, rows,
+        cacheProgressBar->updateImageCacheProgress(tFirst, tLast, rows,
                                          cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
 //            bool metaLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
 //            bool cached = dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool();
             if (icd->cacheItemList.at(i).isCached)
-                cacheProgressBar->updateProgress(i, i + 1, rows,
+                cacheProgressBar->updateImageCacheProgress(i, i + 1, rows,
                                   cacheProgressBar->imageCacheColorGradient);
         }
 
@@ -3409,6 +3434,8 @@ void MW::setImageCacheParameters()
 
     int cacheNetMB = cacheMaxMB - static_cast<int>(G::metaCacheMB);
     if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
+
+    metaReadThread->showProgressInStatusbar = isShowCacheProgressBar;
 
     imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
              isShowCacheProgressBar, cacheWtAhead);

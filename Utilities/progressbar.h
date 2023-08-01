@@ -12,9 +12,9 @@ class ProgressBar : public QWidget
 public:
     explicit ProgressBar(QWidget *parent);
 
-    void clearProgress();
+    void clearImageCacheProgress();
     void setBackgroundColor(const QColor &bg);
-    void updateProgress(int fromItem, int toItem, int items, QLinearGradient gradient);
+    void updateImageCacheProgress(int fromItem, int toItem, int items, QLinearGradient gradient);
     void updateDoneItem(bool isDone, int item, int items, QColor doneColor);
     void updateCursor(int item, int items);
     void saveProgressState();
@@ -28,12 +28,17 @@ public:
     QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
+    QColor progressMetadateCacheColor = QColor(Qt::red);         // Red
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;
     QLinearGradient imageCacheColorGradient;
     QLinearGradient currentColorGradient;
     QLinearGradient targetColorGradient;
+
+public slots:
+    void resetMetadataProgress();
+    void updateMetadataCacheProgress(int item, int items);
 
 private:
     QPixmap state;

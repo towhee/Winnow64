@@ -390,7 +390,7 @@ void TokenDlg::on_okBtn_clicked()
     templatesMap with newTemplatesMap.
 */
     if (G::isLogger) G::log("TokenDlg::on_okBtn_clicked");
-    qDebug() << "TokenDlg::on_okBtn_clicked";
+    //qDebug() << "TokenDlg::on_okBtn_clicked";
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
         QString key = ui->templatesCB->itemText(i);
@@ -499,7 +499,7 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
     Update tokenEdit with the template token string stored in templatesMap
 */
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
-    qDebug() << "TokenDlg::on_templatesCB_currentIndexChanged" << row << key << "current" << currentKey;
+    //qDebug() << "TokenDlg::on_templatesCB_currentIndexChanged" << row << key << "current" << currentKey;
     indexJustChanged = true;
     if (templatesMap.contains(key)) {
         ui->tokenEdit->setText(templatesMap.value(key));
