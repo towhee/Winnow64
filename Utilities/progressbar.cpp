@@ -44,11 +44,17 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
     targetColorGradient = getGradient(progressTargetColor);
 }
 
-void ProgressBar::clearProgress()
+void ProgressBar::resetMetadataProgress()
+{
+    QPainter pnt(m1->progressPixmap);
+    QRect mdRect(0, htOffset-1, m1->progressWidth, htOffset-1);
+    pnt.fillRect(mdRect, progressMetadateCacheColor);
+}
+
+void ProgressBar::clearImageCacheProgress()
 {
     counter = 0;
     QPainter pnt(m1->progressPixmap);
-//    QLinearGradient bgGradient = getGradient(G::progressBgColor);
     QRect bgRect(0, htOffset, m1->progressWidth, ht);
     pnt.fillRect(bgRect, bgGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
@@ -62,19 +68,13 @@ void ProgressBar::setBackgroundColor(const QColor &bg)
     the pixmap the new background shade.
 */
     if (G::isLogger) G::log("ProgressBar::setBackgroundColor");
-//    int w = m1->progressLabel->pixmap().width();     // Qt 6.2
-//    int h = m1->progressLabel->pixmap().height();    // Qt 6.2
-//    /*
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     int w = m1->progressLabel->pixmap()->width();   // deprecated
     int h = m1->progressLabel->pixmap()->height();  // deprecated
 #else
     int w = m1->progressLabel->pixmap().width();     // Qt 6.2
     int h = m1->progressLabel->pixmap().height();    // Qt 6.2
-//    int w = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).width();     // Qt 6.2
-//    int h = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).height();    // Qt 6.2
 #endif
-    //*/
     QPainter pnt(m1->progressPixmap);
     // above progress bar
     QRect bgRect(0, 0, w, htOffset);
@@ -82,15 +82,14 @@ void ProgressBar::setBackgroundColor(const QColor &bg)
     // below progress bar
     QRect bgRect1(0, h - ht, w, h);
     pnt.fillRect(bgRect1, bg);
+//    // metadata progress line reset to zero progress
+//    QRect mdRect(0, htOffset-1, w, htOffset-1);
+
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
 void ProgressBar::saveProgressState()
 {
-//    int w = m1->progressLabel->pixmap().width();
-//    int h = m1->progressLabel->pixmap().height();
-//    state = m1->progressLabel->pixmap().copy(0, 0, w, h);
-//    /*
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     int w = m1->progressLabel->pixmap()->width();
     int h = m1->progressLabel->pixmap()->height();
@@ -100,7 +99,6 @@ void ProgressBar::saveProgressState()
     int h = m1->progressLabel->pixmap().height();
     state = m1->progressLabel->pixmap().copy(0, 0, w, h);
 #endif
-    //*/
 }
 
 void ProgressBar::recoverProgressState()
@@ -118,33 +116,30 @@ void ProgressBar::updateCursor(int item, int items)
     float itemWidth = static_cast<float>(barWidth) / items;
     int pxStartOld = qRound(pos * itemWidth);
     int pxWidth = static_cast<int>(itemWidth) + 1;
-    if(pxWidth < minCursorWidth) pxWidth = minCursorWidth;
+    if (pxWidth < minCursorWidth) pxWidth = minCursorWidth;
 
 
     // paint out the old cursor location
 //    QLinearGradient oldGradient = getGradient(imageCacheColor);
     QRect oldRect(pxStartOld, htOffset, pxWidth, ht);
     pnt.fillRect(oldRect, imageCacheColorGradient);
-//    pnt.fillRect(oldRect, oldGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 
     pos = item;
     int pxStartNew = qRound(pos * itemWidth);
 
     // paint in the new cursor location
-//    QLinearGradient newGradient = getGradient(currentColor);
     QRect newRect(pxStartNew, htOffset, pxWidth, ht);
     pnt.fillRect(newRect, currentColorGradient);
-//    pnt.fillRect(newRect, newGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 
     prevCursorPos = pos;
 }
 
-void ProgressBar::updateProgress(int fromItem,
-                                 int toItem,
-                                 int items,
-                                 QLinearGradient gradient)
+void ProgressBar::updateImageCacheProgress(int fromItem,
+                                           int toItem,
+                                           int items,
+                                           QLinearGradient gradient)
 {
     counter++;
 
@@ -166,20 +161,38 @@ void ProgressBar::updateProgress(int fromItem,
     if (pxWidth < 2) pxWidth = 2;
     if (pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
 
-/*    qDebug() << "Target range from =" << fromItem
+    /*
+       qDebug() << "Target range from =" << fromItem
              << "to" << toItem
              << "itemWidth" << itemWidth
              << "pxStart" << pxStart
              << "pxWidth" << pxWidth
              << "source" << source;
-             */
+             //*/
 
     // Done range
-//    QLinearGradient doneGradient = getGradient(gradient);
     QRect doneRect(pxStart, htOffset, pxWidth, ht);
     pnt.fillRect(doneRect, gradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
+
+void ProgressBar::updateMetadataCacheProgress(int item, int items)
+{
+    QPainter pnt(m1->progressPixmap);
+    int barWidth = m1->progressWidth;
+    float itemWidth = (float)barWidth / items;
+    int pxStart, pxWidth;
+    pxStart = qRound(item * itemWidth);
+    pxWidth = itemWidth + 1;
+
+    // Done range
+    QRect doneRect(pxStart, htOffset-1, pxWidth, 1);
+    //pnt.fillRect(doneRect, Qt::yellow);
+    pnt.fillRect(doneRect, G::backgroundColor);
+    m1->progressLabel->setPixmap(*(m1->progressPixmap));
+}
+
+
 
 void ProgressBar::updateDoneItem(bool isDone, int item, int items, QColor doneColor)
 {

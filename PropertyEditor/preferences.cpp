@@ -208,7 +208,6 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "cacheSizeMB") {
-        qDebug() << "Preferences::itemChange" << v << source;
         mw->cacheMaxMB = v.toInt();
         mw->setImageCacheParameters();
     }
@@ -224,7 +223,6 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "slideShowDelay") {
-        qDebug() << "Preferences::itemChange" << v << source;
         mw->slideShowDelay = v.toInt();
     }
 
@@ -345,7 +343,6 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "infoOverlayFontSize") {
-        qDebug() << "Preferences::itemChange" << v;
         mw->imageView->infoOverlayFontSize = v.toInt();
         mw->setInfoFontSize();
     }

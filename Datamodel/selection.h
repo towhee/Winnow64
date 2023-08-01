@@ -14,6 +14,7 @@ public:
     Selection(QWidget *parent, DataModel *dm, IconView *thumbView,
               IconView *gridView, TableView *tableView);
     void select(QString &fPath);
+    void selectRow(int sfRow);
     void select(QModelIndex sfIdx, QModelIndex sfIdx2 = QModelIndex());
     void updateCurrentIndex(QModelIndex sfIdx);
     void currentIndex(QModelIndex sfIdx);
@@ -46,14 +47,12 @@ signals:
     void fileSelectionChange(QModelIndex idx,
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
-                        QString src = "Selection::currentChanged") ;
+                        QString src = "Selection::currentChanged");
     void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
     void updateStatus(bool, QString, QString);
 
 public slots:
-    void selectRow(int sfRow);
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-    void trigger(QModelIndex sfIdx);
 
 private:
     DataModel *dm;

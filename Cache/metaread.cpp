@@ -43,7 +43,8 @@ MetaRead::MetaRead(QObject *parent,
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
-    imageCacheTriggerCount =  QThread::idealThreadCount();
+//    imageCacheTriggerCount =  200;
+    imageCacheTriggerCount =  QThread::idealThreadCount() * 2;
     isDebug = false;
 }
 
@@ -78,7 +79,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly,
     mutex.unlock();
 
     if (!isRunning()) {
-        start();
+        start(QThread::HighestPriority);
     }
 }
 
@@ -269,7 +270,8 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     // update progress in case filters panel activated before all metadata loaded
     metaReadCount++;
     int progress = 1.0 * metaReadCount / dmRowCount * 100;
-    emit updateProgress(progress);
+    emit updateProgressInFilter(progress);
+    if (showProgressInStatusbar) emit updateProgressInStatusbar(dmRow, dmRowCount);
 
     if (isDebug)
     {
@@ -456,8 +458,7 @@ void MetaRead::resetTrigger()
 
 void MetaRead::triggerCheck()
 /*
-    Signal MW::fileSelectionChange for the current selection, which will also
-    trigger the ImageCache to rebuild.
+    Signal MW::fileSelectionChange to trigger the ImageCache to rebuild.
 */
 {
     count++;
@@ -466,10 +467,8 @@ void MetaRead::triggerCheck()
         // start image caching thread after head start
         if (isDebug || G::isLogger || G::isFlowLogger)
             G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
-        //Utilities::log("MetaRead::run", "emit fileSelectionChange " + startPath);
-        //QModelIndex current = dm->sf->index(targetRow, 0);
-        emit select(targetRow);
-        //emit fileSelectionChange(current, QModelIndex(), true, "MetaRead::run");
+        QModelIndex sfIdx = dm->sf->index(targetRow, 0);
+        emit fileSelectionChange(sfIdx);
         alreadyTriggered = true;
     }
 }

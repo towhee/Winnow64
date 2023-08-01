@@ -129,11 +129,6 @@ void MW::updateStatusBar()
     if (subFoldersAction->isChecked()) G::includeSubfolders = true;
     rawJpgStatusLabel->setVisible(combineRawJpgAction->isChecked());
     slideShowStatusLabel->setVisible(G::isSlideShow);
-
-//    updateProgressBarWidth();
-
-//    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(isShowCacheProgressBar);// rghcachechange
-//    else progressLabel->setVisible(false);
 }
 
 int MW::availableSpaceForProgressBar()
@@ -266,7 +261,6 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 {
-//    return;  //rghmacdelay
     if (G::isLogger) G::log("MW::updateImageCachingThreadRunStatus");
     if (isRunning) {
         if (G::isTest) testTime.restart();

@@ -69,7 +69,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     this->instance = instance;
     errMsg = "";
 //    qDebug() << "ImageDecoder::decode" << fPath;
-    start();
+    start(QThread::LowestPriority);
 }
 
 // all code below runs in separate thread

@@ -1413,7 +1413,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
-    qDebug() << "ImageCache::rebuildImageCacheParameters" << "Source:" << source;
+    //qDebug() << "ImageCache::rebuildImageCacheParameters" << "Source:" << source;
 
     // update cacheItemList
     icd->cache.key = 0;
@@ -1554,7 +1554,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
         mutex.unlock();
     }
     else {
-        start();
+        start(QThread::LowestPriority);
     }
 }
 
