@@ -124,32 +124,45 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->thumbsFitTopOrBottom("labelChoiceChange");
+    qDebug() << sel->sm->selectedRows().count();
     return;
 
-    QPalette palette = QGuiApplication::palette();
-    palette.setColor(QPalette::Inactive, QPalette::ToolTipText, QColor("yellow"));
-    QGuiApplication::setPalette(palette);
+//    for (int j = 0; j < dockTabBars.size(); j++) {
+//        qDebug() << j << dockTabBars.at(j)->tabText(0);
+//    }
+    QPixmap pm(":/images/icon16/anchor.png");
+    folderDockTabRichText = Utilities::pixmapToString(pm);
+    QTabBar *tabBar = dockTabBars.at(1);
+    qDebug() << tabBar->tabText(0);
+    QString newTitle = "BBB";
+    folderDock->setWindowTitle(folderDockTabRichText);
+//    tabBar->setTabText(0, "BBB");
+//    qDebug() << folderDockTabRichText;
     return;
 
-//    QPalette *p = &QGuiApplication::palette();
-    QGuiApplication::palette().setColor(QPalette::ToolTipText, QColor(255,0,0,100));
-//    QGuiApplication::setPalette(p);
-//    QColor color = p.color(QPalette::Active, QPalette::ToolTipText);
-//    qDebug() << color;
-    return;
+//    QPalette palette = QGuiApplication::palette();
+//    palette.setColor(QPalette::Inactive, QPalette::ToolTipText, QColor("yellow"));
+//    QGuiApplication::setPalette(palette);
+//    return;
 
-    QList<QTabBar *> tabList = findChildren<QTabBar *>();
-    for (int i = 0; i < tabList.count(); i++) {
-        QTabBar* tabBar = tabList.at(i);
-        for (int j = 0; j < tabBar->count(); j++) {
-            qDebug() << "tabBar" << i
-                     << "tab" << j
-                     << "text" << tabBar->tabText(j)
-                ;
-        }
-    }
-    return;
+////    QPalette *p = &QGuiApplication::palette();
+//    QGuiApplication::palette().setColor(QPalette::ToolTipText, QColor(255,0,0,100));
+////    QGuiApplication::setPalette(p);
+////    QColor color = p.color(QPalette::Active, QPalette::ToolTipText);
+////    qDebug() << color;
+//    return;
+
+//    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+//    for (int i = 0; i < tabList.count(); i++) {
+//        QTabBar* tabBar = tabList.at(i);
+//        for (int j = 0; j < tabBar->count(); j++) {
+//            qDebug() << "tabBar" << i
+//                     << "tab" << j
+//                     << "text" << tabBar->tabText(j)
+//                ;
+//        }
+//    }
+//    return;
 
     QList<QDockWidget*> dockWidgets = tabifiedDockWidgets(metadataDock);
     for (int i = 0; i < dockWidgets.size(); ++i) {

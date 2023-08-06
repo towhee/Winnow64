@@ -72,7 +72,9 @@ void Selection::currentIndex(QModelIndex sfIdx)
     G::ignoreScrollSignal = true;
 
     updateCurrentIndex(sfIdx);
+    sm->clear();
     sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    //sm->setCurrentIndex(sfIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
     bool fileSelectionChangeTriggered = false;
     if (dm->sf->index(dm->currentSfRow, G::MetadataLoadedColumn).data().toBool()) {
@@ -121,25 +123,27 @@ void Selection::toggleSelect(QModelIndex sfIdx)
 {
     if (G::isLogger || isDebug) G::log("Selection::toggleSelect");
     bool test = sfIdx == dm->currentSfIdx;
+    /*
     qDebug() << "Selection::toggleSelect  nextIdx"
              << "sfIdx =" << sfIdx
              << "dm->currentSfIdx =" << dm->currentSfIdx
              << "Equal =" << test
                 ;
+                //*/
     // current index is always selected
     if (sfIdx == dm->currentSfIdx) {
         QModelIndex nextIdx = nearestSelectedIndex(sfIdx.row());
         qDebug() << "Selection::toggleSelect  nextIdx =" << nextIdx;
         if (nextIdx.isValid()) {
-            qDebug() << "Selection::toggleSelect  nextIdx isValid = true";
+            //qDebug() << "Selection::toggleSelect  nextIdx isValid = true";
 
             updateCurrentIndex(sfIdx);
             sm->setCurrentIndex(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
 
             // update delegates to show current and set focus to enable shift + direction keys
-//            if (thumbView->isVisible()) thumbView->updateView();
-//            if (gridView->isVisible()) gridView->updateView();
+            if (thumbView->isVisible()) thumbView->updateView();
+            if (gridView->isVisible()) gridView->updateView();
 
             emit fileSelectionChange(nextIdx, QModelIndex(), false, "Selection::toggleSelect");
         }
@@ -367,8 +371,10 @@ void Selection::recover()
     if (G::isLogger || isDebug) G::log("Selection::recover");
     QItemSelection selection;
     QModelIndex idx;
-    foreach (idx, selectedRows)
+    sm->clear();
+    foreach (idx, selectedRows) {
         selection.select(idx, idx);
+    }
     sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 

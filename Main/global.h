@@ -182,8 +182,6 @@ namespace G
     extern QFile errlogFile;
     extern bool isDev;
 
-    extern QPoint mousePos;
-//    extern bool isModifier;
     extern bool loadOnlyVisibleIcons;
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;

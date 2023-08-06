@@ -82,13 +82,8 @@ public:
     int nextPick();
     int prevPick();
     int nearestPick();
-//    void saveSelection();
-//    void recoverSelection();
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
-//    QModelIndex getNearestSelectedIndex(int sfRow);
-//    void invertSelection();
-//    void chkForDeselection(int sfRow);
     bool isSelected(int row);
 
     QMutex mutex;
@@ -104,8 +99,8 @@ public:
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
-    int currentSfRow;                     // used in caching to check if new image selected
-    int currentDmRow;                     // used in caching to check if new image selected
+    int currentSfRow;                   // used in caching to check if new image selected
+    int currentDmRow;                   // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
     int firstVisibleIcon;               // not used

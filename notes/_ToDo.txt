@@ -87,6 +87,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Release 1.36
 - Check fix missing thumbs for jpg previews in raw images
 - IconView not always updating after remote embellish
 - Ingest make sure file name template selected

@@ -45,7 +45,7 @@ namespace G
     bool useFilterView = true;          // not finished
 
     // metadata/icon read method
-    QString metaReadInUse;
+    QString metaReadInUse;              // used in tooltip
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -58,8 +58,6 @@ namespace G
     qreal sysDevicePixelRatio;          // current monitor
 
     // application parameters
-    QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
-//    bool isModifier;                    // is shift, ctrl/command or alt/option pressed
     QString strFontSize;                // app font point size
     int fontSize;
     qreal dpi;                          // current logical screen dots per inch
@@ -97,7 +95,7 @@ namespace G
     int wheelSensitivity = 40;
 
     // caching
-    bool loadOnlyVisibleIcons;
+    bool loadOnlyVisibleIcons;          // not used
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;

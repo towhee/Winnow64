@@ -1769,6 +1769,10 @@ void IconView::paintEvent(QPaintEvent *event)
     QListView::paintEvent(event);
 }
 
+void IconView::keyPressEvent(QKeyEvent *event){
+
+}
+
 void IconView::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -1816,11 +1820,19 @@ void IconView::mousePressEvent(QMouseEvent *event)
         else G::fileSelectionChangeSource =  "ThumbMouseClick";
         QString src = "IconView::mousePressEvent " + objectName();
 
-        // Ctrl modifier = toggle
+        // No modifier = clear selection and select
+        if (event->modifiers() & Qt::NoModifier) {
+            m2->sel->sm->clear();
+            m2->sel->currentIndex(idx);
+            return;
+        }
+
+        // Ctrl modifier = toggle select
         if (event->modifiers() & Qt::ControlModifier) {
             // check attempt to deselect only selected item (must always be one selected)
             m2->sel->toggleSelect(idx);
             dragQueue.append(idx.row());
+            return;
         }
 
         // Shift modifier = select span
@@ -2134,7 +2146,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
-//    qDebug() << "IconView::startDrag";
+    //qDebug() << "IconView::startDrag";
 
     isMouseDrag = false;
 
@@ -2144,14 +2156,14 @@ void IconView::startDrag(Qt::DropActions)
         return;
     }
 
-    QDrag *drag = new QDrag(this);
-    QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
-
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }
+
+    QDrag *drag = new QDrag(this);
+    QMimeData *mimeData = new QMimeData;
 
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);

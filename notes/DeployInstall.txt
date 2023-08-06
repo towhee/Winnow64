@@ -17,14 +17,15 @@ NORMAL DEPLOYMENT
         - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
         - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
         - Run WinnowDeploy.command to add frameworks, sign app and copy to Install Winnow folder.
-        - In Disk Utility: File > New Image > Image form Folder...
+        - In Install folder rename with version ie Winnow1.36.app.
+        - In Disk Utility: File > New Image > Image from Folder...
             - select /Users/roryhill/Projects/WinnowInstall/Winnow.
-            - save as Winnow.dmg (in  /Users/roryhill/Projects/WinnowInstall).
+            - save as Winnow1.36.dmg (in  /Users/roryhill/Projects/WinnowInstall).
         - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
           or use FileZilla.
         - Confirm is universal:
-          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.35.app/Contents/MacOS/Winnow
-        - Try http://www.winnow.ca/winnow_mac/test/Winnow1.35.dmg to make sure it works.
+          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.36.app/Contents/MacOS/Winnow
+        - Try http://www.winnow.ca/winnow_mac/test/Winnow1.36.dmg to make sure it works.
         - Finally Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/current
 
         Notes
