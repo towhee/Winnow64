@@ -30,6 +30,7 @@ void MW::keyRight()
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
+    qDebug() << "MW::keyRight ROW:" << dm->currentSfRow;
     if (G::mode == "Compare") {
         sel->currentIndex(compareImages->go("Right"));
     }
@@ -98,7 +99,6 @@ void MW::keyHome()
         }
     }
     else {
-//        G::ignoreScrollSignal = true;
         if (G::mode == "Compare") compareImages->go("Home");
         sel->first();
     }
@@ -119,7 +119,6 @@ void MW::keyEnd()
         }
     }
     else {
-//        G::ignoreScrollSignal = true;
         if (G::mode == "Compare") compareImages->go("End");
         else sel->last();
     }
@@ -163,7 +162,7 @@ void MW::scrollToCurrentRow()
     //qDebug() << "MW::scrollToCurrentRow";
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-//    G::wait(100);
+    G::wait(100);
 
     G::ignoreScrollSignal = true;
     if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");

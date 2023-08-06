@@ -1046,6 +1046,10 @@ void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
     folderDockTabText = "  📁  ";
+    QPixmap pm(":/images/icon16/anchor.png");
+    folderDockTabRichText = "test";
+//    folderDockTabRichText = Utilities::pixmapToString(pm);
+    dockTextNames << folderDockTabText;
     folderDock = new DockWidget(folderDockTabText, this);  // Folders 📁
     folderDock->setObjectName("FoldersDock");
     folderDock->setWidget(fsTree);
@@ -1104,6 +1108,7 @@ void MW::createFavDock()
 {
     if (G::isLogger) G::log("MW::createFavDock");
     favDockTabText = "  🔖  ";
+    dockTextNames << favDockTabText;
     favDock = new DockWidget(favDockTabText, this);  // Bookmarks📗 🔖 🏷️ 🗂️
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
@@ -1160,6 +1165,7 @@ void MW::createFilterDock()
 {
     if (G::isLogger) G::log("MW::createFilterDock");
     filterDockTabText = "  🤏  ";
+    dockTextNames << filterDockTabText;
     filterDock = new DockWidget(filterDockTabText, this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
     filterDock->setObjectName("Filters");
 
@@ -1257,8 +1263,9 @@ void MW::createMetadataDock()
 //    QPixmap pixmap(":/images/icon16/anchor.png");
 //    metadataDockTabText = Utilities::pixmapToString(pixmap);
     metadataDockTabText = "  📷  ";
+    dockTextNames << metadataDockTabText;
     metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
-    metadataDock->setObjectName("Image Info");
+    metadataDock->setObjectName("ImageInfo");
     metadataDock->setWidget(infoView);
 
     /* Experimenting touse rich text in QTabWidget for docks
@@ -1310,6 +1317,7 @@ void MW::createThumbDock()
 {
     if (G::isLogger) G::log("MW::createThumbDock");
     thumbDockTabText = "Thumbnails";
+    dockTextNames << thumbDockTabText;
     thumbDock = new DockWidget(thumbDockTabText, this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
@@ -1342,8 +1350,9 @@ void MW::createEmbelDock()
     connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
     embelDockTabText = "  🎨  ";
+    dockTextNames << embelDockTabText;
     embelDock = new DockWidget(embelDockTabText, this);  // Embellish
-    embelDock->setObjectName("embelDock");
+    embelDock->setObjectName("EmbelDock");
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);
     embelDock->setVisible(true);

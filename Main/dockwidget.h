@@ -5,19 +5,20 @@
 #include "global.h"
 #include "widgetcss.h"
 
-/* Not being used.  Would require also subclassing QMainWindow to use this.
 //-------------------------------------------------------------------------------------------
 class RichTextTabBar : public QTabBar
 {
     Q_OBJECT
 public:
+    RichTextTabBar(QWidget *parent = nullptr);
     void setTabText(int index, const QString& text);
 
 private:
-    int mTabWidth;
-    int mTabHeight;
+    int mTabWidth = 40;
+    int mTabHeight = 20;
 };
 
+/* Not being used.
 //-------------------------------------------------------------------------------------------
 class RichTextTabWidget : public QTabWidget
 {

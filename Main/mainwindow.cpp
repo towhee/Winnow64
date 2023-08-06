@@ -101,8 +101,21 @@ Following is out of date:
 PROGRAM FLOW - CONCURRENT
 
     • New folder selected:
+        - MW::folderSelectionChange            // housekeeping and load datamodel OS file info
         - MW::loadConcurrentNewFolder          // initialize MetaRead and ImageCache
-        - Selection::currentIndex(0)           // set current index
+        - Selection::currentIndex(0)           // set current index to 0
+        - MW::loadConcurrent                   // set scrollOnly false
+        - MetaRead::setCurrentRow              // read metadata and icons
+        - MW::fileSelectionChange              // current file housekeeping
+        - ImageCache::setCurrentPosition       // build image cache
+        - ImageView::load                      // show current image from image cache
+
+    • New folder and image selected:
+        - MW::folderAndFileSelectionChange     // set folderAndFileChangePath
+        - MW::folderSelectionChange            // housekeeping and load datamodel OS file info
+        - MW::loadConcurrentNewFolder          // initialize MetaRead, ImageCache, target row X
+        - Selection::currentIndex(X)           // set current index to target row
+        - MW::loadConcurrent                   // set scrollOnly false
         - MetaRead::setCurrentRow              // read metadata and icons
         - MW::fileSelectionChange              // current file housekeeping
         - ImageCache::setCurrentPosition       // build image cache
@@ -110,6 +123,7 @@ PROGRAM FLOW - CONCURRENT
 
     • While loading - new image selected:
         - Selection::currentIndex              // set current index
+        - MW::loadConcurrent                   // set scrollOnly false
         - MetaRead::setCurrentRow              // read metadata and icons
         - MW::fileSelectionChange              // current file housekeeping
         - ImageCache::setCurrentPosition       // build image cache
@@ -129,7 +143,9 @@ PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
     • The DataModel is loaded with the OS file system info in dm->load and dm->addFileData.
 
     • MW::loadConcurrentNewFolder sets the current file path, initializes the imageCacheThread
-      and metaReadThread, and calls metaReadThread->setCurrentRow.  This starts the
+      and metaReadThread, and calls Selection::currentIndex(0).
+
+        metaReadThread->setCurrentRow.  This starts the
       metaReadThread, which iterates through the DataModel, adding all the image metadata and
       thumbnail icons.  For each item, the metadata is also signalled to the imageCacheThread
       ImageCache::addCacheItemImageMetadata.
@@ -167,10 +183,6 @@ A new image is selected which triggers a scroll event
 
     • Update the icon range (firstVisible/lastVisible)
 
-Idea: if change file and not all metadata read then restart readMeta if new file meta not
-read, else just keep current readMeta going.  Have a separate thread to update icons when
-scroll.
-
 Flow by function call:
 
     MW::folderSelectionChange
@@ -201,6 +213,7 @@ Flow Flags:
 
     G::isInitializing
     G::stop
+    G::dmEmpty
     G::allMetadataLoaded
     G::allIconsLoaded
     G::isLinearLoadDone
@@ -213,12 +226,40 @@ Flow Flags:
 
 Current model row:
 
-    currentRow
     dm->currentRow
     dm->currentFilePath
-    currentDmIdx
-    currentSfIdx
+    dm->currentDmIdx
+    dm->currentSfIdx
+    dm->currentFilePath
+    dm->currentFolderPath
 
+Icons:
+
+    dm->firstVisibleIcon;               // not used
+    dm->lastVisibleIcon;                // not used
+    dm->visibleIcons;                   // not used
+    dm->startIconRange;                 // used to determine MetaRead priority queue
+    dm->endIconRange;                   // used to determine MetaRead priority queue
+    dm->midIconRange;                   // used to determine MetaRead priority queue
+    dm->iconChunkSize;                  // max suggested number of icons to cache
+    dm->defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
+
+Other Global flags:
+
+    G::isSlideShow;
+    G::isRunningColorAnalysis;
+    G::isRunningStackOperation;
+    G::isProcessingExportedImages;
+    G::isEmbellish;
+    G::colorManage;
+    G::modifySourceFiles;
+    G::backupBeforeModifying;
+    G::autoAddMissingThumbnails;
+    G::useSidecar;
+    G::isLoadLinear;
+    G::isLoadConcurrent;
+    G::renderVideoThumb;
+    G::includeSubfolders;
 
 
 ***********************************************************************************************
@@ -1063,6 +1104,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     static int prevTabIndex = -1;
     if (QString(obj->metaObject()->className()) == "QTabBar") {
+        /*
+        // Set rich text label to tabified dock widgets tabbar tabs
+        if (event->type() == QEvent::ChildAdded) {
+            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+            if (tabBarContainsDocks(tabBar)) {
+                if (!dockTabBars.contains(tabBar)) {
+                    dockTabBars.append(tabBar);
+                    tabBarAssignRichText(tabBar);
+                    qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
+                }
+            }
+        }
+        //*/
+
         if (event->type() == QEvent::MouseButtonPress) {      // HoverMove / MouseMove work
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -1071,6 +1126,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 filterDockTabMousePress();
             }
         }
+
         if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -1908,8 +1964,6 @@ void MW::folderSelectionChange()
         //qDebug() << "MW::folderSelectionChange loadConcurrentNewFolder";
         loadConcurrentNewFolder();
     }
-
-//    G::stop = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -1927,7 +1981,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     and delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
-    //qDebug() << "MW::fileSelectionChange" << "*CONTINUE 0*" << current;
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
@@ -2050,21 +2103,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
             }
             else {
-//                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
             }
         }
     }
 
-    /* force scroll in case not up-to-date after holding nav key down
-    if (thumbView->isVisible()) {
-        thumbView->scrollToRow(dm->currentSfRow, "MW::fileSelectionChange");
-    }
-    */
-
     // update caching if folder has been loaded
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-//        updateIconRange(dm->currentSfRow, "MW::fileSelectionChange");
         if (G::isLoadLinear) {
             metadataCacheThread->fileSelectionChange();
         }
@@ -2549,10 +2595,7 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
-    /*
-        Maybe try to run metaread from here, then use triggerCheck to signal
-        Selection::selectRow, currentIndex and fileSelection
-    */
+    // set selection and current index
     sel->currentRow(targetRow);
 }
 
@@ -2560,6 +2603,10 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTrig
 /*
     Called after a scroll event in IconView or TableView by thumbHasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
+
+    Signaled by Selection::currentIndex when a file selection change occurs.
+
+    Starts or redirects MetaRead metadata and thumb loading.
 */
 {
     if (G::isLogger || G::isFlowLogger)
@@ -3193,22 +3240,50 @@ QString MW::getSelectedPath()
 
 QTabBar* MW::tabifiedBar()
 {
-
     // find the tabbar containing the dock widgets
-    QTabBar* widgetTabBar = nullptr;
+    QTabBar* tabBar = nullptr;
     QList<QTabBar *> tabList = findChildren<QTabBar *>();
     for (int i = 0; i < tabList.count(); i++) {
         if (tabList.at(i)->currentIndex() != -1) {
-            widgetTabBar = tabList.at(i);
+            tabBar = tabList.at(i);
             break;
         }
     }
-    return widgetTabBar;
+    return tabBar;
+}
+
+void MW::tabBarAssignRichText(QTabBar *tabBar)
+{
+    for (int i = 0; i < tabBar->count(); i++) {
+        bool match = tabBar->tabText(i) == folderDockTabText;
+        qDebug() << "MW::tabBarAssignRichText" << "tab count =" << tabBar->count()
+                 << i << "tabBar->tabText() =" << tabBar->tabText(i)
+                 << "folderDockTabText =" << folderDockTabText
+                 << "match =" << match;
+        if (tabBar->tabText(i) == folderDockTabText) {
+            qDebug() << "MW::tabBarAssignRichText match found";
+            tabBar->setTabText(i, "xxx");
+//            RichTextTabBar *richTextTabBar = qobject_cast<RichTextTabBar*>(tabBar);
+//            richTextTabBar->setTabText(i, folderDockTabRichText);
+        }
+    }
+}
+
+bool MW::tabBarContainsDocks(QTabBar *tabBar)
+{
+    if (tabBar == nullptr) return false;
+    for (int i = 0; i < tabBar->count(); i++) {
+        qDebug() << "MW::tabBarContainsDocks" << "tab count =" << tabBar->count()
+                 << i << "tabBar->tabText() =" << tabBar->tabText(i);
+        if (dockTextNames.contains(tabBar->tabText(i))) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool MW::isDockTabified(QString tabText)
 {
-
     QTabBar* widgetTabBar = tabifiedBar();
     bool found = false;
     if (widgetTabBar != nullptr) {
@@ -3225,7 +3300,6 @@ bool MW::isDockTabified(QString tabText)
 
 bool MW::isSelectedDockTab(QString tabText)
 {
-
     QTabBar* widgetTabBar = tabifiedBar();
     bool selected = false;
     if (widgetTabBar != nullptr) {

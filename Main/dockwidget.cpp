@@ -1,17 +1,57 @@
 #include "dockwidget.h"
 
 /*
+Try to create your own font that contains the graphic you want at the corresponding
+Unicode code point, such as U+2706 (✆). You can use a font editor such as FontForge or
+Glyphr Studio to design your graphic and assign it to the Unicode character. Then you can
+use the font in your web pages or applications.
+
+Embed a custom font file in your Qt application using a resource file (*.qrc). You can
+then use the QFontDatabase class to load the font from the resource file and use it in
+your application2. For example:
+
+// create a resource file with the font file (e.g. BYekan.ttf) under /fonts folder
+<qresource>
+    <file alias="BYekan.ttf">fonts/BYekan.ttf</file>
+</qresource>
+
+// load the font from the resource file using QFontDatabase
+int id = QFontDatabase::addApplicationFont(":/fonts/BYekan.ttf");
+QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+
+// create a QFont object with the loaded font family
+QFont customFont(family);
+
+// create a QLabel and set its font and text
+QLabel *label = new QLabel(this);
+label->setFont(customFont);
+label->setText("This is a test");
+
+Use FontForge directly to create a new font and import your custom characters into it.
+You can then design the shape of each character using the drawing tools and assign it to
+the desired Unicode code point.
+
+Unicode to QString:  QString s = QString::fromUcs4(0x4FF0);
+*/
+
 // RichTextTabBar *****************************************************************************
-//    Not being used.  Would require also subclassing QMainWindow to use this.
+
+RichTextTabBar::RichTextTabBar(QWidget *parent) : QTabBar(parent)
+{
+
+}
 
 void RichTextTabBar::setTabText(int index, const QString& text)
 {
+//    qDebug() << "RichTextTabBar::setTabText" << text << tabRect(index);
     QLabel* label = new QLabel(text);
-    label->setFixedSize(mTabWidth, mTabHeight);
-    label->setStyleSheet("padding-top:0px; padding-bottom:0px; padding-left:5px; padding-right:5px;");
-    setTabButton(index, QTabBar::LeftSide, label);
+// cause crash
+//    label->setFixedSize(mTabWidth, mTabHeight);
+//    label->setStyleSheet("padding-top:0px; padding-bottom:0px; padding-left:5px; padding-right:5px;");
+//    setTabButton(index, QTabBar::LeftSide, label);
 }
 
+/*
 // RichTextTabWidget **************************************************************************
 //    Not being used.  Would require also subclassing QMainWindow to use this.
 
