@@ -124,7 +124,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << sel->sm->selectedRows().count();
+    sel->next();
     return;
 
 //    for (int j = 0; j < dockTabBars.size(); j++) {

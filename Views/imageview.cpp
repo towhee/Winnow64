@@ -1034,6 +1034,10 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     return;
 }
 
+void ImageView::keyPressEvent(QKeyEvent *event){
+    emit keyPress(event);
+}
+
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("ImageView::mousePressEvent");

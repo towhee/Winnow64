@@ -104,6 +104,7 @@ signals:
     void updateStatus(bool, QString, QString);
     void setCentralMessage(QString msg);
     void killSlideshow();                   // only call when slideshow is active
+    void keyPress(QKeyEvent *event);
     void zoomChange(qreal zoomValue);
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -120,6 +121,7 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void nativeGestureEvent(QNativeGestureEvent *event);
     bool event(QEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;

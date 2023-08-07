@@ -1458,19 +1458,29 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-    /*
+//    /*
     qDebug() << "IconView::scrollToRow" << objectName() << "row =" << row
              << "requested by" << source;
                 // */
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
-    if (!idx.isValid()) return;
+    if (!idx.isValid()) {
+        qDebug() << "IconView::scrollToRow" << row;
+        return;
+    }
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
-void IconView::scrollToCurrent()
+void IconView::scrollToCurrent(QString source)
+/*
+    Called from MW::fileSelectionChange.
+*/
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
+//    /*
+    qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
+        << "source =" << source;
+    // */
     if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
@@ -1770,7 +1780,7 @@ void IconView::paintEvent(QPaintEvent *event)
 }
 
 void IconView::keyPressEvent(QKeyEvent *event){
-
+//    prevent QListView default key actions
 }
 
 void IconView::mousePressEvent(QMouseEvent *event)
@@ -1820,8 +1830,11 @@ void IconView::mousePressEvent(QMouseEvent *event)
         else G::fileSelectionChangeSource =  "ThumbMouseClick";
         QString src = "IconView::mousePressEvent " + objectName();
 
+        m2->sel->select(idx, modifiers);
+        return;
+        /*
         // No modifier = clear selection and select
-        if (event->modifiers() & Qt::NoModifier) {
+        if (modifiers & Qt::NoModifier) {
             m2->sel->sm->clear();
             m2->sel->currentIndex(idx);
             return;
@@ -1839,9 +1852,11 @@ void IconView::mousePressEvent(QMouseEvent *event)
         if (event->modifiers() & Qt::ShiftModifier) {
             // check attempt to deselect only selected item (must always be one selected)
             m2->sel->select(idx, shiftAnchorIndex);
+            m2->sel->select(idx, shiftAnchorIndex);
             shiftAnchorIndex = idx;
             dragQueue.append(idx.row());
         }
+        //*/
     }
 }
 
@@ -1889,7 +1904,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         QString src = "IconView::mouseReleaseEvent";
 
         // req'd when click on current with others also selected
-        m2->sel->currentIndex(idx);
+//        m2->sel->setCurrentIndex(idx);
 
         // Capture the percent coordinates of the mouse click within the thumbnail
         // so that the full scale image can be zoomed to the same point.

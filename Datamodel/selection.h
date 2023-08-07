@@ -13,24 +13,15 @@ class Selection : public QObject
 public:
     Selection(QWidget *parent, DataModel *dm, IconView *thumbView,
               IconView *gridView, TableView *tableView);
-    void select(QString &fPath);
-    void selectRow(int sfRow);
-    void select(QModelIndex sfIdx, QModelIndex sfIdx2 = QModelIndex());
+    void select(QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void select(int sfRow, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void select(QModelIndex sfIdx, QModelIndex sfIdx2);
     void updateCurrentIndex(QModelIndex sfIdx);
-    void currentIndex(QModelIndex sfIdx);
-    void currentRow(int sfRow);
-    void currentPath(QString &fPath);
+    void setCurrentIndex(QModelIndex sfIdx);
+    void setCurrentRow(int sfRow);
+    void setCurrentPath(QString &fPath);
     void toggleSelect(QModelIndex sfIdx);
-    void next();
-    void prev();
-    void up();
-    void down();
-    void first();
-    void last();
-    void nextPage();
-    void prevPage();
-    void nextPick();
-    void prevPick();
     void all();
     void random();
     QModelIndex nearestSelectedIndex(int sfRow);
@@ -53,6 +44,16 @@ signals:
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+    void next(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void prev(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void up(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void down(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void first(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void last(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void nextPage(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void prevPage(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void nextPick(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void prevPick(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
 private:
     DataModel *dm;
@@ -60,6 +61,7 @@ private:
     IconView *gridView;
     TableView *tableView;
     QModelIndex shiftAnchorIndex;
+    QModelIndex shiftExtendIndex;
 
     bool isDebug;
 };
