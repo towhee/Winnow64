@@ -205,12 +205,12 @@ QModelIndex TableView::pageDownIndex()
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
 {
-    if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
-            && scrollWhenReady
-            && obj->objectName() == "QScrollBar")
-    {
-        scrollToCurrent();
-    }
+//    if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
+//            && scrollWhenReady
+//            && obj->objectName() == "QScrollBar")
+//    {
+//        scrollToCurrent();
+//    }
     return QWidget::eventFilter(obj, event);
 }
 
@@ -230,6 +230,10 @@ void TableView::paintEvent(QPaintEvent *event)
     verticalHeader()->setDefaultSectionSize(d);
     horizontalHeader()->setFixedHeight(d);
     QTableView::paintEvent(event);
+}
+
+void TableView::keyPressEvent(QKeyEvent *event){
+    //    prevent QTableView default key actions
 }
 
 void TableView::mousePressEvent(QMouseEvent *event)
@@ -252,7 +256,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
         G::fileSelectionChangeSource = "TableMouseClick";
 
         if (!event->modifiers()) {
-            m5->sel->currentIndex(idx);
+            m5->sel->select(idx);
         }
 
         if (event->modifiers() & Qt::ControlModifier) {
@@ -260,7 +264,8 @@ void TableView::mousePressEvent(QMouseEvent *event)
         }
 
         if (event->modifiers() & Qt::ShiftModifier) {
-            m5->sel->select(idx, shiftAnchorIndex);
+            m5->sel->select(idx, event->modifiers());
+//            m5->sel->select(idx, shiftAnchorIndex);
             shiftAnchorIndex = idx;
         }
     }

@@ -269,8 +269,8 @@ void MW::createMDCache()
 
 //    connect(metadataCacheThread, &MetadataCache::selectFirst,
 //            thumbView, &IconView::selectFirst);
-    connect(metadataCacheThread, &MetadataCache::selectFirst,
-            sel, &Selection::first);
+//    connect(metadataCacheThread, &MetadataCache::selectFirst,
+//            sel, &Selection::first);
 
     // MetaRead and MetaRead2
     if (isSettings) {
@@ -683,6 +683,7 @@ void MW::createImageView()
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::thumbClick);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
+    connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
     connect(imageCacheThread, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 

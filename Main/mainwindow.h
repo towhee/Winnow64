@@ -487,7 +487,7 @@ private slots:
     void zoomIn();
     void zoomToFit();
     void enableGoKeyActions(bool ok);
-    void keyRight();
+    void keyRight(Qt::KeyboardModifiers modifer = Qt::NoModifier);
     void keyLeft();
     void keyUp();
     void keyDown();
@@ -762,14 +762,14 @@ private:
     QAction *oldPrefAction;
 
     // Go Menu
-    QAction *keyRightAction;
-    QAction *keyLeftAction;
-    QAction *keyUpAction;
-    QAction *keyDownAction;
-    QAction *keyHomeAction;
-    QAction *keyEndAction;
-    QAction *keyPageUpAction;
-    QAction *keyPageDownAction;
+//    QAction *keyRightAction;
+//    QAction *keyLeftAction;
+//    QAction *keyUpAction;
+//    QAction *keyDownAction;
+//    QAction *keyHomeAction;
+//    QAction *keyEndAction;
+//    QAction *keyPageUpAction;
+//    QAction *keyPageDownAction;
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;

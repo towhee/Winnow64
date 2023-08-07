@@ -553,54 +553,54 @@ void MW::createActions()
 
     // Go menu
 
-    keyRightAction = new QAction(tr("Next"), this);
-    keyRightAction->setObjectName("nextImage");
-    keyRightAction->setShortcutVisibleInContextMenu(true);
-    keyRightAction->setEnabled(true);
-    addAction(keyRightAction);
-    connect(keyRightAction, &QAction::triggered, this, &MW::keyRight);
+//    keyRightAction = new QAction(tr("Next"), this);
+//    keyRightAction->setObjectName("nextImage");
+//    keyRightAction->setShortcutVisibleInContextMenu(true);
+//    keyRightAction->setEnabled(true);
+//    addAction(keyRightAction);
+//    connect(keyRightAction, &QAction::triggered, this, [this](){ keyRight(Qt::NoModifier); });
 
-    keyLeftAction = new QAction(tr("Previous"), this);
-    keyLeftAction->setObjectName("prevImage");
-    keyLeftAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyLeftAction);
-    connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
+//    keyLeftAction = new QAction(tr("Previous"), this);
+//    keyLeftAction->setObjectName("prevImage");
+//    keyLeftAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyLeftAction);
+//    connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
 
-    keyUpAction = new QAction(tr("Up"), this);
-    keyUpAction->setObjectName("moveUp");
-    keyUpAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyUpAction);
-    connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
+//    keyUpAction = new QAction(tr("Up"), this);
+//    keyUpAction->setObjectName("moveUp");
+//    keyUpAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyUpAction);
+//    connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
 
-    keyDownAction = new QAction(tr("Down"), this);
-    keyDownAction->setObjectName("moveDown");
-    keyDownAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyDownAction);
-    connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
+//    keyDownAction = new QAction(tr("Down"), this);
+//    keyDownAction->setObjectName("moveDown");
+//    keyDownAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyDownAction);
+//    connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
 
-    keyPageUpAction = new QAction(tr("Page Up"), this);
-    keyPageUpAction->setObjectName("movePageUp");
-    keyPageUpAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyPageUpAction);
-    connect(keyPageUpAction, &QAction::triggered, this, &MW::keyPageUp);
+//    keyPageUpAction = new QAction(tr("Page Up"), this);
+//    keyPageUpAction->setObjectName("movePageUp");
+//    keyPageUpAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyPageUpAction);
+//    connect(keyPageUpAction, &QAction::triggered, this, &MW::keyPageUp);
 
-    keyPageDownAction = new QAction(tr("Page Down"), this);
-    keyPageDownAction->setObjectName("movePageDown");
-    keyPageDownAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyPageDownAction);
-    connect(keyPageDownAction, &QAction::triggered, this, &MW::keyPageDown);
+//    keyPageDownAction = new QAction(tr("Page Down"), this);
+//    keyPageDownAction->setObjectName("movePageDown");
+//    keyPageDownAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyPageDownAction);
+//    connect(keyPageDownAction, &QAction::triggered, this, &MW::keyPageDown);
 
-    keyHomeAction = new QAction(tr("First"), this);
-    keyHomeAction->setObjectName("firstImage");
-    keyHomeAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyHomeAction);
-    connect(keyHomeAction, &QAction::triggered, this, &MW::keyHome);
+//    keyHomeAction = new QAction(tr("First"), this);
+//    keyHomeAction->setObjectName("firstImage");
+//    keyHomeAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyHomeAction);
+//    connect(keyHomeAction, &QAction::triggered, this, &MW::keyHome);
 
-    keyEndAction = new QAction(tr("Last"), this);
-    keyEndAction->setObjectName("lastImage");
-    keyEndAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyEndAction);
-    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
+//    keyEndAction = new QAction(tr("Last"), this);
+//    keyEndAction->setObjectName("lastImage");
+//    keyEndAction->setShortcutVisibleInContextMenu(true);
+//    addAction(keyEndAction);
+//    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
     keyScrollLeftAction = new QAction(tr("Scroll  Left"), this);
     keyScrollLeftAction->setObjectName("scrollLeft");
@@ -662,14 +662,16 @@ void MW::createActions()
     nextPickAction->setObjectName("nextPick");
     nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
-    connect(nextPickAction, &QAction::triggered, sel, &Selection::nextPick);
+    connect(nextPickAction, &QAction::triggered, this->sel, [this](){ this->sel->nextPick(Qt::NoModifier); });
+//    connect(nextPickAction, &QAction::triggered, sel, &Selection::nextPick);
 //    connect(nextPickAction, &QAction::triggered, thumbView, &IconView::selectNextPick);
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
     prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
-    connect(prevPickAction, &QAction::triggered, sel, &Selection::prevPick);
+    connect(nextPickAction, &QAction::triggered, this->sel, [this](){ this->sel->prevPick(Qt::NoModifier); });
+//    connect(prevPickAction, &QAction::triggered, sel, &Selection::prevPick);
 //    connect(prevPickAction, &QAction::triggered, thumbView, &IconView::selectPrevPick);
 
     // Filters
@@ -1603,15 +1605,15 @@ void MW::createMenus()
     goMenu = new QMenu(this);
     QAction *goGroupAct = new QAction("Go", this);
     goGroupAct->setMenu(goMenu);
-    goMenu->addAction(keyRightAction);
-    goMenu->addAction(keyLeftAction);
-    goMenu->addAction(keyUpAction);
-    goMenu->addAction(keyDownAction);
-    goMenu->addAction(keyPageUpAction);
-    goMenu->addAction(keyPageDownAction);
-    goMenu->addAction(keyHomeAction);
-    goMenu->addAction(keyEndAction);
-    goMenu->addSeparator();
+//    goMenu->addAction(keyRightAction);
+//    goMenu->addAction(keyLeftAction);
+//    goMenu->addAction(keyUpAction);
+//    goMenu->addAction(keyDownAction);
+//    goMenu->addAction(keyPageUpAction);
+//    goMenu->addAction(keyPageDownAction);
+//    goMenu->addAction(keyHomeAction);
+//    goMenu->addAction(keyEndAction);
+//    goMenu->addSeparator();
     goMenu->addAction(keyScrollLeftAction);
     goMenu->addAction(keyScrollRightAction);
     goMenu->addAction(keyScrollUpAction);
@@ -2070,12 +2072,12 @@ void MW::enableSelectionDependentMenus()
         label5Action->setEnabled(true);
         rotateRightAction->setEnabled(true);
         rotateLeftAction->setEnabled(true);
-        keyRightAction->setEnabled(true);
-        keyLeftAction->setEnabled(true);
-        keyUpAction->setEnabled(true);
-        keyDownAction->setEnabled(true);
-        keyHomeAction->setEnabled(true);
-        keyEndAction->setEnabled(true);
+//        keyRightAction->setEnabled(true);
+//        keyLeftAction->setEnabled(true);
+//        keyUpAction->setEnabled(true);
+//        keyDownAction->setEnabled(true);
+//        keyHomeAction->setEnabled(true);
+//        keyEndAction->setEnabled(true);
         nextPickAction->setEnabled(true);
         prevPickAction->setEnabled(true);
 //        clearAllFiltersAction->setEnabled(true);
@@ -2128,12 +2130,12 @@ void MW::enableSelectionDependentMenus()
         label5Action->setEnabled(false);
         rotateRightAction->setEnabled(false);
         rotateLeftAction->setEnabled(false);
-        keyRightAction->setEnabled(false);
-        keyLeftAction->setEnabled(false);
-        keyUpAction->setEnabled(false);
-        keyDownAction->setEnabled(false);
-        keyHomeAction->setEnabled(false);
-        keyEndAction->setEnabled(false);
+//        keyRightAction->setEnabled(false);
+//        keyLeftAction->setEnabled(false);
+//        keyUpAction->setEnabled(false);
+//        keyDownAction->setEnabled(false);
+//        keyHomeAction->setEnabled(false);
+//        keyEndAction->setEnabled(false);
         nextPickAction->setEnabled(false);
         prevPickAction->setEnabled(false);
 //        clearAllFiltersAction->setEnabled(false);
@@ -2174,10 +2176,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[thumbsShrinkAction->objectName()] = thumbsShrinkAction;
     //    actionKeys[cutAction->objectName()] = cutAction;
     //    actionKeys[copyAction->objectName()] = copyAction;
-    actionKeys[keyRightAction->objectName()] = keyRightAction;
-    actionKeys[keyLeftAction->objectName()] = keyLeftAction;
-    actionKeys[keyDownAction->objectName()] = keyDownAction;
-    actionKeys[keyUpAction->objectName()] = keyUpAction;
+//    actionKeys[keyRightAction->objectName()] = keyRightAction;
+//    actionKeys[keyLeftAction->objectName()] = keyLeftAction;
+//    actionKeys[keyDownAction->objectName()] = keyDownAction;
+//    actionKeys[keyUpAction->objectName()] = keyUpAction;
     //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
     //    actionKeys[keepZoomAct->objectName()] = keepZoomAct;
     //    actionKeys[copyImageAction->objectName()] = copyImageAction;
@@ -2189,8 +2191,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[ingestAction->objectName()] = ingestAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
-    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
-    actionKeys[keyEndAction->objectName()] = keyEndAction;
+//    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
+//    actionKeys[keyEndAction->objectName()] = keyEndAction;
     actionKeys[randomImageAction->objectName()] = randomImageAction;
     actionKeys[openAction->objectName()] = openAction;
     actionKeys[zoomOutAction->objectName()] = zoomOutAction;
@@ -2303,14 +2305,14 @@ void MW::loadShortcuts(bool defaultShortcuts)
         prefAction->setShortcut(QKeySequence("Ctrl+,"));
 
         // Go
-        keyRightAction->setShortcut(QKeySequence("Right"));
-        keyLeftAction->setShortcut(QKeySequence("Left"));
-        keyHomeAction->setShortcut(QKeySequence("Home"));
-        keyEndAction->setShortcut(QKeySequence("End"));
-        keyDownAction->setShortcut(QKeySequence("Down"));
-        keyUpAction->setShortcut(QKeySequence("Up"));
-        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
-        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
+//        keyRightAction->setShortcut(QKeySequence("Right"));
+//        keyLeftAction->setShortcut(QKeySequence("Left"));
+//        keyHomeAction->setShortcut(QKeySequence("Home"));
+//        keyEndAction->setShortcut(QKeySequence("End"));
+//        keyDownAction->setShortcut(QKeySequence("Down"));
+//        keyUpAction->setShortcut(QKeySequence("Up"));
+//        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
+//        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
 
         keyScrollLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
         keyScrollRightAction->setShortcut(QKeySequence("Ctrl+Right"));

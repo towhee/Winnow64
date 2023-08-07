@@ -190,7 +190,7 @@ void MW::setThumbDockVisibity()
 {
     if (G::isLogger) G::log("MW::setThumbDockVisibity");
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    sel->currentRow(dm->currentSfRow);
+    sel->setCurrentRow(dm->currentSfRow);
 }
 
 void MW::toggleFolderDockVisibility()

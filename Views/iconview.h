@@ -97,7 +97,7 @@ public slots:
     void scrollPageDown(int);
     void scrollPageUp(int);
     void scrollToRow(int row, QString source);
-    void scrollToCurrent();
+    void scrollToCurrent(QString source = "");
     void setThumbSize();
     void thumbsEnlarge();
     void thumbsShrink();

@@ -3,36 +3,36 @@
 void MW::enableGoKeyActions(bool ok)
 {
     if (G::isLogger) G::log("MW::enableGoKeyActions");
-    if (ok) {
-        keyRightAction->setEnabled(true);
-        keyLeftAction->setEnabled(true);
-        keyUpAction->setEnabled(true);
-        keyDownAction->setEnabled(true);
-        keyHomeAction->setEnabled(true);
-        keyEndAction->setEnabled(true);
-        keyPageUpAction->setEnabled(true);
-        keyPageDownAction->setEnabled(true);
-    }
-    else {
-        keyRightAction->setEnabled(false);
-        keyLeftAction->setEnabled(false);
-        keyUpAction->setEnabled(false);
-        keyDownAction->setEnabled(false);
-        keyHomeAction->setEnabled(false);
-        keyEndAction->setEnabled(false);
-        keyPageUpAction->setEnabled(false);
-        keyPageDownAction->setEnabled(false);
-    }
+//    if (ok) {
+//        keyRightAction->setEnabled(true);
+//        keyLeftAction->setEnabled(true);
+//        keyUpAction->setEnabled(true);
+//        keyDownAction->setEnabled(true);
+//        keyHomeAction->setEnabled(true);
+//        keyEndAction->setEnabled(true);
+//        keyPageUpAction->setEnabled(true);
+//        keyPageDownAction->setEnabled(true);
+//    }
+//    else {
+//        keyRightAction->setEnabled(false);
+//        keyLeftAction->setEnabled(false);
+//        keyUpAction->setEnabled(false);
+//        keyDownAction->setEnabled(false);
+//        keyHomeAction->setEnabled(false);
+//        keyEndAction->setEnabled(false);
+//        keyPageUpAction->setEnabled(false);
+//        keyPageDownAction->setEnabled(false);
+//    }
 }
 
-void MW::keyRight()
+void MW::keyRight(Qt::KeyboardModifiers modifier)
 {
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
     qDebug() << "MW::keyRight ROW:" << dm->currentSfRow;
     if (G::mode == "Compare") {
-        sel->currentIndex(compareImages->go("Right"));
+        sel->select(compareImages->go("Right"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next();
@@ -45,7 +45,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->currentIndex(compareImages->go("Left"));
+        sel->select(compareImages->go("Left"));
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev();

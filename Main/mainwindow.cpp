@@ -468,8 +468,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // Check if modifier key pressed while program opening
     isShiftOnOpen = false;
-    Qt::KeyboardModifiers modifier = QGuiApplication::queryKeyboardModifiers();
-    if (modifier & Qt::ShiftModifier) {
+    Qt::KeyboardModifiers modifiers = QGuiApplication::queryKeyboardModifiers();
+    if (modifiers & Qt::ShiftModifier) {
         isShiftOnOpen = true;
         G::isEmbellish = false;
     }
@@ -787,17 +787,6 @@ void MW::keyPressEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyPressEvent");
 
-    /*
-    qDebug() << "MW::keyPressEvent" << event;
-    if (G::popUp->isVisible()) {
-        qDebug() << "MW::keyPressEvent ending popup";
-        G::popUp->end();
-    }
-    //*/
-
-    // must process first
-    QMainWindow::keyPressEvent(event);
-
     if (event->key() == Qt::Key_Return) {
         if (G::mode == "Loupe") {
             if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
@@ -962,6 +951,18 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)
         )
     {
+        if (event->type() == QEvent::ShortcutOverride) {
+            QShortcutEvent *e = static_cast<QShortcutEvent *>(event);
+            qDebug() << "MW::eventFilter" << e->type() << e;
+        }
+        if (event->type() == QEvent::KeyPress) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
+                     << "obj:" << obj << "\t"
+                     << "obj->objectName:" << obj->objectName()
+                     << "object->metaObject()->className:" << obj->metaObject()->className()
+                ;
+        }
         if (G::popUp->isVisible()) {
             qDebug() << "MW::eventFilter ending popup" << event->type();
             G::popUp->end();
@@ -992,6 +993,30 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 //    */
+
+    /* KEYPRESS INTERCEPT
+
+    */
+    {
+        if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
+            if (obj->objectName() == "MWWindow") {
+                QKeyEvent *e = static_cast<QKeyEvent *>(event);
+                qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
+                         //                     << "obj:" << obj << "\t"
+                         << "obj->objectName:" << obj->objectName()
+                    //                     << "object->metaObject()->className:" << obj->metaObject()->className()
+                    ;
+                if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
+                if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
+                if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
+                if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
+                if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
+                if (e->key() == Qt::Key_End) sel->last(e->modifiers());
+                if (e->key() == Qt::Key_PageUp) sel->nextPage(e->modifiers());
+                if (e->key() == Qt::Key_PageDown) sel->prevPage(e->modifiers());
+            }
+        }
+    } // end section
 
     /* EMBEL DOCK TITLE
 
@@ -1914,7 +1939,7 @@ void MW::folderSelectionChange()
             QFileInfo info(dragDropFilePath);
             QString fileType = info.suffix().toLower();
             if (metadata->supportedFormats.contains(fileType)) {
-                sel->currentPath(dragDropFilePath);
+                sel->setCurrentPath(dragDropFilePath);
 //                dm->select(dragDropFilePath);
                 dragFileSelected = true;
             }
@@ -1989,7 +2014,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+//    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2037,10 +2062,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     enableSelectionDependentMenus();
 
     // record current proxy row (dm->sf) as it is used to sync everything
-    dm->currentSfRow = current.row();
-    dm->currentSfIdx = dm->sf->index(current.row(), 0);
-    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
-    dm->currentDmRow = dm->currentDmIdx.row();
+//    dm->currentSfRow = current.row();
+//    dm->currentSfIdx = dm->sf->index(current.row(), 0);
+//    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
+//    dm->currentDmRow = dm->currentDmIdx.row();
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -2054,19 +2079,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCurrent();
         if (thumbView->isVisible()) thumbView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-        G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "GridMouseClick") {
-        G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToCurrent();
-        if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else {
         if (gridView->isVisible()) gridView->scrollToCurrent();
@@ -2074,11 +2094,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     G::fileSelectionChangeSource = "";
-    G::ignoreScrollSignal = false;
 
     // set focus to enable shift + direction keys
-    if (gridView->isVisible()) gridView->setFocus();
-    if (thumbView->isVisible()) thumbView->setFocus();
+//    if (gridView->isVisible()) gridView->setFocus();
+//    if (thumbView->isVisible()) thumbView->setFocus();
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
@@ -2202,7 +2221,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (src == "handleDropOnCentralView") {
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
-                sel->currentPath(fPath);
+                sel->setCurrentPath(fPath);
             }
             return;
         }
@@ -2596,7 +2615,7 @@ void MW::loadConcurrentNewFolder()
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
     // set selection and current index
-    sel->currentRow(targetRow);
+    sel->setCurrentRow(targetRow);
 }
 
 void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTriggered)
@@ -2821,7 +2840,7 @@ void MW::loadImageCacheForNewFolder()
     if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        sel->currentPath(fPath);
+        sel->setCurrentPath(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
         if (G::isFileLogger) Utilities::log("MW::loadImageCacheForNewFolder", "set fPath to " + fPath);
     }
@@ -4921,7 +4940,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
     }
 
     QString result = embedThumbnails();
-    if (src == "FromLoading") sel->currentIndex(dm->currentSfIdx);
+    if (src == "FromLoading") sel->select(dm->currentSfIdx);
     thumbView->refreshThumbs();
     G::popUp->showPopup(result, 3000);
 }
@@ -5227,7 +5246,7 @@ void MW::refreshCurrentAfterReload()
 //             */
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
-    sel->currentRow(sfRow);
+    sel->setCurrentRow(sfRow);
     isRefreshingDM = false;
 }
 
@@ -5464,7 +5483,7 @@ void MW::deleteFiles(QStringList paths)
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    sel->currentIndex(sfIdx);
+    sel->select(sfIdx);
 
     // update filters
     qDebug() << "MW::deleteFiles launchBuildFilters())";
@@ -5786,7 +5805,7 @@ void MW::generateMeanStack()
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
 //        QModelIndex idx = dm->proxyIndexFromPath(fPath);
 //        fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
-        sel->currentPath(fPath);
+        sel->setCurrentPath(fPath);
     }
 }
 

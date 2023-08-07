@@ -115,7 +115,7 @@ signals:
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
-    void selectFirst();
+//    void selectFirst();
     void showCacheStatus(QString);            // row, clear progress bar
     void finished2ndPass();                   // buildFilters
 

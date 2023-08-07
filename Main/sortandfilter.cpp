@@ -126,7 +126,7 @@ void MW::filterChange(QString source)
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
     // selection, fileSelectionChange, renew image cache
-    sel->currentIndex(newSfIdx);
+    sel->select(newSfIdx);
 
     QApplication::restoreOverrideCursor();
 }
@@ -441,7 +441,7 @@ void MW::sortChange(QString source)
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
 //    fileSelectionChange(idx, idx, true, "MW::sortChange");
-    sel->currentIndex(idx);
+    sel->select(idx);
 
     scrollToCurrentRow();
     G::popUp->end();
@@ -469,7 +469,7 @@ void MW::sortReverse()
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
-    sel->currentIndex(idx);
+    sel->select(idx);
 
     scrollToCurrentRow();
 }
