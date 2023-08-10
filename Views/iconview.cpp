@@ -65,7 +65,21 @@ Cells
         • frameRect
         • thumbRect (iconWidth, iconHeight)
 
-ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
+Viewport
+
+    The viewport is the entire area available for the IconView and is returned by
+    the viewport() function.  Visible cells are the cells currently visible in the
+    viewport.
+
+Page
+
+    A page is the logical number of cells the user would expect to jump to view the next
+    or previous cells in the viewport. This is calculated as the number of completely
+    visible cells. Since the cells are justified (see below), the last cell in a row of
+    cells is always completely visible. The last row of cells in the viewport is often
+    only partially visible and is not included in the page.
+
+ThumbView behavior in container QDockWidget (thumbDock in MW), changes:
 
         ● thumb/icon size
         ● thumb padding
@@ -113,40 +127,36 @@ ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
         This only occurs when the thumbDock is located in the top or bottom dock locations and
         wrap thumbs is not checked in prefDlg.
 
-        When a relocation to the top or bottom occurs the height of the thumbDock is adjusted
-        to fit the current size of the thumbs, depending on whether a scrollbar is required.
-        It can also occur when a new folder is selected and the scrollbar requirement changes,
-        depending on the number of images in the folder. This behavior is managed in
-        MW::setThumbDockFeatures.
+        When a relocation to the top or bottom occurs the height of the thumbDock is
+        adjusted to fit the current size of the thumbs plus the scrollbar height. This
+        behavior is managed in MW::setThumbDockFeatures.
 
-        Also, when thumbs are resized the height of the thumbDock is adjusted to accomodate
+        When thumbs are resized the height of the thumbDock is adjusted to accomodate
         the new thumb height.
 
     Thumb resize to fit in dock:
 
         This also only occurs when the thumbDock is located in the top or bottom dock
         locations and wrap thumbs is not checked in prefDlg. If the thumbDock horizontal
-        splitter is dragged to make the thumbDock taller or shorter, within the minimum and
-        maximum thumbView heights, the thumb sizes are adjusted to fit, factoring in the need
-        for a scrollbar.
+        splitter is dragged to make the thumbDock taller or shorter, within the minimum
+        and maximum thumbView heights, the thumb sizes are adjusted to fit.
 
         This is triggered by MW::eventFilter() and effectuated in thumbsFit().
 
 Loading icons
 
-    Icons are loaded each time a new folder is selected. MetadataCache::loadIcon reads the
-    thumbnail pixmap into the DataModel as an icon.  Thumbnails or icons are a maximum of
-    256px and can have various aspect ratios.  The IconView thumbView, when anchored to the
-    top or bottom of the centralWidget, sets its height based on the tallest aspect.  To
-    dewtermine this, the widest and highest amounts are determined by calling MetadataCache::iconMax
-    for each icon as it is loaded as G::iconWMax and G::iconHMax.
+    Icons are loaded each time a new folder is selected. MetadataCache::loadIcon reads
+    the thumbnail pixmap into the DataModel as an icon. Thumbnails or icons are a maximum
+    of 256px and can have various aspect ratios. The IconView thumbView, when anchored to
+    the top or bottom of the centralWidget, sets its height based on the tallest aspect.
+    To dewtermine this, the widest and highest amounts are determined by calling
+    MetadataCache::iconMax for each icon as it is loaded as G::iconWMax and G::iconHMax.
 
-
-    The best fit is a function of the aspect ratios of the icon population.  The IconView cell
-    size is defined by the smallest cell that will fit all the icons.  For example, if all the
-    icons are 16x9 landscape then the cell size will be shorter than if the icons were portrait
-    9x16 aspect.  Usually there is a mix, and the thumb size (from which the cell size is calc)
-    is the rectangle that all the icons will fit.
+    The best fit is a function of the aspect ratios of the icon population. The IconView
+    cell size is defined by the smallest cell that will fit all the icons. For example,
+    if all the icons are 16x9 landscape then the cell size will be shorter than if the
+    icons were portrait 9x16 aspect. Usually there is a mix, and the thumb size (from
+    which the cell size is calc) is the rectangle that all the icons will fit.
 
     ie |------------|  and  |------|  fit into  |------------|
        |            |       |      |            |            |
@@ -167,12 +177,20 @@ Making icons bigger or smaller
     iconWidth and iconHeight are incremented and IconViewDelegate::setThumbDimensions is called.
     The thumbDock is a container that resizes to fit its contents: the icons.
 
-    If the thumbDock is made taller by dragging the xxx MW::eventFilter calls
+    If the thumbDock is made taller by dragging the splitter, MW::eventFilter calls
     IconView::thumbsFitTopOrBottom. The thumb size is adjusted to fit the new thumbDock
     height and scrolled to keep the midVisibleThumb in the middle. Other objects visible
     (docks and central widget) are resized.
 
 Justification
+
+    When grid cells are enlarged or shrunk, or when the viewport is resized, keep the
+    right hand side margin minimized. This is only when isWrapping() == true.
+
+    The cells can be direcly adjusted using the "[" and "]" keys, and is handled by the
+    justify() function.
+
+    When the viewport is resized, the cell size is adjusted by the rejustify() fnction.
 
 Scrolling
 
@@ -460,9 +478,9 @@ void IconView::updateVisible(int sfRow)
         max = horizontalScrollBar()->maximum();
     }
     double p = x / max;                     // scrollBar percentage in range
-    double pRow = p * n;
-    double pCells = p * visibleCellCount;
-    double r = pRow - pCells + p;
+    double pRow = p * n;                    // percent of filtered cells or thumbnails
+    double pCells = p * visibleCellCount;   // percent of visible cells or thumbnails
+    double r = pRow - pCells + p;           // first visible
     firstVisibleCell = qRound(r);
     lastVisibleCell = firstVisibleCell + int(visibleCellCount) + 1;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
@@ -476,6 +494,7 @@ void IconView::updateVisible(int sfRow)
              << "midVisibleCell =" << midVisibleCell
         ;
         //*/
+
     return;
 
     // get from iconViewDelegate (only works if the icon/image is visible in cell))
@@ -580,6 +599,22 @@ void IconView::updateVisible(int sfRow)
              << "midVisibleCell =" << midVisibleCell
                 ;
                 //*/
+}
+
+int IconView::pageCount()
+{
+    QSize cell = getCellSize();
+    QSize vp = viewport()->size();
+    int cellsPerPageRow = vp.width() / cell.width();
+    int rowsPerPage = vp.height() / cell.height();
+    /*
+    qDebug() << "IconView::pageCount"
+             << "cellsPerPageRow" << cellsPerPageRow
+             << "rowsPerPage" << rowsPerPage
+             << "cellsPerPage" << cellsPerPageRow * rowsPerPage
+                ;
+    //*/
+    return cellsPerPageRow * rowsPerPage;
 }
 
 int IconView::getThumbsPerPage()
@@ -866,6 +901,44 @@ bool IconView::isRowVisible(int row)
     return row >= iconViewDelegate->firstVisible && row <= iconViewDelegate->lastVisible;
 }
 
+QModelIndex IconView::upIndex()
+{
+    if (isDebug) G::log("IconView::downIndex", objectName());
+    return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
+}
+
+QModelIndex IconView::downIndex()
+{
+    if (isDebug) G::log("IconView::upIndex", objectName());
+    return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
+}
+
+QModelIndex IconView::pageUpIndex(int fromRow)
+{
+    // fromRow is datamodel row
+    // Page is number of completely visible cells in viewport
+    if (isDebug) G::log("IconView::pageUpIndex", objectName());
+    int max = dm->sf->rowCount() - 1;
+    int pageUpCell = fromRow + pageCount();
+    if (pageUpCell > max) pageUpCell = max;
+    scrollToRow(pageUpCell, "IconView::pageUpIndex");
+    return dm->sf->index(pageUpCell, 0);
+    //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
+}
+
+QModelIndex IconView::pageDownIndex(int fromRow)
+{
+    if (isDebug) G::log("IconView::pageDownIndex", objectName());
+    // fromRow is datamodel row
+    // Page is number of completely visible cells in viewport
+    if (isDebug) G::log("IconView::pageUpIndex", objectName());
+    int pageDownCell = fromRow - pageCount();
+    if (pageDownCell < 0) pageDownCell = 0;
+    scrollToRow(pageDownCell, "IconView::pageUpIndex");
+    return dm->sf->index(pageDownCell, 0);
+    //return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
+}
+
 QString IconView::getCurrentFilePath()
 {
 /*
@@ -935,30 +1008,6 @@ QStringList IconView::getSelectedThumbsList()
         SelectedThumbsPaths << indexesList[tn].data(G::PathRole).toString();
     }
     return SelectedThumbsPaths;
-}
-
-QModelIndex IconView::upIndex()
-{
-    if (isDebug) G::log("IconView::downIndex", objectName());
-    return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
-}
-
-QModelIndex IconView::downIndex()
-{
-    if (isDebug) G::log("IconView::upIndex", objectName());
-    return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
-}
-
-QModelIndex IconView::pageUpIndex()
-{
-    if (isDebug) G::log("IconView::pageUpIndex", objectName());
-    return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
-}
-
-QModelIndex IconView::pageDownIndex()
-{
-    if (isDebug) G::log("IconView::pageDownIndex", objectName());
-    return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
 int IconView::fitBadge(int pxAvail)
@@ -1121,6 +1170,7 @@ void IconView::rejustify()
 //    setViewportParameters();
 //    calcViewportRange(currentIndex().row());
     updateVisible(currentIndex().row());
+    pageCount();
 
 //    qDebug() << objectName() << "::rejustify   "
 //             << "firstVisibleRow" << firstVisibleRow
@@ -1257,6 +1307,7 @@ void IconView::resizeEvent(QResizeEvent *)
     // return if grid view has not been opened yet
     //if (m2->gridDisplayFirstOpen) return;
 
+    pageCount();
     visibleCellCount = cellsInViewport();
     updateVisible();
     m2->numberIconsVisibleChange();
