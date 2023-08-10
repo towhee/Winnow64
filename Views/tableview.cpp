@@ -88,25 +88,38 @@ void TableView::updateVisible()
     firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
+    if (rowHeight(0)) visibleRowCount = height() / rowHeight(0);
+    /*
+    qDebug() << "TableView::updateVisible"
+             << "firstVisibleRow =" << firstVisibleRow
+             << "midVisibleRow =" << midVisibleRow
+             << "lastVisibleRow =" << lastVisibleRow
+             << "height() =" << height()
+             << "rowHeight(0) =" << rowHeight(0)
+             << "visibleRowCount =" << visibleRowCount
+                ;
+                //*/
 
     int row = currentIndex().row();
     isCurrentVisible = (row >= firstVisibleRow && row <= lastVisibleRow);
 }
 
+bool TableView::isRowVisible(int row)
+
+{
+    return (row >= firstVisibleRow && row <= lastVisibleRow);
+}
+
 void TableView::scrollToRow(int row, QString source)
 {
     if (G::isLogger) G::log("TableView::scrollToRow", source);
-    /* debug
+//    /* debug
     qDebug() << "TableView::scrollToRow" << objectName() << "row =" << row
              << "source =" << source;
              //*/
     QModelIndex idx = dm->sf->index(row, 0);
+//    scrollTo(idx);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
-}
-
-bool TableView::isRowVisible(int row)
-{
-    return (row >= firstVisibleRow && row <= lastVisibleRow);
 }
 
 void TableView::scrollToCurrent()
@@ -116,7 +129,7 @@ void TableView::scrollToCurrent()
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
 
-int TableView::defaultCulumnWidth(int column)
+int TableView::defaultColumnWidth(int column)
 {
     QFontMetrics fm(this->font());
     if (column == G::PathColumn) return fm.boundingRect("-Icon-").width();
@@ -191,16 +204,29 @@ int TableView::defaultCulumnWidth(int column)
     return 50;
 }
 
-QModelIndex TableView::pageUpIndex()
+QModelIndex TableView::pageUpIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageUpIndex");
-    return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
+    updateVisible();
+    int max = dm->sf->rowCount() - 1;
+    int pageUpRow = fromRow + visibleRowCount;
+    if (pageUpRow > max) pageUpRow = max;
+    qDebug() << "TableView::pageUpIndex row =" << pageUpRow << "visibleRowCount" << visibleRowCount;
+    scrollToRow(pageUpRow, "TableView::pageUpIndex");
+    return dm->sf->index(pageUpRow, 0);
+    //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
 
-QModelIndex TableView::pageDownIndex()
+QModelIndex TableView::pageDownIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageDownIndex");
-    return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
+    updateVisible();
+    int pageDownRow = fromRow - visibleRowCount;
+    if (pageDownRow < 0) pageDownRow = 0;
+    scrollToRow(pageDownRow, "TableView::pageUpIndex");
+    qDebug() << "TableView::pageDownIndex row =" << pageDownRow << "visibleRowCount" << visibleRowCount;
+    return dm->sf->index(pageDownRow, 0);
+    //return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
@@ -218,8 +244,14 @@ void TableView::resizeColumns()
 {
     // qDebug() << "TableView::resizeColumns";
     for (int column = 0; column < G::TotalColumns; ++column) {
-        setColumnWidth(column, defaultCulumnWidth(column));
+        setColumnWidth(column, defaultColumnWidth(column));
     }
+}
+
+void TableView::resizeEvent(QResizeEvent *event)
+{
+    QTableView::resizeEvent(event);
+    updateVisible();
 }
 
 void TableView::paintEvent(QPaintEvent *event)
@@ -238,15 +270,11 @@ void TableView::keyPressEvent(QKeyEvent *event){
 
 void TableView::mousePressEvent(QMouseEvent *event)
 {
-    QModelIndex idx = indexAt(event->pos());
-
-    // check mouse click was not in area after last row
-    if (!idx.isValid()) return;
-
+    int row = indexAt(event->pos()).row();
     // only interested in rows, so set index column = 0
-    idx = idx.model()->index(idx.row(), 0);
-
-    if (!idx.isValid()) return;
+    QModelIndex sfIdx = dm->sf->index(row, 0);
+    // check mouse click was not in area after last row
+    if (!sfIdx.isValid()) return;
 
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
@@ -254,20 +282,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
     // propogate mouse press if pressed in a table row, otherwise do nothing
     if (event->button() == Qt::LeftButton) {
         G::fileSelectionChangeSource = "TableMouseClick";
-
-        if (!event->modifiers()) {
-            m5->sel->select(idx);
-        }
-
-        if (event->modifiers() & Qt::ControlModifier) {
-            m5->sel->toggleSelect(idx);
-        }
-
-        if (event->modifiers() & Qt::ShiftModifier) {
-            m5->sel->select(idx, event->modifiers());
-//            m5->sel->select(idx, shiftAnchorIndex);
-            shiftAnchorIndex = idx;
-        }
+        m5->sel->select(sfIdx, event->modifiers());
     }
 }
 

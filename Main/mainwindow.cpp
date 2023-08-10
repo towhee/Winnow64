@@ -1012,8 +1012,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
                 if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
                 if (e->key() == Qt::Key_End) sel->last(e->modifiers());
-                if (e->key() == Qt::Key_PageUp) sel->nextPage(e->modifiers());
-                if (e->key() == Qt::Key_PageDown) sel->prevPage(e->modifiers());
+                if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
+                if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
             }
         }
     } // end section

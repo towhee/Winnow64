@@ -34,6 +34,10 @@ public:
     int lastVisibleCell;
     double visibleCellCount;
 
+    int cellsPerRow;
+    int rowsPerVP;
+    int cellsPerVP;
+
     bool thumbSplitDrag = false;
 
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
@@ -44,6 +48,7 @@ public:
     QModelIndex prevIdx;                // for zoomCursor
 
     void updateVisible(int sfRow = -1);
+    int pageCount();
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -110,8 +115,8 @@ public slots:
 
     QModelIndex upIndex();
     QModelIndex downIndex();
-    QModelIndex pageUpIndex();
-    QModelIndex pageDownIndex();
+    QModelIndex pageUpIndex(int fromRow);
+    QModelIndex pageDownIndex(int fromRow);
 
     int getFirstVisible();          // not being used
     int getLastVisible();           // not being used

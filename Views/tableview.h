@@ -23,12 +23,13 @@ public:
     int firstVisibleRow;
     int midVisibleRow;
     int lastVisibleRow;
+    int visibleRowCount;
     bool isCurrentVisible;
 
 public slots:
     void showOrHide();
-    QModelIndex pageUpIndex();
-    QModelIndex pageDownIndex();
+    QModelIndex pageUpIndex(int fromRow = 0);
+    QModelIndex pageDownIndex(int fromRow);
     void updateVisible();
     void resizeColumns();
 
@@ -38,12 +39,13 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     IconView *thumbView;
     DataModel *dm;
     void createOkToShow();
-    int defaultCulumnWidth(int column);
+    int defaultColumnWidth(int column);
 
 signals:
     void displayLoupe();

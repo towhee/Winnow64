@@ -153,9 +153,10 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         return;
     }
     if (modifiers & Qt::ShiftModifier) {
-        qDebug() << "Selection::select  ShiftModifier";
+        qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
+        shiftExtendIndex = sfIdx;
         QItemSelection selection;
-        selection.select(shiftAnchorIndex, sfIdx);
+        selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         return;
     }
@@ -283,31 +284,37 @@ void Selection::last(Qt::KeyboardModifiers modifiers)
 void Selection::prevPage(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::prevPage");
+    qDebug() << "Selection::prevPage";
     G::fileSelectionChangeSource = "Key_PageDown";
+    int fromRow = dm->currentSfRow;
+    if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
-        select(gridView->pageDownIndex(), modifiers);
+        select(gridView->pageDownIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageDownIndex(), modifiers);
+        select(tableView->pageDownIndex(fromRow), modifiers);
         return;
     }
-    select(thumbView->pageDownIndex(), modifiers);
+//    select(thumbView->pageDownIndex(), modifiers);
 }
 
 void Selection::nextPage(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::nextPage");
+    qDebug() << "Selection::nextPage";
     G::fileSelectionChangeSource = "Key_PageUp";
+    int fromRow = dm->currentSfRow;
+    if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
-        select(gridView->pageUpIndex(), modifiers);
+        select(gridView->pageUpIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageUpIndex(), modifiers);
+        select(tableView->pageUpIndex(fromRow), modifiers);
         return;
     }
-    select(thumbView->pageUpIndex(), modifiers);
+//    select(thumbView->pageUpIndex(), modifiers);
 }
 
 void Selection::nextPick(Qt::KeyboardModifiers modifiers)
