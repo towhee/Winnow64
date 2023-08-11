@@ -484,10 +484,11 @@ void IconView::updateVisible(int sfRow)
     firstVisibleCell = qRound(r);
     lastVisibleCell = firstVisibleCell + int(visibleCellCount) + 1;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
-    /*
+//    /*
     qDebug() << "IconView::updateVisible"
              << objectName()
              << "scrollbar value =" << x
+             << "r =" << r
              << "visibleCellCount =" << visibleCellCount
              << "firstVisibleCell =" << firstVisibleCell
              << "lastVisibleCell =" << lastVisibleCell
@@ -601,20 +602,26 @@ void IconView::updateVisible(int sfRow)
                 //*/
 }
 
-int IconView::pageCount()
+void IconView::updateVisibleCellCount()
 {
     QSize cell = getCellSize();
     QSize vp = viewport()->size();
-    int cellsPerPageRow = vp.width() / cell.width();
-    int rowsPerPage = vp.height() / cell.height();
-    /*
-    qDebug() << "IconView::pageCount"
+    cellsPerRow = vp.width() / cell.width();
+    cellsPerPageRow = (int)cellsPerRow;
+    rowsPerVP = vp.height() / cell.height();
+    rowsPerPage = (int)rowsPerVP;
+    cellsPerVP = (int)(cellsPerRow * rowsPerVP);
+    cellsPerPage = cellsPerPageRow * rowsPerPage;
+//    /*
+    qDebug() << "IconView::updateVisibleCellCount"
+             << "cellsPerRow" << cellsPerRow
              << "cellsPerPageRow" << cellsPerPageRow
+             << "rowsPerVP" << rowsPerVP
              << "rowsPerPage" << rowsPerPage
-             << "cellsPerPage" << cellsPerPageRow * rowsPerPage
+             << "cellsPerVP" << cellsPerVP
+             << "cellsPerPage" << cellsPerPage
                 ;
     //*/
-    return cellsPerPageRow * rowsPerPage;
 }
 
 int IconView::getThumbsPerPage()
@@ -897,43 +904,56 @@ bool IconView::isRowVisible(int row)
     Dependent on calcViewportRange being up-to-date.
 */
     if (isDebug) G::log("IconView::isRowVisible", objectName());
-    //return row >= firstVisibleCell && row <= lastVisibleCell;
-    return row >= iconViewDelegate->firstVisible && row <= iconViewDelegate->lastVisible;
+    return row >= firstVisibleCell && row <= lastVisibleCell;
+    //return row >= iconViewDelegate->firstVisible && row <= iconViewDelegate->lastVisible;
 }
 
-QModelIndex IconView::upIndex()
+QModelIndex IconView::upIndex(int fromCell)
 {
-    if (isDebug) G::log("IconView::downIndex", objectName());
-    return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
-}
-
-QModelIndex IconView::downIndex()
-{
+    // fromCell is datamodel sortfilter row
+    // Page is number of completely visible cells in viewport
     if (isDebug) G::log("IconView::upIndex", objectName());
-    return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
+    int toCell = fromCell - viewport()->width() / getCellSize().width();
+    if (toCell < 0) toCell = fromCell;
+    if (!isRowVisible(toCell)) scrollToRow(toCell, "IconView::upIndex");
+    return dm->sf->index(toCell, 0);
+    //return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
 }
 
-QModelIndex IconView::pageUpIndex(int fromRow)
+QModelIndex IconView::downIndex(int fromCell)
+{
+    // fromCell is datamodel sortfilter row
+    // Page is number of completely visible cells in viewport
+    if (isDebug) G::log("IconView::downIndex", objectName());
+    int max = dm->sf->rowCount() - 1;
+    int toCell = fromCell + viewport()->width() / getCellSize().width();
+    if (toCell > max) toCell = fromCell;
+    if (!isRowVisible(toCell)) scrollToRow(toCell, "IconView::downIndex");
+    return dm->sf->index(toCell, 0);
+    //return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
+}
+
+QModelIndex IconView::pageDownIndex(int fromRow)
 {
     // fromRow is datamodel row
     // Page is number of completely visible cells in viewport
-    if (isDebug) G::log("IconView::pageUpIndex", objectName());
+    if (isDebug) G::log("IconView::pageDownIndex", objectName());
     int max = dm->sf->rowCount() - 1;
-    int pageUpCell = fromRow + pageCount();
-    if (pageUpCell > max) pageUpCell = max;
-    scrollToRow(pageUpCell, "IconView::pageUpIndex");
+    int pageUpCell = fromRow + cellsPerPage;
+    if (pageUpCell > max) pageUpCell = fromRow;
+    scrollToRow(pageUpCell, "IconView::pageDownIndex");
     return dm->sf->index(pageUpCell, 0);
     //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
 
-QModelIndex IconView::pageDownIndex(int fromRow)
+QModelIndex IconView::pageUpIndex(int fromRow)
 {
     if (isDebug) G::log("IconView::pageDownIndex", objectName());
     // fromRow is datamodel row
     // Page is number of completely visible cells in viewport
     if (isDebug) G::log("IconView::pageUpIndex", objectName());
-    int pageDownCell = fromRow - pageCount();
-    if (pageDownCell < 0) pageDownCell = 0;
+    int pageDownCell = fromRow - cellsPerPage;
+    if (pageDownCell < 0) pageDownCell = fromRow;
     scrollToRow(pageDownCell, "IconView::pageUpIndex");
     return dm->sf->index(pageDownCell, 0);
     //return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
@@ -1169,8 +1189,8 @@ void IconView::rejustify()
     setThumbParameters();
 //    setViewportParameters();
 //    calcViewportRange(currentIndex().row());
+    updateVisibleCellCount();
     updateVisible(currentIndex().row());
-    pageCount();
 
 //    qDebug() << objectName() << "::rejustify   "
 //             << "firstVisibleRow" << firstVisibleRow
@@ -1307,7 +1327,7 @@ void IconView::resizeEvent(QResizeEvent *)
     // return if grid view has not been opened yet
     //if (m2->gridDisplayFirstOpen) return;
 
-    pageCount();
+    updateVisibleCellCount();
     visibleCellCount = cellsInViewport();
     updateVisible();
     m2->numberIconsVisibleChange();
