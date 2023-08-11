@@ -34,9 +34,12 @@ public:
     int lastVisibleCell;
     double visibleCellCount;
 
-    int cellsPerRow;
-    int rowsPerVP;
+    double cellsPerRow;
+    int cellsPerPageRow;
+    double rowsPerVP;
+    int rowsPerPage;
     int cellsPerVP;
+    int cellsPerPage;
 
     bool thumbSplitDrag = false;
 
@@ -48,7 +51,7 @@ public:
     QModelIndex prevIdx;                // for zoomCursor
 
     void updateVisible(int sfRow = -1);
-    int pageCount();
+    void updateVisibleCellCount();
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -113,8 +116,8 @@ public slots:
     void thumbsFitTopOrBottom(QString src = "");
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
-    QModelIndex upIndex();
-    QModelIndex downIndex();
+    QModelIndex upIndex(int fromIndex);
+    QModelIndex downIndex(int fromCell);
     QModelIndex pageUpIndex(int fromRow);
     QModelIndex pageDownIndex(int fromRow);
 

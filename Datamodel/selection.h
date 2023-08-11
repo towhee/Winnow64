@@ -18,6 +18,7 @@ public:
     void select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(QModelIndex sfIdx, QModelIndex sfIdx2);
     void updateCurrentIndex(QModelIndex sfIdx);
+    void updateVisible();
     void setCurrentIndex(QModelIndex sfIdx);
     void setCurrentRow(int sfRow);
     void setCurrentPath(QString &fPath);
@@ -28,6 +29,8 @@ public:
     void invert();
     void chkForDeselection(int sfRow);
     bool isSelected(int sfRow);
+    int startSelectionBlock(int rowInBlock);
+    int endSelectionBlock(int rowInBlock);
     void save();
     void recover();
 

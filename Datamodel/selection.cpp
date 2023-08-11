@@ -108,6 +108,13 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
     shiftExtendIndex = sfIdx;
 }
 
+void Selection::updateVisible()
+{
+    if (thumbView->isVisible()) thumbView->updateVisible();
+    if (gridView->isVisible()) gridView->updateVisible();
+    if (tableView->isVisible()) tableView->updateVisible();
+}
+
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select QString");
@@ -149,6 +156,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
             shiftAnchorIndex = sfIdx;
             shiftExtendIndex = sfIdx;
         }
+        updateVisible();
         qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
         return;
     }
@@ -158,11 +166,13 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        updateVisible();
         return;
     }
     qDebug() << "Selection::select  Fall through";
     sm->clear();
     setCurrentIndex(sfIdx);
+    updateVisible();
 }
 
 
@@ -223,6 +233,7 @@ void Selection::prev(Qt::KeyboardModifiers modifiers)
 {
     G::fileSelectionChangeSource = "Key_Left";
     if (modifiers & Qt::ShiftModifier) {
+        // find prev unselected row
         while (sm->isSelected(shiftExtendIndex)) {
             int row = shiftExtendIndex.row();
             if (row == 0) break;
@@ -243,10 +254,11 @@ void Selection::up(Qt::KeyboardModifiers modifiers)
     if (G::isLogger || isDebug) G::log("Selection::up");
     G::fileSelectionChangeSource = "Key_Up";
     if (gridView->isVisible()) {
-        select(gridView->upIndex(), modifiers);
+        int row = dm->currentSfRow;
+        if (modifiers & Qt::ShiftModifier)  row = startSelectionBlock(shiftExtendIndex.row());
+        select(gridView->upIndex(row), modifiers);
     }
     if (tableView->isVisible()) {
-        qDebug() << "Selection::up" << "row before =" << dm->currentSfRow;
         prev(modifiers);
     }
 //    setCurrentIndex(thumbView->pageUpIndex());
@@ -257,7 +269,9 @@ void Selection::down(Qt::KeyboardModifiers modifiers)
     if (G::isLogger || isDebug) G::log("Selection::down");
     G::fileSelectionChangeSource = "Key_Down";
     if (gridView->isVisible()) {
-        select(gridView->downIndex(), modifiers);
+        int row = dm->currentSfRow;
+        if (modifiers & Qt::ShiftModifier)  row = endSelectionBlock(shiftExtendIndex.row());
+        select(gridView->downIndex(row), modifiers);
         return;
     }
     if (tableView->isVisible()) {
@@ -289,11 +303,11 @@ void Selection::prevPage(Qt::KeyboardModifiers modifiers)
     int fromRow = dm->currentSfRow;
     if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
-        select(gridView->pageDownIndex(fromRow), modifiers);
+        select(gridView->pageUpIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageDownIndex(fromRow), modifiers);
+        select(tableView->pageUpIndex(fromRow), modifiers);
         return;
     }
 //    select(thumbView->pageDownIndex(), modifiers);
@@ -307,11 +321,11 @@ void Selection::nextPage(Qt::KeyboardModifiers modifiers)
     int fromRow = dm->currentSfRow;
     if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
-        select(gridView->pageUpIndex(fromRow), modifiers);
+        select(gridView->pageDownIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {
-        select(tableView->pageUpIndex(fromRow), modifiers);
+        select(tableView->pageDownIndex(fromRow), modifiers);
         return;
     }
 //    select(thumbView->pageUpIndex(), modifiers);
@@ -388,6 +402,31 @@ bool Selection::isSelected(int sfRow)
 {
     if (G::isLogger || isDebug) G::log("Selection::isSelectedn");
     return sm->isSelected(dm->sf->index(sfRow, 0));
+}
+
+int Selection::startSelectionBlock(int rowInBlock)
+{
+    int row = rowInBlock;
+    if (row <= 0) return row;
+    while (sm->isSelected(dm->sf->index(row - 1, 0))) {
+        row--;
+        if (row == 0) break;
+    }
+    qDebug() << "Selection::startSelectionBlock row =" << row;
+    return row;
+}
+
+int Selection::endSelectionBlock(int rowInBlock)
+{
+    int row = rowInBlock;
+    int max = dm->sf->rowCount() - 1;
+    if (row >= max) return row;
+    while (sm->isSelected(dm->sf->index(row + 1, 0))) {
+        row++;
+        if (row == max) break;
+    }
+    qDebug() << "Selection::startSelectionBlock row =" << row;
+    return row;
 }
 
 void Selection::chkForDeselection(int sfRow)

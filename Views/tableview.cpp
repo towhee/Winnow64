@@ -204,7 +204,7 @@ int TableView::defaultColumnWidth(int column)
     return 50;
 }
 
-QModelIndex TableView::pageUpIndex(int fromRow)
+QModelIndex TableView::pageDownIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageUpIndex");
     updateVisible();
@@ -217,7 +217,7 @@ QModelIndex TableView::pageUpIndex(int fromRow)
     //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
 
-QModelIndex TableView::pageDownIndex(int fromRow)
+QModelIndex TableView::pageUpIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageDownIndex");
     updateVisible();
