@@ -2072,11 +2072,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
 
-    // update views
-    thumbView->shiftAnchorIndex = current;
-    gridView->shiftAnchorIndex = current;
-    tableView->shiftAnchorIndex = current;
-
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         if (thumbView->isVisible()) thumbView->scrollToCurrent();

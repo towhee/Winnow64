@@ -62,19 +62,6 @@ void MW::togglePickUnlessRejected()
     buildFilters->updateCategory(BuildFilters::PickEdit);
 }
 
-void MW::togglePickMouseOver()
-{
-/*
-    Toggles the pick status item the mouse is over is toggled, but the selection is not
-    changed.
-
-    Triggered by ThumbView context menu MW::pickMouseOverAction.  ThumbView mousePressEvent
-    stores the mouse click indexAt(position).  Use this to call togglePickMouseOverItem.
-*/
-    if (G::isLogger) G::log("MW::togglePickMouseOver");
-    togglePickMouseOverItem(thumbView->mouseOverIndex);
-}
-
 void MW::togglePickMouseOverItem(QModelIndex idx)
 {
 /*
@@ -82,9 +69,10 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     over is toggled, but the selection is not changed.
 */
     if (G::isLogger) G::log("MW::togglePickMouseOverItem");
+    qDebug() << "MW::togglePickMouseOverItem" << idx;
     QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
-    pickStatus == "false" ? pickStatus = "Picked" : pickStatus = "Unpicked";
+    pickStatus == "Unpicked" ? pickStatus = "Picked" : pickStatus = "Unpicked";
     emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
 
     updateClassification();
@@ -117,9 +105,10 @@ void MW::togglePick()
 
 */
     if (G::isLogger) G::log("MW::togglePick");
+    qDebug() << "MW::togglePick";
     QModelIndexList selection = dm->selectionModel->selectedRows();
     qint64 n = selection.count();
-    //qDebug() << "MW::togglePick" << selection;
+    qDebug() << "MW::togglePick" << selection;
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;

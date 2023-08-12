@@ -31,6 +31,7 @@ public:
     bool isSelected(int sfRow);
     int startSelectionBlock(int rowInBlock);
     int endSelectionBlock(int rowInBlock);
+    int count();
     void save();
     void recover();
 

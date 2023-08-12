@@ -85,7 +85,6 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
                                    bool &isRatingBadgeVisible,
                                    bool &isIconNumberVisible,
                                    DataModel *dm,
-                                   ImageCacheData *icd,
                                    QItemSelectionModel *selectionModel
                                    )
         : isRatingBadgeVisible(isRatingBadgeVisible),
@@ -93,7 +92,6 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
 {
     parent->isWidgetType();         // suppress compiler warning
     this->dm = dm;
-    this->icd = icd;
     fPad = 4;
     tPad = 4;         // allow small gap between thumb and outer border
 

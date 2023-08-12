@@ -86,7 +86,7 @@ void MW::loupeDisplay()
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
-        if(gridView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+        if(gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
@@ -174,7 +174,7 @@ void MW::gridDisplay()
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
-        if (thumbView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+        if (thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = thumbView->midVisibleCell;
     }
 
@@ -263,11 +263,11 @@ void MW::tableDisplay()
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Grid") {
-        if (gridView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+        if (gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Loupe") {
-        if(thumbView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+        if(thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = thumbView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;

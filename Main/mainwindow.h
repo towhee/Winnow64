@@ -552,7 +552,6 @@ private slots:
     void setIngested();
 //    QStringList getSelectionOrPicks();
     void togglePick();
-    void togglePickMouseOver();
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
     int pickLogCount();
@@ -1067,7 +1066,7 @@ private:
 //    QModelIndexList selectedRows;
 //    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
-    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
+//    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
 
     QHash<QString, bool> stopped;
 
