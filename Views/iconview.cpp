@@ -467,29 +467,55 @@ void IconView::updateVisible(int sfRow)
     // get from scroll bars
 //    visibleCellCount = cellsInViewport();
     int n = dm->sf->rowCount() - 1;
+    double rCells = cellsPerPageRow;
     double x;                               // scrollBar current value (position)
     double max;                             // scrollBar maximum value
+    int rMax = ceil((double)n / rCells) - rowsPerPage;
+    double p;
+    double r;
+    double f;
     if (isWrapping()) {
         x = verticalScrollBar()->value();
         max = verticalScrollBar()->maximum();
+        p = x / max;                                        // scrollBar percentage in range
+        r = p * rMax;                                       // first visible row
+        double r1 = r - (int)r;                             // portion first row ht visible
+        firstVisibleCell = (int)r * cellsPerPageRow;
+        int visibleRows = ceil(rowsPerVP - r1) + ceil(r1);
+        int visibleCells = visibleRows * cellsPerPageRow;
+        qDebug() << "vpHt =" << viewport()->height()
+                 << "cellHt =" << getCellSize().height()
+                 << "r =" << r
+                 << "r - (int)r =" << r - (int)r
+                 << "rowsPerVP =" << rowsPerVP
+                 << "visibleRows =" << visibleRows
+                 << "visibleCells =" << visibleCells
+                    ;
+
+        lastVisibleCell = firstVisibleCell + visibleCells - 1;
     }
     else {
         x = horizontalScrollBar()->value();
         max = horizontalScrollBar()->maximum();
+        p = (double)x / max;                     // scrollBar percentage in range
+        f = p * (n - cellsPerRow) + p;
+        firstVisibleCell = p * (n - cellsPerRow) + p;
+        lastVisibleCell = firstVisibleCell + cellsPerVP;
     }
-    double p = x / max;                     // scrollBar percentage in range
-    double pRow = p * n;                    // percent of filtered cells or thumbnails
-    double pCells = p * visibleCellCount;   // percent of visible cells or thumbnails
-    double r = pRow - pCells + p;           // first visible
-    firstVisibleCell = qRound(r);
-    lastVisibleCell = firstVisibleCell + int(visibleCellCount) + 1;
+    if (lastVisibleCell > n) lastVisibleCell = n;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
 //    /*
     qDebug() << "IconView::updateVisible"
              << objectName()
-             << "scrollbar value =" << x
+             << "n =" << n
+             << "x =" << x
+             << "max =" << max
+             << "p =" << p
              << "r =" << r
-             << "visibleCellCount =" << visibleCellCount
+             << "rMax =" << rMax
+             << "rCells =" << rCells
+             << "f =" << f
+             << "visibleCellCount =" << cellsPerPage
              << "firstVisibleCell =" << firstVisibleCell
              << "lastVisibleCell =" << lastVisibleCell
              << "midVisibleCell =" << midVisibleCell
@@ -498,12 +524,14 @@ void IconView::updateVisible(int sfRow)
 
     return;
 
+    /*
     // get from iconViewDelegate (only works if the icon/image is visible in cell))
     firstVisibleCell = iconViewDelegate->firstVisible;
     lastVisibleCell = iconViewDelegate->lastVisible;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     return;
+    //*/
 
     /* Alternates
     int n = dm->sf->rowCount() - 1;
@@ -606,14 +634,20 @@ void IconView::updateVisibleCellCount()
 {
     QSize cell = getCellSize();
     QSize vp = viewport()->size();
-    cellsPerRow = vp.width() / cell.width();
+    cellsPerRow = (double)vp.width() / cell.width();
     cellsPerPageRow = (int)cellsPerRow;
-    rowsPerVP = vp.height() / cell.height();
-    rowsPerPage = (int)rowsPerVP;
-    cellsPerVP = (int)(cellsPerRow * rowsPerVP);
+    rowsPerVP = vp.height() * 1.0 / cell.height();
+    //if (rowsPerVP - (int)rowsPerVP < 0.1) rowsPerVP = (int)rowsPerVP;
+    rowsPerPage = (int)floor(rowsPerVP);
+    cellsPerVP = (int)(cellsPerRow * ceil(rowsPerVP));
     cellsPerPage = cellsPerPageRow * rowsPerPage;
+    visibleCellCount = cellsPerVP;
 //    /*
     qDebug() << "IconView::updateVisibleCellCount"
+             << "VP width" << vp.width()
+             << "VP height" << vp.height()
+             << "cell width" << cell.width()
+             << "cell height" << cell.height()
              << "cellsPerRow" << cellsPerRow
              << "cellsPerPageRow" << cellsPerPageRow
              << "rowsPerVP" << rowsPerVP
@@ -915,7 +949,7 @@ QModelIndex IconView::upIndex(int fromCell)
     if (isDebug) G::log("IconView::upIndex", objectName());
     int toCell = fromCell - viewport()->width() / getCellSize().width();
     if (toCell < 0) toCell = fromCell;
-    if (!isRowVisible(toCell)) scrollToRow(toCell, "IconView::upIndex");
+    /*if (!isRowVisible(toCell))*/ scrollToRow(toCell, "IconView::upIndex");
     return dm->sf->index(toCell, 0);
     //return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
 }
@@ -928,7 +962,7 @@ QModelIndex IconView::downIndex(int fromCell)
     int max = dm->sf->rowCount() - 1;
     int toCell = fromCell + viewport()->width() / getCellSize().width();
     if (toCell > max) toCell = fromCell;
-    if (!isRowVisible(toCell)) scrollToRow(toCell, "IconView::downIndex");
+    /*if (!isRowVisible(toCell))*/ scrollToRow(toCell, "IconView::downIndex");
     return dm->sf->index(toCell, 0);
     //return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
 }
@@ -1062,9 +1096,11 @@ void IconView::setThumbSize()
 //    int pxAvail = getCellSize().width() * 1.1 * 0.8;
 //    badgeSize = fitBadge(pxAvail);
 
-    visibleCellCount = cellsInViewport();
-    updateVisible();
     setThumbParameters();
+    updateVisibleCellCount();
+//    visibleCellCount = cellsInViewport();
+    updateVisible();
+//    setThumbParameters();
 
     QModelIndex scrollToIndex;
     int currentRow = currentIndex().row();
