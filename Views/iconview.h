@@ -2,22 +2,18 @@
 #define THUMBVIEW_H
 
 #include <QtWidgets>
-#include "File/fstree.h"
 #include "Datamodel/datamodel.h"
 #include "iconviewdelegate.h"
 #include <math.h>
-
-#ifdef Q_OS_MAC
-//#include "Utilities/mac.h"
-#endif
 
 class IconView : public QListView
 {
     Q_OBJECT
 
 public:
-    IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString objName);
+    IconView(QWidget *parent, DataModel *dm, QString objName);
 
+    // Icon (Thumbnail) parameters
     int iconWidth;
     int iconHeight;
     int labelFontSize = 13;
@@ -34,21 +30,26 @@ public:
     int lastVisibleCell;
     double visibleCellCount;
 
-    double cellsPerRow;
-    int cellsPerPageRow;
-    double rowsPerVP;
-    int rowsPerPage;
-    int cellsPerVP;
-    int cellsPerPage;
+    // Viewport / page cell counts
+    double cellsPerRow;                 // includes partly visible cells
+    int cellsPerPageRow;                // whole cells per row
+    double rowsPerVP;                   // includes partly visible cells
+    int rowsPerPage;                    // whole rows only
+    int cellsPerVP;                     // includes partly visible cells
+    int cellsPerPage;                   // whole cells only
 
     bool thumbSplitDrag = false;
 
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
     bool isMouseModifier = false;       // for zoomCursor in MW::eventFilter
 
-    QModelIndex shiftAnchorIndex;
-    QModelIndex mouseOverIndex;         // for toggle pick
     QModelIndex prevIdx;                // for zoomCursor
+    double bestAspectRatio;
+
+    enum JustifyAction {
+        Shrink = 1,
+        Enlarge = -1
+    };
 
     void updateVisible(int sfRow = -1);
     void updateVisibleCellCount();
@@ -57,45 +58,12 @@ public:
                     bool forceUpdate = false,
                     QPoint mousePos = QPoint(-1, -1));
 
-    void updateLayout();
-    bool readyToScroll();
-
     IconViewDelegate *iconViewDelegate;
     QString diagnostics();
 
-    QFileInfoList getPicks();       // not being used.
-    QSize getMinCellSize();
     QSize getMaxCellSize();
     QSize getCellSize();
-    double cellsInViewport();
-    int midVisible();
-    int getThumbSpaceWidth(int thumbSpaceHeight);
-    QStringList getSelectedThumbsList();        //used by tags, might be useful, move to selection
-    QString getCurrentFilePath();       // used by MW::updateStatus to check for instance clash.  Is this needed?
-    int getSelectedCount();             // used by MW::updateStatus - move to selection?
-
     void setThumbParameters();
-
-//    int firstRowFromScrollBars();
-//    int midRowFromScrollBars();
-
-    int getHorizontalScrollBarOffset(int row);  // not being used
-    int getVerticalScrollBarOffset(int row);    // not being used
-    int getHorizontalScrollBarMax();
-    int getVerticalScrollBarMax();
-
-    void mousePress(QMouseEvent *event);
-    void mouseRelease(QMouseEvent *event);
-
-    QItemSelectionModel *thumbViewSelection;
-
-    bool scrollWhenReady;
-
-    enum JustifyAction {
-        Shrink = 1,
-        Enlarge = -1
-    };
-    double bestAspectRatio;
 
 public slots:
     void updateView();
@@ -121,14 +89,7 @@ public slots:
     QModelIndex pageUpIndex(int fromRow);
     QModelIndex pageDownIndex(int fromRow);
 
-    int getFirstVisible();          // not being used
-    int getLastVisible();           // not being used
-    void scannedViewportRange();
-    bool allPageIconsLoaded();      // not being used
-    bool isRowVisible(int row);
-    int getThumbsPerPage();
-
-//    void updateAfterThumbSplitterChange();
+    bool isCellVisible(int row);
     void refreshThumb(QModelIndex idx, int role);
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -155,21 +116,12 @@ protected:
 signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
-//    void fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src);
-    void togglePick();
     void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
     void displayLoupe();
-//    void updateStatus(bool, QString, QString);
     void updateThumbDockHeight();
 
 private:
-    void initLoad();
-    bool addFolderImageDataToModel();
-    void waitUntilScrollReady();
-    int fitBadge(int pxAvail);
-
     DataModel *dm;
-    ImageCacheData *icd;
 
     QList<int> dragQueue;
     QPoint mousePressPos;

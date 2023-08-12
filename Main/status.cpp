@@ -12,7 +12,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger) G::log("MW::updateStatus");
 
     // check if instance clash (old folder signal)
-    QString fPath = thumbView->getCurrentFilePath();
+    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     int row = dm->rowFromPath(fPath);
     if ((row == -1) && (dm->instance > -1) && (fPath != "")) {
         qWarning() << "WARNING" << "MW::updateStatus"
@@ -64,7 +64,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         }
         base += spacer + "Pos: " + getPosition();
         if (source != "nextSlide") {
-            QString s = QString::number(thumbView->getSelectedCount());
+            QString s = QString::number(sel->count());
+//            QString s = QString::number(thumbView->getSelectedCount());
             base += spacer +" Selected: " + s;
             base += spacer + "Picked: " + getPicked();
         }

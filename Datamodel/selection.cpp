@@ -261,7 +261,6 @@ void Selection::up(Qt::KeyboardModifiers modifiers)
     if (tableView->isVisible()) {
         prev(modifiers);
     }
-//    setCurrentIndex(thumbView->pageUpIndex());
 }
 
 void Selection::down(Qt::KeyboardModifiers modifiers)
@@ -278,7 +277,6 @@ void Selection::down(Qt::KeyboardModifiers modifiers)
         next(modifiers);
         return;
     }
-//    select(thumbView->pageDownIndex());
 }
 
 void Selection::first(Qt::KeyboardModifiers modifiers)
@@ -310,7 +308,6 @@ void Selection::prevPage(Qt::KeyboardModifiers modifiers)
         select(tableView->pageUpIndex(fromRow), modifiers);
         return;
     }
-//    select(thumbView->pageDownIndex(), modifiers);
 }
 
 void Selection::nextPage(Qt::KeyboardModifiers modifiers)
@@ -328,7 +325,6 @@ void Selection::nextPage(Qt::KeyboardModifiers modifiers)
         select(tableView->pageDownIndex(fromRow), modifiers);
         return;
     }
-//    select(thumbView->pageUpIndex(), modifiers);
 }
 
 void Selection::nextPick(Qt::KeyboardModifiers modifiers)
@@ -406,6 +402,9 @@ bool Selection::isSelected(int sfRow)
 
 int Selection::startSelectionBlock(int rowInBlock)
 {
+/*
+    A selection block is a contiguous selection of cells
+*/
     int row = rowInBlock;
     if (row <= 0) return row;
     while (sm->isSelected(dm->sf->index(row - 1, 0))) {
@@ -418,6 +417,9 @@ int Selection::startSelectionBlock(int rowInBlock)
 
 int Selection::endSelectionBlock(int rowInBlock)
 {
+/*
+    A selection block is a contiguous selection of cells
+*/
     int row = rowInBlock;
     int max = dm->sf->rowCount() - 1;
     if (row >= max) return row;
@@ -466,6 +468,11 @@ void Selection::chkForDeselection(int sfRow)
             }
         }
     }
+}
+
+int Selection::count()
+{
+    return sm->selectedRows().count();
 }
 
 void Selection::save()

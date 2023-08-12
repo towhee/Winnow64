@@ -1041,7 +1041,11 @@ void ImageView::keyPressEvent(QKeyEvent *event){
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("ImageView::mousePressEvent");
-
+    /*
+    qDebug() << "ImageView::mousePressEvent"
+             << "Button =" << event->button()
+        ;
+    //*/
     QGraphicsView::mousePressEvent(event);
 
     // bad things happen if no image when click

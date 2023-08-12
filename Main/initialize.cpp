@@ -468,7 +468,7 @@ void MW::createImageCache()
 void MW::createThumbView()
 {
     if (G::isLogger) G::log("MW::createThumbView");
-    thumbView = new IconView(this, dm, icd, "Thumbnails");
+    thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
@@ -484,7 +484,6 @@ void MW::createThumbView()
         if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
         if (setting->contains("classificationBadgeSizeFactor")) thumbView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
         if (setting->contains("iconNumberSize")) thumbView->iconNumberSize = setting->value("iconNumberSize").toInt();
-        if (setting->contains("thumbsPerPage")) thumbView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
         thumbView->iconWidth = 100;
@@ -494,13 +493,12 @@ void MW::createThumbView()
         thumbView->showZoomFrame = true;
         thumbView->badgeSize = 13;
         thumbView->iconNumberSize = 24;
-        thumbView->visibleCellCount = width() / thumbView->iconWidth;
     }
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     // back and forward mouse buttons toggle pick
-    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
+//    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
 
     // scrolling
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
@@ -512,7 +510,7 @@ void MW::createThumbView()
 void MW::createGridView()
 {
     if (G::isLogger) G::log("MW::createGridView");
-    gridView = new IconView(this, dm, icd, "Grid");
+    gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
     gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);
@@ -527,7 +525,6 @@ void MW::createGridView()
         if (setting->contains("labelChoice")) gridView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("classificationBadgeSizeFactor")) gridView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
         if (setting->contains("iconNumberSize")) gridView->iconNumberSize = setting->value("iconNumberSize").toInt();
-        if (setting->contains("thumbsPerPage")) gridView->visibleCellCount = setting->value("thumbsPerPage").toInt();
     }
     else {
         gridView->iconWidth = 200;
@@ -536,8 +533,6 @@ void MW::createGridView()
         gridView->showIconLabels = true;
         gridView->badgeSize = classificationBadgeSizeFactor;
         gridView->iconNumberSize = iconNumberSize;
-        // rgh has window size been assigned yet
-        gridView->visibleCellCount = (width() / 200) * (height() / 200);
     }
 
     // double mouse click fires displayLoupe

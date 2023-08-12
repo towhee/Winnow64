@@ -18,7 +18,6 @@ public:
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,
                      DataModel *dm,
-                     ImageCacheData *icd,
                      QItemSelectionModel *selectionModel
                      );
 
@@ -70,7 +69,6 @@ public slots:
 private:
     QObject parent;
     DataModel *dm;
-    ImageCacheData *icd;
     QItemSelectionModel *selectionModel;
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;
