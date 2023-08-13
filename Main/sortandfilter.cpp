@@ -68,7 +68,7 @@ void MW::filterChange(QString source)
     selection that is still available is set, the thumb and grid first/last/thumbsPerPage
     parameters are recalculated and icons are loaded if necessary.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange", "Src: " + source);
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
@@ -325,7 +325,7 @@ void MW::sortChange(QString source)
     The sort order (ascending or descending) can be set by the menu, the button icon on the
     statusbar or a workspace change.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::sortChange", "Src: " + source);
+    if (G::isLogger || G::isFlowLogger)qDebug() << "MW::sortChange  Src:" << source;
 
     if (G::isInitializing || !G::allMetadataLoaded) return;
 

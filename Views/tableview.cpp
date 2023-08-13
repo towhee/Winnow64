@@ -82,9 +82,12 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     resizeColumns();
 }
 
-void TableView::updateVisible()
+void TableView::updateVisible(QString src)
 {
     if (G::isLogger) G::log("TableView::setViewportParameters");
+    //    /*
+    qDebug() << "TableView::updateVisible src =" << src;
+    //*/
     firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
@@ -207,7 +210,7 @@ int TableView::defaultColumnWidth(int column)
 QModelIndex TableView::pageDownIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageUpIndex");
-    updateVisible();
+    updateVisible("TableView::pageDownIndex");
     int max = dm->sf->rowCount() - 1;
     int pageUpRow = fromRow + visibleRowCount;
     if (pageUpRow > max) pageUpRow = max;
@@ -220,7 +223,7 @@ QModelIndex TableView::pageDownIndex(int fromRow)
 QModelIndex TableView::pageUpIndex(int fromRow)
 {
     if (G::isLogger) G::log("TableView::pageDownIndex");
-    updateVisible();
+    updateVisible("TableView::pageUpIndex");
     int pageDownRow = fromRow - visibleRowCount;
     if (pageDownRow < 0) pageDownRow = 0;
     scrollToRow(pageDownRow, "TableView::pageUpIndex");
@@ -251,7 +254,7 @@ void TableView::resizeColumns()
 void TableView::resizeEvent(QResizeEvent *event)
 {
     QTableView::resizeEvent(event);
-    updateVisible();
+    updateVisible("TableView::resizeEvent");
 }
 
 void TableView::paintEvent(QPaintEvent *event)

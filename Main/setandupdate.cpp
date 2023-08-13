@@ -524,7 +524,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == dm->currentSfRow) {
-                if (G::isFlowLogger) G::log("MW::updateCachedStatus", fPath);
+                if (G::isFlowLogger) qDebug() << "MW::updateCachedStatus", fPath;
                 imageView->loadImage(fPath, "MW::updateCachedStatus");
                 updateClassification();
                 centralLayout->setCurrentIndex(prevCentralView);

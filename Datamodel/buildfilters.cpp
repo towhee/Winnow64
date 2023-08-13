@@ -113,7 +113,7 @@ void BuildFilters::build(AfterAction newAction)
     tab or triggering a query from the filter menu.  This avoids building Filters until
     they are required.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::build");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::build";
     if (debugBuildFilters)
     {
         qDebug()
@@ -149,7 +149,7 @@ void BuildFilters::update()
 /*
     Update the filtered item counts.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::update");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::update";
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::update"
@@ -175,7 +175,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     the category items and will crash with a bad memory access when it tries to
     access a removed item.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::update");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::update";
     if (debugBuildFilters)
     {
         qDebug()
@@ -198,7 +198,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
 
 void BuildFilters::done()
 {
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::done");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::done";
     if (debugBuildFilters)
     {
         qDebug()
@@ -226,7 +226,7 @@ void BuildFilters::reset()
     Called when a new folder is being loaded. The Filters tree dynamic category items are
     all removed, and relevent variables are reset.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::reset";
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::reset"
@@ -361,7 +361,7 @@ void BuildFilters::updateCategoryItems()
     category items, the new one is appended and the items are resorted.  The item
     counts for this category only are updated.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::updateCategory");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::updateCategory";
     if (debugBuildFilters)
     {
         qDebug()
@@ -565,7 +565,7 @@ void BuildFilters::time(QString msg)
 
 void BuildFilters::run()
 {
-    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log("BuildFilters::run"); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); qDebug() << "BuildFilters::run"; mutex.unlock();}
     if (debugBuildFilters)
     {
         qDebug()

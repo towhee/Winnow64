@@ -1253,7 +1253,7 @@ void ImageCache::buildImageCacheList()
 
     It is built from dm->sf (sorted / filtered datamodel).
 */
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "ImageCache::buildImageCacheList";
     if (debugCaching) qDebug() << "ImageCache::buildImageCacheList";
     icd->cacheItemList.clear();
     cacheKeyHash.clear();
@@ -1328,7 +1328,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
                                 bool &isShowCacheStatus,
                                 int &cacheWtAhead)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::initImageCache");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "ImageCache::initImageCache";
     if (G::isFlowLogger2) qDebug() << "ImageCache::initImageCache";
     if (!G::useImageCache) return;   // rgh isolate image cache
 
@@ -1399,7 +1399,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     surplus cached images (not in the filtered dataset) are removed from imCache.
     The image cache is now ready to run by calling setCachePosition().
 */
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "ImageCache::rebuildImageCacheParameters";
     if (debugCaching) qDebug() << "ImageCache::rebuildImageCacheParameters";
     if (dm->sf->rowCount() == 0) return;
 
@@ -1514,9 +1514,9 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
-             "src = " + src + " " + path);
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "ImageCache::setCurrentPosition" << "src =" << src << path;
+
     if (debugCaching) qDebug() << "ImageCache::setCurrentPosition" << path;
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
         if (G::isWarningLogger)
@@ -1857,7 +1857,7 @@ void ImageCache::run()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::run");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "ImageCache::run";
     if (icd->cacheItemList.length() == 0) return;
     if (debugCaching) {
         qDebug().noquote() << "ImageCache::run";

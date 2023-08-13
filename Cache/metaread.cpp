@@ -57,11 +57,11 @@ MetaRead::~MetaRead()
 void MetaRead::setCurrentRow(int row, bool scrollOnly,
                              bool fileSelectionChangeTriggered, QString src)
 {
-    if (isDebug) {
+    if (isDebug || G::isFlowLogger) {
         QString running;
         isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(row) + " src = " + src + " isRunning = " + running;
-        G::log("MetaRead::setCurrentRow", s);
+        qDebug() << "MetaRead::setCurrentRow" << s;
     }
     //qDebug() << "MetaRead::setCurrentRow row =" << row << "src =" << src;
     this->src = src;
@@ -466,7 +466,7 @@ void MetaRead::triggerCheck()
     if (count == lastRow || count == imageCacheTriggerCount) {
         // start image caching thread after head start
         if (isDebug || G::isLogger || G::isFlowLogger)
-            G::log("MetaRead::run", "emit fileSelectionChange " + startPath);
+            qDebug() << "MetaRead::run  emit fileSelectionChange" << startPath;
         QModelIndex sfIdx = dm->sf->index(targetRow, 0);
         emit fileSelectionChange(sfIdx);
         alreadyTriggered = true;

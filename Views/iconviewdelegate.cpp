@@ -381,7 +381,8 @@ void IconViewDelegate::paint(QPainter *painter,
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
     if (duration.isNull()) duration = "XXX";
     bool isSelected = dm->isSelected(row);
-    bool isCurrentIndex = row == dm->currentSfIdx.row();
+    bool isCurrentIndex = row == dm->currentSfRow;
+//    bool isCurrentIndex = row == dm->currentSfIdx.row();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     bool isPicked = pickStatus == "Picked";
     bool isRejected = pickStatus == "Rejected";

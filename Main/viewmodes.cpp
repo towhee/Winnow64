@@ -29,7 +29,8 @@ void MW::loupeDisplay()
     painting itself.
 */
     if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
-        G::log("MW::loupeDisplay", "wasThumbDockVisible = " + QVariant(wasThumbDockVisible).toString());
+        qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
+                 << QVariant(wasThumbDockVisible).toString();
 
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
@@ -113,7 +114,7 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::gridDisplay";
     qDebug() << "MW::gridDisplay" << "1";
 
     if (embelProperties->templateId > 0) {
@@ -198,7 +199,7 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MW::tableDisplay");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::tableDisplay";
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(

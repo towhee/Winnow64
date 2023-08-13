@@ -65,16 +65,17 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
-    if (G::isFlowLogger2) qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row();
-    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
-        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
-    if (isDebug)
-        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row();
+//    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
+//        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
+//    if (isDebug || G::isLogger || G::isFlowLogger)
+//        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
 
     if (!sfIdx.isValid()) return;
 
     updateCurrentIndex(sfIdx);
-//    /*
+    /*
     qDebug() << "Selection::setCurrentIndex"
              << "sfIdx =" << sfIdx
         ;
@@ -110,9 +111,10 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 
 void Selection::updateVisible()
 {
-    if (thumbView->isVisible()) thumbView->updateVisible();
-    if (gridView->isVisible()) gridView->updateVisible();
-    if (tableView->isVisible()) tableView->updateVisible();
+    QString src = "Selection::updateVisibl";
+    if (thumbView->isVisible()) thumbView->updateVisible(src);
+    if (gridView->isVisible()) gridView->updateVisible(src);
+    if (tableView->isVisible()) tableView->updateVisible(src);
 }
 
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
@@ -157,11 +159,11 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
             shiftExtendIndex = sfIdx;
         }
         updateVisible();
-        qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
+        //qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
         return;
     }
     if (modifiers & Qt::ShiftModifier) {
-        qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
+        //qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
         shiftExtendIndex = sfIdx;
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
@@ -169,7 +171,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         updateVisible();
         return;
     }
-    qDebug() << "Selection::select  Fall through";
+    //qDebug() << "Selection::select  Fall through";
     sm->clear();
     setCurrentIndex(sfIdx);
     updateVisible();

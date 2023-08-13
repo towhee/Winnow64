@@ -51,8 +51,8 @@ public:
         Enlarge = -1
     };
 
-    void updateVisible(int sfRow = -1);
-    void updateVisibleCellCount();
+    void updateVisible(QString src);
+    void updateVisibleCellCount(QString src);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -104,6 +104,7 @@ protected:
     void startDrag(Qt::DropActions) override;
     void wheelEvent(QWheelEvent *event) override;
     bool event(QEvent *event) override;
+    void showEvent(QShowEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
