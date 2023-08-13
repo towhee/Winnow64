@@ -407,12 +407,18 @@ QSize IconView::getCellSize()
     return iconViewDelegate->getCellSize();
 }
 
-void IconView::updateVisibleCellCount()
+void IconView::updateVisibleCellCount(QString src)
 /*
     Calculate parameters that are based on the sell and viewport size.  Called
     when these change.
 */
 {
+    QElapsedTimer t;
+//    /*
+    qDebug() << "IconView::updateVisibleCellCount src =" << src
+             << "current row = " << dm->currentSfRow;
+    //*/
+    t.start();
     cellSize = getCellSize();
     QSize vp = viewport()->size();
     cellsPerRow = vp.width() / cellSize.width();
@@ -422,6 +428,7 @@ void IconView::updateVisibleCellCount()
     cellsPerVP = (int)(cellsPerRow * rowsPerVP);
     cellsPerPage = cellsPerPageRow * rowsPerPage;
     visibleCellCount = cellsPerVP;
+    qDebug() << "IconView::updateVisibleCellCount elapsed =" << t.nsecsElapsed() << t.elapsed();
     /*
     qDebug() << "IconView::updateVisibleCellCount"
              << "cellsPerRow" << cellsPerRow
@@ -434,7 +441,7 @@ void IconView::updateVisibleCellCount()
     //*/
 }
 
-void IconView::updateVisible(int sfRow)
+void IconView::updateVisible(QString src)
 {
 /*
     The firstVisibleCell and lastVisibleCell are determined in iconViewDelegate.  They are
@@ -462,11 +469,27 @@ void IconView::updateVisible(int sfRow)
 
         By iterating back and forth the firstVisible and lastVisible is determined.
 */
-    if (isDebug || G::isFlowLogger) G::log("IconView::updateVisible", objectName());
+    if (isDebug || G::isFlowLogger)
+        qDebug() << "IconView::updateVisible" << objectName() << "IconView::updateVisible src =" << src ;
 
     if (G::isInitializing || G::dmEmpty) return;
 
-    // get from scroll bars
+    /*
+    qDebug() << "IconView::updateVisible src =" << src;
+    //*/
+
+    // viewport paramters
+    cellSize = getCellSize();
+    QSize vp = viewport()->size();
+    cellsPerRow = vp.width() / cellSize.width();
+    cellsPerPageRow = (int)cellsPerRow;
+    rowsPerVP = vp.height() / cellSize.height();
+    rowsPerPage = (int)rowsPerVP;
+    cellsPerVP = (int)(cellsPerRow * rowsPerVP);
+    cellsPerPage = cellsPerPageRow * rowsPerPage;
+    visibleCellCount = cellsPerVP;
+
+    // get current position from scroll bars
     int n = dm->sf->rowCount() - 1;
     double rCells = cellsPerPageRow;
     double x;                               // scrollBar current value (position)
@@ -484,6 +507,7 @@ void IconView::updateVisible(int sfRow)
         firstVisibleCell = (int)r * cellsPerPageRow;
         int visibleRows = ceil(rowsPerVP - r1) + ceil(r1);
         int visibleCells = visibleRows * cellsPerPageRow;
+        /*
         qDebug() << "vpHt =" << viewport()->height()
                  << "cellHt =" << getCellSize().height()
                  << "r =" << r
@@ -492,7 +516,7 @@ void IconView::updateVisible(int sfRow)
                  << "visibleRows =" << visibleRows
                  << "visibleCells =" << visibleCells
                     ;
-
+        //*/
         lastVisibleCell = firstVisibleCell + visibleCells - 1;
     }
     else {
@@ -506,8 +530,14 @@ void IconView::updateVisible(int sfRow)
     if (lastVisibleCell > n) lastVisibleCell = n;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     /*
-    qDebug() << "IconView::updateVisible"
+    qDebug() << "\nIconView::updateVisible"
              << objectName()
+             << "cellsPerRow" << cellsPerRow
+             << "cellsPerPageRow" << cellsPerPageRow
+             << "rowsPerVP" << rowsPerVP
+             << "rowsPerPage" << rowsPerPage
+             << "cellsPerVP" << cellsPerVP
+             << "cellsPerPage" << cellsPerPage
              << "n =" << n
              << "x =" << x
              << "max =" << max
@@ -524,14 +554,13 @@ void IconView::updateVisible(int sfRow)
         //*/
     return;
 
-    /* Alternates
+    /* Alternatives
     // get from iconViewDelegate (only works if the icon/image is visible in cell))
     firstVisibleCell = iconViewDelegate->firstVisible;
     lastVisibleCell = iconViewDelegate->lastVisible;
     midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     return;
-    //*/
 
     int n = dm->sf->rowCount() - 1;
     bool isGrid = objectName() == "Grid";
@@ -692,7 +721,7 @@ QModelIndex IconView::pageUpIndex(int fromRow)
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
-    if (isDebug || G::isFlowLogger) G::log("IconView::sortThumbs", objectName());
+    if (isDebug || G::isFlowLogger) qDebug() << "IconView::sortThumbs" << objectName();
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
     qDebug() << "IconView::sortThumbs";
@@ -706,17 +735,11 @@ void IconView::setThumbSize()
 */
     if (isDebug) G::log("IconView::setThumbSize", objectName());
     if (isDebug) qDebug() << "IconView::setThumbSize";
+    QString src = "IconView::setThumbSize";
 
-//    int pxAvail = getCellSize().width() * 1.1 * 0.8;
-//    badgeSize = fitBadge(pxAvail);
-
-    updateVisibleCellCount();
-    updateVisible();
     setThumbParameters();
-    updateVisibleCellCount();
-//    visibleCellCount = cellsInViewport();
-    updateVisible();
-//    setThumbParameters();
+    //updateVisibleCellCount(src);
+    updateVisible(src);
 
     QModelIndex scrollToIndex;
     int currentRow = currentIndex().row();
@@ -841,8 +864,9 @@ void IconView::rejustify()
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    updateVisibleCellCount();
-    updateVisible(currentIndex().row());
+    QString src = "IconView::rejustify";
+    //updateVisibleCellCount(src);
+    updateVisible(src);
 }
 
 void IconView::justify(JustifyAction action)
@@ -891,8 +915,9 @@ void IconView::justify(JustifyAction action)
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    updateVisibleCellCount();
-    updateVisible(currentIndex().row());
+    QString src = "IconView::justify";
+    //updateVisibleCellCount(src);
+    updateVisible(src);
 }
 
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -969,8 +994,9 @@ void IconView::resizeEvent(QResizeEvent *)
     // return if grid view has not been opened yet
     //if (m2->gridDisplayFirstOpen) return;
 
-    updateVisibleCellCount();
-    updateVisible();
+    QString src = "IconView::resizeEvent";
+    //updateVisibleCellCount(src);
+    updateVisible(src);
     m2->numberIconsVisibleChange();
     /*
     qDebug() << "IconView::resizeEvent"
@@ -1168,7 +1194,7 @@ void IconView::scrollToRow(int row, QString source)
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
     if (!idx.isValid()) {
-        qDebug() << "IconView::scrollToRow" << row;
+        //qDebug() << "IconView::scrollToRow" << row;
         return;
     }
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
@@ -1247,6 +1273,15 @@ bool IconView::event(QEvent *event) {
 
     QListView::event(event);
     return true;
+}
+
+void IconView::showEvent(QShowEvent *event)
+{
+    qDebug() << "IconView::showEvent" << objectName() << event;
+    QString src = "IconView::showEvent";
+    //updateVisibleCellCount(src);
+    updateVisible(src);
+    QListView::showEvent(event);
 }
 
 void IconView::paintEvent(QPaintEvent *event)
@@ -1427,6 +1462,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << "src =" << src
              << idx
              << "forceUpdate =" << forceUpdate
+             << "isFit =" << m2->imageView->isFit
              << mousePos;
              //*/
     QString failReason = "";
@@ -1477,14 +1513,16 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "imW < cW && imH < cH";
     }
 
-    // debugging
+    /* debugging
     if (failReason.length()) {
         qWarning() << "WARNING IconView::zoomCursor Failed because" << failReason;
-        return;
     }
     else {
         qDebug() << "IconView::zoomCursor" << "Succeeded";
     }
+    //*/
+
+    if (failReason.length()) return;
 
     prevIdx = idx;
 

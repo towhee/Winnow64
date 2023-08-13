@@ -30,7 +30,7 @@ public slots:
     void showOrHide();
     QModelIndex pageUpIndex(int fromRow = 0);
     QModelIndex pageDownIndex(int fromRow);
-    void updateVisible();
+    void updateVisible(QString src);
     void resizeColumns();
 
 protected:

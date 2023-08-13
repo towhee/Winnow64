@@ -269,7 +269,7 @@ void DataModel::setModelProperties()
 void DataModel::clearDataModel()
 {
     lastFunction = "";
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::clearDataModel";
     // clear the model
     if (mLock) return;
     if (isDebug) qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
@@ -457,10 +457,11 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
       but on demand when the user selects the filter panel or a menu filter command.
 */
     lastFunction = "";
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
+//    if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
 
     clearDataModel();
-    if (isDebug) qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     filters->loadingDataModel(false);
@@ -572,11 +573,12 @@ bool DataModel::addFileData()
     • ErrColumn
 */
     lastFunction = "";
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
-    if (isDebug) qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
-    QString logmsg = QString::number(fileInfoList.count()) + " images";
+//    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
+//    QString logmsg = QString::number(fileInfoList.count()) + " images";
 //    qDebug() << "DataModel::addFileDataForRow" << logmsg;
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileDataForRow", logmsg);
+//    if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addFileDataForRow" << logmsg;
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
@@ -923,7 +925,7 @@ void DataModel::addAllMetadata()
     to run as a separate thread and can be executed directly.
 */
     lastFunction = "DataModel::addAllMetadata";
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addAllMetadata");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addAllMetadata";
     if (isDebug) qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentFolderPath;
 //    G::t.restart();
 

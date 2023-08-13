@@ -620,7 +620,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         // crash log
         setting->setValue("hasCrashed", true);
 
-        if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "Winnow running");
+        if (G::isLogger || G::isFlowLogger) qDebug() << "MW::MW", "Winnow running";
     }
 }
 
@@ -658,7 +658,7 @@ void MW::showEvent(QShowEvent *event)
         MW::updateDisplayResolution()
     MW::restoreLastSessionGeometryState()
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::showEvent";
 
 //    QMainWindow::showEvent(event);
 
@@ -1001,11 +1001,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             if (obj->objectName() == "MWWindow") {
                 QKeyEvent *e = static_cast<QKeyEvent *>(event);
-                qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
-                         //                     << "obj:" << obj << "\t"
-                         << "obj->objectName:" << obj->objectName()
-                    //                     << "object->metaObject()->className:" << obj->metaObject()->className()
+                if (G::isLogger || G::isFlowLogger)
+                    qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
+                             << "obj->objectName:" << obj->objectName()
                     ;
+                if (e->key() == Qt::Key_Return) loupeDisplay();
                 if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
                 if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
                 if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
@@ -1758,8 +1758,7 @@ Current model row:
     QSignalBlocker blocker(bookmarks);
 
     if (G::isLogger || G::isFlowLogger) {
-        G::log("skipline");
-        G::log("MW::selectionChange");
+        qDebug() << "MW::selectionChange";
     }
     qDebug() << "MW::selectionChange" << "instance" << dm->instance;
     qDebug() << " ";
@@ -1810,8 +1809,7 @@ void MW::folderSelectionChange()
 
 
     if (G::isLogger || G::isFlowLogger) {
-        G::log("skipline");
-        G::log("MW::folderSelectionChange");
+        qDebug() << "\nMW::folderSelectionChange";
     }
 
     G::t.restart();
@@ -2005,12 +2003,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::fileSelectionChange" << src << current.data(G::PathRole).toString();
 
     if (G::stop) {
-        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-            "G::stop so exit");
-        qDebug() << "MW::fileSelectionChange G::stop so exit";
+        if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::fileSelectionChange G::stop = true so exit";
         return;
     }
 
@@ -2037,8 +2035,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 || isFilterChange
                 || (G::isLoadLinear && !G::isLinearLoadDone))
         {
-            if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-                "Initializing or invalid row so exit");
+            if (G::isLogger || G::isFlowLogger)
+                qDebug() << "MW::fileSelectionChange  Initializing or invalid row so exit";
             //qDebug() << "MW::fileSelectionChange  current.row() == -1  so return";
             return;
         }
@@ -2053,8 +2051,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // if starting program, return
     if (current.row() == -1) {
-        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
-            "Invalid row, select row 0 so exit");
+        if (G::isLogger || G::isFlowLogger)
+            qDebug() << "MW::fileSelectionChange  Invalid row, select row 0 so exit";
         return;
     }
 
@@ -2272,7 +2270,7 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", G::currRootFolder);
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::stop" << G::currRootFolder;
 
     G::stop = true;
     dm->abortLoadingModel = true;
@@ -2465,7 +2463,12 @@ bool MW::updateIconRange(int row, QString src)
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::updateIconRange", "src = " + src + " row = " + QString::number(row));
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::updateIconRange  src =" << src + " row =" << QString::number(row);
+        /*
+    qDebug() << "MW::updateIconRange src =" << src;
+    //*/
+
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
     static int chunkSize = dm->defaultIconChunkSize;
@@ -2475,21 +2478,21 @@ bool MW::updateIconRange(int row, QString src)
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
-        thumbView->updateVisible(row);
+        thumbView->updateVisible("MW::updateIconRange");
         if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
 
     }
 
     if (gridView->isVisible()) {
-        gridView->updateVisible(row);
+        gridView->updateVisible("MW::updateIconRange");
         if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
 
     }
 
     if (tableView->isVisible()) {
-        tableView->updateVisible();
+        tableView->updateVisible("MW::updateIconRange");
         if (tableView->firstVisibleRow < firstVisible) firstVisible = tableView->firstVisibleRow;
         if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
     }
@@ -2555,8 +2558,7 @@ void MW::loadConcurrentNewFolder()
 */
 {
     QString fun = "MW::loadConcurrentNewFolder";
-    if (G::isFlowLogger2) qDebug() << fun << G::currRootFolder;
-    if (G::isLogger || G::isFlowLogger) G::log(fun);
+    if (G::isLogger || G::isFlowLogger) qDebug() << fun << G::currRootFolder;
 
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;
@@ -2624,8 +2626,8 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTrig
 */
 {
     if (G::isLogger || G::isFlowLogger)
-        G::log("MW::loadConcurrent", "Row = " + QString::number(sfRow) +
-        " scrollOnly = " + QVariant(scrollOnly).toString());
+        qDebug() << "MW::loadConcurrent  Row =" << QString::number(sfRow)
+                 << "scrollOnly = " << QVariant(scrollOnly).toString();
     //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow << "scrollOnly =" << scrollOnly;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
@@ -2646,7 +2648,7 @@ void MW::loadConcurrentDone()
 */
     QSignalBlocker blocker(bookmarks);
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentMetaDone");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadConcurrentMetaDone";
     QString src = "MW::loadConcurrentMetaDone ";
     int count = 0;
     /*
@@ -2700,8 +2702,8 @@ void MW::loadLinearNewFolder()
     still used (as a separate thread) for updating icons when scroll, resize or change icon
     selection.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadLinearNewFolder");
+//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadLinearNewFolder";
 
     QString src = "MW::loadLinearNewFolder ";
 
@@ -2795,8 +2797,8 @@ void MW::loadLinearNewFolder()
         metadata->missingThumbnailWarning();
     }
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadLinearNewFolder", "DONE");
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadLinearNewFolder  DONE\n";
+//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
 }
 
 void MW::loadImageCacheForNewFolder()
@@ -2806,8 +2808,8 @@ void MW::loadImageCacheForNewFolder()
     been loaded for a new folder selection. The imageCache loads images until the
     assigned amount of memory has been consumed or all the images are cached.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadImageCacheForNewFolder");
+//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadImageCacheForNewFolder";
 
     // clear the central
     setCentralMessage("");
@@ -2885,7 +2887,7 @@ void MW::thumbHasScrolled()
     This was to prevent many scroll calls from bunching up. The new approach just aborts
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::thumbHasScrolled");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::thumbHasScrolled";
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 //    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
@@ -2937,7 +2939,9 @@ void MW::gridHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::gridHasScrolled", "Visible (0 = false) = " + QString::number(gridView->isVisible()));
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
+                 << QString::number(gridView->isVisible());
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
     if (gridView->isHidden()) return;
 
@@ -2983,7 +2987,7 @@ void MW::tableHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::tableHasScrolled");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::tableHasScrolled";
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -3005,7 +3009,7 @@ void MW::numberIconsVisibleChange()
     metadataCacheThread is restarted at the row of the first visible thumb after the
     scrolling.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::numberIconsVisibleChange");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::numberIconsVisibleChange";
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
     bool chunkSizeChanged = updateIconRange(dm->currentSfRow, "MW::numberIconsVisibleChange");
     /*
@@ -3076,8 +3080,9 @@ void MW::loadEntireMetadataCache(QString source)
     separate thread as the filter and sort operations cannot commence until all the metadata
     has been loaded.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadEntireMetadataCache", "Source: " + source);
-    qDebug() << "MW::loadEntireMetadataCache"
+//    if (G::isLogger || G::isFlowLogger) G::log("MW::loadEntireMetadataCache", "Source: " + source);
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::loadEntireMetadataCache"
              << "Source: " << source
              << "G::isInitializing: " << G::isInitializing
              ;
@@ -3189,7 +3194,7 @@ void MW::updateIconBestFit()
     thumbs triggers an unwanted scrolling, so the first visible thumbnail is recorded before
     the bestAspect is called and the IconView is returned to its previous position after.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::updateIconBestFit");
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::updateIconBestFit";
     if (G::stop) return;
     gridView->bestAspect();
     thumbView->bestAspect();
@@ -3200,7 +3205,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 /*
     Called by signal itemClicked in bookmark.
 */
-    if (G::isLogger) G::log("MW::bookmarkClicked");
+    if (G::isLogger) qDebug() << "MW::bookmarkClicked";
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
 

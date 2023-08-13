@@ -299,8 +299,8 @@ void Filters::removeChildrenDynamicFilters()
     folder is selected.  This function removes any pre-existing children to
     prevent duplication and orphans.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::removeChildrenDynamicFilters"
                     ;
     picks->takeChildren();
@@ -723,8 +723,8 @@ void Filters::loadingDataModel(bool isLoaded)
 
 void Filters::startBuildFilters(bool isReset)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::startBuildFilters"
                     ;
     if (isReset) removeChildrenDynamicFilters();
@@ -768,8 +768,8 @@ void Filters::clearAll()
     Uncheck all the filter items but do not signal filter change.  This is called when a new
     folder is selected to reset the filter criteria.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::clearAll");
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::clearAll");
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::clearAll"
                     ;
     QTreeWidgetItemIterator it(this);
@@ -796,8 +796,8 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
     Determines if there is another category expanded in the tree.  This is used to
     control solo mode in mousePressEvent.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::otherHdrExpanded");
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::otherHdrExpanded");
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::otherHdrExpanded"
                     ;
     for (int i = 0; i < topLevelItemCount(); ++i) {
@@ -1090,8 +1090,8 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
     The itemMap contains the total unfiltered count for the item.  This is set for both
     unfiltered and filtered totals since the DataModel has not been filtered at this time.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryItems", category->text(0));
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryItems", category->text(0));
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::addCategoryItems"
                  << "category =" << category->text(0)
                     ;
@@ -1130,8 +1130,8 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     If a category item was just checked (activeCategory) then it is ignored, as the user
     may want to check another item in the same category.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    if (debugFilters)
+//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
+    if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::addFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;
