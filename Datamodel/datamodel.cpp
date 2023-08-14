@@ -1453,6 +1453,27 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
     mutex.unlock();
 }
 
+void DataModel::setCurrent(QModelIndex sfIdx, int instance)
+{
+    if (instance != this->instance) {
+        if (G::isWarningLogger)
+        qWarning() << "WARNING" << "DataModel::setValuePath" << "Instance conflict = "
+                   << "DM instance =" << this->instance
+                   << "Src instance =" << instance
+            ;
+        return;
+    }
+
+    // update current index parameters
+    mutex.lock();
+    currentSfIdx = sfIdx;
+    currentSfRow = sfIdx.row();
+    currentDmIdx = sf->mapToSource(currentSfIdx);
+    currentDmRow = currentDmIdx.row();
+    currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
+    mutex.unlock();
+}
+
 void DataModel::setValuePath(QString fPath, int col, QVariant value, int instance, int role)
 {
     lastFunction = "";
