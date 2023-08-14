@@ -45,6 +45,7 @@ signals:
                         QString src = "Selection::currentChanged");
     void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
     void updateStatus(bool, QString, QString);
+    void updateCurrent(QModelIndex sfIdx, int instance);
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);

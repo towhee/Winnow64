@@ -152,6 +152,7 @@ public slots:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
+    void setCurrent(QModelIndex sfIdx, int instance);
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);

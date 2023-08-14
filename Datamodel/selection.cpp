@@ -100,12 +100,14 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 {
     if (G::isLogger || isDebug) G::log("Selection::updateCurrentIndex");
 
-    // update cursor
-    dm->currentSfIdx = sfIdx;
-    dm->currentSfRow = sfIdx.row();
-    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
-    dm->currentDmRow = dm->currentDmIdx.row();
-    dm->currentFilePath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    // update datamodel current parameters
+    dm->setCurrent(sfIdx, G::dmInstance);
+//    emit updateCurrent(sfIdx, G::dmInstance);
+//    dm->currentSfIdx = sfIdx;
+//    dm->currentSfRow = sfIdx.row();
+//    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
+//    dm->currentDmRow = dm->currentDmIdx.row();
+//    dm->currentFilePath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     shiftAnchorIndex = sfIdx;
     shiftExtendIndex = sfIdx;
 }
