@@ -975,27 +975,17 @@ void ImageView::wheelEvent(QWheelEvent *event)
 {
     if (G::isLogger) qDebug() << "ImageView::wheelEvent";
     //qDebug() << "ImageView::wheelEvent";
+
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;
     static int prevDelta = 0;
-    int delta;
-    int dx = event->angleDelta().x();
-    int dy = event->angleDelta().y();
-    dx == 0 ? delta = dy : delta = dx;
-    bool isForward =true;
-    if (dx > 0) isForward = false;
-    if (dy < 0) isForward = false;
-    //int delta = event->angleDelta().y();
-    //int delta = event->angleDelta().x();
+    int delta = event->angleDelta().y();
     if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
         deltaSum = delta;
     }
     deltaSum += delta;
-//    /*
+    /*
     qDebug() << "ImageView::wheelEvent"
-             << "dx =" << dx
-             << "dy =" << dy
-             << "isForward =" << isForward
              << "delta =" << delta
              << "prevDelta =" << prevDelta
              << "deltaSum =" << deltaSum
@@ -1003,19 +993,54 @@ void ImageView::wheelEvent(QWheelEvent *event)
                 ;
                 //*/
 
-    if (isForward) sel->next();
-    else sel->prev();
-    return;
-
     if (deltaSum > G::wheelSensitivity) {
-        sel->next();
+        sel->prev();
         deltaSum = 0;
     }
 
     if (deltaSum < (-G::wheelSensitivity)) {
-        sel->prev();
+        sel->next();
         deltaSum = 0;
     }
+
+    return;
+
+//    // wheel scrolling / trackpad swiping = next/previous image
+//    static int deltaSum = 0;
+//    static int prevDelta = 0;
+//    int delta;
+//    int dx = event->angleDelta().x();
+//    int dy = event->angleDelta().y();
+//    dx == 0 ? delta = dy : delta = dx;
+//    bool isForward =true;
+//    if (dx > 0) isForward = false;
+//    if (dy < 0) isForward = false;
+//    //int delta = event->angleDelta().y();
+//    //int delta = event->angleDelta().x();
+//    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
+//        deltaSum = delta;
+//    }
+//    deltaSum += delta;
+////    /*
+//    qDebug() << "ImageView::wheelEvent"
+//             << "dx =" << dx
+//             << "dy =" << dy
+//             << "isForward =" << isForward
+//             << "delta =" << delta
+//             << "prevDelta =" << prevDelta
+//             << "deltaSum =" << deltaSum
+//             << "G::wheelSensitivity =" << G::wheelSensitivity
+//                ;
+//                //*/
+
+////    if (isForward) sel->next();
+////    else sel->prev();
+////    return;
+
+//    if (qAbs(delta) < G::wheelSensitivity) return;
+//    deltaSum = 0;
+//    if (isForward) sel->next();
+//    else sel->prev();
 }
 
 bool ImageView::event(QEvent *event) {

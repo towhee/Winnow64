@@ -2323,7 +2323,7 @@ bool MW::stop(QString src)
 
     if (G::isLoadConcurrent) {
         G::t.restart();
-        bool metaReadThreadStopped = metaReadThread->stop();
+        //bool metaReadThreadStopped = metaReadThread->stop();
         if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
                  << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
