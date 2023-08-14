@@ -28,7 +28,7 @@ public:
     int firstVisibleCell;
     int midVisibleCell;
     int lastVisibleCell;
-    double visibleCellCount;
+    double visibleCellCount;            // same as cellsPerVP
 
     // Viewport / page cell counts
     double cellsPerRow;                 // includes partly visible cells
