@@ -588,6 +588,7 @@ void ImageCache::fixOrphans()
     range is shown as isCaching it is reset, and if the image is cached then it is
     removed from the imCache and the cached flag is reset to false.
 */
+    return;
     if (debugCaching) {
         qDebug().noquote()
             << "ImageCache::fixOrphans"
@@ -1604,6 +1605,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
                               ;
     }
 
+    // cache the image
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // Check if initial sizeMB was estimated (image without preview metadata ie PNG)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
@@ -1622,6 +1624,10 @@ void ImageCache::cacheImage(int id, int cacheKey)
                        << "cache size =" << icd->cache.currMB
                           ;
                           */
+
+//    qDebug().noquote() << "ImageCache::cacheImage"
+//                       << decoder[id]->fPath
+//                       << dm->currentFilePath;
     // set datamodel isCached = true
     emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
     if (decoder[id]->status != ImageDecoder::Status::Video) {

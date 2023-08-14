@@ -679,6 +679,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
+    connect(this, &MW::imageWheelEvent, imageView, &ImageView::wheel);
     connect(imageCacheThread, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 

@@ -105,6 +105,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
     dm->currentSfRow = sfIdx.row();
     dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
     dm->currentDmRow = dm->currentDmIdx.row();
+    dm->currentFilePath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     shiftAnchorIndex = sfIdx;
     shiftExtendIndex = sfIdx;
 }

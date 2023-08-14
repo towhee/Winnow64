@@ -229,7 +229,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     //*/
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
-        //qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
+        qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
         bool imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));
@@ -965,21 +965,37 @@ void ImageView::scrollContentsBy(int dx, int dy)
 //{
 //    qDebug() << G::t.restart() << "\t" << "drag";
 //}
+void ImageView::wheel(QWheelEvent *event)
+{
+    qDebug() << "ImageView::wheel" << event;
+    wheelEvent(event);
+}
 
 void ImageView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) G::log("ImageView::wheelEvent");
-
+    if (G::isLogger) qDebug() << "ImageView::wheelEvent";
+    //qDebug() << "ImageView::wheelEvent";
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;
     static int prevDelta = 0;
-    int delta = event->angleDelta().y();
+    int delta;
+    int dx = event->angleDelta().x();
+    int dy = event->angleDelta().y();
+    dx == 0 ? delta = dy : delta = dx;
+    bool isForward =true;
+    if (dx > 0) isForward = false;
+    if (dy < 0) isForward = false;
+    //int delta = event->angleDelta().y();
+    //int delta = event->angleDelta().x();
     if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
         deltaSum = delta;
     }
     deltaSum += delta;
-    /*
+//    /*
     qDebug() << "ImageView::wheelEvent"
+             << "dx =" << dx
+             << "dy =" << dy
+             << "isForward =" << isForward
              << "delta =" << delta
              << "prevDelta =" << prevDelta
              << "deltaSum =" << deltaSum
@@ -987,13 +1003,17 @@ void ImageView::wheelEvent(QWheelEvent *event)
                 ;
                 //*/
 
+    if (isForward) sel->next();
+    else sel->prev();
+    return;
+
     if (deltaSum > G::wheelSensitivity) {
-        sel->prev();
+        sel->next();
         deltaSum = 0;
     }
 
     if (deltaSum < (-G::wheelSensitivity)) {
-        sel->next();
+        sel->prev();
         deltaSum = 0;
     }
 }
@@ -1002,8 +1022,7 @@ bool ImageView::event(QEvent *event) {
     /*
         Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
     */
-//    if (G::isLogger) G::log("ImageView::event");
-//    qDebug() << "ImageView::event" << event;
+    //qDebug() << "ImageView::event" << event << event->type();
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
         /*

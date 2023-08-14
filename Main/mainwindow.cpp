@@ -1018,6 +1018,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     } // end section
 
+    /*  WHEEL EVENT INTERCEPT
+
+    */
+    {
+        if (!G::isInitializing && (event->type() == QEvent::Wheel)) {
+            qDebug() << "MW::eventFilter" << event;
+            QWheelEvent *e = static_cast<QWheelEvent*>(event);
+            if (imageView->isVisible()) emit imageWheelEvent(e);
+        }
+    } // end section
+
     /* EMBEL DOCK TITLE
 
     Set dock title if not tabified
@@ -2012,7 +2023,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-//    /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2059,15 +2070,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
 
-    // record current proxy row (dm->sf) as it is used to sync everything
-//    dm->currentSfRow = current.row();
-//    dm->currentSfIdx = dm->sf->index(current.row(), 0);
-//    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
-//    dm->currentDmRow = dm->currentDmIdx.row();
     // the file path is used as an index in ImageView
     QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
-    dm->currentFilePath = fPath;
+    //dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
@@ -2088,10 +2094,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
     G::fileSelectionChangeSource = "";
 
-    // set focus to enable shift + direction keys
-//    if (gridView->isVisible()) gridView->setFocus();
-//    if (thumbView->isVisible()) thumbView->setFocus();
-
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
     // new file name appended to window title
@@ -2110,12 +2112,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
         }
         else {
-            if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
-                updateClassification();
-                if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-            }
-            else {
-                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+            if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
+                if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+                    updateClassification();
+                    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+                }
+                else {
+                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+                }
             }
         }
     }
