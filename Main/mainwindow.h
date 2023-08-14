@@ -378,7 +378,7 @@ signals:
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
-
+    void imageWheelEvent(QWheelEvent *event);
     void testAddToDM(ImageMetadata m, QString src);
 
 public slots:

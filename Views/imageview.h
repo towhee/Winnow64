@@ -95,6 +95,7 @@ public slots:
     void hideCursor();
     void refresh();
     void setClassificationBadgeImageDiam(int d);
+    void wheel(QWheelEvent *event);
     void activateRubberBand();
     void quitRubberBand();
 
