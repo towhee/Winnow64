@@ -2468,7 +2468,7 @@ bool MW::updateIconRange(int row, QString src)
     it is less than the visible thumbnails.
 */
     if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::updateIconRange  src =" << src + " row =" << QString::number(row);
+        qDebug() << "    MW::updateIconRange  src =" << src + " row =" << QString::number(row);
         /*
     qDebug() << "MW::updateIconRange src =" << src;
     //*/
@@ -2519,11 +2519,20 @@ bool MW::updateIconRange(int row, QString src)
     metadataCacheThread->visibleIcons = visibleIcons;
 
     // DataModel (Concurrent metadata loading) icon range
-    int firstIconRow = dm->currentSfRow - dm->iconChunkSize / 2;
-    if (firstIconRow < 0) firstIconRow = 0;
-    int lastIconRow = firstIconRow + dm->iconChunkSize;
-    if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
-    dm->setIconRange(firstVisible, lastVisible, firstIconRow, lastIconRow);
+    int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
+    if (firstChunkRow < 0) firstChunkRow = 0;
+    int lastChunkRow = firstChunkRow + dm->iconChunkSize;
+    if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
+    dm->setIconRange(firstVisible, lastVisible, firstChunkRow, lastChunkRow);
+
+    // update icons cached if chunkSizeChanged
+    if (chunkSizeChanged) {
+        if (G::isLoadLinear) {
+        metadataCacheThread->sizeChange("MW::numberIconsVisibleChange");
+        }
+        else
+        loadConcurrent(dm->midIconRange, true);
+    }
 
     /* debug
     qDebug()
@@ -3596,7 +3605,7 @@ void MW::thumbsEnlarge()
 //    return;
 //    scrollToCurrentRow();
     // may be less icons to cache
-    numberIconsVisibleChange();
+    //numberIconsVisibleChange();
 
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
     if (thumbView->isVisible())  {
@@ -3618,7 +3627,7 @@ void MW::thumbsShrink()
     return;
     scrollToCurrentRow();
     // may be more icons to cache
-    numberIconsVisibleChange();
+    //numberIconsVisibleChange();
 
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
     if (thumbView->isVisible())  {

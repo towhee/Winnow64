@@ -413,12 +413,10 @@ void IconView::updateVisibleCellCount(QString src)
     when these change.
 */
 {
-    QElapsedTimer t;
 //    /*
-    qDebug() << "IconView::updateVisibleCellCount src =" << src
+    qDebug() << "    IconView::updateVisibleCellCount src =" << src
              << "current row = " << dm->currentSfRow;
     //*/
-    t.start();
     cellSize = getCellSize();
     QSize vp = viewport()->size();
     cellsPerRow = vp.width() / cellSize.width();
@@ -428,7 +426,6 @@ void IconView::updateVisibleCellCount(QString src)
     cellsPerVP = (int)(cellsPerRow * rowsPerVP);
     cellsPerPage = cellsPerPageRow * rowsPerPage;
     visibleCellCount = cellsPerVP;
-    qDebug() << "IconView::updateVisibleCellCount elapsed =" << t.nsecsElapsed() << t.elapsed();
     /*
     qDebug() << "IconView::updateVisibleCellCount"
              << "cellsPerRow" << cellsPerRow
@@ -439,17 +436,26 @@ void IconView::updateVisibleCellCount(QString src)
              << "cellsPerPage" << cellsPerPage
         ;
     //*/
+    updateVisible("IconView::updateVisibleCellCount");
+    m2->updateIconRange(-1, "IconView::updateVisibleCellCount");
 }
 
 void IconView::updateVisible(QString src)
 {
 /*
+    The datamodel sort/filter rows visible (cells) are updated:
+        firstVisibleCell
+        midVisibleCell
+        lastVisibleCell
+        visibleCellCount
+
+*/
+/*    Deprecated process:
+
     The firstVisibleCell and lastVisibleCell are determined in iconViewDelegate.  They are
     reset when an IconView::paintEvent is received by calling resetFirstLastVisible() in
     iconViewDelegate.  When IconView::paintEvent is received all visible cells are
     repainted in iconViewDelegate.
-
-    Deprecated process:
 
     Determine the first and last visible icons in the IconView viewport for any item in the
     datamodel. There are two options:
@@ -472,20 +478,20 @@ void IconView::updateVisible(QString src)
     if (G::isInitializing || G::dmEmpty) return;
 
     if (isDebug || G::isFlowLogger)
-        qDebug() << "### IconView::updateVisible"
+        qDebug() << "   IconView::updateVisible"
                  << objectName()
                  << "IconView::updateVisible src =" << src ;
 
     // viewport paramters
-    cellSize = getCellSize();
-    QSize vp = viewport()->size();
-    cellsPerRow = vp.width() / cellSize.width();
-    cellsPerPageRow = (int)cellsPerRow;
-    rowsPerVP = vp.height() / cellSize.height();
-    rowsPerPage = (int)rowsPerVP;
-    cellsPerVP = (int)(cellsPerRow * rowsPerVP);
-    cellsPerPage = cellsPerPageRow * rowsPerPage;
-    visibleCellCount = cellsPerVP;
+//    cellSize = getCellSize();
+//    QSize vp = viewport()->size();
+//    cellsPerRow = vp.width() / cellSize.width();
+//    cellsPerPageRow = (int)cellsPerRow;
+//    rowsPerVP = vp.height() / cellSize.height();
+//    rowsPerPage = (int)rowsPerVP;
+//    cellsPerVP = (int)(cellsPerRow * rowsPerVP);
+//    cellsPerPage = cellsPerPageRow * rowsPerPage;
+//    visibleCellCount = cellsPerVP;
 
     // get current position from scroll bars
     int n = dm->sf->rowCount() - 1;
@@ -736,8 +742,8 @@ void IconView::setThumbSize()
     QString src = "IconView::setThumbSize";
 
     setThumbParameters();
-    //updateVisibleCellCount(src);
-    updateVisible(src);
+    updateVisibleCellCount(src);
+    //updateVisible(src);
 
     QModelIndex scrollToIndex;
     int currentRow = currentIndex().row();
@@ -863,8 +869,8 @@ void IconView::rejustify()
 
     setThumbParameters();
     QString src = "IconView::rejustify";
-    //updateVisibleCellCount(src);
-    updateVisible(src);
+    updateVisibleCellCount(src);
+    //updateVisible(src);
 }
 
 void IconView::justify(JustifyAction action)
@@ -914,8 +920,8 @@ void IconView::justify(JustifyAction action)
 
     setThumbParameters();
     QString src = "IconView::justify";
-    //updateVisibleCellCount(src);
-    updateVisible(src);
+    updateVisibleCellCount(src);
+    //updateVisible(src);
 }
 
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
@@ -993,9 +999,9 @@ void IconView::resizeEvent(QResizeEvent *)
     //if (m2->gridDisplayFirstOpen) return;
 
     QString src = "IconView::resizeEvent";
-    //updateVisibleCellCount(src);
-    updateVisible(src);
-    m2->numberIconsVisibleChange();
+    updateVisibleCellCount(src);
+    //updateVisible(src);
+    //m2->numberIconsVisibleChange();
     /*
     qDebug() << "IconView::resizeEvent"
              << "Object =" << objectName()
@@ -1278,8 +1284,8 @@ void IconView::showEvent(QShowEvent *event)
     if (G::isInitializing || G::dmEmpty) return;
     qDebug() << "IconView::showEvent" << objectName() << event;
     QString src = "IconView::showEvent";
-    //updateVisibleCellCount(src);
-    updateVisible(src);
+    updateVisibleCellCount(src);
+    //updateVisible(src);
     QListView::showEvent(event);
 }
 
