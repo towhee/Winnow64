@@ -620,7 +620,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         // crash log
         setting->setValue("hasCrashed", true);
 
-        if (G::isLogger || G::isFlowLogger) qDebug() << "MW::MW", "Winnow running";
+        if (G::isLogger) qDebug() << "MW::MW  Winnow running";
     }
 }
 
@@ -916,8 +916,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
 
-    // uncomment below:
-    /* use to show all events being filtered - handy to figure out which to intercept
+    /* ALL EVENTS (uncomment to use)
     if (event->type()
                              != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
@@ -934,11 +933,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << "obj->objectName:" << obj->objectName()
                  << "object->metaObject()->className:" << obj->metaObject()->className()
                     ;
-//        return QWidget::eventFilter(obj, event);
+        //return QWidget::eventFilter(obj, event);
     }
-//*/
+    //*/
 
-    /* figure out key presses
+    /* DEBUG KEY PRESSES (uncomment to use)
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
     {
         G::log("MW::eventFilter", "Performance profiling");
@@ -970,12 +969,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
-    /* Specific event
+    /* DEBUG SPECIFIC EVENT (uncomment to use)
+    if (obj->objectName() == "GraphicsEffect") {
     if (event->type() == QEvent::FocusIn) {
             qDebug() << event << obj << embelDock->hasFocus();
     }*/
 
-    /* Specific objectName
+    /* DEBUG SPECIFIC OBJECTNAME (uncomment to use)
     if (obj->objectName() == "GraphicsEffect") {
 //        if (event->type()        != QEvent::Paint
 //                && event->type() != QEvent::UpdateRequest
@@ -2562,7 +2562,8 @@ void MW::loadConcurrentNewFolder()
 */
 {
     QString fun = "MW::loadConcurrentNewFolder";
-    if (G::isLogger || G::isFlowLogger) qDebug() << fun << G::currRootFolder;
+    if (G::isLogger || G::isFlowLogger)
+        qDebug().noquote() << fun << G::currRootFolder;
 
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;

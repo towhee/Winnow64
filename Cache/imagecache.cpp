@@ -588,7 +588,6 @@ void ImageCache::fixOrphans()
     range is shown as isCaching it is reset, and if the image is cached then it is
     removed from the imCache and the cached flag is reset to false.
 */
-    return;
     if (debugCaching) {
         qDebug().noquote()
             << "ImageCache::fixOrphans"

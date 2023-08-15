@@ -469,14 +469,12 @@ void IconView::updateVisible(QString src)
 
         By iterating back and forth the firstVisible and lastVisible is determined.
 */
-    if (isDebug || G::isFlowLogger)
-        qDebug() << "IconView::updateVisible" << objectName() << "IconView::updateVisible src =" << src ;
-
     if (G::isInitializing || G::dmEmpty) return;
 
-    /*
-    qDebug() << "IconView::updateVisible src =" << src;
-    //*/
+    if (isDebug || G::isFlowLogger)
+        qDebug() << "### IconView::updateVisible"
+                 << objectName()
+                 << "IconView::updateVisible src =" << src ;
 
     // viewport paramters
     cellSize = getCellSize();
@@ -1277,6 +1275,7 @@ bool IconView::event(QEvent *event) {
 
 void IconView::showEvent(QShowEvent *event)
 {
+    if (G::isInitializing || G::dmEmpty) return;
     qDebug() << "IconView::showEvent" << objectName() << event;
     QString src = "IconView::showEvent";
     //updateVisibleCellCount(src);
