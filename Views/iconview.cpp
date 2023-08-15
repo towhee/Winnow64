@@ -414,7 +414,7 @@ void IconView::updateVisibleCellCount(QString src)
 */
 {
 //    /*
-    qDebug() << "    IconView::updateVisibleCellCount src =" << src
+    qDebug() << "   IconView::updateVisibleCellCount src =" << src
              << "current row = " << dm->currentSfRow;
     //*/
     cellSize = getCellSize();
