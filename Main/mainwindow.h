@@ -1141,7 +1141,7 @@ private:
 
     QStringList dockTextNames;
     QList<QTabBar*> dockTabBars;
-    QList<RichTextTabBar*> dockRichTextTabBars;
+    //QList<RichTextTabBar*> dockRichTextTabBars;
 
     void createEmbel();
     void createDocks();

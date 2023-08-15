@@ -34,7 +34,7 @@ the desired Unicode code point.
 Unicode to QString:  QString s = QString::fromUcs4(0x4FF0);
 */
 
-// RichTextTabBar *****************************************************************************
+/* RichTextTabBar *****************************************************************************
 
 RichTextTabBar::RichTextTabBar(QWidget *parent) : QTabBar(parent)
 {
