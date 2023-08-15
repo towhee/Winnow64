@@ -2468,7 +2468,7 @@ bool MW::updateIconRange(int row, QString src)
     it is less than the visible thumbnails.
 */
     if (G::isLogger || G::isFlowLogger)
-        qDebug() << "    MW::updateIconRange  src =" << src + " row =" << QString::number(row);
+        qDebug() << "   MW::updateIconRange  src =" << src + " row =" << QString::number(row);
         /*
     qDebug() << "MW::updateIconRange src =" << src;
     //*/
