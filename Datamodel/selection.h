@@ -18,7 +18,6 @@ public:
     void select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(QModelIndex sfIdx, QModelIndex sfIdx2);
     void updateCurrentIndex(QModelIndex sfIdx);
-    void updateVisible();
     void setCurrentIndex(QModelIndex sfIdx);
     void setCurrentRow(int sfRow);
     void setCurrentPath(QString &fPath);
@@ -46,6 +45,7 @@ signals:
     void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
     void updateStatus(bool, QString, QString);
     void updateCurrent(QModelIndex sfIdx, int instance);
+//    void updateVisible();
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);

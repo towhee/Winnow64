@@ -65,21 +65,14 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
-    if (isDebug || G::isLogger || G::isFlowLogger)
-        qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row();
-//    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
-//        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
-//    if (isDebug || G::isLogger || G::isFlowLogger)
-//        G::log("Selection::currentIndex", "row = " + QString::number(sfIdx.row()));
-
     if (!sfIdx.isValid()) return;
 
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row()
+                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+                    ;
+
     updateCurrentIndex(sfIdx);
-    /*
-    qDebug() << "Selection::setCurrentIndex"
-             << "sfIdx =" << sfIdx
-        ;
-        //*/
 
     sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
@@ -91,6 +84,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
     else {
         if (G::isLoadConcurrent) {
             bool scrollOnly = false;
+            qDebug() << "Selection::currentIndex loadConcurrent";
             emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered);
         }
     }
@@ -103,21 +97,8 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
     // update datamodel current parameters
     dm->setCurrent(sfIdx, G::dmInstance);
 //    emit updateCurrent(sfIdx, G::dmInstance);
-//    dm->currentSfIdx = sfIdx;
-//    dm->currentSfRow = sfIdx.row();
-//    dm->currentDmIdx = dm->sf->mapToSource(dm->currentSfIdx);
-//    dm->currentDmRow = dm->currentDmIdx.row();
-//    dm->currentFilePath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     shiftAnchorIndex = sfIdx;
     shiftExtendIndex = sfIdx;
-}
-
-void Selection::updateVisible()
-{
-    QString src = "Selection::updateVisibl";
-    if (thumbView->isVisible()) thumbView->updateVisible(src);
-    if (gridView->isVisible()) gridView->updateVisible(src);
-    if (tableView->isVisible()) tableView->updateVisible(src);
 }
 
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
@@ -161,7 +142,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
             shiftAnchorIndex = sfIdx;
             shiftExtendIndex = sfIdx;
         }
-        updateVisible();
+//        emit updateVisible();
         //qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
         return;
     }
@@ -171,13 +152,13 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        updateVisible();
+//        updateVisible();
         return;
     }
     //qDebug() << "Selection::select  Fall through";
     sm->clear();
     setCurrentIndex(sfIdx);
-    updateVisible();
+//    updateVisible();
 }
 
 

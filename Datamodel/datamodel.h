@@ -73,8 +73,6 @@ public:
     bool isAllMetadataLoaded();
     int iconCount();
     void clearAllIcons();
-    void setIconRange(int firstVisible, int lastVisible, int first, int last);
-    void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
     int rowFromPath(QString fPath);
@@ -103,11 +101,9 @@ public:
     int currentDmRow;                   // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
-    int firstVisibleIcon;               // not used
-    int lastVisibleIcon;                // not used
-    int visibleIcons;                   // not used
-    int startIconRange;                 // used to determine MetaRead priority queue
-    int endIconRange;                   // used to determine MetaRead priority queue
+
+//    int startIconRange;                 // used to determine MetaRead priority queue
+//    int endIconRange;                   // used to determine MetaRead priority queue
     int midIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)

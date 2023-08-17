@@ -50,8 +50,8 @@ MetaRead::MetaRead(QObject *parent,
 
 MetaRead::~MetaRead()
 {
-    if (isDebug) qDebug() << "MetaRead::~MetaRead";
-    delete thumb;
+//    if (isDebug) qDebug() << "MetaRead::~MetaRead";
+//    delete thumb;
 }
 
 void MetaRead::setCurrentRow(int row, bool scrollOnly,
@@ -465,7 +465,7 @@ void MetaRead::triggerCheck()
     if (alreadyTriggered || scrollOnly) return;
     if (count == lastRow || count == imageCacheTriggerCount) {
         // start image caching thread after head start
-        if (isDebug || G::isLogger || G::isFlowLogger)
+//        if (isDebug || G::isLogger || G::isFlowLogger)
             qDebug() << "MetaRead::run  emit fileSelectionChange" << startPath;
         QModelIndex sfIdx = dm->sf->index(targetRow, 0);
         emit fileSelectionChange(sfIdx);

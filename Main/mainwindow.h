@@ -516,14 +516,15 @@ private slots:
                                 QString source);
     // caching
     void loadConcurrentNewFolder();
-    void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
+    void loadConcurrent(int sfRow, bool scrollOnly = false,
+                        bool fileSelectionChangeTriggered = false
+                        QString src = "");
     void loadConcurrentDone();
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);
-    bool updateIconRange(int row = -1, QString src = "");
-    void numberIconsVisibleChange();
+    bool updateIconRange(QString src = "");
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
