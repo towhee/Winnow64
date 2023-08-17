@@ -159,7 +159,7 @@ void MW::scrollToCurrentRow()
     visible hence need to scroll to the current row.
 */
     if (G::isLogger) G::log("MW::scrollToCurrentRow");
-    //qDebug() << "MW::scrollToCurrentRow";
+    qDebug() << "MW::scrollToCurrentRow";
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     G::wait(100);
@@ -171,7 +171,7 @@ void MW::scrollToCurrentRow()
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateIconRange(dm->currentSfRow, "MW::scrollToCurrentRow");
+    updateIconRange("MW::scrollToCurrentRow");
     metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
 }
 

@@ -436,8 +436,7 @@ void IconView::updateVisibleCellCount(QString src)
              << "cellsPerPage" << cellsPerPage
         ;
     //*/
-    updateVisible("IconView::updateVisibleCellCount");
-    m2->updateIconRange(-1, "IconView::updateVisibleCellCount");
+    m2->updateIconRange("IconView::updateVisibleCellCount");
 }
 
 void IconView::updateVisible(QString src)
@@ -737,8 +736,11 @@ void IconView::setThumbSize()
 /*
 
 */
+    if (G::isInitializing) return;
+
     if (isDebug) G::log("IconView::setThumbSize", objectName());
-    if (isDebug) qDebug() << "IconView::setThumbSize";
+//    if (isDebug)
+        qDebug() << "IconView::setThumbSize";
     QString src = "IconView::setThumbSize";
 
     setThumbParameters();
@@ -760,7 +762,7 @@ void IconView::setThumbSize()
              << "scrollToIndex.row() =" << scrollToIndex.row()
                 ;
                 //*/
-    G::ignoreScrollSignal = true;
+//    G::ignoreScrollSignal = true;
     scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
 }
 
@@ -1000,8 +1002,6 @@ void IconView::resizeEvent(QResizeEvent *)
 
     QString src = "IconView::resizeEvent";
     updateVisibleCellCount(src);
-    //updateVisible(src);
-    //m2->numberIconsVisibleChange();
     /*
     qDebug() << "IconView::resizeEvent"
              << "Object =" << objectName()
@@ -1191,7 +1191,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-    /*
+//    /*
     qDebug() << "IconView::scrollToRow" << objectName() << "row =" << row
              << "requested by" << source;
                 // */
@@ -1210,9 +1210,11 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
-    /*
+//    /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
-        << "source =" << source;
+        << "source =" << source
+        << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+           ;
     // */
     if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);

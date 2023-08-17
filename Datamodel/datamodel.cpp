@@ -1726,49 +1726,6 @@ void DataModel::clearAllIcons()
     mutex.unlock();
 }
 
-void DataModel::setIconRange(int firstVisible, int lastVisible, int first, int last)
-{
-    lastFunction = "";
-    if (isDebug) qDebug() << "DataModel::setIconRange" << "instance =" << instance << currentFolderPath;
-    mutex.lock();
-    firstVisibleIcon = firstVisible;
-    lastVisibleIcon = lastVisible;
-    visibleIcons = lastVisible - firstVisible;
-    startIconRange = first;
-    endIconRange = last;
-    midIconRange = first + (last - first) / 2;
-    mutex.unlock();
-}
-
-void DataModel::clearOutOfRangeIcons(int startRow)
-{
-/*
-    Not used.  See MetaRead::cleanupIcons
-*/
-//    qDebug() << "DataModel::clearOutOfRangeIcons" << startRow;
-    lastFunction = "";
-    if (isDebug) qDebug() << "DataModel::clearOutOfRangeIcons" << "instance =" << instance
-                          << "startRow =" << startRow
-                          << currentFolderPath;
-    mutex.lock();
-    startIconRange = startRow - iconChunkSize / 2;
-    if (startIconRange< 0) startIconRange = 0;
-    endIconRange = startIconRange + iconChunkSize;
-    for (int row = 0; row < rowCount(); ++row) {
-        int sfRow = sf->mapFromSource(index(row, 0)).row();
-        if (sfRow >= startIconRange && sfRow <= endIconRange) {
-            continue;
-        }
-//        qDebug() << "DataModel::clearOutOfRangeIcons  itemFromIndex  row =" << row;
-        QStandardItem *item = itemFromIndex(index(row, 0));
-        if (item->icon().isNull()) {
-            continue;
-        }
-        item->setIcon(QIcon());
-    }
-    mutex.unlock();
-}
-
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
     lastFunction = "";
