@@ -42,7 +42,9 @@ signals:
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
                         QString src = "Selection::currentChanged");
-    void loadConcurrent(int sfRow, bool scrollOnly = false, bool fileSelectionChangeTriggered = false);
+    void loadConcurrent(int sfRow, bool scrollOnly = false,
+                        bool fileSelectionChangeTriggered = false,
+                        QString src = "");
     void updateStatus(bool, QString, QString);
     void updateCurrent(QModelIndex sfIdx, int instance);
 //    void updateVisible();

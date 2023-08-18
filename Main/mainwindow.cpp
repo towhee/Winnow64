@@ -2596,7 +2596,7 @@ bool MW::updateIconRange(QString src)
         }
         else {
             qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
-            loadConcurrent(dm->currentSfRow, true);
+            loadConcurrent(dm->currentSfRow, true, false, "MW::updateIconRange");
         }
     }
 
@@ -2695,20 +2695,27 @@ void MW::loadConcurrentNewFolder()
     sel->setCurrentRow(targetRow);
 }
 
-void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTriggered)
+void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTriggered, QString src)
 /*
+    Starts or redirects MetaRead metadata and thumb loading at sfRow.
+
+    scrollOnly defaults to false.  MetaRead will
+
+    fileSelectionChangeTriggered defaults to false.
+
     Called after a scroll event in IconView or TableView by thumbHasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
 
     Signaled by Selection::currentIndex when a file selection change occurs.
 
-    Starts or redirects MetaRead metadata and thumb loading.
 */
 {
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::loadConcurrent  Row =" << QString::number(sfRow)
-                 << "scrollOnly = " << QVariant(scrollOnly).toString();
-    //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow << "scrollOnly =" << scrollOnly;
+                 << "scrollOnly = " << QVariant(scrollOnly).toString()
+                 << "src =" << src
+                    ;
+    //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow << "scrollOnly =" << scrollOnly << "src =" << src;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
@@ -2987,7 +2994,7 @@ void MW::thumbHasScrolled()
 
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-        else loadConcurrent(midVisibleCell, true);
+        else loadConcurrent(midVisibleCell, true, false, "MW::thumbHasScrolled");
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -3062,7 +3069,7 @@ void MW::gridHasScrolled()
 
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
-        else loadConcurrent(midVisibleCell, true);
+        else loadConcurrent(midVisibleCell, true, false, "MW::gridHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
@@ -3107,7 +3114,7 @@ void MW::tableHasScrolled()
         }
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
-        else loadConcurrent(tableView->midVisibleRow, true);
+        else loadConcurrent(tableView->midVisibleRow, true, false, "MW::tableHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
