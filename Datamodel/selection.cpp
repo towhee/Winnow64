@@ -85,7 +85,8 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
         if (G::isLoadConcurrent) {
             bool scrollOnly = false;
             qDebug() << "Selection::currentIndex loadConcurrent";
-            emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered);
+            emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered,
+                                "Selection::currentIndex");
         }
     }
 }

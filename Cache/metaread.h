@@ -59,7 +59,7 @@ signals:
 
 public slots:
     void initialize();
-    void setCurrentRow(int row = 0, bool scrollOnly = false,
+    void setStartRow(int row = 0, bool scrollOnly = false,
                        bool fileSelectionChangeTriggered = false, QString src = "");
 
 protected:
