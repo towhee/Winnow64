@@ -426,6 +426,7 @@ bool DataModel::endLoad(bool success)
 //    abortLoadingModel = false;
     if (success) {
         G::dmEmpty = false;
+        checkChunkSize = iconChunkSize > rowCount();
         return true;
     }
     else {
@@ -1708,6 +1709,12 @@ bool DataModel::allIconsLoaded()
         if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
     }
     return true;
+}
+
+void DataModel::setChunkSize(int chunkSize)
+{
+    iconChunkSize = chunkSize;
+    checkChunkSize = chunkSize > rowCount();
 }
 
 void DataModel::clearAllIcons()

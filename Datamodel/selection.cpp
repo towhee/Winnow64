@@ -83,10 +83,9 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
     }
     else {
         if (G::isLoadConcurrent) {
-            bool scrollOnly = false;
-            qDebug() << "Selection::currentIndex loadConcurrent";
-            emit loadConcurrent(sfIdx.row(), scrollOnly, fileSelectionChangeTriggered,
-                                "Selection::currentIndex");
+            bool isCurrent = true;
+            //qDebug() << "Selection::currentIndex loadConcurrent";
+            emit loadConcurrent(sfIdx.row(), isCurrent, "Selection::currentIndex");
         }
     }
 }
@@ -112,7 +111,7 @@ void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select row");
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
+    //qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
     select(sfIdx, modifiers);
 }
 
@@ -211,7 +210,7 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
     else {
         int row = dm->currentSfRow;
         if (row < dm->sf->rowCount() - 1) row++;
-        qDebug() << "Selection::next row =" << row << modifiers;
+        //qDebug() << "Selection::next row =" << row << modifiers;
         select(row, modifiers);
     }
 }

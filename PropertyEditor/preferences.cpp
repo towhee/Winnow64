@@ -723,13 +723,13 @@ void Preferences::addItems()
                 "to trigger the next or previous image in loupe view.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.defaultValue = 40;
+    i.defaultValue = 75;
     i.value = G::wheelSensitivity;
     i.key = "wheelSensitivity";
     i.delegateType = DT_Slider;
     i.type = "int";
-    i.min = 5;
-    i.max = 80;
+    i.min = 10;
+    i.max = 210;
     i.fixedWidth = 50;
     addItem(i);
 

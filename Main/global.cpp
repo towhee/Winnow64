@@ -6,7 +6,7 @@ namespace G
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
-    bool isFlowLogger = true;          // Writes key program flow points to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isFlowLogger2 = false;         // QDebug key program flow points
     bool isWarningLogger = false;       // Writes warnings to qDebug
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)

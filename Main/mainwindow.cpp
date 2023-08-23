@@ -235,11 +235,11 @@ Current model row:
 
 Icons:
 
-    dm->startIconRange;                 // used to determine MetaRead priority queue
-    dm->endIconRange;                   // used to determine MetaRead priority queue
     dm->midIconRange;                   // used to determine MetaRead priority queue
     dm->iconChunkSize;                  // max suggested number of icons to cache
     dm->defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
+
+IconChunkSize:
 
     Icons or thumbnails, 256px on the long side, are stored in the DataModel in column 0
     and role G::IconRectRole  ie dm->index(row, 0).data(G::IconrectRole).  When a folder
@@ -262,20 +262,18 @@ Tracking the icon parameters:
     When this happens:
 
         • IconView::updateVisibleCellCount is called.
-        • MW::updateIconRange updates the DataModel visible parameters based on which
-          view has the most visible icons.
+        • IconView::updateVisible is called.  A number of IconView operations use
+          the parameters defined in IconView::updateVisible.
+        • MW::updateIconRange updates the DataModel iconChunkSize based on which
+          view has the most visible icons and the current iconChunkSize.
 
-    The first, mid and last visible icons changes whenever:
+    The first, mid and last visible icons changes whenever there is a scroll event.  The
+    scroll event can triggered by the user scrolling or selecting another image.  Also, see
+    SCROLLING below.
 
-        • there is a scroll event
-
-          Scroll events signal either MW::thumbHasScrolled, MW::gridHasScrolled or
-          MW::tableHasScrolled.
-
-          • the scrolled view updateVisible is called  ie gridView::updateVisible.
+          • MW::thumbHasScrolled, MW::gridHasScrolled or MW::tableHasScrolled is triggered.
+          • MW::updateIconRange calls IconView::updateVisible.
           • other visible views are scrolled to sync.
-
-        • the number of visible icons changes
 
 Other Global flags:
 
@@ -845,14 +843,14 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            tested.
         */
         G::popUp->end();
+        // end stress test
+        if (isStressTest) isStressTest = false;
         // stop loading a new folder
-        if (!G::allMetadataLoaded) stop("Escape key");
+        else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
         else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
         else if (G::isCopyingFiles) G::stopCopyingFiles = true;
-        // end stress test
-        else if (isStressTest) isStressTest = false;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
         // quit loading datamodel
@@ -1049,17 +1047,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
                 if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
             }
-        }
-    } // end section
-
-    /*  WHEEL EVENT INTERCEPT
-
-    */
-    {
-        if (!G::isInitializing && (event->type() == QEvent::Wheel)) {
-            qDebug() << "MW::eventFilter" << event;
-            QWheelEvent *e = static_cast<QWheelEvent*>(event);
-            if (imageView->isVisible()) emit imageWheelEvent(e);
         }
     } // end section
 
@@ -2061,7 +2048,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+//    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2567,7 +2554,8 @@ bool MW::updateIconRange(QString src)
 
     // chunk size
     int visibleIcons = lastVisible - firstVisible;
-    if (dm->iconChunkSize < visibleIcons) dm->iconChunkSize = visibleIcons;
+    int midVisible = firstVisible + (firstVisible + lastVisible) / 2;
+    if (dm->iconChunkSize < visibleIcons) dm->setChunkSize(visibleIcons);
     if (dm->iconChunkSize > chunkSize) {
         chunkSize = dm->iconChunkSize;
         chunkSizeChanged = true;
@@ -2576,7 +2564,7 @@ bool MW::updateIconRange(QString src)
     if (G::isLoadLinear) {
         // MDCache (Linear metadata loading) icon range to use:
         metadataCacheThread->firstIconVisible = firstVisible;
-        metadataCacheThread->midIconVisible = (firstVisible + lastVisible) / 2;   // rgh qCeil ??
+        metadataCacheThread->midIconVisible = midVisible;   // rgh qCeil ??
         metadataCacheThread->lastIconVisible = lastVisible;
         metadataCacheThread->visibleIcons = visibleIcons;
     }
@@ -2589,6 +2577,8 @@ bool MW::updateIconRange(QString src)
 //        int midChunkRow = firstChunkRow + (lastChunkRow - firstChunkRow) / 2;
 //    }
 
+    if (!dm->checkChunkSize) return false;
+
     // update icons cached if chunkSizeChanged
     if (chunkSizeChanged) {
         if (G::isLoadLinear) {
@@ -2596,7 +2586,7 @@ bool MW::updateIconRange(QString src)
         }
         else {
             qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
-            loadConcurrent(dm->currentSfRow, true, false, "MW::updateIconRange");
+            loadConcurrent(midVisible, false, "MW::updateIconRange");
         }
     }
 
@@ -2695,15 +2685,13 @@ void MW::loadConcurrentNewFolder()
     sel->setCurrentRow(targetRow);
 }
 
-void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTriggered, QString src)
+void MW::loadConcurrent(int sfRow, bool isCurrent, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.
 
-    scrollOnly defaults to false.  MetaRead will
+    isCurrent defaults to true.  MetaRead will
 
-    fileSelectionChangeTriggered defaults to false.
-
-    Called after a scroll event in IconView or TableView by thumbHasScrolled,
+    Called after a scroll event in IconView or TableView by thumbHeasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
 
     Signaled by Selection::currentIndex when a file selection change occurs.
@@ -2711,21 +2699,18 @@ void MW::loadConcurrent(int sfRow, bool scrollOnly, bool fileSelectionChangeTrig
 */
 {
     if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::loadConcurrent  Row =" << QString::number(sfRow)
-                 << "scrollOnly = " << QVariant(scrollOnly).toString()
+        qDebug() << "MW::loadConcurrent  Row =" << sfRow
+                 << "isCurrent = " << isCurrent
                  << "src =" << src
                     ;
-    //qDebug() << "MW::loadConcurrent  sfRow =" << sfRow << "scrollOnly =" << scrollOnly << "src =" << src;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
             //dm->currentSfRow = sfRow;
-            dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-            qDebug() << "MW::loadConcurrent  Row =" << QString::number(sfRow)
-                     << "scrollOnly = " << QVariant(scrollOnly).toString();
-            metaReadThread->setCurrentRow(sfRow, scrollOnly, fileSelectionChangeTriggered,
-                                          "MW::loadConcurrent");
+            if (isCurrent)
+                dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+            metaReadThread->setStartRow(sfRow, isCurrent, "MW::loadConcurrent");
         }
     }
 }
@@ -2979,22 +2964,19 @@ void MW::thumbHasScrolled()
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::thumbHasScrolled"
                                                  << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
-//    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
+    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange("MW::thumbHasScrolled");
-        int midVisibleCell = thumbView->midVisibleCell;
         if (gridView->isVisible()) {
-            gridView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
+            gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
         if (tableView->isVisible()) {
-            tableView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
+            tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
-
-        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-        else loadConcurrent(midVisibleCell, true, false, "MW::thumbHasScrolled");
+        else loadConcurrent(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -3069,7 +3051,7 @@ void MW::gridHasScrolled()
 
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
-        else loadConcurrent(midVisibleCell, true, false, "MW::gridHasScrolled");
+        else loadConcurrent(midVisibleCell, false, "MW::gridHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
@@ -3114,7 +3096,7 @@ void MW::tableHasScrolled()
         }
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
-        else loadConcurrent(tableView->midVisibleRow, true, false, "MW::tableHasScrolled");
+        else loadConcurrent(tableView->midVisibleRow, false, "MW::tableHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
@@ -5176,27 +5158,6 @@ void MW::selectCurrentViewDir()
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
     }
-}
-
-void MW::wheelEvent(QWheelEvent *event)
-{
-    // rgh ??
-    if (G::isLogger) G::log("MW::wheelEvent");
-//        if (event->modifiers() == Qt::ControlModifier)
-//        {
-//            if (event->delta() < 0)
-//                imageView->zoomOut();
-//            else
-//                imageView->zoomIn();
-//        }
-//        else if (keyRightAction->isEnabled())
-//        {
-//            if (event->delta() < 0)
-//                thumbView->selectNext();
-//            else
-//                thumbView->selectPrev();
-//        }
-    QMainWindow::wheelEvent(event);
 }
 
 // not req'd rgh ??

@@ -36,19 +36,21 @@ public:
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
-             bool &isShowCacheStatus, int &cacheWtAhead);
+                        bool &isShowCacheStatus, int &cacheWtAhead);
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
-             int &cacheWtAhead);
+                               int &cacheWtAhead);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stop();
     void clearImageCache(bool includeList = true);
-//    void pauseImageCache();
-//    void resumeImageCache();
+    //    void pauseImageCache();
+    //    void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
     bool isCached(int sfRow);
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
-//    QSize getPreviewSize();
+    //    QSize getPreviewSize();
+
+    QString getFPath(int i);
 
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
@@ -63,7 +65,7 @@ public:
     bool debugCaching = false;
     QString source;                 // temp for debugging
 
-//    ImageCacheData::Cache icd->cache;
+    //    ImageCacheData::Cache icd->cache;
 
 signals:
     void stopped(QString src);
@@ -95,7 +97,8 @@ public slots:
     void refreshImageCache();
 
 private:
-    QMutex mutex;
+    bool useMutex = false;
+    QMutex gMutex;
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load
     bool restart;
@@ -116,7 +119,8 @@ private:
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
-    QHash<QString,int> cacheKeyHash;    // cache key for assigned path
+    QHash<QString,int> keyFromPath;    // cache key for assigned path
+    QHash<int,QString> pathFromKey;    // cache key for assigned path
     QList<int> priorityList;
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
@@ -129,20 +133,21 @@ private:
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
-//    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
+    //    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     void fixOrphans();              // outside target range with isCached == true
     void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
-    int keyFromPath(QString path);
+    // int keyFromPath(QString path);
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
-//    void updateImageCacheList();    //
-//    void refreshImageCache();
-//    QSize scalePreview(int w, int h);
+
+    //    void updateImageCacheList();    //
+    //    void refreshImageCache();
+    //    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
 };

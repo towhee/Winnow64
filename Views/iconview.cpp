@@ -409,11 +409,12 @@ QSize IconView::getCellSize()
 
 void IconView::updateVisibleCellCount(QString src)
 /*
-    Calculate parameters that are based on the sell and viewport size.  Called
-    when these change.
+    Calculate parameters that are based on the sell and viewport size.  Invoked
+    when these change.  MW::updateIconRange is called, where the largest visible
+    icon range is compared to the iconChunkSize, which is updated if necessary.
 */
 {
-//    /*
+    /*
     qDebug() << "   IconView::updateVisibleCellCount src =" << src
              << "current row = " << dm->currentSfRow;
     //*/
@@ -1191,7 +1192,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-//    /*
+    /*
     qDebug() << "IconView::scrollToRow" << objectName() << "row =" << row
              << "requested by" << source;
                 // */
@@ -1210,7 +1211,7 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
-//    /*
+    /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
         << "source =" << source
         << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
@@ -1233,11 +1234,31 @@ void IconView::leaveEvent(QEvent *event)
 
 void IconView::wheelEvent(QWheelEvent *event)
 {
-    if (isDebug) G::log("IconView::wheelEvent", objectName());
+    if (G::isInitializing) return;
+    if (isDebug)
+        qDebug() << "IconView::wheelEvent" << objectName() << event;
+
+    static int deltaSum = 0;
+    static int prevDelta = 0;
+    int delta = event->angleDelta().y();
+    // change direction?
+    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
+        deltaSum = delta;
+    }
+    deltaSum += delta;
     /*
-    qDebug() << "IconView::wheelEvent" << event;
-    //*/
-    QListView::wheelEvent(event);
+    qDebug() << "IconView::wheelEvent"
+             << "delta =" << delta
+             << "prevDelta =" << prevDelta
+             << "deltaSum =" << deltaSum
+             << "G::wheelSensitivity =" << G::wheelSensitivity
+                ;
+                //*/
+
+    if (qAbs(deltaSum) > G::wheelSensitivity) {
+        QListView::wheelEvent(event);
+        deltaSum = 0;
+    }
 }
 
 bool IconView::event(QEvent *event) {

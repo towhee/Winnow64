@@ -104,6 +104,27 @@ void MW::bounceFoldersStressTest(int ms, int duration)
     }
 }
 
+void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
+{
+    // ESC to quit
+    isStressTest = true;
+    bool isForward = true;
+    int i = 0;
+    while (isStressTest) {
+        if (ms) G::wait(ms);
+        if (pauseCount && ++i > pauseCount) {
+            G::wait(msPauseDelay);
+            i = 0;
+        }
+        if (isForward && dm->currentSfRow >= dm->sf->rowCount() - 1)
+            isForward = false;
+        if (!isForward && dm->currentSfRow <= 0)
+            isForward = true;
+        if (isForward) sel->next();
+        else sel->prev();
+    }
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     QPalette pal = QToolTip::palette();
@@ -124,67 +145,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "current row = " << dm->currentSfIdx.row();
+    scrollImageViewStressTest(5, 200, 2000);
     return;
-
-//    for (int j = 0; j < dockTabBars.size(); j++) {
-//        qDebug() << j << dockTabBars.at(j)->tabText(0);
-//    }
-    QPixmap pm(":/images/icon16/anchor.png");
-    folderDockTabRichText = Utilities::pixmapToString(pm);
-    QTabBar *tabBar = dockTabBars.at(1);
-    qDebug() << tabBar->tabText(0);
-    QString newTitle = "BBB";
-    folderDock->setWindowTitle(folderDockTabRichText);
-//    tabBar->setTabText(0, "BBB");
-//    qDebug() << folderDockTabRichText;
-    return;
-
-//    QPalette palette = QGuiApplication::palette();
-//    palette.setColor(QPalette::Inactive, QPalette::ToolTipText, QColor("yellow"));
-//    QGuiApplication::setPalette(palette);
-//    return;
-
-////    QPalette *p = &QGuiApplication::palette();
-//    QGuiApplication::palette().setColor(QPalette::ToolTipText, QColor(255,0,0,100));
-////    QGuiApplication::setPalette(p);
-////    QColor color = p.color(QPalette::Active, QPalette::ToolTipText);
-////    qDebug() << color;
-//    return;
-
-//    QList<QTabBar *> tabList = findChildren<QTabBar *>();
-//    for (int i = 0; i < tabList.count(); i++) {
-//        QTabBar* tabBar = tabList.at(i);
-//        for (int j = 0; j < tabBar->count(); j++) {
-//            qDebug() << "tabBar" << i
-//                     << "tab" << j
-//                     << "text" << tabBar->tabText(j)
-//                ;
-//        }
-//    }
-//    return;
-
-    QList<QDockWidget*> dockWidgets = tabifiedDockWidgets(metadataDock);
-    for (int i = 0; i < dockWidgets.size(); ++i) {
-        DockWidget *dw = qobject_cast<DockWidget*>(dockWidgets.at(i));
-        if (dw) {
-            // Do something with dw
-            qDebug() << dw->objectName();
-        }
-    }
-    return;
-
-    qDebug() << "IconView::updateVisibleCells"
-             << thumbView->objectName()
-             << "current row =" << thumbView->currentIndex().row()
-             << "firstVisibleCell =" << thumbView->firstVisibleCell
-             << "lastVisibleCell =" << thumbView->lastVisibleCell
-             << "midVisibleCell =" << thumbView->midVisibleCell
-             << "visibleCellCount =" << thumbView->visibleCellCount
-             << "bestAspectRatio =" << thumbView->bestAspectRatio;
-        ;
-    return;
-
 
     qDebug() << "pos() =" << pos();
     qDebug() << "QApplication::desktop ()->screenNumber (pos)) =" << QGuiApplication::screenAt(pos());
@@ -198,4 +160,5 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     for (int i = 0; i < screens.size(); ++i) {
         QRect screenGeometry = screens[i]->geometry();
         qDebug() << "Screen" << i << "geometry:" << screenGeometry;
-    }}
+    }
+}
