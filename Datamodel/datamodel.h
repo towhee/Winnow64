@@ -75,6 +75,7 @@ public:
     void clearAllIcons();
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
+    void setChunkSize(int chunkSize);
     int rowFromPath(QString fPath);
     void refreshRowFromPathHash();
     int nextPick();
@@ -107,6 +108,7 @@ public:
     int midIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
+    bool checkChunkSize;                // true if iconChunkSize < rowCount()
 
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel

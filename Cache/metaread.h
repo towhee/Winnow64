@@ -59,8 +59,7 @@ signals:
 
 public slots:
     void initialize();
-    void setStartRow(int row = 0, bool scrollOnly = false,
-                       bool fileSelectionChangeTriggered = false, QString src = "");
+    void setStartRow(int row = 0, bool isCurrent = false, QString src = "");
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -92,7 +91,7 @@ private:
     int imageCacheTriggerCount;
     bool alreadyTriggered;
 
-    bool scrollOnly;
+    bool isCurrent;                         // triggers imageCache if true
     int startRow = 0;
     int targetRow = 0;
     int lastRow;

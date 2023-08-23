@@ -48,6 +48,8 @@
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
+#include "Containers/concurrentlist.h"
+
 #ifdef Q_OS_WIN
 #endif
 
@@ -378,7 +380,6 @@ signals:
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
-    void imageWheelEvent(QWheelEvent *event);
     void testAddToDM(ImageMetadata m, QString src);
 
 public slots:
@@ -516,9 +517,8 @@ private slots:
                                 QString source);
     // caching
     void loadConcurrentNewFolder();
-    void loadConcurrent(int sfRow, bool scrollOnly = false,
-                        bool fileSelectionChangeTriggered = false,
-                        QString src = "");
+    void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
+
     void loadConcurrentDone();
 
     void loadLinearNewFolder();
@@ -1211,7 +1211,6 @@ private:
 
     bool isValidPath(QString &path);
     QString getSelectedPath();
-    void wheelEvent(QWheelEvent *event) override;
 //    bool event(QEvent *event);
     void copyFiles();
     void shareFiles();
@@ -1275,6 +1274,7 @@ private:
     void mediaReadSpeed();
     void reportHueCount();
     void generateMeanStack();
+    void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int ms = 0, int duration = 0);
     void bounceFoldersStressTestFromMenu();

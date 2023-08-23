@@ -54,15 +54,24 @@ MetaRead::~MetaRead()
 //    delete thumb;
 }
 
-void MetaRead::setCurrentRow(int row, bool scrollOnly,
-                             bool fileSelectionChangeTriggered, QString src)
+void MetaRead::setStartRow(int row, bool isCurrent, QString src)
 {
-    if (isDebug || G::isFlowLogger) {
-        QString running;
-        isRunning() ? running = "true" : running = "false";
-        QString s = "row = " + QString::number(row) + " src = " + src + " isRunning = " + running;
-        qDebug() << "MetaRead::setCurrentRow" << s;
-    }
+/*
+    Starts reading metadata and icons from row, alternating ahead and behind.
+
+    If isCurrent = true then row is the current image and MW::fileSelectionChange will
+    be signalled after a delay of imageCacheTriggerCount images.
+
+    If isCurrent = false then only metadata and icons are read (used for scroll
+    operatations).
+*/
+    if (isDebug || G::isFlowLogger)
+        qDebug() << "MetaRead::setCurrentRow"
+                 << "row =" << row
+                 << "isCurrent =" << isCurrent
+                 << "isRunning =" << isRunning()
+                 << "src =" << src
+                    ;
     //qDebug() << "MetaRead::setCurrentRow row =" << row << "src =" << src;
     this->src = src;
 
@@ -72,8 +81,7 @@ void MetaRead::setCurrentRow(int row, bool scrollOnly,
     else startRow = 0;
     targetRow = startRow;
     startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
-    this->scrollOnly = scrollOnly;
-    alreadyTriggered = fileSelectionChangeTriggered;
+    alreadyTriggered = !isCurrent;
     count = 0;
     abortCleanup = isRunning();
     mutex.unlock();
@@ -461,12 +469,12 @@ void MetaRead::triggerCheck()
     Signal MW::fileSelectionChange to trigger the ImageCache to rebuild.
 */
 {
+    if (alreadyTriggered ) return;
     count++;
-    if (alreadyTriggered || scrollOnly) return;
     if (count == lastRow || count == imageCacheTriggerCount) {
         // start image caching thread after head start
-//        if (isDebug || G::isLogger || G::isFlowLogger)
-            qDebug() << "MetaRead::run  emit fileSelectionChange" << startPath;
+        if (isDebug || G::isLogger || G::isFlowLogger)
+            qDebug() << "MetaRead::triggerCheck  emit fileSelectionChange" << startPath;
         QModelIndex sfIdx = dm->sf->index(targetRow, 0);
         emit fileSelectionChange(sfIdx);
         alreadyTriggered = true;
@@ -515,7 +523,7 @@ void MetaRead::run()
             // housekeeping
             startRow = -1;
             instance = dm->instance;
-            alreadyTriggered = false;
+            //alreadyTriggered = false;
         }
 
         if (a < sfRowCount) {

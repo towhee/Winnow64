@@ -146,6 +146,7 @@ class HashMap
         HashBucket<K, V> * hashTable;
         F hashFn;
         const size_t hashSize;
+        QMutex mutex;
 
 }; // end class HashMap
 } // end namespace CTSL
