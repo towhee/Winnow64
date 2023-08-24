@@ -1,62 +1,113 @@
-if (G::isLogger) G::log(__FUNCTION__);
-// rotate current loupe view image
-imageView->rotateImage(degrees);
+#include "videowidget.h"
 
-// iterate selection
-QModelIndexList selection = selectionModel->selectedRows();
-for (int i = 0; i < selection.count(); ++i) {
-    // update rotation amount in the data model
-    int row = selection.at(i).row();
-    QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
-    int orientation = orientationIdx.data(Qt::EditRole).toInt();
-    int prevRotation = 0;
-    switch (orientation) {
-    case 6: prevRotation = 90;  break;
-    case 3: prevRotation = 180; break;
-    case 8: prevRotation = 270; break;
+/*
+     QVideoWidget uses a QWindow to speed up painting and this is added as a child of the
+     QVideoWidget so the drag and drop event is not propagated to the parent. An event
+     filter is used to listen for the drop event.
+*/
+
+VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
+{
+    if (G::isLogger) G::log("VideoWidget::VideoWidget");
+    mediaPlayer = new QMediaPlayer(this);
+    audioOutput = new QAudioOutput(this);
+    mediaPlayer->setAudioOutput(audioOutput);
+    mediaPlayer->setVideoOutput(this);
+    QWidget *child = findChild<QWidget *>();
+    child->installEventFilter(this);
+}
+
+void VideoWidget::load(QString fPath)
+{
+    if (G::isLogger) G::log("VideoWidget::load");
+    mediaPlayer->setSource(fPath);
+}
+
+void VideoWidget::play()
+{
+    if (G::isLogger) G::log("VideoWidget::play");
+    mediaPlayer->play();
+}
+
+void VideoWidget::pause()
+{
+    if (G::isLogger) G::log("VideoWidget::pause");
+    mediaPlayer->pause();
+}
+
+void VideoWidget::stop()
+{
+    if (G::isLogger) G::log("VideoWidget::stop");
+    mediaPlayer->stop();
+}
+
+int VideoWidget::duration()
+{
+    if (G::isLogger) G::log("VideoWidget::duration");
+    return static_cast<int>(mediaPlayer->duration());
+}
+
+void VideoWidget::setPosition(int ms)
+{
+    if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::EndOfMedia
+       )
+    {
+        mediaPlayer->pause();
+        mediaPlayer->setPosition(ms);
+        mediaPlayer->play();
     }
+}
 
-    int newRotation = prevRotation + degrees;
-    if (newRotation >= 360) newRotation = newRotation - 360;
-    int newOrientation = 0;
-    switch (newRotation) {
-    case 90:  newOrientation = 6; break;
-    case 180: newOrientation = 3; break;
-    case 270: newOrientation = 8; break;
+VideoWidget::PlayState VideoWidget::playOrPause()
+{
+    if (G::isLogger) G::log("VideoWidget::PlayState VideoWidget::playOrPause");
+    if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
+        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::EndOfMedia
+       )
+    {
+        if (mediaPlayer->playbackState() == QMediaPlayer::PlaybackState::PlayingState) {
+            return PlayState::Playing;
+        }
+        else {
+            return PlayState::Paused;
+        }
     }
+    return PlayState::Unavailable;
+}
 
-    dm->sf->setData(orientationIdx, newOrientation);
+void VideoWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (G::isLogger) G::log("VideoWidget::mousePressEvent");
 
-    // rotate thumbnail(s)
-    QTransform trans;
-    trans.rotate(degrees);
-    QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
-    QString fPath = thumbIdx.data(G::PathRole).toString();
-    QStandardItem *item = new QStandardItem;
-    item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-    QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
-    pm = pm.transformed(trans, Qt::SmoothTransformation);
-    item->setIcon(pm);
-    thumbView->refreshThumbs();
-    QApplication::processEvents();
-
-    // rotate selected cached full size images
-    QImage image;
-    if (icd->imCache.find(fPath, image)) {
-        image = image.transformed(trans, Qt::SmoothTransformation);
-        icd->imCache.insert(fPath, image);
+    // ignore right click
+    if (event->button() == Qt::RightButton) {
+        return;
     }
+    emit togglePlayOrPause();
+}
 
-    // update exif in image
-    QString orient;
-    switch (newRotation) {
-    case 0:   orient = "1"; break;
-    case 90:  orient = "6"; break;
-    case 180: orient = "3"; break;
-    case 270: orient = "8"; break;
+bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
+{
+    /*
+    qDebug() << "VideoWidget::eventFilter"
+             << "event:" <<event << "\t"
+             << "event->type:" << event->type() << "\t"
+             << "obj:" << obj << "\t"
+             << "obj->objectName:" << obj->objectName()
+             << "object->metaObject()->className:" << obj->metaObject()->className()
+                ;
+                //*/
+    if (event->type() == QEvent::Drop) {
+        QDropEvent *e = static_cast<QDropEvent *>(event);
+        if (e->mimeData()->hasUrls()) {
+            QString fPath = e->mimeData()->urls().at(0).toLocalFile();
+            emit handleDrop(fPath);
+        }
     }
-    if (orient.length() && G::modifySourceFiles) {
-        // note that Metadata::writeOrientation must be static!
-        QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
-    }
+    return QWidget::eventFilter(obj, event);
 }

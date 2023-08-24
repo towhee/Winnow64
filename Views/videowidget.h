@@ -25,6 +25,7 @@ public:
     PlayState playOrPause();
     int duration();
     void setPosition(int ms);
+    void firstFrame(QPixmap &pm);
     QMediaPlayer *mediaPlayer = nullptr;
 
 private:
@@ -39,6 +40,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 //    void dropEvent(QDropEvent *event) override;
 //    void dragEnterEvent(QDragEnterEvent *event) override;
+    bool isDebug;
 };
 
 #endif // VIDEOWIDGET_H

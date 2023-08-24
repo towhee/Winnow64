@@ -116,7 +116,7 @@ bool TableView::isRowVisible(int row)
 void TableView::scrollToRow(int row, QString source)
 {
     if (G::isLogger) G::log("TableView::scrollToRow", source);
-//    /* debug
+    /* debug
     qDebug() << "TableView::scrollToRow" << objectName() << "row =" << row
              << "source =" << source;
              //*/

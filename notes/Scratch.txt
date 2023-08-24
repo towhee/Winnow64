@@ -1,5 +1,17 @@
-ImageCache::keyFromPath
-ImageCache::getFPath
-ImageCache::fixOrphans
-ImageCache::removeFromCache
-ImageCache::rename
+Here is a code snippet that shows how to extract the
+first video frame from a QVideoWidget to a QPixmap in C++
+using Qt 6:
+
+QVideoFrame frame = videoWidget->videoSurface()->currentFrame();
+if (!frame.isValid()) {
+    return;
+}
+QImage image = frame.image();
+QPixmap pixmap = QPixmap::fromImage(image);
+
+This code snippet extracts the current video frame from a
+QVideoWidget and converts it to a QPixmap. You can use this
+code snippet to extract the first video frame by calling it
+once.
+
+QT 5 - NOT QT 6

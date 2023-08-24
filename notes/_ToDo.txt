@@ -1,6 +1,6 @@
 WHAT'S NEW
 
-BUGS / TODO
+BUGS / TO DO
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
@@ -87,6 +87,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Spacebar do not set zoom 100% if current is a video
+- Redo icon chunk size
+- Rapid ImageView scrolling results in crash
+- Redo selection and navigation
 - Release 1.36
 - Check fix missing thumbs for jpg previews in raw images
 - IconView not always updating after remote embellish
