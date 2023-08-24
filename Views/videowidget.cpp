@@ -8,42 +8,43 @@
 
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
-    if (G::isLogger) G::log("VideoWidget::VideoWidget");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::VideoWidget";
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
     mediaPlayer->setAudioOutput(audioOutput);
     mediaPlayer->setVideoOutput(this);
     QWidget *child = findChild<QWidget *>();
     child->installEventFilter(this);
+    isDebug = false;
 }
 
 void VideoWidget::load(QString fPath)
 {
-    if (G::isLogger) G::log("VideoWidget::load");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::load";
     mediaPlayer->setSource(fPath);
 }
 
 void VideoWidget::play()
 {
-    if (G::isLogger) G::log("VideoWidget::play");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::play";
     mediaPlayer->play();
 }
 
 void VideoWidget::pause()
 {
-    if (G::isLogger) G::log("VideoWidget::pause");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::pause";
     mediaPlayer->pause();
 }
 
 void VideoWidget::stop()
 {
-    if (G::isLogger) G::log("VideoWidget::stop");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::stop";
     mediaPlayer->stop();
 }
 
 int VideoWidget::duration()
 {
-    if (G::isLogger) G::log("VideoWidget::duration");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::duration";
     return static_cast<int>(mediaPlayer->duration());
 }
 
@@ -63,7 +64,7 @@ void VideoWidget::setPosition(int ms)
 
 VideoWidget::PlayState VideoWidget::playOrPause()
 {
-    if (G::isLogger) G::log("VideoWidget::PlayState VideoWidget::playOrPause");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::PlayState VideoWidget::playOrPause";
     if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
@@ -80,9 +81,21 @@ VideoWidget::PlayState VideoWidget::playOrPause()
     return PlayState::Unavailable;
 }
 
+void::VideoWidget::firstFrame(QPixmap &pm)
+{
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::firstFrame";
+//    this->
+//    QVideoFrame frame = videoSurface()->currentFrame();
+//    if (!frame.isValid()) {
+//        return;
+//    }
+//    QImage image = frame.image();
+//    pm = QPixmap::fromImage(image);
+}
+
 void VideoWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("VideoWidget::mousePressEvent");
+    if (G::isLogger || isDebug) qDebug() << "VideoWidget::mousePressEvent";
 
     // ignore right click
     if (event->button() == Qt::RightButton) {

@@ -739,14 +739,12 @@ void IconView::setThumbSize()
 */
     if (G::isInitializing) return;
 
-    if (isDebug) G::log("IconView::setThumbSize", objectName());
-//    if (isDebug)
-        qDebug() << "IconView::setThumbSize";
+    if (isDebug)
+        qDebug() << "IconView::setThumbSize" << objectName();
     QString src = "IconView::setThumbSize";
 
     setThumbParameters();
     updateVisibleCellCount(src);
-    //updateVisible(src);
 
     QModelIndex scrollToIndex;
     int currentRow = currentIndex().row();
@@ -1305,18 +1303,14 @@ bool IconView::event(QEvent *event) {
 void IconView::showEvent(QShowEvent *event)
 {
     if (G::isInitializing || G::dmEmpty) return;
-    qDebug() << "IconView::showEvent" << objectName() << event;
     QString src = "IconView::showEvent";
     updateVisibleCellCount(src);
-    //updateVisible(src);
     QListView::showEvent(event);
 }
 
 void IconView::paintEvent(QPaintEvent *event)
 {
-    /*
-    qDebug() << "IconView::paintEvent" << event << event->region() << viewport()->visibleRegion();
-    //*/
+    //qDebug() << "IconView::paintEvent" << event << event->region() << viewport()->visibleRegion();
     iconViewDelegate->resetFirstLastVisible();
     QListView::paintEvent(event);
 }

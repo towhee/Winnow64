@@ -967,13 +967,11 @@ void ImageView::scrollContentsBy(int dx, int dy)
 //}
 void ImageView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) qDebug() << "ImageView::wheelEvent";
-    //qDebug() << "ImageView::wheelEvent";
+    if (G::isLogger)
+        qDebug() << "ImageView::wheelEvent";
 
     // wheel scrolling / trackpad swiping = next/previous image
     static QElapsedTimer t;
-//    static int deltaSum = 0;
-//    static int prevDelta = 0;
 
     static bool first = true;
     if (first) {
@@ -990,24 +988,27 @@ void ImageView::wheelEvent(QWheelEvent *event)
         else sel->next();
         t.restart();
     }
+    /*
+    static int deltaSum = 0;
+    static int prevDelta = 0;
+    int delta = event->angleDelta().y();
+    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
+        deltaSum = delta;
+    }
+    deltaSum += delta;
 
-//    int delta = event->angleDelta().y();
-//    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
-//        deltaSum = delta;
-//    }
-//    deltaSum += delta;
+    if (deltaSum > G::wheelSensitivity) {
+        sel->prev();
+        deltaSum = 0;
+    }
 
-//    if (deltaSum > G::wheelSensitivity) {
-//        sel->prev();
-//        deltaSum = 0;
-//    }
-
-//    if (deltaSum < (-G::wheelSensitivity)) {
-//        qDebug() << t.elapsed();
-//        t.restart();
-//        sel->next();
-//        deltaSum = 0;
-//    }
+    if (deltaSum < (-G::wheelSensitivity)) {
+        qDebug() << t.elapsed();
+        t.restart();
+        sel->next();
+        deltaSum = 0;
+    }
+    */
 }
 
 bool ImageView::event(QEvent *event) {

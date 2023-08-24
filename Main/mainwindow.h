@@ -108,7 +108,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.36" ;
+    QString versionNumber = "1.37" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -526,9 +526,6 @@ private slots:
     void updateDefaultIconChunkSize(int size);
     bool updateIconRange(QString src = "");
     void loadMetadataChunk();
-//    void loadMetadataChunkAfterScroll();
-//    void loadMetadataCacheThumbScrollEvent();
-    void scrollChange(int sfRow, QString src);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();

@@ -2048,7 +2048,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-//    /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2101,8 +2101,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     //dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
 
-//    scrollToCurrentRow();
-
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         if (thumbView->isVisible()) thumbView->scrollToCurrent();
@@ -2134,27 +2132,52 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
     // update loupe view
-    if (G::useImageView) {
-        if (G::useMultimedia) videoView->stop();
-        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-        if (isVideo) {
-            if (G::useMultimedia) {
-                videoView->load(fPath);
-                if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
-            }
-        }
-        else {
-            if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
-                if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
-                    updateClassification();
-                    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-                }
-                else {
-                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
-                }
+    if (G::useMultimedia) videoView->stop();
+    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+    if (isVideo) {
+        if (G::useMultimedia) {
+            videoView->load(fPath);
+            qDebug() << "test video G::mode =" << G::mode;
+            if (G::mode == "Loupe") {
+                qDebug() << "test video1";
+                centralLayout->setCurrentIndex(VideoTab);
             }
         }
     }
+    else if (G::useImageView) {
+        if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
+            if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+                updateClassification();
+                if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+            }
+            else {
+                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+            }
+        }
+    }
+
+//    // update loupe view
+//    if (G::useImageView) {
+//        if (G::useMultimedia) videoView->stop();
+//        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+//        if (isVideo) {
+//            if (G::useMultimedia) {
+//                videoView->load(fPath);
+//                if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
+//            }
+//        }
+//        else {
+//            if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
+//                if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+//                    updateClassification();
+//                    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+//                }
+//                else {
+//                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+//                }
+//            }
+//        }
+//    }
 
     // update caching if folder has been loaded
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
@@ -2922,20 +2945,6 @@ void MW::loadImageCacheForNewFolder()
     }
 }
 
-void MW::scrollChange(int sfRow, QString src)
-{
-//    emit startMetaRead(sfRow, "MW::scrollChange");
-//    if (metaRead->isRunning) {
-//        metaRead->stop();
-//        G::wait(0);
-//        while (metaRead->isRunning && G::wait(1) < 5);
-//    }
-//    iconCache->stop();
-//    G::wait(0);
-//    while (iconCache->isRunning && G::wait(1) < 5);
-//    emit startIconCache(sfRow, src);
-}
-
 void MW::thumbHasScrolled()
 {
 /*
@@ -2961,10 +2970,9 @@ void MW::thumbHasScrolled()
     This was to prevent many scroll calls from bunching up. The new approach just aborts
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::thumbHasScrolled"
-                                                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
-    qDebug() << "MW::thumbHasScrolled  G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -2983,27 +2991,6 @@ void MW::thumbHasScrolled()
             thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
         }
     }
-//    if (G::ignoreScrollSignal == false) {
-//        G::ignoreScrollSignal = true;
-//        updateIconRange("MW::thumbHasScrolled");
-//        thumbView->updateVisible("MW::thumbHasScrolled");
-//        int midVisibleCell = thumbView->midVisibleCell;
-//        if (gridView->isVisible()) {
-//            gridView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
-//        }
-//        if (tableView->isVisible()) {
-//            tableView->scrollToRow(midVisibleCell, "MW::thumbHasScrolled");
-//        }
-
-//        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-//        if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::thumbHasScrolled");
-//        else loadConcurrent(midVisibleCell, true);
-//        // update thumbnail zoom frame cursor
-//        QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-//        if (idx.isValid()) {
-//            thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
-//        }
-//    }
     G::ignoreScrollSignal = false;
 }
 
@@ -3039,7 +3026,6 @@ void MW::gridHasScrolled()
         qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
                  << QString::number(gridView->isVisible());
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
-    if (gridView->isHidden()) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -3048,8 +3034,6 @@ void MW::gridHasScrolled()
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(midVisibleCell, "MW::gridHasScrolled");
         }
-
-        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::gridHasScrolled");
         else loadConcurrent(midVisibleCell, false, "MW::gridHasScrolled");
     }
@@ -3085,7 +3069,8 @@ void MW::tableHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::tableHasScrolled";
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::tableHasScrolled";
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -3094,7 +3079,6 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         }
-        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (G::isLoadLinear) metadataCacheThread->scrollChange("MW::tableHasScrolled");
         else loadConcurrent(tableView->midVisibleRow, false, "MW::tableHasScrolled");
     }
@@ -4372,6 +4356,9 @@ void MW::zoomToFit()
 void MW::zoomToggle()
 {
     if (G::isLogger) G::log("MW::zoomToggle");
+    // ignore if video
+    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+    if (isVideo) return;
     if (asLoupeAction) imageView->zoomToggle();
     if (asCompareAction) compareImages->zoomToggle();
 }

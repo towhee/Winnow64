@@ -28,7 +28,8 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isInitializing) return;
+    //req'd to set G::mode = "Loupe" when starting program to show videos (better way??)
+    //if (G::isInitializing) return;
 
     if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
         qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
@@ -117,7 +118,6 @@ void MW::gridDisplay()
     painting itself.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::gridDisplay";
-    qDebug() << "MW::gridDisplay" << "1";
 
     if (embelProperties->templateId > 0) {
         QString msg = "Only loupe mode is available while the Embellish Editor is active.";
@@ -128,17 +128,9 @@ void MW::gridDisplay()
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", "MW::gridDisplay");
-//    updateIconRange(-1, "MW::gridDisplay");
 
     // save selection as gridView is hidden and not synced
     sel->save();
-
-//    int interruptedRow;
-//    bool interrupted = false;
-//    if (metaReadThread->isRunning()) {
-//        interruptedRow = metaReadThread->interrupt();
-//        interrupted = true;
-//    }
 
 //    bool wasVisible = thumbDock->isVisible();
     thumbDock->setVisible(false);

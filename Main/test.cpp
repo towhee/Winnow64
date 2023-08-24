@@ -145,7 +145,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    scrollImageViewStressTest(5, 200, 2000);
+    centralLayout->setCurrentIndex(VideoTab);
+    //scrollImageViewStressTest(5, 200, 2000);
     return;
 
     qDebug() << "pos() =" << pos();

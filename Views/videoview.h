@@ -45,6 +45,7 @@ private:
     qint64 duration = 0;
     qint64 position = 0;
     QTimer *t;
+    bool isDebug;
 };
 
 #endif // VIDEOVIEW_H
