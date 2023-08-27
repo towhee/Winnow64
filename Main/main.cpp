@@ -8,18 +8,20 @@
 int main(int argc, char *argv[])
 {
     /* Original multi instance version
-    QApplication QApp(argc, argv);
-        if (QCoreApplication::arguments().size() > 2)
-        {
-            qDebug() << QObject::tr("Usage: Winnow [FILE or DIRECTORY]...");
-            return -1;
-        }
-        QCoreApplication::addLibraryPath("./");
-        MW MW;
-        MW.show();
-        return QApp.exec();
-        //*/
+    QApplication a(argc, argv);
+    QString args;
+    QString delimiter = "\n";
+    for (int i = 1; i < argc; ++i) {
+        args += argv[i];
+        if (i < argc - 1) args += delimiter;
+    }
+    QCoreApplication::addLibraryPath("./");
+    MW mw(args);
+    mw.show();
+    return a.exec();
+    //*/
 
+//    /* Single instance version
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QtSingleApplication instance("Winnow", argc, argv);
@@ -30,7 +32,6 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-    // if (G::isFileLogger) Utilities::log("WinnowMain", args);
 
     // terminate if Winnow already open and no arguments to pass
     if (args == "" && instance.isRunning()) return 0;
@@ -38,13 +39,13 @@ int main(int argc, char *argv[])
     // instance already running
     if (instance.sendMessage(args)) {
         if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
-        //qDebug() << "main" << "instance already running, sent args";
         return 0;
     }
 
     // start program
     QCoreApplication::addLibraryPath("./");
     MW mw(args);
+    mw.show();
 
     // connect message when instance already running
     QObject::connect(&instance, SIGNAL(messageReceived(const QString&)),
@@ -53,7 +54,9 @@ int main(int argc, char *argv[])
     instance.setActivationWindow(&mw, false);
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    // if (G::isFileLogger) Utilities::log("WinnowMain", "Start new instance");
+    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
+                     &mw, &MW::restoreLastSessionGeometryState);
 
-    return instance.exec();             //    return QApp.exec();
+    return instance.exec();
+    //*/
 }

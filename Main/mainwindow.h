@@ -121,6 +121,7 @@ public:
 
     bool isShiftOnOpen;               // used when opening if shift key pressed
 
+
     // debugging flags
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
@@ -349,7 +350,6 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void showEvent(QShowEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
     void dropEvent(QDropEvent *event) override;
@@ -362,29 +362,29 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void restartMetaRead(int newRow);
-    void startMetaRead(int sfRow, QString src);
-    void startIconCache(int sfRow, QString src);
+    //void restartMetaRead(int newRow);
+    //void startMetaRead(int sfRow, QString src);
+    //void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
-    void setImageCachePosition2(QString);
-    void refreshImageCache();
+    //void setImageCachePosition2(QString);
+    void refreshImageCache();   // not being used
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
-    void closeZoomDlg();
-    void aSyncGo(int);  // rgh req'd?
-    void needToShow();
-    void abortMetaRead();
-    void abortMDCache();
-    void abortImageCache();
-    void abortBuildFilters();
-    void abortFrameDecoder();
+    void closeZoomDlg();        // not being used
+    void aSyncGo(int);          // rgh req'd?
+    void needToShow();          // not being used
+    void abortMetaRead();       // not being used
+    void abortMDCache();        // not being used
+    void abortImageCache();     // not being used
+    void abortBuildFilters();   // not being used
+    void abortFrameDecoder();   // not being used
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
-    void testAddToDM(ImageMetadata m, QString src);
+    void testAddToDM(ImageMetadata m, QString src); // not being used
 
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
-    void restoreLastSessionGeometryState();
+    void restoreLastSessionGeometryState(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
@@ -1193,6 +1193,9 @@ private:
     void setupCentralWidget();
     void initialize();
     void setupPlatform();
+    QRect recoverGeometry(const QByteArray &geometry);
+    void checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
+                               int frameHeight);
     void setfsModelFlags();
     void removeDeprecatedSettings();
     void writeSettings();

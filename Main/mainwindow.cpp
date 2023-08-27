@@ -529,6 +529,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (setting->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             // except settings with dependencies ie for actions not created yet
+    //return;
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
@@ -590,7 +591,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
-    show();
+//    show();
+//    if (isSettings) restoreLastSessionGeometryState();
+//    else defaultWorkspace();
+    //setGeometry(QRect(4291,361, 855, 493));
 
     G::isInitializing = false;
 
@@ -619,6 +623,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             }
         }
 
+        // recover from prior crash
         if (setting->value("hasCrashed").toBool()) {
             int picks = pickLogCount();
             int ratings = ratingLogCount();
@@ -656,18 +661,24 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
 }
 
-void MW::restoreLastSessionGeometryState()
+void MW::restoreLastSessionGeometryState(Qt::ApplicationState state)
 {
-    if (G::isLogger) G::log("MW::restoreLastSessionGeometryState");
-//    if (isSettings) {
+/*
+    This is signalled when QGuiApplication::applicationStateChanged (connect
+    in Main()).  For an unknown reason restoreGeometry only works on the
+    primary monitor before the app is instantiated by instance.exec in main.
+*/
+    if (G::isLogger) qDebug() << "MW::restoreLastSessionGeometryState";
+    static bool isRestored = false;
+    if (!isRestored && state == Qt::ApplicationActive) {
+        qDebug() << "MW::restoreLastSessionGeometryState";
         restoreGeometry(setting->value("Geometry").toByteArray());
-        //setGeometry(setting->value("WindowLocation").toByteArray());
         restoreState(setting->value("WindowState").toByteArray());
-//    }
-//    else {
-//        defaultWorkspace();
-//    }
-    setWindowOpacity(1);
+        setVisible(true);
+        setWindowOpacity(100);
+        show();
+        isRestored = true;
+    }
 }
 
 bool MW::isDevelopment()
@@ -690,12 +701,14 @@ void MW::showEvent(QShowEvent *event)
         MW::updateDisplayResolution()
     MW::restoreLastSessionGeometryState()
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::showEvent";
+//    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::showEvent";
 
-//    QMainWindow::showEvent(event);
+    //QMainWindow::showEvent(event);
 
-    if (isSettings) restoreLastSessionGeometryState();
-    else defaultWorkspace();
+//    if (isSettings) restoreLastSessionGeometryState();
+//    else defaultWorkspace();
+//    setWindowOpacity(0);
 
     getDisplayProfile();
 
@@ -730,7 +743,12 @@ void MW::showEvent(QShowEvent *event)
 //    // size columns after show if device pixel ratio > 1
 //    embelProperties->resizeColumns();
 
-    QMainWindow::showEvent(event);
+//    if (isSettings) restoreLastSessionGeometryState();
+//    else defaultWorkspace();
+    setWindowOpacity(0);
+//    setVisible(false);
+    Utilities::log("MW::showEvent", "");
+    //QMainWindow::showEvent(event);
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -789,7 +807,8 @@ void MW::moveEvent(QMoveEvent *event)
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
 */
-    if (G::isLogger) G::log("MW::moveEvent");
+    //if (G::isLogger)
+    qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
     QMainWindow::moveEvent(event);
     setDisplayResolution();
     updateDisplayResolution();
@@ -798,7 +817,8 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log("MW::moveEvent");
+    //if (G::isLogger)
+        qDebug() << "MW::resizeEvent";
     QMainWindow::resizeEvent(event);
     // re-position zoom dialog
     emit resizeMW(this->geometry(), centralWidget->geometry());
@@ -807,12 +827,6 @@ void MW::resizeEvent(QResizeEvent *event)
     if (availSpace < progressWidthBeforeResizeWindow && availSpace > progressWidth)
         progressWidth = availSpace;
     updateProgressBarWidth();
-}
-
-void MW::mouseMoveEvent(QMouseEvent *event)
-{
-    QMainWindow::mouseMoveEvent(event);
-//    qDebug() << "MW::mouseMoveEvent" << event;
 }
 
 void MW::keyPressEvent(QKeyEvent *event)
@@ -947,7 +961,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-
     /* ALL EVENTS (uncomment to use)
     if (event->type()
                              != QEvent::Paint
