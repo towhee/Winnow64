@@ -86,7 +86,7 @@ void TableView::updateVisible(QString src)
 {
     if (G::isLogger) G::log("TableView::setViewportParameters");
     //    /*
-    qDebug() << "TableView::updateVisible src =" << src;
+    //qDebug() << "TableView::updateVisible src =" << src;
     //*/
     firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
