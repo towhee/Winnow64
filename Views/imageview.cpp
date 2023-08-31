@@ -152,7 +152,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     // No folder selected yet
     if (!fPath.length()) {
-        qWarning() << "WARNING" << "ImageView::loadImage" << "Src =" << src << "No folder selected";
+        //qWarning() << "WARNING" << "ImageView::loadImage" << "Src =" << src << "No folder selected";
         return false;
     }
 

@@ -17,6 +17,7 @@ class Mac
 {
 public:
     static void availableMemory();
+    static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);

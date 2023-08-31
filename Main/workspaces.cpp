@@ -29,7 +29,8 @@
 
 void MW::newWorkspace()
 {
-    if (G::isLogger) G::log("MW::newWorkspace");
+    if (G::isLogger)
+        G::log("MW::newWorkspace");
     int n = workspaces->count();
     if (n > 9) {
         QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\n"
@@ -55,6 +56,7 @@ void MW::newWorkspace()
         workspaceActions.at(n)->setShortcutVisibleInContextMenu(true);
         workspaceActions.at(n)->setShortcut(QKeySequence("Ctrl+" + QString::number(n)));
         workspaceActions.at(n)->setVisible(true);
+        saveWorkspaces();
     }
 }
 
@@ -208,14 +210,15 @@ void MW::manageWorkspaces()
 
 void MW::deleteWorkspace(int n)
 {
-    if (G::isLogger) G::log("MW::deleteWorkspace");
+    if (G::isLogger)
+        G::log("MW::deleteWorkspace");
     if (workspaces->count() < 1) return;
 
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
     // remove workspace from settings deleting all and then saving all
-    setting->remove("Workspaces");
+    settings->remove("Workspaces");
     saveWorkspaces();
 
     // sync menus by re-updating.  Tried to use indexes but had problems so
@@ -334,7 +337,8 @@ void MW::defaultWorkspace()
 
 void MW::renameWorkspace(int n, QString name)
 {
-    if (G::isLogger) G::log("MW::renameWorkspace");
+    if (G::isLogger)
+        G::log("MW::renameWorkspace");
     // do not rename if duplicate
     if (workspaces->count() > 0) {
         for (int i=1; i<workspaces->count(); i++) {
@@ -400,92 +404,97 @@ void MW::loadWorkspaces()
 {
     if (G::isLogger) G::log("MW::loadWorkspaces");
     if (!isSettings) return;
-    int size = setting->beginReadArray("Workspaces");
+    int size = settings->beginReadArray("Workspaces");
+    qDebug() << "MW::loadWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
-        setting->setArrayIndex(i);
-        ws.name = setting->value("name").toString();
-        ws.geometry = setting->value("geometry").toByteArray();
-        ws.state = setting->value("state").toByteArray();
-        ws.isFullScreen = setting->value("isFullScreen").toBool();
-        ws.isWindowTitleBarVisible = setting->value("isWindowTitleBarVisible").toBool();
-        ws.isMenuBarVisible = setting->value("isMenuBarVisible").toBool();
-        ws.isStatusBarVisible = setting->value("isStatusBarVisible").toBool();
-        ws.isFolderDockVisible = setting->value("isFolderDockVisible").toBool();
-        ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
-        ws.isFilterDockVisible = setting->value("isFilterDockVisible").toBool();
-        ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
-        ws.isEmbelDockVisible = setting->value("isEmbelDockVisible").toBool();
-        ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
-        ws.thumbSpacing = setting->value("thumbSpacing").toInt();
-        ws.thumbPadding = setting->value("thumbPadding").toInt();
-        ws.thumbWidth = setting->value("thumbWidth").toInt();
-        ws.thumbHeight = setting->value("thumbHeight").toInt();
-        ws.labelFontSize = setting->value("labelFontSize").toInt();
-        ws.showThumbLabels = setting->value("showThumbLabels").toBool();
-        ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
-        ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
-        ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
-        ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
-        ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
-        ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-        ws.labelChoice = setting->value("labelChoice").toString();
-        ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
-        ws.isGridDisplay = setting->value("isGridDisplay").toBool();
-        ws.isTableDisplay = setting->value("isTableDisplay").toBool();
-        ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
-        ws.isEmbelDisplay = setting->value("isEmbelDisplay").toBool();
-        ws.isColorManage = setting->value("isColorManage").toBool();
-        ws.cacheSizeMethod = setting->value("cacheSizeMethod").toString();
-        ws.sortColumn = setting->value("sortColumn").toInt();
-        ws.isReverseSort = setting->value("isReverseSort").toBool();
+        settings->setArrayIndex(i);
+        ws.name = settings->value("name").toString();
+
+        ws.geometry = settings->value("geometry").toByteArray();
+        ws.state = settings->value("state").toByteArray();
+        ws.isFullScreen = settings->value("isFullScreen").toBool();
+        ws.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
+        ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
+        ws.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
+        ws.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
+        ws.isFavDockVisible = settings->value("isFavDockVisible").toBool();
+        ws.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
+        ws.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
+        ws.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
+        ws.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
+        ws.thumbSpacing = settings->value("thumbSpacing").toInt();
+        ws.thumbPadding = settings->value("thumbPadding").toInt();
+        ws.thumbWidth = settings->value("thumbWidth").toInt();
+        ws.thumbHeight = settings->value("thumbHeight").toInt();
+        ws.labelFontSize = settings->value("labelFontSize").toInt();
+        ws.showThumbLabels = settings->value("showThumbLabels").toBool();
+        ws.thumbSpacingGrid = settings->value("thumbSpacingGrid").toInt();
+        ws.thumbPaddingGrid = settings->value("thumbPaddingGrid").toInt();
+        ws.thumbWidthGrid = settings->value("thumbWidthGrid").toInt();
+        ws.thumbHeightGrid = settings->value("thumbHeightGrid").toInt();
+        ws.labelFontSizeGrid = settings->value("labelFontSizeGrid").toInt();
+        ws.showThumbLabelsGrid = settings->value("showThumbLabelsGrid").toBool();
+        ws.labelChoice = settings->value("labelChoice").toString();
+        ws.isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
+        ws.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
+        ws.isGridDisplay = settings->value("isGridDisplay").toBool();
+        ws.isTableDisplay = settings->value("isTableDisplay").toBool();
+        ws.isCompareDisplay = settings->value("isCompareDisplay").toBool();
+        ws.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
+        ws.isColorManage = settings->value("isColorManage").toBool();
+        ws.cacheSizeMethod = settings->value("cacheSizeMethod").toString();
+        ws.sortColumn = settings->value("sortColumn").toInt();
+        ws.isReverseSort = settings->value("isReverseSort").toBool();
         workspaces->append(ws);
     }
-    setting->endArray();
+    settings->endArray();
 }
 
 void MW::saveWorkspaces()
 {
     if (G::isLogger) G::log("MW::saveWorkspaces");
-    setting->beginWriteArray("Workspaces");
-    for (int i = 0; i < workspaces->count(); ++i) {
+    int size = workspaces->count();
+    settings->beginWriteArray("Workspaces", size);
+    qDebug() << "MW::saveWorkspaces" << size;
+    for (int i = 0; i < size; ++i) {
         ws = workspaces->at(i);
-        setting->setArrayIndex(i);
-        setting->setValue("name", ws.name);
-        setting->setValue("geometry", ws.geometry);
-        setting->setValue("state", ws.state);
-        setting->setValue("isFullScreen", ws.isFullScreen);
-        setting->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
-        setting->setValue("isMenuBarVisible", ws.isMenuBarVisible);
-        setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
-        setting->setValue("isFolderDockVisible", ws.isFolderDockVisible);
-        setting->setValue("isFavDockVisible", ws.isFavDockVisible);
-        setting->setValue("isFilterDockVisible", ws.isFilterDockVisible);
-        setting->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
-        setting->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
-        setting->setValue("isThumbDockVisible", ws.isThumbDockVisible);
-        setting->setValue("thumbSpacing", ws.thumbSpacing);
-        setting->setValue("thumbPadding", ws.thumbPadding);
-        setting->setValue("thumbWidth", ws.thumbWidth);
-        setting->setValue("thumbHeight", ws.thumbHeight);
-        setting->setValue("showThumbLabels", ws.showThumbLabels);
-        setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
-        setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
-        setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
-        setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
-        setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
-        setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
-        setting->setValue("labelChoice", ws.labelChoice);
-        setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
-        setting->setValue("isGridDisplay", ws.isGridDisplay);
-        setting->setValue("isTableDisplay", ws.isTableDisplay);
-        setting->setValue("isCompareDisplay", ws.isCompareDisplay);
-        setting->setValue("isEmbelDisplay", ws.isEmbelDisplay);
-        setting->setValue("isColorManage", ws.isColorManage);
-        setting->setValue("cacheSizeMethod", ws.cacheSizeMethod);
-        setting->setValue("sortColumn", ws.sortColumn);
-        setting->setValue("isReverseSort", ws.isReverseSort);
+        settings->setArrayIndex(i);
+        settings->setValue("name", ws.name);
+        settings->setValue("geometry", ws.geometry);
+        settings->setValue("state", ws.state);
+        settings->setValue("isFullScreen", ws.isFullScreen);
+        settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
+        settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
+        settings->setValue("isStatusBarVisible", ws.isStatusBarVisible);
+        settings->setValue("isFolderDockVisible", ws.isFolderDockVisible);
+        settings->setValue("isFavDockVisible", ws.isFavDockVisible);
+        settings->setValue("isFilterDockVisible", ws.isFilterDockVisible);
+        settings->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
+        settings->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
+        settings->setValue("isThumbDockVisible", ws.isThumbDockVisible);
+        settings->setValue("thumbSpacing", ws.thumbSpacing);
+        settings->setValue("thumbPadding", ws.thumbPadding);
+        settings->setValue("thumbWidth", ws.thumbWidth);
+        settings->setValue("thumbHeight", ws.thumbHeight);
+        settings->setValue("showThumbLabels", ws.showThumbLabels);
+        settings->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
+        settings->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
+        settings->setValue("thumbWidthGrid", ws.thumbWidthGrid);
+        settings->setValue("thumbHeightGrid", ws.thumbHeightGrid);
+        settings->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
+        settings->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
+        settings->setValue("labelChoice", ws.labelChoice);
+        settings->setValue("isImageInfoVisible", ws.isImageInfoVisible);
+        settings->setValue("isLoupeDisplay", ws.isLoupeDisplay);
+        settings->setValue("isGridDisplay", ws.isGridDisplay);
+        settings->setValue("isTableDisplay", ws.isTableDisplay);
+        settings->setValue("isCompareDisplay", ws.isCompareDisplay);
+        settings->setValue("isEmbelDisplay", ws.isEmbelDisplay);
+        settings->setValue("isColorManage", ws.isColorManage);
+        settings->setValue("cacheSizeMethod", ws.cacheSizeMethod);
+        settings->setValue("sortColumn", ws.sortColumn);
+        settings->setValue("isReverseSort", ws.isReverseSort);
     }
-    setting->endArray();
+    settings->endArray();
+    //setting->setValue("Workpaces.size", size);
 }

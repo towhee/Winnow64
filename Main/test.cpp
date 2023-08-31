@@ -106,6 +106,9 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 {
+    imageCacheThread->resume();
+    return;
+
     // ESC to quit
     isStressTest = true;
     bool isForward = true;
@@ -127,20 +130,7 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    setWindowOpacity(0);
-    return;
 
-    QPalette pal = QToolTip::palette();
-    pal.setColor(QPalette::ToolTipText, Qt::red);
-//    QFont font;
-//    font.setPointSize(18);
-//    pal.setBrush(QPalette::ToolTipText, QBrush(Qt::red));
-    QToolTip::setPalette(pal);
-    return;
-
-    qDebug() << "G::modifySourceFiles =" << G::modifySourceFiles;
-    bounceFoldersStressTest(50, 10000);
-    return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
     if (G::isFlowLogger2) qDebug() << "";
@@ -148,54 +138,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    //this->windowHandle()->setPosition(4291,361);
-    qDebug() << "test";
-    //restoreLastSessionGeometryState();
-
-//    restoreGeometry(setting->value("Geometry").toByteArray());
-//    restoreState(setting->value("WindowState").toByteArray());
-//    setVisible(true);
-//    setWindowOpacity(100);
-//    show();
-    return;
-
-    QList<QScreen *> screens = QGuiApplication::screens();
-    QScreen *screen = screens.at(1);
-    QRect availableGeometry = screen->availableGeometry();
-    int x = qBound(availableGeometry.left(), 4291, availableGeometry.right() - 855);
-    int y = qBound(availableGeometry.top(), 361, availableGeometry.bottom() - 493);
-    qDebug() << "availableGeometry:" << availableGeometry
-             << "x =" << x
-             << "y =" << y
-        ;
-    setGeometry(QRect(x, y, 855, 493));
-    //setGeometry(QRect(4291,361, 855, 493));
-    return;
-
-//    QList<QScreen *> screens = QGuiApplication::screens();
-//    qDebug() << "Number of screens:" << screens.count();
-
-//    for (int i = 0; i < screens.count(); ++i) {
-//        QScreen *screen = screens.at(i);
-//        qDebug() << "Screen" << i << screen << "geometry:" << screen->geometry();
-//    }
-//    qDebug() << "Winnow Screen" << this->screen();
-//    QWindow *window = windowHandle();
-//    QScreen *screen = screens.at(1);
-    //window->setScreen(screen);
-//    this->move(QPoint(4500,500));
-
-//    qDebug() << "pos() =" << pos();
-//    qDebug() << "QApplication::desktop ()->screenNumber (pos)) =" << QGuiApplication::screenAt(pos());
-//    qDebug() << "geometry() =" << geometry();
-//    qDebug() << "screen()->geometry() =" << screen()->geometry();
-//    qDebug() << "screen()->availableGeometry() =" << screen()->availableGeometry();
-//    qDebug() << "screen()->availableVirtualGeometry() ="<<  screen()->availableVirtualGeometry();
-
-//    Mac::spaces();
-//    QList<QScreen *> screens = QGuiApplication::screens();
-//    for (int i = 0; i < screens.size(); ++i) {
-//        QRect screenGeometry = screens[i]->geometry();
-//        qDebug() << "Screen" << i << "geometry:" << screenGeometry;
-//    }
+    int iconCount = 0;
+    for (int i = 0; i < dm->rowCount(); i++) {
+        if (dm->iconLoaded(i, dm->instance)) iconCount++;
+    }
+    qDebug() << iconCount;
 }

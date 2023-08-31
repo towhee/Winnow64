@@ -529,8 +529,8 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     if (G::isLogger) G::log("CheckBoxEditor::CheckBoxEditor");
     this->idx = idx;
     source = idx.data(UR_Source).toString();
-
-    checkBox = new QCheckBox;
+    qDebug() << "CheckBoxEditor::CheckBoxEditor  parent =" << parent;
+    checkBox = new QCheckBox(parent);
     checkBox->setObjectName("DisableGoActions");  // used in MW::focusChange
     checkBox->setStyleSheet("QCheckBox {background: transparent; border:none;}");
     checkBox->setWindowFlags(Qt::FramelessWindowHint);

@@ -17,8 +17,8 @@ void MW::externalAppManager()
         Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
         in the MW constructor and then edited here based on changes made in appDlg.
         */
-        setting->beginGroup("ExternalApps");
-        setting->remove("");
+        settings->beginGroup("ExternalApps");
+        settings->remove("");
         for (int i = 0; i < 10; ++i) {
             if (i < externalApps.length()) {
                 QString shortcut = "Alt+" + xAppShortcut[i];
@@ -31,17 +31,17 @@ void MW::externalAppManager()
                 // save to settings
                 QString sortPrefix = xAppShortcut[i];
                 if (sortPrefix == "0") sortPrefix = "X";
-                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
+                settings->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
             }
             else {
                 appActions.at(i)->setVisible(false);
                 appActions.at(i)->setText("");
             }
         }
-        setting->endGroup();
-
-        setting->beginGroup("ExternalAppArgs");
-        setting->remove("");
+        settings->endGroup();
+        
+        settings->beginGroup("ExternalAppArgs");
+        settings->remove("");
         for (int i = 0; i < 10; ++i) {
             if (i < externalApps.length()) {
                 // save to settings
@@ -50,10 +50,10 @@ void MW::externalAppManager()
 //                qDebug() << "MW::externalAppManager" << i
 //                         << externalApps.at(i).name
 //                         << externalApps.at(i).args;
-                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).args);
+                settings->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).args);
             }
         }
-        setting->endGroup();
+        settings->endGroup();
     }
 }
 

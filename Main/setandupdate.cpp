@@ -406,7 +406,7 @@ void MW::setIngested()
     after a crash recovery.
 */
     if (G::isLogger) G::log("MW::setIngested");
-    setting->beginGroup("PickLog");
+    settings->beginGroup("PickLog");
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QString sKey = dm->sf->index(row, 0).data(G::PathRole).toString();
         if (dm->sf->index(row, G::PickColumn).data().toString() == "Picked") {
@@ -416,10 +416,10 @@ void MW::setIngested()
                             dm->instance, "MW::setIngested", Qt::EditRole, Qt::AlignCenter);
             // update pickLog
             sKey.replace("/", "🔸");
-            setting->setValue(sKey, "ingested");
+                              settings->setValue(sKey, "ingested");
         }
     }
-    setting->endGroup();
+    settings->endGroup();
 
     // update filter counts
     buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction);
@@ -582,7 +582,7 @@ void MW::updateClassification()
 void MW::setIgnoreAddThumbnailsDlg()
 {
     qDebug() << "MW::setIgnoreAddThumbnailsDlg";
-    setting->setValue("ignoreAddThumbnailsDlg", true);
+    settings->setValue("ignoreAddThumbnailsDlg", true);
     ignoreAddThumbnailsDlg = true;
 }
 

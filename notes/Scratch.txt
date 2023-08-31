@@ -1,1 +1,20 @@
-MW::eventFilter event: QExposeEvent() 	 event->type: QEvent::Expose 	 obj: QWidgetWindow(0x6000026fb0c0, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
+MW::moveEvent isVisible() = true
+    107,107 MW::updateDisplayResolution
+         18 MW::setDisplayResolution
+        411 MW::macActualDevicePixelRatio
+ 10,344,616 MW::updateDisplayResolution
+         20 DockWidget::moveEvent                              FoldersDock
+          0 FSTree::resizeEvent
+         83 FSTree::resizeColumns
+         28 DockWidget::resizeEvent
+      1,420 DockWidget::moveEvent                              thumbDock
+          2 MW::setThumbDockHeight
+   MW::updateIconRange  src = "IconView::updateVisibleCellCount"
+         31 MW::setThumbDockFeatures
+MW::resizeEvent
+         25 DockWidget::resizeEvent
+          2 MW::availableSpaceForProgressBar
+MW::moveEvent isVisible() = true
+      4,391 MW::updateProgressBarWidth
+          4 MW::setDisplayResolution
+         84 MW::macActualDevicePixelRatio

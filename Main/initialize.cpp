@@ -8,7 +8,6 @@ void MW::initialize()
     G::stop = false;
     G::dmEmpty = true;
     G::isProcessingExportedImages = false;
-    G::isDev = isDevelopment();
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
     G::dpi = 72;
@@ -90,6 +89,7 @@ void MW::setupPlatform()
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
         Mac::availableMemory();
+        Mac::joinAllSpaces(window()->winId());
     #endif
 }
 
@@ -324,14 +324,14 @@ void MW::createDataModel()
     cacheProgressBar = new ProgressBar(this);
 
     // loadSettings not run yet
-    if (isSettings && setting->contains("combineRawJpg"))
-        combineRawJpg = setting->value("combineRawJpg").toBool();
+    if (isSettings && settings->contains("combineRawJpg"))
+        combineRawJpg = settings->value("combineRawJpg").toBool();
     else combineRawJpg = false;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
 
-    if (setting->contains("showThumbNailSymbolHelp"))
-        dm->showThumbNailSymbolHelp = setting->value("showThumbNailSymbolHelp").toBool();
+    if (settings->contains("showThumbNailSymbolHelp"))
+        dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();
     else dm->showThumbNailSymbolHelp = true;
 
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
@@ -402,8 +402,8 @@ void MW::createMDCache()
     metadataCacheThread = new MetadataCache(this, dm, metadata, frameDecoder);
 
     if (isSettings) {
-        if (setting->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
-        if (setting->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
+        if (settings->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = settings->value("cacheAllMetadata").toBool();
+        if (settings->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = settings->value("cacheAllIcons").toBool();
     }
     else {
         metadataCacheThread->cacheAllMetadata = true;
@@ -447,8 +447,8 @@ void MW::createMDCache()
 
     // MetaRead and MetaRead2
     if (isSettings) {
-        if (setting->contains("iconChunkSize")) {
-            dm->defaultIconChunkSize = setting->value("iconChunkSize").toInt();
+        if (settings->contains("iconChunkSize")) {
+            dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
             if (dm->defaultIconChunkSize < 1000)
                 dm->defaultIconChunkSize = 3000;
         }
@@ -457,7 +457,7 @@ void MW::createMDCache()
         }
     }
     else {
-        setting->setValue("iconChunkSize", dm->defaultIconChunkSize);
+        settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
     }
     //dm->iconChunkSize = dm->defaultIconChunkSize;
     dm->setChunkSize(dm->defaultIconChunkSize);
@@ -471,7 +471,7 @@ void MW::createMDCache()
     // MetaRead
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-    //metaReadThread->setPriority(QThread::TimeCriticalPriority);
+    metaReadThread->setPriority(QThread::TimeCriticalPriority);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
@@ -578,7 +578,7 @@ void MW::createImageCache()
 
 //    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
-    //imageCacheThread->setPriority(QThread::LowestPriority);
+    imageCacheThread->setPriority(QThread::LowestPriority);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -650,14 +650,14 @@ void MW::createThumbView()
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
-        if (setting->contains("thumbWidth")) thumbView->iconWidth = setting->value("thumbWidth").toInt();
-        if (setting->contains("thumbHeight")) thumbView->iconHeight = setting->value("thumbHeight").toInt();
-        if (setting->contains("labelFontSize")) thumbView->labelFontSize = setting->value("labelFontSize").toInt();
-        if (setting->contains("showThumbLabels")) thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
-        if (setting->contains("labelChoice")) thumbView->labelChoice = setting->value("labelChoice").toString();
-        if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
-        if (setting->contains("classificationBadgeSizeFactor")) thumbView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
-        if (setting->contains("iconNumberSize")) thumbView->iconNumberSize = setting->value("iconNumberSize").toInt();
+        if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
+        if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
+        if (settings->contains("labelFontSize")) thumbView->labelFontSize = settings->value("labelFontSize").toInt();
+        if (settings->contains("showThumbLabels")) thumbView->showIconLabels = settings->value("showThumbLabels").toBool();
+        if (settings->contains("labelChoice")) thumbView->labelChoice = settings->value("labelChoice").toString();
+        if (settings->contains("showZoomFrame")) thumbView->showZoomFrame = settings->value("showZoomFrame").toBool();
+        if (settings->contains("classificationBadgeSizeFactor")) thumbView->badgeSize = settings->value("classificationBadgeSizeFactor").toInt();
+        if (settings->contains("iconNumberSize")) thumbView->iconNumberSize = settings->value("iconNumberSize").toInt();
     }
     else {
         thumbView->iconWidth = 100;
@@ -692,13 +692,13 @@ void MW::createGridView()
     gridView->firstVisibleCell = 0;
 
     if (isSettings) {
-        if (setting->contains("thumbWidthGrid")) gridView->iconWidth = setting->value("thumbWidthGrid").toInt();
-        if (setting->contains("thumbHeightGrid")) gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
-        if (setting->contains("labelFontSizeGrid")) gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
-        if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
-        if (setting->contains("labelChoice")) gridView->labelChoice = setting->value("labelChoice").toString();
-        if (setting->contains("classificationBadgeSizeFactor")) gridView->badgeSize = setting->value("classificationBadgeSizeFactor").toInt();
-        if (setting->contains("iconNumberSize")) gridView->iconNumberSize = setting->value("iconNumberSize").toInt();
+        if (settings->contains("thumbWidthGrid")) gridView->iconWidth = settings->value("thumbWidthGrid").toInt();
+        if (settings->contains("thumbHeightGrid")) gridView->iconHeight = settings->value("thumbHeightGrid").toInt();
+        if (settings->contains("labelFontSizeGrid")) gridView->labelFontSize = settings->value("labelFontSizeGrid").toInt();
+        if (settings->contains("showThumbLabelsGrid")) gridView->showIconLabels = settings->value("showThumbLabelsGrid").toBool();
+        if (settings->contains("labelChoice")) gridView->labelChoice = settings->value("labelChoice").toString();
+        if (settings->contains("classificationBadgeSizeFactor")) gridView->badgeSize = settings->value("classificationBadgeSizeFactor").toInt();
+        if (settings->contains("iconNumberSize")) gridView->iconNumberSize = settings->value("iconNumberSize").toInt();
     }
     else {
         gridView->iconWidth = 200;
@@ -729,13 +729,13 @@ void MW::createTableView()
 
     if (isSettings) {
         /* read TableView okToShow fields */
-        setting->beginGroup("TableFields");
-        QStringList setFields = setting->childKeys();
+        settings->beginGroup("TableFields");
+        QStringList setFields = settings->childKeys();
         QList<QStandardItem *> itemList;
-        setFields = setting->childKeys();
+        setFields = settings->childKeys();
         for (int i = 0; i <setFields.size(); ++i) {
             QString setField = setFields.at(i);
-            bool okToShow = setting->value(setField).toBool();
+            bool okToShow = settings->value(setField).toBool();
             itemList = tableView->ok->findItems(setField);
             if (itemList.length()) {
                 int row = itemList[0]->row();
@@ -743,7 +743,7 @@ void MW::createTableView()
                 tableView->ok->setData(idx, okToShow, Qt::EditRole);
             }
         }
-        setting->endGroup();
+        settings->endGroup();
     }
 
     // update menu "sort by" to match tableView sort change
@@ -794,16 +794,16 @@ void MW::createImageView()
     infoString->loupeInfoTemplate = "Default info";
     if (isSettings) {
         // load info templates
-        setting->beginGroup("InfoTemplates");
-        QStringList keys = setting->childKeys();
+        settings->beginGroup("InfoTemplates");
+        QStringList keys = settings->childKeys();
         for (int i = 0; i < keys.size(); ++i) {
             QString key = keys.at(i);
-            infoString->infoTemplates[key] = setting->value(key).toString();
+            infoString->infoTemplates[key] = settings->value(key).toString();
         }
-        setting->endGroup();
+        settings->endGroup();
         // if loupeInfoTemplate is in QSettings and info templates then assign
-        if (setting->contains("loupeInfoTemplate")) {
-            QString displayInfoTemplate = setting->value("loupeInfoTemplate").toString();
+        if (settings->contains("loupeInfoTemplate")) {
+            QString displayInfoTemplate = settings->value("loupeInfoTemplate").toString();
             if (infoString->infoTemplates.contains(displayInfoTemplate))
                 infoString->loupeInfoTemplate = displayInfoTemplate;
         }
@@ -811,8 +811,8 @@ void MW::createImageView()
 
     // prep pass values: first use of program vs settings have been saved
     if (isSettings) {
-        if (setting->contains("isImageInfoVisible")) isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        if (setting->contains("infoOverlayFontSize")) infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
+        if (settings->contains("isImageInfoVisible")) isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
+        if (settings->contains("infoOverlayFontSize")) infoOverlayFontSize = settings->value("infoOverlayFontSize").toInt();
     }
     else {
         // parameters already defined in loadSettings
@@ -826,16 +826,16 @@ void MW::createImageView()
                               sel,
                               thumbView,
                               infoString,
-                              setting->value("isImageInfoVisible").toBool(),
-                              setting->value("isRatingBadgeVisible").toBool(),
-                              setting->value("classificationBadgeInImageDiameter").toInt(),
-                              setting->value("infoOverlayFontSize").toInt());
+                              settings->value("isImageInfoVisible").toBool(),
+                              settings->value("isRatingBadgeVisible").toBool(),
+                              settings->value("classificationBadgeInImageDiameter").toInt(),
+                              settings->value("infoOverlayFontSize").toInt());
 
     if (isSettings) {
-        if (setting->contains("limitFit100Pct")) imageView->limitFit100Pct = setting->value("limitFit100Pct").toBool();
-        if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
-        if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
-        qreal tempZoom = setting->value("toggleZoomValue").toReal();
+        if (settings->contains("limitFit100Pct")) imageView->limitFit100Pct = settings->value("limitFit100Pct").toBool();
+        if (settings->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = settings->value("infoOverlayFontSize").toInt();
+        if (settings->contains("lastPrefPage")) lastPrefPage = settings->value("lastPrefPage").toInt();
+        qreal tempZoom = settings->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1.0;
         if (tempZoom < 0.25) tempZoom = 1.0;
         imageView->toggleZoom = tempZoom;
@@ -863,8 +863,8 @@ void MW::createCompareView()
     compareImages = new CompareImages(this, centralWidget, metadata, dm, sel, thumbView, icd);
 
     if (isSettings) {
-        if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
-        qreal tempZoom = setting->value("toggleZoomValue").toReal();
+        if (settings->contains("lastPrefPage")) lastPrefPage = settings->value("lastPrefPage").toInt();
+        qreal tempZoom = settings->value("toggleZoomValue").toReal();
         if (tempZoom > 3) tempZoom = 1;
         if (tempZoom < 0.25) tempZoom = 1;
         compareImages->toggleZoom = tempZoom;
@@ -885,7 +885,7 @@ void MW::createInfoString()
     dependent on template data stored in QSettings
 */
     if (G::isLogger) G::log("MW::createInfoString");
-    infoString = new InfoString(this, dm, setting/*, embelProperties*/);
+    infoString = new InfoString(this, dm, settings/*, embelProperties*/);
 
 }
 
@@ -901,8 +901,8 @@ void MW::createInfoView()
 
     if (isSettings) {
         /* read InfoView okToShow fields */
-        setting->beginGroup("InfoFields");
-        QStringList setFields = setting->childKeys();
+        settings->beginGroup("InfoFields");
+        QStringList setFields = settings->childKeys();
         QList<QStandardItem *> itemList;
         QStandardItemModel *k = infoView->ok;
         // go through every setting in QSettings
@@ -911,7 +911,7 @@ void MW::createInfoView()
             isFound = false;
             // Get a field and boolean
             QString setField = setFields.at(i);
-            bool okToShow = setting->value(setField).toBool();
+            bool okToShow = settings->value(setField).toBool();
             int row;
             // search for the matching item in infoView
             for (row = 0; row < k->rowCount(); row++) {
@@ -948,13 +948,13 @@ void MW::createInfoView()
                 if (isFound) break;
             }
         }
-        setting->endGroup();
+        settings->endGroup();
     }
 
     /* read InfoView okToShow fields */
 //    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
-    setting->beginGroup("InfoFields");
-    QStringList setFields = setting->childKeys();
+    settings->beginGroup("InfoFields");
+    QStringList setFields = settings->childKeys();
     QList<QStandardItem *> itemList;
     QStandardItemModel *k = infoView->ok;
     // go through every setting in QSettings
@@ -963,7 +963,7 @@ void MW::createInfoView()
         isFound = false;
         // Get a field and boolean
         QString setField = setFields.at(i);
-        bool okToShow = setting->value(setField).toBool();
+        bool okToShow = settings->value(setField).toBool();
         int row;
         // search for the matching item in infoView
         for (row = 0; row < k->rowCount(); row++) {
@@ -999,7 +999,7 @@ void MW::createInfoView()
             if (isFound) break;
         }
     }
-    setting->endGroup();
+    settings->endGroup();
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(metadataChanged(QStandardItem*)));
@@ -1056,13 +1056,13 @@ void MW::createBookmarks()
     bookmarks = new BookMarks(this, metadata, true /*showImageCount*/, combineRawJpg);
 
     if (isSettings) {
-        setting->beginGroup("Bookmarks");
-        QStringList paths = setting->childKeys();
+        settings->beginGroup("Bookmarks");
+        QStringList paths = settings->childKeys();
         for (int i = 0; i < paths.size(); ++i) {
-            bookmarks->bookmarkPaths.insert(setting->value(paths.at(i)).toString());
+            bookmarks->bookmarkPaths.insert(settings->value(paths.at(i)).toString());
         }
         bookmarks->reloadBookmarks();
-        setting->endGroup();
+        settings->endGroup();
     }
     else {
         bookmarks->bookmarkPaths.insert(QDir::homePath());
@@ -1126,8 +1126,8 @@ void MW::createStatusBar()
     // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
-    if (isSettings && setting->contains("cacheStatusWidth"))
-        progressWidth = setting->value("cacheStatusWidth").toInt();
+    if (isSettings && settings->contains("cacheStatusWidth"))
+        progressWidth = settings->value("cacheStatusWidth").toInt();
     if (progressWidth < 100 || progressWidth > 1000) progressWidth = 200;
     progressPixmap = new QPixmap(4000, 25);   // cacheprogress
     progressPixmap->scaled(progressWidth, 25);
@@ -1264,12 +1264,12 @@ void MW::createFolderDock()
     folderTitleLayout->addSpacing(5);
 
     if (isSettings) {
-        setting->beginGroup(("FolderDock"));
-        if (setting->contains("screen")) folderDock->dw.screen = setting->value("screen").toInt();
-        if (setting->contains("pos")) folderDock->dw.pos = setting->value("pos").toPoint();
-        if (setting->contains("size")) folderDock->dw.size = setting->value("size").toSize();
-        if (setting->contains("devicePixelRatio")) folderDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
-        setting->endGroup();
+        settings->beginGroup(("FolderDock"));
+        if (settings->contains("screen")) folderDock->dw.screen = settings->value("screen").toInt();
+        if (settings->contains("pos")) folderDock->dw.pos = settings->value("pos").toPoint();
+        if (settings->contains("size")) folderDock->dw.size = settings->value("size").toSize();
+        if (settings->contains("devicePixelRatio")) folderDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
+        settings->endGroup();
     }
 
     connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
@@ -1323,12 +1323,12 @@ void MW::createFavDock()
     favTitleLayout->addSpacing(5);
 
     if (isSettings) {
-        setting->beginGroup(("FavDock"));
-        if (setting->contains("screen")) favDock->dw.screen = setting->value("screen").toInt();
-        if (setting->contains("pos")) favDock->dw.pos = setting->value("pos").toPoint();
-        if (setting->contains("size")) favDock->dw.size = setting->value("size").toSize();
-        if (setting->contains("devicePixelRatio")) favDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
-        setting->endGroup();
+        settings->beginGroup(("FavDock"));
+        if (settings->contains("screen")) favDock->dw.screen = settings->value("screen").toInt();
+        if (settings->contains("pos")) favDock->dw.pos = settings->value("pos").toPoint();
+        if (settings->contains("size")) favDock->dw.size = settings->value("size").toSize();
+        if (settings->contains("devicePixelRatio")) favDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
+        settings->endGroup();
     }
 }
 
@@ -1417,12 +1417,12 @@ void MW::createFilterDock()
     filterDock->setWidget(frame);
 
     if (isSettings) {
-        setting->beginGroup(("FilterDock"));
-        if (setting->contains("screen")) filterDock->dw.screen = setting->value("screen").toInt();
-        if (setting->contains("pos")) filterDock->dw.pos = setting->value("pos").toPoint();
-        if (setting->contains("size")) filterDock->dw.size = setting->value("size").toSize();
-        if (setting->contains("devicePixelRatio")) filterDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
-        setting->endGroup();
+        settings->beginGroup(("FilterDock"));
+        if (settings->contains("screen")) filterDock->dw.screen = settings->value("screen").toInt();
+        if (settings->contains("pos")) filterDock->dw.pos = settings->value("pos").toPoint();
+        if (settings->contains("size")) filterDock->dw.size = settings->value("size").toSize();
+        if (settings->contains("devicePixelRatio")) filterDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
+        settings->endGroup();
     }
 }
 
@@ -1475,12 +1475,12 @@ void MW::createMetadataDock()
     metaTitleLayout->addSpacing(5);
 
     if (isSettings) {
-        setting->beginGroup(("MetadataDock"));
-        if (setting->contains("screen")) metadataDock->dw.screen = setting->value("screen").toInt();
-        if (setting->contains("pos")) metadataDock->dw.pos = setting->value("pos").toPoint();
-        if (setting->contains("size")) metadataDock->dw.size = setting->value("size").toSize();
-        if (setting->contains("devicePixelRatio")) metadataDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
-        setting->endGroup();
+        settings->beginGroup(("MetadataDock"));
+        if (settings->contains("screen")) metadataDock->dw.screen = settings->value("screen").toInt();
+        if (settings->contains("pos")) metadataDock->dw.pos = settings->value("pos").toPoint();
+        if (settings->contains("size")) metadataDock->dw.size = settings->value("size").toSize();
+        if (settings->contains("devicePixelRatio")) metadataDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
+        settings->endGroup();
     }
 }
 
@@ -1495,12 +1495,12 @@ void MW::createThumbDock()
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
-        setting->beginGroup(("ThumbDockFloat"));
-        if (setting->contains("screen")) thumbDock->dw.screen = setting->value("screen").toInt();
-        if (setting->contains("pos")) thumbDock->dw.pos = setting->value("pos").toPoint();
-        if (setting->contains("size")) thumbDock->dw.size = setting->value("size").toSize();
-        if (setting->contains("devicePixelRatio")) thumbDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
-        setting->endGroup();
+        settings->beginGroup(("ThumbDockFloat"));
+        if (settings->contains("screen")) thumbDock->dw.screen = settings->value("screen").toInt();
+        if (settings->contains("pos")) thumbDock->dw.pos = settings->value("pos").toPoint();
+        if (settings->contains("size")) thumbDock->dw.size = settings->value("size").toSize();
+        if (settings->contains("devicePixelRatio")) thumbDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
+        settings->endGroup();
     }
 //    else thumbDock->dw.size = QSize(600, 600);
 
@@ -1514,7 +1514,7 @@ void MW::createThumbDock()
 void MW::createEmbelDock()
 {
     if (G::isLogger) G::log("MW::createEmbelDock");
-    embelProperties = new EmbelProperties(this, setting);
+    embelProperties = new EmbelProperties(this, settings);
 
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
     connect (embelProperties, &EmbelProperties::centralMsg, this, &MW::setCentralMessage);

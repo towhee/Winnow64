@@ -36,6 +36,30 @@ void Mac::availableMemory()
     }
 }
 
+void Mac::joinAllSpaces(WId wId)
+{
+/*
+    This is required in case the user has set the MacOS docked Winnow app options
+    (right click on docked app and choose options) to anything other than all
+    desktops.  In that case Qt restoreGeometry was not working if the app last
+    location was not on the same desktop assigned in the dock options.  Other
+    weird behaviors, like tooltips and dropdowns on wrong monitor are also
+    avoided.
+*/
+    NSView* view = reinterpret_cast<NSView*>(wId);
+    NSWindow *myWindow = [view window];
+    NSUInteger collectionBehavior;
+
+    // Gets the current collection behavior of the window
+    collectionBehavior = [ myWindow collectionBehavior ];
+
+    // Adds the option to make the window visible on all spaces
+    collectionBehavior |= NSWindowCollectionBehaviorCanJoinAllSpaces;
+
+    // Sets the new collection behaviour
+    [ myWindow setCollectionBehavior: collectionBehavior ];
+}
+
 bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 {
     ColorSyncIteratorData *iterData = (ColorSyncIteratorData *)data;

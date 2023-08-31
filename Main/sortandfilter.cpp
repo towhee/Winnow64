@@ -238,7 +238,7 @@ void MW::setFilterSolo()
 {
     if (G::isLogger) G::log("MW::setFilterSolo");
     filters->setSoloMode(filterSoloAction->isChecked());
-    setting->setValue("isSoloFilters", filterSoloAction->isChecked());
+    settings->setValue("isSoloFilters", filterSoloAction->isChecked());
 }
 
 void MW::filterLastDay()
@@ -651,22 +651,22 @@ void MW::setRating()
 int MW::ratingLogCount()
 {
     if (G::isLogger) G::log("MW::ratingLogCount");
-    setting->beginGroup("RatingLog");
-    int count = setting->allKeys().size();
-    setting->endGroup();
+    settings->beginGroup("RatingLog");
+    int count = settings->allKeys().size();
+    settings->endGroup();
     return count;
 }
 
 void MW::recoverRatingLog()
 {
     if (G::isLogger) G::log("MW::recoverRatingLog");
-    setting->beginGroup("RatingLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("RatingLog");
+    QStringList keys = settings->allKeys();
     QString src = "MW::recoverRatingLog";
     for (int i = 0; i < keys.length(); ++i) {
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
-        QString pickStatus = setting->value(keys.at(i)).toString();
+                            QString pickStatus = settings->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
@@ -676,7 +676,7 @@ void MW::recoverRatingLog()
 //            qDebug() << "MW::recoverRatingLog" << fPath << "not found";
         }
     }
-    setting->endGroup();
+    settings->endGroup();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 }
@@ -684,33 +684,33 @@ void MW::recoverRatingLog()
 void MW::clearRatingLog()
 {
     if (G::isLogger) G::log("MW::clearRatingLog");
-    setting->beginGroup("RatingLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("RatingLog");
+    QStringList keys = settings->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
-        setting->remove(keys.at(i));
+        settings->remove(keys.at(i));
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::updateRatingLog(QString fPath, QString rating)
 {
     if (G::isLogger) G::log("MW::updateRatingLog");
-    setting->beginGroup("RatingLog");
+    settings->beginGroup("RatingLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (rating == "") {
         /*
         qDebug() << "MW::updateRatingLog" << "removing" << sKey;
         //*/
-        setting->remove(sKey);
+        settings->remove(sKey);
     }
     else {
         /*
         qDebug() << "MW::updateRatingLog" << "adding" << sKey;
         //*/
-        setting->setValue(sKey, rating);
+        settings->setValue(sKey, rating);
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::setColorClass()
@@ -825,21 +825,21 @@ void MW::setColorClass()
 int MW::colorClassLogCount()
 {
     if (G::isLogger) G::log("MW::colorClassLogCount");
-    setting->beginGroup("ColorClassLog");
-    int count = setting->allKeys().size();
-    setting->endGroup();
+    settings->beginGroup("ColorClassLog");
+    int count = settings->allKeys().size();
+    settings->endGroup();
     return count;
 }
 
 void MW::recoverColorClassLog()
 {
     if (G::isLogger) G::log("MW::recoverColorClassLog");
-    setting->beginGroup("ColorClassLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("ColorClassLog");
+    QStringList keys = settings->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
-        QString colorClassStatus = setting->value(keys.at(i)).toString();
+                            QString colorClassStatus = settings->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         QString src = "MW::recoverColorClassLog";
         if (idx.isValid()) {
@@ -850,7 +850,7 @@ void MW::recoverColorClassLog()
 //            qDebug() << "MW::recoverColorClassLog" << fPath << "not found";
         }
     }
-    setting->endGroup();
+    settings->endGroup();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 }
@@ -858,29 +858,29 @@ void MW::recoverColorClassLog()
 void MW::clearColorClassLog()
 {
     if (G::isLogger) G::log("MW::clearColorClassLog");
-    setting->beginGroup("ColorClassLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("ColorClassLog");
+    QStringList keys = settings->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
-        setting->remove(keys.at(i));
+        settings->remove(keys.at(i));
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::updateColorClassLog(QString fPath, QString label)
 {
     if (G::isLogger) G::log("MW::updateColorClassLog");
-    setting->beginGroup("ColorClassLog");
+    settings->beginGroup("ColorClassLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (label == "") {
 //        qDebug() << "MW::updateColorClassLog" << "removing" << sKey;
-        setting->remove(sKey);
+        settings->remove(sKey);
     }
     else {
 //        qDebug() << "MW::updateColorClassLog" << "adding" << sKey;
-        setting->setValue(sKey, label);
+        settings->setValue(sKey, label);
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::searchTextEdit2()

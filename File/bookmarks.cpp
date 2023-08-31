@@ -93,6 +93,20 @@ void BookMarks::addBookmark(QString itemPath)
     }
 }
 
+void BookMarks::saveBookmarks(QSettings *setting)
+{
+    if (G::isLogger) G::log("BookMarks::saveBookmarks");
+    /* save bookmarks */
+    int idx = 0;
+    setting->beginGroup("Bookmarks");
+    setting->remove("");
+    QSetIterator<QString> pathsIter(bookmarkPaths);
+    while (pathsIter.hasNext()) {
+        setting->setValue("path" + QString::number(++idx), pathsIter.next());
+    }
+    setting->endGroup();
+}
+
 void BookMarks::update()
 {
     if (G::isLogger) G::log("BookMarks::update");

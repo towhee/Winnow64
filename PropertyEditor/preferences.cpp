@@ -124,7 +124,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "showThumbNailSymbolHelp") {
         bool value = v.toBool();
         mw->dm->setShowThumbNailSymbolHelp(value);
-        mw->setting->setValue("showThumbNailSymbolHelp", value);
+        mw->settings->setValue("showThumbNailSymbolHelp", value);
 
     }
 
@@ -287,13 +287,13 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "activityLog") {
         G::isLogger = v.toBool();
         G::isFileLogger = v.toBool();
-        mw->setting->setValue("isFileLogger", v.toBool());
+        mw->settings->setValue("isFileLogger", v.toBool());
     }
 
     if (source == "errorLog") {
         G::isLogger = v.toBool();
         G::isErrorLogger = v.toBool();
-        mw->setting->setValue("isErrorLogger", v.toBool());
+        mw->settings->setValue("isErrorLogger", v.toBool());
     }
 
     if (source == "renderVideoThumb") {
@@ -1019,7 +1019,7 @@ void Preferences::addItems()
     i.key = "iconChunkSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
-    i.min = 1000;
+    i.min = 10;
     i.max = 10000;
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
