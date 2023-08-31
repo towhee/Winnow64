@@ -89,6 +89,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
+    void pause();
+    void resume();
     void addCacheItemImageMetadata(ImageMetadata m);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
@@ -103,7 +105,7 @@ private:
     int instance;                   // incremented on every DataModel::load
     bool restart;
     bool abort;
-    bool pause;
+    bool paused;
     bool cacheSizeHasChanged = false;
     bool filterOrSortHasChanged = false;
     bool refreshCache;

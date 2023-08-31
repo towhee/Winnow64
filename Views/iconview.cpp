@@ -425,7 +425,7 @@ void IconView::updateVisibleCellCount(QString src)
     rowsPerVP = vp.height() / cellSize.height();
     rowsPerPage = (int)rowsPerVP;
     cellsPerVP = (int)(cellsPerRow * rowsPerVP);
-    cellsPerPage = cellsPerPageRow * rowsPerPage;
+    cellsPerPage = cellsPerPageRow * rowsPerPage + 1;
     visibleCellCount = cellsPerVP;
     /*
     qDebug() << "IconView::updateVisibleCellCount"
@@ -1026,6 +1026,7 @@ void IconView::bestAspect()
     been loaded. Both thumbView and gridView have to be called.
 */
     if (isDebug) G::log("IconView::bestAspect", objectName());
+    return;
 
     bestAspectRatio = static_cast<double>(G::iconWMax) / G::iconHMax;
     thumbsFitTopOrBottom("bestAspect");

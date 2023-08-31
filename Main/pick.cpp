@@ -215,21 +215,21 @@ void MW::toggleReject()
 int MW::pickLogCount()
 {
     if (G::isLogger) G::log("MW::pickLogCount");
-    setting->beginGroup("PickLog");
-    int count = setting->allKeys().size();
-    setting->endGroup();
+    settings->beginGroup("PickLog");
+    int count = settings->allKeys().size();
+    settings->endGroup();
     return count;
 }
 
 void MW::recoverPickLog()
 {
     if (G::isLogger) G::log("MW::recoverPickLog");
-    setting->beginGroup("PickLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("PickLog");
+    QStringList keys = settings->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
-        QString pickStatus = setting->value(keys.at(i)).toString();
+                            QString pickStatus = settings->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             if (pickStatus == "Picked") {
@@ -246,7 +246,7 @@ void MW::recoverPickLog()
 //            qDebug() << "MW::recoverPickLog" << fPath << "not found";
         }
     }
-    setting->endGroup();
+    settings->endGroup();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 }
@@ -254,12 +254,12 @@ void MW::recoverPickLog()
 void MW::clearPickLog()
 {
     if (G::isLogger) G::log("MW::clearPickLog");
-    setting->beginGroup("PickLog");
-    QStringList keys = setting->allKeys();
+    settings->beginGroup("PickLog");
+    QStringList keys = settings->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
-        setting->remove(keys.at(i));
+        settings->remove(keys.at(i));
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::updatePickLog(QString fPath, QString pickStatus)
@@ -268,18 +268,18 @@ void MW::updatePickLog(QString fPath, QString pickStatus)
 */
 {
     if (G::isLogger) G::log("MW::updatePickLog");
-    setting->beginGroup("PickLog");
+    settings->beginGroup("PickLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (pickStatus == "Picked") {
 //        qDebug() << "MW::updatePickLog" << "adding" << sKey;
-        setting->setValue(sKey, pickStatus);
+        settings->setValue(sKey, pickStatus);
     }
     else {
 //        qDebug() << "MW::updatePickLog" << "removing" << sKey;
-        setting->remove(sKey);
+        settings->remove(sKey);
     }
-    setting->endGroup();
+    settings->endGroup();
 }
 
 void MW::pushPick(QString fPath, QString status)

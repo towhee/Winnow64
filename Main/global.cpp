@@ -15,7 +15,6 @@ namespace G
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
-    bool isDev;                         // Running from within Winnow Project/Winnow64
 
     // Errors
     QMap<QString,QStringList> err;
@@ -30,11 +29,14 @@ namespace G
     bool allMetadataLoaded;
     bool allIconsLoaded;
 
+    QWaitCondition metaReadDone;
     int dmInstance;
     int metadataInstance;
     int imageCacheInstance;
 
     // limit functionality for testing
+    bool useApplicationStateChanged = false;
+    bool useZoomWindow = false;;
     bool useReadMetadata = true;
     bool useReadIcons = true;
     bool useImageCache = true;
@@ -299,7 +301,7 @@ namespace G
 
     int popUpProgressCount = 0;
     int popUpLoadFolderStep = 100;
-    PopUp *popUp;
+    PopUp *popUp = nullptr;
     void newPopUp(QWidget *widget, QWidget *centralWidget)
     {
         popUp = new PopUp(widget, centralWidget);

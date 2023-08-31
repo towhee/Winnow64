@@ -524,15 +524,14 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     initialize();
 
     // persistant settings between sessions
-    setting = new QSettings("Winnow", "winnow_100");
-    G::settings = setting;
-    if (setting->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
+    settings = new QSettings("Winnow", "winnow_100");
+    G::settings = settings;
+    if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             // except settings with dependencies ie for actions not created yet
-    //return;
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
-    setting->setValue("appPath", qApp->applicationDirPath());
+    settings->setValue("appPath", qApp->applicationDirPath());
 
     // Loggers
     /*
@@ -542,7 +541,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
-
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
@@ -591,15 +589,15 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
-//    show();
-//    if (isSettings) restoreLastSessionGeometryState();
-//    else defaultWorkspace();
-    //setGeometry(QRect(4291,361, 855, 493));
+    // create popup window used for messaging
+    G::newPopUp(this, centralWidget);
 
     G::isInitializing = false;
 
     if (isStartupArgs) {
         handleStartupArgs(args);
+        this->args = args;
+        return;
     }
     else {
         // First use of app
@@ -622,72 +620,126 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                 prevMode = "Loupe";
             }
         }
+    }
 
-        // recover from prior crash
-        if (setting->value("hasCrashed").toBool()) {
-            int picks = pickLogCount();
-            int ratings = ratingLogCount();
-            int colors = colorClassLogCount();
-            QString picksRecoverable = " picks recoverable";
-            if (picks == 1) picksRecoverable = " pick recoverable";
-            QString ratingsRecoverable = " ratings recoverable";
-            if (picks == 1) ratingsRecoverable = " rating recoverable";
-            QString colorsRecoverable = " color labels recoverable";
-            if (picks == 1) colorsRecoverable = " color label recoverable";
-            if (picks || ratings || colors) {
-                QString msg = "It appears Winnow did not close properly.  Do you want to "
-                              "recover the most recent picks, ratings and color categories?\n";
-                msg += "\nFolder: " + QFileInfo(lastFileIfCrash).dir().path();
-                msg += "\n";
-                if (picks) msg += "\n" + QString::number(picks) + picksRecoverable;
-                if (ratings) msg += "\n" + QString::number(ratings) + ratingsRecoverable;
-                if (colors) msg += "\n" + QString::number(colors) + colorsRecoverable;
-                msg += "\n";
-                int ret = QMessageBox::warning(this, "Recover Prior State", msg,
-                                               QMessageBox::Yes | QMessageBox::No);
-                if (ret == QMessageBox::Yes) {
-                    folderAndFileSelectionChange(lastFileIfCrash, "lastFileIfCrash");
-                    recoverPickLog();
-                    recoverRatingLog();
-                    recoverColorClassLog();
-                }
+    // recover from prior crash
+    if (settings->value("hasCrashed").toBool()) {
+        int picks = pickLogCount();
+        int ratings = ratingLogCount();
+        int colors = colorClassLogCount();
+        QString picksRecoverable = " picks recoverable";
+        if (picks == 1) picksRecoverable = " pick recoverable";
+        QString ratingsRecoverable = " ratings recoverable";
+        if (picks == 1) ratingsRecoverable = " rating recoverable";
+        QString colorsRecoverable = " color labels recoverable";
+        if (picks == 1) colorsRecoverable = " color label recoverable";
+        if (picks || ratings || colors) {
+            QString msg = "It appears Winnow did not close properly.  Do you want to "
+                          "recover the most recent picks, ratings and color categories?\n";
+            msg += "\nFolder: " + QFileInfo(lastFileIfCrash).dir().path();
+            msg += "\n";
+            if (picks) msg += "\n" + QString::number(picks) + picksRecoverable;
+            if (ratings) msg += "\n" + QString::number(ratings) + ratingsRecoverable;
+            if (colors) msg += "\n" + QString::number(colors) + colorsRecoverable;
+            msg += "\n";
+            int ret = QMessageBox::warning(this, "Recover Prior State", msg,
+                                           QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes) {
+                folderAndFileSelectionChange(lastFileIfCrash, "lastFileIfCrash");
+                recoverPickLog();
+                recoverRatingLog();
+                recoverColorClassLog();
+            }
+        }
+    }
+
+    // crash log
+    settings->setValue("hasCrashed", true);
+
+    if (G::isLogger) qDebug() << "MW::MW  Winnow running (end of MW::MW)";
+}
+
+void MW::whenActivated(Qt::ApplicationState state)
+{
+/*
+    Invoked after the application becomes active.
+
+    This is signalled when QGuiApplication::applicationStateChanged (connect
+    in Main()).
+
+    For an unknown reason restoreGeometry only works on the primary monitor before the
+    app is instantiated by instance.exec in main.  This behavior is unique to Winnow.
+
+    This is resolved using Mac::joinAllSpaces and below prep code moved back to
+    MW::showEvent.
+*/
+    static bool isRestored = false;
+//    if (G::isLogger)
+        qDebug() << "MW::whenActivated"
+                 << state
+             << "isRestored =" << isRestored
+                    ;
+
+    if (isRestored || state != Qt::ApplicationActive) return;
+
+    // restore prior geometry and state
+    if (isSettings) {
+            restoreGeometry(settings->value("Geometry").toByteArray());
+            restoreState(settings->value("WindowState").toByteArray());
+    }
+    else {
+        defaultWorkspace();
+    }
+
+    // set thumbnail size to fit the thumbdock initial size
+    thumbView->thumbsFitTopOrBottom();
+
+    // initial status bar icon state
+    updateStatusBar();
+
+    // set initial visibility in embellish template
+    embelTemplateChange(embelProperties->templateId);
+
+    // size columns if device pixel ratio > 1
+    embelProperties->resizeColumns();
+
+    // req'd for color management
+    getDisplayProfile();
+
+    // show the app
+    //setVisible(true);
+    setWindowOpacity(100);
+    //show();
+    isRestored = true;
+
+    if (isStartupArgs) {
+        handleStartupArgs(args);
+        return;
+    }
+
+    // check for updates
+    if (checkIfUpdate && !isStartupArgs) checkForUpdate();
+
+     // First use of app
+    if (!isSettings) {
+        centralLayout->setCurrentIndex(StartTab);
+    }
+    else {
+        // process the persistant folder if available
+        if (rememberLastDir && !isShiftOnOpen) {
+            if (isFolderValid(lastDir, true, true)) {
+                fsTree->select(lastDir);
+                folderSelectionChange();
             }
         }
 
-        // crash log
-        setting->setValue("hasCrashed", true);
-
-        if (G::isLogger) qDebug() << "MW::MW  Winnow running";
+        // show start message
+        else {
+            QString msg = "Select a folder or bookmark to get started.";
+            setCentralMessage(msg);
+            prevMode = "Loupe";
+        }
     }
-}
-
-void MW::restoreLastSessionGeometryState(Qt::ApplicationState state)
-{
-/*
-    This is signalled when QGuiApplication::applicationStateChanged (connect
-    in Main()).  For an unknown reason restoreGeometry only works on the
-    primary monitor before the app is instantiated by instance.exec in main.
-*/
-    if (G::isLogger) qDebug() << "MW::restoreLastSessionGeometryState";
-    static bool isRestored = false;
-    if (!isRestored && state == Qt::ApplicationActive) {
-        qDebug() << "MW::restoreLastSessionGeometryState";
-        restoreGeometry(setting->value("Geometry").toByteArray());
-        restoreState(setting->value("WindowState").toByteArray());
-        setVisible(true);
-        setWindowOpacity(100);
-        show();
-        isRestored = true;
-    }
-}
-
-bool MW::isDevelopment()
-{
-    if (G::isLogger) G::log("MW::isDevelopment");
-//    qDebug() << "MW::isDevelopment" << QCoreApplication::applicationDirPath();
-    if (QCoreApplication::applicationDirPath().contains("Winnow64"))
-        return true;
-    else return false;
 }
 
 //   EVENT HANDLERS
@@ -695,60 +747,36 @@ bool MW::isDevelopment()
 void MW::showEvent(QShowEvent *event)
 {
 /*
-    Functions used at startup for display
-    MW::moveEvent
-        MW::setDisplayResolution()
-        MW::updateDisplayResolution()
-    MW::restoreLastSessionGeometryState()
+
 */
-//    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::showEvent";
 
-    //QMainWindow::showEvent(event);
-
-//    if (isSettings) restoreLastSessionGeometryState();
-//    else defaultWorkspace();
-//    setWindowOpacity(0);
-
-    getDisplayProfile();
+    // restore prior geometry and state
+    if (isSettings) {
+        restoreGeometry(settings->value("Geometry").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray());
+    }
+    else {
+        defaultWorkspace();
+    }
 
     // set thumbnail size to fit the thumbdock initial size
     thumbView->thumbsFitTopOrBottom();
 
-    // create popup window used for messaging
-    G::newPopUp(this, centralWidget);
-
-    // set initial visibility
-    embelTemplateChange(embelProperties->templateId);
-
-    // size columns after show if device pixel ratio > 1
-    embelProperties->resizeColumns();
-
-    // check for updates
-    if (checkIfUpdate && !isStartupArgs) QTimer::singleShot(100, this, SLOT(checkForUpdate()));
-
-    // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
-    QPoint loc = centralWidget->window()->geometry().center();
-    prevScreenName = qApp->screenAt(loc)->name();
-//    currScreen = qApp->screenAt(loc);
-//    connect(currScreen, &QScreen::logicalDotsPerInchChanged, this, &MW::setDisplayResolution);
-
-    if (isShiftOnOpen) refreshFolders();
-
     // initial status bar icon state
     updateStatusBar();
 
-//    // set initial visibility
-//    embelTemplateChange(embelProperties->templateId);
-//    // size columns after show if device pixel ratio > 1
-//    embelProperties->resizeColumns();
+    // set initial visibility in embellish template
+    embelTemplateChange(embelProperties->templateId);
 
-//    if (isSettings) restoreLastSessionGeometryState();
-//    else defaultWorkspace();
-    setWindowOpacity(0);
-//    setVisible(false);
-    Utilities::log("MW::showEvent", "");
-    //QMainWindow::showEvent(event);
+    // size columns if device pixel ratio > 1
+    embelProperties->resizeColumns();
+
+    // req'd for color management
+    getDisplayProfile();
+
+    QMainWindow::showEvent(event);
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -775,15 +803,15 @@ void MW::closeEvent(QCloseEvent *event)
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
     }
-    if (!simulateJustInstalled) writeSettings();
     closeLog();
     closeErrLog();
     clearPickLog();
     clearRatingLog();
     clearColorClassLog();
     // crash log
-    setting->setValue("hasCrashed", false);
-    G::popUp->close();
+    settings->setValue("hasCrashed", false);
+    if (G::popUp != nullptr) G::popUp->close();
+    if (zoomDlg != nullptr) zoomDlg->close();
     hide();
     if (!QApplication::clipboard()->image().isNull()) {
         QApplication::clipboard()->clear();
@@ -793,6 +821,7 @@ void MW::closeEvent(QCloseEvent *event)
         delete pref;
         delete preferencesDlg;
     }
+    if (!simulateJustInstalled) writeSettings();
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -807,8 +836,8 @@ void MW::moveEvent(QMoveEvent *event)
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
 */
-    //if (G::isLogger)
-    qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
+    if (G::isLogger)
+        qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
     QMainWindow::moveEvent(event);
     setDisplayResolution();
     updateDisplayResolution();
@@ -817,7 +846,7 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
-    //if (G::isLogger)
+    if (G::isLogger)
         qDebug() << "MW::resizeEvent";
     QMainWindow::resizeEvent(event);
     // re-position zoom dialog
@@ -1465,7 +1494,8 @@ void MW::checkForUpdate()
    performs the install of the update.  When that is completed the maintenancetool opens
    Winnow again.
 */
-    if (G::isLogger) G::log("MW::checkForUpdate");
+    if (G::isLogger)
+        qDebug() << "MW::checkForUpdate";
     /* Checking for updates requires the maintenancetool.exe to be in the Winnow.exe folder,
        which is only true for the installed version of Winnow in the "Program Files".  In
        order to simulate for testing during development, the maintenancetool.exe path must
@@ -1873,7 +1903,7 @@ void MW::folderSelectionChange()
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
-    setting->setValue("lastDir", G::currRootFolder);
+    settings->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 
@@ -2048,12 +2078,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) {
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src
                  << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
                  << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
                  << current.data(G::PathRole).toString();
+    }
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger)
@@ -2078,17 +2109,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 ;
                 //*/
 
-    if (!rememberLastDir)
+    if (!rememberLastDir) {
         if (!isCurrentFolderOkay
-                || G::isInitializing
-                || isFilterChange
-                || (G::isLoadLinear && !G::isLinearLoadDone))
+            || G::isInitializing
+            || isFilterChange
+            || (G::isLoadLinear && !G::isLinearLoadDone))
         {
             if (G::isLogger || G::isFlowLogger)
                 qDebug() << "MW::fileSelectionChange  Initializing or invalid row so exit";
             //qDebug() << "MW::fileSelectionChange  current.row() == -1  so return";
             return;
         }
+    }
 
     if (!currRootDir.exists()) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
@@ -2109,10 +2141,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     enableSelectionDependentMenus();
 
     // the file path is used as an index in ImageView
-    QString fPath = dm->currentSfIdx.data(G::PathRole).toString();
-    // also update datamodel, used in MdCache
-    //dm->currentFilePath = fPath;
-    setting->setValue("lastFileSelection", fPath);
+    QString fPath = current.data(G::PathRole).toString();
+    settings->setValue("lastFileSelection", fPath);
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
@@ -2144,17 +2174,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
-    // update loupe view
+    // update loupe/video view
     if (G::useMultimedia) videoView->stop();
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         if (G::useMultimedia) {
             videoView->load(fPath);
-            qDebug() << "test video G::mode =" << G::mode;
+            qDebug() << "MW::fileSelectionChange2 G::mode =" << G::mode << fPath;
             if (G::mode == "Loupe") {
-                qDebug() << "test video1";
                 centralLayout->setCurrentIndex(VideoTab);
             }
+            videoView->play();
         }
     }
     else if (G::useImageView) {
@@ -2168,29 +2198,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
         }
     }
-
-//    // update loupe view
-//    if (G::useImageView) {
-//        if (G::useMultimedia) videoView->stop();
-//        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-//        if (isVideo) {
-//            if (G::useMultimedia) {
-//                videoView->load(fPath);
-//                if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
-//            }
-//        }
-//        else {
-//            if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
-//                if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
-//                    updateClassification();
-//                    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-//                }
-//                else {
-//                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
-//                }
-//            }
-//        }
-//    }
 
     // update caching if folder has been loaded
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
@@ -2221,7 +2228,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
-            //qDebug() << "MW::fileSelectionChange emit setImageCachePosition" << dm->currentFilePath;
             emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
         }
     }
@@ -2245,7 +2251,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update cursor position on progressBar
-    cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
+    if (cacheProgressBar->isVisible())
+        cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
 
     fsTree->scrollToCurrent();
 
@@ -2523,7 +2530,7 @@ void MW::updateDefaultIconChunkSize(int size)
 */
     if (G::isLogger) G::log("MW::updateDefaultIconChunkSize");
     // update settings
-    setting->setValue("iconChunkSize", size);
+    settings->setValue("iconChunkSize", size);
     dm->defaultIconChunkSize = size;
     if (size > dm->iconChunkSize) {
         dm->iconChunkSize = size;
@@ -2827,6 +2834,7 @@ void MW::loadLinearNewFolder()
     if (reset()) return;
 
     // add all metadata to datamodel
+    G::t.restart();
     dm->addAllMetadata();
     if (!dm->isAllMetadataLoaded()) {
         qWarning() << "WARNING" << "MW::loadLinearNewFolder" << "Not all metadata loaded";
@@ -2884,6 +2892,7 @@ void MW::loadLinearNewFolder()
 //    QApplication::processEvents();
 //    if (reset()) return;
     mct->readIconChunk();
+    qDebug() << "Linear     elapsed sec:" << G::t.elapsed() * 1.0 / 1000 << G::currRootFolder;
     if (reset()) return;
     updateIconBestFit();
 //    thumbView->thumbsFitTopOrBottom();
@@ -3689,6 +3698,17 @@ void MW::addRecentFolder(QString fPath)
             recentFolders->removeAt(i - 1);
         }
     }
+
+    // update settings
+    settings->beginGroup("RecentFolders");
+    settings->remove("");
+    QString leadingZero;
+    for (int i = 0; i < recentFolders->count(); i++) {
+        i < 9 ? leadingZero = "0" : leadingZero = "";
+        settings->setValue("recentFolder" + leadingZero + QString::number(i+1),
+                          recentFolders->at(i));
+    }
+    settings->endGroup();
 }
 
 void MW::addIngestHistoryFolder(QString fPath)
@@ -3946,7 +3966,7 @@ void MW::updateDisplayResolution()
 void MW::setDisplayResolution()
 {
 /*
-    This is triggered by the mainwindow move event at startup, when the operating system
+    This is triggered by the mainwindow show event at startup, when the operating system
     display scale is changed and when the app window is dragged to another monitor. The loupe
     view always shows native pixel resolution (one image pixel = one physical monitor pixel),
     therefore the zoom has to be factored by the device pixel ratio.
@@ -4076,7 +4096,7 @@ void MW::setDisplayResolution()
             w = static_cast<int>(w * 0.75 / fitH);
             h = static_cast<int>(h * 0.75 / fitH);
         }
-//        qDebug() << "MW::setDisplayResolution" << "RESIZE TO:" << w << h;
+        //qDebug() << "MW::setDisplayResolution" << "RESIZE TO:" << w << h;
         resize(w, h);
     }
 
@@ -4106,7 +4126,8 @@ void MW::getDisplayProfile()
     This is required for color management.  It is called after the show event when the
     progam is opening and when the main window is moved to a different screen.
 */
-    if (G::isLogger) G::log("MW::getDisplayProfile");
+    if (G::isLogger)
+        qDebug() << "MW::getDisplayProfile";
     #ifdef Q_OS_WIN
     if (G::winScreenHash.contains(screen()->name()))
         G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
@@ -4118,8 +4139,6 @@ void MW::getDisplayProfile()
     ICC::setOutProfile();
     #endif
 }
-
-
 
 double MW::macActualDevicePixelRatio(QPoint loc, QScreen *screen)
 {
@@ -4501,6 +4520,7 @@ void MW::removeBookmark()
     if (G::isLogger) G::log("MW::removeBookmark");
     if (QApplication::focusWidget() == bookmarks) {
         bookmarks->removeBookmark();
+        bookmarks->saveBookmarks(settings);
         return;
     }
 }
@@ -4775,39 +4795,39 @@ void MW::ingest()
         addIngestHistoryFolder(historyPath);
 
         // save ingest history folders
-        setting->beginGroup("IngestHistoryFolders");
-        setting->remove("");
+        settings->beginGroup("IngestHistoryFolders");
+        settings->remove("");
         for (int i = 0; i < ingestHistoryFolders->count(); i++) {
-            setting->setValue("ingestHistoryFolder" + QString::number(i+1),
+            settings->setValue("ingestHistoryFolder" + QString::number(i+1),
                               ingestHistoryFolders->at(i));
         }
-        setting->endGroup();
+        settings->endGroup();
 
         // save ingest description completer list
-        setting->beginGroup("IngestDescriptionCompleter");
+        settings->beginGroup("IngestDescriptionCompleter");
         for (const auto& i : ingestDescriptionCompleter) {
-            setting->setValue(i, "");
+            settings->setValue(i, "");
         }
-        setting->endGroup();
+        settings->endGroup();
 
         // save ingest settings
-        setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
-        setting->setValue("autoEjectUSB", autoEjectUsb);
-        setting->setValue("integrityCheck", integrityCheck);
-        setting->setValue("isBackgroundIngest", isBackgroundIngest);
-        setting->setValue("isBackgroundIngestBeep", isBackgroundIngestBeep);
-        setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
-        setting->setValue("backupIngest", backupIngest);
-        setting->setValue("gotoIngestFolder", gotoIngestFolder);
-        setting->setValue("ingestRootFolder", ingestRootFolder);
-        setting->setValue("ingestRootFolder2", ingestRootFolder2);
-        setting->setValue("pathTemplateSelected", pathTemplateSelected);
-        setting->setValue("pathTemplateSelected2", pathTemplateSelected2);
-        setting->setValue("manualFolderPath", manualFolderPath);
-        setting->setValue("manualFolderPath2", manualFolderPath2);
-        setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
-        setting->setValue("ingestCount", G::ingestCount);
-        setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
+        settings->setValue("autoIngestFolderPath", autoIngestFolderPath);
+        settings->setValue("autoEjectUSB", autoEjectUsb);
+        settings->setValue("integrityCheck", integrityCheck);
+        settings->setValue("isBackgroundIngest", isBackgroundIngest);
+        settings->setValue("isBackgroundIngestBeep", isBackgroundIngestBeep);
+        settings->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
+        settings->setValue("backupIngest", backupIngest);
+        settings->setValue("gotoIngestFolder", gotoIngestFolder);
+        settings->setValue("ingestRootFolder", ingestRootFolder);
+        settings->setValue("ingestRootFolder2", ingestRootFolder2);
+        settings->setValue("pathTemplateSelected", pathTemplateSelected);
+        settings->setValue("pathTemplateSelected2", pathTemplateSelected2);
+        settings->setValue("manualFolderPath", manualFolderPath);
+        settings->setValue("manualFolderPath2", manualFolderPath2);
+        settings->setValue("filenameTemplateSelected", filenameTemplateSelected);
+        settings->setValue("ingestCount", G::ingestCount);
+        settings->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
 
         if (!okToIngest) {
             qWarning() << "WARNING" << "MW::ingest" << "Not ok to ingest";
@@ -4964,7 +4984,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 */
 {
     if (G::isLogger) G::log("MW::chkMissingEmbeddedThumbnails");
-//    /*
+    /*
     qDebug() << "MW::chkMissingEmbeddedThumbnails" << "src =" << src
              << "dm->isMissingEmbeddedThumb =" << dm->isMissingEmbeddedThumb
                 ;
@@ -5186,6 +5206,7 @@ void MW::addBookmark(QString path)
     if (G::isLogger) G::log("MW::addBookmark");
     bookmarks->bookmarkPaths.insert(path);
     bookmarks->reloadBookmarks();
+    bookmarks->saveBookmarks(settings);
 }
 
 void MW::openFolder()
@@ -5422,6 +5443,7 @@ void MW::deleteSelectedFiles()
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         int ret = msgBox.exec();
+        msgBox.move(centralWidget->geometry().center());
         if (ret == QMessageBox::Cancel) return;
     }
 

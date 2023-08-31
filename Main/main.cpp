@@ -2,8 +2,7 @@
 #include <QApplication>
 #include "qtsingleapplication.h"
 
-// see https://github.com/itay-grudev/SingleApplication if replacement for
-// QtSingleApplication required
+static QString rory = "Rory";
 
 int main(int argc, char *argv[])
 {
@@ -22,6 +21,8 @@ int main(int argc, char *argv[])
     //*/
 
 //    /* Single instance version
+    // see https://github.com/itay-grudev/SingleApplication if replacement for
+    // QtSingleApplication required
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QtSingleApplication instance("Winnow", argc, argv);
@@ -52,10 +53,15 @@ int main(int argc, char *argv[])
              &mw, SLOT(handleStartupArgs(const QString&)));
 
     instance.setActivationWindow(&mw, false);
+
+    // not being used
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
-                     &mw, &MW::restoreLastSessionGeometryState);
+    // finish initialization / restore prior position/state after app is active
+    // resolved by adding Mac::joinAllSpaces therefore not req'd
+    //if (G::useApplicationStateChanged)
+    //    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
+    //                     &mw, &MW::whenActivated);
 
     return instance.exec();
     //*/

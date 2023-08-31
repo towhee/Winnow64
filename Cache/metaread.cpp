@@ -43,8 +43,8 @@ MetaRead::MetaRead(QObject *parent,
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
-//    imageCacheTriggerCount =  200;
     imageCacheTriggerCount =  QThread::idealThreadCount() * 2;
+//    imageCacheTriggerCount =  10000;
     isDebug = false;
 }
 
@@ -73,6 +73,7 @@ void MetaRead::setStartRow(int row, bool isCurrent, QString src)
                  << "src =" << src
                     ;
     //qDebug() << "MetaRead::setCurrentRow row =" << row << "src =" << src;
+    t.restart();
     this->src = src;
 
     mutex.lock();
@@ -400,8 +401,8 @@ void MetaRead::readRow(int sfRow)
                               ;
     }
 
-    // IconView scroll signal can be delayed
-    emit updateScroll();
+    // IconView scroll signal can be delayed (big performance impact - req'd??)
+    //emit updateScroll();
 
     // range check
     if (sfRow >= dm->sf->rowCount()) {
@@ -557,6 +558,8 @@ void MetaRead::run()
     if (isDebug) qDebug() << "MetaRead::run  Done.";
 
     abort = false;
+    qDebug() << "Concurrent elapsed sec:" << t.elapsed() * 1.0 / 1000 << G::currRootFolder;
+
     return;
 }
 

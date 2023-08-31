@@ -153,11 +153,14 @@ namespace G
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
 
+    extern QWaitCondition metaReadDone;
     extern int dmInstance;
     extern int metadataInstance;
     extern int imageCacheInstance;
 
     // limit functionality for testing
+    extern bool useApplicationStateChanged;
+    extern bool useZoomWindow;
     extern bool useImageCache;
     extern bool useImageView;
     extern bool useInfoView;

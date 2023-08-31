@@ -120,7 +120,7 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShiftOnOpen;               // used when opening if shift key pressed
-
+    QString args;                     // opening args
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -131,7 +131,7 @@ public:
     QTextStream rpt;
 
     // QSettings
-    QSettings *setting;
+    QSettings *settings;
     QMap<QString, QAction *> actionKeys;
 
     QMap<QString, QString> pathTemplates;
@@ -384,7 +384,7 @@ signals:
 
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
-    void restoreLastSessionGeometryState(Qt::ApplicationState state);
+    void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
@@ -1207,7 +1207,6 @@ private:
     void startErrLog();
     void closeErrLog();
     void trimErrLog(QFile &errorLog, int daysToKeep);
-    bool isDevelopment();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

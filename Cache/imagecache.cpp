@@ -1,8 +1,8 @@
 #include "Cache/imagecache.h"
 
 
-/*
-How the Image Cache works:
+/*  How the Image Cache works:
+
             CCC         CCCCCCCCCC
                   TTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     .......................*...........................................
@@ -74,6 +74,7 @@ ImageCache::ImageCache(QObject *parent,
 
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
+    //decoderCount = 10;
     icd->cache.decoderCount = decoderCount;
     for (int id = 0; id < decoderCount; ++id) {
         ImageDecoder *d = new ImageDecoder(this, id, dm, metadata);
@@ -138,6 +139,21 @@ void ImageCache::stop()
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+}
+
+void ImageCache::pause()
+{
+    gMutex.lock();
+    paused = true;
+    gMutex.unlock();
+}
+
+void ImageCache::resume()
+{
+    gMutex.lock();
+    paused = false;
+    gMutex.unlock();
+    condition.wakeAll();
 }
 
 float ImageCache::getImCacheSize()
@@ -991,7 +1007,6 @@ void ImageCache::reportRunStatus()
              << "isRunning =" << isRun
              << "isForward =" << icd->cache.isForward
              << "abort =" << abort
-             << "pause =" << pause
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged
              << "currentPath =" << currentPath;
@@ -1290,7 +1305,7 @@ void ImageCache::refreshImageCache()
     refreshCache = true;
     if (useMutex) gMutex.unlock();
     if (!isRunning()) {
-        start();
+        start(QThread::LowestPriority);
     }
 }
 
@@ -1314,7 +1329,7 @@ void ImageCache::cacheSizeChange()
     cacheSizeHasChanged = true;
     if (useMutex) gMutex.unlock();
     if (!isRunning()) {
-        start();
+        start(QThread::LowestPriority);
     }
 }
 
@@ -1387,6 +1402,7 @@ void ImageCache::decodeNextImage(int id)
             << icd->cacheItemList.at(row).fPath
             ;
     }
+
     if (!abort) decoder[id]->decode(icd->cacheItemList.at(row), instance);
 }
 
@@ -1474,6 +1490,11 @@ void ImageCache::fillCache(int id)
       - no
         - fix orphans
 */
+    if (paused) {
+        gMutex.lock();
+        condition.wait(&gMutex);
+        gMutex.unlock();
+    }
 
     int cacheKey;       // row for image in cacheKeyHash
     cacheKey = -1;      // default = no image

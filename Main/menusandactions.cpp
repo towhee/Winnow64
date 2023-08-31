@@ -45,8 +45,8 @@ void MW::createActions()
 
     /* read external apps from QSettings */
     if (isSettings) {
-        setting->beginGroup("ExternalApps");
-        QStringList names = setting->childKeys();
+        settings->beginGroup("ExternalApps");
+        QStringList names = settings->childKeys();
         n = names.size();
 
         for (int i = 0; i < 10; ++i) {
@@ -58,7 +58,7 @@ void MW::createActions()
                 */
                 QString name = names.at(i);
                 externalApp.name = name.remove(0, 1);
-                externalApp.path = setting->value(names.at(i)).toString();
+                externalApp.path = settings->value(names.at(i)).toString();
                 externalApps.append(externalApp);
             }
             else externalApp.name = "Future app" + QString::number(i);
@@ -76,20 +76,20 @@ void MW::createActions()
             connect(appActions.at(i), &QAction::triggered, this, &MW::runExternalApp);
         }
         addActions(appActions);
-        setting->endGroup();
+        settings->endGroup();
 
         // app arguments (optional) are in a sister group
-        setting->beginGroup("ExternalAppArgs");
-        QStringList args = setting->childKeys();
+        settings->beginGroup("ExternalAppArgs");
+        QStringList args = settings->childKeys();
         n = args.size();
         for (int i = 0; i < 10; ++i) {
             if (i < n) {
                 QString arg = args.at(i);
                 externalApps[i].args = arg.remove(0, 1);
-                externalApps[i].args = setting->value(args.at(i)).toString();
+                externalApps[i].args = settings->value(args.at(i)).toString();
             }
         }
-        setting->endGroup();
+        settings->endGroup();
     }
     else {
         for (int i = 0; i < 10; ++i) {
@@ -290,7 +290,7 @@ void MW::createActions()
     combineRawJpgAction->setObjectName("combineRawJpg");
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
     combineRawJpgAction->setCheckable(true);
-    if (isSettings && setting->contains("combineRawJpg")) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
+    if (isSettings && settings->contains("combineRawJpg")) combineRawJpgAction->setChecked(settings->value("combineRawJpg").toBool());
     else combineRawJpgAction->setChecked(false);
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
@@ -781,10 +781,10 @@ void MW::createActions()
     filterSoloAction->setShortcutVisibleInContextMenu(true);
     filterSoloAction->setCheckable(true);
     addAction(filterSoloAction);
-    if (!setting->value("isSoloFilters").isValid() || simulateJustInstalled)
+    if (!settings->value("isSoloFilters").isValid() || simulateJustInstalled)
         filterSoloAction->setChecked(true);
     else
-        filterSoloAction->setChecked(setting->value("isSoloFilters").toBool());
+        filterSoloAction->setChecked(settings->value("isSoloFilters").toBool());
     setFilterSolo();    // set solo in filters and save to settings
     connect(filterSoloAction,  &QAction::triggered, this, &MW::setFilterSolo);
 
@@ -1034,7 +1034,7 @@ void MW::createActions()
     fullScreenAction->setObjectName("fullScreenAct");
     fullScreenAction->setShortcutVisibleInContextMenu(true);
     fullScreenAction->setCheckable(true);
-    if (isSettings && setting->contains("isFullScreen")) fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
+    if (isSettings && settings->contains("isFullScreen")) fullScreenAction->setChecked(settings->value("isFullScreen").toBool());
     else fullScreenAction->setChecked(false);
     addAction(fullScreenAction);
     connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
@@ -1075,7 +1075,7 @@ void MW::createActions()
     infoSelectAction = new QAction(tr("Select or edit info overlay   "), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
-    if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
+    if (isSettings && settings->contains("isImageInfoVisible")) infoVisibleAction->setChecked(settings->value("isImageInfoVisible").toBool());
     else infoVisibleAction->setChecked(false);
     addAction(infoSelectAction);
     connect(infoSelectAction, &QAction::triggered, this, &MW::tokenEditor);
@@ -1083,9 +1083,9 @@ void MW::createActions()
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
-    if (isSettings && setting->contains("isLoupeDisplay"))
-        asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool()
-                                  || setting->value("isCompareDisplay").toBool());
+    if (isSettings && settings->contains("isLoupeDisplay"))
+        asLoupeAction->setChecked(settings->value("isLoupeDisplay").toBool()
+                                  || settings->value("isCompareDisplay").toBool());
 //                                  || setting->value("isEmbelDisplay").toBool()
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
@@ -1094,7 +1094,7 @@ void MW::createActions()
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
     asGridAction->setCheckable(true);
-    if (isSettings && setting->contains("isGridDisplay")) asGridAction->setChecked(setting->value("isGridDisplay").toBool());
+    if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
     connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
@@ -1102,7 +1102,7 @@ void MW::createActions()
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
     asTableAction->setCheckable(true);
-    if (isSettings && setting->contains("isTableDisplay")) asTableAction->setChecked(setting->value("isTableDisplay").toBool());
+    if (isSettings && settings->contains("isTableDisplay")) asTableAction->setChecked(settings->value("isTableDisplay").toBool());
     else asTableAction->setChecked(false);
     addAction(asTableAction);
     connect(asTableAction, &QAction::triggered, this, &MW::tableDisplay);
@@ -1162,7 +1162,7 @@ void MW::createActions()
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
     menuBarVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isMenuBarVisible")) menuBarVisibleAction->setChecked(setting->value("isMenuBarVisible").toBool());
+    if (isSettings && settings->contains("isMenuBarVisible")) menuBarVisibleAction->setChecked(settings->value("isMenuBarVisible").toBool());
     else menuBarVisibleAction->setChecked(true);
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
@@ -1172,7 +1172,7 @@ void MW::createActions()
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setShortcutVisibleInContextMenu(true);
     statusBarVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isStatusBarVisible")) statusBarVisibleAction->setChecked(setting->value("isStatusBarVisible").toBool());
+    if (isSettings && settings->contains("isStatusBarVisible")) statusBarVisibleAction->setChecked(settings->value("isStatusBarVisible").toBool());
     else statusBarVisibleAction->setChecked(true);
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
@@ -1181,7 +1181,7 @@ void MW::createActions()
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isFolderDockVisible")) folderDockVisibleAction->setChecked(setting->value("isFolderDockVisible").toBool());
+    if (isSettings && settings->contains("isFolderDockVisible")) folderDockVisibleAction->setChecked(settings->value("isFolderDockVisible").toBool());
     else folderDockVisibleAction->setChecked(true);
     addAction(folderDockVisibleAction);
     connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
@@ -1190,7 +1190,7 @@ void MW::createActions()
     favDockVisibleAction->setObjectName("toggleFavs");
     favDockVisibleAction->setShortcutVisibleInContextMenu(true);
     favDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isFavDockVisible")) favDockVisibleAction->setChecked(setting->value("isFavDockVisible").toBool());
+    if (isSettings && settings->contains("isFavDockVisible")) favDockVisibleAction->setChecked(settings->value("isFavDockVisible").toBool());
     else favDockVisibleAction->setChecked(true);
     addAction(favDockVisibleAction);
     connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
@@ -1199,7 +1199,7 @@ void MW::createActions()
     filterDockVisibleAction->setObjectName("toggleFilters");
     filterDockVisibleAction->setShortcutVisibleInContextMenu(true);
     filterDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isFilterDockVisible")) filterDockVisibleAction->setChecked(setting->value("isFilterDockVisible").toBool());
+    if (isSettings && settings->contains("isFilterDockVisible")) filterDockVisibleAction->setChecked(settings->value("isFilterDockVisible").toBool());
     else filterDockVisibleAction->setChecked(true);
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
@@ -1208,7 +1208,7 @@ void MW::createActions()
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
     metadataDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isMetadataDockVisible")) metadataDockVisibleAction->setChecked(setting->value("isMetadataDockVisible").toBool());
+    if (isSettings && settings->contains("isMetadataDockVisible")) metadataDockVisibleAction->setChecked(settings->value("isMetadataDockVisible").toBool());
     else metadataDockVisibleAction->setChecked(true);
     addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
@@ -1217,7 +1217,7 @@ void MW::createActions()
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isThumbDockVisible")) thumbDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
+    if (isSettings && settings->contains("isThumbDockVisible")) thumbDockVisibleAction->setChecked(settings->value("isThumbDockVisible").toBool());
     else thumbDockVisibleAction->setChecked(true);
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
@@ -1226,7 +1226,7 @@ void MW::createActions()
     embelDockVisibleAction->setObjectName("toggleEmbelDock");
     embelDockVisibleAction->setShortcutVisibleInContextMenu(true);
     embelDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isEmbelDockVisible")) embelDockVisibleAction->setChecked(setting->value("isEmbelDockVisible").toBool());
+    if (isSettings && settings->contains("isEmbelDockVisible")) embelDockVisibleAction->setChecked(settings->value("isEmbelDockVisible").toBool());
     else embelDockVisibleAction->setChecked(false);
     addAction(embelDockVisibleAction);
     connect(embelDockVisibleAction, &QAction::triggered, this, &MW::toggleEmbelDockVisibility);
@@ -2220,8 +2220,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
     //    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
 
-    setting->beginGroup("Shortcuts");
-    QStringList groupKeys = setting->childKeys();
+    settings->beginGroup("Shortcuts");
+    QStringList groupKeys = settings->childKeys();
 
     if (groupKeys.size() && !defaultShortcuts)
     {
@@ -2232,9 +2232,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
                 key.next();
                 if (groupKeys.contains(key.value()->text()))
                 {
-                    key.value()->setShortcut(setting->value(key.value()->text()).toString());
-                    setting->remove(key.value()->text());
-                    setting->setValue(key.key(), key.value()->shortcut().toString());
+                    key.value()->setShortcut(settings->value(key.value()->text()).toString());
+                    settings->remove(key.value()->text());
+                    settings->setValue(key.key(), key.value()->shortcut().toString());
                 }
             }
         }
@@ -2244,7 +2244,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
             {
                 if (actionKeys.value(groupKeys.at(i)))
                     actionKeys.value(groupKeys.at(i))->setShortcut
-                        (setting->value(groupKeys.at(i)).toString());
+                        (settings->value(groupKeys.at(i)).toString());
             }
         }
     }
@@ -2402,6 +2402,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         //        toggleIconsListAction->setShortcut(QKeySequence("Ctrl+T"));
     }
 
-    setting->endGroup();
+    settings->endGroup();
 }
 
