@@ -3,7 +3,6 @@
 #include <QDebug>
 
 class LoadUsbDelegate : public QStyledItemDelegate
-//class LoadUsbDelegate : public QAbstractItemDelegate
 {
 public:
     explicit LoadUsbDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
@@ -63,7 +62,6 @@ void LoadUsbDlg::keyPressEvent(QKeyEvent *event)
 void LoadUsbDlg::paintEvent(QPaintEvent * /*event*/)
 {
     setScreenDependencies();
-//    QDialog::paintEvent(event);
 }
 
 void LoadUsbDlg::setScreenDependencies()
@@ -81,7 +79,4 @@ void LoadUsbDlg::setScreenDependencies()
     QRect r = ui->label->geometry();
     r.setWidth(w);
     ui->label->setGeometry(r);
-
-//    resize(w, this->height());
-//    adjustSize();
 }

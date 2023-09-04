@@ -27,10 +27,35 @@ QSize Utilities::fitScreen(QSize preferred)
     return QSize(w, h);
 }
 
+QStringList Utilities::listFromPath(QString path)
+{
+    QStringList segments = path.split("/");
+    if (segments.at(0) == "" && segments.count() > 0) segments.remove((0));
+    return segments;
+}
+
+QString Utilities::getDriveName(QString path)
+{
+    QString name = "";
+    QStringList segments = listFromPath(path);
+    qDebug() << "Utilities::getDriveName  path =" << path << "segments =" << segments;
+    if (segments.count() == 0) return "";
+    #ifdef Q_OS_WIN
+        return segments.at(0);
+    #endif
+    #ifdef Q_OS_MAC
+        if (segments.at(0) == "Volumes" && segments.count() >= 2) {
+            return segments.at(1);
+        }
+    #endif    // 1st segment should be Volumes
+    return "";
+}
+
 QString Utilities::getDrive(QString path)
 {
 /*
-    Returns the drive portion of a file system path.  The path must use the delimiter /.
+    Returns the drive portion of a file system path ie /Volumes/Untitled
+    The path must use the delimiter /.
     The path must include the drive - the absolute path.
 */
     QString drivePath = "";
@@ -42,7 +67,7 @@ QString Utilities::getDrive(QString path)
 #endif
 #ifdef Q_OS_MAC
     if (path.left(9) == "/Volumes/") {
-        drivePath = path.left(path.indexOf("/", 10) /*+ 1*/);
+        drivePath = path.left(path.indexOf("/", 10));
     }
     else {
         if (path.at(0) == '/') drivePath = "/";
@@ -62,8 +87,6 @@ QString Utilities::getFileName(QString srcPath)
 QString Utilities::getFolderPath(QString fPath)
 {
     if (G::isLogger) G::log("Utilities::getFolderPath");
-//    QFileInfo fileInfo(fPath);
-//    return fileInfo.dir().absolutePath();
     return QFileInfo((fPath)).dir().absolutePath();
 }
 

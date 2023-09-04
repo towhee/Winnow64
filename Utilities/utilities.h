@@ -16,6 +16,8 @@ public:
     static QSize fitScreen(QSize preferred);
 
     // File/folder path operations
+    static QStringList listFromPath(QString path);
+    static QString getDriveName(QString path);
     static QString getDrive(QString path);
     static QString getFileName(QString srcPath);
     static QString getFolderPath(QString fPath);

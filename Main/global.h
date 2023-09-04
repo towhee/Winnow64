@@ -3,6 +3,7 @@
 #define GLOBAL_H
 
 #include <QtWidgets>
+#include <QtConcurrent/QtConcurrent>
 #include <QColor>
 #include <QModelIndexList>
 #include <QStringList>

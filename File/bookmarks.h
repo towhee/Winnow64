@@ -56,6 +56,7 @@ signals:
     void deleteFiles(QStringList srcPaths);
     void refreshFSTree();
     void folderSelection();
+    void renameEjectAction(QString path);
 };
 
 #endif // BOOKMARKS_H

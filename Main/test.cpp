@@ -130,7 +130,8 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-
+    fileGroupAct->setEnabled(false);
+    return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
     if (G::isFlowLogger2) qDebug() << "";
@@ -138,9 +139,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int iconCount = 0;
-    for (int i = 0; i < dm->rowCount(); i++) {
-        if (dm->iconLoaded(i, dm->instance)) iconCount++;
-    }
-    qDebug() << iconCount;
+    ejectAction->setEnabled(false);
+    return;
+    QString fPath = "Users/Rory/Pictures/favourites/2013-09-17_0033.jpg";
+    Usb::isEjectable("");
+    //qDebug() << Utilities::getDriveName(fPath);
+    //ejectAction->setText("Eject X");
 }

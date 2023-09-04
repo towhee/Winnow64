@@ -1122,7 +1122,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
             mouseOverFolderPath = idx.data(QFileSystemModel::FilePathRole).toString();
-            enableEjectUsbMenu(mouseOverFolderPath);
+            //enableEjectUsbMenu(mouseOverFolderPath);
             // in folders or bookmarks but not on folder item
             if(mouseOverFolderPath == "") {
                 addBookmarkAction->setEnabled(false);
@@ -1134,7 +1134,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = bookmarks->indexAt(e->pos());
             mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
-            enableEjectUsbMenu(mouseOverFolderPath);
+            //enableEjectUsbMenu(mouseOverFolderPath);
             // in folders or bookmarks but not on folder item
             if (mouseOverFolderPath == "") {
                 addBookmarkAction->setEnabled(false);
@@ -1143,7 +1143,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
         else {
-            enableEjectUsbMenu(G::currRootFolder);
+            //enableEjectUsbMenu(G::currRootFolder);
             if (G::currRootFolder == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
@@ -1961,7 +1961,7 @@ void MW::folderSelectionChange()
     fsTree->scrollToCurrent();
 
     // update menu
-    enableEjectUsbMenu(G::currRootFolder);
+    //enableEjectUsbMenu(G::currRootFolder);
 
     // clear filters
     uncheckAllFilters();

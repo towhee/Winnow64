@@ -232,12 +232,15 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // ignore right mouse clicks (context menu)
+    // update eject drive menu item if ejectable
+    QModelIndex idx = indexAt(event->pos());
+    QString path = "";
+    if (idx.isValid()) {
+        path = idx.data(Qt::ToolTipRole).toString();
+    }
+    emit renameEjectAction(path);
+
     if (event->button() == Qt::RightButton) {
-        rightClickItem = itemAt(event->pos());
-        if (rightClickItem) {
-            rightMouseClickPath = rightClickItem->toolTip(0);
-        }
         return;
     }
 
