@@ -738,7 +738,7 @@ private:
     QAction *invertSelectionAction;
     QAction *copyFilesAction;
     QAction *copyImageAction;
-    QAction *deleteAction;
+    QAction *deleteImagesAction;
     QAction *deleteAction1;
     QAction *deleteActiveFolderAction;
     QAction *deleteBookmarkFolderAction;
@@ -869,11 +869,8 @@ private:
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
-//    QAction *thumbsWrapAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
-//    QAction *thumbsFitAction;   // used?? rgh
-//    QAction *showThumbLabelsAction;
     QAction *sortReverseAction;
     QAction *colorManageToggeAction;
 
@@ -934,6 +931,17 @@ private:
     // Testing Menu (under Help Diagnostics Menu)
     QAction *stressTestAction;
     QAction *bounceFoldersStressTestAction;
+
+    // Group actions
+    QAction *fileGroupAct;
+    QAction *editGroupAct;
+    QAction *goGroupAct;
+    QAction *filterGroupAct;
+    QAction *sortGroupAct;
+    QAction *embelGroupAct;
+    QAction *viewGroupAct;
+    QAction *windowGroupAct;
+    QAction *helpGroupAct;
 
     // Context menus
     QList<QAction *> *fsTreeActions;
@@ -1162,8 +1170,19 @@ private:
 //    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
+    // actions
     void addMenuSeparator(QWidget *widget);
     void createActions();
+    void createFileActions();
+    void createEditActions();
+    void createGoActions();
+    void createFilterActions();
+    void createSortActions();
+    void createEmbellishActions();
+    void createViewActions();
+    void createWindowActions();
+    void createHelpActions();
+    void createMiscActions();
     void createBookmarks();
     void createFrameDecoder();
     void createLinearMetaRead();
@@ -1178,7 +1197,25 @@ private:
     void createVideoView();
     void createInfoView();
     void createInfoString();
+    // menus
     void createMenus();
+    void createFileMenu();
+    void createEditMenu();
+    void createGoMenu();
+    void createFilterMenu();
+    void createSortMenu();
+    void createEmbellishMenu();
+    void createViewMenu();
+    void createWindowMenu();
+    void createHelpMenu();
+    void createMainMenu();
+    void createMainContextMenu();
+    void createFSTreeContextMenu();
+    void createBookmarksContextMenu();
+    void createFiltersContextMenu();
+    void createInfoViewContextMenu();
+    void createThumbViewContextMenu();
+
     void createTableView();
     void createThumbView();
     void createGridView();

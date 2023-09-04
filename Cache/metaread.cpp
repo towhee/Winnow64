@@ -558,7 +558,7 @@ void MetaRead::run()
     if (isDebug) qDebug() << "MetaRead::run  Done.";
 
     abort = false;
-    qDebug() << "Concurrent elapsed sec:" << t.elapsed() * 1.0 / 1000 << G::currRootFolder;
+    //qDebug() << "Concurrent elapsed sec:" << t.elapsed() * 1.0 / 1000 << G::currRootFolder;
 
     return;
 }

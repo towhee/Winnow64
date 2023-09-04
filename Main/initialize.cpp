@@ -1040,6 +1040,9 @@ void MW::createFSTree()
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
 
+    // rename menu item "Eject USB drive <x>" and enable/disable
+    connect(fsTree, &FSTree::renameEjectAction, this, &MW::renameEjectUsbMenu);
+
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
     // this does not work to detect ejecting a drive
@@ -1087,6 +1090,9 @@ void MW::createBookmarks()
 
     // reselect folder after external program drop onto BookMarks
     connect(bookmarks, &BookMarks::folderSelection, this, &MW::folderSelectionChange);
+
+    // rename menu item "Eject USB drive <x>" and enable/disable
+    connect(bookmarks, &BookMarks::renameEjectAction, this, &MW::renameEjectUsbMenu);
 }
 
 void MW::createAppStyle()

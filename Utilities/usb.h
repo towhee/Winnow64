@@ -14,6 +14,7 @@ public:
     Usb();
     static bool eject(QString driveName);
     static bool isUsb(QString path);
+    static bool isEjectable(QString path);
 };
 
 #endif // USB_H

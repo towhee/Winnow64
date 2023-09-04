@@ -480,15 +480,15 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // ignore right mouse clicks (context menu)
-//    if (event->button() == Qt::RightButton) return;
+    // update eject drive menu item if ejectable
+    QModelIndex idx = indexAt(event->pos());
+    QString path = "";
+    if (idx.isValid()) {
+        path = idx.data(Qt::ToolTipRole).toString();
+    }
+    emit renameEjectAction(path);
+
     if (event->button() == Qt::RightButton) {
-        rightClickIndex = indexAt(event->pos());
-        if (rightClickIndex.isValid()) {
-            rightMouseClickPath = rightClickIndex.data(Qt::ToolTipRole).toString();
-            qDebug() << "FSTree::mousePressEvent" << rightMouseClickPath;
-            emit renameEjectAction(rightMouseClickPath);
-        }
         return;
     }
 
