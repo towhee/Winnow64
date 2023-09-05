@@ -459,6 +459,10 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 //    qDebug() << "FSTree::selectionChanged" << count;
 }
 
+void FSTree::keyPressEvent(QKeyEvent *event){
+    // prevent default key actions
+}
+
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("FSTree::mousePressEvent");

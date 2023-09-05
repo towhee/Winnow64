@@ -317,7 +317,7 @@ qint32 MetadataCache::memRequired()
     if (G::isLogger) G::log("MetadataCache::memRequired");
     int rowsWithIcons = endRow - startRow;
     quint32 iconMem;
-    iconMem = static_cast<quint32>(G::iconHMax * G::iconHMax * 3 * rowsWithIcons);
+    iconMem = static_cast<quint32>(G::maxIconSize * G::maxIconSize * 3 * rowsWithIcons);
     quint32 metaMem;
     int averageMetaMemReqdPerRow = 18900;   // bytes per row
     metaMem = static_cast<quint32>(dm->rowCount() * averageMetaMemReqdPerRow);
@@ -329,18 +329,6 @@ qint32 MetadataCache::memRequired()
              << "Total reqd =" << (iconMem + metaMem) / (1024 * 1024);
 //             */
     return (iconMem + metaMem) / (1024 * 1024);
-}
-
-void MetadataCache::iconMax(QPixmap &thumb)
-{
-    if (G::isLogger) G::log("MetadataCache::iconMax");
-    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
-
-    // for best aspect calc
-    int w = thumb.width();
-    int h = thumb.height();
-    if (w > G::iconWMax) G::iconWMax = w;
-    if (h > G::iconHMax) G::iconHMax = h;
 }
 
 bool MetadataCache::loadIcon(int sfRow)
@@ -372,7 +360,7 @@ bool MetadataCache::loadIcon(int sfRow)
         }
 //        dm->setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
         emit setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
-        iconMax(pm);
+        //iconMax(pm);
         iconsCached.append(dmRow);
     }
     return true;
@@ -456,7 +444,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             QModelIndex dmIdx = dm->index(dmRow, 0);
             emit setIcon(dmIdx, pm, instance, "MetadataCache::readMetadataIcon");
-            iconMax(pm);
+            //iconMax(pm);
             iconsCached.append(dmRow);
         }
     }

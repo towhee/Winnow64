@@ -40,7 +40,6 @@ public:
     void readMetadataIcon(const QModelIndex &idx);
     void stop();
     void setRange();
-    void iconMax(QPixmap &thumb);
     qint32 memRequired();
 
     int instance;
@@ -113,7 +112,6 @@ signals:
     void setIconCaching(int sfRow, bool state);
     void loadImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
-    void updateIconBestFit();
     void loadMetadataCache2ndPass();
 //    void selectFirst();
     void showCacheStatus(QString);            // row, clear progress bar

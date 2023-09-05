@@ -1,6 +1,8 @@
 WHAT'S NEW
-
+setThumbDockFeatures
+updateIconBestFit
 BUGS / TO DO
+- FSTree selection / up/down key issue
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
@@ -86,6 +88,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Found performance issue with max thumbnails less than total thumbnails
+- Reorganized menus and actions
 - Added Mac::joinAllSpaces to resolve multiple monitor issues
 - Not restoring to same monitor / mac space
 - Spacebar do not set zoom 100% if current is a video

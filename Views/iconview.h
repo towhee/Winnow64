@@ -80,7 +80,6 @@ public slots:
     int justifyMargin();
     void justify(JustifyAction action);
     void rejustify();
-    void bestAspect();
     void thumbsFitTopOrBottom(QString src = "");
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 

@@ -28,7 +28,7 @@ public:
     QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
-    QColor progressMetadateCacheColor = QColor(Qt::red);         // Red
+    QColor progressMetadateCacheColor = QColor(Qt::lightGray);   // Dark green
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;
