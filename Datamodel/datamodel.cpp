@@ -1567,7 +1567,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
                 QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
                 setData(index(row, G::AspectRatioColumn), aspectRatio);
             }
-            setIconMax(pm);
+            //setIconMax(pm);
         }
     }
 }
@@ -1636,25 +1636,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
-    setIconMax(pm);
-}
-
-void DataModel::setIconMax(const QPixmap &pm)
-{
-/*
-    Used locally in DataModel.
-*/
-    lastFunction = "";
-    if (G::isLogger) G::log("DataModel::setIconMax");
-    if (isDebug) qDebug() << "DataModel::setIconMax" << "instance =" << instance << currentFolderPath;
-    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
-
-//    qDebug() << "DataModel::setIconMax" << "Instance =" << instance << currentFolderPath;
-    // for best aspect calc
-    int w = pm.width();
-    int h = pm.height();
-    if (w > G::iconWMax) G::iconWMax = w;
-    if (h > G::iconHMax) G::iconHMax = h;
+    //setIconMax(pm);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -1684,7 +1666,6 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     }
     if (sfRow >= sf->rowCount()) return true;
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
-//    qDebug() << "DataModel::iconLoaded  itemFromIndex" << dmIdx;
     return !(itemFromIndex(dmIdx)->icon().isNull());
 }
 
@@ -1705,7 +1686,6 @@ bool DataModel::allIconsLoaded()
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
-//        qDebug() << "DataModel::allIconsLoaded  itemFromIndex  row =" << row;
         if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
     }
     return true;

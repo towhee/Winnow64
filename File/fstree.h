@@ -79,6 +79,7 @@ public slots:
 private slots:
 
 protected:
+    void keyPressEvent(QKeyEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;       // debugging
     void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
     void mouseMoveEvent(QMouseEvent *event) override;

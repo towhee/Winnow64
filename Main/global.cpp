@@ -2,7 +2,7 @@
 
 namespace G
 {
-    QSettings *settings;//
+    QSettings *settings;
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
@@ -10,7 +10,7 @@ namespace G
     bool isFlowLogger2 = false;         // QDebug key program flow points
     bool isWarningLogger = false;       // Writes warnings to qDebug
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
-    bool isErrorLogger = true;         // Writes error log messages to file or console
+    bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
@@ -109,8 +109,8 @@ namespace G
     // icons
     int maxIconSize = 256;
     int minIconSize = 40;
-    int iconWMax;                       // widest icon found in datamodel
-    int iconHMax;                       // highest icon found in datamodel
+//    int iconWMax;                       // widest icon found in datamodel
+//    int iconHMax;                       // highest icon found in datamodel
 
     // status
     QString currRootFolder;

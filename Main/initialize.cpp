@@ -553,8 +553,6 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
     connect(metaReadThread, &MetaRead2::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
-    // check icons visible is correct
-    connect(metaReadThread, &MetaRead2::updateIconBestFit, this, &MW::updateIconBestFit);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead2::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window

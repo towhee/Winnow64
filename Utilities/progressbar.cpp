@@ -48,7 +48,7 @@ void ProgressBar::resetMetadataProgress()
 {
     QPainter pnt(m1->progressPixmap);
     QRect mdRect(0, htOffset-1, m1->progressWidth, htOffset-1);
-    pnt.fillRect(mdRect, progressMetadateCacheColor);
+    pnt.fillRect(mdRect, G::backgroundColor);
 }
 
 void ProgressBar::clearImageCacheProgress()
@@ -187,8 +187,7 @@ void ProgressBar::updateMetadataCacheProgress(int item, int items)
 
     // Done range
     QRect doneRect(pxStart, htOffset-1, pxWidth, 1);
-    //pnt.fillRect(doneRect, Qt::yellow);
-    pnt.fillRect(doneRect, G::backgroundColor);
+    pnt.fillRect(doneRect, progressMetadateCacheColor);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 

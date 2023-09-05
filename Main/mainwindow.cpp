@@ -192,7 +192,6 @@ Flow by function call:
     DataModel::addFileData
     MW::loadLinearNewFolder
     DataModel::addAllMetadata
-    MW::updateIconBestFit
     MW::updateIconsVisible
     IconView::calcViewportRange
     MetadataCache::readIconChunk
@@ -396,7 +395,6 @@ Folder change
     MetadataCache::setRange
     MetadataCache::readMetadataIconChunk
     MW::loadMetadataCache2ndPass
-    MW::updateIconBestFit
     IconView::bestAspect
     IconView::setThumbParameters
     MetadataCache::loadNewFolder2ndPass
@@ -404,7 +402,6 @@ Folder change
     MetadataCache::readMetadataIconChunk
     MW::loadImageCacheForNewFolder
     // need to repeat best fit?
-    MW::updateIconBestFit
     IconView::bestAspect
     IconView::setThumbParameters
     ImageCache::initImageCache
@@ -2677,8 +2674,8 @@ void MW::loadConcurrentNewFolder()
     int count = 0;
 
     // reset for bestAspect thumbnail calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
+//    G::iconWMax = G::minIconSize;
+//    G::iconHMax = G::minIconSize;
 
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
@@ -2779,7 +2776,7 @@ void MW::loadConcurrentDone()
 
     if (reset(src + QString::number(count++))) return;
     // double check all visible icons loaded, depending on best fit
-    updateIconBestFit();
+    //updateIconBestFit();
 
     if (reset(src + QString::number(count++))) return;
     if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
@@ -2881,8 +2878,8 @@ void MW::loadLinearNewFolder()
         mct->lastIconVisible = mct->metadataChunkSize;
     }
     // reset for bestAspect calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
+//    G::iconWMax = G::minIconSize;
+//    G::iconHMax = G::minIconSize;
 
     // read icons
     if (reset()) return;
@@ -2894,7 +2891,7 @@ void MW::loadLinearNewFolder()
     mct->readIconChunk();
     qDebug() << "Linear     elapsed sec:" << G::t.elapsed() * 1.0 / 1000 << G::currRootFolder;
     if (reset()) return;
-    updateIconBestFit();
+    //updateIconBestFit();
 //    thumbView->thumbsFitTopOrBottom();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
@@ -3274,10 +3271,10 @@ void MW::updateIconBestFit()
     thumbs triggers an unwanted scrolling, so the first visible thumbnail is recorded before
     the bestAspect is called and the IconView is returned to its previous position after.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::updateIconBestFit";
-    if (G::stop) return;
-    gridView->bestAspect();
-    thumbView->bestAspect();
+//    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::updateIconBestFit";
+//    if (G::stop) return;
+//    gridView->bestAspect();
+//    thumbView->bestAspect();
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)

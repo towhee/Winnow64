@@ -652,11 +652,11 @@ void ImageCache::removeFromCache(QStringList &pathList)
         icd->imCache.remove(fPathToRemove);
         for (int j = 0; j < icd->cacheItemList.length(); ++j) {
             QString fPath = pathFromKey[j];
-            gMutex.lock();
+            //gMutex.lock();
             if (fPath == fPathToRemove) {
                 icd->cacheItemList.removeAt(j);
             }
-            gMutex.unlock();
+            //gMutex.unlock();
         }
     }
     icd->cache.totFiles = icd->cacheItemList.length();
@@ -1516,11 +1516,11 @@ void ImageCache::fillCache(int id)
       - no
         - fix orphans
 */
-    if (paused) {
-        gMutex.lock();
-        condition.wait(&gMutex);
-        gMutex.unlock();
-    }
+//    if (paused) {
+//        gMutex.lock();
+//        condition.wait(&gMutex);
+//        gMutex.unlock();
+//    }
 
     int cacheKey;       // row for image in cacheKeyHash
     cacheKey = -1;      // default = no image

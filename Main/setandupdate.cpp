@@ -72,7 +72,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // if thumbDock area changed then set dock height to cell size
 
         // get max icon height based on best aspect
-        int hMax = G::iconHMax;
+        int hMax = G::maxIconSize; //G::iconHMax;  qDebug() << "G::iconHMax =" << G::iconHMax;
 
         // max and min cell heights (icon plus padding + name text)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
@@ -102,7 +102,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
              << "MW::setThumbDockFeatures  dock area =" << area
              << "thumbView Ht =" << thumbView->height()
              << "maxHt ="  << maxHt << "minHt =" << minHt
-             << "G::iconHMax =" << G::iconHMax
+             << "G::maxIconSize =" << G::maxIconSize
              << "newThumbDockHeight" << newThumbDockHeight
              << "scrollBarHeight =" << G::scrollBarThickness;
 //        */

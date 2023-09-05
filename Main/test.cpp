@@ -146,3 +146,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     //qDebug() << Utilities::getDriveName(fPath);
     //ejectAction->setText("Eject X");
 }
+
+/*
+   Performance
+        Big max thumbnails
+        Turn color management off
+        Hide caching progress
+*/

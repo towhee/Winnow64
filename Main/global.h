@@ -207,8 +207,8 @@ namespace G
 
     extern int maxIconSize;
     extern int minIconSize;
-    extern int iconWMax;
-    extern int iconHMax;
+//    extern int iconWMax;
+//    extern int iconHMax;
 
     extern QColor textColor;
     extern QColor backgroundColor;

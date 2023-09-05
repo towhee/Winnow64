@@ -145,6 +145,8 @@ ThumbView behavior in container QDockWidget (thumbDock in MW), changes:
 
 Loading icons
 
+    The best aspect fit has been eliminated:
+
     Icons are loaded each time a new folder is selected. MetadataCache::loadIcon reads
     the thumbnail pixmap into the DataModel as an icon. Thumbnails or icons are a maximum
     of 256px and can have various aspect ratios. The IconView thumbView, when anchored to
@@ -1010,38 +1012,6 @@ void IconView::resizeEvent(QResizeEvent *)
                 //*/
 }
 
-void IconView::bestAspect()
-{
-/*
-    When a new folder is loaded: (1. Linear loading - MetadataCache::loadIcon calls
-    MetadataCache::iconMax for each icon in the datamodel or 2. Concurrent loading -
-    MetaRead::setIcon signals DataModel::setIcon, which calls DataModel::setIconMax) to
-    find the greatest height and width of the icons, stored in G::iconWMax and
-    G::iconHMax. This is used to define the thumb size in IconViewDelegate.
-
-    The resulting max width and height are sent to IconViewDelegate to define the
-    thumbRect that holds each icon. This is also the most compact container available.
-
-    The function is called after a new folder is selected and the datamodel icon data has
-    been loaded. Both thumbView and gridView have to be called.
-*/
-    if (isDebug) G::log("IconView::bestAspect", objectName());
-    return;
-
-    bestAspectRatio = static_cast<double>(G::iconWMax) / G::iconHMax;
-    thumbsFitTopOrBottom("bestAspect");
-
-     /*
-    qDebug() << "IconView::bestAspect" << objectName()
-             << "G::iconWMax =" << G::iconWMax
-             << "G::iconHMax =" << G::iconHMax
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-             << "bestAspectRatio =" << bestAspectRatio
-                ;
-//  */
-}
-
 void IconView::thumbsFitTopOrBottom(QString src)
 {
 /*
@@ -1051,9 +1021,6 @@ void IconView::thumbsFitTopOrBottom(QString src)
 
     Called by MW::eventFilter when a thumbDock resize event occurs triggered by
     the user resizing the thumbDock.
-
-    Called by bestAspect when the height change requires a thumbnail size
-    change to fit.
 
     Called when thumbViewShowLabel is changed.
 
