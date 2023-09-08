@@ -1076,6 +1076,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
                     ;
+                if (G::isTestLogger) G::log("skipline");
+                if (G::isTestLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
                 if (e->key() == Qt::Key_Return) loupeDisplay();
                 if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
                 if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
@@ -2082,6 +2084,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                  << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
                  << current.data(G::PathRole).toString();
     }
+    if (G::isTestLogger)
+        G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger)
@@ -2142,6 +2146,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     settings->setValue("lastFileSelection", fPath);
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
+    G::ignoreScrollSignal = true;
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         if (thumbView->isVisible()) thumbView->scrollToCurrent();
     }
@@ -2162,6 +2167,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (thumbView->isVisible())  thumbView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
+    G::ignoreScrollSignal = false;
     G::fileSelectionChangeSource = "";
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
@@ -2177,7 +2183,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (isVideo) {
         if (G::useMultimedia) {
             videoView->load(fPath);
-            qDebug() << "MW::fileSelectionChange2 G::mode =" << G::mode << fPath;
+            //qDebug() << "MW::fileSelectionChange2 G::mode =" << G::mode << fPath;
             if (G::mode == "Loupe") {
                 centralLayout->setCurrentIndex(VideoTab);
             }
@@ -2191,14 +2197,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
             }
             else {
-                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+                //qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
             }
         }
     }
 
     // update caching if folder has been loaded
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent) {
-        fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
+        //fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         if (G::isLoadLinear) {
             metadataCacheThread->fileSelectionChange();
         }
@@ -2346,6 +2352,7 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
+    if (G::isTestLogger) G::log("MW::stop", "src = " + src);
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
@@ -2625,7 +2632,7 @@ bool MW::updateIconRange(QString src)
             metadataCacheThread->sizeChange("MW::updateIconRange");
         }
         else {
-            qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
+            //qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
             loadConcurrent(midVisible, false, "MW::updateIconRange");
         }
     }
@@ -2725,7 +2732,7 @@ void MW::loadConcurrentNewFolder()
     sel->setCurrentRow(targetRow);
 }
 
-void MW::loadConcurrent(int sfRow, bool isCurrent, QString src)
+void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.
 
@@ -2738,20 +2745,27 @@ void MW::loadConcurrent(int sfRow, bool isCurrent, QString src)
 
 */
 {
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isTestLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
+          + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
+
+//    if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
-                 << "isCurrent = " << isCurrent
+                 << "isFileSelectionChange = " << isFileSelectionChange
                  << "src =" << src
+                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allIconsLoaded =" << G::allIconsLoaded
                     ;
-    if (!G::allMetadataLoaded || !G::allIconsLoaded) {
-        if (!dm->abortLoadingModel) {
-            frameDecoder->clear();
-            updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-            //dm->currentSfRow = sfRow;
-            if (isCurrent)
-                dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-            metaReadThread->setStartRow(sfRow, isCurrent, "MW::loadConcurrent");
-        }
+    if (G::allMetadataLoaded) {
+        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
+        if (G::allIconsLoaded) return;
+    }
+    if (!dm->abortLoadingModel) {
+        frameDecoder->clear();
+        updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
+        //dm->currentSfRow = sfRow;
+//        if (isFileSelectionChange)
+//            dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
     }
 }
 
@@ -2775,12 +2789,11 @@ void MW::loadConcurrentDone()
                 //*/
 
     if (reset(src + QString::number(count++))) return;
-    // double check all visible icons loaded, depending on best fit
-    //updateIconBestFit();
 
-    if (reset(src + QString::number(count++))) return;
-    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails)
+    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails) {
         chkMissingEmbeddedThumbnails();
+        if (reset(src + QString::number(count++))) return;
+    }
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
@@ -2795,7 +2808,7 @@ void MW::loadConcurrentDone()
     sortMenu->setEnabled(true);
     if (reset(src + QString::number(count++))) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-        qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
+        //qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
         launchBuildFilters();   // new folder = true
     }
 
@@ -2877,9 +2890,6 @@ void MW::loadLinearNewFolder()
         mct->endRow = mct->metadataChunkSize;
         mct->lastIconVisible = mct->metadataChunkSize;
     }
-    // reset for bestAspect calc
-//    G::iconWMax = G::minIconSize;
-//    G::iconHMax = G::minIconSize;
 
     // read icons
     if (reset()) return;
@@ -2889,10 +2899,7 @@ void MW::loadLinearNewFolder()
 //    QApplication::processEvents();
 //    if (reset()) return;
     mct->readIconChunk();
-    qDebug() << "Linear     elapsed sec:" << G::t.elapsed() * 1.0 / 1000 << G::currRootFolder;
     if (reset()) return;
-    //updateIconBestFit();
-//    thumbView->thumbsFitTopOrBottom();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, "MW::loadLinearNewFolder");
 
@@ -3261,20 +3268,6 @@ void MW::updateImageCacheStatus(QString instruction,
     }
 
     return;
-}
-
-void MW::updateIconBestFit()
-{
-/*
-    This function is signalled from MetadataCache after each chunk of icons have been
-    processed. The best aspect of the thumbnail cells is calculated. The repainting of the
-    thumbs triggers an unwanted scrolling, so the first visible thumbnail is recorded before
-    the bestAspect is called and the IconView is returned to its previous position after.
-*/
-//    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::updateIconBestFit";
-//    if (G::stop) return;
-//    gridView->bestAspect();
-//    thumbView->bestAspect();
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)

@@ -147,9 +147,8 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-    if (G::isLogger || G::isFlowLogger)
-        qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
-
+    if (G::isLogger || G::isFlowLogger) qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
+    if (G::isTestLogger) G::log("ImageView::loadImage", fPath + " Src:" + src);
     // No folder selected yet
     if (!fPath.length()) {
         //qWarning() << "WARNING" << "ImageView::loadImage" << "Src =" << src << "No folder selected";
@@ -212,6 +211,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     int dmRow = dm->rowFromPath(fPath);
     if (dmRow == -1) return false;
     int sfRow = dm->proxyRowFromModelRow(dmRow);
+    //int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1) return false;
     bool isCached = false;
     if (icd->cacheItemList.size() >= sfRow) {
@@ -287,8 +287,8 @@ bool ImageView::loadImage(QString fPath, QString src)
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);
-//        QString msg = "Could not read " + fPath;
-//        G::popUp->showPopup(msg, 0);
+        //QString msg = "Could not read " + fPath;
+        //G::popUp->showPopup(msg, 0);
         return false;
     }
 }

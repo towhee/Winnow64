@@ -59,13 +59,15 @@ signals:
 
 public slots:
     void initialize();
-    void setStartRow(int row = 0, bool isCurrent = false, QString src = "");
+    void setStartRow(int row, bool fileSelectionChanged, QString src = "");
+//    void setStartRow(int row = 0, bool isCurrent = false, QString src = "");
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 private:
     void triggerCheck();
+    void triggerFileSelectionChange();
     void read(int startRow);
     void readRow(int sfRow);
     bool readMetadata(QModelIndex sfIdx, QString fPath);
@@ -89,14 +91,15 @@ private:
     double expansionFactor = 1.2;
     int iconLimit;                          // iconChunkSize * expansionFactor
     int imageCacheTriggerCount;
-    bool alreadyTriggered;
+    bool hasBeenTriggered;
+    bool okToTrigger;                       // signal MW::fileSelectionChange
 
-    bool isCurrent;                         // triggers imageCache if true
+    bool fileSelectionChanged;              // triggers imageCache if true
     int startRow = 0;
     int targetRow = 0;
     int lastRow;
     QString startPath = "";
-    int count;
+    int triggerCount;
     QString src;
     QString folderPath;
 

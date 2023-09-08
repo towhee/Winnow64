@@ -57,6 +57,7 @@ void Selection::setCurrentRow(int sfRow)
 {
     if (G::isLogger || isDebug) G::log("Selection::current row");
     if (G::isFlowLogger2) qDebug() << "Selection::currentRow" << "row =" << sfRow;
+    if (G::isTestLogger) G::log("Selection::setCurrentRow", "row = " + QString::number(sfRow));
     setCurrentIndex(dm->sf->index(sfRow, 0));
 }
 
@@ -67,27 +68,20 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
 {
     if (!sfIdx.isValid()) return;
 
-    if (isDebug || G::isLogger || G::isFlowLogger)
-        qDebug() << "Selection::currentIndex" << "row =" << sfIdx.row()
-                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+    if (G::isTestLogger) G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()));
+//    if (isDebug || G::isLogger || G::isFlowLogger)
+        qDebug() << "Selection::setCurrentIndex" << "row =" << sfIdx.row()
+                 << "G::isLoadLinear =" << G::isLoadLinear
                     ;
 
     updateCurrentIndex(sfIdx);
 
     sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
-    bool fileSelectionChangeTriggered = false;
-    if (dm->sf->index(dm->currentSfRow, G::MetadataLoadedColumn).data().toBool()) {
-        emit fileSelectionChange(sfIdx, QModelIndex(), true, "Selection::select");
-        fileSelectionChangeTriggered = true;
-    }
-    else {
-        if (G::isLoadConcurrent) {
-            bool isCurrent = true;
-            //qDebug() << "Selection::currentIndex loadConcurrent";
-            emit loadConcurrent(sfIdx.row(), isCurrent, "Selection::currentIndex");
-        }
-    }
+    bool isFileSelectionChange = true;
+//    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
+    if (G::isLoadLinear) emit fileSelectionChange(sfIdx);
+    else emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
 }
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)
@@ -96,7 +90,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 
     // update datamodel current parameters
     dm->setCurrent(sfIdx, G::dmInstance);
-//    emit updateCurrent(sfIdx, G::dmInstance);
+    //emit updateCurrent(sfIdx, G::dmInstance);
     shiftAnchorIndex = sfIdx;
     shiftExtendIndex = sfIdx;
 }
@@ -109,7 +103,7 @@ void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 
 void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 {
-    if (G::isLogger || isDebug) G::log("Selection::select row");
+    if (G::isLogger || isDebug) G::log("Selection::select(row)");
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     //qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
     select(sfIdx, modifiers);
@@ -117,7 +111,7 @@ void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 
 void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
-    if (G::isLogger || isDebug) G::log("Selection::select QModelIndex");
+    if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
     /*
     bool isNoModifier = modifiers & Qt::NoModifier;
     bool isControlModifier = modifiers & Qt::ControlModifier;
@@ -142,7 +136,6 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
             shiftAnchorIndex = sfIdx;
             shiftExtendIndex = sfIdx;
         }
-//        emit updateVisible();
         //qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
         return;
     }
@@ -152,13 +145,11 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-//        updateVisible();
         return;
     }
     //qDebug() << "Selection::select  Fall through";
     sm->clear();
     setCurrentIndex(sfIdx);
-//    updateVisible();
 }
 
 

@@ -139,7 +139,8 @@ void MetadataCache::scrollChange(QString source)
     limits are removed (not visible and not with chunk range)
 */
 //    return;
-    if (G::isLogger) G::log("MetadataCache::scrollChange", "called by =" + source);
+//    if (G::isLogger)
+        G::log("MetadataCache::scrollChange", "called by =" + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
