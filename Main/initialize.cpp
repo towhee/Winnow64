@@ -449,17 +449,11 @@ void MW::createMDCache()
     if (isSettings) {
         if (settings->contains("iconChunkSize")) {
             dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
-            if (dm->defaultIconChunkSize < 1000)
-                dm->defaultIconChunkSize = 3000;
-        }
-        else {
-            dm->defaultIconChunkSize = 3000;
         }
     }
     else {
         settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
     }
-    //dm->iconChunkSize = dm->defaultIconChunkSize;
     dm->setChunkSize(dm->defaultIconChunkSize);
 
     /*

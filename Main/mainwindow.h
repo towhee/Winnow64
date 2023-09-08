@@ -508,7 +508,6 @@ private slots:
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
-    void updateIconBestFit();
 //    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);

@@ -1,8 +1,6 @@
 WHAT'S NEW
-setThumbDockFeatures
-updateIconBestFit
+
 BUGS / TO DO
-- FSTree selection / up/down key issue
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
@@ -88,6 +86,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- FSTree selection / up/down key issue
 - Found performance issue with max thumbnails less than total thumbnails
 - Reorganized menus and actions
 - Added Mac::joinAllSpaces to resolve multiple monitor issues
@@ -96,7 +95,7 @@ DONE/FIXED
 - Redo icon chunk size
 - Rapid ImageView scrolling results in crash
 - Redo selection and navigation
-- Release 1.36
+- Release 1.36 (not distributed to users)
 - Check fix missing thumbs for jpg previews in raw images
 - IconView not always updating after remote embellish
 - Ingest make sure file name template selected

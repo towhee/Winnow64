@@ -174,13 +174,13 @@ namespace G
 
     extern QSettings *settings;
 
+    extern bool isTestLogger;
     extern bool isLogger;
     extern bool isFlowLogger;
     extern bool isFlowLogger2;
     extern bool isWarningLogger;
     extern bool isFileLogger;
     extern bool isErrorLogger;
-    extern bool isTestLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
     extern QFile errlogFile;
@@ -207,8 +207,6 @@ namespace G
 
     extern int maxIconSize;
     extern int minIconSize;
-//    extern int iconWMax;
-//    extern int iconHMax;
 
     extern QColor textColor;
     extern QColor backgroundColor;

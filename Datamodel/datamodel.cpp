@@ -1740,6 +1740,18 @@ int DataModel::rowFromPath(QString fPath)
     else return -1;
 }
 
+int DataModel::proxyRowFromPath(QString fPath)
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance << fPath << currentFolderPath;
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    int dmRow;
+    if (fPathRow.contains(fPath)) return fPathRow[fPath];
+    QModelIndex sfIdx = sf->mapFromSource(index(fPathRow[fPath], 0));
+    if (sfIdx.isValid()) return sfIdx.row();
+    else return -1;
+}
+
 void DataModel::refreshRowFromPathHash()
 {
     lastFunction = "";

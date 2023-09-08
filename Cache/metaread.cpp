@@ -44,7 +44,6 @@ MetaRead::MetaRead(QObject *parent,
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
     imageCacheTriggerCount =  QThread::idealThreadCount() * 2;
-//    imageCacheTriggerCount =  10000;
     isDebug = false;
 }
 
@@ -54,40 +53,63 @@ MetaRead::~MetaRead()
 //    delete thumb;
 }
 
-void MetaRead::setStartRow(int row, bool isCurrent, QString src)
+//void MetaRead::setStartRow(int row, bool isCurrent, QString src)
+void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
 {
 /*
     Starts reading metadata and icons from row, alternating ahead and behind.
 
-    If isCurrent = true then row is the current image and MW::fileSelectionChange will
-    be signalled after a delay of imageCacheTriggerCount images.
+    fileSelectionChanged == false (Scroll event)
 
-    If isCurrent = false then only metadata and icons are read (used for scroll
-    operatations).
+        Read metadata and icons.  Do not trigger a fileSelectioChange.
+
+    fileSelectionChanged == true
+
+        The row is the current image and MW::fileSelectionChange will be signalled after
+        a delay of imageCacheTriggerCount images.
+
+    Invoked by MW::loadCurrent.
 */
     if (isDebug || G::isFlowLogger)
         qDebug() << "MetaRead::setCurrentRow"
                  << "row =" << row
-                 << "isCurrent =" << isCurrent
+                 << "fileSelectionChanged =" << fileSelectionChanged
                  << "isRunning =" << isRunning()
                  << "src =" << src
+                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allIconsLoaded =" << G::allIconsLoaded
                     ;
-    //qDebug() << "MetaRead::setCurrentRow row =" << row << "src =" << src;
+    if (G::isTestLogger) G::log("MetaRead::setStartRow", "row = " + QString::number(row));
+
+    // Nothing to read
+    if (/*!isRunning() && */G::allMetadataLoaded && G::allIconsLoaded) {
+        if (fileSelectionChanged) {
+            targetRow = row;
+            triggerFileSelectionChange();
+        }
+        return;
+    }
+
     t.restart();
     this->src = src;
 
     mutex.lock();
     iconChunkSize = dm->iconChunkSize;
-    if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
+    sfRowCount = dm->sf->rowCount();
+    if (row >= 0 && row < sfRowCount) startRow = row;
     else startRow = 0;
-    targetRow = startRow;
     startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
-    alreadyTriggered = !isCurrent;
-    count = 0;
+    triggerCount = 0;
+    targetRow = startRow;
+    hasBeenTriggered = false;
     abortCleanup = isRunning();
+
+    okToTrigger = fileSelectionChanged;
+
     mutex.unlock();
 
     if (!isRunning()) {
+        //start(QThread::LowestPriority);
         start(QThread::HighestPriority);
     }
 }
@@ -132,6 +154,7 @@ void MetaRead::initialize()
 {
     if (isDebug) G::log("MetaRead::initialize");
     if (G::isFlowLogger2) qDebug() << "MetaRead::initialize";
+    if (G::isTestLogger) G::log("MetaRead::initialize");
     if (isDebug)
         G::log("MetaRead::initialize",
                "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
@@ -139,7 +162,7 @@ void MetaRead::initialize()
     dmRowCount = dm->rowCount();
     folderPath = dm->currentFolderPath;
     metaReadCount = 0;
-    count = -1;                     // used to delay start ImageCache
+    triggerCount = -1;                     // used to delay start ImageCache
     abort = false;
 }
 
@@ -241,6 +264,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readMetadata");
     if (G::isFlowLogger2) qDebug() << "MetaRead::readMetadata" << "row =" << sfIdx.row() << fPath;
+    if (G::isTestLogger) G::log("MetaRead::readMetadata", "row = " + QString::number(sfIdx.row()));
 
     if (isDebug)
     {
@@ -328,16 +352,11 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readIcon");
     if (G::isFlowLogger2) qDebug() << "MetaRead::readIcon" << "row =" << sfIdx.row() << fPath;
+    if (G::isTestLogger) G::log("MetaRead::readIcon", "row = " + QString::number(sfIdx.row()));
     if (isDebug) {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "start  row =" << sfIdx.row()
                               ;
-    }
-    if (!sfIdx.isValid()) {
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "MetaRead::readIcon"
-                   << "sfIdx.isValid() =" << sfIdx.isValid() << sfIdx;
-        return;
     }
 
     // dm->sf->mapToSource(sfIdx) EXC_BAD_ACCESS crash when rapid folder changes
@@ -391,8 +410,9 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (isDebug) G::log("MetaRead::readRow");
-    if (G::isFlowLogger2) qDebug() << "MetaRead::readRow" << "row =" << sfRow;
+    if (G::isTestLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));    if (isDebug) G::log("MetaRead::readRow");
+    if (G::isFlowLogger)
+        qDebug() << "MetaRead::readRow" << "row =" << sfRow;
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readRow"
@@ -401,19 +421,9 @@ void MetaRead::readRow(int sfRow)
                               ;
     }
 
-    // IconView scroll signal can be delayed (big performance impact - req'd??)
-    //emit updateScroll();
-
     // range check
     if (sfRow >= dm->sf->rowCount()) {
-        if (G::isWarningLogger)
-        qWarning() << "WARNING MetaRead::readRow"
-                   << "abort =" << abort
-                   << "instance =" << instance << "dm->instance =" << dm->instance
-                   << "dm->sf->rowCount() =" << dm->sf->rowCount()
-                   << "row =" << sfRow << "FAILED RANGE CHECK"
-                      ;
-        return;
+       return;
     }
     // valid index check
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
@@ -438,6 +448,7 @@ void MetaRead::readRow(int sfRow)
     if (abort) return;
 
     // load icon
+
     // can ignore if debugging
     if (!G::useReadIcons) return;
 
@@ -462,7 +473,16 @@ void MetaRead::readRow(int sfRow)
 
 void MetaRead::resetTrigger()
 {
-    alreadyTriggered = false;
+    hasBeenTriggered = false;
+}
+
+void MetaRead::triggerFileSelectionChange()
+{
+    // file selection change and start image caching thread after head start
+    if (G::isTestLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
+    QModelIndex sfIdx = dm->sf->index(targetRow, 0);
+    emit fileSelectionChange(sfIdx);
+    hasBeenTriggered = true;
 }
 
 void MetaRead::triggerCheck()
@@ -470,15 +490,14 @@ void MetaRead::triggerCheck()
     Signal MW::fileSelectionChange to trigger the ImageCache to rebuild.
 */
 {
-    if (alreadyTriggered ) return;
-    count++;
-    if (count == lastRow || count == imageCacheTriggerCount) {
-        // start image caching thread after head start
-        if (isDebug || G::isLogger || G::isFlowLogger)
-            qDebug() << "MetaRead::triggerCheck  emit fileSelectionChange" << startPath;
-        QModelIndex sfIdx = dm->sf->index(targetRow, 0);
-        emit fileSelectionChange(sfIdx);
-        alreadyTriggered = true;
+    if (hasBeenTriggered) return;
+    if (G::allMetadataLoaded) {
+        triggerFileSelectionChange();
+        return;
+    }
+    triggerCount++;
+    if (triggerCount == lastRow || triggerCount == imageCacheTriggerCount) {
+            triggerFileSelectionChange();
     }
 }
 
@@ -498,45 +517,66 @@ void MetaRead::run()
                            << "sfRowCount =" << sfRowCount
                               ;
     }
-    if (startRow >= dm->sf->rowCount()) return;
+    if (startRow >= sfRowCount) return;
 
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead::run");
 
-    sfRowCount = dm->sf->rowCount();
-    count = -1;                     // used to delay start ImageCache
+    triggerCount = -1;                     // used to delay start ImageCache
     lastRow = sfRowCount - 1;
     int a = 0;      // ahead
     int b = 0;      // back
 
     while (a < sfRowCount || b >= 0) {
         if (startRow != -1) {
-            a = startRow;
-            b = startRow - 1;
+            a = startRow;       // forward counter
+            b = startRow - 1;   // backward counter
             sfRowCount = dm->sf->rowCount();
             lastRow = sfRowCount - 1;
-            // icon range in case changes ie thumb size change
+            // icon range size in case changes ie thumb size change
             iconChunkSize = dm->iconChunkSize;
             iconLimit = static_cast<int>(iconChunkSize * 1.2);
+            // adjust icon range to startRow
             firstIconRow = startRow - iconChunkSize / 2;
             if (firstIconRow < 0) firstIconRow = 0;
             lastIconRow = firstIconRow + iconChunkSize - 1;
             if (lastIconRow > lastRow) lastIconRow = lastRow;
+            /*
+            qDebug() << "MetaRead::run startRow != -1"
+                     << "b =" << b
+                     << "a =" << a
+                     << "firstIconRow =" << firstIconRow
+                     << "lastIconRow =" << lastIconRow
+                ; //*/
             // housekeeping
             startRow = -1;
             instance = dm->instance;
-            //alreadyTriggered = false;
+            abort = false;
         }
 
         if (a < sfRowCount) {
+            //qDebug() << "MetaRead::run (a < sfRowCount)" << a << sfRowCount << abort;
             if (!abort) readRow(a);
             a++;
-            if (!abort) triggerCheck();
+            if (!abort && okToTrigger) triggerCheck();
         }
 
         if (b >= 0) {
             if (!abort) readRow(b);
             b--;
-            if (!abort) triggerCheck();
+            if (!abort && okToTrigger) triggerCheck();
+        }
+
+        if (!abort && G::allMetadataLoaded) {
+            bool allReqdIconsLoaded = b < firstIconRow && a > lastIconRow;
+            /*
+            qDebug() << "MetaRead::run"
+                     << "b =" << b
+                     << "a =" << a
+                     << "firstIconRow =" << firstIconRow
+                     << "lastIconRow =" << lastIconRow
+                     << "allReqdIconsLoaded =" << allReqdIconsLoaded
+                ; //*/
+            if (allReqdIconsLoaded) abort = true;
         }
 
         if (abort) {

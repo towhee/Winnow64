@@ -77,6 +77,7 @@ public:
     bool iconLoaded(int sfRow, int instance);
     void setChunkSize(int chunkSize);
     int rowFromPath(QString fPath);
+    int proxyRowFromPath(QString fPath);
     void refreshRowFromPathHash();
     int nextPick();
     int prevPick();

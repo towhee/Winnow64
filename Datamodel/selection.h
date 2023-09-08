@@ -41,11 +41,10 @@ signals:
     void fileSelectionChange(QModelIndex idx,
                         QModelIndex idx2 = QModelIndex(),
                         bool clearSelection = false,
-                        QString src = "Selection::currentChanged");
+                        QString src = "Selection::setCurrentIndex");
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
     void updateStatus(bool, QString, QString);
     void updateCurrent(QModelIndex sfIdx, int instance);
-//    void updateVisible();
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
