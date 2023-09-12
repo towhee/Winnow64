@@ -1733,7 +1733,7 @@ void ImageCache::fillCache(int id)
 //        if (orphansFound) fixOrphans();
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
         if (G::isFlowLogger) G::log("ImageCache::fillCache  Caching done.",
-                   "Row = " + QString::number(key) + " Decoder = " + QString::number(id));
+                   "Row = " + QString::number(cacheKey) + " Decoder = " + QString::number(id));
         if (debugCaching) {
             qDebug() << "ImageCache::fillCache"
                      << "      decoder" << id
