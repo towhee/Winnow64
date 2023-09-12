@@ -6,8 +6,13 @@ void MW::traverseFolderStressTestFromMenu()
     traverseFolderStressTest();
 }
 
-void MW::traverseFolderStressTest(int ms, int duration)
+void MW::traverseFolderStressTest(int ms, int duration, bool uturn)
 {
+/*
+    ms          time per image
+    duration    ms test (0 == forever) ESC to stop
+    uturn       randomly change direction
+*/
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
     qDebug() << "MW::traverseFolderStressTest" << ms;
     G::popUp->end();
@@ -23,24 +28,31 @@ void MW::traverseFolderStressTest(int ms, int duration)
     isStressTest = true;
     bool isForward = true;
     slideCount = 0;
+    int uturnCounter = 0;
+    int uturnAmount = QRandomGenerator::global()->bounded(1, 301);
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
         if (duration && t.elapsed() > duration) return;
-        G::wait(ms);
+        if (uturn && ++uturnCounter > uturnAmount) {
+            isForward = !isForward;
+            uturnAmount = QRandomGenerator::global()->bounded(1, 301);
+            uturnCounter = 0;
+        }
         ++slideCount;
+        G::wait(ms);
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
-//        qApp->processEvents();
+        //qApp->processEvents();
         if (dm->sf->rowCount() < 2) return;
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
     double msPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
-    QString msg = "Executed stress test " + QString::number(slideCount) + " times.<br>" +
+    QString msg = "" + QString::number(slideCount) + " images.<br>" +
                   QString::number(msElapsed) + " ms elapsed.<br>" +
                   QString::number(ms) + " ms delay.<br>" +
                   QString::number(imagePerSec) + " images per second.<br>" +
@@ -87,7 +99,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
         ms = QInputDialog::getInt(this,
               "Enter ms delay between images",
               "Delay (1-1000 ms) ",
-              50, 1, 1000);
+              50, 1000);
     }
 
     isStressTest = true;
@@ -130,7 +142,8 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    fileGroupAct->setEnabled(false);
+    G::isFlowLogger = !G::isFlowLogger;
+    qDebug() << "G::isFlowLogger =" << G::isFlowLogger;
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
@@ -139,17 +152,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    ejectAction->setEnabled(false);
-    return;
-    QString fPath = "Users/Rory/Pictures/favourites/2013-09-17_0033.jpg";
-    Usb::isEjectable("");
-    //qDebug() << Utilities::getDriveName(fPath);
-    //ejectAction->setText("Eject X");
+    traverseFolderStressTest(50, 0, true);
 }
 
 /*
    Performance
-        Big max thumbnails
+        Big max number of thumbnails
         Turn color management off
         Hide caching progress
 */

@@ -56,8 +56,7 @@ void Selection::setCurrentPath(QString &fPath)
 void Selection::setCurrentRow(int sfRow)
 {
     if (G::isLogger || isDebug) G::log("Selection::current row");
-    if (G::isFlowLogger2) qDebug() << "Selection::currentRow" << "row =" << sfRow;
-    if (G::isTestLogger) G::log("Selection::setCurrentRow", "row = " + QString::number(sfRow));
+    if (G::isFlowLogger) G::log("Selection::setCurrentRow", "row = " + QString::number(sfRow));
     setCurrentIndex(dm->sf->index(sfRow, 0));
 }
 
@@ -68,11 +67,11 @@ void Selection::setCurrentIndex(QModelIndex sfIdx)
 {
     if (!sfIdx.isValid()) return;
 
-    if (G::isTestLogger) G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()));
+    if (G::isFlowLogger) G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()));
 //    if (isDebug || G::isLogger || G::isFlowLogger)
-        qDebug() << "Selection::setCurrentIndex" << "row =" << sfIdx.row()
-                 << "G::isLoadLinear =" << G::isLoadLinear
-                    ;
+//        qDebug() << "Selection::setCurrentIndex" << "row =" << sfIdx.row()
+//                 << "G::isLoadLinear =" << G::isLoadLinear
+//                    ;
 
     updateCurrentIndex(sfIdx);
 

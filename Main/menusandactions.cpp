@@ -2073,10 +2073,8 @@ void MW::enableEjectUsbMenu(QString path)
 void MW::renameEjectUsbMenu(QString path)
 {
     QString drive = "";
-//    bool disable = true;
     if (Usb::isEjectable(path)) {
-        qDebug() << "MW::renameEjectUsbMenu  enable";
-//        disable = false;
+        //qDebug() << "MW::renameEjectUsbMenu  enable";
         ejectAction->setEnabled(true);
         ejectActionFromContextMenu->setEnabled(true);
         drive = Utilities::getDriveName(path);
