@@ -152,7 +152,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    traverseFolderStressTest(100, 0, true);
+    traverseFolderStressTest(50, 0, true);
 }
 
 /*
