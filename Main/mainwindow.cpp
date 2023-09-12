@@ -1076,8 +1076,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
                     ;
-                if (G::isTestLogger) G::log("skipline");
-                if (G::isTestLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
+                if (G::isFlowLogger) G::log("skipline");
+                if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
                 if (e->key() == Qt::Key_Return) loupeDisplay();
                 if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
                 if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
@@ -2077,14 +2077,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
-    if (G::isLogger || G::isFlowLogger) {
+    /*if (G::isLogger || G::isFlowLogger)
+    {
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src
                  << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
                  << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
                  << current.data(G::PathRole).toString();
-    }
-    if (G::isTestLogger)
+    }//*/
+    if (G::isFlowLogger)
         G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) {
@@ -2352,7 +2353,7 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isTestLogger) G::log("MW::stop", "src = " + src);
+    if (G::isFlowLogger) G::log("MW::stop", "src = " + src);
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
@@ -2745,7 +2746,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
-    if (G::isTestLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
+    if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
 //    if (G::isLogger || G::isFlowLogger)
@@ -2830,7 +2831,7 @@ void MW::loadLinearNewFolder()
     selection.
 */
 //    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadLinearNewFolder";
+    if (G::isLogger || G::isFlowLogger) G::log("MW::loadLinearNewFolder");
 
     QString src = "MW::loadLinearNewFolder ";
 
@@ -2996,7 +2997,7 @@ void MW::thumbHasScrolled()
     This was to prevent many scroll calls from bunching up. The new approach just aborts
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger)
         qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
     if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 

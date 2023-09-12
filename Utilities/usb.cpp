@@ -82,7 +82,7 @@ bool Usb::isEjectable(QString path)
                 if (isUsb(storage.rootPath())) {
                     QString rootPath = storage.rootPath();
                     QString name = storage.name();
-                    qDebug() << "Usb::isEjectable" << rootPath << name;
+                    //qDebug() << "Usb::isEjectable" << rootPath << name;
                     if (path.contains(rootPath)) return true;
                 }
             }

@@ -68,7 +68,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     cacheKey = n.key;       // used in ImageCache::fixOrphans
     this->instance = instance;
     errMsg = "";
-    if (G::isTestLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
+    if (G::isFlowLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
 //    qDebug() << "ImageDecoder::decode" << fPath;
     start(QThread::LowestPriority);
 }
@@ -81,7 +81,7 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isTestLogger) G::log("ImageDecoder::load", "row = " + QString::number(cacheKey));
+    if (G::isFlowLogger) G::log("ImageDecoder::load", "row = " + QString::number(cacheKey));
     QString fun = "ImageDecoder::load";
     if (isDebug) G::log(fun, fPath);
 
@@ -316,7 +316,7 @@ void ImageDecoder::setReady()
 
 void ImageDecoder::rotate()
 {
-    if (G::isTestLogger) G::log("ImageDecoder::rotate", "row = " + QString::number(cacheKey));
+    if (G::isFlowLogger) G::log("ImageDecoder::rotate", "row = " + QString::number(cacheKey));
     if (isDebug) {
 //        mutex.lock();
 //        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
@@ -362,7 +362,7 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isTestLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
+    if (G::isFlowLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
     if (isDebug) {
 //        mutex.lock();
 //        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
