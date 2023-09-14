@@ -410,9 +410,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (G::isFlowLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));    if (isDebug) G::log("MetaRead::readRow");
-    if (G::isFlowLogger)
-        qDebug() << "MetaRead::readRow" << "row =" << sfRow;
+    if (G::isFlowLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readRow"
@@ -546,6 +544,7 @@ void MetaRead::run()
                      << "a =" << a
                      << "firstIconRow =" << firstIconRow
                      << "lastIconRow =" << lastIconRow
+                     << "iconChunkSize =" << iconChunkSize
                 ; //*/
             // housekeeping
             startRow = -1;
