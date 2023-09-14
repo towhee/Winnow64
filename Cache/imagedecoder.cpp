@@ -94,14 +94,16 @@ bool ImageDecoder::load()
     }
 
     // get image type (extension)
-    QFileInfo fileInfo(fPath);  // crash
-    if (!fileInfo.exists()) {
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::load  File does not exist" << fPath;
-        status = Status::NoFile;
-        return false;
-    }
-    ext = fileInfo.completeSuffix().toLower();
+//    QFileInfo fileInfo(fPath);  // crash
+//    if (!fileInfo.exists()) {
+//        if (G::isWarningLogger)
+//        qWarning() << "WARNING" << "ImageDecoder::load  File does not exist" << fPath;
+//        status = Status::NoFile;
+//        return false;
+//    }
+//    ext = fileInfo.completeSuffix().toLower();
+    int sfRow = dm->proxyRowFromPath(fPath);
+    ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
 
     // ignore video files
     if (metadata->videoFormats.contains(ext)) {
@@ -142,7 +144,8 @@ bool ImageDecoder::load()
         qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
         G::error(errMsg, fun, fPath);
         // check if drive ejected or folder deleted by another app
-        QDir dir(fileInfo.dir());
+        QDir dir(Utilities::getFolderPath(fPath));
+//        QDir dir(fileInfo.dir());
         if (!dir.exists()) {
             status = Status::NoDir;
             errMsg = "Folder is missing, deleted or in a drive that has been ejected.";

@@ -30,7 +30,6 @@ void MW::keyRight(Qt::KeyboardModifiers modifier)
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
-    qDebug() << "MW::keyRight ROW:" << dm->currentSfRow;
     if (G::mode == "Compare") {
         sel->select(compareImages->go("Right"));
     }

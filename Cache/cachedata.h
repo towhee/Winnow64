@@ -11,6 +11,8 @@ class ImageCacheData : public QObject
 public:
     explicit ImageCacheData(QObject *);
 
+    QMutex mutex;
+
     // concurrent image cache hash
     CTSL::HashMap<QString, QImage> imCache;
 

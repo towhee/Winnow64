@@ -2749,7 +2749,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
-//    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
                  << "src =" << src
