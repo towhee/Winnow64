@@ -950,6 +950,7 @@ private:
     QAction *copyInfoTextToClipboardAction;
 
     // General
+    QAction *roryAction;                 // only available via shortcut key "Shift+Ctrl+Alt+."
     QAction *thriftyCacheAction;         // only available via shortcut key "F10"
     QAction *moderateCacheAction;        // only available via shortcut key "F11"
     QAction *greedyCacheAction;          // only available via shortcut key "F12"
@@ -1027,7 +1028,7 @@ private:
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
-    Preferences *pref;
+    Preferences *pref = nullptr;
     QFrame *embelFrame;
     Embel *embel;
     InfoString *infoString;
@@ -1311,13 +1312,16 @@ private:
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
-    void traverseFolderStressTest(int ms = 0, int duration = 0, bool uturn = false);
+    void traverseFolderStressTest(int msPerImage = 0, int secPerFolder = 0, bool uturn = false);
     void bounceFoldersStressTestFromMenu();
-    void bounceFoldersStressTest(int ms = 0, int duration = 0);
+    void bounceFoldersStressTest(int msPerImage = 0, int secPerFolder = 0);
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;
     bool testCrash = false;
+
+    void toggleRory();
+    void rory();
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);

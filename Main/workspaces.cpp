@@ -405,7 +405,7 @@ void MW::loadWorkspaces()
     if (G::isLogger) G::log("MW::loadWorkspaces");
     if (!isSettings) return;
     int size = settings->beginReadArray("Workspaces");
-    qDebug() << "MW::loadWorkspaces" << size;
+    //qDebug() << "MW::loadWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
         settings->setArrayIndex(i);
         ws.name = settings->value("name").toString();

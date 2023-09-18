@@ -186,6 +186,10 @@ namespace G
     extern QFile errlogFile;
     extern bool isDev;
 
+    // Rory version
+    extern bool isRory;
+
+
     extern bool loadOnlyVisibleIcons;
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;

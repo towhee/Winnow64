@@ -465,7 +465,6 @@ void MW::createMDCache()
     // MetaRead
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-    metaReadThread->setPriority(QThread::TimeCriticalPriority);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
@@ -570,7 +569,6 @@ void MW::createImageCache()
 
 //    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
-    imageCacheThread->setPriority(QThread::LowestPriority);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -1069,10 +1067,11 @@ void MW::createBookmarks()
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
 
+    // update folder image counts
+    connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::update);
+
     connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
-
-    connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::update);
 
     // if move drag and drop then delete files from source folder(s)
     connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles);
@@ -1155,8 +1154,6 @@ void MW::createStatusBar()
     //metadataThreadRunningLabel = new QLabel;
     // sets tooltip
     setCacheMethod(cacheMethod);
-//    QString mtrl = "Turns orange/red when metadata/icon caching in progress\n" + G::metaReadInUse;
-//    metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
@@ -1169,11 +1166,9 @@ void MW::createStatusBar()
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
 
     // label to show cache amount
-//    cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
-    // setImageCacheSize sets icon
-    setImageCacheSize(cacheSizeStrategy);
-    statusBar()->addPermanentWidget(cacheMethodBtn);
-    cacheMethodBtn->show();
+    //    setImageCacheSize(cacheSizeStrategy);
+    //    statusBar()->addPermanentWidget(cacheMethodBtn);
+    //    cacheMethodBtn->show();
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;

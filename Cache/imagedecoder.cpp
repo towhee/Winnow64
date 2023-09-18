@@ -69,7 +69,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     this->instance = instance;
     errMsg = "";
     if (G::isFlowLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
-//    qDebug() << "ImageDecoder::decode" << fPath;
+    //qDebug() << "ImageDecoder::decode" << fPath;
     start(QThread::LowestPriority);
 }
 
@@ -94,16 +94,8 @@ bool ImageDecoder::load()
     }
 
     // get image type (extension)
-//    QFileInfo fileInfo(fPath);  // crash
-//    if (!fileInfo.exists()) {
-//        if (G::isWarningLogger)
-//        qWarning() << "WARNING" << "ImageDecoder::load  File does not exist" << fPath;
-//        status = Status::NoFile;
-//        return false;
-//    }
-//    ext = fileInfo.completeSuffix().toLower();
-    int sfRow = dm->proxyRowFromPath(fPath);
-    ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+    // QFileInfo fileInfo(fPath);  // crash occasionally using QFileInfo to get suffix
+    ext = fPath.section('.', -1).toLower();
 
     // ignore video files
     if (metadata->videoFormats.contains(ext)) {

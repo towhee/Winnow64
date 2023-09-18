@@ -109,7 +109,11 @@ void BookMarks::saveBookmarks(QSettings *setting)
 
 void BookMarks::update()
 {
-    if (G::isLogger) G::log("BookMarks::update");
+/*
+    Update the image count for each folder bookmarked;
+*/
+    if (G::isLogger)
+        G::log("BookMarks::update");
     count();
     /* update only changed folder (to do if required)
     // pass dPath and make FSModel::count and FSModel::combineCount public
@@ -162,14 +166,20 @@ void BookMarks::select(QString fPath)
     This is called from MW::folderSelectionChange to attempt to sync bookmarks with
     the FSTree folders view.
 */
-    if (G::isLogger) G::log("BookMarks::select");
+    if (G::isLogger)
+         G::log("BookMarks::select");
+
+    // ignore if already selected path (in tooltip)
+    if (selectedItems().size())
+        if (fPath == selectedItems().at(0)->toolTip(0)) return;
+
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
         if (items.length() > 0) {
             setCurrentItem(items[0]);
             setCurrentIndex(selectedIndexes().at(0));
-//            count();  // big slowdown
+            //count();  // big slowdown
         }
 
     }
@@ -237,6 +247,9 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     QString path = "";
     if (idx.isValid()) {
         path = idx.data(Qt::ToolTipRole).toString();
+        // change selection, does not trigger anything
+        setCurrentIndex(idx);
+        qApp->processEvents();
     }
     emit renameEjectAction(path);
 
@@ -249,6 +262,8 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         G::includeSubfolders = true;
     }
 
+    // trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
+    // FSTree, which signals MW::folderSelectionChange
     QTreeWidget::mousePressEvent(event);
 }
 

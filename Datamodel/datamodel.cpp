@@ -988,7 +988,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     QString errMsg = "";
     lastFunction = "";
     if (G::isLogger) G::log(fun, index(row, 0).data(G::PathRole).toString());
-    //qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
+    qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
     if (isDebug) qDebug() << fun << "instance =" << instance
                           << "row =" << row
                           << currentFolderPath;

@@ -14,6 +14,7 @@ public:
 
 public slots:
     void itemChange(QModelIndex idx) override;
+    void rory();
 
 private:
     void addItems();

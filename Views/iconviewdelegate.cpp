@@ -109,9 +109,9 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     pickColor = QColor(Qt::green);
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
-    cacheColor = QColor(Qt::red);
+    cacheColor = QColor(100,0,0);
+    cacheBorderColor = QColor(l20,l20,l20);
     missingThumbColor = QColor(Qt::yellow);
-    cacheBorderColor = QColor(Qt::lightGray);
     videoTextcolor = G::textColor;
     numberTextColor = QColor(l40,l40,l40);
 
