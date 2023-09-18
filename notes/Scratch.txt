@@ -1,14 +1,20 @@
 
-MW::eventFilter QEvent::KeyPress QKeyEvent(KeyPress, Key_Right, KeypadModifier) QFlags<Qt::KeyboardModifier>(KeypadModifier) obj->objectName: "MWWindow"
-Selection::currentIndex row = 3989 G::ignoreScrollSignal = false
-MW::fileSelectionChange src = "Selection::select" G::ignoreScrollSignal = false G::fileSelectionChangeSource = "Key_Right" "/Volumes/A260GB/DCIM/100MSDCF/A1_08375.ARW"
-MW::thumbHasScrolled G::ignoreScrollSignal = false
-   MW::updateIconRange  src = "MW::thumbHasScrolled"
-   IconView::updateVisible "Thumbnails" IconView::updateVisible src = "MW::updateIconRange"
-MW::loadConcurrent  Row = 3989 isCurrent =  false src = "MW::thumbHasScrolled"
-MetaRead::setCurrentRow row = 3989 isCurrent = false isRunning = false src = "MW::loadConcurrent"
-ImageView::loadImage: "/Volumes/A260GB/DCIM/100MSDCF/A1_08375.ARW"  Src: "MW::fileSelectionChange"
-
-ImageCache::run
-        161 ImageCache::setCurrentPosition                     src = MW::fileSelectionChange /Volumes/A260GB/DCIM/100MSDCF/A1_08375.ARW
-MW::loadConcurrentMetaDone
+129 MetaRead::stop
+  0 MetaRead::initialize
+MetaRead::setCurrentRow row = 0 fileSelectionChanged = true isRunning = false src = "MW::loadConcurrent" G::allMetadataLoaded = false G::allIconsLoaded = false
+242 MetaRead::initialize                               imageCacheTriggerCount = 40
+MetaRead::run src = MW::loadConcurrent startRow = 0 sfRowCount = 1
+MetaRead::readRow start  row = 0 dm->sf->rowCount() = 1
+ 10 MetaRead::run                                      MW::loadConcurrent
+MetaRead::readMetadata instance = 0 dm->instance 0 row = 0 abort = false "/Users/roryhill/Movies/Lion King.m4v"
+MetaRead::readMetadata added row = 0 abort = false
+MetaRead::readMetadata addToDatamodel row = 0 abort = false
+MetaRead::readMetadata addToImageCache row = 0
+7,761 MetaRead::readMetadata
+MetaRead::readIcon start  row = 0
+MetaRead::readIcon load   row = 0
+MetaRead::readIcon loaded row = 0
+MetaRead::readRow done   row = 0
+MetaRead::run  Completed loop XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ 80 MetaRead::readIcon
+MetaRead::run  Done.

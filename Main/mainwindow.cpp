@@ -570,6 +570,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // platform specific settings (must follow dock creation)
     setupPlatform();
 
+    // enable / disable rory functions
+    rory();
+
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
@@ -1794,7 +1797,7 @@ void MW::watchCurrentFolder()
     folderSelectionChange();
 }
 
-void MW::selectionChange()
+void MW::selectionChange()  // not being used
 {
 /*
    This is invoked when there is a folder selection change in the folder or bookmark views.
@@ -2756,16 +2759,13 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                     ;
-    if (G::allMetadataLoaded) {
+    if (G::allMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
         if (G::allIconsLoaded) return;
     }
-    if (!dm->abortLoadingModel) {
+    if (!dm->abortLoadingModel && !G::allIconsLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-        //dm->currentSfRow = sfRow;
-//        if (isFileSelectionChange)
-//            dm->currentFilePath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
     }
 }
@@ -5904,6 +5904,30 @@ void MW::helpWelcome()
 {
     if (G::isLogger) G::log("MW::helpWelcome");
     centralLayout->setCurrentIndex(StartTab);
+}
+
+void MW::toggleRory()   // shortcut = "Shift+Ctrl+Alt+."
+{
+    G::isRory = !G::isRory;
+    rory();
+}
+
+void MW::rory()
+{
+    if (pref != nullptr) pref->rory();
+    if (G::isRory) {
+        setImageCacheParameters();
+    }
+    else {
+        isShowCacheProgressBar = false;
+        setImageCacheParameters();
+        metadataCacheThread->cacheAllIcons = true;
+        updateDefaultIconChunkSize(20000);
+        G::isLoadLinear = false;
+        G::isLoadConcurrent = true;
+    }
+
+    //qDebug() << "MW::rory" << G::isRory;
 }
 
 // End MW

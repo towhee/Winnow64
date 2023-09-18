@@ -16,6 +16,9 @@ namespace G
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
 
+    // Rory version
+    bool isRory = false;
+
     // Errors
     QMap<QString,QStringList> err;
 

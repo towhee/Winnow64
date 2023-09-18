@@ -321,7 +321,10 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
              << "metadata->m.lengthThumb =" << metadata->m.lengthThumb
                 ; //*/
 
-    if (abort) return false;
+    if (abort) {
+        qDebug() << "MetaRead::readMetadata aborted";
+        return false;
+    }
     // add metadata->m to DataModel dm
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
     if (isDebug)
@@ -332,7 +335,11 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  ;
     }
 
-    if (abort) return false;
+    if (abort) {
+        qDebug() << "MetaRead::readMetadata aborted";
+        return false;
+    }
+
     // add to ImageCache icd->cacheItemList (used to manage image cache)
     if (G::useImageCache) {
         emit addToImageCache(metadata->m);

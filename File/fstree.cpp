@@ -467,6 +467,9 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("FSTree::mousePressEvent");
 
+//    QTreeView::mousePressEvent(event);
+//    qApp->processEvents();
+
     if (G::stop) {
         G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
         return;

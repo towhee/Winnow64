@@ -22,6 +22,27 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     addItems();
 }
 
+void Preferences::rory()
+{
+    QModelIndex capIdx;
+
+    capIdx = findCaptionIndex("showCacheProgressBar");
+    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
+    else setRowHidden(capIdx.row(), capIdx.parent(), true);
+
+    capIdx = findCaptionIndex("progressWidthSlider");
+    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
+    else setRowHidden(capIdx.row(), capIdx.parent(), true);
+
+    capIdx = findCaptionIndex("iconChunkSize");
+    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
+    else setRowHidden(capIdx.row(), capIdx.parent(), true);
+
+    capIdx = findCaptionIndex("cacheMethod");
+    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
+    else setRowHidden(capIdx.row(), capIdx.parent(), true);
+}
+
 void Preferences::itemChange(QModelIndex idx)
 {
 /*
@@ -989,20 +1010,11 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
     // hide/show progressWidthSlider in preferences
-    QModelIndex idx = findCaptionIndex("showCacheProgressBar");
-    if (model->index(idx.row(), 1, idx.parent()).data().toBool())
-        setRowHidden(capIdx.row(), capIdx.parent(), false);
-    else
-        setRowHidden(capIdx.row(), capIdx.parent(), true);
-
-    // Cache Thumbnail Header
-    i.name = "CacheThumbnailHeader";
-    i.parentName = "CacheHeader";
-    i.captionText = "Thumbnails";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-//    addItem(i);   // setting default thumbnail cache parameters so remove as preference
+//    QModelIndex idx = findCaptionIndex("showCacheProgressBar");
+//    if (model->index(idx.row(), 1, idx.parent()).data().toBool())
+//        setRowHidden(capIdx.row(), capIdx.parent(), false);
+//    else
+//        setRowHidden(capIdx.row(), capIdx.parent(), true);
 
     // Metadata chunk size (number of thumbnails)
     i.name = "iconChunkSize";
@@ -1023,64 +1035,6 @@ void Preferences::addItems()
     i.max = 10000;
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
-
-    /* Load icons just in time (only visible icons) (not used)
-    i.name = "loadOnlyVisibleIcons";
-    i.parentName = "CacheHeader";
-    i.captionText = "Only load visible thumbnails";
-    i.tooltip = "Only load thumbnails visible in the grid view or film strip.  Ignore"
-                "the maximumthumbnails to cache setting";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::loadOnlyVisibleIcons;
-    i.key = "loadOnlyVisibleIcons";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-//    addItem(i);  //*/
-
-    /* Maximum icon size (not used)
-    i.name = "maxIconSize";
-    i.parentName = "CacheThumbnailHeader";
-    i.captionText = "Maximum Icon Size";
-    i.tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \n"
-                "created at this size.  \n\n"
-                "WARNING: The memory requirements increase at the square of the size, \n"
-                "and folders can contain thousands of images.  Larger thumbnail sizes \n"
-                "can consume huge amounts of memory.  The default size is 256 pixels \n"
-                "to a side.\n";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::maxIconSize;
-    i.key = "maxIconSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 40;
-    i.max = 640;
-    i.fixedWidth = 50;
-//    addItem(i);   // set to 256 //*/
-
-    /* Cache Full Image Header (not used)
-    i.name = "CacheImagesHeader";
-    i.parentName = "CacheHeader";
-    i.captionText = "Full size images";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-//    addItem(i); //*/
-
-    /* Memory required for the metadata cache (includes thumbnails)
-    i.name = "metaCacheReqd";
-    i.parentName = "CacheHeader";
-    i.captionText = "Metadata and thumb memory used";
-    i.tooltip = "Memory required for the metadata cache (includes thumbnails).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = QString::number(G::metaCacheMB) + " MB";
-    i.key = "availableMBToCache";
-    i.delegateType = DT_Label;
-    i.type = "QString";
-    i.color = "#1b8a83";
-    availMBMsgWidget = addItem(i);  //*/
 
     // Cache method
     i.name = "cacheMethod";
@@ -1441,6 +1395,9 @@ void Preferences::addItems()
     }
     // end TableView show/hide field items
     }
+
+    // enable/disable rory items
+    rory();
 
     return;
 }

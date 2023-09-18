@@ -6,19 +6,19 @@ void MW::traverseFolderStressTestFromMenu()
     traverseFolderStressTest();
 }
 
-void MW::traverseFolderStressTest(int ms, int duration, bool uturn)
+void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 {
 /*
-    ms          time per image
-    duration    ms test (0 == forever) ESC to stop
-    uturn       randomly change direction
+    msPerImage      time per image
+    secPerFolder    ms test (0 == forever) ESC to stop
+    uturn           randomly change direction
 */
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
-    qDebug() << "MW::traverseFolderStressTest" << ms;
+    qDebug() << "MW::traverseFolderStressTest" << msPerImage;
     G::popUp->end();
 
-    if (!ms) {
-        ms = QInputDialog::getInt(this,
+    if (!msPerImage) {
+        msPerImage = QInputDialog::getInt(this,
                                   "Enter ms delay between images",
                                   "Delay (1-1000 ms) ",
                                   50, 1, 1000);
@@ -33,14 +33,14 @@ void MW::traverseFolderStressTest(int ms, int duration, bool uturn)
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
-        if (duration && t.elapsed() > duration) return;
+        if (secPerFolder && t.elapsed() > secPerFolder) return;
         if (uturn && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
             uturnAmount = QRandomGenerator::global()->bounded(1, 301);
             uturnCounter = 0;
         }
         ++slideCount;
-        G::wait(ms);
+        G::wait(msPerImage);
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
@@ -50,21 +50,21 @@ void MW::traverseFolderStressTest(int ms, int duration, bool uturn)
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
-    double msPerImage = msElapsed * 1.0 / slideCount;
+    double elapedmsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
     QString msg = "" + QString::number(slideCount) + " images.<br>" +
                   QString::number(msElapsed) + " ms elapsed.<br>" +
-                  QString::number(ms) + " ms delay.<br>" +
+                  QString::number(elapedmsPerImage) + " ms delay.<br>" +
                   QString::number(imagePerSec) + " images per second.<br>" +
-                  QString::number(msPerImage) + " ms per image."
+                  QString::number(elapedmsPerImage) + " ms per image."
 //                  + "<br><br>Press <font color=\"red\"><b>Esc</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
-             << ms << "ms delay  "
+             << msPerImage << "ms delay  "
              << imagePerSec << "images per second  "
-             << msPerImage << "ms per image."
+             << elapedmsPerImage << "ms per image."
                 ;
     return;
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
@@ -77,29 +77,29 @@ void MW::traverseFolderStressTest(int ms, int duration, bool uturn)
 void MW::bounceFoldersStressTestFromMenu()
 {
     qDebug() << "MW::bounceFoldersStressTestFromMenu";
-    bounceFoldersStressTest(0, 0);
+    bounceFoldersStressTest();
 }
 
-void MW::bounceFoldersStressTest(int ms, int duration)
+void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
 {
     if (G::isLogger) G::log("MW::bounceFoldersStressTest");
-    qDebug() << "MW::bounceFoldersStressTest" << "ms =" << ms << "duration =" << duration;
+    //qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
     G::popUp->end();
 
 
-    if (!duration) {
-        duration = QInputDialog::getInt(this,
-              "Enter time per folder tested",
+    if (!secPerFolder) {
+        secPerFolder = QInputDialog::getInt(this,
+              "Enter seconds per folder tested",
               "Duration (0 - 1000 sec)",
               5, 0, 86400);
-        duration *= 1000;
+        secPerFolder *= 1000;
     }
 
-    if (!ms) {
-        ms = QInputDialog::getInt(this,
+    if (!msPerImage) {
+        msPerImage = QInputDialog::getInt(this,
               "Enter ms delay between images",
               "Delay (1-1000 ms) ",
-              50, 1000);
+              50, 1, 1000);
     }
 
     isStressTest = true;
@@ -112,14 +112,14 @@ void MW::bounceFoldersStressTest(int ms, int duration)
         bookmarks->select(path);
         fsTree->select(path);
         folderSelectionChange();
-        traverseFolderStressTest(ms, duration);
+        traverseFolderStressTest(msPerImage, secPerFolder);
     }
 }
 
 void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 {
-    imageCacheThread->resume();
-    return;
+//    imageCacheThread->resume();
+//    return;
 
     // ESC to quit
     isStressTest = true;
@@ -161,7 +161,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    traverseFolderStressTest(150, 0, true);
+    traverseFolderStressTest(50, 0, true);
 }
 
 /*

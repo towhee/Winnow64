@@ -1479,13 +1479,20 @@ void MW::createMiscActions()
     greedyCacheAction->setShortcut(QKeySequence("F12"));
     connect(greedyCacheAction, &QAction::triggered, this, &MW::greedyCache);
 
+    // Rory (extra functionality)
+    roryAction = new QAction(tr("Test"), this);
+    roryAction->setObjectName("rory");
+    roryAction->setShortcutVisibleInContextMenu(true);
+    addAction(roryAction);
+    roryAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+."));
+    connect(roryAction, &QAction::triggered, this, &MW::toggleRory);
+
     // Testing
 
     testAction = new QAction(tr("Test"), this);
     testAction->setObjectName("test");
     testAction->setShortcutVisibleInContextMenu(true);
     addAction(testAction);
-    //    testAction->setShortcut(QKeySequence("*"));
     testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
     connect(testAction, &QAction::triggered, this, &MW::test);
 
@@ -2080,11 +2087,11 @@ void MW::renameEjectUsbMenu(QString path)
         drive = Utilities::getDriveName(path);
         drive = Utilities::enquote(drive);
     }
-    qDebug() << "MW::renameEjectUsbMenu" << path << drive;
+    //qDebug() << "MW::renameEjectUsbMenu" << path << drive;
     ejectAction->setText("Eject Usb Drive " + drive);
     ejectActionFromContextMenu->setText("Eject Usb Drive " + drive);
     if (drive == "") {
-        qDebug() << "MW::renameEjectUsbMenu  disable";
+        //qDebug() << "MW::renameEjectUsbMenu  disable";
         ejectAction->setEnabled(false);
         ejectActionFromContextMenu->setEnabled(false);
     }
