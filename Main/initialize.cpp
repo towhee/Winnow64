@@ -1018,8 +1018,19 @@ void MW::createFSTree()
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
 
-    // selection change check if triggered by ejecting USB drive
-//    connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
+    // watch volumes for ejection / mounting
+    #ifdef Q_OS_MAC
+//    QModelIndex rootIdx = fsTree->fsModel->index(0,0);
+//    QModelIndex firstChildIdx = fsTree->fsModel->index(0,0,rootIdx);
+//    fsTree->setExpanded(rootIdx, true);
+//    fsTree->setRootIndex(firstChildIdx);
+//    fsTree->setRowHidden(0, QModelIndex(), true);
+
+    fsTree->volumesWatcher.addPath("/Volumes");
+    // selection change check if triggered by mounting/ejecting USB drive
+    //QObject::connect(&watcher, &QFileSystemWatcher::directoryChanged,
+    //connect(fsTree, &FSTree::selectionChange, this, &MW::watchForEject);
+    #endif
 
     // this works for touchpad tap
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);

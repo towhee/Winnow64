@@ -57,11 +57,9 @@ int main(int argc, char *argv[])
     // not being used
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    // finish initialization / restore prior position/state after app is active
-    // resolved by adding Mac::joinAllSpaces therefore not req'd
-    //if (G::useApplicationStateChanged)
-    //    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
-    //                     &mw, &MW::whenActivated);
+    // used to hide root in FSTree after loaded
+    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
+                     &mw, &MW::whenActivated);
 
     return instance.exec();
     //*/

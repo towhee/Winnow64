@@ -70,6 +70,8 @@ public:
     bool combineRawJpg;
     QString rightMouseClickPath;
 
+    QFileSystemWatcher volumesWatcher;
+
 public slots:
     void resizeColumns();
     void expand(const QModelIndex &);

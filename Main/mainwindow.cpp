@@ -673,73 +673,7 @@ void MW::whenActivated(Qt::ApplicationState state)
     This is resolved using Mac::joinAllSpaces and below prep code moved back to
     MW::showEvent.
 */
-    static bool isRestored = false;
-//    if (G::isLogger)
-        qDebug() << "MW::whenActivated"
-                 << state
-             << "isRestored =" << isRestored
-                    ;
-
-    if (isRestored || state != Qt::ApplicationActive) return;
-
-    // restore prior geometry and state
-    if (isSettings) {
-            restoreGeometry(settings->value("Geometry").toByteArray());
-            restoreState(settings->value("WindowState").toByteArray());
-    }
-    else {
-        defaultWorkspace();
-    }
-
-    // set thumbnail size to fit the thumbdock initial size
-    thumbView->thumbsFitTopOrBottom();
-
-    // initial status bar icon state
-    updateStatusBar();
-
-    // set initial visibility in embellish template
-    embelTemplateChange(embelProperties->templateId);
-
-    // size columns if device pixel ratio > 1
-    embelProperties->resizeColumns();
-
-    // req'd for color management
-    getDisplayProfile();
-
-    // show the app
-    //setVisible(true);
-    setWindowOpacity(100);
-    //show();
-    isRestored = true;
-
-    if (isStartupArgs) {
-        handleStartupArgs(args);
-        return;
-    }
-
-    // check for updates
-    if (checkIfUpdate && !isStartupArgs) checkForUpdate();
-
-     // First use of app
-    if (!isSettings) {
-        centralLayout->setCurrentIndex(StartTab);
-    }
-    else {
-        // process the persistant folder if available
-        if (rememberLastDir && !isShiftOnOpen) {
-            if (isFolderValid(lastDir, true, true)) {
-                fsTree->select(lastDir);
-                folderSelectionChange();
-            }
-        }
-
-        // show start message
-        else {
-            QString msg = "Select a folder or bookmark to get started.";
-            setCentralMessage(msg);
-            prevMode = "Loupe";
-        }
-    }
+    fsTree->setRootIndex(fsTree->model()->index(0,0));
 }
 
 //   EVENT HANDLERS
@@ -777,6 +711,7 @@ void MW::showEvent(QShowEvent *event)
     getDisplayProfile();
 
     QMainWindow::showEvent(event);
+    fsTree->setRootIndex(fsTree->model()->index(0,0));
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -1780,7 +1715,7 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
-void MW::watchCurrentFolder()
+void MW::watchForEject()
 {
 /*
     Not working.
@@ -1789,12 +1724,12 @@ void MW::watchCurrentFolder()
     cached no longer exists (ejected) then make a folderSelectionChange.
 */
     if (G::isLogger) G::log("MW::watchCurrentFolder");
-//    qDebug() << "MW::watchCurrentFolder" << currentViewDirPath;
-    if (G::currRootFolder == "") return;
-    QFileInfo info(G::currRootFolder);
-    if (info.exists()) return;
-//    selectionChange();
-    folderSelectionChange();
+    qDebug() << "MW::watchCurrentFolder";
+//    if (G::currRootFolder == "") return;
+//    QFileInfo info(G::currRootFolder);
+//    if (info.exists()) return;
+////    selectionChange();
+//    folderSelectionChange();
 }
 
 void MW::selectionChange()  // not being used
@@ -4508,7 +4443,8 @@ bool MW::isValidPath(QString &path)
 
 void MW::removeBookmark()
 {
-    if (G::isLogger) G::log("MW::removeBookmark");
+    if (G::isLogger)
+        G::log("MW::removeBookmark", QApplication::focusWidget()->objectName());
     if (QApplication::focusWidget() == bookmarks) {
         bookmarks->removeBookmark();
         bookmarks->saveBookmarks(settings);
@@ -4535,7 +4471,7 @@ void MW::updateState()
     if (G::isLogger) G::log("MW::updateState");
     // set flag so
     isUpdatingState = true;
-//    setWindowsTitleBarVisibility();   // problem with full screen toggling
+    //setWindowsTitleBarVisibility();   // problem with full screen toggling
     // setCentralView has to precede setting visibility to docks
     setCentralView();
     setMenuBarVisibility();
@@ -4549,9 +4485,9 @@ void MW::updateState()
     setThumbDockVisibity();
     setShootingInfoVisibility();
     updateStatusBar();
-//    setActualDevicePixelRation();
+    //setActualDevicePixelRation();
     isUpdatingState = false;
-//    reportState();
+    //reportState();
 }
 
 void MW::refreshFolders()
@@ -4598,9 +4534,9 @@ void MW::tokenEditor()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->setShootingInfo(info);
-//    qDebug() << "MW::tokenEditor" << "call  updateMetadataTemplateList";
+    //qDebug() << "MW::tokenEditor" << "call  updateMetadataTemplateList";
     embelProperties->updateMetadataTemplateList();
-//    qDebug() << "MW::tokenEditor" << "updateMetadataTemplateList did not crash";
+    //qDebug() << "MW::tokenEditor" << "updateMetadataTemplateList did not crash";
 }
 
 void MW::exportEmbelFromAction(QAction *embelExportAction)
@@ -4916,13 +4852,6 @@ void MW::ejectUsb(QString path)
     driveName = ejectDrive.rootPath();
 #elif defined(Q_OS_MAC)
     driveName = ejectDrive.name();
-    /*
-    int start = path.indexOf("/Volumes/", 0);
-    if (start != 0) return;                   // should start with "/Volumes/"
-    int pos = path.indexOf("/", start + 9);
-    if (pos == -1) pos = path.length();
-    driveName = path.mid(9, pos - 9);
-    //*/
 #endif
 
     // confirm this is an ejectable drive
@@ -4932,7 +4861,7 @@ void MW::ejectUsb(QString path)
         // drive was ejected
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            // setCentralMessage("Removable drive " + driveName + " has been ejected.");
+            bookmarks->count();
         }
         // drive ejection failed
         else
