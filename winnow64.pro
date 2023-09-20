@@ -30,7 +30,6 @@ INCLUDEPATH += Utilities
 
 INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
-#DEPENDPATH += $$PWD/libxml
 
 Release:DESTDIR = release
 Release:OBJECTS_DIR = release/.obj
@@ -48,10 +47,8 @@ QT += widgets
 QT += multimedia
 QT += multimediawidgets
 QT += concurrent
-#QT += network
 
-HEADERS += Cache/cachedata.h \
-    Containers/concurrentlist.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -176,8 +173,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Containers/concurrentlist.cpp
+SOURCES += Cache/cachedata.cpp
+SOURCES +=
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp

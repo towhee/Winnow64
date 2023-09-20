@@ -254,6 +254,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     emit renameEjectAction(path);
 
     if (event->button() == Qt::RightButton) {
+        rightClickItem = itemAt(event->pos());
         return;
     }
 
@@ -269,17 +270,12 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 
 void BookMarks::removeBookmark()
 {
-    if (G::isLogger) G::log("BookMarks::removeBookmark");
+    if (G::isLogger)
+        G::log("BookMarks::removeBookmark", rightClickItem->toolTip(0));
     if (rightClickItem) {
-//        qDebug() << "BookMarks::removeBookmark"<< rightClickItem->toolTip(0);
         bookmarkPaths.remove(rightClickItem->toolTip(0));
         reloadBookmarks();
     }
-
-//	if (selectedItems().size() == 1) {
-//        bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
-//		reloadBookmarks();
-//	}
 }
 
 void BookMarks::contextMenuEvent(QContextMenuEvent *event)

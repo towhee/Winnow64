@@ -86,6 +86,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Reset image count in bookmarks when eject bookmarked drive
+- Delete folder fixed
+- Stabilized folder loading for all folder sizes
 - FSTree selection / up/down key issue
 - Found performance issue with max thumbnails less than total thumbnails
 - Reorganized menus and actions

@@ -306,7 +306,7 @@ void FSTree::createModel()
     the folders by deleting the model and re-creating it.
 */
     if (G::isLogger) G::log("FSTree::createModel");
-    fsModel = new FSModel(this, *metadata, /*count, combineCount,*/ combineRawJpg);
+    fsModel = new FSModel(this, *metadata, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath(fsModel->myComputer().toString());
 

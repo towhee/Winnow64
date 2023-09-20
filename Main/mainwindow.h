@@ -48,8 +48,6 @@
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
-#include "Containers/concurrentlist.h"
-
 #ifdef Q_OS_WIN
 #endif
 
@@ -387,7 +385,7 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void watchCurrentFolder();
+    void watchForEject();
     void selectionChange();
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
