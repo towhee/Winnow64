@@ -224,7 +224,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 {
     this->dm = dm;
     setObjectName(objName);
-    if (isDebug) G::log("IconView::IconView", objectName());
+    //if (isDebug) G::log("IconView::IconView", objectName());
 
     // this works because ThumbView is a friend class of MW.  It is used in the
     // event filter to access the thumbDock
@@ -1231,7 +1231,7 @@ bool IconView::event(QEvent *event) {
 /*
      Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    if (isDebug) G::log("IconView::event");
+    //if (isDebug) G::log("IconView::event");
     /*
     qDebug() << "IconView::event" << event;
     //*/

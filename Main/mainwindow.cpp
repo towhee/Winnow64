@@ -667,13 +667,11 @@ void MW::whenActivated(Qt::ApplicationState state)
     This is signalled when QGuiApplication::applicationStateChanged (connect
     in Main()).
 
-    For an unknown reason restoreGeometry only works on the primary monitor before the
-    app is instantiated by instance.exec in main.  This behavior is unique to Winnow.
-
-    This is resolved using Mac::joinAllSpaces and below prep code moved back to
-    MW::showEvent.
+    Update FSTree after it has been opened.
 */
+#ifdef Q_OS_MAC
     fsTree->setRootIndex(fsTree->model()->index(0,0));
+#endif
 }
 
 //   EVENT HANDLERS
