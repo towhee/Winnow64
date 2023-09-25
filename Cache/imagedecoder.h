@@ -37,17 +37,30 @@ public:
     enum Status {
         Ready,
         Busy,
+        Done,
         Invalid,
         Failed,
         Video,
         InstanceClash,
         NoDir,
-        NoFile,
+        BlankFilePath,
         NoMetadata,
-        FileOpen,
-        Done
+        FileOpen
     } status;
 
+    QVector<QString> statusText {
+        "Ready"
+        "Busy"
+        "Done"
+        "Invalid"
+        "Failed"
+        "Video"
+        "InstanceClash"
+        "NoDir"
+        "BlankFilePath"
+        "NoMetadata"
+        "FileOpen"
+    };
 
 protected:
     void run() Q_DECL_OVERRIDE;

@@ -85,11 +85,11 @@ bool ImageDecoder::load()
     QString fun = "ImageDecoder::load";
     if (isDebug) G::log(fun, fPath);
 
-    // null fPath when caching is cycling, waiting to finish.
+    // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load  Null file path" << fPath;
-        status = Status::NoFile;
+        status = Status::BlankFilePath;
         return false;
     }
 
@@ -137,7 +137,6 @@ bool ImageDecoder::load()
         G::error(errMsg, fun, fPath);
         // check if drive ejected or folder deleted by another app
         QDir dir(Utilities::getFolderPath(fPath));
-//        QDir dir(fileInfo.dir());
         if (!dir.exists()) {
             status = Status::NoDir;
             errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
@@ -145,7 +144,7 @@ bool ImageDecoder::load()
             qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
         }
         else {
-            status = Status::Failed;
+            status = Status::FileOpen;
         }
         return false;
     }
