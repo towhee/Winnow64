@@ -2407,6 +2407,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     //if (!G::isNewFolderLoaded) return true;
     //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
 
+    finished = false;
     static int counter = 0;
     counter++;
     int dataModelColumn = 0;
@@ -2472,7 +2473,10 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                          ;
             //*/
 
-            if (!isMatch) return false;   // no match in category
+            if (!isMatch) {
+                finished = true;
+                return false;   // no match in category
+            }
 
             /*
             Prepare for category items filter match.  If no item is checked
@@ -2484,12 +2488,15 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             isMatch = false;
             itemCategory = (*filter)->text(0);      // for debugging
         }
-        if (suspendFiltering) return false;
+        if (suspendFiltering) {
+            finished = true;
+            return false;
+        }
         ++filter;
     }
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
-
+    finished = true;
     return isMatch;
 }
 
@@ -2510,6 +2517,10 @@ void SortFilter::filterChange()
     if (G::isLogger) G::log("SortFilter::filterChange");
     //qDebug() << "SortFilter::filterChange";
     invalidateFilter();
+
+    while(!finished) {
+        G::wait(10);
+    }
 }
 
 void SortFilter::suspend(bool suspendFiltering)
@@ -2521,4 +2532,9 @@ void SortFilter::suspend(bool suspendFiltering)
     if (G::isLogger) G::log("SortFilter::suspend");
     this->suspendFiltering = suspendFiltering;
     if (!suspendFiltering) invalidateFilter();
+}
+
+bool SortFilter::isFinished()
+{
+    return finished;
 }

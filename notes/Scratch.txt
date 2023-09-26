@@ -1,20 +1,65 @@
 
-129 MetaRead::stop
-  0 MetaRead::initialize
-MetaRead::setCurrentRow row = 0 fileSelectionChanged = true isRunning = false src = "MW::loadConcurrent" G::allMetadataLoaded = false G::allIconsLoaded = false
-242 MetaRead::initialize                               imageCacheTriggerCount = 40
-MetaRead::run src = MW::loadConcurrent startRow = 0 sfRowCount = 1
-MetaRead::readRow start  row = 0 dm->sf->rowCount() = 1
- 10 MetaRead::run                                      MW::loadConcurrent
-MetaRead::readMetadata instance = 0 dm->instance 0 row = 0 abort = false "/Users/roryhill/Movies/Lion King.m4v"
-MetaRead::readMetadata added row = 0 abort = false
-MetaRead::readMetadata addToDatamodel row = 0 abort = false
-MetaRead::readMetadata addToImageCache row = 0
-7,761 MetaRead::readMetadata
-MetaRead::readIcon start  row = 0
-MetaRead::readIcon load   row = 0
-MetaRead::readIcon loaded row = 0
-MetaRead::readRow done   row = 0
-MetaRead::run  Completed loop XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
- 80 MetaRead::readIcon
-MetaRead::run  Done.
+MW::filterChange  Src:  "Filters::itemClickedSignal"
+       22 Filters::itemClickedSignal
+        4 MW::filterSyncActionsWithFilters
+       19 Filters::checkRating
+        5 Filters::checkRating
+        5 Filters::checkRating
+        5 Filters::checkRating
+        4 Filters::checkRating
+       12 Filters::checkRating
+        5 Filters::checkRating
+        2 Filters::checkRating
+       23 Filters::checkRating
+        6 Filters::checkRating
+    3,140 Filters::isOnlyMostRecentDayChecked
+    1,813 SortFilter::filterChange
+        2 MW::updateStatus
+        7 DataModel::rowFromPath
+        6 MW::getZoom
+        8 MW::getPosition
+      244 MW::getPicked
+       17 MW::getPosition
+        3 MW::metadataChanged
+       40 InfoView::showOrHide
+        2 MW::getZoom
+        2 MW::getSelectedFileSize
+        3 MW::memoryReqdForSelection
+        0 MW::metadataChanged
+        5 InfoView::showOrHide
+BuildFilters::update
+MW::sortChange  Src: "filterChange"
+      175 MW::getPicked
+BuildFilters::run
+       62 MW::updateStatusBar
+Filters::addFilteredCountPerItem category = "Picks"
+Filters::addFilteredCountPerItem category = "Ratings"
+Filters::addFilteredCountPerItem category = "Color classes"
+Filters::addFilteredCountPerItem category = "File types"
+Filters::addFilteredCountPerItem category = "Years"
+      302 Filters::updateSearchCategoryCount
+Filters::addFilteredCountPerItem category = "Days"
+Filters::addFilteredCountPerItem category = "Camera models"
+Filters::addFilteredCountPerItem category = "Lenses"
+Filters::addFilteredCountPerItem category = "Focal lengths"
+Filters::addFilteredCountPerItem category = "Titles"
+    1,045 Filters::isAnyFilter
+ImageCache::rebuildImageCacheParameters
+        5 ImageCache::rebuildImageCacheParameters
+ImageCache::buildImageCacheList
+       24 ImageCache::buildImageCacheList
+       92 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-21_0066.jpg
+       38 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-21_0075.jpg
+       37 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-21_0100_1.JPG
+       38 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-21_0116.jpg
+       32 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-27_0013_1.JPG
+       36 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-27_0018.jpg
+Filters::addFilteredCountPerItem category = "Creators"
+Filters::addFilteredCountPerItem category = "Missing thumbs"
+Filters::addFilteredCountPerItem category = "Keywords"
+    2,308 DataModel::imMetadata                              /Users/roryhill/Pictures/3840x2160/2020-04-27_0041-2.jpg
+        2 Filters::updateSearchCategoryCount
+BuildFilters::done
+       87 Filters::setCatFiltering
+   84,283 SortFilter::filterChange
+        0 ImageCache::setPriorities                          key = 0

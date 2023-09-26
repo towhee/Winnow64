@@ -2128,14 +2128,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         }
     }
     else if (G::useImageView) {
-        if (icd->cacheItemList.at(dm->currentSfRow).isCached) {
-            if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
-                updateClassification();
-                if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-            }
-            else {
-                //qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
-            }
+        if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+            updateClassification();
+            if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+        }
+        else {
+            qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
         }
     }
 

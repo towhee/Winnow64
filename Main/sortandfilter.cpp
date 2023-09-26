@@ -79,7 +79,7 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
-    // if filter chnage source is the filter panel then sync menu actions isChecked property
+    // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
 
     // Need all metadata loaded before filtering
@@ -115,7 +115,7 @@ void MW::filterChange(QString source)
         return;
     }
 
-    // Is the DataModel current index still in the filter.  If not, set to zero
+    // is the DataModel current index still in the filter.  If not, set to zero
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);

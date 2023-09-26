@@ -109,10 +109,14 @@ bool ImageDecoder::load()
         qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
                    << "threadId =" << threadId
                    << fPath;
+        errMsg = "Could not read metadata.";
         status = Status::NoMetadata;
         // pause for metadata to be loaded
-        msleep(100);
-        return false;
+//        msleep(100);
+//        if (!metadata->hasHeic.contains(ext)) {
+//            qDebug() << "ImageDecoder::load" << "Could not read metadata" << ext << fPath;
+//            return false;
+//        }
     }
 
     if (abort) quit();
@@ -131,7 +135,7 @@ bool ImageDecoder::load()
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
-        QString errMsg = "Could not open file for image";
+        QString errMsg = "Could not open file.";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
         G::error(errMsg, fun, fPath);
@@ -205,7 +209,7 @@ bool ImageDecoder::load()
             QString errMsg = "heic.decodePrimaryImage failed";
             G::error(errMsg, fun, fPath);
             imFile.close();
-            status = Status::Failed;
+            status = Status::Invalid;
             return false;
         }
         /*
@@ -214,6 +218,7 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
+        qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
         if (!image.load(fPath)) {
             errMsg = "Could not read because decoder failed.";
             imFile.close();
@@ -222,7 +227,16 @@ bool ImageDecoder::load()
             status = Status::Invalid;
             return false;
         }
+        else if (image.width() == 0) {
+            errMsg = "Unable to read heic image";
+            status = Status::Invalid;
+            return false;
+        }
         imFile.close();
+        qDebug() << "ImageDecoder::load" << "HEIC image"
+                 << image.width() << image.height()
+                 << fPath
+            ;
         #endif
     }
 
@@ -231,8 +245,7 @@ bool ImageDecoder::load()
         // check for sampling format we cannot read
         if (n.samplesPerPixel > 3) {
             imFile.close();
-            errMsg = "Could not read tiff because " + QString::number(n.samplesPerPixel)
-                    + " samplesPerPixel > 3.";
+            errMsg = "tiff samplesPerPixel more than 3.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load " << errMsg << fPath;
             status = Status::Invalid;
@@ -251,7 +264,8 @@ bool ImageDecoder::load()
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
             if (abort) quit();
-            // use Qt tiff library to decode
+
+            // use Qt tiff decoder
             if (!image.load(fPath)) {
                 imFile.close();
                 errMsg = "Could not read because Qt tiff decoder failed.";
