@@ -17,6 +17,7 @@ class SortFilter : public QSortFilterProxyModel
 
 public:
     SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
+    bool isFinished();
 
 public slots:
     void filterChange();
@@ -32,7 +33,7 @@ signals:
 private:
     Filters *filters;
     bool &combineRawJpg;
-    bool isFinished;
+    mutable bool finished;
     bool suspendFiltering;
 };
 

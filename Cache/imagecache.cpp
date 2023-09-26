@@ -509,7 +509,7 @@ bool ImageCache::nextToCache(int id)
         int i = priorityList.at(p);  // crash
 
         if (icd->cacheItemList.at(i).isCached) continue;
-        //if (debugCaching)
+        if (debugCaching)
             qDebug() << "ImageCache::nextToCache"
                      << "row =" << i
                      << "attempt =" << icd->cacheItemList.at(i).attempts
@@ -522,7 +522,7 @@ bool ImageCache::nextToCache(int id)
 
         // debug multi attempts
         if (icd->cacheItemList.at(i).attempts > 0)
-//            if (debugCaching)
+            if (debugCaching)
                 qDebug() << "ImageCache::nextToCache"
                          << "row =" << i
                          << "attempt =" << icd->cacheItemList.at(i).attempts
@@ -530,7 +530,7 @@ bool ImageCache::nextToCache(int id)
                     ;
 
         icd->cache.toCacheKey = i;
-//        if (debugCaching)
+        if (debugCaching)
             qDebug() << "ImageCache::nextToCache = true"
                      << "row =" << i
                      << "attempt =" << icd->cacheItemList.at(i).attempts
@@ -539,7 +539,7 @@ bool ImageCache::nextToCache(int id)
         return true;
     }
     icd->cache.toCacheKey = -1;
-    //if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::nextToCache = false"
         ;
     return false;
@@ -559,7 +559,7 @@ void ImageCache::fixOrphans()
     it should have been, and is used to flag missing images in fillCache.
 */
     if (G::isFlowLogger) G::log("ImageCache::fixOrphans");
-    //if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote()
             << "ImageCache::fixOrphans"
@@ -598,7 +598,7 @@ void ImageCache::fixOrphans()
                         << "isCached = false and try again (blank path or open file)"
                         ;
                 }
-                break;
+                continue;
             }
         }
 
@@ -613,7 +613,7 @@ void ImageCache::fixOrphans()
                     << "isCached = true but not in imCache"
                     ;
             }
-            break;
+            continue;
         }
 
         // check isCaching is up-to-date in target range
@@ -639,7 +639,7 @@ void ImageCache::fixOrphans()
                         << "isCaching = true but decoder is inactive"
                         ;
                 }
-                break;
+                continue;
             }
         }
     }
@@ -902,9 +902,13 @@ QString ImageCache::reportCache(QString title)
                 << "Offset"
                 << "Length"
                 ;
+            rpt.setFieldAlignment(QTextStream::AlignLeft);
+            rpt.setFieldWidth(1);
+            rpt << " ";
+            rpt.setFieldWidth(40);
+            rpt << "Error message";
             rpt.setFieldWidth(3);
             rpt << "   ";
-            rpt.setFieldAlignment(QTextStream::AlignLeft);
             rpt.setFieldWidth(50);
             rpt << "File Name";
             rpt.setFieldWidth(0);
@@ -935,9 +939,13 @@ QString ImageCache::reportCache(QString title)
             << icd->cacheItemList.at(i).offsetFull
             << icd->cacheItemList.at(i).lengthFull
             ;
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(1);
+        rpt << " ";
+        rpt.setFieldWidth(40);
+        rpt << icd->cacheItemList.at(i).errMsg.left(40);
         rpt.setFieldWidth(3);
         rpt << "   ";
-        rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(50);
         rpt << icd->cacheItemList.at(i).fPath;
         rpt.setFieldWidth(0);
@@ -1136,7 +1144,8 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     MetaRead::readMetadata.
 */
     if (G::isFlowLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
-    if (debugCaching) qDebug() << "ImageCache::addCacheItemImageMetadata";
+    //if (debugCaching)
+        qDebug() << "ImageCache::addCacheItemImageMetadata";
     if (debugCaching || G::isLogger) G::log("ImageCache::addCacheItemImageMetadata");
     if (!G::useImageCache) return;  // rgh isolate image cache
     if (G::stop) {
@@ -1218,7 +1227,8 @@ void ImageCache::buildImageCacheList()
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
     if (G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
-    if (debugCaching) qDebug() << "ImageCache::buildImageCacheList";
+    //if (debugCaching)
+        qDebug() << "ImageCache::buildImageCacheList";
     icd->cacheItemList.clear();
     keyFromPath.clear();
     // the total memory size of all the images in the folder currently selected
@@ -1363,6 +1373,8 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         qDebug() << "ImageCache::rebuildImageCacheParameters";
     }
     if (dm->sf->rowCount() == 0) return;
+
+    // do not use mutex - spins forever
 
     // update currentPath
     currentPath = currentImageFullPath;
@@ -1525,7 +1537,7 @@ void ImageCache::decodeNextImage(int id)
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].threadId = id;
     icd->cacheItemList[row].attempts += 1;
-//    if (debugCaching || G::isLogger)
+    if (debugCaching || G::isLogger)
     {
         QString k = QString::number(row).leftJustified((4));
         qDebug().noquote()
@@ -1652,7 +1664,7 @@ void ImageCache::fillCache(int id)
 
     // new decoder just getting started
     if (decoder[id]->status == ImageDecoder::Status::Ready) {
-        //if (debugCaching)
+        if (debugCaching)
         {
             qDebug().noquote() << "ImageCache::fillCache"
                                << "     starting decoder" << id
@@ -1664,7 +1676,7 @@ void ImageCache::fillCache(int id)
     // returning decoder
     else {
         cacheKey = keyFromPath[decoder[id]->fPath];
-        //if (debugCaching)
+        if (debugCaching)
         {
             qDebug().noquote() << "ImageCache::fillCache"
                                << "     returning decoder" << id
@@ -1840,7 +1852,7 @@ void ImageCache::fillCache(int id)
         if (!cacheItemListComplete()) updateTargets();
         decoder[id]->setReady();
         fixOrphans();
-        //if (debugCaching)
+        if (debugCaching)
         {
             qDebug() << "ImageCache::fillCache  Might be finished"
                      << "      decoder" << id

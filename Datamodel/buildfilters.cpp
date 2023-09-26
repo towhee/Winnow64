@@ -22,7 +22,7 @@
          *days;
 
     An item is a unique value for its category in the DataModel.  For example,
-    in the category types, items could include JPG, NEF, PNG ...
+    in the category "types", items could include JPG, NEF, PNG ...
 
     BuildFilters does the following:
 
@@ -574,7 +574,7 @@ void BuildFilters::run()
                ;
     }
 
-//    if (filters->filtersBuilt) return;
+    //if (filters->filtersBuilt) return;
 
     if (reportTime) {
         msTot = 0;

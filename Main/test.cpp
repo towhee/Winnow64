@@ -161,16 +161,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QModelIndex rootIdx = fsTree->fsModel->index(0,0);
-//    //fsTree->expandAll();
-//    QModelIndex firstChildIdx = fsTree->fsModel->index(0,0,rootIdx);
-//    QModelIndex usersIdx = fsTree->fsModel->index("/Users");
-//    qDebug() << rootIdx.data() << firstChildIdx.data() << usersIdx.data();
-//    fsTree->expand(rootIdx);  /Users
-//    fsTree->setRootIndex(usersIdx);
-    fsTree->setRootIndex(fsTree->model()->index(0,0));
-    //fsTree->setRowHidden(0, QModelIndex(), true);
-
+    bool isHeic = metadata->hasHeic.contains("heic");
+    qDebug() << isHeic;
 }
 
 /*

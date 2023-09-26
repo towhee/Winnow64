@@ -147,7 +147,8 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-    if (G::isLogger) qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
+    if (G::isLogger)
+        qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
     if (G::isFlowLogger) G::log("ImageView::loadImage", fPath + " Src:" + src);
     // No folder selected yet
     if (!fPath.length()) {
@@ -245,8 +246,10 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
     }
     else {
-        // report why no image cached
-        emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
+        // report why no image cached (chk range in case filtering has just occurred)
+        if (icd->cacheItemList.count() > dmRow) {
+            emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
+        }
     }
 
     /* When the program is opening or resizing it is possible this function could be called
