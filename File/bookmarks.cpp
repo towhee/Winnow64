@@ -5,14 +5,21 @@ class BookDelegate : public QStyledItemDelegate
 public:
     explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
-    {
-        static int count = 0;
-        count++;
-        index.isValid();          // suppress compiler warning
-        int height = qRound(G::strFontSize.toInt() * 1.5 * G::ptToPx);
-        return QSize(option.rect.width(), height);
-    }
+// sizeHint only working for first 10 entries
+//    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
+//    {
+//        static int count = 0;
+//        count++;
+//        index.isValid();          // suppress compiler warning
+//        int height = qRound(G::strFontSize.toInt() * 1.5 * G::ptToPx);
+//        qDebug() << "BookDelegate::sizeHint"
+//                 << count
+//                 << "height =" << height
+//                 << "G::strFontSize =" << G::strFontSize
+//                 << "G::ptToPx =" << G::ptToPx
+//            ;
+//        return QSize(option.rect.width(), height);
+//    }
 };
 
 /*

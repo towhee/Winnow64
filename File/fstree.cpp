@@ -146,8 +146,7 @@ void FSModel::refresh(const QModelIndex &index)
     QList<int> roles;
     roles << Qt::DisplayRole;
     emit dataChanged(index, index, roles);
-//    emit dataChanged(testIdx, testIdx);
-    qDebug() << "FSModel::refresh" << index << testIdx;
+    //qDebug() << "FSModel::refresh" << index << testIdx;
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
@@ -394,7 +393,6 @@ QModelIndex FSTree::getCurrentIndex()
     if (G::isLogger) G::log("FSTree::getCurrentIndex");
     QModelIndex idx;
     if (selectedIndexes().size() > 0)
-//        idx = fsFilter->mapFromSource(selectedIndexes().first());
         idx = selectedIndexes().first();
     else idx = fsModel->index(-1, -1, QModelIndex());
     return idx;
