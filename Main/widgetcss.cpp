@@ -171,20 +171,25 @@ QString WidgetCSS::menuBar()
     "}"
 
     "QMenuBar::item:pressed {"
-    "background-color: " + selectionColor.name() + ";"
-    "}";
+        "background-color: " + selectionColor.name() + ";"
+    "}"
+
+    "QMenuBar::item:disabled {"
+        "color:" + disabledColor.name() + ";"
+    "}"
+    ;
 }
 
 QString WidgetCSS::menu()
 {
     return
     "QMenu {"
-    "background-color: " + QColor(mb,mb,mb).name() + ";"
-    "border: 1px solid gray;"
+        "background-color: " + QColor(mb,mb,mb).name() + ";"
+        "border: 1px solid gray;"
     "}"
 
     "QMenu::item {"
-        "color: white;"     // nada
+        //"color: white;"     // nada
         "background-color: transparent;"
     "}"
 
@@ -193,8 +198,9 @@ QString WidgetCSS::menu()
     "}"
 
     "QMenu::item:disabled {"
-        "color: gray;"
-    "}";
+        "color:" + disabledColor.name() + ";"
+    "}"
+    ;
 }
 
 QString WidgetCSS::groupBox()
