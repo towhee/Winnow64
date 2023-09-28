@@ -2518,8 +2518,14 @@ void SortFilter::filterChange()
     //qDebug() << "SortFilter::filterChange";
     invalidateFilter();
 
-    while(!finished) {
+    // force wait until finished to prevent sorting/editing datamodel
+    int waitMs = 2000;
+    int ms = 0;
+    bool timeIsUp = false;
+    while (!finished || timeIsUp) {
         G::wait(10);
+        ms += 10;
+        if (ms > waitMs) timeIsUp = true;
     }
 }
 

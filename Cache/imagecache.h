@@ -131,6 +131,7 @@ private:
     float getImCacheSize();         // add up total MB cached
     bool cacheItemListComplete();
     void updateTargets();
+    void resetAbortedCaching();     // Set IsCaching = false within current target range
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead

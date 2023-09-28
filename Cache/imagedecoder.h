@@ -38,6 +38,7 @@ public:
         Ready,
         Busy,
         Done,
+        Abort,
         Invalid,
         Failed,
         Video,
@@ -52,6 +53,7 @@ public:
         "Ready"
         "Busy"
         "Done"
+        "Abort"
         "Invalid"
         "Failed"
         "Video"

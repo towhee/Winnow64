@@ -571,7 +571,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setupPlatform();
 
     // enable / disable rory functions
-    rory();
+    //rory();
+    setImageCacheParameters();
 
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -786,8 +787,8 @@ void MW::resizeEvent(QResizeEvent *event)
     emit resizeMW(this->geometry(), centralWidget->geometry());
     // prevent progressBar overlapping in statusBar
     int availSpace = availableSpaceForProgressBar();
-    if (availSpace < progressWidthBeforeResizeWindow && availSpace > progressWidth)
-        progressWidth = availSpace;
+    if (availSpace < progressWidthBeforeResizeWindow && availSpace > cacheBarProgressWidth)
+        cacheBarProgressWidth = availSpace;
     updateProgressBarWidth();
 }
 
@@ -2643,7 +2644,11 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
 
     // reset metadata progress
-    cacheProgressBar->resetMetadataProgress();
+    if (G::showProgress == G::ShowProgress::MetaCache) {
+        cacheProgressBar->resetMetadataProgress();
+        isShowCacheProgressBar = true;
+        progressLabel->setVisible(true);
+    }
 
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
@@ -2711,7 +2716,7 @@ void MW::loadConcurrentDone()
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadConcurrentMetaDone";
     QString src = "MW::loadConcurrentMetaDone ";
     int count = 0;
-    /*
+//    /*
     qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
@@ -2728,6 +2733,10 @@ void MW::loadConcurrentDone()
     }
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
+    if (G::showProgress == G::ShowProgress::MetaCache) {
+        isShowCacheProgressBar = false;
+        progressLabel->setVisible(false);
+    }
     G::allIconsLoaded = dm->allIconsLoaded();
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -3164,7 +3173,8 @@ void MW::updateImageCacheStatus(QString instruction,
         k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
     }
 
-    if (!isShowCacheProgressBar) return;
+    if (G::showProgress != G::ShowProgress::ImageCache) return;
+    //if (!isShowCacheProgressBar) return;
 
     // just repaint the progress bar gray and return.
     if (instruction == "Clear") {
@@ -3530,16 +3540,9 @@ void MW::setImageCacheParameters()
     int cacheNetMB = cacheMaxMB - static_cast<int>(G::metaCacheMB);
     if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
 
-    metaReadThread->showProgressInStatusbar = isShowCacheProgressBar;
-
-    imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
-             isShowCacheProgressBar, cacheWtAhead);
-
-    QString fPath = dm->currentFilePath;
-//    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    // set position in image cache
-    if (fPath.length() && G::useImageCache)
-        imageCacheThread->setCurrentPosition(fPath, "MW::setImageCacheParameters");
+    metaReadThread->showProgressInStatusbar =
+        G::showProgress == G::ShowProgress::MetaCache ||
+        G::showProgress == G::ShowProgress::ImageCache;
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheProgressBar);
@@ -3550,6 +3553,40 @@ void MW::setImageCacheParameters()
 
     if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent)
         imageCacheThread->cacheSizeChange();
+
+    bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
+    qDebug() << "MW::setImageCacheParameters" << okToShow;
+    imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
+
+    // set position in image cache
+    if (dm->currentFilePath.length() && G::useImageCache)
+        imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
+
+    /* old code
+    if (G::isLogger) G::log("MW::setImageCacheParameters");
+
+    int cacheNetMB = cacheMaxMB - static_cast<int>(G::metaCacheMB);
+    if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
+
+    metaReadThread->showProgressInStatusbar = isShowCacheProgressBar;
+
+    // cache progress bar
+    progressLabel->setVisible(isShowCacheProgressBar);
+
+    // thumbnail cache status indicators
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
+    if ((G::isLoadLinear && G::isLinearLoadDone) || G::isLoadConcurrent)
+        imageCacheThread->cacheSizeChange();
+
+    imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
+                                            isShowCacheProgressBar, cacheWtAhead);
+
+    // set position in image cache
+    if (dm->currentFilePath.length() && G::useImageCache)
+        imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
+    */
 }
 
 void MW::showHiddenFiles()
@@ -5841,6 +5878,7 @@ void MW::rory()
 {
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
+        isShowCacheProgressBar = true;
         setImageCacheParameters();
     }
     else {
@@ -5852,7 +5890,7 @@ void MW::rory()
         G::isLoadConcurrent = true;
     }
 
-    //qDebug() << "MW::rory" << G::isRory;
+    qDebug() << "MW::rory" << G::isRory;
 }
 
 // End MW

@@ -322,6 +322,8 @@ void MW::createDataModel()
     iconCacheData = new IconCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
+    bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;
+    cacheProgressBar->setMetaProgressStyle(onTopOfCache);
 
     // loadSettings not run yet
     if (isSettings && settings->contains("combineRawJpg"))
@@ -1134,13 +1136,14 @@ void MW::createStatusBar()
     // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
-    if (isSettings && settings->contains("cacheStatusWidth"))
-        progressWidth = settings->value("cacheStatusWidth").toInt();
-    if (progressWidth < 100 || progressWidth > 1000) progressWidth = 200;
+    if (isSettings && settings->contains("cacheStatusWidth") && G::isRory)
+        cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
+    else cacheBarProgressWidth = 100;
+    if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 200;
     progressPixmap = new QPixmap(4000, 25);   // cacheprogress
-    progressPixmap->scaled(progressWidth, 25);
+    progressPixmap->scaled(cacheBarProgressWidth, 25);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
-    progressLabel->setFixedWidth(progressWidth);
+    progressLabel->setFixedWidth(cacheBarProgressWidth);
     progressLabel->setPixmap(*progressPixmap);
 
     // tooltip

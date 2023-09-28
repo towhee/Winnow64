@@ -221,8 +221,8 @@ void MW::updateProgressBarWidth()
     if (G::isLogger) G::log("MW::updateProgressBarWidth");
     if (dm->rowCount() && progressLabel->isVisible()) {
         int availableSpace = availableSpaceForProgressBar();
-        if (availableSpace < progressWidth) progressWidth = availableSpace;
-        progressLabel->setFixedWidth(progressWidth);
+        if (availableSpace < cacheBarProgressWidth) cacheBarProgressWidth = availableSpace;
+        progressLabel->setFixedWidth(cacheBarProgressWidth);
         updateImageCacheStatus("Update all rows", icd->cache, "MW::updateProgressBarWidth");
     }
 }

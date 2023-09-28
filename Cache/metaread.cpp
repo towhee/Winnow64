@@ -44,6 +44,7 @@ MetaRead::MetaRead(QObject *parent,
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
     imageCacheTriggerCount =  QThread::idealThreadCount() * 2;
+    showProgressInStatusbar = true;
     isDebug = false;
 }
 
@@ -260,7 +261,7 @@ void MetaRead::cleanupIcons()
     }
 }
 
-bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
+           bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readMetadata");
     if (G::isFlowLogger2) qDebug() << "MetaRead::readMetadata" << "row =" << sfIdx.row() << fPath;

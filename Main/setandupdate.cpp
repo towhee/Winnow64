@@ -380,6 +380,9 @@ void MW::setCacheStatusVisibility()
 
 void MW::setProgress(int value)
 {
+/*
+    Used by ingest to show progress on left side of status bar.
+*/
     if (G::isLogger) G::log("MW::setProgress");
     if (value < 0 || value > 100) {
         progressBar->setVisible(false);

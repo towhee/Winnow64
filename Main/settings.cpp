@@ -84,7 +84,7 @@ void MW::writeSettings()
     settings->setValue("cacheMinSize", cacheMinSize);
     settings->setValue("isShowCacheStatus", isShowCacheProgressBar);
     settings->setValue("cacheDelay", cacheDelay);
-    settings->setValue("cacheStatusWidth", progressWidth);
+    settings->setValue("cacheStatusWidth", cacheBarProgressWidth);
     settings->setValue("cacheWtAhead", cacheWtAhead);
     settings->setValue("isCachePreview", isCachePreview);
     settings->setValue("cachePreviewWidth", cachePreviewWidth);
@@ -381,8 +381,8 @@ bool MW::loadSettings()
         cacheSizePercentOfAvailable = 50;
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
         isShowCacheProgressBar = true;
-        progressWidth = 200;
-        progressWidthBeforeResizeWindow = progressWidth;
+        cacheBarProgressWidth = 200;
+        progressWidthBeforeResizeWindow = cacheBarProgressWidth;
         cacheWtAhead = 7;
         isCachePreview = false;
         cachePreviewWidth = 2000;
@@ -532,8 +532,8 @@ bool MW::loadSettings()
     if (settings->contains("cacheMinSize")) setImageCacheMinSize(settings->value("cacheMinSize").toString());
     else setImageCacheMinSize("4 GB");
     if (settings->contains("isShowCacheStatus")) isShowCacheProgressBar = settings->value("isShowCacheStatus").toBool();
-    if (settings->contains("cacheStatusWidth")) progressWidth = settings->value("cacheStatusWidth").toInt();
-    progressWidthBeforeResizeWindow = progressWidth;
+    if (settings->contains("cacheStatusWidth")) cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
+    progressWidthBeforeResizeWindow = cacheBarProgressWidth;
     if (settings->contains("cacheWtAhead")) cacheWtAhead = settings->value("cacheWtAhead").toInt();
     if (settings->contains("isCachePreview")) isCachePreview = settings->value("isCachePreview").toBool();
     if (settings->contains("cachePreviewWidth")) cachePreviewWidth = settings->value("cachePreviewWidth").toInt();
