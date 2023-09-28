@@ -2190,7 +2190,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update cursor position on progressBar
-    if (cacheProgressBar->isVisible())
+    if (cacheProgressBar->isVisible() && G::showProgress == G::ShowProgress::ImageCache)
         cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
 
     fsTree->scrollToCurrent();

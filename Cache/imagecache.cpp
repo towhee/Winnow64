@@ -219,6 +219,10 @@ void ImageCache::updateTargets()
 
 void ImageCache::resetAbortedCaching()
 {
+/*
+    Rapidly updating the cache can result in aborted decoder threads that leave
+    isCaching and cached states orphaned.  Reset these in the target range.
+*/
     if (debugCaching || G::isLogger) G::log("ImageCache::resetAbortedCaching");
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
         if (abort) break;
@@ -522,8 +526,12 @@ bool ImageCache::nextToCache(int id)
 
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort || G::stop) return false;
+        // prevent crash when priority has just updated
         if (p >= priorityList.size()) return false;
-        int i = priorityList.at(p);  // crash
+        int i = priorityList.at(p);  // was causing crash
+
+        // make sure metadata has been loaded
+        if (!icd->cacheItemList.at(i).isUpdated) return false;
 
         if (icd->cacheItemList.at(i).isCached) continue;
         if (debugCaching)
@@ -563,7 +571,7 @@ bool ImageCache::nextToCache(int id)
 
 }
 
-void ImageCache::fixOrphans()
+void ImageCache::fixOrphans()  // not being used
 {
 /*
     If the caching process fails, then an image in the target range may be orphaned while
