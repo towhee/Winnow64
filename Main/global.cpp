@@ -18,6 +18,7 @@ namespace G
 
     // Rory version
     bool isRory = false;
+    ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
 
     // Errors
     QMap<QString,QStringList> err;

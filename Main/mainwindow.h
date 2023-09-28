@@ -266,7 +266,7 @@ public:
     int cacheMaxMB;
     int cacheDelay = 100;
     bool isShowCacheProgressBar;
-    int progressWidth;
+    int cacheBarProgressWidth;
     int progressWidthBeforeResizeWindow;
     int cacheWtAhead;
     bool isCachePreview;

@@ -186,7 +186,7 @@ QString MW::diagnostics()
     rpt << "\n" << "showCacheStatus = " << G::s(isShowCacheProgressBar);
     rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
     rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheProgressBar);
-    rpt << "\n" << "progressWidth = " << G::s(progressWidth);
+    rpt << "\n" << "progressWidth = " << G::s(cacheBarProgressWidth);
     rpt << "\n" << "cacheWtAhead = " << G::s(cacheWtAhead);
     rpt << "\n" << "isCachePreview = " << G::s(isCachePreview);
     rpt << "\n" << "cachePreviewWidth = " << G::s(cachePreviewWidth);

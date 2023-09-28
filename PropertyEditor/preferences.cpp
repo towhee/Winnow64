@@ -159,9 +159,9 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "progressWidthSlider") {
-        mw->progressWidth = v.toInt();
+        mw->cacheBarProgressWidth = v.toInt();
         mw->updateProgressBarWidth();
-        mw->progressWidthBeforeResizeWindow = mw->progressWidth;
+        mw->progressWidthBeforeResizeWindow = mw->cacheBarProgressWidth;
         mw->setImageCacheParameters();
     }
 
@@ -1001,7 +1001,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 120;
-    i.value = mw->progressWidth;
+    i.value = mw->cacheBarProgressWidth;
     i.key = "progressWidthSlider";
     i.delegateType = DT_Slider;
     i.type = "int";

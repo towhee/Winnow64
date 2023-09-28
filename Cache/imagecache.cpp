@@ -213,7 +213,23 @@ void ImageCache::updateTargets()
     icd->cache.currMB = getImCacheSize();
     setPriorities(icd->cache.key);
     setTargetRange();
-    fixOrphans();
+    resetAbortedCaching();
+    //fixOrphans();
+}
+
+void ImageCache::resetAbortedCaching()
+{
+    if (debugCaching || G::isLogger) G::log("ImageCache::resetAbortedCaching");
+    for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
+        if (abort) break;
+        if (!icd->cacheItemList.at(i).isUpdated) break;
+        if (icd->cacheItemList.at(i).isCaching) icd->cacheItemList[i].isCaching = false;
+        if (icd->cacheItemList.at(i).isCached &&
+            !icd->imCache.contains(icd->cacheItemList.at(i).fPath))
+        {
+            icd->cacheItemList[i].isCached = false;
+        }
+    }
 }
 
 bool ImageCache::cacheItemListComplete()
@@ -506,6 +522,7 @@ bool ImageCache::nextToCache(int id)
 
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort || G::stop) return false;
+        if (p >= priorityList.size()) return false;
         int i = priorityList.at(p);  // crash
 
         if (icd->cacheItemList.at(i).isCached) continue;
@@ -558,6 +575,8 @@ void ImageCache::fixOrphans()
     orphansFound == true means that an item in the target range has not been cached when
     it should have been, and is used to flag missing images in fillCache.
 */
+
+    //if (abort) return;
     if (G::isFlowLogger) G::log("ImageCache::fixOrphans");
     if (debugCaching)
     {
@@ -574,6 +593,10 @@ void ImageCache::fixOrphans()
 
     // target range
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
+        //if (abort) return;
+        // may still be loading metadata
+        if (!icd->cacheItemList.at(i).isUpdated) break;
+
         int attempts = icd->cacheItemList.at(i).attempts;
         if (attempts > maxAttemptsToCacheImage) continue;
 
@@ -583,22 +606,28 @@ void ImageCache::fixOrphans()
         bool inImCache = icd->imCache.contains(fPath);
 
         if (!isCached) {
-            // check if was blank path or file was already open
             int id = icd->cacheItemList.at(i).threadId;
-            int status = icd->cacheItemList.at(i).status;
-            bool isBlankFilePath = status == ImageDecoder::Status::BlankFilePath;
-            bool isFileOpen = status == ImageDecoder::Status::FileOpen;
-            if (isBlankFilePath || isFileOpen) {
-                orphansFound = true;
-                if (debugCaching)
-                {
-                    qDebug().noquote()
-                        << "ImageCache::fixOrphans"
-                        << "row =" << i
-                        << "isCached = false and try again (blank path or open file)"
-                        ;
+            bool validDecoder = (id >= 0 && id < decoderCount);
+            if (validDecoder) {
+                int id = icd->cacheItemList.at(i).threadId;
+                int status = icd->cacheItemList.at(i).status;
+                bool isBusy = decoder.at(id)->status == ImageDecoder::Status::Busy;
+                bool isValid = !(decoder.at(id)->status == ImageDecoder::Status::Invalid);
+                //bool isBlankFilePath = status == ImageDecoder::Status::BlankFilePath;
+                //bool isFileOpen = status == ImageDecoder::Status::FileOpen;
+                if (!isBusy && isValid) {
+                    orphansFound = true;
+                    if (isCaching) icd->cacheItemList[i].isCaching = false;
+                    if (debugCaching)
+                    {
+                        qDebug().noquote()
+                            << "ImageCache::fixOrphans"
+                            << "row =" << i
+                            << "isCached = false and try again (blank path or open file)"
+                            ;
+                    }
+                    //continue;
                 }
-                continue;
             }
         }
 
@@ -613,35 +642,40 @@ void ImageCache::fixOrphans()
                     << "isCached = true but not in imCache"
                     ;
             }
-            continue;
+            //continue;
         }
 
         // check isCaching is up-to-date in target range
-        if (isCaching) {
-            // chk if decoding is active
-            int id = icd->cacheItemList.at(i).threadId;
-            bool validDecoder = (id >= 0 && id < decoderCount);
-            if (!validDecoder) continue;
-
-            bool decoderIsInactive = !(decoder.at(id)->status == ImageDecoder::Status::Busy);
-            bool notCurrentItem = decoder.at(id)->cacheKey != i;
-            bool notVideo = !icd->cacheItemList.at(i).isVideo;
-            //if (decoderIsInactive && notCurrentItem && !notVideo) {
-            if (decoderIsInactive && !inImCache && !notVideo) {
-                // reset isCaching to false unless video
-                icd->cacheItemList[i].isCaching = false;
-                orphansFound = true;
-                if (debugCaching)
-                {
-                    qDebug().noquote()
-                        << "ImageCache::fixOrphans"
-                        << "row =" << i
-                        << "isCaching = true but decoder is inactive"
-                        ;
-                }
-                continue;
-            }
-        }
+//        if (isCaching) {
+//            // chk if decoding is active
+//            int id = icd->cacheItemList.at(i).threadId;
+//            bool validDecoder = (id >= 0 && id < decoderCount);
+//            if (validDecoder) {
+//                bool decoderIsInactive = !(decoder.at(id)->status == ImageDecoder::Status::Busy);
+//                bool notCurrentItem = decoder.at(id)->cacheKey != i;
+//                bool notVideo = !icd->cacheItemList.at(i).isVideo;
+//                qDebug().noquote()
+//                    << "ImageCache::fixOrphans"
+//                    << "row =" << i
+//                        << "decoder =" << id
+//                    << "isCaching = true, check if decoder is active"
+//                    ;
+//                //if (decoderIsInactive && notCurrentItem && !notVideo) {
+//                if (decoderIsInactive && !inImCache && !notVideo) {
+//                    // reset isCaching to false unless video
+//                    icd->cacheItemList[i].isCaching = false;
+//                    orphansFound = true;
+//                    //if (debugCaching)
+//                    {
+//                        qDebug().noquote()
+//                            << "ImageCache::fixOrphans"
+//                            << "row =" << i
+//                            << "isCaching = true and decoder is not busy, set isCaching = false"
+//                            ;
+//                    }
+//                }
+//            }
+//        }
     }
 }
 
@@ -1144,7 +1178,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     MetaRead::readMetadata.
 */
     if (G::isFlowLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
-    //if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::addCacheItemImageMetadata";
     if (debugCaching || G::isLogger) G::log("ImageCache::addCacheItemImageMetadata");
     if (!G::useImageCache) return;  // rgh isolate image cache
@@ -1227,7 +1261,7 @@ void ImageCache::buildImageCacheList()
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
     if (G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
-    //if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::buildImageCacheList";
     icd->cacheItemList.clear();
     keyFromPath.clear();
@@ -1258,6 +1292,7 @@ void ImageCache::buildImageCacheList()
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.isVideo = m.video;
+            icd->cacheItem.isUpdated = true;
             if (!m.video) {
                 // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
                 int w, h;
@@ -1676,6 +1711,12 @@ void ImageCache::fillCache(int id)
     // returning decoder
     else {
         cacheKey = keyFromPath[decoder[id]->fPath];
+//        // check if aborted
+//        if (decoder[id]->status == ImageDecoder::Status::Abort) {
+//            icd->cacheItemList[cacheKey].isCaching = false;
+//            decoder[id]->status = ImageDecoder::Status::Ready;
+//            return;
+//        }
         if (debugCaching)
         {
             qDebug().noquote() << "ImageCache::fillCache"
@@ -1851,7 +1892,7 @@ void ImageCache::fillCache(int id)
         // did caching start before cacheItemList was completed?
         if (!cacheItemListComplete()) updateTargets();
         decoder[id]->setReady();
-        fixOrphans();
+//        fixOrphans();
         if (debugCaching)
         {
             qDebug() << "ImageCache::fillCache  Might be finished"

@@ -161,8 +161,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bool isHeic = metadata->hasHeic.contains("heic");
-    qDebug() << isHeic;
+    progressLabel->setVisible(false);
+//    bool test = G::showProgress == G::ShowProgress::MetaCache;
+//    qDebug() << G::showProgress << test;
 }
 
 /*

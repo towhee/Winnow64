@@ -47,7 +47,7 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 void ProgressBar::resetMetadataProgress()
 {
     QPainter pnt(m1->progressPixmap);
-    QRect mdRect(0, htOffset-1, m1->progressWidth, htOffset-1);
+    QRect mdRect(0, htOffset-1, m1->cacheBarProgressWidth, htOffset-1);
     pnt.fillRect(mdRect, G::backgroundColor);
 }
 
@@ -55,7 +55,7 @@ void ProgressBar::clearImageCacheProgress()
 {
     counter = 0;
     QPainter pnt(m1->progressPixmap);
-    QRect bgRect(0, htOffset, m1->progressWidth, ht);
+    QRect bgRect(0, htOffset, m1->cacheBarProgressWidth, ht);
     pnt.fillRect(bgRect, bgGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
@@ -112,7 +112,7 @@ void ProgressBar::updateCursor(int item, int items)
     int pos = prevCursorPos;
 
     QPainter pnt(m1->progressPixmap);
-    int barWidth = m1->progressWidth;
+    int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = static_cast<float>(barWidth) / items;
     int pxStartOld = qRound(pos * itemWidth);
     int pxWidth = static_cast<int>(itemWidth) + 1;
@@ -144,7 +144,7 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
     counter++;
 
     QPainter pnt(m1->progressPixmap);
-    int barWidth = m1->progressWidth;
+    int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
     int pxStart, pxWidth;
 
@@ -176,18 +176,38 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
+void ProgressBar::setMetaProgressStyle(bool onTopOfCache)
+{
+/*
+    This is set from initialize.cpp, based on G::showProgress value.
+*/
+    if (onTopOfCache) {
+        metaHtOffset = htOffset-1;
+        metaHt = 1;
+    }
+    else  {
+        metaHtOffset = htOffset;
+        metaHt = ht;
+    }
+}
+
 void ProgressBar::updateMetadataCacheProgress(int item, int items)
 {
+    if ((metaHt != 1)) {
+        updateImageCacheProgress(item, item+1, items, bgGradient);
+        return;
+    }
     QPainter pnt(m1->progressPixmap);
-    int barWidth = m1->progressWidth;
+    int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
     int pxStart, pxWidth;
     pxStart = qRound(item * itemWidth);
     pxWidth = itemWidth + 1;
 
     // Done range
-    QRect doneRect(pxStart, htOffset-1, pxWidth, 1);
-    pnt.fillRect(doneRect, progressMetadateCacheColor);
+    QRect doneRect(pxStart, metaHtOffset, pxWidth, metaHt);
+    if (metaHt == 1) pnt.fillRect(doneRect, progressMetadateCacheColor);
+    else pnt.fillRect(doneRect, bgGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
@@ -196,7 +216,7 @@ void ProgressBar::updateMetadataCacheProgress(int item, int items)
 void ProgressBar::updateDoneItem(bool isDone, int item, int items, QColor doneColor)
 {
     QPainter pnt(m1->progressPixmap);
-    int barWidth = m1->progressWidth;
+    int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
     int pxStart, pxWidth;
     pxWidth = qRound(itemWidth) + 1;

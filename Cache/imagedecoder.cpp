@@ -44,14 +44,16 @@ void ImageDecoder::stop()
         condition.wakeOne();
         mutex.unlock();
         wait();
-        abort = false;
+//        abort = false;
     }
-    quit();
+//    quit();
 }
 
 bool ImageDecoder::quit()
 {
-    status = Status::Ready;
+    abort = false;
+    status = Status::Abort;
+    //emit done(threadId);
     fPath = "";
     QImage blank;
     image = blank;

@@ -19,6 +19,7 @@ public:
     void updateCursor(int item, int items);
     void saveProgressState();
     void recoverProgressState();
+    void setMetaProgressStyle(bool onTopOfCache);
 
     QColor progressCurrentColor = QColor(158,200,158);           // Light green
     QColor progressBgColor = QColor(150,150,150);                // Light gray
@@ -46,6 +47,8 @@ private:
     int counter = 0;
     int htOffset;           // the offset from the top of pnt to the progress bar
     int ht;                 // the height of the progress bar
+    int metaHtOffset;       // the offset from the top of pnt to the progress bar for meta progress
+    int metaHt;             // the height of the progress bar for meta progress
     int minCursorWidth = 2; // the minimum width in pixels of the current file position on the bar
 };
 
