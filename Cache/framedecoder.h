@@ -4,45 +4,42 @@
 #include <QtWidgets>
 #include <QObject>
 #include <QMutex>
-#include "Main/global.h"
+//#include "Main/global.h"
 #include <QMediaPlayer>
 #include <QVideoSink>
 #include <QVideoFrame>
-#include "Main/global.h"
+#include "Datamodel/datamodel.h"
 
 class FrameDecoder : public QObject
 {
     Q_OBJECT
 
 public:
-    FrameDecoder(QObject *parent = nullptr);
+    FrameDecoder(DataModel *dm, QObject *parent = nullptr);
+
     int id;
     QString fPath;
     QModelIndex dmIdx;
-    int frameChangedCount;
-    bool frameCaptured;
 
 signals:
     void stopped(QString src);
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration);
+    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
+                      FrameDecoder *thisFrameDecoder);
 
 public slots:
     void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void clear();
     void stop();
+//    bool isBusy();
     void frameChanged(const QVideoFrame frame);
-    void stateChanged(QMediaPlayer::PlaybackState state);
-    void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
+    void errorOccurred(QMediaPlayer::Error, const QString &errorString);
 
 private:
     void getNextThumbNail(QString src = "");
-    int queueIndex(QModelIndex dmIdx);
     enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
         QModelIndex dmIdx;
-        int frameChangedCount;
-        bool frameCaptured;
         int dmInstance;
     };
     QList<Item> queue;
@@ -52,10 +49,56 @@ private:
     QVideoSink *videoSink;
     int dmInstance;
 
-    QMutex mutex;
+//    QMutex mutex;
 
-//    bool reset = false;
+    bool abort = false;
+    bool reset =   false;
     bool isDebugging;
+
+    DataModel *dm;
+
+
+//    int id;
+//    QString fPath;
+//    QModelIndex dmIdx;
+//    int frameChangedCount;
+//    bool frameCaptured;
+
+//signals:
+//    void stopped(QString src);
+//    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration);
+
+//public slots:
+//    void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
+//    void clear();
+//    void stop();
+//    void frameChanged(const QVideoFrame frame);
+//    void stateChanged(QMediaPlayer::PlaybackState state);
+//    void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
+
+//private:
+//    void getNextThumbNail(QString src = "");
+//    int queueIndex(QModelIndex dmIdx);
+//    enum Status {Idle, Busy} status;
+//    struct Item {
+//        QString fPath;
+//        QModelIndex dmIdx;
+//        int frameChangedCount;
+//        bool frameCaptured;
+//        int dmInstance;
+//    };
+//    QList<Item> queue;
+
+//    FrameDecoder *thisFrameDecoder;
+//    QMediaPlayer *mediaPlayer;
+//    QVideoSink *videoSink;
+//    int dmInstance;
+//    DataModel *dm;
+
+//    QMutex mutex;
+//    bool abort;             // version 1.33
+//    bool reset = false;     // version 1.33
+//    bool isDebugging;
 };
 
 

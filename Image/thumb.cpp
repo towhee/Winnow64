@@ -74,9 +74,9 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
 
-    if (isDebug)
+//    if (isDebug)
     {
-    qDebug() << "Thumb::loadFromVideo                  "
+    qDebug() << "Thumb::loadFromVideo                     "
              << "row =" << dmRow
              << fPath
                 ;

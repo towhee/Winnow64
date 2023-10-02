@@ -1,6 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
