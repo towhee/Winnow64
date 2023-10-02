@@ -1522,14 +1522,16 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     from the previous folder. To prevent this, the datamodel instance is incremented
     every time a new folder is loaded, and this is checked against the signal instance.
 */
-    lastFunction = "";
+    //lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
     if (isDebug)
-        qDebug() << "DataModel::setIconFromVideoFrame      "
+        qDebug() << "DataModel::setIconFromVideoFrame         "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
-                 << currentFolderPath;
+                 << dmIdx.data(G::PathRole).toString()
+                 << "\n"
+        ;
 
     if (G::stop) return;
     if (!dmIdx.isValid()) {
@@ -1544,10 +1546,12 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
                    << "Src instance =" << fromInstance;
         return;
     }
-//    qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
+    //qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
 
     int row = dmIdx.row();
-//    qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
+    //qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
+
+    mutex.lock();
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     if (modelDuration == "") {
         duration /= 1000;
@@ -1557,7 +1561,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         if (duration > 3600) format = "hh:mm:ss";
         setData(index(row, G::DurationColumn), durationTime.toString(format));
     }
-//    qDebug() << "DataModel::setIconFromVideoFrame  itemFromIndex" << dmIdx;
+    //qDebug() << "DataModel::setIconFromVideoFrame  itemFromIndex" << dmIdx;
     QStandardItem *item = itemFromIndex(dmIdx);
     if (itemFromIndex(dmIdx)->icon().isNull()) {
         if (item != nullptr) {
@@ -1570,6 +1574,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
             //setIconMax(pm);
         }
     }
+    mutex.unlock();
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)

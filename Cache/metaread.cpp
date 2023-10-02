@@ -391,10 +391,12 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
                            << "loaded row =" << sfIdx.row()
                               ;
     }
+
     if (isVideo) {
         rowsWithIcon.append(dmRow);
         return;
     }
+
     QPixmap pm;
     if (thumbLoaded && !abort) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

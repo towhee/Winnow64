@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
-#include "Cache/framedecoder.h"
+//#include "Cache/framedecoder.h"
 #include "progressbar.h"        // rgh used??
 #include "Main/global.h"
 #include "selectionorpicksdlg.h"

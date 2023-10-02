@@ -16,7 +16,7 @@ namespace G
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
 
-    // Rory version
+    // Rory version (expanded cache pref)
     bool isRory = false;
     ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
 
