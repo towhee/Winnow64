@@ -1522,7 +1522,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     from the previous folder. To prevent this, the datamodel instance is incremented
     every time a new folder is loaded, and this is checked against the signal instance.
 */
-    //lastFunction = "";
+    //lastFunction = "";  // if req'd inclose in mutex
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
     if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame         "

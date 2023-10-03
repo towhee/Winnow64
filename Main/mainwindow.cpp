@@ -3884,6 +3884,7 @@ void MW::setPrefPage(int page)
 void MW::updateDisplayResolution()
 {
     if (G::isLogger) G::log("MW::updateDisplayResolution");
+    return;
     QString monitorScale = QString::number(G::actDevicePixelRatio * 100) + "%";
     QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
             + QString::number(G::displayPhysicalVerticalPixels)
@@ -3910,6 +3911,7 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log("MW::setDisplayResolution");
+    return;
 
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
