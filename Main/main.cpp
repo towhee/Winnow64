@@ -20,11 +20,11 @@ int main(int argc, char *argv[])
     return a.exec();
     //*/
 
-//    /* Single instance version
+    ///* Single instance version
     // see https://github.com/itay-grudev/SingleApplication if replacement for
     // QtSingleApplication required
-    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-                Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+//    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+//                Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QtSingleApplication instance("Winnow", argc, argv);
 
     QString args;
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     // not being used
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    // used to hide root in FSTree after loaded
+    // hide root in FSTree after loaded
     QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
                      &mw, &MW::whenActivated);
 

@@ -145,8 +145,7 @@ public slots:
                                    int fromInstance, QString src);
     bool addMetadataForItem(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
-    void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
-                          qint64 duration);
+    void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,

@@ -11,7 +11,7 @@ Reader::Reader(QObject *parent,
     this->imageCache = imageCache;
     threadId = id;
     instance = 0;
-    frameDecoder = new FrameDecoder(dm, this);
+    frameDecoder = new FrameDecoder(this);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     //connect(this, &FrameDecoder::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
     //connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);

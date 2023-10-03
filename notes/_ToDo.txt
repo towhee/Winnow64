@@ -87,6 +87,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Video thumbnail wrong
 - Unfilter can crash
 - Reset image count in bookmarks when eject bookmarked drive
 - Delete folder fixed
