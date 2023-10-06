@@ -60,25 +60,25 @@ void Selection::setCurrentRow(int sfRow)
     setCurrentIndex(dm->sf->index(sfRow, 0));
 }
 
-void Selection::setCurrentIndex(QModelIndex sfIdx)
+void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
 /*
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
     if (!sfIdx.isValid()) return;
 
-    if (G::isFlowLogger) G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()));
-//    if (isDebug || G::isLogger || G::isFlowLogger)
-//        qDebug() << "Selection::setCurrentIndex" << "row =" << sfIdx.row()
-//                 << "G::isLoadLinear =" << G::isLoadLinear
-//                    ;
+    if (G::isFlowLogger || isDebug)
+        G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()) +
+               " clearSelection = " + QVariant(clearSelection).toString());
 
     updateCurrentIndex(sfIdx);
 
-    sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    if (clearSelection) {
+        sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    }
 
     bool isFileSelectionChange = true;
-//    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
+
     if (G::isLoadLinear) emit fileSelectionChange(sfIdx);
     else emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
 }
@@ -111,7 +111,7 @@ void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
-    /*
+//    /*
     bool isNoModifier = modifiers & Qt::NoModifier;
     bool isControlModifier = modifiers & Qt::ControlModifier;
     bool isShiftModifier = modifiers & Qt::ShiftModifier;
@@ -119,6 +119,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
     bool isMetaModifier = modifiers & Qt::MetaModifier;
     bool isKeypadModifier = modifiers & Qt::KeypadModifier;
     Qt::KeyboardModifiers m_modifiers = modifiers ^ Qt::KeypadModifier;
+    /*
     qDebug() << "Selection::select" << "sfIdx =" << sfIdx << modifiers
              << "isNoModifier =" << isNoModifier
              << "isControlModifier =" << isControlModifier
@@ -146,7 +147,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         return;
     }
-    //qDebug() << "Selection::select  Fall through";
+    //qDebug() << "Selection::select  Fall through  sfIdx =" << sfIdx;
     sm->clear();
     setCurrentIndex(sfIdx);
 }
@@ -358,16 +359,15 @@ QModelIndex Selection::nearestSelectedIndex(int sfRow)
 void Selection::invert()
 {
     if (G::isLogger || isDebug) G::log("Selection::invert");
-    QItemSelection toggleSelection;
+
+    QItemSelection all;
     QModelIndex firstIndex = dm->sf->index(0, 0);
-    QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, 0);
-    toggleSelection.select(firstIndex, lastIndex);
-    sm->select(toggleSelection, QItemSelectionModel::Toggle);
+    QModelIndex lastIndex = dm->sf->index(dm->sf->rowCount() - 1, G::TotalColumns - 1);
+    all.select(firstIndex, lastIndex);
+    sm->select(all, QItemSelectionModel::Toggle);
     QModelIndex idx = nearestSelectedIndex(dm->currentSfRow);
-    // MW::fileSelectionChange (updates DataModel current indexes, rows)
-    // qDebug() << "Selection::invert" << idx.isValid() << dm->currentSfIdx;
-    if (idx.isValid()) emit fileSelectionChange(idx);
-    if (sm->selectedRows().isEmpty()) select(dm->currentSfIdx);
+    bool clearSelection = false;
+    setCurrentIndex(idx, clearSelection);
 }
 
 bool Selection::isSelected(int sfRow)

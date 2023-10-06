@@ -18,7 +18,7 @@ public:
     void select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(QModelIndex sfIdx, QModelIndex sfIdx2);
     void updateCurrentIndex(QModelIndex sfIdx);
-    void setCurrentIndex(QModelIndex sfIdx);
+    void setCurrentIndex(QModelIndex sfIdx, bool clearSelection = true);
     void setCurrentRow(int sfRow);
     void setCurrentPath(QString &fPath);
     void toggleSelect(QModelIndex sfIdx);
@@ -33,6 +33,7 @@ public:
     int count();
     void save();
     void recover();
+    //void report();
 
     QModelIndexList selectedRows;
     QItemSelectionModel *sm;

@@ -38,7 +38,7 @@ public:
     QLinearGradient targetColorGradient;
 
 public slots:
-    void resetMetadataProgress();
+    void resetMetadataProgress(QColor bgColor);
     void updateMetadataCacheProgress(int item, int items);
 
 private:

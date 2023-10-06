@@ -48,6 +48,7 @@ public:
     QColor disabledColor; // = QColor(G::backgroundShade+20,G::backgroundShade+20,G::backgroundShade+20);
     QColor borderColor;
     QColor widgetBackgroundColor;
+    QColor progressBarBackgroundColor;
 
     QColor scrollBarHandleBackgroundColor;
     QColor selectionColor;

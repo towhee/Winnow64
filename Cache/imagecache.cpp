@@ -1411,7 +1411,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
     if (G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
-    //if (debugCaching)
+    if (debugCaching)
     {
         qDebug() << "ImageCache::rebuildImageCacheParameters";
     }

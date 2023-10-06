@@ -40,6 +40,7 @@ QString WidgetCSS::css()
     scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
+    progressBarBackgroundColor = QColor(d10,d10,d10);
 
     // heights (mostly used for rows in TreeView etc)
     h12 = QString::number(fontSize * 1.2 * G::ptToPx);
