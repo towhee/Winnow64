@@ -212,7 +212,6 @@ bool ImageView::loadImage(QString fPath, QString src)
     int dmRow = dm->rowFromPath(fPath);
     if (dmRow == -1) return false;
     int sfRow = dm->proxyRowFromModelRow(dmRow);
-    //int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1) return false;
     bool isCached = false;
     if (icd->cacheItemList.size() >= sfRow) {

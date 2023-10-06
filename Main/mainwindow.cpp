@@ -593,7 +593,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
 
-    G::isInitializing = false;
+//    G::isInitializing = false;
 
     if (isStartupArgs) {
         handleStartupArgs(args);
@@ -683,7 +683,14 @@ void MW::showEvent(QShowEvent *event)
 
 */
     if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::showEvent";
+
+    // exit if already initialized (ie when moving window)
+    if (!G::isInitializing) {
+        QMainWindow::showEvent(event);
+        return;
+    }
+
+    // Finish initializing
 
     // restore prior geometry and state
     if (isSettings) {
@@ -711,6 +718,8 @@ void MW::showEvent(QShowEvent *event)
 
     QMainWindow::showEvent(event);
     fsTree->setRootIndex(fsTree->model()->index(0,0));
+
+    G::isInitializing = false;
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -772,10 +781,14 @@ void MW::moveEvent(QMoveEvent *event)
 */
     if (G::isLogger)
         qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
+//    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+//    show();
     QMainWindow::moveEvent(event);
     setDisplayResolution();
     updateDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
+//    setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
+//    show();
 }
 
 void MW::resizeEvent(QResizeEvent *event)
@@ -791,6 +804,12 @@ void MW::resizeEvent(QResizeEvent *event)
         cacheBarProgressWidth = availSpace;
     updateProgressBarWidth();
 }
+
+//void MW::mousePressEvent(QMouseEvent *event)
+//{
+//    QMainWindow::mousePressEvent(event);
+//    qDebug() << "MW::mousePressEvent" << event;
+//}
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
@@ -930,7 +949,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
             && event->type() != QEvent::Timer
-            && event->type() != QEvent::MouseMove
+            //&& event->type() != QEvent::MouseMove
             && event->type() != QEvent::HoverMove
             )
     {
@@ -1015,7 +1034,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     ;
                 if (G::isFlowLogger) G::log("skipline");
                 if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
-                if (e->key() == Qt::Key_Return) loupeDisplay();
+                //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
                 if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
                 if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
                 if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
@@ -1026,6 +1045,28 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
             }
         }
+    } // end section
+
+    /* KEEP WINDOW ON TOP WHEN DRAGGING TO ANOTHER SCREEN
+       Window is underneath apps on another screen on MacOS (sometimes)
+    */
+    {
+//    if (obj->objectName() == "MW") {
+//        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
+//            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+//            if (e->button() == Qt::LeftButton) {
+//                setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+//                show();
+//            }
+//        }
+//        if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
+//            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+//            if (e->button() == Qt::LeftButton) {
+//                setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
+//                show();
+//            }
+//        }
+//    }
     } // end section
 
     /* EMBEL DOCK TITLE
@@ -2134,7 +2175,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
         }
         else {
-            qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+            if (!imageView->isFirstImageNewFolder && G::isWarningLogger)
+                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
         }
     }
 
@@ -2645,7 +2687,7 @@ void MW::loadConcurrentNewFolder()
 
     // reset metadata progress
     if (G::showProgress == G::ShowProgress::MetaCache) {
-        cacheProgressBar->resetMetadataProgress();
+        cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
         isShowCacheProgressBar = true;
         progressLabel->setVisible(true);
     }

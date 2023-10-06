@@ -366,7 +366,6 @@ void IconView::setThumbParameters()
     possibly altered thumbnail dimensions.
 */
     if (isDebug) G::log("IconView::setThumbParameters", objectName());
-    if (G::isInitializing) return;
         /*
         qDebug() << "IconView::setThumbParameters" << objectName()
                  << "iconWidth =" << iconWidth
@@ -739,8 +738,6 @@ void IconView::setThumbSize()
 /*
 
 */
-    if (G::isInitializing) return;
-
     if (isDebug)
         qDebug() << "IconView::setThumbSize" << objectName();
     QString src = "IconView::setThumbSize";
@@ -763,7 +760,6 @@ void IconView::setThumbSize()
              << "scrollToIndex.row() =" << scrollToIndex.row()
                 ;
                 //*/
-//    G::ignoreScrollSignal = true;
     scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
 }
 
@@ -1057,7 +1053,10 @@ void IconView::thumbsFitTopOrBottom(QString src)
                 //*/
 
     // do nothing if exceed limits
-    if (exceedsLimits) return;
+    if (exceedsLimits) {
+        qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits";
+        return;
+    }
 
     // newViewportHt is okay, set icon size
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
@@ -1284,7 +1283,11 @@ void IconView::paintEvent(QPaintEvent *event)
 }
 
 void IconView::keyPressEvent(QKeyEvent *event){
-    // prevent QListView default key actions
+    // navigation keys are executed in MW::eventFilter to make sure they work no matter
+    // what has the focus
+    if (objectName() == "Grid") {
+        if (event->key() == Qt::Key_Return) m2->loupeDisplay();
+    }
 }
 
 void IconView::mousePressEvent(QMouseEvent *event)

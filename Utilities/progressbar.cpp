@@ -44,11 +44,11 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
     targetColorGradient = getGradient(progressTargetColor);
 }
 
-void ProgressBar::resetMetadataProgress()
+void ProgressBar::resetMetadataProgress(QColor bgColor)
 {
     QPainter pnt(m1->progressPixmap);
-    QRect mdRect(0, htOffset-1, m1->cacheBarProgressWidth, htOffset-1);
-    pnt.fillRect(mdRect, G::backgroundColor);
+    QRect mdRect(0, htOffset, m1->cacheBarProgressWidth, htOffset);
+    pnt.fillRect(mdRect, bgColor);
 }
 
 void ProgressBar::clearImageCacheProgress()

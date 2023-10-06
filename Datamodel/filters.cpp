@@ -1179,7 +1179,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     signal and updates the datamodel searchColumn match to true or false for each row. The
     filteredItemCount is updated.
 */
-//    if (G::isLogger) G::log("Filters::dataChanged");
+    //if (G::isLogger) G::log("Filters::dataChanged");
 
     // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {

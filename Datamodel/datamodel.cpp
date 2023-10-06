@@ -1458,7 +1458,7 @@ void DataModel::setCurrent(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
         if (G::isWarningLogger)
-        qWarning() << "WARNING" << "DataModel::setValuePath" << "Instance conflict = "
+        qWarning() << "WARNING" << "DataModel::setCurrent" << "Instance conflict = "
                    << "DM instance =" << this->instance
                    << "Src instance =" << instance
             ;
@@ -1473,6 +1473,16 @@ void DataModel::setCurrent(QModelIndex sfIdx, int instance)
     currentDmRow = currentDmIdx.row();
     currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
     mutex.unlock();
+    if (isDebug)
+    {
+        qDebug() << "DataModel::setCurrent"
+                 << "currentSfIdx =" << currentSfIdx
+                 << "currentSfRow =" << currentSfRow
+                 << "currentDmIdx =" << currentDmIdx
+                 << "currentDmRow =" << currentDmRow
+                 << "currentFilePath =" << currentFilePath
+            ;
+    }
 }
 
 void DataModel::setValuePath(QString fPath, int col, QVariant value, int instance, int role)
@@ -2520,7 +2530,6 @@ void SortFilter::filterChange()
     filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     if (G::isLogger) G::log("SortFilter::filterChange");
-    //qDebug() << "SortFilter::filterChange";
     invalidateFilter();
 
     // force wait until finished to prevent sorting/editing datamodel
@@ -2532,6 +2541,7 @@ void SortFilter::filterChange()
         ms += 10;
         if (ms > waitMs) timeIsUp = true;
     }
+    //qDebug() << "SortFilter::filterChange" << ms;
 }
 
 void SortFilter::suspend(bool suspendFiltering)

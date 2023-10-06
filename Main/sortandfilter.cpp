@@ -69,7 +69,7 @@ void MW::filterChange(QString source)
     parameters are recalculated and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    // qDebug() << "MW::filterChange" << "called from:" << source;
+    //qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -883,18 +883,6 @@ void MW::updateColorClassLog(QString fPath, QString label)
     settings->endGroup();
 }
 
-void MW::searchTextEdit2()
-{
-    if (G::isLogger) G::log("MW::searchTextEdit2");
-     // Goto item and edit
-    filters->scrollToItem(filters->search);
-    filters->expandItem(filters->search);
-    filters->editItem(filters->searchTrue, 0);
-//    filters->update();
-    buildFilters->update();
-    return;
-}
-
 void MW::searchTextEdit()
 {
     if (G::isLogger) G::log("MW::searchTextEdit");
@@ -902,7 +890,6 @@ void MW::searchTextEdit()
     if (!filters->filtersBuilt) {
         filterDock->setVisible(true);       // triggers launchBuildFilters()
         filterDock->raise();
-        qDebug() << "MW::searchTextEdit buildFilters->build(BuildFilters::Reset, 'SearchTextEdit')";
         filterDockVisibleAction->setChecked(true);
         buildFilters->build(BuildFilters::Search);
     }
@@ -920,6 +907,17 @@ void MW::searchTextEdit()
 
     // edit search text after this function returns
     QTimer::singleShot(100, this, SLOT(searchTextEdit2()));
+    return;
+}
+
+void MW::searchTextEdit2()
+{
+    if (G::isLogger) G::log("MW::searchTextEdit2");
+    // Goto item and edit
+    filters->scrollToItem(filters->search);
+    filters->expandItem(filters->search);
+    filters->editItem(filters->searchTrue, 0);
+    //buildFilters->update();
     return;
 }
 

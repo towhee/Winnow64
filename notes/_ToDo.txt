@@ -87,6 +87,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Search filter not showing first item selected
+- Initial thumbView icon size (remove if (G::isInitializing) return;)
+- Invert selection
+- Window on bottom when drag to another screen in MacOS
 - Video thumbnail wrong
 - Unfilter can crash
 - Reset image count in bookmarks when eject bookmarked drive

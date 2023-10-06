@@ -161,9 +161,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    progressLabel->setVisible(false);
-//    bool test = G::showProgress == G::ShowProgress::MetaCache;
-//    qDebug() << G::showProgress << test;
+    //sel->setCurrentIndex(dm->currentSfIdx);
+
+    sel->sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 /*

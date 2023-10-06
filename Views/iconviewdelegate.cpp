@@ -157,11 +157,13 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     /*
     qDebug() << "IconViewDelegate::setThumbDimensions"
              << "row =" << currentRow
+             << "thumbWidth =" << thumbWidth
+             << "thumbHeight =" << thumbHeight
              << "labelFontSize =" << labelFontSize
                 ;
              //*/
     delegateShowThumbLabels = showThumbLabels;
-//    fPad = thumbPadding;
+    //fPad = thumbPadding;
     font = QApplication::font();
     if (labelFontSize < 6) labelFontSize = 6;
     font.setPixelSize(labelFontSize);
@@ -392,7 +394,6 @@ void IconViewDelegate::paint(QPainter *painter,
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
-
     // Cell structure (see IconViewDelegate Anatomy at top of file).
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);

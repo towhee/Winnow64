@@ -268,7 +268,9 @@ void TableView::paintEvent(QPaintEvent *event)
 }
 
 void TableView::keyPressEvent(QKeyEvent *event){
-    //    prevent QTableView default key actions
+    // navigation keys are executed in MW::eventFilter to make sure they work no matter
+    // what has the focus
+    if (event->key() == Qt::Key_Return) emit displayLoupe();
 }
 
 void TableView::mousePressEvent(QMouseEvent *event)
