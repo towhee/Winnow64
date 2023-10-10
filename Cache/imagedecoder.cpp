@@ -156,7 +156,7 @@ bool ImageDecoder::load()
     }
 
     // JPG format (including embedded in raw files)
-    if (metadata->hasJpg.contains(ext) || ext == "jpg") {
+    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();

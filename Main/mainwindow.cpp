@@ -1028,21 +1028,31 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             if (obj->objectName() == "MWWindow") {
                 QKeyEvent *e = static_cast<QKeyEvent *>(event);
-                if (G::isLogger || G::isFlowLogger)
-                    qDebug() << "MW::eventFilter" << e->type() << e << e->modifiers()
+                //if (G::isLogger || G::isFlowLogger)
+                    qDebug() << "MW::eventFilter" << e->type() << e
+                             << "key =" << e->key()
+                             << "modifier =" << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
                     ;
                 if (G::isFlowLogger) G::log("skipline");
                 if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
-                //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
-                if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
-                if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
-                if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
-                if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
-                if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
-                if (e->key() == Qt::Key_End) sel->last(e->modifiers());
-                if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
-                if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
+
+                // ignore if modifier pressed
+                Qt::KeyboardModifiers k = e->modifiers();
+                bool isModifier = k & Qt::AltModifier /*|| k & Qt::ControlModifier || k & Qt::ShiftModifier*/;
+                qDebug() << "MW::eventFilter isModifier =" << isModifier;
+
+                if (!isModifier) {
+                    //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
+                    if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
+                    if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
+                    if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
+                    if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
+                    if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
+                    if (e->key() == Qt::Key_End) sel->last(e->modifiers());
+                    if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
+                    if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
+                }
             }
         }
     } // end section
@@ -5471,6 +5481,7 @@ void MW::deleteFiles(QStringList paths)
 
     // refresh image count in folders and bookmarks: fsTree is signalled by the OS,
     // updates count and then signals bookmarks to recount all bookmarks
+    fsTree->refreshModel();
     bookmarks->count();
 
     // if all images in folder were deleted
@@ -5816,13 +5827,15 @@ void MW::generateMeanStack()
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     QString fPath = meanStack->mean();
     if (fPath != "") {
-        dm->insert(fPath);
+        int dmRow = dm->insert(fPath);
         int sfRow = dm->rowFromPath(fPath);
+        qDebug() << "MW::generateMeanStack" << sfRow << dmRow << fPath;
         metadataCacheThread->loadIcon(sfRow);
         imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
-//        QModelIndex idx = dm->proxyIndexFromPath(fPath);
-//        fileSelectionChange(idx, idx, true, "MW::generateMeanStack");
         sel->setCurrentPath(fPath);
+        // update FSTree image count
+        fsTree->refreshModel();
+        bookmarks->count();
     }
 }
 
