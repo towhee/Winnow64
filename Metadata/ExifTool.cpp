@@ -137,7 +137,7 @@ void ExifTool::addThumb(QString src, QString dst)
     args.append(dst.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
-    process.waitForBytesWritten(1000);
+    process.waitForBytesWritten(30000);
 }
 
 int ExifTool::copyAll(QString src, QString dst)

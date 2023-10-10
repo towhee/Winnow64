@@ -306,7 +306,7 @@ bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
     return s1 < s2;
 }
 
-void DataModel::insert(QString fPath)
+int DataModel::insert(QString fPath)
 {
 /*
     Insert a new image into the data model.  Use when a new image is created by embel export
@@ -318,23 +318,25 @@ void DataModel::insert(QString fPath)
     QFileInfo insertFile(fPath);
 
     // find row greater than insert file absolute path
-    int row;
-    for (row = 0; row < rowCount(); ++row) {
-        QString rowPath = index(row, 0).data(G::PathRole).toString();
+    int dmRow;
+    for (dmRow = 0; dmRow < rowCount(); ++dmRow) {
+        QString rowPath = index(dmRow, 0).data(G::PathRole).toString();
         QFileInfo currentFile(rowPath);
         if (lessThan(insertFile, currentFile)) break;
     }
 
     // insert new row
-    insertRow(row);
-    fileInfoList.insert(row, insertFile);
+    insertRow(dmRow);
+    fileInfoList.insert(dmRow, insertFile);
 
     // add the file data
-    addFileDataForRow(row, insertFile);
+    addFileDataForRow(dmRow, insertFile);
     // read and add metadata
-    readMetadataForItem(row, instance);
+    readMetadataForItem(dmRow, instance);
     // update fPathRow hash
     refreshRowFromPathHash();
+
+    return dmRow;
 }
 
 void DataModel::remove(QString fPath)

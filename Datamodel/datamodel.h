@@ -58,7 +58,7 @@ public:
     bool isPick();
     void clearPicks();
     void remove(QString fPath);
-    void insert(QString fPath);
+    int insert(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);

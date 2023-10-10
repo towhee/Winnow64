@@ -31,11 +31,13 @@ QString Stack::mean()
     if (G::isLogger) G::log("Stack::mean");
     abort = false;
     G::isRunningStackOperation = true;
-    QString dst = "";
 
     int row = dm->rowFromPath(selection.at(0));
     int w = dm->index(row, G::WidthColumn).data().toInt();
     int h = dm->index(row, G::HeightColumn).data().toInt();
+
+    // check all images in selection have the same dimensions
+
 
     // total selection with same width or height
     int n = 0;
@@ -45,7 +47,10 @@ QString Stack::mean()
         int thisH = dm->index(row, G::HeightColumn).data().toInt();
         if (thisW == w && thisH == h) n++;
     }
-    if (n < 2) return dst;
+    if (n < 2) {
+        G::popUp->showPopup("Select more than 1 image to execute a mean stack.", 2000);
+        return "";
+    }
 
     QImage image;
     Pixmap *pix = new Pixmap(this, dm, metadata);
@@ -88,8 +93,18 @@ QString Stack::mean()
             h = image.height();
         }
         else {
-            if (image.width() != w) continue;
-            if (image.height() != h) continue;
+            if ((image.width() != w) || (image.height() != h)) {
+                QString txt = "All images in selection must have the same dimensions.<br>"
+                              "Image " + fPath + "<br>"
+                              "has diffent dimensions."
+                              "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
+                              ;
+                G::popUp->setProgressVisible(false);
+                G::popUp->end();
+                 G::popUp->showPopup(txt, 0, true, 1);
+                return "";
+            }
+            //if ((image.height() != h)) continue;
         }
         // load image to vector s
         for (int y = 0; y < h; ++y) {
@@ -119,6 +134,7 @@ QString Stack::mean()
         qApp->processEvents();
     }
 
+    QString newFilePath;
     if (!abort) {
         // transfer mean vector to source vector
         for (int y = 0; y < h; ++y) {
@@ -141,7 +157,7 @@ QString Stack::mean()
         QFileInfo info(selection.at(0));
         QString base = info.dir().absolutePath() + "/" + info.baseName() + "_MeanStack" +
                        QString::number(n);
-        QString newFilePath = base + ".jpg";
+        newFilePath = base + ".jpg";
         int count = 0;
         bool fileAlreadyExists = true;
         QString newBase = base + "_";
@@ -157,7 +173,7 @@ QString Stack::mean()
 
         // copy metadata from first image to the new stacked image
         QString src = selection.at(0);
-        dst = newFilePath;
+        QString dst = newFilePath;
         ExifTool et;
         et.setOverWrite(true);
         // copy all metadata tags from src to dst
@@ -174,5 +190,5 @@ QString Stack::mean()
     }
 
     delete pix;
-    return dst;
+    return newFilePath;
 }

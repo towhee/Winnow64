@@ -622,25 +622,25 @@ void MW::createGoActions()
     //    addAction(keyEndAction);
     //    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
-    keyScrollLeftAction = new QAction(tr("Scroll  Left"), this);
+    keyScrollLeftAction = new QAction(tr("Scroll Left"), this);
     keyScrollLeftAction->setObjectName("scrollLeft");
     keyScrollLeftAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollLeftAction);
     connect(keyScrollLeftAction, &QAction::triggered, this, &MW::keyScrollUp);
 
-    keyScrollRightAction = new QAction(tr("Scroll  Right"), this);
+    keyScrollRightAction = new QAction(tr("Scroll Right"), this);
     keyScrollRightAction->setObjectName("scrollRight");
     keyScrollRightAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollRightAction);
     connect(keyScrollRightAction, &QAction::triggered, this, &MW::keyScrollDown);
 
-    keyScrollUpAction = new QAction(tr("Scroll  up"), this);
+    keyScrollUpAction = new QAction(tr("Scroll Up"), this);
     keyScrollUpAction->setObjectName("scrollUp");
     keyScrollUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollUpAction);
     connect(keyScrollUpAction, &QAction::triggered, this, &MW::keyScrollUp);
 
-    keyScrollDownAction = new QAction(tr("Scroll  Down"), this);
+    keyScrollDownAction = new QAction(tr("Scroll Down"), this);
     keyScrollDownAction->setObjectName("scrollDown");
     keyScrollDownAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollDownAction);
@@ -683,14 +683,12 @@ void MW::createGoActions()
     nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
     connect(nextPickAction, &QAction::triggered, this->sel, [this](){ this->sel->nextPick(Qt::NoModifier); });
-    //    connect(nextPickAction, &QAction::triggered, sel, &Selection::nextPick);
-    //    connect(nextPickAction, &QAction::triggered, thumbView, &IconView::selectNextPick);
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
     prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
-    connect(nextPickAction, &QAction::triggered, this->sel, [this](){ this->sel->prevPick(Qt::NoModifier); });
+    connect(prevPickAction, &QAction::triggered, this->sel, [this](){ this->sel->prevPick(Qt::NoModifier); });
 }
 
 void MW::createFilterActions()
@@ -2009,6 +2007,10 @@ void MW::createThumbViewContextMenu()
     separatorAction6->setSeparator(true);
     QAction *separatorAction7 = new QAction(this);
     separatorAction7->setSeparator(true);
+    QAction *separatorAction8 = new QAction(this);
+    separatorAction8->setSeparator(true);
+    QAction *separatorAction9 = new QAction(this);
+    separatorAction9->setSeparator(true);
 
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
     openWithGroupAct->setMenu(openWithMenu);
@@ -2020,11 +2022,11 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
     thumbViewActions->append(pickUnlessRejectedAction);
-    thumbViewActions->append(separatorAction6);
+    thumbViewActions->append(separatorAction8);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
-    thumbViewActions->append(separatorAction7);
+    thumbViewActions->append(separatorAction9);
     thumbViewActions->append(ratingBadgeVisibleAction);
     thumbViewActions->append(iconNumberVisibleAction);
     thumbViewActions->append(separatorAction);
@@ -2315,10 +2317,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
 //        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
 
-        keyScrollLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
-        keyScrollRightAction->setShortcut(QKeySequence("Ctrl+Right"));
-        keyScrollUpAction->setShortcut(QKeySequence("Ctrl+Up"));
-        keyScrollDownAction->setShortcut(QKeySequence("Ctrl+Down"));
+        keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
+        keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));
+        keyScrollUpAction->setShortcut(QKeySequence("Alt+Up"));
+        keyScrollDownAction->setShortcut(QKeySequence("Alt+Down"));
 
         keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
         keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));

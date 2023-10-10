@@ -161,9 +161,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    //sel->setCurrentIndex(dm->currentSfIdx);
-
-    sel->sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    fsTree->refreshModel();
 }
 
 /*

@@ -548,7 +548,7 @@
           <string>Scroll Left</string>
          </property>
          <property name="text">
-          <string>Cmd/Ctrl + Left</string>
+          <string>Opt/Alt + Left</string>
          </property>
         </item>
         <item>
@@ -556,7 +556,7 @@
           <string>Scroll Right</string>
          </property>
          <property name="text">
-          <string>Cmd/Ctrl + Right</string>
+          <string>Opt/Alt + Right</string>
          </property>
         </item>
         <item>
@@ -564,7 +564,7 @@
           <string>Scroll Up</string>
          </property>
          <property name="text">
-          <string>Cmd/Ctrl + Up</string>
+          <string>Opt/Alt + Up</string>
          </property>
         </item>
         <item>
@@ -572,7 +572,7 @@
           <string>Scroll Down</string>
          </property>
          <property name="text">
-          <string>Cmd/Ctrl + Down</string>
+          <string>Opt/Alt + Down</string>
          </property>
         </item>
         <item>
@@ -613,7 +613,7 @@
          <string>Previous Pick</string>
         </property>
         <property name="text">
-         <string>Cmd/Ctrl  Left</string>
+         <string>Cmd/Ctrl + Opt/Alt + Shift + Left</string>
         </property>
        </item>
        <item>
@@ -621,7 +621,7 @@
          <string>Next Pick</string>
         </property>
         <property name="text">
-         <string>Cmd/Ctrl  Right</string>
+         <string>Cmd/Ctrl + Opt/Alt + Shift + Right</string>
         </property>
        </item>
        <item>

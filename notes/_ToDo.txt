@@ -87,6 +87,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix next pick
+- Opt+Left/Right
+- Go, scroll left/right not scrolling one image left/right
+- Mean stack insert into datamodel not always working
 - Search filter not showing first item selected
 - Initial thumbView icon size (remove if (G::isInitializing) return;)
 - Invert selection
