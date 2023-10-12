@@ -114,7 +114,7 @@ void MW::writeSettings()
 
     settings->setValue("wasThumbDockVisible", wasThumbDockVisible);
 
-    settings->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
+    //settings->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
     settings->setValue("isStatusBarVisible", statusBarVisibleAction->isChecked());
     settings->setValue("isFolderDockVisible", folderDockVisibleAction->isChecked());
     settings->setValue("isFavDockVisible", favDockVisibleAction->isChecked());

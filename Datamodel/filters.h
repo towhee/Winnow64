@@ -100,7 +100,7 @@ public slots:
     void collapseAllFilters();
     void collapseAllFiltersExceptSearch();
     void toggleExpansion();
-    void setPicksState();
+    void setPicksState(bool isChecked);
     void setRatingState(QString rating, bool isChecked);
     void setLabelState(QString label, bool isChecked);  // color class red, yellow...
     bool isRatingChecked(QString rating);

@@ -100,7 +100,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
     restoreState(w.state);
-    menuBarVisibleAction->setChecked(w.isMenuBarVisible);
+    //menuBarVisibleAction->setChecked(w.isMenuBarVisible);
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
@@ -151,7 +151,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
-    wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
+    //wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
     wsd.isFavDockVisible = favDockVisibleAction->isChecked();
@@ -366,7 +366,7 @@ void MW::reportWorkspace(int n)
              << "\nState" << ws.state
              << "\nisFullScreen" << ws.isFullScreen
              << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
-             << "\nisMenuBarVisible" << ws.isMenuBarVisible
+             //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
              << "\nisStatusBarVisible" << ws.isStatusBarVisible
              << "\nisFolderDockVisible" << ws.isFolderDockVisible
              << "\nisFavDockVisible" << ws.isFavDockVisible
@@ -414,7 +414,7 @@ void MW::loadWorkspaces()
         ws.state = settings->value("state").toByteArray();
         ws.isFullScreen = settings->value("isFullScreen").toBool();
         ws.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
-        ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
+        //ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
         ws.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
         ws.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
         ws.isFavDockVisible = settings->value("isFavDockVisible").toBool();
@@ -464,7 +464,7 @@ void MW::saveWorkspaces()
         settings->setValue("state", ws.state);
         settings->setValue("isFullScreen", ws.isFullScreen);
         settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
-        settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
+        //settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
         settings->setValue("isStatusBarVisible", ws.isStatusBarVisible);
         settings->setValue("isFolderDockVisible", ws.isFolderDockVisible);
         settings->setValue("isFavDockVisible", ws.isFavDockVisible);

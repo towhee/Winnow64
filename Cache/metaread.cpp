@@ -385,7 +385,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     bool thumbLoaded = false;
     thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
     if (abort) return;
-    if (isDebug)
+    //if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "loaded row =" << sfIdx.row()
@@ -394,7 +394,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
     if (isVideo) {
         rowsWithIcon.append(dmRow);
-        return;
+        if (G::renderVideoThumb) return;
     }
 
     QPixmap pm;

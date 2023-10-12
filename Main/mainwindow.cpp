@@ -751,6 +751,10 @@ void MW::closeEvent(QCloseEvent *event)
     clearPickLog();
     clearRatingLog();
     clearColorClassLog();
+
+    // close slide show
+    if (G::isSlideShow) slideShow();
+
     // crash log
     settings->setValue("hasCrashed", false);
     if (G::popUp != nullptr) G::popUp->close();
@@ -1028,19 +1032,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             if (obj->objectName() == "MWWindow") {
                 QKeyEvent *e = static_cast<QKeyEvent *>(event);
-                //if (G::isLogger || G::isFlowLogger)
+                if (G::isLogger || G::isFlowLogger) {
                     qDebug() << "MW::eventFilter" << e->type() << e
                              << "key =" << e->key()
                              << "modifier =" << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
-                    ;
+                        ;}
                 if (G::isFlowLogger) G::log("skipline");
                 if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
 
                 // ignore if modifier pressed
                 Qt::KeyboardModifiers k = e->modifiers();
-                bool isModifier = k & Qt::AltModifier /*|| k & Qt::ControlModifier || k & Qt::ShiftModifier*/;
-                qDebug() << "MW::eventFilter isModifier =" << isModifier;
+                bool isModifier = k & Qt::AltModifier;
+                //qDebug() << "MW::eventFilter isModifier =" << isModifier;
 
                 if (!isModifier) {
                     //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
@@ -1061,7 +1065,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        Window is underneath apps on another screen on MacOS (sometimes)
     */
     {
-//    if (obj->objectName() == "MW") {
+    if (obj->objectName() == "MW") {
 //        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
 //            QMouseEvent *e = static_cast<QMouseEvent *>(event);
 //            if (e->button() == Qt::LeftButton) {
@@ -1076,7 +1080,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //                show();
 //            }
 //        }
-//    }
+    }
     } // end section
 
     /* EMBEL DOCK TITLE
@@ -4231,8 +4235,8 @@ void MW::toggleFullScreen()
         embelDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
-        menuBarVisibleAction->setChecked(false);
-        setMenuBarVisibility();
+        //menuBarVisibleAction->setChecked(false);
+        //setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }

@@ -381,7 +381,9 @@ void MW::createEditActions()
     filterPickAction->setCheckable(true);
     filterPickAction->setChecked(false);
     addAction(filterPickAction);
-    connect(filterPickAction, &QAction::triggered, filters, &Filters::setPicksState);
+    // lamda example
+    connect(filterPickAction, &QAction::triggered, filters,
+            [this](){filters->setPicksState(filterPickAction->isChecked());});
 
     popPickHistoryAction = new QAction(tr("Recover prior pick state"), this);
     popPickHistoryAction->setObjectName("togglePick");
@@ -682,13 +684,13 @@ void MW::createGoActions()
     nextPickAction->setObjectName("nextPick");
     nextPickAction->setShortcutVisibleInContextMenu(true);
     addAction(nextPickAction);
-    connect(nextPickAction, &QAction::triggered, this->sel, [this](){ this->sel->nextPick(Qt::NoModifier); });
+    connect(nextPickAction, &QAction::triggered, sel, [this](){ sel->nextPick(Qt::NoModifier); });
 
     prevPickAction = new QAction(tr("Previous Pick"), this);
     prevPickAction->setObjectName("prevPick");
     prevPickAction->setShortcutVisibleInContextMenu(true);
     addAction(prevPickAction);
-    connect(prevPickAction, &QAction::triggered, this->sel, [this](){ this->sel->prevPick(Qt::NoModifier); });
+    connect(prevPickAction, &QAction::triggered, sel, [this](){ sel->prevPick(Qt::NoModifier); });
 }
 
 void MW::createFilterActions()
@@ -848,17 +850,17 @@ void MW::createSortActions()
     addAction(sortPickAction);
     connect(sortPickAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
-    sortLabelAction = new QAction(tr("Sort by label"), this);
-    sortLabelAction->setShortcutVisibleInContextMenu(true);
-    sortLabelAction->setCheckable(true);
-    addAction(sortLabelAction);
-    connect(sortLabelAction, &QAction::triggered, this, &MW::sortChangeFromAction);
-
     sortRatingAction = new QAction(tr("Sort by rating"), this);
     sortRatingAction->setShortcutVisibleInContextMenu(true);
     sortRatingAction->setCheckable(true);
     addAction(sortRatingAction);
     connect(sortRatingAction, &QAction::triggered, this, &MW::sortChangeFromAction);
+
+    sortLabelAction = new QAction(tr("Sort by color label"), this);
+    sortLabelAction->setShortcutVisibleInContextMenu(true);
+    sortLabelAction->setCheckable(true);
+    addAction(sortLabelAction);
+    connect(sortLabelAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
     sortMegaPixelsAction->setShortcutVisibleInContextMenu(true);
@@ -1191,6 +1193,7 @@ void MW::createViewActions()
 void MW::createWindowActions()
 {
     // Windows menu
+    /* menu bar
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
     menuBarVisibleAction->setObjectName("toggleMenuBar");
     menuBarVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -1199,6 +1202,7 @@ void MW::createWindowActions()
     else menuBarVisibleAction->setChecked(true);
     addAction(menuBarVisibleAction);
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
+    //*/
 
     statusBarVisibleAction = new QAction(tr("Statusbar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
@@ -1744,7 +1748,7 @@ void MW::createEmbellishMenu()
     //*/
     embelGroupAct = new QAction("Embellish", this);
     embelGroupAct->setMenu(embelMenu);
-    embelExportMenu = embelMenu->addMenu(tr("Export..."));
+    embelExportMenu = embelMenu->addMenu(tr("Export embellished images..."));
     embelExportMenu->addActions(embelExportGroupAction->actions());
     embelMenu->addSeparator();
     embelMenu->addAction(embelNewTemplateAction);
@@ -1821,8 +1825,10 @@ void MW::createHelpMenu()
     helpMenu = new QMenu(this);
     helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
+    #ifdef Q_OS_WIN
     helpMenu->addAction(checkForUpdateAction);
     helpMenu->addSeparator();
+    #endif
     helpMenu->addAction(aboutAction);
     //    helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
@@ -2152,10 +2158,11 @@ void MW::enableSelectionDependentMenus()
     sortMenu->setEnabled(enable);
 
 //    // Embellish menu
-//    embelExportMenu->setEnabled(enable);
-//    embelNewTemplateAction->setEnabled(enable);
-//    embelReadTemplateAction->setEnabled(enable);
-//    embelSaveTemplateAction->setEnabled(enable);
+    //embelExportMenu->setEnabled(enable);
+    embelExportMenu->setEnabled(enable);
+    embelNewTemplateAction->setEnabled(enable);
+    embelReadTemplateAction->setEnabled(enable);
+    embelSaveTemplateAction->setEnabled(enable);
 
     // View menu
     slideShowAction->setEnabled(enable);
@@ -2165,6 +2172,20 @@ void MW::enableSelectionDependentMenus()
     zoomToggleAction->setEnabled(enable);
     thumbsEnlargeAction->setEnabled(enable);
     thumbsShrinkAction->setEnabled(enable);
+
+    // Help menu
+    helpDiagnosticsMenu->setEnabled(enable);
+    diagnosticsAllAction->setEnabled(enable);
+    diagnosticsCurrentAction->setEnabled(enable);
+    diagnosticsMainAction->setEnabled(enable);
+    diagnosticsGridViewAction->setEnabled(enable);
+    diagnosticsThumbViewAction->setEnabled(enable);
+    diagnosticsImageViewAction->setEnabled(enable);
+    diagnosticsMetadataAction->setEnabled(enable);
+    diagnosticsDataModelAction->setEnabled(enable);
+    diagnosticsMetadataCacheAction->setEnabled(enable);
+    diagnosticsImageCacheAction->setEnabled(enable);
+    diagnosticsEmbellishAction->setEnabled(enable);
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)
@@ -2218,7 +2239,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
     //    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
-    actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
+    //actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
     actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
     //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
     //    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
@@ -2390,7 +2411,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterDockVisibleAction->setShortcut(QKeySequence("Shift+F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("Shift+F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("Shift+F7"));
-        menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
+        //menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("Shift+F10"));
 
         //        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));

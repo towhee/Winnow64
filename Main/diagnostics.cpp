@@ -53,7 +53,7 @@ void MW::reportWorkspaceState()
     qDebug() << G::t.restart()
              << "\t" << "\nisMaximized" << w.isFullScreen
              << "\nisWindowTitleBarVisible" << w.isWindowTitleBarVisible
-             << "\nisMenuBarVisible" << w.isMenuBarVisible
+             //<< "\nisMenuBarVisible" << w.isMenuBarVisible
              << "\nisStatusBarVisible" << w.isStatusBarVisible
              << "\nisFolderDockVisible" << w.isFolderDockVisible
              << "\nisFavDockVisible" << w.isFavDockVisible

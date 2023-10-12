@@ -261,12 +261,12 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     bool success = false;
 
-    // If video file then just show video icon unless G::renderVideoThumb
+    // if video file then just show video icon unless G::renderVideoThumb
     if (isVideo) {
         if (G::renderVideoThumb) {
             loadFromVideo(fPath, dmRow);
         }
-        bool success = true;
+        success = true;
     }
 
     // raw image file or tiff with embedded jpg
@@ -315,6 +315,10 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     /*if (metadata->rotateFormats.contains(ext)) */checkOrientation(fPath, image);
     QFile(fPath).setPermissions(oldPermissions);
 
+    qDebug() << "Thumb::loadThumb"
+             << "dmRow =" << dmRow
+             << "success =" << success
+        ;
     return success;
 }
 
