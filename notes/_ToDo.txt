@@ -87,6 +87,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Cancel menu bar shortcut still active
+- Quick sorts MW::sortChangeFromAction missing lens, creator
+- Quick filter picks was not toggling
 - Fix next pick
 - Opt+Left/Right
 - Go, scroll left/right not scrolling one image left/right

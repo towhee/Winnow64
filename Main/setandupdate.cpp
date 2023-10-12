@@ -362,7 +362,7 @@ void MW::toggleEmbelDockVisibility() {
 void MW::setMenuBarVisibility()
 {
     if (G::isLogger) G::log("MW::setMenuBarVisibility");
-    menuBar()->setVisible(menuBarVisibleAction->isChecked());
+    //menuBar()->setVisible(menuBarVisibleAction->isChecked());
 }
 
 void MW::setStatusBarVisibility()

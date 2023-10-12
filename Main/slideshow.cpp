@@ -81,7 +81,7 @@ void MW::nextSlide()
         else sel->next();
     }
 
-    QString msg = "  Slide # "+ QString::number(slideCount) +
+    QString msg = "  Slideshow count:"+ QString::number(slideCount) +
             "  (<font color=\"red\">press H for slideshow shortcuts</font>)";
     updateStatus(true, msg, "MW::nextSlide");
 
@@ -147,7 +147,7 @@ void MW::slideshowHelpMsg()
         "<tr><td><font color=\"red\"><b>  S       </b></font></td><td>Exit slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off</td></tr>"
         "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection</td></tr>"
-        "<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
+        //"<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
         "<tr><td><font color=\"red\"><b>Spacebar  </b></font></td><td>Pause/Continue slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>  H       </b></font></td><td>Show this popup message</td></tr>"
         "</table>"

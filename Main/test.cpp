@@ -161,6 +161,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << windowFlags();
+    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+    qDebug() << "windowFlags() | Qt::WindowStaysOnTopHint";
+    qDebug() << windowFlags();
+    setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
+    qDebug() << "windowFlags() & (~Qt::WindowStaysOnTopHint";
+    qDebug() << windowFlags();
+    return;
     fsTree->refreshModel();
 }
 

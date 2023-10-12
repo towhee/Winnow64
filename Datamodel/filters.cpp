@@ -318,18 +318,27 @@ void Filters::removeChildrenDynamicFilters()
     missingThumbs->takeChildren();
 }
 
-void Filters::setPicksState()
+void Filters::setPicksState(bool isChecked)
 {
 /*
-    Quick Menu Filter picks by setting 'Picked' true.
+    Quick Menu Filter toggles 'Picked' and 'Unpicked'.
+    isChecked is the menu item status.
 */
     if (G::isLogger) G::log("Filters::checkPicks");
     if (debugFilters)
-        qDebug() << "Filters::checkPicks"
+        qDebug() << "Filters::setPicksState" << isChecked
                     ;
-    checkItem(picks, "Picked", Qt::Checked);
-    checkItem(picks, "Unpicked", Qt::Unchecked);
-    checkItem(picks, "Rejected", Qt::Unchecked);
+
+    if (isChecked) {
+        checkItem(picks, "Picked", Qt::Checked);
+        checkItem(picks, "Unpicked", Qt::Unchecked);
+        checkItem(picks, "Rejected", Qt::Unchecked);
+    }
+    else {
+        checkItem(picks, "Picked", Qt::Unchecked);
+        checkItem(picks, "Unpicked", Qt::Unchecked);
+        checkItem(picks, "Rejected", Qt::Unchecked);
+    }
     emit filterChange("Filters::checkPicks");
 }
 

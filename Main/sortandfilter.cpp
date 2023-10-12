@@ -136,7 +136,7 @@ void MW::quickFilter()
     if (G::isLogger) G::log("MW::quickFilter");
 
     // make sure the filters have been built
-    qDebug() << "MW::quickFilter  filters->filtersBuilt =" << filters->filtersBuilt;
+    //qDebug() << "MW::quickFilter  filters->filtersBuilt =" << filters->filtersBuilt;
     if (filters->filtersBuilt) {
         quickFilterComplete();
     }
@@ -309,8 +309,10 @@ void MW::sortChangeFromAction()
     if (sortShutterSpeedAction->isChecked()) sortColumn = G::ShutterspeedColumn;
     if (sortISOAction->isChecked()) sortColumn = G::ISOColumn;
     if (sortModelAction->isChecked()) sortColumn = G::CameraModelColumn;
+    if (sortLensAction->isChecked()) sortColumn = G::LensColumn;
     if (sortFocalLengthAction->isChecked()) sortColumn = G::FocalLengthColumn;
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
+    if (sortCreatorAction->isChecked()) sortColumn = G::CreatorColumn;
     sortChange("Action");
 }
 

@@ -105,10 +105,8 @@ void MW::togglePick()
 
 */
     if (G::isLogger) G::log("MW::togglePick");
-    qDebug() << "MW::togglePick";
     QModelIndexList selection = dm->selectionModel->selectedRows();
     qint64 n = selection.count();
-    qDebug() << "MW::togglePick" << selection;
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
