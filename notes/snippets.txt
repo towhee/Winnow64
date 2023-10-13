@@ -1,3 +1,7 @@
+// Set and unset bit flags example
+setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
+
 // Qt version control
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     qDebug() << "CLASSFUNCTION" << progressLabel->pixmap()->width();

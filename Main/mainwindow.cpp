@@ -1063,23 +1063,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* KEEP WINDOW ON TOP WHEN DRAGGING TO ANOTHER SCREEN
        Window is underneath apps on another screen on MacOS (sometimes)
+
+       Set and unset bit flags example
+       setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+       setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
     */
     {
     if (obj->objectName() == "MW") {
-//        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
-//            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//            if (e->button() == Qt::LeftButton) {
-//                setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-//                show();
-//            }
-//        }
-//        if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
-//            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//            if (e->button() == Qt::LeftButton) {
-//                setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
-//                show();
-//            }
-//        }
+        // try using raise()
+        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                raise();
+            }
+        }
+        if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                raise();
+            }
+        }
     }
     } // end section
 
@@ -1643,9 +1646,6 @@ void MW::handleStartupArgs(const QString &args)
         this would be confusing for the user.  */
         show();
         raise();
-//        qApp->setActiveWindow(this);
-//        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-//        setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
 
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
@@ -5430,8 +5430,9 @@ void MW::deleteSelectedFiles()
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-        int ret = msgBox.exec();
+        msgBox.show();
         msgBox.move(centralWidget->geometry().center());
+        int ret = msgBox.exec();
         if (ret == QMessageBox::Cancel) return;
     }
 

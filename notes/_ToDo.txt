@@ -87,6 +87,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Set Winnow on top when remotely activated
 - G::renderVideoThumb = false was not working
 - Cancel menu bar shortcut still active
 - Quick sorts MW::sortChangeFromAction missing lens, creator
