@@ -1025,7 +1025,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* KEYPRESS INTERCEPT
+    /* KEYPRESS INTERCEPT (NAVIGATION)
 
     */
     {
@@ -1642,6 +1642,10 @@ void MW::handleStartupArgs(const QString &args)
         visible.  If there is a significant delay, when a lot of images have to be processed,
         this would be confusing for the user.  */
         show();
+        raise();
+//        qApp->setActiveWindow(this);
+//        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+//        setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
 
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
@@ -1670,9 +1674,9 @@ void MW::handleStartupArgs(const QString &args)
         /* Get earliest lastModified time (t) for incoming files, then choose all files in the
         folder that are Winnow supported formats and have been modified after (t). This allows
         unlimited files to be received, getting around the command argument buffer limited
-        size. */
+        size.
 
-        /* The earliest modified date for incoming files is a little bit tricky.  The incoming
+        The earliest modified date for incoming files is a little bit tricky.  The incoming
         files have been saved to the folder folderPath by the exporting program (ie lightroom).
         However, this folder might already have existing files.  If the command argument
         buffer has been exceeded then the argument list may not contain the earliest modified
@@ -1736,7 +1740,7 @@ void MW::handleStartupArgs(const QString &args)
         }
 
         setCentralMessage("Loading Embellished ...");
-        //QApplication::processEvents();
+        QApplication::processEvents();
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);

@@ -12,11 +12,11 @@ void MW::writeSettings()
 
     // general
     settings->setValue("lastPrefPage", lastPrefPage);
-//    setting->setValue("mouseClickScroll", mouseClickScroll);
+    //setting->setValue("mouseClickScroll", mouseClickScroll);
     settings->setValue("toggleZoomValue", imageView->toggleZoom);
     settings->setValue("limitFit100Pct", imageView->limitFit100Pct);
-//    setting->setValue("sortColumn", sortColumn);
-//    setting->setValue("sortReverse", sortReverseAction->isChecked());
+    //setting->setValue("sortColumn", sortColumn);
+    //setting->setValue("sortReverse", sortReverseAction->isChecked());
     settings->setValue("autoAdvance", autoAdvance);
     settings->setValue("turnOffEmbellish", turnOffEmbellish);
     settings->setValue("deleteWarning", deleteWarning);
@@ -25,7 +25,7 @@ void MW::writeSettings()
     settings->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
     settings->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
     settings->setValue("useSidecar", G::useSidecar);
-//    setting->setValue("embedTifThumb", G::embedTifJpgThumb);
+    //setting->setValue("embedTifThumb", G::embedTifJpgThumb);
     settings->setValue("renderVideoThumb", G::renderVideoThumb);
     settings->setValue("isLogger", G::isLogger);
     settings->setValue("isErrorLogger", G::isErrorLogger);

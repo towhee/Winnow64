@@ -349,12 +349,12 @@ void IconViewDelegate::paint(QPainter *painter,
     qDebug() << "IconViewDelegate::paint  "
              << "row =" << index.row()
              << "option.state =" << option.state
-//             << "option.state just enabled =" << enabled
-//             << "option.type =" << option.type
-//             << "option.features =" << option.features
-//             << "option.index =" << option.index
+             //<< "option.state just enabled =" << enabled
+             //<< "option.type =" << option.type
+             //<< "option.features =" << option.features
+             //<< "option.index =" << option.index
                 ;
-            //*/
+             //*/
 
     // make default border relative to background
     int l40 = G::backgroundShade + 40;
