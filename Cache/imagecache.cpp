@@ -509,7 +509,10 @@ bool ImageCache::nextToCache(int id)
     if (G::isFlowLogger) G::log("ImageCache::nextToCache", "Decoder = " + QString::number(id));
     if (debugCaching) qDebug() << "ImageCache::nextToCache";
     if (debugCaching || G::isLogger) G::log("ImageCache::nextToCache");
-    if (G::instanceClash(instance, "ImageCache::nextToCache")) {
+//    if (G::instanceClash(instance, "ImageCache::nextToCache")) {
+//        return false;
+//    }
+    if (instance != dm->instance) {
         return false;
     }
 
@@ -1900,7 +1903,10 @@ void ImageCache::fillCache(int id)
         // did caching start before cacheItemList was completed?
         if (!cacheItemListComplete()) updateTargets();
         decoder[id]->setReady();
-//        fixOrphans();
+        // check if new targets????
+
+        /*
+        //fixOrphans();
         if (debugCaching)
         {
             qDebug() << "ImageCache::fillCache  Might be finished"
@@ -1911,6 +1917,7 @@ void ImageCache::fillCache(int id)
             launchDecoders();
             return;
         }
+        */
 
         // okay, now we are really finished
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)

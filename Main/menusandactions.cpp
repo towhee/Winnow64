@@ -1815,9 +1815,9 @@ void MW::createWindowMenu()
     windowMenu->addSeparator();
 //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
-    windowMenu->addAction(menuBarVisibleAction);
+    //windowMenu->addAction(menuBarVisibleAction);
     #endif
-    windowMenu->addAction(statusBarVisibleAction);
+    windowMenu->addAction(statusBarVisibleAction);  // crash
 }
 
 void MW::createHelpMenu()
