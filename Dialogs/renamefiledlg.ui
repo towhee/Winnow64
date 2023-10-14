@@ -137,7 +137,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Start sequence:</string>
+    <string>Start sequence:      </string>
    </property>
   </widget>
   <widget class="QLabel" name="existingSequenceLabel">
@@ -178,7 +178,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Example:</string>
+    <string>Example:     </string>
    </property>
   </widget>
   <widget class="QLabel" name="exampleLbl">

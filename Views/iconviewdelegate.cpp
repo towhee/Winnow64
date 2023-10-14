@@ -415,7 +415,7 @@ void IconViewDelegate::paint(QPainter *painter,
     int alignHorPad = (thumbRect.width() - pm.width()) / 2;
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    pm.width(), pm.height());
-//    /* debug
+    /* debug
     if (row == 0)
     qDebug() << "IconViewDelegate::paint "
              << "row =" << row

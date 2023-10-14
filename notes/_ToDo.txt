@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Rename dialog spacing issue
+- Windows dialogs titlebar white background
 - qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
