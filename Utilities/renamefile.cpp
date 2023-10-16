@@ -48,7 +48,11 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     for (i = filenameTemplatesMap.begin(); i != filenameTemplatesMap.end(); ++i) {
         ui->filenameTemplatesCB->addItem(i.key());
     }
-//    ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
+    //ui->filenameTemplatesCB->setCurrentIndex(filenameTemplateSelected);
+
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 
     updateExample();
 
