@@ -67,7 +67,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     status = Status::Busy;
     n = item;
     fPath = n.fPath;
-    cacheKey = n.key;       // used in ImageCache::fixOrphans
+    cacheKey = n.key;       // not being used (ImageCache::fixOrphans artifact)
     this->instance = instance;
     errMsg = "";
     if (G::isFlowLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
