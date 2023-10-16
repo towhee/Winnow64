@@ -1628,6 +1628,7 @@ void MW::createEditMenu()
     editMenu->addAction(copyFilesAction);
     editMenu->addAction(copyImageAction);
     editMenu->addAction(copyImagePathFromContextAction);
+    editMenu->addSeparator();
     editMenu->addAction(deleteImagesAction);
     editMenu->addAction(deleteActiveFolderAction);
     editMenu->addSeparator();

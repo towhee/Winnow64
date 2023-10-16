@@ -138,7 +138,6 @@ private:
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
     //    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
-    void fixOrphans();              // outside target range with isCached == true
     void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
