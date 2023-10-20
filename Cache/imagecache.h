@@ -89,8 +89,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void pause();
-    void resume();
+//    void pause();
+//    void resume();
     void addCacheItemImageMetadata(ImageMetadata m);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);

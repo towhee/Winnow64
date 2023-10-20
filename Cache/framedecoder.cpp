@@ -130,7 +130,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     qint64 duration = 0;
 
     // wait for first valid frame
-    if (im.isNull() || !frame.isValid()) {
+    if (im.isNull() || !frame.isValid() || queue.empty()) {
         validFrame = false;
     }
     else {

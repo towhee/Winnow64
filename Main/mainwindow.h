@@ -926,7 +926,7 @@ private:
     QAction *diagnosticsZoomAction;
 
     // Testing Menu (under Help Diagnostics Menu)
-    QAction *stressTestAction;
+    QAction *traverseFolderStressTestAction;
     QAction *bounceFoldersStressTestAction;
 
     // Group actions

@@ -14,8 +14,10 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     uturn           randomly change direction
 */
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
-    qDebug() << "MW::traverseFolderStressTest" << msPerImage;
     G::popUp->end();
+
+    int msPerFolder = secPerFolder * 1000;
+    //qDebug() << "MW::traverseFolderStressTest" << msPerImage << msPerFolder;
 
     if (!msPerImage) {
         msPerImage = QInputDialog::getInt(this,
@@ -33,7 +35,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
-        if (secPerFolder && t.elapsed() > secPerFolder) return;
+        if (msPerFolder && t.elapsed() > msPerFolder) return;
         if (uturn && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
             uturnAmount = QRandomGenerator::global()->bounded(1, 301);
@@ -67,6 +69,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
              << elapedmsPerImage << "ms per image."
                 ;
     return;
+
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
@@ -83,32 +86,34 @@ void MW::bounceFoldersStressTestFromMenu()
 void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
 {
     if (G::isLogger) G::log("MW::bounceFoldersStressTest");
-    //qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
+    qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
     G::popUp->end();
-
-
-    if (!secPerFolder) {
-        secPerFolder = QInputDialog::getInt(this,
-              "Enter seconds per folder tested",
-              "Duration (0 - 1000 sec)",
-              5, 0, 86400);
-        secPerFolder *= 1000;
-    }
 
     if (!msPerImage) {
         msPerImage = QInputDialog::getInt(this,
               "Enter ms delay between images",
               "Delay (1-1000 ms) ",
-              50, 1, 1000);
+              100, 1, 1000);
     }
+
+    if (!secPerFolder) {
+        secPerFolder = QInputDialog::getInt(this,
+                                            "Enter seconds per folder tested",
+                                            "Duration (0 - 1000 sec)  -1 sec = random 1 - 20 sec",
+                                            -1, -1, 1000);
+    }
+    bool isRandomSecPerFolder = secPerFolder == -1;
 
     isStressTest = true;
     QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
     int n = bookMarkPaths.count();
     while (isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
+        if (isRandomSecPerFolder)
+            secPerFolder = QRandomGenerator::global()->bounded(1, 21);
         QString path = bookMarkPaths.at(randomIdx);
-        qDebug() << "MW::bounceFoldersStressTest" << randomIdx << path;
+        qDebug() << "MW::bounceFoldersStressTest"
+            << "secInFolder =" << secPerFolder << path;
         bookmarks->select(path);
         fsTree->select(path);
         folderSelectionChange();
@@ -161,21 +166,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    deleteSelectedFiles();
-    return;
-
-    raise();
-    return;
-
-    qDebug() << windowFlags();
-    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-    qDebug() << "windowFlags() | Qt::WindowStaysOnTopHint";
-    qDebug() << windowFlags();
-    setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
-    qDebug() << "windowFlags() & (~Qt::WindowStaysOnTopHint";
-    qDebug() << windowFlags();
-    return;
-    fsTree->refreshModel();
+    bounceFoldersStressTest(100, -1);
 }
 
 /*

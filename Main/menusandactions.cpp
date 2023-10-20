@@ -1443,11 +1443,11 @@ void MW::createHelpActions()
     connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
 
     // Tests
-    stressTestAction = new QAction(tr("Traverse folders stress test"), this);
-    stressTestAction->setObjectName("traversFoldersStressTest");
-    stressTestAction->setShortcutVisibleInContextMenu(true);
-    addAction(stressTestAction);
-    connect(stressTestAction, &QAction::triggered, this, &MW::traverseFolderStressTestFromMenu);
+    traverseFolderStressTestAction = new QAction(tr("Traverse images in current folder stress test"), this);
+    traverseFolderStressTestAction->setObjectName("traversFoldersStressTest");
+    traverseFolderStressTestAction->setShortcutVisibleInContextMenu(true);
+    addAction(traverseFolderStressTestAction);
+    connect(traverseFolderStressTestAction, &QAction::triggered, this, &MW::traverseFolderStressTestFromMenu);
 
     // Tests
     bounceFoldersStressTestAction = new QAction(tr("Bounce bookmarks stress test"), this);
@@ -1842,7 +1842,7 @@ void MW::createHelpMenu()
     helpMenu->addSeparator();
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
     testMenu = helpDiagnosticsMenu->addMenu(tr("&Tests"));
-    testMenu->addAction(stressTestAction);
+    testMenu->addAction(traverseFolderStressTestAction);
     testMenu->addAction(bounceFoldersStressTestAction);
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
