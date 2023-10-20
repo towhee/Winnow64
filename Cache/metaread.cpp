@@ -323,7 +323,10 @@ void MetaRead::cleanupIcons()
                 ; //*/
 
     if (abort) {
-        qDebug() << "MetaRead::readMetadata aborted";
+        if (isDebug)
+        {
+            qDebug() << "MetaRead::readMetadata aborted";
+        }
         return false;
     }
     // add metadata->m to DataModel dm
@@ -337,7 +340,10 @@ void MetaRead::cleanupIcons()
     }
 
     if (abort) {
-        qDebug() << "MetaRead::readMetadata aborted";
+        if (isDebug)
+        {
+            qDebug() << "MetaRead::readMetadata aborted";
+        }
         return false;
     }
 
