@@ -273,6 +273,9 @@ void MW::diagnosticsReport(QString reportString)
     if (G::isLogger) G::log("MW::diagnosticsReport");
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
 //    dlg->setFixedWidth(1000);
