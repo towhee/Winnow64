@@ -147,21 +147,6 @@ void ImageCache::stop()
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 }
 
-//void ImageCache::pause()
-//{
-//    if (useMutex) gMutex.lock();
-//    paused = true;
-//    if (useMutex) gMutex.unlock();
-//}
-
-//void ImageCache::resume()
-//{
-//    if (useMutex) gMutex.lock();
-//    paused = false;
-//    if (useMutex) gMutex.unlock();
-//    condition.wakeAll();
-//}
-
 float ImageCache::getImCacheSize()
 {
     // return the current size of the cache
@@ -1614,13 +1599,6 @@ void ImageCache::fillCache(int id)
             - done
 
 */
-    /*
-    if (paused) {
-        gMutex.lock();
-        condition.wait(&gMutex);
-        gMutex.unlock();
-    }
-    */
 
     int cacheKey = -1;       // row for image in cacheKeyHash (default to no key)
 
