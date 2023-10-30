@@ -265,16 +265,17 @@ bool Jpeg::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
-        ifd->ifdDataHash.value(36868).tagCount).left(19);
-    if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
     // try DateTimeOriginal
-    if (createdExif.length() == 0) {
-        createdExif = u.getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
-            ifd->ifdDataHash.value(36867).tagCount);
-        if (createdExif.length() > 0) {
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
+                              ifd->ifdDataHash.value(36867).tagCount);
+    if (createdExif.length() > 0)
+        m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+    // try CreateData
+    else {
+        createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+                                  ifd->ifdDataHash.value(36868).tagCount).left(19);
+        if (createdExif.length() > 0)
             m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
-        }
     }
 
     // EXIF: shutter speed

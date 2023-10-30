@@ -220,7 +220,7 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
+        //qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
         if (!image.load(fPath)) {
             errMsg = "Could not read because decoder failed.";
             imFile.close();
@@ -235,10 +235,13 @@ bool ImageDecoder::load()
             return false;
         }
         imFile.close();
+        if (isDebug)
+        {
         qDebug() << "ImageDecoder::load" << "HEIC image"
                  << image.width() << image.height()
                  << fPath
             ;
+        }
         #endif
     }
 

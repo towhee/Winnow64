@@ -853,8 +853,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isCopyingFiles) G::stopCopyingFiles = true;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
-        // quit loading datamodel
-//        else if (dm->loadingModel) dm->abortLoadingModel = true;
         // quit adding thumbnails
         else if (thumb->insertingThumbnails) thumb->abort = true;
         // abort Embellish export process
@@ -2179,11 +2177,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         if (G::useMultimedia) {
-            videoView->load(fPath);
-            //qDebug() << "MW::fileSelectionChange2 G::mode =" << G::mode << fPath;
+            qDebug() << "MW::fileSelectionChange Video G::mode =" << G::mode << fPath;
             if (G::mode == "Loupe") {
                 centralLayout->setCurrentIndex(VideoTab);
             }
+            videoView->load(fPath);
             videoView->play();
         }
     }

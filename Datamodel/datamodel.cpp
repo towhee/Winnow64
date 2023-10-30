@@ -1201,15 +1201,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     // rghcreate
     QDateTime createdDT;
+    if (m.createdDate.isValid()) createdDT = m.createdDate;
+    else createdDT = index(row, G::CreatedColumn).data().toDateTime();
 //    if (index(row, G::CreatedColumn).data().toString().length())
-        createdDT = index(row, G::CreatedColumn).data().toDateTime();
+//        createdDT = index(row, G::CreatedColumn).data().toDateTime();
 //    else
 //        createdDT = m.createdDate;
-//    if (createdDT.isValid()) {
-//        setData(index(row, G::CreatedColumn), createdDT.toString("yyyy-MM-dd hh:mm:ss.zzz"));
+    if (createdDT.isValid()) {
+        setData(index(row, G::CreatedColumn), createdDT.toString("yyyy-MM-dd hh:mm:ss.zzz"));
         setData(index(row, G::YearColumn), createdDT.toString("yyyy"));
         setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
-//    }
+    }
 
 //    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
 //    setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));

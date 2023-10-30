@@ -648,6 +648,9 @@ void MW::setRating()
         G::popUp->setProgressVisible(false);
         G::popUp->end();
     }
+
+    // auto advance
+    if (autoAdvance) sel->next();
 }
 
 int MW::ratingLogCount()
@@ -822,6 +825,9 @@ void MW::setColorClass()
         G::popUp->setProgressVisible(false);
         G::popUp->end();
     }
+
+    // auto advance
+    if (autoAdvance) sel->next();
 }
 
 int MW::colorClassLogCount()

@@ -22,6 +22,9 @@ void VideoWidget::load(QString fPath)
 {
     if (G::isLogger || isDebug) qDebug() << "VideoWidget::load";
     mediaPlayer->setSource(fPath);
+    // force reset if was hidden
+    resize(size() - QSize(1,0));
+    resize(size() + QSize(1,0));
 }
 
 void VideoWidget::play()
@@ -107,7 +110,7 @@ void VideoWidget::mousePressEvent(QMouseEvent *event)
 bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
 {
     /*
-    qDebug() << "VideoWidget::eventFilter"
+    qDebug() << "\nVideoWidget::eventFilter"
              << "event:" <<event << "\t"
              << "event->type:" << event->type() << "\t"
              << "obj:" << obj << "\t"
@@ -116,7 +119,7 @@ bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
                 ;
                 //*/
     if (event->type() == QEvent::Drop) {
-        QDropEvent *e = static_cast<QDropEvent *>(event);
+        QDropEvent *e = static_cast<QDropEvent*>(event);
         if (e->mimeData()->hasUrls()) {
             QString fPath = e->mimeData()->urls().at(0).toLocalFile();
             emit handleDrop(fPath);

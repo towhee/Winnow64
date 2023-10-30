@@ -481,8 +481,10 @@ void Preferences::addItems()
     // Auto advance
     i.name = "autoAdvance";
     i.parentName = "GeneralHeader";
-    i.captionText = "Auto advance after pick";
-    i.tooltip = "Advance to next image after pick.";
+    i.captionText = "Auto advance after pick, rating or label.";
+    i.tooltip = "Advance to next image after pick, rating or label change.\n"
+                "CAPS lock toggles state."
+                ;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->autoAdvance;

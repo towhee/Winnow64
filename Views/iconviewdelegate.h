@@ -87,7 +87,9 @@ private:
     QColor cacheColor;
     QColor missingThumbColor;
     QColor cacheBorderColor;
-    QColor videoTextcolor;
+    QColor ratingBackgoundColor;
+    QColor labelTextColor;
+    QColor videoTextColor;
     QColor numberTextColor;
 
     QPen pickedPen;
