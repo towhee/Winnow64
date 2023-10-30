@@ -58,7 +58,8 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWi
 
 void VideoView::load(QString fPath)
 {
-    if (G::isLogger || G::isFlowLogger || isDebug) qDebug() << "VideoView::load";
+    if (G::isLogger || G::isFlowLogger || isDebug)
+        qDebug() << "VideoView::load" << fPath;
     video->load(fPath);
     play();
     pause();
@@ -66,7 +67,8 @@ void VideoView::load(QString fPath)
 
 void VideoView::play()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::play";
+    if (G::isLogger || isDebug)
+        qDebug() << "VideoView::play" << video->mediaPlayer->source();
     if (position >= duration) video->setPosition(0);
     video->play();
     t->start();

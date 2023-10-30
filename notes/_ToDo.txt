@@ -1,6 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Auto advance when cap lock
 - GoogleDrive folder not showing all videos
 - Open with exiftool
 - qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
@@ -89,6 +90,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Update IconViewDelegate color class and ratings
+- Images with JPG extension could be HEIC
+- Created date should be DateTimeOriginal
 - Set Winnow on top when remotely activated
 - G::renderVideoThumb = false was not working
 - Cancel menu bar shortcut still active

@@ -103,6 +103,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     int b = G::backgroundShade;
     int l20 = G::backgroundShade + 20;
     int l40 = G::backgroundShade + 40;
+    int l60 = G::backgroundShade + 60;
     defaultBorderColor = QColor(l20,l20,l20);
     currentItemColor = QColor(Qt::yellow);
     selectedColor = QColorConstants::Svg::white;
@@ -112,8 +113,10 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     cacheColor = QColor(100,0,0);
     cacheBorderColor = QColor(l20,l20,l20);
     missingThumbColor = QColor(Qt::yellow);
-    videoTextcolor = G::textColor;
-    numberTextColor = QColor(l40,l40,l40);
+    ratingBackgoundColor = QColor(b,b,b,50);
+    labelTextColor = G::textColor;
+    videoTextColor = G::textColor;
+    numberTextColor = QColor(l60,l60,l60);
 
     // define pens
     currentPen.setColor(currentItemColor);
@@ -399,15 +402,19 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
 
-    // get icon (thumbnail) from the datamodel
+    // get icon (thumbnail) from the datamodel and scale
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     // get the icon dimensions to fit into G::maxIconSize.  Must start with largest size
     // to prevent scaling glitches.
     QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
     // convert to a QPixmap
     QPixmap pm = icon.pixmap(maxSize);
+    // if the pm is nearly square scale slightly smaller so border large enough to show color class
+    int pmMargin = 8;
+    bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
     // scale the pixmap to fit in the thumbRect
-    pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
+    if (isSquare) pm = pm.scaled(thumbSize - QSize(pmMargin,pmMargin), Qt::KeepAspectRatio);
+    else pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
     // define iconSize for reporting
     QSize iconSize = QSize(pm.width(), pm.height());
     // center the iconRect in the thumbRect
@@ -451,11 +458,29 @@ void IconViewDelegate::paint(QPainter *painter,
     QPainterPath textPath;
     textPath.addRoundedRect(textRect, 8, 8);
 
+    QColor labelColorToUse;
+    if (G::labelColors.contains(colorClass) && isRatingBadgeVisible) {
+        if (colorClass == "Red") labelColorToUse = G::labelRedColor;
+        if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
+        if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
+        if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
+        if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
+    }
+    else labelColorToUse = G::backgroundColor;
+
     // start painting
+
+    // paint the background label color and border
+    painter->setBrush(labelColorToUse);
+    painter->setPen(border);
+    painter->drawRoundedRect(frameRect, 8, 8);
+
+    // label (file name or title)
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
     if (delegateShowThumbLabels) {
+        painter->setPen(labelTextColor);
         painter->setFont(font);
         painter->drawText(textRect, Qt::AlignHCenter, labelText);
     }
@@ -466,9 +491,6 @@ void IconViewDelegate::paint(QPainter *painter,
     painter->drawPixmap(iconRect, pm);
     painter->setClipping(false);
 
-    // default thumb border
-    painter->setPen(border);
-    painter->drawRoundedRect(frameRect, 8, 8);
     /*
     qDebug() << "IconViewDelegate::paint"
              << "row =" << row
@@ -481,102 +503,42 @@ void IconViewDelegate::paint(QPainter *painter,
              << "isCurrentIndex" << isCurrentIndex
         ;
 //             */
-    // current index item
-    if (isCurrentIndex) {
-        //if (row == currentRow) {
-        QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
-        painter->setPen(currentPen);
-        painter->drawRoundedRect(currRect, 8, 8);
-    }
-
-    // selected item
-    if (isSelected) {
-        painter->setPen(selectedPen);
-        painter->drawRoundedRect(frameRect, 8, 8);
-    }
-
-    // pick status
-    if (isPicked) {
-        painter->setPen(pickedPen);
-        painter->drawPath(iconPath);
-    }
-    if (isIngested) {
-        painter->setPen(ingestedPen);
-        painter->drawPath(iconPath);
-    }
-    if (isRejected) {
-        painter->setPen(rejectedPen);
-        painter->drawPath(iconPath);
-    }
-
-    // draw icon number
-    if (isIconNumberVisible) {
-        QPen numberPen(numberTextColor);
-        numberPen.setWidth(2);
-        painter->setBrush(G::backgroundColor);
-        QFont numberFont = painter->font();
-        int pxSize = iconNumberSize;
-        if (pxSize < 6) pxSize = 6;
-        numberFont.setPixelSize(pxSize);
-        numberFont.setBold(true);
-        painter->setFont(numberFont);
-        QFontMetrics fm(numberFont);
-        QString labelNumber = QString::number(row + 1);
-        int numberWidth = fm.boundingRect(labelNumber).width() + 4;
-        QPoint numberTopLeft(option.rect.left(), option.rect.top());
-        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + iconNumberSize - 2);
-        QRect numberRect(numberTopLeft, numberBottomRight);
-        painter->setPen(G::backgroundColor);
-        painter->drawRoundedRect(numberRect, 2, 2);
-        painter->setPen(numberPen);
-        painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
-    }
 
     // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
         // label/rating rect located top-right as containment for circle
-
-        QColor labelColorToUse;
+//        QColor labelColorToUse;
         QColor textColor(Qt::white);
-        if (G::labelColors.contains(colorClass) || G::ratings.contains(rating)) {
-            if (G::labelColors.contains(colorClass)) {
-                if (colorClass == "Red") labelColorToUse = G::labelRedColor;
-                if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
-                if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
-                if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
-                if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
-            }
-            else labelColorToUse = G::labelNoneColor;
-
+        if (G::ratings.contains(rating)) {
             // font
             QFont font = painter->font();
-            int pxSize = 1.0 * G::fontSize * badgeSize / 10;
+            int pxSize = 1.0 * G::fontSize * thumbRect.width() * 0.02;
+//            int pxSize = 1.0 * G::fontSize * badgeSize / 5;
             if (pxSize < 6) pxSize = 6;
             font.setPixelSize(pxSize-1);
             painter->setFont(font);
+            // stars
             QString stars;
             stars.fill('*', ratingNumber);
 
-            // define color rect
+            // define star rect
             QFontMetrics fm(font);
             QRect bRect = fm.boundingRect("******");
             int w = bRect.width();
-            int h = bRect.height() * 0.6;
-            int r = h / 2;      // rounding amount for rect
+            int b = (thumbRect.width() - w) / 2;
+            int h = bRect.height() * 0.5;
             int t = h / 5;      // translate to center * in ratingRect
-            QPoint ratingTopLeft(frameRect.right() - w, frameRect.top());
-            QPoint ratingBottomRight(frameRect.right(), frameRect.top() + h);
+            QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - h + 6);
+            QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() + 6);
+//            QPoint ratingTopLeft(frameRect.right() - w, frameRect.top());
+//            QPoint ratingBottomRight(frameRect.right(), frameRect.top() + h);
             QRect ratingRect(ratingTopLeft, ratingBottomRight);
-
-            // draw color in rect
-            painter->setBrush(labelColorToUse);
-            QPen ratingPen(labelColorToUse);
-            ratingPen.setWidth(0);
-            painter->setPen(ratingPen);
-            painter->drawRoundedRect(ratingRect, r, r);
 
             // draw stars
             QPen ratingTextPen(textColor);
+            painter->setPen(Qt::transparent);
+            painter->setBrush(ratingBackgoundColor);
+            painter->drawRoundedRect(ratingRect,8,8);
             ratingTextPen.setWidth(1);
             painter->setPen(ratingTextPen);
             painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignCenter, stars);
@@ -592,7 +554,7 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
         painter->setBrush(G::backgroundColor);
         painter->drawRect(bRect);
-        painter->setPen(videoTextcolor);
+        painter->setPen(videoTextColor);
         QString vText;
         G::renderVideoThumb ? vText = duration : vText = "Video";
         painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, vText);
@@ -638,6 +600,65 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setBrush(missingThumbColor);
         painter->drawEllipse(missingThumbRect);
     }
+
+    painter->setPen(border);
+    painter->setBrush(Qt::transparent);
+
+    // pick status
+    if (isPicked) {
+        painter->setPen(pickedPen);
+        painter->drawPath(iconPath);
+    }
+    if (isIngested) {
+        painter->setPen(ingestedPen);
+        painter->drawPath(iconPath);
+    }
+    if (isRejected) {
+        painter->setPen(rejectedPen);
+        painter->drawPath(iconPath);
+    }
+
+    // draw icon number
+    if (isIconNumberVisible) {
+//        painter->setBrush(Qt::transparent);
+//        painter->setBrush(G::backgroundColor);
+        painter->setBrush(labelColorToUse);
+        QFont numberFont = painter->font();
+        int pxSize = iconNumberSize;
+        if (pxSize < 6) pxSize = 6;
+        numberFont.setPixelSize(pxSize);
+        numberFont.setBold(true);
+        painter->setFont(numberFont);
+        QFontMetrics fm(numberFont);
+        QString labelNumber = QString::number(row + 1);
+        int numberWidth = fm.boundingRect(labelNumber).width() + 4;
+        QPoint numberTopLeft(frameRect.left(), frameRect.top());
+        QPoint numberBottomRight(frameRect.left() + numberWidth + 4, frameRect.top() + iconNumberSize);
+        QRect numberRect(numberTopLeft, numberBottomRight);
+//        painter->setPen(border);
+        painter->setPen(Qt::transparent);
+        painter->drawRoundedRect(numberRect, 8, 8);
+        QPen numberPen(numberTextColor);
+        painter->setPen(numberPen);
+        painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
+    }
+
+    painter->setBrush(Qt::transparent);
+
+    // selected item
+    if (isSelected) {
+        painter->setPen(selectedPen);
+        painter->drawRoundedRect(frameRect, 8, 8);
+    }
+
+    // current index item
+    if (isCurrentIndex) {
+        //if (row == currentRow) {
+        QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
+        painter->setPen(currentPen);
+        painter->drawRoundedRect(currRect, 8, 8);
+    }
+
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */

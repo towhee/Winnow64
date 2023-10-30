@@ -85,13 +85,14 @@ namespace G
 
     QString css;                        // app stylesheet;
 
-    static int transparency = 150;
+    static int transparency = 50;
     QColor labelNoneColor(85,85,85,transparency);                // Background Gray
-    QColor labelRedColor(QColor(128,0,0,transparency));          // Dark red
-    QColor labelYellowColor(QColor(255,255,0,transparency));     // Dark yellow
-    QColor labelGreenColor(QColor(0,128,0,transparency));        // Dark green
-    QColor labelBlueColor(QColor(0,0,200,transparency));         // Dark blue
-    QColor labelPurpleColor(QColor(128,0,128,transparency));     // Dark magenta
+    QColor labelRedColor(QColor(60,20,20));          // Dark red
+    QColor labelYellowColor(QColor(80,55,15));     // Dark yellow
+    QColor labelGreenColor(QColor(20,60,20));        // Dark green
+    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
+    QColor labelPurpleColor(QColor(54,37,95));     // Dark magenta
+//    QColor labelPurpleColor(QColor(37,25,61));     // Dark magenta
 
     QStringList ratings, labelColors;
 

@@ -469,7 +469,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     buffer: byte array containing the xmp data
 
     m: the current state of the metadata for fPath MUST BE UPDATED BEFORE CALLING with
-       dm->imMetadata(fPath); because dm is not available from Metadata.
+       dm->imMetadata(fPath);
+    because dm is not available from Metadata.
 
     If it is a supported image type a copy of the image file is made and any metadata changes
     are updated in buffer. If it is a raw file in the sidecarFormats hash then the xmp data
@@ -744,6 +745,13 @@ bool Metadata::parseJPG(quint32 startOffset)
         qWarning() << "WARNING" << "Metadata::parseJPG" << p.file.fileName() << "is not open";
         return false;
     }
+
+    // might be a HEIC
+    if (p.file.read(14).contains("ftypheic")) {
+        return parseHEIF();
+    }
+    p.file.seek(0);
+
     p.offset = startOffset;
     if (p.file.fileName() == "") {
         if (G::isWarningLogger)
@@ -752,6 +760,11 @@ bool Metadata::parseJPG(quint32 startOffset)
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
     if (ok && p.report) reportMetadata();
+
+    // check if HEIC file with JPG extension
+    if (!ok) {
+
+    }
 
     // fix missing thumbnail (use external program ExifTool)
     if (ok && m.isEmbeddedThumbMissing && m.isReadWrite &&
@@ -767,7 +780,6 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
-//    qDebug() << "Metadata::parseHEIF";
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
         parseJPG(0);
@@ -780,14 +792,12 @@ bool Metadata::parseHEIF()
     return ok;
 #endif
 #ifdef Q_OS_MAC
-//    if (heic == nullptr) heic = new Heic;
     heic = new Heic;
     bool ok = heic->parseHeic(p, m, ifd, exif, gps);
     delete heic;
     if (ok && p.report) reportMetadata();
     return ok;
 #endif
-    return false;
 }
 
 bool Metadata::parseSidecar()
