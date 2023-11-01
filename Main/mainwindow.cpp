@@ -2177,7 +2177,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         if (G::useMultimedia) {
-            qDebug() << "MW::fileSelectionChange Video G::mode =" << G::mode << fPath;
             if (G::mode == "Loupe") {
                 centralLayout->setCurrentIndex(VideoTab);
             }
@@ -5520,9 +5519,9 @@ void MW::deleteFiles(QStringList paths)
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     sel->select(sfIdx);
 
-    // update filters
-    qDebug() << "MW::deleteFiles launchBuildFilters())";
-    launchBuildFilters();
+    // rebuild filters
+    buildFilters->reset(false/*collapse*/);
+    buildFilters->build();
 }
 
 void MW::deleteFolder()

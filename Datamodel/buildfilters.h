@@ -39,7 +39,7 @@ public:
     } category;
 
     void stop();
-    void reset();
+    void reset(bool collapse = true);
 
     bool is = true;
 

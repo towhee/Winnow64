@@ -1655,7 +1655,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
-    //setIconMax(pm);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)

@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Change color not aligned center in table view
+- MOV creation date ie IMG_3298.MOV
 - Auto advance when cap lock
 - GoogleDrive folder not showing all videos
 - Open with exiftool
@@ -90,6 +92,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Delete files not updating filters
+- Filter color, edit color, loupe not updated
 - Update IconViewDelegate color class and ratings
 - Images with JPG extension could be HEIC
 - Created date should be DateTimeOriginal
