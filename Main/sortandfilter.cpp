@@ -41,11 +41,12 @@ void MW::updateAllFilters()
 //    buildFilters->build(BuildFilters::Update);
 }
 
-void MW::launchBuildFilters()
+void MW::launchBuildFilters(bool force)
 {
 /*
     Filters cannot be updated if hidden.
     Check if can build: filterDock->visibleRegion().isNull()
+    If images have been deleted then force a rebuild
 */
     if (G::isLogger) G::log("MW::launchBuildFilters");
     if (G::isInitializing) return;
@@ -53,7 +54,7 @@ void MW::launchBuildFilters()
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
-    if (filters->filtersBuilt) return;
+    if (filters->filtersBuilt && !force) return;
 
     //qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
@@ -69,7 +70,7 @@ void MW::filterChange(QString source)
     parameters are recalculated and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    //qDebug() << "MW::filterChange" << "called from:" << source;
+    qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -117,6 +118,7 @@ void MW::filterChange(QString source)
 
     // is the DataModel current index still in the filter.  If not, set to zero
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
     }
@@ -126,6 +128,7 @@ void MW::filterChange(QString source)
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
     // selection, fileSelectionChange, renew image cache
+    //qDebug() << "MW::filterChange  sfIdx =" << newSfIdx;
     sel->select(newSfIdx);
 
     QApplication::restoreOverrideCursor();
@@ -605,7 +608,7 @@ void MW::setRating()
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
         QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
-        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
+        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // update rating crash log
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateRatingLog(fPath, rating);
@@ -648,6 +651,8 @@ void MW::setRating()
         G::popUp->setProgressVisible(false);
         G::popUp->end();
     }
+
+    filterChange(src);
 
     // auto advance
     if (autoAdvance) sel->next();
@@ -780,7 +785,7 @@ void MW::setColorClass()
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
         QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
-        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole);
+        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // update color class crash log
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateColorClassLog(fPath, colorClass);
@@ -825,6 +830,8 @@ void MW::setColorClass()
         G::popUp->setProgressVisible(false);
         G::popUp->end();
     }
+
+    filterChange(src);
 
     // auto advance
     if (autoAdvance) sel->next();

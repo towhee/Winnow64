@@ -220,7 +220,7 @@ void BuildFilters::done()
 //    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
 
-void BuildFilters::reset()
+void BuildFilters::reset(bool collapse)
 {
 /*
     Called when a new folder is being loaded. The Filters tree dynamic category items are
@@ -236,7 +236,7 @@ void BuildFilters::reset()
     filters->buildingFilters = false;
     filters->filterLabel->setVisible(false);
     filters->setEnabled(true);
-    filters->collapseAll();
+    if (collapse) filters->collapseAll();
     action = Action::Reset;
     afterAction = AfterAction::NoAfterAction;
     filters->activeCategory = nullptr;

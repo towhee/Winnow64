@@ -386,7 +386,8 @@ void MW::createFrameDecoder()
     frameDecoder = new FrameDecoder(this);
     connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
     connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame/*,
+            Qt::BlockingQueuedConnection*/);
     thumb = new Thumb(dm, metadata, frameDecoder);
 }
 
@@ -487,7 +488,8 @@ void MW::createMDCache()
             Qt::BlockingQueuedConnection);
 
     // add icon to datamodel (Qt::BlockingQueuedConnection sometimes prevents MetaRead::stop)
-    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon,
+            Qt::BlockingQueuedConnection);
 
     // add metadata to image cache item list
     connect(metaReadThread, &MetaRead::addToImageCache,

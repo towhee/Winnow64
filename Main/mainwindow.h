@@ -531,7 +531,7 @@ private slots:
     void loadEntireMetadataCache(QString source);
     void loadImageCacheForNewFolder();
     void updateAllFilters();
-    void launchBuildFilters();
+    void launchBuildFilters(bool force = false);
 //    void loadFilteredImageCache();
     void addNewBookmarkFromMenu();
     void addNewBookmarkFromContextMenu();
