@@ -33,3 +33,43 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
+
+#include <QApplication>
+#include <QAbstractNativeEventFilter>
+#include <QDebug>
+#include <windows.h>
+#include <dbt.h>
+
+class DeviceEventFilter : public QAbstractNativeEventFilter
+{
+public:
+    bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override
+    {
+        Q_UNUSED(eventType);
+        Q_UNUSED(result);
+
+        MSG *msg = static_cast<MSG *>(message);
+        if (msg->message == WM_DEVICECHANGE && msg->wParam == DBT_DEVICEARRIVAL)
+        {
+            qDebug() << "Device connected";
+        }
+        else if (msg->message == WM_DEVICECHANGE && msg->wParam == DBT_DEVICEREMOVECOMPLETE)
+        {
+            qDebug() << "Device disconnected";
+        }
+
+        return false;
+    }
+};
+
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+
+    DeviceEventFilter filter;
+    app.eventDispatcher()->installNativeEventFilter(&filter);
+
+    return app.exec();
+}
+
+model.setRootPath(QDir::drives().first().path()); // Set the root path to the parent directory of the C: drive
