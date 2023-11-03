@@ -287,7 +287,6 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
-//    this->showImageCount = showImageCount;
 
     fileFilters->clear();
     foreach (const QString &str, metadata->supportedFormats)
