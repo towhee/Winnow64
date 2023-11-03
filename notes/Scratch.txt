@@ -1,23 +1,35 @@
-SortFilter::filterChange 0
-SortFilter::filterChange 0
-ImageCache::rebuildImageCacheParameters
-Selection::select sfIdx = QModelIndex(0,0,0x600002eb8120,SortFilter(0x600001323fc0)) QFlags<Qt::KeyboardModifier>(NoModifier) isNoModifier = false isControlModifier = false isShiftModifier = false isAltModifier = false isMetaModifier = false isKeypadModifier = false
-Selection::select  Fall through  sfIdx = QModelIndex(0,0,0x600002eb8120,SortFilter(0x600001323fc0))
-DataModel::setCurrent currentSfIdx = QModelIndex(0,0,0x600002eb8120,SortFilter(0x600001323fc0)) currentSfRow = 0 currentDmIdx = QModelIndex(11,0,0x600001f77740,DataModel(0x15c8d3a00)) currentDmRow = 11 currentFilePath = "/Users/roryhill/Pictures/Subjects/2023-04-14_0056.jpg"
-Selection::setCurrentIndex QModelIndex(0,0,0x600002eb8120,SortFilter(0x600001323fc0)) 0
-IconViewDelegate::paint   row = 0 isSelected = true
-IconViewDelegate::paint   row = 0 isSelected = false
-IconViewDelegate::paint   row = 0 isSelected = false
+#include <QApplication>
+#include <QFileSystemModel>
+#include <QTreeView>
+#include <QStorageInfo>
+#include <QTimer>
 
-// filter red
-SortFilter::filterChange 0
-SortFilter::filterChange 0
-SortFilter::filterChange 0
-ImageCache::rebuildImageCacheParameters
-Selection::select sfIdx = QModelIndex(0,0,0x600000870e10,SortFilter(0x6000034fe7f0)) QFlags<Qt::KeyboardModifier>(NoModifier) isNoModifier = false isControlModifier = false isShiftModifier = false isAltModifier = false isMetaModifier = false isKeypadModifier = false
-Selection::select  Fall through  sfIdx = QModelIndex(0,0,0x600000870e10,SortFilter(0x6000034fe7f0))
-DataModel::setCurrent currentSfIdx = QModelIndex(0,0,0x600000870e10,SortFilter(0x6000034fe7f0)) currentSfRow = 0 currentDmIdx = QModelIndex(11,0,0x6000038aa390,DataModel(0x1540f3400)) currentDmRow = 11 currentFilePath = "/Users/roryhill/Pictures/Subjects/2023-04-14_0056.jpg"
-Selection::setCurrentIndex QModelIndex(0,0,0x600000870e10,SortFilter(0x6000034fe7f0)) 0
-WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Subjects/2023-04-14_0056.jpg"
-IconViewDelegate::paint   row = 0 isSelected = true
-IconViewDelegate::paint   row = 0 isSelected = true
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+
+    QFileSystemModel model;
+    model.setRootPath(QDir::rootPath()); // Set the root path to the root directory of the file system
+    model.setFilter(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Drives); // Set the filter to show only drives and directories
+
+    QTreeView treeView;
+    treeView.setModel(&model);
+    treeView.setRootIndex(model.index(model.rootPath())); // Set the root index to the root path of the model
+    treeView.show();
+
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, & {
+        QStringList drives;
+        for (const QStorageInfo &storage : QStorageInfo::mountedVolumes()) {
+            if (storage.isReady() && storage.isRemovable()) {
+                drives << storage.rootPath();
+            }
+        }
+        model.setNameFilters(drives);
+        model.setRootPath("");
+        treeView.setRootIndex(model.index(model.rootPath()));
+    });
+    timer.start(1000); // Update the model every second
+
+    return app.exec();
+}
