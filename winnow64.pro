@@ -48,8 +48,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    Main/winnativeeventfilter.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -128,6 +127,7 @@ HEADERS += Main/qtlocalpeer.h
 HEADERS += Main/qtlockedfile.h
 HEADERS += Main/qtsingleapplication.h
 HEADERS += Main/widgetcss.h
+win32:HEADERS += Main/winnativeeventfilter.h
 HEADERS += Metadata/exif.h
 HEADERS += Metadata/exiftool.h
 HEADERS += Metadata/irb.h
@@ -174,9 +174,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Main/winnativeeventfilter.cpp
-SOURCES +=
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -283,6 +281,7 @@ SOURCES += Main/sortandfilter.cpp
 SOURCES += Main/status.cpp
 SOURCES += Main/test.cpp
 SOURCES += Main/viewmodes.cpp
+win32:SOURCES += Main/winnativeeventfilter.cpp
 SOURCES += Main/workspaces.cpp
 
 SOURCES += Main/dockwidget.cpp
