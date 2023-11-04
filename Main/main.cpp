@@ -20,11 +20,12 @@ int main(int argc, char *argv[])
     return a.exec();
     //*/
 
-    ///* Single instance version
-    // see https://github.com/itay-grudev/SingleApplication if replacement for
-    // QtSingleApplication required
-//    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-//                Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    /* Single instance version
+       see https://github.com/itay-grudev/SingleApplication if replacement for
+       QtSingleApplication required
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+                Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    */
     QtSingleApplication instance("Winnow", argc, argv);
 
     QString args;

@@ -21,7 +21,7 @@ void FSFilter::refresh()
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
 #ifdef Q_OS_WIN
-    /*
+    ///*
     if (!sourceParent.isValid()) {      // if is a drive
         QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
@@ -280,6 +280,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     sortByColumn(0, Qt::AscendingOrder);
     setIndentation(16);
     setSelectionMode(QAbstractItemView::SingleSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
 
     setAcceptDrops(true);
     setDragEnabled(true);
@@ -306,7 +307,8 @@ void FSTree::createModel()
     if (G::isLogger) G::log("FSTree::createModel");
     fsModel = new FSModel(this, *metadata, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
-    fsModel->setRootPath(fsModel->myComputer().toString());
+    fsModel->setRootPath("");  //
+    //fsModel->setRootPath(fsModel->myComputer().toString());
 
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -338,6 +340,17 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log("FSTree::refreshModel");
+    qDebug() << "FSTree::refreshModel";
+    mountedDrives.clear();
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    fsModel->refresh(fsModel->index(0,0));
     setFocus();
     select(G::currRootFolder);
 }
@@ -371,6 +384,9 @@ bool FSTree::select(QString dirPath)
 
     QDir test(dirPath);
     if (test.exists()) {
+//        QModelIndex idx = fsFilter->mapFromSource(fsModel->index(dirPath));
+//        setCurrentIndex(idx);
+//        selectionModel()->select(idx,QItemSelectionModel::Select);
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
         scrollToCurrent();
         return true;

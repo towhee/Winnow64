@@ -1781,6 +1781,7 @@ void MW::watchForEject()
 */
     if (G::isLogger) G::log("MW::watchCurrentFolder");
     qDebug() << "MW::watchCurrentFolder";
+    fsTree->refreshModel();
 //    if (G::currRootFolder == "") return;
 //    QFileInfo info(G::currRootFolder);
 //    if (info.exists()) return;
@@ -3284,7 +3285,8 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         fsTree->setCurrentIndex(filterIdx);
         fsTree->select(fPath);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-//        selectionChange();
+        // must have focus to show selection in blue instead of gray
+        fsTree->setFocus();
         folderSelectionChange();
     }
     else {
@@ -4927,6 +4929,9 @@ void MW::ejectUsb(QString path)
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
             bookmarks->count();
+            #ifdef Q_OS_WIN
+            fsTree->refreshModel();
+            #endif
         }
         // drive ejection failed
         else

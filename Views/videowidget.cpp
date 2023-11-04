@@ -8,6 +8,7 @@
 
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
+    isDebug = false;
     if (G::isLogger || isDebug) qDebug() << "VideoWidget::VideoWidget";
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
@@ -15,7 +16,6 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
     mediaPlayer->setVideoOutput(this);
     QWidget *child = findChild<QWidget *>();
     child->installEventFilter(this);
-    isDebug = false;
 }
 
 void VideoWidget::load(QString fPath)

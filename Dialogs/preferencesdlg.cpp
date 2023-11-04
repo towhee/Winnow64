@@ -41,7 +41,9 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     QFontMetrics fm(fnt);
     int w0 = fm.boundingRect("==Incremental amount to load plus more room==").width();
     int w1 = fm.boundingRect("===Next / Previous Image plus===").width();
-    setMinimumSize(w0 + w1 + 10, 600);
+    int w = pref->width;
+    setMinimumSize(w + 10, 600);
+//    setMinimumSize(w0 + w1 + 10, 600);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     setStyleSheet(css);
     tree->setStyleSheet(css);

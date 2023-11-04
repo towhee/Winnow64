@@ -622,6 +622,7 @@ void PropertyEditor::resizeColumns()
     QFontMetrics fm(fnt);
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
+    width = captionColumnWidth + valueColumnWidth + 3;
     setColumnWidth(CapColumn, captionColumnWidth);
     hideColumn(OrdColumn);
 }

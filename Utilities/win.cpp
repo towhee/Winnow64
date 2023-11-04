@@ -117,9 +117,11 @@ void Win::collectScreensInfo()
 
 void Win::setTitleBarColor(WId winId, QColor bgColor)
 {
-    HWND hWnd = reinterpret_cast<HWND>(winId);
-    COLORREF color = RGB(bgColor.red(), bgColor.green(), bgColor.blue());
-    DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+    #if _WIN32_WINNT >= 0x0B00  // windows 11 or later
+        HWND hWnd = reinterpret_cast<HWND>(winId);
+        COLORREF color = RGB(bgColor.red(), bgColor.green(), bgColor.blue());
+        DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+    #endif
 }
 
 
