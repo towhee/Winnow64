@@ -37,6 +37,7 @@ public:
     int indentation;
     QString stringToFitCaptions;
     QString stringToFitValues;
+    int width;
     int captionColumnWidth;
     int valueColumnWidth;
     bool ignoreFontSizeChangeSignals = false;

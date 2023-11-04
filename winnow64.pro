@@ -48,7 +48,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Main/winnativeeventfilter.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -173,7 +174,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Main/winnativeeventfilter.cpp
 SOURCES +=
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp

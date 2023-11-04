@@ -15,7 +15,7 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     // work if being resized at the same time due to changes in font size
     ignoreFontSizeChangeSignals = true;
 
-    stringToFitCaptions = "======String to fit in captions column======";
+    stringToFitCaptions = "======String to fit in captions column needs to be wide======";
     stringToFitValues   = "=String to fit in values column=";
     resizeColumns();
 

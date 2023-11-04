@@ -85,6 +85,7 @@
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#include "Main/winnativeeventfilter.h"
 #endif
 
 #ifdef Q_OS_MAC

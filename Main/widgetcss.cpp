@@ -444,19 +444,18 @@ QString WidgetCSS::treeView()
     "}"
 
     "QTreeView::item {"
-//        "height: " + h17 + "px;"      // this works but delegates and defaults working for now
+        //"height: " + h17 + "px;"      // this works but delegates and defaults working for now
     "}"
 
-    "QTreeView::item:selected {"
-        "color: " + textColor.name() + ";"
-        "background-color: " + selectionColor.name() + ";"
-    "}"
+//    "QTreeView::item:selected {"
+//        "color: " + textColor.name() + ";"
+//        "background-color: " + selectionColor.name() + ";"
+//    "}"
 
-    "QTreeView::item:selected:!active {"
-        "color: " + textColor.name() + ";"
-        "background: " + selectionColor.name() + ";"
-    "}"
-
+//    "QTreeView::item:selected:!active {"
+//        "color: " + textColor.name() + ";"
+//        "background: " + selectionColor.name() + ";"
+//    "}"
     ;
 }
 
