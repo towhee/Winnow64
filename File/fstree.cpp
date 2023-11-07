@@ -340,7 +340,7 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log("FSTree::refreshModel");
-    qDebug() << "FSTree::refreshModel";
+    //qDebug() << "FSTree::refreshModel";
     mountedDrives.clear();
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {

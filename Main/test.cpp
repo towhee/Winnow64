@@ -147,17 +147,7 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    G::isFlowLogger = !G::isFlowLogger;
-    qDebug() << "G::isFlowLogger =" << G::isFlowLogger;
-    int count = 0;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        if (!(dm->itemFromIndex(dm->index(row, 0))->icon().isNull())) count++;
-    }
-    qDebug() << "Icon count =" << count
-             << "metaReadThread->firstIconRow =" << metaReadThread->firstIconRow
-             << "metaReadThread->lastIconRow =" << metaReadThread->lastIconRow
-             << "metaReadThread->iconChunkSize =" << metaReadThread->iconChunkSize
-                ;
+    filters->restore();
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
@@ -166,8 +156,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    //bounceFoldersStressTest(100, -1);
-    fsTree->setFocus();
+    filters->save();
 }
 
 /*
