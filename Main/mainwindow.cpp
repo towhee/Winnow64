@@ -496,6 +496,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (G::isLogger) G::log("MW::MW", "START APPLICATION", true);
     setObjectName("MW");
 
+    qDebug() << "QSysInfo::prettyProductName() =" << QSysInfo::prettyProductName()
+             << "\nQSysInfo::productType() =      " << QSysInfo::productType()
+             << "\nQSysInfo::productVersion() =   " << QSysInfo::productVersion()
+        ;
+
     // Check if modifier key pressed while program opening
     isShiftOnOpen = false;
     Qt::KeyboardModifiers modifiers = QGuiApplication::queryKeyboardModifiers();
