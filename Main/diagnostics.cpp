@@ -135,7 +135,14 @@ QString MW::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "MainWindow Diagnostics");
     rpt << "\n";
 
-    rpt << "\n" << "version = " << G::s(version);
+    rpt << "\n" << "Winnow version = " << G::s(version);
+#ifdef Q_OS_WIN
+    rpt << "\n";
+    rpt << "\n" << "Preprocessor operating system";
+    rpt << "\n" << "WINVER = " << G::s(WINVER);
+    rpt << "\n" << "_WIN32_WINNT = " << G::s(_WIN32_WINNT);
+    rpt << "\n" << "NTDDI_VERSION = " << G::s(NTDDI_VERSION);
+#endif
     rpt << "\n";
 
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
