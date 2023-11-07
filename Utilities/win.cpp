@@ -123,11 +123,13 @@ void Win::setTitleBarColor(WId winId, QColor bgColor)
              << "NTDDI_VERSION =" << NTDDI_VERSION
                 ;
                 */
-    #if NTDDI_VERSION >= 167772171  // windows 11 or later
+    double osVersion = QSysInfo::productVersion().toDouble();
+    if (osVersion < 11) return;
+    //#if NTDDI_VERSION >= 167772171  // windows 11 or later
         HWND hWnd = reinterpret_cast<HWND>(winId);
         COLORREF color = RGB(bgColor.red(), bgColor.green(), bgColor.blue());
         DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
-    #endif
+    //#endif
 }
 
 
