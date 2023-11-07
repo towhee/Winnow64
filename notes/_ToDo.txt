@@ -1,7 +1,6 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Change color not aligned center in table view
 - MOV creation date ie IMG_3298.MOV
 - Auto advance when cap lock
 - GoogleDrive folder not showing all videos
@@ -92,6 +91,11 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Update filter unfiltered counts after image deletion
+- Auto detect USB removal and insertion on Windows
+- Compile-time Win10/11 not correct in win.cpp
+- FSTree root wrong on some Win10 computers
+- Change color not aligned center in table view
 - Delete files not updating filters
 - Filter color, edit color, loupe not updated
 - Update IconViewDelegate color class and ratings
@@ -124,6 +128,7 @@ DONE/FIXED
 - Redo icon chunk size
 - Rapid ImageView scrolling results in crash
 - Redo selection and navigation
+
 - Release 1.36 (not distributed to users)
 - Check fix missing thumbs for jpg previews in raw images
 - IconView not always updating after remote embellish
@@ -145,11 +150,13 @@ DONE/FIXED
 - After delete image cannot view last image in folder
 - Created date not including ms in token builder
 - Click below last row in TableView crashes
+
 - Release 1.35
 - Add pick status ingested to filters
 - FolderAndFileSelection not always scrolling IconView to current
 - Cmd and Shift select in table view
 - Share including airdrop for Macs
+
 - Release 1.34
 - IconView right click selecting image on PC
 - New folder scroll to start after scrolled ahead
@@ -214,6 +221,7 @@ DONE/FIXED
 
 - Release 1.33.1
 - Embellish not working on windows (setmonitorProfile return issue)
+
 - Release 1.33
 - Use Qt image load if TIF LZW and predictor = 2 (crashes)
 - Not counting in filters for keywords

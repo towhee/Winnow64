@@ -334,7 +334,7 @@ int DataModel::insert(QString fPath)
     // read and add metadata
     readMetadataForItem(dmRow, instance);
     // update fPathRow hash
-    refreshRowFromPathHash();
+    rebuildRowFromPathHash();
 
     return dmRow;
 }
@@ -343,7 +343,7 @@ void DataModel::remove(QString fPath)
 {
 /*
     Delete a row from the data model matching the absolute path.  This is used when an image
-    file has been deleted by Winnow.
+    file has been deleted by Winnow.  Also update fileInfoList and fPathRow.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::remove");
@@ -361,19 +361,19 @@ void DataModel::remove(QString fPath)
         }
     }
 
-    // remove from fileInfoList
+    // rebuild fileInfoList
+    fileInfoList.clear();
     int i;
-    for (i = 0; i < fileInfoList.count(); ++i) {
-        if (fileInfoList.at(i).filePath() == fPath) {
-            fileInfoList.removeAt(i);
-            break;
-        }
+    for (i = 0; i < rowCount(); ++i) {
+        QString path = index(i, G::PathColumn).data(G::PathRole).toString();
+        fileInfoList[i] = QFileInfo(path);
     }
 
-    // remove from fPathRow hash
-    if (fPathRow.contains(fPath)) {
-        fPathRow.remove(fPath);
-    }
+    // rebuild fPathRow hash
+    rebuildRowFromPathHash();
+
+    // update imageCount
+    imageCount = rowCount();
 }
 
 bool DataModel::contains(QString &path)
@@ -1775,7 +1775,7 @@ int DataModel::proxyRowFromPath(QString fPath)
     return sfRow;
 }
 
-void DataModel::refreshRowFromPathHash()
+void DataModel::rebuildRowFromPathHash()
 {
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
@@ -2240,7 +2240,8 @@ QString DataModel::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("currentFolderPath", 27) << G::s(currentFolderPath);
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
-    rpt << "\n" << G::sj("currentRow", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("currentDMRow", 27) << G::s(currentDmRow);
+    rpt << "\n" << G::sj("currentSFRow", 27) << G::s(currentSfRow);
     rpt << "\n" << G::sj("firstVisibleRow", 27) << G::s(currentSfRow);
     rpt << "\n" << G::sj("lastVisibleRow", 27) << G::s(currentSfRow);
     rpt << "\n" << G::sj("startIconRange", 27) << G::s(currentSfRow);
@@ -2252,6 +2253,8 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
     rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abortLoadingModel);
     rpt << "\n" << G::sj("imageCount", 27) << G::s(imageCount);
+    rpt << "\n" << G::sj("dmRowCount", 27) << G::s(rowCount());
+    rpt << "\n" << G::sj("sfRowCount", 27) << G::s(sf->rowCount());
     rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
     for(int row = 0; row < rowCount(); row++) {
         rpt << "\n";
@@ -2427,7 +2430,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
 
     finished = false;
     static int counter = 0;
-    counter++;
+    //counter++;
     int dataModelColumn = 0;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
@@ -2459,12 +2462,15 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QString itemName = (*filter)->text(0);      // for debugging
                     /*
                     qDebug() << "DataModel::filterAcceptsRow"
+                             << counter++
                              << "\tCat =" << itemCategory
                              << "dataModelColumn =" << dataModelColumn
                              << "itemName =" << itemName
                              << "sfRow" << sourceRow
                              << "Comparing" << dataValue << filterValue
-                             << (dataValue == filterValue);
+                             << (dataValue == filterValue)
+                                ;
+                                //*/
 //                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
 //                             << dataModelColumn << G::KeywordsColumn
 //                             << dataValue.typeId()
@@ -2515,6 +2521,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
     finished = true;
+    //qDebug() << "SortFilter::filterAcceptsRow  sf->rowCount =" << rowCount();
     return isMatch;
 }
 
@@ -2542,7 +2549,10 @@ void SortFilter::filterChange()
     while (!finished || timeIsUp) {
         G::wait(10);
         ms += 10;
-        if (ms > waitMs) timeIsUp = true;
+        if (ms > waitMs) {
+            timeIsUp = true;
+            qDebug() << "SortFilter::filterChange  timeIsUp triggered";
+        }
     }
     //qDebug() << "SortFilter::filterChange" << ms;
 }

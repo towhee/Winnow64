@@ -10,22 +10,28 @@ NORMAL DEPLOYMENT
         Creating and uploading a dmg to server
         - Make sure release build qmake details x86 and arm are both checked (Universal build)
           in Qt Creator project mode build config release > qmake > details.
+        - In QMake uncomment QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
+        - Note: after deployment select arm build and uncomment QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
         - Update version in mainwindow.h.
         - In global.cpp set isLogger and isFlowLogger = false.
         - Update ExifTool if necessary.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
           Winnow.app/Contents/MacOS.
         - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
+        - Execute build>clean to make sure fully universal build
         - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
-        - Run WinnowDeploy.command to add frameworks, sign app and copy to Install Winnow folder.
-        - In Install folder rename with version ie Winnow1.36.app.
+        - Run WinnowDeployRelease.command to add frameworks, sign app and copy to Install Winnow folder.
+        - In Install folder rename with version ie Winnow1.37.app.
+        - Confirm is universal:
+          lipo -archs /Users/roryhill/Projects/build-winnow64-Qt_6_6_0_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow
+          or
+          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.37.app/Contents/MacOS/Winnow
+          result: x86_64 arm64
         - In Disk Utility: File > New Image > Image from Folder...
             - select /Users/roryhill/Projects/WinnowInstall/Winnow.
-            - save as Winnow1.36.dmg (in  /Users/roryhill/Projects/WinnowInstall).
+            - save as Winnow1.37.dmg (in  /Users/roryhill/Projects/WinnowInstall).
         - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
           or use FileZilla.
-        - Confirm is universal:
-          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.36.app/Contents/MacOS/Winnow
-        - Try http://www.winnow.ca/winnow_mac/test/Winnow1.36.dmg to make sure it works.
+        - Try http://www.winnow.ca/winnow_mac/test/Winnow1.37.dmg to make sure it works.
         - Finally Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/current
 
         Notes

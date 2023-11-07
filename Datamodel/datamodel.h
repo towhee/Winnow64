@@ -79,7 +79,7 @@ public:
     void setChunkSize(int chunkSize);
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath);
-    void refreshRowFromPathHash();
+    void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();
     int nearestPick();

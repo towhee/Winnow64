@@ -673,6 +673,10 @@ void MW::whenActivated(Qt::ApplicationState state)
 #ifdef Q_OS_MAC
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 #endif
+#ifdef Q_OS_WIN
+    // sometimes windows has not shown all drives yet
+    fsTree->refreshModel();
+#endif
 }
 
 //   EVENT HANDLERS
@@ -5463,7 +5467,8 @@ void MW::deleteFiles(QStringList paths)
        made) to insure the correct index is selected after deletion.  */
     int lowRow = 999999;
     for (int i = 0; i < paths.count(); ++i) {
-        int row = dm->rowFromPath(paths.at(i));
+        int row = dm->proxyRowFromPath(paths.at(i));
+//        int row = dm->rowFromPath(paths.at(i));
         if (row < lowRow) {
             lowRow = row;
         }
@@ -5502,16 +5507,21 @@ void MW::deleteFiles(QStringList paths)
         return;
     }
 
-    // remove fPath from datamodel dm if successfully deleted
+    /*
+    Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
+    is the smae as dm: no filtering.  We save the filter, clear filters, remove all the
+    datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
+    the rows, updates dm->fileInfoList and dm->fPathRow.
+    */
+    filters->save();
+    clearAllFilters();
     for (int i = 0; i < sldm.count(); ++i) {
         QString fPath = sldm.at(i);
         dm->remove(fPath);
     }
+    filters->restore();
 
-    // refresh datamodel fPathRow hash
-    dm->refreshRowFromPathHash();
-
-    // cleanup G::rowsWithIcon
+     // cleanup G::rowsWithIcon
     if (G::isLoadConcurrent) metaReadThread->cleanupIcons();
 
     // remove deleted files from imageCache
@@ -5525,8 +5535,7 @@ void MW::deleteFiles(QStringList paths)
     sel->select(sfIdx);
 
     // rebuild filters
-    buildFilters->reset(false/*collapse*/);
-    buildFilters->build();
+    buildFilters->recount();
 }
 
 void MW::deleteFolder()

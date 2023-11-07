@@ -61,6 +61,7 @@ public:
     void updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
@@ -91,6 +92,8 @@ public slots:
     bool isAnyFilter();
     void setEachCatTextColor();
     bool isCatFiltering(QTreeWidgetItem *item);
+    void save();
+    void restore();
     void disableEmptyCat();
     void invertFilters();
     void clearAll();
@@ -111,8 +114,6 @@ public slots:
     void loadingDataModel(bool isLoaded);
     void setSoloMode(bool isSolo);
     bool otherHdrExpanded(QModelIndex thisIdx);
-
-public slots:
     void dataChanged(const QModelIndex &topLeft,
                      const QModelIndex &bottomRight,
                      const QVector<int> &roles = QVector<int>()) override;
@@ -138,6 +139,12 @@ private:
     bool hdrJustClicked;
     QModelIndex searchTrueIdx;
     bool debugFilters = false;
+    struct ItemState {
+        QString parent;
+        QString item;
+    };
+    QList<ItemState>itemStates;
+    QString searchTextState;
 };
 
 #endif // FILTERS_H

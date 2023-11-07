@@ -40,6 +40,7 @@ public:
 
     void stop();
     void reset(bool collapse = true);
+    void recount();
 
     bool is = true;
 
@@ -66,6 +67,7 @@ private:
     void done();
     void appendUniqueItems();
     void updateUnfilteredSearchCount();
+    void updateUnfilteredCounts();
     void updateFilteredCounts();
     void updateCategoryItems();
     void time(QString msg);

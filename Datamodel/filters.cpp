@@ -805,7 +805,7 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
     Determines if there is another category expanded in the tree.  This is used to
     control solo mode in mousePressEvent.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::otherHdrExpanded");
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::otherHdrExpanded");
     if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::otherHdrExpanded"
                     ;
@@ -815,6 +815,68 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
         if (isExpanded(idx)) return true;
     }
     return false;
+}
+
+void Filters::save()
+/*
+    The filters tree (this) is iterated, and every item that is checked is added to the list
+    as an ItemState, which includes the parent name and the item name.  Also, the search
+    text is saved in searchTextState.
+*/
+{
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::save");
+    //qDebug() << "Filters::save";
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent()) {
+            /*
+            qDebug().noquote()
+                     << (*it)->parent()->text(0).leftJustified(15)
+                     << (*it)->text(0).leftJustified(50, '.') + " "
+                     << (*it)->checkState(0);//*/
+            if ((*it)->checkState(0) == Qt::Checked) {
+                ItemState state;
+                state.parent = (*it)->parent()->text(0);
+                state.item = (*it)->text(0);
+                itemStates << state;
+            }
+        }
+        ++it;
+    }
+    searchTextState = searchTrue->text(0);
+    if (searchTextState == enterSearchString) searchTextState = "";
+}
+
+void Filters::restore()
+/*
+    First, uncheck all items to start with a clean state.  Then iterate through all
+    the ItemState and checking the matching item in the QWidgetTree (this).
+*/
+{
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
+    uncheckAllFilters();
+    // check filters for items in itemStates
+    for (int i = 0; i < itemStates.size(); i++) {
+        QTreeWidgetItemIterator it(this);
+        while (*it) {
+            if ((*it)->parent()) {
+                if ((*it)->parent()->text(0) == itemStates.at(i).parent) {
+                    if ((*it)->text(0) == itemStates.at(i).item) {
+                        (*it)->setCheckState(0, Qt::Checked);
+                    }
+                }
+            }
+            ++it;
+        }
+        // restore search text
+        searchTrue->setText(0, searchTextState);
+
+        emit filterChange("Filters::checkItem");
+//        qDebug().noquote()
+//            << itemStates.at(i).parent.leftJustified(15)
+//            << itemStates.at(i).item.leftJustified(50, '.') + "Checked";
+    }
+
 }
 
 void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state)
@@ -1119,11 +1181,44 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight);
         item->setTextAlignment(3, Qt::AlignRight);
-//        qDebug() << "Filters::addCategoryItems  Category =" << category->text(0) << "item =" << i.value();
+        /*
+        qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
+                 << "item =" << i.value();
+        //*/
     }
 
     // sort the result
 //    category->sortChildren(0, Qt::AscendingOrder);
+}
+
+void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
+{
+    /*
+    All the unique values for a category are collected into a QMap object in
+    BuildFilters. The list is passed here, where unique values are extracted and added to
+    the category. For example, there could be multiple file types in the folder like JPG
+    and NEF. A QMap object is used so the items can be sorted by key in the same order as
+    the tableView. This function should only be used for dynamic categories - see
+    createDynamicFilters;
+
+    If a category item was just checked (activeCategory) then it is ignored, as the user
+    may want to check another item in the same category.
+*/
+    //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
+    if (debugFilters || G::isLogger || G::isFlowLogger)
+        qDebug() << "Filters::addFilteredCountPerItem"
+                 << "category =" << category->text(0)
+            ;
+
+    for (int i = 0; i < category->childCount(); i++) {
+        category->child(i)->setData(3, Qt::EditRole, 0);
+        QString key = category->child(i)->text(0);
+        if (itemMap.contains(key))
+            category->child(i)->setData(3, Qt::EditRole, itemMap.value(key));
+    }
+
+    // sort the result
+    //category->sortChildren(0, Qt::AscendingOrder);
 }
 
 void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
@@ -1144,13 +1239,6 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
         qDebug() << "Filters::addFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;
-    // qDebug() << "Filters::addFilteredCountPerItem  Category =" << category->text(0);
-//    if (activeCategory == category) {
-//        // only ignore if there is at least one checked item
-//        for (int i = 0; i < category->childCount(); i++) {
-//            if (category->child(i)->checkState(0) == Qt::Checked) return;
-//        }
-//    }
 
     for (int i = 0; i < category->childCount(); i++) {
         category->child(i)->setData(2, Qt::EditRole, 0);
@@ -1160,7 +1248,7 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     }
 
     // sort the result
-    //    category->sortChildren(0, Qt::AscendingOrder);
+    //category->sortChildren(0, Qt::AscendingOrder);
 }
 
 void Filters::dataChanged(const QModelIndex &topLeft,

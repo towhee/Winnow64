@@ -70,7 +70,7 @@ void MW::filterChange(QString source)
     parameters are recalculated and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    //qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -118,7 +118,7 @@ void MW::filterChange(QString source)
 
     // is the DataModel current index still in the filter.  If not, set to zero
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
+    //qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
     }

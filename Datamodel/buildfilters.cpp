@@ -163,6 +163,16 @@ void BuildFilters::update()
     else build();
 }
 
+void BuildFilters::recount()
+{
+/*
+    Counts the filtered and unfiltered items without rebuilding the filters.  This is used
+    when images are deleted.
+*/
+    updateUnfilteredCounts();
+    updateFilteredCounts();
+}
+
 void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction newAction)
 {
 /*
@@ -260,6 +270,102 @@ void BuildFilters::updateUnfilteredSearchCount()
     filters->updateSearchCategoryCount(map, false /*isFiltered*/);
 }
 
+void BuildFilters::updateUnfilteredCounts()
+{
+    /*
+    Update the DataModel item counts in Filters.  A QMap is used to count all the unique
+    items for each DataModel column that can be filtered and updates the unique item counts by
+    calling filters->addFilteredCountPerItem.
+
+    This is used when images are deleted from a filtered dataset.
+*/
+    if (debugBuildFilters)
+    {
+        qDebug()
+            << "BuildFilters::countMapFiltered"
+            ;
+    }
+
+    QMap<QString,int> map;
+    QString method = "Map";
+    int rows = dm->rowCount();
+
+    // count unfiltered
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
+    //filters->updateSearchCategoryCount(map, true /*isFiltered*/);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->picks);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->ratings);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->labels);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->types);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->years);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->days);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->models);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->lenses);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
+    filters->updateUnfilteredCountPerItem(map, filters->focalLengths);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->titles);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->creators);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
+    map.clear();
+
+    for (int row = 0; row < rows; row++) {
+        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
+    }
+    filters->updateUnfilteredCountPerItem(map, filters->keywords);
+    map.clear();
+
+    filters->update();
+}
+
 void BuildFilters::updateFilteredCounts()
 {
 /*
@@ -345,7 +451,7 @@ void BuildFilters::updateFilteredCounts()
     map.clear();
 
     for (int row = 0; row < rows; row++) {
-        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        QStringList x = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->updateFilteredCountPerItem(map, filters->keywords);
