@@ -606,7 +606,7 @@ void Embel::updateBorder(int i)
 {
     if (G::isLogger) G::log("Embel::updateBorder");
     if (G::mode != "Loupe") return;
-    qDebug() << "Embel::updateBorder";
+    //qDebug() << "Embel::updateBorder";
     // index guard
     if (bItems.count() < i + 1) return;
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
@@ -651,7 +651,7 @@ void Embel::updateText(int i)
 {
     if (G::isLogger) G::log("Embel::updateText");
     if (G::mode != "Loupe") return;
-    qDebug() << "Embel::updateText";
+    //qDebug() << "Embel::updateText";
 
     // index guard
     if (p->t.count() < i + 1) return;
@@ -730,7 +730,7 @@ void Embel::updateGraphic(int i)
 {
     if (G::isLogger) G::log("Embel::updateGraphic");
     if (G::mode != "Loupe") return;
-    qDebug() << "Embel::updateGraphic";
+    //qDebug() << "Embel::updateGraphic";
 
     // index guard
     if (p->g.count() < i + 1) return;
@@ -810,7 +810,7 @@ void Embel::updateImage()       // all effects bundled in style
 {
     if (G::isLogger) G::log("Embel::updateImage");
     if (G::mode != "Loupe") return;
-    qDebug() << "Embel::updateImage" << fPath;
+    //qDebug() << "Embel::updateImage" << fPath;
 
     bool isEffects = (p->styleMap[p->image.style].size() > 0);
     bool legalStyle = (p->image.style != "No style" && p->image.style != "");
@@ -821,7 +821,7 @@ void Embel::updateImage()       // all effects bundled in style
         // start with a fresh image from the ImageCache
         QImage im;
         if (icd->imCache.find(fPath, im)) {
-            qDebug() << "Embel::updateImage  image.w =" << image.w;
+            //qDebug() << "Embel::updateImage  image.w =" << image.w;
             pmItem->setPixmap(QPixmap::fromImage(im).scaledToWidth(image.w));
         }
 

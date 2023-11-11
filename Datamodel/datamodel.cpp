@@ -299,7 +299,7 @@ bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
     QString s1 = i1.absoluteFilePath().toLower();
     QString s2 = i2.absoluteFilePath().toLower();
     // check if combined raw+jpg duplicates
-    if(i1.completeBaseName() == i2.completeBaseName()) {
+    if (i1.completeBaseName() == i2.completeBaseName()) {
         if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
         if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
     }
@@ -311,30 +311,48 @@ int DataModel::insert(QString fPath)
 /*
     Insert a new image into the data model.  Use when a new image is created by embel export
     or meanStack to quickly refresh the active folder with the just saved image.
+
+    The datamodel must already contain the fPath folder.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::insert");
-    if (isDebug) qDebug() << "DataModel::insert" << "instance =" << instance;
+    if (isDebug)
+        qDebug() << "DataModel::insert"
+                 << "instance =" << instance
+                 << "fPath =" << fPath;
+
     QFileInfo insertFile(fPath);
+    QString insertFileName = insertFile.fileName().toLower();
 
     // find row greater than insert file absolute path
     int dmRow;
     for (dmRow = 0; dmRow < rowCount(); ++dmRow) {
         QString rowPath = index(dmRow, 0).data(G::PathRole).toString();
         QFileInfo currentFile(rowPath);
-        if (lessThan(insertFile, currentFile)) break;
+        QString currentFileName = currentFile.fileName().toLower();
+        if (insertFileName < currentFileName) {
+            break;
+        }
     }
-
+    if (dmRow >= rowCount()) dmRow = rowCount() - 1;
     // insert new row
     insertRow(dmRow);
-    fileInfoList.insert(dmRow, insertFile);
+
+    // rebuild fileInfoList
+    fileInfoList.clear();
+    int i;
+    for (i = 0; i < rowCount(); ++i) {
+        QString path = index(i, G::PathColumn).data(G::PathRole).toString();
+        fileInfoList.append(QFileInfo(path));
+    }
+
+    // update fPathRow hash
+    rebuildRowFromPathHash();
+    // update imageCount
+    imageCount = rowCount();
 
     // add the file data
     addFileDataForRow(dmRow, insertFile);
-    // read and add metadata
-    readMetadataForItem(dmRow, instance);
-    // update fPathRow hash
-    rebuildRowFromPathHash();
 
     return dmRow;
 }
@@ -366,7 +384,7 @@ void DataModel::remove(QString fPath)
     int i;
     for (i = 0; i < rowCount(); ++i) {
         QString path = index(i, G::PathColumn).data(G::PathRole).toString();
-        fileInfoList[i] = QFileInfo(path);
+        fileInfoList.append(QFileInfo(path));
     }
 
     // rebuild fPathRow hash
@@ -990,7 +1008,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     QString errMsg = "";
     lastFunction = "";
     if (G::isLogger) G::log(fun, index(row, 0).data(G::PathRole).toString());
-    qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
+    //qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
     if (isDebug) qDebug() << fun << "instance =" << instance
                           << "row =" << row
                           << currentFolderPath;
@@ -1023,7 +1041,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
         // only read metadata from files that we know how to
         QString ext = fileInfo.suffix().toLower();
         if (metadata->hasMetadataFormats.contains(ext)) {
-            qDebug() << "DataModel::readMetadataForItem" << fPath;
+            //qDebug() << "DataModel::readMetadataForItem" << fPath;
             if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
                 metadata->m.row = row;
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");

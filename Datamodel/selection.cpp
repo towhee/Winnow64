@@ -97,6 +97,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select QString");
+    //qDebug() << "Selection::select QString" << fPath;
     select(dm->proxyIndexFromPath(fPath), modifiers);
 }
 
@@ -111,7 +112,8 @@ void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
-//    /*
+    //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
+    ///*
     bool isNoModifier = modifiers & Qt::NoModifier;
     bool isControlModifier = modifiers & Qt::ControlModifier;
     bool isShiftModifier = modifiers & Qt::ShiftModifier;

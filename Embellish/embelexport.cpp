@@ -156,7 +156,7 @@ bool EmbelExport::isValidExportFolder()
     return true;
 }
 
-QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
+QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
@@ -171,13 +171,15 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
 */
     if (G::isLogger) G::log("EmbelExport::exportRemoteFiles");
 
+    // clear dstPaths
+    dstPaths.clear();
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
     // make sure export folder has been set
     if (!isValidExportFolder()) {
-        return "";
+        return dstPaths;
     }
     embellish->setRemote(true);
 
@@ -191,8 +193,12 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
         QFile(pathList.at(i)).remove();
     }
 
+    // clear embellish
+    embelProperties->setCurrentTemplate("Do not Embellish");
+
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
-    return lastFileExportedPath;
+    return dstPaths;
+//    return lastFileExportedPath;
 }
 
 void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
@@ -215,7 +221,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     if (embelProperties->templateName == "Do not Embellish") {
         G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"
-                            "Press <font color=\"red\"><b>Esc</b></font> to continue.",
+                            "Press <font color=\"red\"><b>Spacebar</b></font> to continue.",
                             0);
         return;
     }
@@ -268,6 +274,9 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             // add thumbnail to dst
             et.addThumb(dstThumb, dst);
 
+            //qDebug() << "EmbelExport::exportImages" << i << dst;
+            dstPaths << dst;
+
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
             if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", msg);
         }
@@ -307,7 +316,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                   "Elapsed time " + _sec + second + "<p>" +
                   _msperim + " milliseconds per image.<p>" +
                   "<hr>" +
-                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
+                  "Press <font color=\"red\"><b>Spacebar</b></font> to continue";
     G::popUp->showPopup(msg, 2000);
     //*/
 }
@@ -381,6 +390,9 @@ bool EmbelExport::exportImage(const QString &fPath)
 
         lastFileExportedPath = exportPath;
     }
+
+//    QFile f(exportPath);
+//    f.close();
 
     return wasSaved;
 }

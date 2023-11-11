@@ -27,6 +27,7 @@ void MW::createFileActions()
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
     openAction->setShortcutVisibleInContextMenu(true);
+    openAction->setToolTip("This is a tip");
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
@@ -391,33 +392,43 @@ void MW::createEditActions()
     addAction(popPickHistoryAction);
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
-    // Delete
-    deleteImagesAction = new QAction(tr("Delete image(s)"), this);
+    //
+    QString moveFilesToWhatever;
+    QString moveFolderToWhatever;
+    #ifdef Q_OS_WIN
+    moveFilesToWhatever = "Move file(s) to recycle bin";
+    moveFoldersToWhatever = "Move folder to recycle bin";
+    #endif
+    #ifdef Q_OS_MAC
+    moveFilesToWhatever = "Move file(s) to trash";
+    moveFolderToWhatever = "Move folder to trash";
+    #endif
+    deleteImagesAction = new QAction(moveFilesToWhatever, this);
     deleteImagesAction->setObjectName("deleteFiles");
     deleteImagesAction->setShortcutVisibleInContextMenu(true);
     deleteImagesAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteImagesAction);
     connect(deleteImagesAction, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
-    deleteAction1 = new QAction(tr("Delete image(s)"), this);
+    deleteAction1 = new QAction(moveFilesToWhatever, this);
     deleteAction1->setObjectName("backspaceDeleteFiles");
     deleteAction1->setShortcutVisibleInContextMenu(true);
     deleteAction1->setShortcut(QKeySequence("Backspace"));
     addAction(deleteAction1);
     connect(deleteAction1, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
-    deleteActiveFolderAction = new QAction(tr("Delete folder"), this);
+    deleteActiveFolderAction = new QAction(moveFolderToWhatever, this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");
     addAction(deleteActiveFolderAction);
     connect(deleteActiveFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
     // not being used due to risk of folder containing many subfolders with no indication to user
-    deleteBookmarkFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteBookmarkFolderAction = new QAction(moveFolderToWhatever, this);
     deleteBookmarkFolderAction->setObjectName("deleteBookmarkFolder");
     addAction(deleteBookmarkFolderAction);
     connect(deleteBookmarkFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
-    deleteFSTreeFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteFSTreeFolderAction = new QAction(moveFolderToWhatever, this);
     deleteFSTreeFolderAction->setObjectName("deleteFSTreeFolder");
     addAction(deleteFSTreeFolderAction);
     connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
@@ -1564,6 +1575,7 @@ void MW::createMenus()
 void MW::createFileMenu()
 {
     fileMenu = new QMenu(this);
+    fileMenu->setToolTipsVisible(true);
     fileGroupAct = new QAction("File", this);
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);

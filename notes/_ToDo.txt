@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Add tooltips to menus
+- Check possible fast QQ glitch.
 - MOV creation date ie IMG_3298.MOV
 - Auto advance when cap lock
 - GoogleDrive folder not showing all videos

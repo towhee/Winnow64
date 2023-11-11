@@ -117,12 +117,7 @@ void Win::collectScreensInfo()
 
 void Win::setTitleBarColor(WId winId, QColor bgColor)
 {
-    /*
-    qDebug() << "_WIN32_WINNT =" << _WIN32_WINNT
-             << "WINVER =" << WINVER
-             << "NTDDI_VERSION =" << NTDDI_VERSION
-                ;
-                */
+    // WINVER not working - same for Win10 and Win11, must compile on Win11
     double osVersion = QSysInfo::productVersion().toDouble();
     if (osVersion < 11) return;
     //#if NTDDI_VERSION >= 167772171  // windows 11 or later

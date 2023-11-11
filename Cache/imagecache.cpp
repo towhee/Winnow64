@@ -462,6 +462,9 @@ void ImageCache::setTargetRange()
     for (int key = 0; key < keys.size(); key++) {
         QString fPath = keys.at(key);
         // i = cacheKey
+        // could be issue when deleting an image
+        if (!keyFromPath.contains(fPath)) continue;
+
         int i = keyFromPath[fPath];
         if (i < icd->cache.targetFirst || i > icd->cache.targetLast) {
             if (debugCaching)
@@ -1089,15 +1092,36 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     if (G::stop) {
         return;
     }
+
+    icd->mutex.lock();
+    // row same as datamodel
+    int row;
     if (!keyFromPath.contains(m.fPath)) {
+        /* Prev code
         if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
                        << "cacheKeyHash does not contain" << m.fPath;
         return;
+        //*/
+        // insert new item in icd->cacheItemList
+        row = m.row;
+        //qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath;
+        icd->cacheItem.isUpdated = false;
+        icd->cacheItem.key = row;              // need to be able to sync with imageList
+        icd->cacheItem.origKey = row;          // req'd while setting target range
+        icd->cacheItem.fPath = m.fPath;
+        icd->cacheItem.status = 0;
+        icd->cacheItem.isCaching = false;
+        icd->cacheItem.attempts = 0;
+        icd->cacheItem.threadId = -1;
+        icd->cacheItem.isCached = false;
+        icd->cacheItem.isTarget = false;
+        icd->cacheItem.priority = row;
+        icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
+        icd->cacheItemList.insert(row, icd->cacheItem);
     }
+    else row = keyFromPath[m.fPath];
 
-    icd->mutex.lock();
-    int row = keyFromPath[m.fPath];
     if (row >= icd->cacheItemList.size()) {
         if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"

@@ -60,11 +60,11 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
 /*
     Starts reading metadata and icons from row, alternating ahead and behind.
 
-    fileSelectionChanged == false (Scroll event)
+    fileSelectionChanged == false (Scroll event):
 
         Read metadata and icons.  Do not trigger a fileSelectioChange.
 
-    fileSelectionChanged == true
+    fileSelectionChanged == true:
 
         The row is the current image and MW::fileSelectionChange will be signalled after
         a delay of imageCacheTriggerCount images.
@@ -599,6 +599,13 @@ void MetaRead::run()
                 qDebug() << "MetaRead::run  abort = true  exit run";
             return;
         }
+    }
+
+    /* When images are inserted into the current folder (ie export from lightroom to a
+    Winnet - see MW::handleStartArgs), fileSelectionChanged may not be triggered. */
+    if (!hasBeenTriggered && fileSelectionChanged) {
+        QModelIndex sfIdx = dm->sf->index(startRow, 0);
+        emit fileSelectionChange(sfIdx);
     }
 
     if (isDebug)

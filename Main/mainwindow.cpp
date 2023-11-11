@@ -496,11 +496,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (G::isLogger) G::log("MW::MW", "START APPLICATION", true);
     setObjectName("MW");
 
-    qDebug() << "QSysInfo::prettyProductName() =" << QSysInfo::prettyProductName()
-             << "\nQSysInfo::productType() =      " << QSysInfo::productType()
-             << "\nQSysInfo::productVersion() =   " << QSysInfo::productVersion()
-        ;
-
     // Check if modifier key pressed while program opening
     isShiftOnOpen = false;
     Qt::KeyboardModifiers modifiers = QGuiApplication::queryKeyboardModifiers();
@@ -601,6 +596,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 //    G::isInitializing = false;
 
     if (isStartupArgs) {
+        qApp->processEvents();
         handleStartupArgs(args);
         this->args = args;
         return;
@@ -935,6 +931,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
                 slideShowTimer->start(slideShowDelay * 1000);
             }
         }
+
     }
 
     bool isVideoMode = centralLayout->currentIndex() == VideoTab;
@@ -942,6 +939,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         if (event->key() == Qt::Key_Space) {
             if (G::useMultimedia) videoView->playOrPause();
         }
+    }
+
+    if (event->key() == Qt::Key_Space) {
+        G::popUp->end();
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -1620,12 +1621,13 @@ void MW::handleStartupArgs(const QString &args)
 
     if (args.length() < 2) return;
 
-    stop("MW::handleStartupArgs");
+    //if (!G::allMetadataLoaded)
+    //stop("MW::handleStartupArgs");
 
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
-    qDebug() << "MW::handleStartupArgs" << argList;
+    //qDebug() << "MW::handleStartupArgs" << argList;
     /*
     QString a = "";
     for (QString s : argList) a += s + "\n";
@@ -1752,26 +1754,49 @@ void MW::handleStartupArgs(const QString &args)
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
-        // export get the location for the last embellished file
-        QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "lastFileExportedThumbPath = " + fPath);
+        // embellish src images (pathList) and return paths to embellished images
+        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
+        //qDebug() << "MW::handleStartUpArgs" << embellishedPaths;
 
-        info.setFile(fPath);
+        if (!embellishedPaths.size()) return;
+
+        info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
-//        fsTree->getFolderImageCount(fDir, true, "MW::handleStartupArgs");
-        // go there ...
-        fsTree->select(fDir);
-        // refresh FSTree counts
-        fsTree->refreshModel();
-        folderAndFileSelectionChange(fPath, "handleStartupArgs");
+        /* debug
+        qDebug() << "MW::handleStartUpArgs"
+                 << "fDir" << fDir
+                 << "G::currRootFolder" << G::currRootFolder
+                 << "first path =" << embellishedPaths.at(0)
+            ; //*/
+
+        // folder already open
+        if (fDir == G::currRootFolder) {
+            foreach (QString path, embellishedPaths) {
+                // change dir in path to G::currRootFolder
+                dm->insert(path);
+            }
+            G::allMetadataLoaded = false;
+            G::allIconsLoaded = false;
+            QString fPath = embellishedPaths.at(0);
+            sel->select(fPath);
+        }
+        // open the folder
+        else {
+            // go there ...
+            fsTree->select(fDir);
+            // refresh FSTree counts
+            fsTree->refreshModel();
+            QString fPath = embellishedPaths.at(0);
+            folderAndFileSelectionChange(fPath, "handleStartupArgs");
+        }
     }
 
     // startup not triggered by embellish winnet
     else {
+        //qDebug() << "MW::handleStartupArgs:  startup not triggered by embellish winnet";
         QFileInfo f(argList.at(1));
         f.dir().path();
         fsTree->select(f.dir().path());
-//        selectionChange();
         folderSelectionChange();
          if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
@@ -2479,6 +2504,7 @@ bool MW::reset(QString src)
     G::allIconsLoaded = false;
     G::isLinearLoadDone = false;
     G::currRootFolder = "";
+    //qDebug() << "MW::reset" << "G::currRootFolder = Blank";
 
     imageView->clear();
     setWindowTitle(winnowWithVersion);
@@ -2761,6 +2787,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "src =" << src
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
+                 << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
     if (G::allMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
@@ -2770,6 +2797,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
+        //thumbView->scrollToRow(sfRow, "MW::loadConcurrent");
     }
 }
 
@@ -3317,6 +3345,7 @@ void MW::checkDirState(const QString &dirPath)
     if (G::isInitializing) return;
 
     if (!QDir().exists(G::currRootFolder)) {
+        qDebug() << "MW::checkDirState" << "G::currRootFolder = Blank";
         G::currRootFolder = "";
     }
 }
@@ -4499,7 +4528,7 @@ void MW::setRotation(int degrees)
             QString msg = "Please note that while the images have been rotated in Winnow,<br>"
                           "the EXIF in the image file has not been updated because file<br>"
                           "modification is disabled in preferences (General section).<p>"
-                          "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
+                          "<p>Press <font color=\"red\"><b>Spacebar</b></font> to continue."
                 ;
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             rotationAlertShown = true;
@@ -5396,7 +5425,7 @@ void MW::renameSelectedFiles()
                           "images from multiple folders and there should be a<br>"
                           + includesubfoldersIcon +
                           " in the status bar.<p>"
-                          "Press <font color=\"red\"><b>Esc</b></font> to continue."
+                          "Press <font color=\"red\"><b>Spacebar</b></font> to continue."
                           ;
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             return;
@@ -5417,7 +5446,12 @@ void MW::deleteSelectedFiles()
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
     // make sure datamodel is loaded
     if (!G::allMetadataLoaded) {
-        G::popUp->showPopup("Cannot delete images before all images have been added, 1500");
+        QString msg = "Please wait until the folder has been completely loaded<br>"
+                      "before deleting images.  When the folder is completely<br>"
+                      "loaded the metadata light in the status bar (2nd from the<br>"
+                      "right side) will turn green.<p>"
+                      "Press <font color=\"red\"><b>Spacebar</b></font> to continue.";
+        G::popUp->showPopup(msg, 0);
         return;
     }
 
@@ -5468,6 +5502,17 @@ void MW::deleteFiles(QStringList paths)
 */
     if (G::isLogger) G::log("MW::deleteFiles");
 
+    // if still loading metadata then do not delete
+    if (!G::allMetadataLoaded) {
+        QString msg = "Please wait until the folder has been completely loaded<br>"
+                      "before deleting images.  When the folder is completely<br>"
+                      "loaded the metadata light in the status bar (2nd from the<br>"
+                      "right side) will turn green.<p>"
+                      "Press <font color=\"red\"><b>Spacebar</b></font> to continue.";
+        G::popUp->showPopup(msg, 0);
+        return;
+    }
+
     /* save the index to the first row in selection (order depends on how selection was
        made) to insure the correct index is selected after deletion.  */
     int lowRow = 999999;
@@ -5482,20 +5527,33 @@ void MW::deleteFiles(QStringList paths)
     G::ignoreScrollSignal = true;
 
     // delete file(s) in folder on disk, including any xmp sidecars
-    QStringList sldm;   // paths of successfully deleted files to remove in datamodel
+
+    // paths of successfully deleted files to remove in datamodel
+    QStringList sldm;
     bool fileWasLocked = false;
     for (int i = 0; i < paths.count(); ++i) {
         QString fPath = paths.at(i);
-        ImageMetadata m = dm->imMetadata(fPath);
-        if (!m.isReadWrite) fileWasLocked = true;
-        if (QFile(fPath).moveToTrash()) {
-            sldm.append(fPath);
-        }
-        QStringList srcSidecarPaths = Utilities::getPossibleSidecars(fPath);
-        foreach (QString sidecarPath, srcSidecarPaths) {
-            if (QFile(sidecarPath).exists()) {
-                QFile(sidecarPath).moveToTrash();
+        if (QFile::exists(fPath)) {
+            ImageMetadata m = dm->imMetadata(fPath);
+            if (!m.isReadWrite) {
+                fileWasLocked = true;
+                qDebug() << "MW::deleteFiles File is locked" << fPath;
             }
+            if (QFile(fPath).moveToTrash()) {
+                sldm.append(fPath);
+                QStringList srcSidecarPaths = Utilities::getPossibleSidecars(fPath);
+                foreach (QString sidecarPath, srcSidecarPaths) {
+                    if (QFile(sidecarPath).exists()) {
+                    QFile(sidecarPath).moveToTrash();
+                    }
+                }
+            }
+            else {
+                qDebug() << "MW::deleteFiles Unable to move to trash" << fPath;
+            }
+        }
+        else {
+            qDebug() << "MW::deleteFiles File does not exist" << fPath;
         }
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
@@ -5514,7 +5572,7 @@ void MW::deleteFiles(QStringList paths)
 
     /*
     Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
-    is the smae as dm: no filtering.  We save the filter, clear filters, remove all the
+    is the same as dm: no filtering.  We save the filter, clear filters, remove all the
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
     the rows, updates dm->fileInfoList and dm->fPathRow.
     */
