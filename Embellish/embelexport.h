@@ -27,7 +27,7 @@ public:
     ~EmbelExport() override;
 
     void exportImages(const QStringList &srcList, bool isRemote = false);
-    QString exportRemoteFiles(QString templateName, QStringList &pathList);
+    QStringList exportRemoteFiles(QString templateName, QStringList &pathList);
     bool exportImage(const QString &fPath);
     QString exportSubfolderPath(QString folderPath = "", bool allowOverride = false);
 
@@ -50,6 +50,7 @@ private:
     QString exportFolderIfNotSubfolder;
     QString lastFileExportedPath;
     QString lastFileExportedThumbPath;
+    QStringList dstPaths;
     bool abort = false;
 };
 

@@ -59,7 +59,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
                   QString::number(elapedmsPerImage) + " ms delay.<br>" +
                   QString::number(imagePerSec) + " images per second.<br>" +
                   QString::number(elapedmsPerImage) + " ms per image."
-//                  + "<br><br>Press <font color=\"red\"><b>Esc</b></font> to cancel this popup."
+//                  + "<br><br>Press <font color=\"red\"><b>Spacebar</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
@@ -156,7 +156,29 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->save();
+    QString fPath;
+    fPath = "/Users/roryhill/Pictures/_test0/2023-11-07_0001.orf";
+    int dmRow = dm->insert(fPath);
+    G::allMetadataLoaded = false;
+    G::allIconsLoaded = false;
+    sel->select(fPath);
+    return;
+
+    QFileInfo i1 = QFileInfo("/users/roryhill/pictures/zenfolio/pbase2048/pbase2048 archive/2021-02-27_0006_zen2048.jpg");
+    QString a = i1.absoluteFilePath().toLower();
+    QFileInfo i2 = QFileInfo("/users/roryhill/pictures/_test6/1cbbccff-2a43-4015-ba7d-2d8418256149.jpg");
+    QString b = i2.absoluteFilePath().toLower();
+
+    bool a_lessthan_b = a < b;
+    bool b_lessthan_a = b < a;
+    qDebug() << "a_lessthan_b" << a_lessthan_b << "b_lessthan_a" << b_lessthan_a;
+    return;
+
+
+    qDebug() << G::currRootFolder;
+    return;
+    //QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-07_0526 Focus Stack_Zen2048.JPG";
+    folderAndFileSelectionChange(fPath, "handleStartupArgs");
 }
 
 /*

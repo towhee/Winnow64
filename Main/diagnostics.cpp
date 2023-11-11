@@ -136,6 +136,8 @@ QString MW::diagnostics()
     rpt << "\n";
 
     rpt << "\n" << "Winnow version = " << G::s(version);
+    rpt << "\n" << "Winnow executable dir = " << G::s(qApp->applicationDirPath());
+    rpt << "\n" << "Winnow executable path = " << G::s(qApp->applicationFilePath());
 #ifdef Q_OS_WIN
     rpt << "\n";
     rpt << "\n" << "Preprocessor operating system";

@@ -49,7 +49,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
               return l.effectOrder < r.effectOrder; });
               //*/
     for (int i = 0; i < effects.length(); ++i) {
-        qDebug() << "GraphicsEffect::set" << i;
+        //qDebug() << "GraphicsEffect::set" << i;
         const Effect &ef = effects.at(i);
         switch (ef.effectType) {
             case emboss:
@@ -129,7 +129,7 @@ if (G::isFileLogger) Utilities::log("GraphicsEffect::draw", "");
 
     if (effects->length() == 0) return;
     */
-    qDebug() << "GraphicsEffect::draw" << "drawCount =" << drawCount;
+    //qDebug() << "GraphicsEffect::draw" << "drawCount =" << drawCount;
     if (this->sourcePixmap().isNull()) return;
 
     painter->save();
@@ -283,11 +283,12 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::shadowEffect", "");
 #endif
+/*
     qDebug() << "GraphicsEffect::shadowEffect"
-//             << QTime::currentTime();
              << "boundingRect =" << boundingRect()
              << "overlay.size() =" << overlay.size()
                 ;
+    //*/
 
     if (overlay.isNull()) return;
 
@@ -525,10 +526,12 @@ void GraphicsEffect::strokeEffect(double width,
 #ifdef ISLOGGER
 if (G::isFileLogger) Utilities::log("GraphicsEffect::strokeEffect", "");
 #endif
+    /*
     qDebug() << "GraphicsEffect::strokeEffect"
              << "boundingRect =" << boundingRect()
              << "overlay.size() =" << overlay.size()
                 ;
+    //*/
 
     if (overlay.isNull() || width < 1) return;
 

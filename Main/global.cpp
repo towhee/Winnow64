@@ -90,9 +90,12 @@ namespace G
     QColor labelRedColor(QColor(60,20,20));          // Dark red
     QColor labelYellowColor(QColor(80,55,15));     // Dark yellow
     QColor labelGreenColor(QColor(20,40,20));        // Dark green
-    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
-    QColor labelPurpleColor(QColor(54,37,95));     // Dark magenta
-//    QColor labelPurpleColor(QColor(37,25,61));     // Dark magenta
+    QColor labelBlueColor(QColor(20,20,60));         // Dark blue
+//    QColor labelBlueColor(QColor(20,45,100));         // Dark blue
+//    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
+    QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
+//    QColor labelPurpleColor(QColor(60,30,90));     // Dark purple
+//    QColor labelPurpleColor(QColor(54,37,95));     // Dark purple
 
     QStringList ratings, labelColors;
 

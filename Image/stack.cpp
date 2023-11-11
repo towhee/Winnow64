@@ -97,7 +97,7 @@ QString Stack::mean()
                 QString txt = "All images in selection must have the same dimensions.<br>"
                               "Image " + fPath + "<br>"
                               "has diffent dimensions."
-                              "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
+                              "<p>Press <font color=\"red\"><b>Spacebar</b></font> to continue."
                               ;
                 G::popUp->setProgressVisible(false);
                 G::popUp->end();
