@@ -312,8 +312,11 @@ void MW::errorReport()
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     G::errlogFile.seek(0);
     QString errString(G::errlogFile.readAll());
-//    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
+    //qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
     md.textBrowser->setText(errString);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
     dlg->show();
 }
 
@@ -331,8 +334,11 @@ void MW::logReport()
     if (!G::logFile.isOpen()) startLog();
     G::logFile.seek(0);
     QString logString(G::logFile.readAll());
-    //    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
+    //qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
     md.textBrowser->setText(logString);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
     dlg->show();
 }
 
