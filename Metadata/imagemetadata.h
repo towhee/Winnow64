@@ -39,6 +39,7 @@ public:
 
     bool isSearch = false;
     QString type = "";
+    QString ext = "";
     // end of file system info, rest requires pulling metadata from image file
     int size = 0;
     uint permissions = 0;                   // file permissions (QFileDevice::Permissions)

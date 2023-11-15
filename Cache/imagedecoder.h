@@ -49,18 +49,19 @@ public:
         FileOpen
     } status;
 
-    QVector<QString> statusText {
-        "Ready"
-        "Busy"
-        "Done"
-        "Abort"
-        "Invalid"
-        "Failed"
-        "Video"
-        "InstanceClash"
-        "NoDir"
-        "BlankFilePath"
-        "NoMetadata"
+    //QVector<QString> StatusText {
+    QStringList statusText {
+        "Ready",
+        "Busy",
+        "Done",
+        "Abort",
+        "Invalid",
+        "Failed",
+        "Video",
+        "InstanceClash",
+        "NoDir",
+        "BlankFilePath",
+        "NoMetadata",
         "FileOpen"
     };
 

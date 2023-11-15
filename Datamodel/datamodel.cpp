@@ -947,7 +947,8 @@ void DataModel::addAllMetadata()
 */
     lastFunction = "DataModel::addAllMetadata";
     if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addAllMetadata";
-    if (isDebug) qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentFolderPath;
+    if (isDebug)
+        qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentFolderPath;
 //    G::t.restart();
 
     int mod = 10;
@@ -960,7 +961,7 @@ void DataModel::addAllMetadata()
                         " metadata loading...";
             emit centralMsg(s);    // rghmsg
             emit updateProgress(1.0 * row / rowCount() * 100);
-            qApp->processEvents();
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
         }
         if (abortLoadingModel || G::dmEmpty) {
             endLoad(false);
@@ -988,7 +989,7 @@ void DataModel::addAllMetadata()
     }
     setAllMetadataLoaded(true);
     emit centralMsg("Metadata loaded");
-    qApp->processEvents();
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
     endLoad(true);
     /*
     qint64 ms = G::t.elapsed();

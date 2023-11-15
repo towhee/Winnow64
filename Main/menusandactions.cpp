@@ -27,7 +27,6 @@ void MW::createFileActions()
     openAction = new QAction(tr("Open Folder"), this);
     openAction->setObjectName("openFolder");
     openAction->setShortcutVisibleInContextMenu(true);
-    openAction->setToolTip("This is a tip");
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 

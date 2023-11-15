@@ -1461,7 +1461,7 @@ void MW::resetFocus()
 void MW::ingestFinished()
 {
     if (G::isLogger) G::log("MW::ingestFinished");
-    qDebug() << "MW::ingestFinished";
+    //qDebug() << "MW::ingestFinished";
     delete backgroundIngest;
     backgroundIngest = nullptr;
     G::isRunningBackgroundIngest = false;
@@ -1495,6 +1495,81 @@ void MW::checkForUpdate()
    update on the Winnow server.  If there is then Winnow is closed and the maintenancetool
    performs the install of the update.  When that is completed the maintenancetool opens
    Winnow again.
+
+// CHATGPT Sure, I can help you with that. Here's a basic example of how you might set up
+a function to check for a new version of an application and install it. This example uses
+Qt's `QNetworkAccessManager` to send a GET request to the server where your app is
+hosted. It then compares the version number of the current app with the version number
+received from the server. If the server version is newer, it downloads and installs the
+new version.
+
+Please note that this is a simplified example and may not cover all edge cases. You may
+need to adjust it to fit your specific needs.
+
+```cpp
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QUrl>
+#include <QProcess>
+
+class Updater : public QObject {
+    Q_OBJECT
+
+public:
+    Updater(QObject *parent = nullptr) : QObject(parent) {
+        manager = new QNetworkAccessManager(this);
+        connect(manager, &QNetworkAccessManager::finished, this, &Updater::replyFinished);
+    }
+
+    void checkForUpdates() {
+        manager->get(QNetworkRequest(QUrl("http://www.winnow.ca/winnow_mac/test/version.txt")));
+    }
+
+private slots:
+    void replyFinished(QNetworkReply *reply) {
+        if (reply->error()) {
+            qDebug() << "ERROR!";
+            qDebug() << reply->errorString();
+        } else {
+            QString newVersion = reply->readAll();
+            if (newVersion > CURRENT_VERSION) {
+                QProcess::startDetached("open", QStringList() << "http://www.winnow.ca/winnow_mac/test/Winnow" + newVersion + ".dmg");
+            }
+        }
+        reply->deleteLater();
+    }
+
+private:
+    QNetworkAccessManager *manager;
+    const QString CURRENT_VERSION = "1.37";
+};
+```
+
+In this example, `CURRENT_VERSION` is the current version of your app. You would replace
+`"1.37"` with the actual current version of your app. The URL
+`"http://www.winnow.ca/winnow_mac/test/version.txt"` is where you would host a plain text
+file containing the latest version number of your app. The URL
+`"http://www.winnow.ca/winnow_mac/test/Winnow" + newVersion + ".dmg"` is the download
+link for the new version of your app.
+
+This code should be integrated into your existing Qt application. You can call
+`checkForUpdates()` whenever you want to check for updates, such as at application
+startup.
+
+Please note that this code does not handle the actual installation of the new version. On
+macOS, the downloaded .dmg file will be opened, but the user will need to manually
+install the new version. If you want to automate the installation process, you will need
+to use a software installer framework.
+
+Also, please be aware that accessing the network and starting processes are both actions
+that require appropriate permissions. Depending on your application's security context,
+you may need to request these permissions from the user or system.
+
+Lastly, this code does not include error handling for network errors or process errors.
+In a production environment, you should add appropriate error handling code.
+
+I hope this helps! Let me know if you have any questions.
+
 */
     if (G::isLogger)
         qDebug() << "MW::checkForUpdate";
@@ -1510,16 +1585,17 @@ void MW::checkForUpdate()
         // RETURN UNLESS TESTING UPDATER IN DEV
         return;
     }
-    else
+    else {
         maintenancePathToUse = maintanceToolPath;
-//    qDebug() << "MW::checkForUpdate" << "maintenancePathToUse" << maintenancePathToUse;
+    }
+    //qDebug() << "MW::checkForUpdate" << "maintenancePathToUse" << maintenancePathToUse;
 
 #ifdef Q_OS_MAC
-//    return false;
+
 #endif
 
 #ifdef Q_OS_LINIX
-    rerurn false;
+
 #endif
 
 #ifdef Q_OS_WIN
@@ -1749,7 +1825,7 @@ void MW::handleStartupArgs(const QString &args)
         }
 
         setCentralMessage("Loading Embellished ...");
-        QApplication::processEvents();
+        qApp->processEvents();
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
@@ -1803,97 +1879,6 @@ void MW::handleStartupArgs(const QString &args)
 
     if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "done");
     return;
-}
-
-void MW::watchForEject()
-{
-/*
-    Not working.
-    This slot is signalled from FSTree when a folder selection changes.  We are interested
-    in selection changes caused by a drive being ejected.  If the current folder being
-    cached no longer exists (ejected) then make a folderSelectionChange.
-*/
-    if (G::isLogger) G::log("MW::watchCurrentFolder");
-    qDebug() << "MW::watchCurrentFolder";
-    fsTree->refreshModel();
-//    if (G::currRootFolder == "") return;
-//    QFileInfo info(G::currRootFolder);
-//    if (info.exists()) return;
-////    selectionChange();
-//    folderSelectionChange();
-}
-
-void MW::selectionChange()  // not being used
-{
-/*
-   This is invoked when there is a folder selection change in the folder or bookmark views.
-
-   - folder change triggers MW::selectionChange
-   - return (ignore) if prior folder selection change is still being stopped
-   - call MW::stop
-   - all worker threads are stopped
-   - resets all necessary info
-   - finally, MW::folderSelectionChange is called
-
-Flow Flags:
-
-    G::isInitializing
-    G::stop
-    G::allMetadataLoaded
-    G::allIconsLoaded
-    G::isLinearLoadDone
-    dm->loadingModel
-    dm->basicFileInfoLoaded  // not used
-    G::isLinearLoading
-    G::ignoreScrollSignal
-    isCurrentFolderOkay
-    isFilterChange
-
-Current model row:
-
-    currentRow
-    dm->currentRow
-    dm->currentFilePath
-    currentDmIdx
-    currentSfIdx
-
-*/
-    QSignalBlocker blocker(bookmarks);
-
-    if (G::isLogger || G::isFlowLogger) {
-        qDebug() << "MW::selectionChange";
-    }
-    qDebug() << "MW::selectionChange" << "instance" << dm->instance;
-    qDebug() << " ";
-
-    testTime.restart();
-    if (G::isInitializing) {
-        qDebug() << "MW::selectionChange" << "Ignore: G::isInitializing = true";
-        return;
-    }
-
-    // ignore if very rapid selection and current folder is still at stopAndClearAll
-
-    if (G::stop) {
-        qDebug() << "MW::selectionChange" << "Ignore: G::stop = true";
-        return;
-    }
-    if (dm->loadingModel) {
-        qDebug() << "MW::selectionChange" << "Ignore: dm->loadingModel = true";
-        return;
-    }
-
-    qDebug() << "MW::selectionChange" << getSelectedPath();
-
-    if (stop("MW::selectionChange")) {
-        qDebug() << "Time to stop =" << testTime.elapsed();
-        folderSelectionChange();
-    }
-    else {
-        qDebug() << "MW::selectionChange" << "IGNORE - BUSY" << dm->instance;
-    }
-
-    blocker.unblock();
 }
 
 void MW::folderSelectionChange()
@@ -2470,7 +2455,7 @@ bool MW::stop(QString src)
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted for\n" + oldFolder);
-        qApp->processEvents();
+        //qApp->processEvents(); //rgh_ProcessEvents
     }
 
     dm->abortLoad();
@@ -4760,8 +4745,6 @@ void MW::ingest()
     if (G::isLogger) G::log("MW::ingest");
 
     // check if background ingest in progress
-//    bool backgroundIngestInProgress = backgroundIngest != nullptr;
-//    if (isBackgroundIngest && backgroundIngestInProgress) {
     if (G::isRunningBackgroundIngest) {
         QString msg =
                 "There is a background ingest in progress.  When it<br>"
@@ -4884,16 +4867,18 @@ void MW::ingest()
 
             connect(backgroundIngest, &Ingest::updateProgress, this, &MW::setProgress);
             connect(backgroundIngest, &Ingest::ingestFinished, this, &MW::ingestFinished);
+            connect(backgroundIngest, &Ingest::rptIngestErrors, this, &MW::rptIngestErrors);
             backgroundIngest->commence();
             G::isRunningBackgroundIngest = true;
         }
 
         prevSourceFolder = G::currRootFolder;
+        /*
         qDebug() << "MW::ingest"
                  << "gotoIngestFolder =" << gotoIngestFolder
                  << "isBackgroundIngest =" << isBackgroundIngest
                  << "lastIngestLocation =" << lastIngestLocation
-                    ;
+                    ;//*/
 
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
@@ -4911,6 +4896,14 @@ void MW::ingest()
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
 }
 
+void MW::rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure)
+{
+    if (G::isLogger) G::log("MW::rptIngestErrors");
+
+    IngestErrors ingestErrors(failedToCopy, integrityFailure, this);
+    ingestErrors.exec();
+}
+
 void MW::ejectUsb(QString path)
 {
 /*
@@ -4918,12 +4911,6 @@ void MW::ejectUsb(QString path)
     files will cause a crash. This is avoided by stopping any further activity in the
     metadataCacheThread and imageCacheThread, preventing any file reading attempts to a
     non-existent drive.
-
-    This works fine here, but not if the drive is ejected externally ie from Finder.
-    FSTree emits a signal selectionChange that is connected to MW::watchCurrentFolder
-    each time the FSTree QTreeView selection changes.  If the current folder being
-    cached no longer exists (ejected) then make a folderSelectionChange in
-    MW::watchCurrentFolder.
 */
     if (G::isLogger) G::log("MW::ejectUsb");
 

@@ -21,11 +21,14 @@ bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
 
 bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
 {
-    QFile imFile(fPath);
-    // check if file is locked by another process   rgh why not just imFile.isOpen
-     if (imFile.open(QIODevice::ReadOnly)) {
+     QFile imFile(fPath);
+     // check if file is locked by another process   rgh why not just imFile.isOpen
+     if (imFile.isOpen()) return false;
+
+     if (!imFile.open(QIODevice::ReadOnly)) {
+         return false;
         // close it to allow qt load to work
-        imFile.close();
+//        imFile.close();
      }
 
      // Attempt to decode heic image

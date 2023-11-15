@@ -396,7 +396,6 @@ void IngestDlg::ingest()
         //*/
         ui->progressBar->setValue(progress);
         emit updateProgress(progress);
-        //qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
         QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
@@ -883,7 +882,7 @@ void IngestDlg::updateFolderPaths()
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
-//        /*
+        /*
         qDebug() << "IngestDlg::"
                  << "\nrootFolderPath        =" << rootFolderPath
                  << "\nfromRootToBaseFolder  =" << fromRootToBaseFolder

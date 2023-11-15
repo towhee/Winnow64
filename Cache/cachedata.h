@@ -42,6 +42,7 @@ public:
         int key;                    // same as row in dm->sf (sorted and filtered datamodel)
         int origKey;                // the key of a previous filter or sort
         QString fPath;              // image full path
+        QString ext;                // lower case file extension
         bool isUpdated;             // item updated by MetaRead or MDCache
         bool isCaching;             // decoder is working on image
         int attempts;               // number of tries to cache item

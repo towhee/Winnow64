@@ -29,7 +29,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 //    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
     bool isForward = true;
-    slideCount = 0;
+    //slideCount = 0;
     int uturnCounter = 0;
     int uturnAmount = QRandomGenerator::global()->bounded(1, 301);
     QElapsedTimer t;
@@ -42,23 +42,28 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
             uturnCounter = 0;
         }
         ++slideCount;
+        if (!uturn && slideCount >= dm->sf->rowCount()) {
+            return;
+        }
         G::wait(msPerImage);
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
         //qApp->processEvents();
-        if (dm->sf->rowCount() < 2) return;
+//        if (dm->sf->rowCount() < 2) return;
+//        QString status = " Stress test: " + QString::number(slideCount) + " images.";
+//        updateStatus(true, status, "StressTest");
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
-    double elapedmsPerImage = msElapsed * 1.0 / slideCount;
+    double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
     QString msg = "" + QString::number(slideCount) + " images.<br>" +
                   QString::number(msElapsed) + " ms elapsed.<br>" +
-                  QString::number(elapedmsPerImage) + " ms delay.<br>" +
+                  QString::number(elapsedMsPerImage) + " ms delay.<br>" +
                   QString::number(imagePerSec) + " images per second.<br>" +
-                  QString::number(elapedmsPerImage) + " ms per image."
+                  QString::number(elapsedMsPerImage) + " ms per image."
 //                  + "<br><br>Press <font color=\"red\"><b>Spacebar</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
@@ -66,7 +71,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
              << msElapsed << "ms elapsed  "
              << msPerImage << "ms delay  "
              << imagePerSec << "images per second  "
-             << elapedmsPerImage << "ms per image."
+             << elapsedMsPerImage << "ms per image."
                 ;
     return;
 
@@ -96,7 +101,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
               100, 1, 1000);
     }
 
-    if (!secPerFolder) {
+    if (secPerFolder < 0) {
         secPerFolder = QInputDialog::getInt(this,
                                             "Enter seconds per folder tested",
                                             "Duration (0 - 1000 sec)  -1 sec = random 1 - 20 sec",
@@ -104,6 +109,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
     }
     bool isRandomSecPerFolder = secPerFolder == -1;
 
+    slideCount = 0;
     isStressTest = true;
     QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
     int n = bookMarkPaths.count();
@@ -123,9 +129,6 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
 
 void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 {
-//    imageCacheThread->resume();
-//    return;
-
     // ESC to quit
     isStressTest = true;
     bool isForward = true;
@@ -156,29 +159,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath;
-    fPath = "/Users/roryhill/Pictures/_test0/2023-11-07_0001.orf";
-    int dmRow = dm->insert(fPath);
-    G::allMetadataLoaded = false;
-    G::allIconsLoaded = false;
-    sel->select(fPath);
-    return;
-
-    QFileInfo i1 = QFileInfo("/users/roryhill/pictures/zenfolio/pbase2048/pbase2048 archive/2021-02-27_0006_zen2048.jpg");
-    QString a = i1.absoluteFilePath().toLower();
-    QFileInfo i2 = QFileInfo("/users/roryhill/pictures/_test6/1cbbccff-2a43-4015-ba7d-2d8418256149.jpg");
-    QString b = i2.absoluteFilePath().toLower();
-
-    bool a_lessthan_b = a < b;
-    bool b_lessthan_a = b < a;
-    qDebug() << "a_lessthan_b" << a_lessthan_b << "b_lessthan_a" << b_lessthan_a;
-    return;
-
-
-    qDebug() << G::currRootFolder;
-    return;
-    //QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-07_0526 Focus Stack_Zen2048.JPG";
-    folderAndFileSelectionChange(fPath, "handleStartupArgs");
+//    QString fPath =
 }
 
 /*

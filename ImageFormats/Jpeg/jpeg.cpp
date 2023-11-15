@@ -803,7 +803,8 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
 
     MetadataParameters p;
     p.file.setFileName(file.fileName());
-    if (p.file.isOpen()) p.file.close();
+    if (p.file.isOpen()) return;    //rgh_isOpenCheck
+//    if (p.file.isOpen()) p.file.close();
 //    qDebug() << "Jpeg::decodeScan" << "Close" << p.file.fileName();
     if (p.file.open(QIODevice::ReadOnly)) {
 //        qDebug() << "Jpeg::decodeScan" << "Open " << p.file.fileName();
@@ -843,6 +844,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     qDebug() << "Jpeg::decodeScan";
 
     QBuffer buffer(&ba);
+    if (buffer.isOpen()) return;  //rgh_isOpenCheck
     buffer.open(QIODevice::ReadOnly);
 
     // rgh can we only build once?
