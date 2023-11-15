@@ -1,8 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Delete image after LR embel crash
+- LR export embel not triggering image cache when Winnow was not already open
+- When advance, scroll before repaint icons to prevent flashing
 - Add tooltips to menus
-- Check possible fast QQ glitch.
 - MOV creation date ie IMG_3298.MOV
 - Auto advance when cap lock
 - GoogleDrive folder not showing all videos
@@ -93,6 +95,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Not showing loupe image when jump to end before all metadata has been read
+- Background ingest errors crashing (non-gui attempt use QDialog)
+- Insert images into active folder and datamodel without reloading entire folder
 - Update filter unfiltered counts after image deletion
 - Auto detect USB removal and insertion on Windows
 - Compile-time Win10/11 not correct in win.cpp

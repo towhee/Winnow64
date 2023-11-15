@@ -337,6 +337,7 @@ void Ingest::run()
     isBackup ? n = 2 : n = 1;
 
     // list of files not copied
+
     QStringList failedToCopy;
     QStringList integrityFailure;
 
@@ -479,12 +480,13 @@ void Ingest::run()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-//    qDebug() << "Ingest::run" << seqDate << G::ingestCount << G::ingestLastSeqDate;
+    //qDebug() << "Ingest::run" << seqDate << G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
-        IngestErrors ingestErrors(failedToCopy, integrityFailure);
-        ingestErrors.exec();
+        // Cannot show QDialog in non-gui thread, so message info to main thread
+        // Note: difference from IngestDlg::ingest
+        emit rptIngestErrors(failedToCopy, integrityFailure);
     }
 
     if (abort) G::popUp->showPopup("Background ingest terminated", 2000);

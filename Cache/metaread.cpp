@@ -43,7 +43,8 @@ MetaRead::MetaRead(QObject *parent,
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
-    imageCacheTriggerCount =  QThread::idealThreadCount() * 2;
+    imageCacheTriggerCount =  3;
+//    imageCacheTriggerCount =  QThread::idealThreadCount();
     showProgressInStatusbar = true;
     isDebug = false;
 }
@@ -261,7 +262,7 @@ void MetaRead::cleanupIcons()
     }
 }
 
-           bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
+bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
     if (isDebug) G::log("MetaRead::readMetadata");
     if (G::isFlowLogger2) qDebug() << "MetaRead::readMetadata" << "row =" << sfIdx.row() << fPath;
@@ -314,13 +315,6 @@ void MetaRead::cleanupIcons()
                  << "abort =" << abort
                  ;
     }
-    /*
-    qDebug() << "MetaRead::readMetadata"
-             << "row =" << sfIdx.row()
-             << "metadata->m.type =" << metadata->m.type
-             << "metadata->m.offsetThumb =" << metadata->m.offsetThumb
-             << "metadata->m.lengthThumb =" << metadata->m.lengthThumb
-                ; //*/
 
     if (abort) {
         if (isDebug)
@@ -329,6 +323,7 @@ void MetaRead::cleanupIcons()
         }
         return false;
     }
+
     // add metadata->m to DataModel dm
     emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
     if (isDebug)
@@ -347,10 +342,10 @@ void MetaRead::cleanupIcons()
         return false;
     }
 
-    // add to ImageCache icd->cacheItemList (used to manage image cache)
-    if (G::useImageCache) {
-        emit addToImageCache(metadata->m);
-    }
+//    // add to ImageCache icd->cacheItemList (used to manage image cache)
+//    if (G::useImageCache) {
+//        emit addToImageCache(metadata->m);
+//    }
 
     if (isDebug)
     {
@@ -470,6 +465,10 @@ void MetaRead::readRow(int sfRow)
     if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
         if (!dm->iconLoaded(sfRow, instance)) {
             readIcon(sfIdx, fPath);
+            // add to ImageCache icd->cacheItemList (used to manage image cache)
+            if (G::useImageCache) {
+                emit addToImageCache(metadata->m);
+            }
             if (abort) return;
             if (rowsWithIcon.size() > iconLimit) {
                 cleanupIcons();
@@ -494,6 +493,7 @@ void MetaRead::triggerFileSelectionChange()
 {
     // file selection change and start image caching thread after head start
     if (G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
+    //qDebug() << "MetaRead::triggerFileSelectionChange  targetRow =" << targetRow;
     QModelIndex sfIdx = dm->sf->index(targetRow, 0);
     emit fileSelectionChange(sfIdx);
     hasBeenTriggered = true;
@@ -569,7 +569,6 @@ void MetaRead::run()
         }
 
         if (a < sfRowCount) {
-            //qDebug() << "MetaRead::run (a < sfRowCount)" << a << sfRowCount << abort;
             if (!abort) readRow(a);
             a++;
             if (!abort && okToTrigger) triggerCheck();
@@ -593,6 +592,7 @@ void MetaRead::run()
                 ; //*/
             if (allReqdIconsLoaded) abort = true;
         }
+
 
         if (abort) {
             if (isDebug)

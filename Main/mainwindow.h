@@ -386,8 +386,6 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void watchForEject();
-    void selectionChange();
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
@@ -413,6 +411,7 @@ public slots:
     void slideShowResetSequence();
     void slideshowHelpMsg();
     void imageCachePrevCentralView();
+    void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -1313,7 +1312,7 @@ private:
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, int secPerFolder = 0, bool uturn = false);
     void bounceFoldersStressTestFromMenu();
-    void bounceFoldersStressTest(int msPerImage = 0, int secPerFolder = 0);
+    void bounceFoldersStressTest(int msPerImage = 0, int secPerFolder = -1);
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;

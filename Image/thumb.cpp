@@ -156,8 +156,9 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             success =  image.loadFromData(buf, "JPEG");
         }
         imFile.close();
+        return success;
     }
-    return success;
+    return false;
 }
 
 bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)

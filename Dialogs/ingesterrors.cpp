@@ -18,7 +18,7 @@ IngestErrors::IngestErrors(const QStringList &failedToCopy,
     }
 
     if (integrityFailure.length() > 0) {
-        ui->textEdit->append("\nINTEGRITY FAILURE FOR THESE FILES:\n");
+        ui->textEdit->append("\nFILES APPEAR TO BE CORRUPTED DURING COPY:\n");
         for (int i = 0; i < integrityFailure.length(); i++) {
             ui->textEdit->append(integrityFailure.at(i));
         }

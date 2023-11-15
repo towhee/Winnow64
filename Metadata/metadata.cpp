@@ -543,11 +543,12 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 
     // data edited, open image file
     p.file.setFileName(fPath);
+    if (p.file.isOpen()) return false;
     // rgh error trap file operation
     if (p.file.isOpen()) {
         p.file.close();
     }
-    p.file.open(QIODevice::ReadWrite);
+    if (!p.file.open(QIODevice::ReadWrite)) return false;
 
     // if current xmp is invalid then fix
     Xmp xmp(p.file, p.instance);
@@ -965,7 +966,7 @@ void Metadata::testNewFileFormat(const QString &path)
     clearMetadata();
     p.file.setFileName(path);
     if (p.file.isOpen()) {
-        p.file.close();
+        return;
 //        qDebug() << "Metadata::testNewFileFormat" << "Close" << p.file.fileName();
     }
 //    qDebug() << "Metadata::testNewFileFormat" << "Open " << p.file.fileName();
@@ -998,13 +999,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 //    clearMetadata();  // moved to loadMetadata
     m.fPath = path;
     p.fPath = path;
+    p.file.setFileName(path);
 
     if (p.file.isOpen()) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::readMetadata" << "File already open" << path;
         return false;
     }
-    p.file.setFileName(path);
 
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
@@ -1091,13 +1092,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check abort
     if (G::dmEmpty && !isRemote) return false;
 
-//    if (fileInfo.filePath() == "Volumes/Untitled/DCIM/100MSDCF/A1_07767.ARW")
-//        qDebug() << "Metadata::loadImageMetadata  src =" << source
-//                 << fileInfo.filePath();
-
-    //QElapsedTimer t;
-    //t.restart();
-
     // check instance up-to-date
     if (instance != G::dmInstance) {
         if (G::isWarningLogger)
@@ -1131,17 +1125,15 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
     m.type = ext;
+    m.ext = ext;
 
     m.video = videoFormats.contains(ext);
 
     if (!hasMetadataFormats.contains(ext)) {
         bool parsedSidcar = false;
         m.metadataLoaded = true;
-//        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {
             p.file.setFileName(fPath);
-//            qDebug() << "Metadata::loadImageMetadata" << "Open " << p.file.fileName();
-//            if (p.file.open(QIODevice::ReadWrite)) {
             if (p.file.open(QIODevice::ReadOnly)) {
                 if (parseSidecar()) {
                     parsedSidcar = true;
@@ -1149,7 +1141,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                 p.file.close();
             }
         }
-//        return parsedSidcar;
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         return true;
     }

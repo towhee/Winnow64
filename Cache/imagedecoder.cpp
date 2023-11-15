@@ -62,7 +62,6 @@ bool ImageDecoder::quit()
 }
 
 void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
-//void ImageDecoder::decode(QString fPath)
 {
     status = Status::Busy;
     n = item;
@@ -83,7 +82,8 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isFlowLogger) G::log("ImageDecoder::load", "row = " + QString::number(cacheKey));
+    if (G::isFlowLogger) G::log("ImageDecoder::load",
+               "row = " + QString::number(cacheKey) + "  " + fPath);
     QString fun = "ImageDecoder::load";
     if (isDebug) G::log(fun, fPath);
 
@@ -97,7 +97,8 @@ bool ImageDecoder::load()
 
     // get image type (extension)
     // QFileInfo fileInfo(fPath);  // crash occasionally using QFileInfo to get suffix
-    ext = fPath.section('.', -1).toLower();
+//    ext = fPath.section('.', -1).toLower();
+    ext = n.ext;
 
     // ignore video files
     if (metadata->videoFormats.contains(ext)) {
@@ -136,24 +137,29 @@ bool ImageDecoder::load()
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
-        imFile.close();
-        QString errMsg = "Could not open file.";
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
-        G::error(errMsg, fun, fPath);
-        // check if drive ejected or folder deleted by another app
-        QDir dir(Utilities::getFolderPath(fPath));
-        if (!dir.exists()) {
-            status = Status::NoDir;
-            errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
-            if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
-        }
-        else {
-            status = Status::FileOpen;
-        }
+        status = Status::FileOpen;
         return false;
     }
+
+//    if (!imFile.open(QIODevice::ReadOnly)) {
+//        imFile.close();
+//        QString errMsg = "Could not open file.";
+//        if (G::isWarningLogger)
+//        qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
+//        G::error(errMsg, fun, fPath);
+//        // check if drive ejected or folder deleted by another app
+//        QDir dir(Utilities::getFolderPath(fPath));
+//        if (!dir.exists()) {
+//            status = Status::NoDir;
+//            errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
+//            if (G::isWarningLogger)
+//            qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
+//        }
+//        else {
+//            status = Status::FileOpen;
+//        }
+//        return false;
+//    }
 
     // JPG format (including embedded in raw files)
     if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {

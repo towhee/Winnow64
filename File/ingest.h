@@ -5,7 +5,6 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include "Datamodel/datamodel.h"
-//#include "Metadata/metadata.h"
 #include "Main/global.h"
 #include "Dialogs/ingesterrors.h"
 
@@ -36,6 +35,7 @@ protected:
 signals:
     void updateProgress(int progress);
     void ingestFinished();
+    void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
 
 private:
     QMutex mutex;
