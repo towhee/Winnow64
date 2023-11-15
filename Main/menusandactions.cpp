@@ -396,7 +396,7 @@ void MW::createEditActions()
     QString moveFolderToWhatever;
     #ifdef Q_OS_WIN
     moveFilesToWhatever = "Move file(s) to recycle bin";
-    moveFoldersToWhatever = "Move folder to recycle bin";
+    moveFolderToWhatever = "Move folder to recycle bin";
     #endif
     #ifdef Q_OS_MAC
     moveFilesToWhatever = "Move file(s) to trash";
