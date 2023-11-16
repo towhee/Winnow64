@@ -1758,6 +1758,13 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
     filters->loadingDataModel(isLoaded);
 }
 
+bool DataModel::isMetadataLoaded(int sfRow)
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    return index(sfRow, G::MetadataLoadedColumn).data().toBool();
+}
+
 bool DataModel::isAllMetadataLoaded()
 {
     lastFunction = "";

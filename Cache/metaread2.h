@@ -6,7 +6,6 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-//#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
@@ -19,13 +18,13 @@ class MetaRead2 : public QThread
 
 public:
     MetaRead2(QObject *parent,
-             DataModel *dm,
-             Metadata *metadata,
-             FrameDecoder *frameDecoder,
-             ImageCache *imageCache);
+              DataModel *dm,
+              Metadata *metadata,
+              FrameDecoder *frameDecoder,
+              ImageCache *imageCache);
     ~MetaRead2() override;
 
-    void stop();
+    bool stop();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
@@ -34,37 +33,41 @@ public:
     int firstIconRow;
     int lastIconRow;
 
+    bool showProgressInStatusbar = true;
+
 signals:
     void stopped(QString src);
     void updateScroll();
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void centralMsg(QString message);
-    void updateProgress(int progress);
+    void updateProgressInFilter(int progress);
+    void updateProgressInStatusbar(int progress, int total);
+
     void addToDatamodel(ImageMetadata m, QString src);// decoder
     void addToImageCache(ImageMetadata m);// decoder
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);  // decoder
-    void triggerImageCache(QString startPath, QString src);
 
-    void updateIconBestFit();  // req'd?
+    void fileSelectionChange(QModelIndex sfIdx,
+                             QModelIndex idx2 = QModelIndex(),
+                             bool clearSelection = false,
+                             QString src = "MetaRead::triggerCheck");
+
     void done();
 
 public slots:
     void initialize();
     void decodeThumbs(int id);
-    void setStartRow(int row = 0, QString src = "");
-    int interrupt();
+    void setStartRow(int row, bool fileSelectionChanged, QString src = "");
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 private:
+    void triggerFileSelectionChange();
     void read(int startRow = 0, QString src = "");// decoder
-    void readRow(int sfRow);// decoder
-    bool readMetadata(QModelIndex sfIdx, QString fPath);// decoder
-    void readIcon(QModelIndex sfIdx, QString fPath);// decoder
 
     void buildQueue();
-    void startThumbDecoders();
+    void startReaders();
     void completed();
 
 //    void iconMax(QPixmap &thumb);
@@ -93,14 +96,16 @@ private:
     int metaReadCount;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
+    bool hasBeenTriggered;
+    bool okToTrigger;                       // signal MW::fileSelectionChange
     int thumbDecoderTriggerCount = 20;
     int imageCacheTriggerCount = 200;
 
     QList<QString> queue;
 
     int startRow = 0;
+    int targetRow = 0;
     QString src;
-    QString folderPath;
 
     bool imageCachingStarted = false;
 

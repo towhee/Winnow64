@@ -21,7 +21,7 @@ public:
                  DataModel *dm,
                  ImageCache *imageCache);
 
-    void decode(const QModelIndex dmIdx,
+    void read(const QModelIndex dmIdx,
                 const QString fPath,
                 const int instance,
                 const bool isReadIcon);

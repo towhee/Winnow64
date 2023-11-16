@@ -65,7 +65,7 @@ MetaRead2::~MetaRead2()
     delete thumb;
 }
 
-void MetaRead2::setStartRow(int row, QString src)
+void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
 {
     if (isDebug || G::isLogger || G::isFlowLogger) {
         QString running;
@@ -74,13 +74,22 @@ void MetaRead2::setStartRow(int row, QString src)
         G::log("MetaRead2::setCurrentRow", s);
     }
 
-    if (G::allMetadataLoaded && G::allIconsLoaded) return;
+    // Nothing to read
+    if (G::allMetadataLoaded && G::allIconsLoaded) {
+        if (fileSelectionChanged) {
+            targetRow = row;
+            triggerFileSelectionChange();
+        }
+        return;
+    }
+
     this->src = src;
     stop();
     mutex.lock();
     iconChunkSize = dm->iconChunkSize;
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
+    targetRow = startRow;
     abortCleanup = isRunning();
     mutex.unlock();
     if (!isRunning()) {
@@ -88,7 +97,7 @@ void MetaRead2::setStartRow(int row, QString src)
     }
 }
 
-void MetaRead2::stop()
+bool MetaRead2::stop()
 {
     if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
     if (isDebug)
@@ -105,35 +114,25 @@ void MetaRead2::stop()
 //        wait();
         abort = false;
     }
-    // signal MW all stopped if a folder change
-//    if (G::stop) emit stopped("MetaRead2");
-    return;
-}
-
-int MetaRead2::interrupt()
-{
-    // is this being used?
-
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead2::pause");
-    G::stop = false;
-    qDebug() << "MetaRead2::interrupt";
-    mutex.lock();
-    interrupted = true;
-    mutex.unlock();
-    stop();
-//    qDebug() << "MetaRead2::interrupt after stop  interruptRow =" << interruptedRow;
-    return interruptedRow;
+    return isRunning();
 }
 
 void MetaRead2::initialize()
+/*
+    Called when change folders.
+*/
 {
-    if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead2::initialize");
+    if (isDebug || G::isLogger || G::isFlowLogger)
+    {
+        G::log("MetaRead2::initialize",
+               "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
+    }
     rowsWithIcon.clear();
-    queue.clear();
-    imageCachingStarted = false;
-    instance = dm->instance;
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
+    instance = dm->instance;
+    queue.clear();
+    imageCachingStarted = false;
 }
 
 QString MetaRead2::diagnostics()
@@ -223,7 +222,7 @@ void MetaRead2::cleanupIcons()
 
     // check if datamodel size is less than assigned icon cache chunk size
     if (iconChunkSize >= sfRowCount) {
-        G::allIconsLoaded = true;
+        G::allIconsLoaded = true;   // rgh review
         return;
     }
 
@@ -250,7 +249,17 @@ void MetaRead2::cleanupIcons()
     }
 }
 
-void MetaRead2::startThumbDecoders()
+void MetaRead2::triggerFileSelectionChange()
+{
+    // file selection change and start image caching thread after head start
+    if (G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
+    //qDebug() << "MetaRead::triggerFileSelectionChange  targetRow =" << targetRow;
+    QModelIndex sfIdx = dm->sf->index(targetRow, 0);
+    emit fileSelectionChange(sfIdx);
+    hasBeenTriggered = true;
+}
+
+void MetaRead2::startReaders()
 {
     if (isDebug || G::isLogger) G::log("MetaRead2::startThumbDecoders");
     qDebug() << "MetaRead2::startThumbDecoders"
@@ -264,6 +273,7 @@ void MetaRead2::startThumbDecoders()
         }
     }
 }
+
 void MetaRead2::decodeThumbs(int id)
 {
     if (abort) {
@@ -284,13 +294,14 @@ void MetaRead2::decodeThumbs(int id)
                  << "metaReadCount =" << metaReadCount
                  << "sfRowCount =" << sfRowCount
                  << d->fPath;
-        int progress = 1.0 * metaReadCount / sfRowCount * 100;
-        emit updateProgress(progress);
+        //int progress = 1.0 * metaReadCount / sfRowCount * 100;
+        //emit updateProgress(progress);
         rowsWithIcon.append(d->dmIdx.row());
         // delayed start ImageCache
         if (metaReadCount == sfRowCount || metaReadCount == imageCacheTriggerCount) {
             // start image caching thread after head start
-            emit triggerImageCache("Change to startPath","Initial");
+            QModelIndex sfIdx = dm->sf->index(targetRow, 0);
+            emit fileSelectionChange(sfIdx);
             imageCachingStarted = true;
             qDebug() << "MetaRead2::decodeThumbs triggerImageCache"
                      << metaReadCount
@@ -322,193 +333,8 @@ void MetaRead2::decodeThumbs(int id)
         }
     }
 
-    // decode
-    reader[id]->decode(dmIdx, fPath, instance, isReadIcon);
-}
-
-bool MetaRead2::readMetadata(QModelIndex sfIdx, QString fPath)
-{
-    if (isDebug || G::isLogger) G::log("MetaRead2::readMetadata");
-    if (isDebug)
-    {
-        qDebug() << "MetaRead2::readMetadata"
-                 << "instance =" << instance
-                 << "dm->instance" << dm->instance
-                 << "row =" << sfIdx.row()
-                 << "abort =" << abort
-                 << fPath;
-    }
-    if (instance != dm->instance) {
-        qWarning() << "WARNING MetaRead2::readMetadata Instance Clash"
-                   << "row =" << sfIdx.row();
-        abort = true;
-        return false;
-    }
-
-    // read metadata from file into metadata->m
-    int dmRow = dm->sf->mapToSource(sfIdx).row();
-    QFileInfo fileInfo(fPath);
-    bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead2::readMetadata");
-    if (!isMetaLoaded) {
-        qDebug() << "MetaRead2::readMetadata"
-                 << "row =" << sfIdx.row()
-                 << "Load meta failed"
-                 ;
-    }
-
-    metadata->m.row = dmRow;
-    metadata->m.instance = instance;
-
-    // update progress in case filters panel activated before all metadata loaded
-    metaReadCount++;
-    int progress = 1.0 * metaReadCount / dmRowCount * 100;
-    emit updateProgress(progress);
-
-    if (isDebug)
-    {
-        qDebug() << "MetaRead2::readMetadata"
-                 << "added row =" << sfIdx.row()
-                 << "abort =" << abort
-                 ;
-    }
-
-    // add metadata->m to DataModel dm
-    emit addToDatamodel(metadata->m, "MetaRead2::readMetadata");
-    if (isDebug)
-    {
-        qDebug() << "MetaRead2::readMetadata"
-                 << "addToDatamodel row =" << sfIdx.row()
-                 << "abort =" << abort
-                 ;
-    }
-
-    // add to ImageCache icd->cacheItemList (used to manage image cache)
-    if (G::useImageCache) {
-        emit addToImageCache(metadata->m);
-    }
-
-    if (isDebug) {
-        qDebug() << "MetaRead2::readMetadata"
-                 << "addToImageCache row =" << sfIdx.row()
-                 << "abort =" << abort
-                 ;
-    }
-    return true;
-}
-
-void MetaRead2::readIcon(QModelIndex sfIdx, QString fPath)
-{
-    if (isDebug || G::isLogger) G::log("MetaRead2::readIcon");
-    if (isDebug) {
-        qDebug().noquote() << "MetaRead2::readIcon"
-                           << "start  row =" << sfIdx.row()
-                              ;
-    }
-    if (!sfIdx.isValid()) {
-        qWarning() << "WARNING" << "MetaRead2::readIcon"
-                   << "sfIdx.isValid() =" << sfIdx.isValid() << sfIdx;
-        return;
-    }
-
-//  //  dmIdx = dm->sf->mapToSource(sfIdx); // EXC_BAD_ACCESS crash when rapid folder changes
-    int dmRow = dm->rowFromPath(fPath);
-    QModelIndex dmIdx = dm->index(dmRow, 0);
-
-    bool isVideo = false;
-    isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
-
-    // get thumbnail
-    QImage image;
-    bool thumbLoaded = false;
-    thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead2::readIcon");
-    if (isVideo) {
-        rowsWithIcon.append(dmRow);
-        return;
-    }
-    QPixmap pm;
-    if (thumbLoaded) {
-        pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    }
-    else {
-        pm = QPixmap(":/images/error_image256.png");
-        qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
-    }
-    emit setIcon(dmIdx, pm, instance, "MetaRead2::readIcon");
-    rowsWithIcon.append(dmRow);
-
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead2::readIcon"
-                           << "done   row =" << sfIdx.row()
-                              ;
-    }
-}
-
-void MetaRead2::readRow(int sfRow)
-{
-    if (isDebug || G::isLogger) G::log("MetaRead2::readRow");
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead2::readRow"
-                           << "start  row =" << sfRow
-                           << "dm->sf->rowCount()=" << dm->sf->rowCount()
-                              ;
-    }
-
-    // IconView scroll signal can be delayed
-    emit updateScroll();
-
-    // range check
-    if (sfRow >= dm->sf->rowCount()) return;
-    // valid index check
-    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    if (!sfIdx.isValid()) {
-        if (isDebug) {
-            qDebug().noquote() << "MetaRead2::readRow  "
-                               << "invalid sfidx =" << sfIdx
-                                  ;
-        }
-        return;
-    }
-
-    // load metadata
-    QString fPath = sfIdx.data(G::PathRole).toString();
-    // add to the thumb decoder queue
-    queue.append(fPath);
-    if (!G::allMetadataLoaded /*&& !isVideo*/ && G::useReadMetadata) {
-        bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-        if (!metaLoaded /*&& !abort*/) {
-            if (!abort) {
-                if (!readMetadata(sfIdx, fPath)) {
-                    return;
-                }
-            }
-            if (abort) return;
-        }
-    }
-    return;     // decoder
-
-    // load icon
-
-    // can ignore if debugging
-    if (!G::useReadIcons) return;
-
-    // read icon if in icon range
-    if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
-        if (!dm->iconLoaded(sfRow, instance)) {
-            if (!abort) readIcon(sfIdx, fPath);
-            if (rowsWithIcon.size() > iconLimit) {
-                if (!abort) cleanupIcons();
-            }
-        }
-    }
-
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead2::readRow"
-                           << "done   row =" << sfRow
-                              ;
-    }
+    // read metadata and icon
+    reader[id]->read(dmIdx, fPath, instance, isReadIcon);
 }
 
 void MetaRead2::buildQueue()
@@ -517,16 +343,10 @@ void MetaRead2::buildQueue()
 
     queue.clear();
 
-    int row = startRow;
-    int count = -1;                     // used to delay start ImageCache
-    bool ahead = true;
-    int lastRow = sfRowCount - 1;
-    bool moreAhead = row < lastRow;
-    bool moreBehind = row >= 0;
-    int rowAhead = row;
-    int rowBehind = row;
+    int a = startRow;           // ahead
+    int b = startRow - 1;       // back
 
-    while (moreAhead || moreBehind) {
+    while (a < sfRowCount || b >= 0) {
         // abort?
         if (dm->instance != instance) {
             abort = true;
@@ -540,51 +360,24 @@ void MetaRead2::buildQueue()
             return;
         }
 
-        // check if start row has changed
-        if (startRow != -1) {
-            row = startRow;
-            moreAhead = row < lastRow;
-            moreBehind = row >= 0;
-            rowAhead = row;
-            rowBehind = row;
-            moreAhead ? ahead = true : ahead = false;
-
-            // icon range in case changes ie thumb size change
-            iconChunkSize = dm->iconChunkSize;
-            iconLimit = static_cast<int>(iconChunkSize * 1.2);
-            firstIconRow = startRow - iconChunkSize / 2;
-            if (firstIconRow < 0) firstIconRow = 0;
-            lastIconRow = firstIconRow + iconChunkSize - 1;
-            if (lastIconRow > lastRow) lastIconRow = lastRow;
-            // qDebug() << "MetaRead2::run" << "row =" << row;
-            abortCleanup = false;
-            startRow = -1;
-        }
-
-        // add datamodel row to queue
-        if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-            QModelIndex sfIdx = dm->sf->index(row, 0);
-            QString fPath = sfIdx.data(G::PathRole).toString();
-            queue.append(fPath);
-        }
-
-        // next row to process
-        if (ahead) {
-            if (moreBehind) ahead = false;
-            if (moreAhead) {
-                ++rowAhead;
-                row = rowAhead;
-                moreAhead = rowAhead <= sfRowCount;
+        if (a < sfRowCount) {
+            if (!dm->isMetadataLoaded(a)) {
+                QModelIndex sfIdx = dm->sf->index(a, 0);
+                QString fPath = sfIdx.data(G::PathRole).toString();
+                queue.append(fPath);
             }
+            a++;
         }
-        else {
-            if (moreAhead) ahead = true;
-            if (moreBehind) {
-                --rowBehind;
-                row = rowBehind;
-                moreBehind = row >= 0;
+
+        if (b >= 0) {
+            if (!dm->isMetadataLoaded(b)) {
+                QModelIndex sfIdx = dm->sf->index(b, 0);
+                QString fPath = sfIdx.data(G::PathRole).toString();
+                queue.append(fPath);
             }
+            b--;
         }
+
     } // end loop building queue
 }
 
@@ -596,7 +389,6 @@ void MetaRead2::run()
 */
     if (isDebug || G::isLogger || G::isFlowLogger) G::log("MetaRead2::read", src);
 
-    folderPath = dm->currentFolderPath;
     sfRowCount = dm->sf->rowCount();
 
     if (isDebug)
@@ -614,7 +406,7 @@ void MetaRead2::run()
     decodeThumbsTerminated = false;
 
     buildQueue();
-    startThumbDecoders();
+    startReaders();
 
     if (isDebug) qDebug() << "MetaRead2::run  Decoders started";    // finished or aborted
 }
@@ -629,7 +421,6 @@ void MetaRead2::completed()
     G::allMetadataLoaded = true;
     cleanupIcons();
 
-    emit updateIconBestFit();
     emit done();
 
     if (isDebug) qDebug() << "MetaRead2::run  Done.";

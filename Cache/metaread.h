@@ -44,9 +44,6 @@ signals:
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 
-    void addMetadataAndIconInDM(ImageMetadata m, QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void addToDatamodel2(ImageMetadata m, QString src);
-
     void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
@@ -60,7 +57,6 @@ signals:
 public slots:
     void initialize();
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
-//    void setStartRow(int row = 0, bool isCurrent = false, QString src = "");
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -98,10 +94,8 @@ private:
     int startRow = 0;
     int targetRow = 0;
     int lastRow;
-    QString startPath = "";
     int triggerCount;
     QString src;
-    QString folderPath;
 
     QList<int> rowsWithIcon;
 

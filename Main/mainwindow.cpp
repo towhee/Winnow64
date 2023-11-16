@@ -2747,6 +2747,7 @@ void MW::loadConcurrentNewFolder()
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
     // set selection and current index
+    testTime.restart();
     sel->setCurrentRow(targetRow);
 }
 
@@ -2763,6 +2764,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
+    { // debug
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
@@ -2774,6 +2776,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
+    }
     if (G::allMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
         if (G::allIconsLoaded) return;
@@ -2782,7 +2785,6 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
-        //thumbView->scrollToRow(sfRow, "MW::loadConcurrent");
     }
 }
 
@@ -2818,6 +2820,8 @@ void MW::loadConcurrentDone()
         progressLabel->setVisible(false);
     }
     G::allIconsLoaded = dm->allIconsLoaded();
+
+    qDebug() << "MW::loadConcurrentMetaDone  Elsped ms =" << testTime.elapsed();
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,

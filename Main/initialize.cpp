@@ -380,30 +380,17 @@ void MW::createMDCache()
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
-    // delete thread when finished
-    //connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
-   // read metadata
-//    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
-
     // add metadata to datamodel
-    connect(metaReadThread, &MetaRead::addMetadataAndIconInDM, dm, &DataModel::addMetadataAndIconForItem,
-            Qt::BlockingQueuedConnection);
-    connect(metaReadThread, &MetaRead::addToDatamodel2, dm, &DataModel::addMetadataForItem);
-
-//    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
-
-    // add icon to datamodel (Qt::BlockingQueuedConnection sometimes prevents MetaRead::stop)
+    // add icon image to datamodel
     connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon,
             Qt::BlockingQueuedConnection);
-
     // add metadata to image cache item list
     connect(metaReadThread, &MetaRead::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-
     // update thumbView in case scrolling has occurred
     connect(metaReadThread, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
@@ -433,38 +420,41 @@ void MW::createMDCache()
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
-    // delete thread when finished
-    //connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead2
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead2::stop);
-    // signal stopped when abort completed
-//    connect(metaReadThread, &MetaRead2::stopped, this, &MW::reset);
-    // read metadata
-    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);
-    // pause waits until isRunning == false
-    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead2::interrupt);
     // add metadata to datamodel
     connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
+    // add icon to datamodel
+    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon,
+            Qt::BlockingQueuedConnection);
+    // add metadata to image cache item list
+    connect(metaReadThread, &MetaRead2::addToImageCache,
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
     // update thumbView in case scrolling has occurred
     connect(metaReadThread, &MetaRead2::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // update gridView in case scrolling has occurred
     connect(metaReadThread, &MetaRead2::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
-    // add icon to datamodel
-    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon,
-            Qt::BlockingQueuedConnection);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentMetaDone);
-    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaReadThread, &MetaRead2::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
+    // Signal to change selection, fileSelectionChange, update ImageCache
+    connect(metaReadThread, &MetaRead2::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
     connect(metaReadThread, &MetaRead2::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window
     connect(metaReadThread, &MetaRead2::centralMsg, this, &MW::setCentralMessage);
     // update filters MetaRead2 progress
     connect(metaReadThread, &MetaRead2::updateProgress, filters, &Filters::updateProgress);
+    // update loading metadata in statusbar
+    connect(metaReadThread, &MetaRead2::updateProgressInStatusbar,
+            cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
+
+    // read metadata
+    //connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);
+    // pause waits until isRunning == false
+    //connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead2::interrupt);
 #endif // end of MetaRead2
 }
 

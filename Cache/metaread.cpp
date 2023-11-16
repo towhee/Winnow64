@@ -72,7 +72,7 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
 
     Invoked by MW::loadCurrent.
 */
-    if (isDebug || G::isFlowLogger)
+    if (isDebug || G::isFlowLogger) {
         qDebug() << "MetaRead::setCurrentRow"
                  << "row =" << row
                  << "fileSelectionChanged =" << fileSelectionChanged
@@ -81,10 +81,10 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                     ;
-    if (G::isFlowLogger) G::log("MetaRead::setStartRow", "row = " + QString::number(row));
+    }
 
     // Nothing to read
-    if (/*!isRunning() && */G::allMetadataLoaded && G::allIconsLoaded) {
+    if (G::allMetadataLoaded && G::allIconsLoaded) {
         if (fileSelectionChanged) {
             targetRow = row;
             triggerFileSelectionChange();
@@ -100,7 +100,6 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
     sfRowCount = dm->sf->rowCount();
     if (row >= 0 && row < sfRowCount) startRow = row;
     else startRow = 0;
-    startPath = dm->sf->index(startRow, 0).data(G::PathRole).toString();
     triggerCount = 0;
     targetRow = startRow;
     hasBeenTriggered = false;
@@ -116,7 +115,7 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
     }
 }
 
-bool MetaRead::stop()   // not being used
+bool MetaRead::stop()
 {
     if (isDebug) G::log("MetaRead::stop");
 
@@ -154,15 +153,13 @@ void MetaRead::initialize()
     Called when change folders.
 */
 {
-    if (isDebug) G::log("MetaRead::initialize");
-    if (G::isFlowLogger2) qDebug() << "MetaRead::initialize";
-    if (G::isFlowLogger) G::log("MetaRead::initialize");
-    if (isDebug)
+    if (isDebug || G::isLogger || G::isFlowLogger)
+    {
         G::log("MetaRead::initialize",
                "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
+    }
     rowsWithIcon.clear();
     dmRowCount = dm->rowCount();
-    folderPath = dm->currentFolderPath;
     metaReadCount = 0;
     triggerCount = -1;                     // used to delay start ImageCache
     abort = false;
@@ -185,7 +182,7 @@ QString MetaRead::diagnostics()
     rpt << "\n" << "imageCacheTriggerCount: " << imageCacheTriggerCount;
     rpt << "\n" << "expansionFactor:        " << expansionFactor;
     rpt << "\n";
-    rpt << "\n" << "folder path:            " << folderPath;
+    rpt << "\n" << "folder path:            " << dm->currentFolderPath;
     rpt << "\n" << "sfRowCount:             " << sfRowCount;
     rpt << "\n" << "dm->currentSfRow:       " << dm->currentSfRow;
     rpt << "\n";
@@ -227,10 +224,13 @@ void MetaRead::cleanupIcons()
 /*
     Remove icons not in icon range after start row change, iconChunkSize change or
     MW::deleteFiles.
+
     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
     the current datamodel row dm->currentSfRow.
+
     For efficiency, the currently cached icons are tracked in the QList rowsWithIcon.
     Each item in rowsWithIcon is the dmRow in the datamodel.
+
     If a new startRow is sent to setStartPosition while running then the icon
     cleanup is interrupted.
 */
