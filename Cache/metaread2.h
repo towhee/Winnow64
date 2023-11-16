@@ -51,7 +51,7 @@ signals:
 public slots:
     void initialize();
     void decodeThumbs(int id);
-    void setCurrentRow(int row = 0, QString src = "");
+    void setStartRow(int row = 0, QString src = "");
     int interrupt();
 
 protected:
@@ -85,7 +85,7 @@ private:
     ImageCache *imageCache;
     Thumb *thumb;               // decoder
     int instance;
-    QVector<Reader*> decoder;     // all the decoders
+    QVector<Reader*> reader;     // all the decoders
     Reader *d;        // short ptr for current decoder
     int decoderCount;
     int sfRowCount;
