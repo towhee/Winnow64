@@ -29,7 +29,7 @@ Reader::Reader(QObject *parent,
     isDebug = false;
 }
 
-void Reader::decode(const QModelIndex dmIdx,
+void Reader::read(const QModelIndex dmIdx,
                           const QString fPath,
                           const int instance,
                           const bool isReadIcon)

@@ -71,6 +71,7 @@ public:
     bool metadataLoaded(int dmRow);
     bool missingThumbnails();
     bool subFolderImagesLoaded = false;
+    bool isMetadataLoaded(int sfRow);
     bool isAllMetadataLoaded();
     int iconCount();
     void clearAllIcons();
