@@ -43,7 +43,7 @@ MetaRead::MetaRead(QObject *parent,
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
     thumb = new Thumb(dm, metadata, frameDecoder);
-    imageCacheTriggerCount =  3;
+    imageCacheTriggerCount =  1;
 //    imageCacheTriggerCount =  QThread::idealThreadCount();
     showProgressInStatusbar = true;
     isDebug = false;
@@ -342,6 +342,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         return false;
     }
 
+    // moved to end of readRow()
 //    // add to ImageCache icd->cacheItemList (used to manage image cache)
 //    if (G::useImageCache) {
 //        emit addToImageCache(metadata->m);
@@ -465,15 +466,16 @@ void MetaRead::readRow(int sfRow)
     if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
         if (!dm->iconLoaded(sfRow, instance)) {
             readIcon(sfIdx, fPath);
-            // add to ImageCache icd->cacheItemList (used to manage image cache)
-            if (G::useImageCache) {
-                emit addToImageCache(metadata->m);
-            }
             if (abort) return;
             if (rowsWithIcon.size() > iconLimit) {
                 cleanupIcons();
             }
         }
+    }
+
+    // add to ImageCache icd->cacheItemList (used to manage image cache)
+    if (G::useImageCache) {
+        emit addToImageCache(metadata->m);
     }
 
     if (isDebug)
@@ -537,8 +539,8 @@ void MetaRead::run()
 
     triggerCount = -1;                     // used to delay start ImageCache
     lastRow = sfRowCount - 1;
-    int a = 0;      // ahead
-    int b = 0;      // back
+    int a;      // ahead
+    int b;      // back
 
     while (a < sfRowCount || b >= 0) {
         if (startRow != -1) {
@@ -580,19 +582,8 @@ void MetaRead::run()
             if (!abort && okToTrigger) triggerCheck();
         }
 
-        if (!abort && G::allMetadataLoaded) {
-            bool allReqdIconsLoaded = b < firstIconRow && a > lastIconRow;
-            /*
-            qDebug() << "MetaRead::run"
-                     << "b =" << b
-                     << "a =" << a
-                     << "firstIconRow =" << firstIconRow
-                     << "lastIconRow =" << lastIconRow
-                     << "allReqdIconsLoaded =" << allReqdIconsLoaded
-                ; //*/
-            if (allReqdIconsLoaded) abort = true;
-        }
-
+        // terminate loop
+        if (b < firstIconRow && a > lastIconRow) break;
 
         if (abort) {
             if (isDebug)

@@ -374,13 +374,14 @@ void MW::createMDCache()
 
 #ifdef METAREAD
     // MetaRead
+    // Runs a single thread to load metadata and thumbnails
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
-//    // delete thread when finished
-//    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
+    // delete thread when finished
+    //connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
    // read metadata
@@ -427,13 +428,13 @@ void MW::createMDCache()
 #ifdef METAREAD2
     // MetaRead2
     // Runs multiple reader threads to load metadata and thumbnails
-    G::metaReadInUse = "Concurrent2 multi-threaded metadata and thumbnail loading";
+    G::metaReadInUse = "Concurrent multi-threaded metadata and thumbnail loading";
     metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCacheThread);
     metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
-//    // delete thread when finished
-//    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
+    // delete thread when finished
+    //connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead2
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead2::stop);
     // signal stopped when abort completed

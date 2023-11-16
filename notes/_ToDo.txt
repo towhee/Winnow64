@@ -1,12 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Delete image after LR embel crash
-- LR export embel not triggering image cache when Winnow was not already open
-- When advance, scroll before repaint icons to prevent flashing
+- Select multiple folders
+- Check for updates for macos
 - Add tooltips to menus
 - MOV creation date ie IMG_3298.MOV
-- Auto advance when cap lock
 - GoogleDrive folder not showing all videos
 - Open with exiftool
 - qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
@@ -14,7 +12,6 @@ BUGS / TO DO
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail
-- Select multiple folders
 - G::isNewFileSelection req'd?
 - Make sure HEIC also works on PC including thumbs
 - Get thumbnail from HEIC.
@@ -95,6 +92,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Release 1.37
 - Not showing loupe image when jump to end before all metadata has been read
 - Background ingest errors crashing (non-gui attempt use QDialog)
 - Insert images into active folder and datamodel without reloading entire folder

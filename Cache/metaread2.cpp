@@ -49,9 +49,9 @@ MetaRead2::MetaRead2(QObject *parent,
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
     for (int id = 0; id < decoderCount; ++id) {
-        Reader *d = new Reader(this, id, dm, imageCache);
-        decoder.append(d);
-        connect(decoder[id], &Reader::done, this, &MetaRead2::decodeThumbs);
+        Reader *r = new Reader(this, id, dm, imageCache);
+        reader.append(r);
+        connect(reader[id], &Reader::done, this, &MetaRead2::decodeThumbs);
     }
 
     instance = 0;
@@ -65,7 +65,7 @@ MetaRead2::~MetaRead2()
     delete thumb;
 }
 
-void MetaRead2::setCurrentRow(int row, QString src)
+void MetaRead2::setStartRow(int row, QString src)
 {
     if (isDebug || G::isLogger || G::isFlowLogger) {
         QString running;
@@ -77,12 +77,12 @@ void MetaRead2::setCurrentRow(int row, QString src)
     if (G::allMetadataLoaded && G::allIconsLoaded) return;
     this->src = src;
     stop();
-//    mutex.lock();
+    mutex.lock();
     iconChunkSize = dm->iconChunkSize;
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
     abortCleanup = isRunning();
-//    mutex.unlock();
+    mutex.unlock();
     if (!isRunning()) {
         start();
     }
@@ -258,8 +258,8 @@ void MetaRead2::startThumbDecoders()
                 ;
     for (int i = 0; i < decoderCount; i++) {
         if (i >= sfRowCount) break;
-        if (!decoder[i]->isRunning()) {
-            decoder[i]->fPath = "";
+        if (!reader[i]->isRunning()) {
+            reader[i]->fPath = "";
             decodeThumbs(i);
         }
     }
@@ -270,7 +270,7 @@ void MetaRead2::decodeThumbs(int id)
         return;
     }
 
-    d = decoder[id];
+    d = reader[id];
     qDebug() << "MetaRead2::decodeThumbs"
              << "id =" << id
              << "d->fPath =" << d->fPath
@@ -323,7 +323,7 @@ void MetaRead2::decodeThumbs(int id)
     }
 
     // decode
-    decoder[id]->decode(dmIdx, fPath, instance, isReadIcon);
+    reader[id]->decode(dmIdx, fPath, instance, isReadIcon);
 }
 
 bool MetaRead2::readMetadata(QModelIndex sfIdx, QString fPath)
@@ -487,6 +487,7 @@ void MetaRead2::readRow(int sfRow)
         }
     }
     return;     // decoder
+
     // load icon
 
     // can ignore if debugging
