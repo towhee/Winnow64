@@ -5959,6 +5959,9 @@ void MW::helpShortcuts()
     ui.treeWidget->setColumnWidth(2, 250);
     ui.treeWidget->expandAll();
     ui.scrollAreaWidgetContents->setStyleSheet(css);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(helpShortcuts->winId(), G::backgroundColor);
+    #endif
     helpShortcuts->show();
 }
 
