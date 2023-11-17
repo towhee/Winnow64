@@ -1162,7 +1162,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     lastFunction = "";
     mCopy = m;
     if (G::isLogger) G::log("DataModel::addMetadataForItem");
-    /*
+    ///*
     qDebug() << "DataModel::addMetadataForItem"
              << "Instance =" << instance
              << "m.instance =" << m.instance
@@ -1628,7 +1628,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIcon");
-    if (isDebug)
+//    if (isDebug)
     {
         qDebug() << "DataModel::setIcon"
                  << "src =" << src

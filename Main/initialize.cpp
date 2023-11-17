@@ -422,15 +422,18 @@ void MW::createMDCache()
 
     // signal to stop MetaRead2
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead2::stop);
-    // add metadata to datamodel
-    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
-    // add icon to datamodel
-    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon,
-            Qt::BlockingQueuedConnection);
-    // add metadata to image cache item list
-    connect(metaReadThread, &MetaRead2::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+
+//  These connections have been moved to the readers spawned by MetaRead2
+//    // add metadata to datamodel
+//    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem,
+//            Qt::BlockingQueuedConnection);
+//    // add icon to datamodel
+//    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon,
+//            Qt::BlockingQueuedConnection);
+//    // add metadata to image cache item list
+//    connect(metaReadThread, &MetaRead2::addToImageCache,
+//            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+
     // update thumbView in case scrolling has occurred
     connect(metaReadThread, &MetaRead2::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
@@ -438,7 +441,7 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead2::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // message metadata reading completed
-    connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentMetaDone);
+    connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentDone);
     // Signal to change selection, fileSelectionChange, update ImageCache
     connect(metaReadThread, &MetaRead2::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
@@ -446,7 +449,7 @@ void MW::createMDCache()
     // update loading metadata in central window
     connect(metaReadThread, &MetaRead2::centralMsg, this, &MW::setCentralMessage);
     // update filters MetaRead2 progress
-    connect(metaReadThread, &MetaRead2::updateProgress, filters, &Filters::updateProgress);
+    connect(metaReadThread, &MetaRead2::updateProgressInFilter, filters, &Filters::updateProgress);
     // update loading metadata in statusbar
     connect(metaReadThread, &MetaRead2::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);

@@ -47,11 +47,14 @@ MetaRead2::MetaRead2(QObject *parent,
     thumb = new Thumb(dm, metadata, frameDecoder);
 
     // create n decoder threads
-    decoderCount = QThread::idealThreadCount();
-    for (int id = 0; id < decoderCount; ++id) {
+    readerCount = QThread::idealThreadCount();
+    for (int id = 0; id < readerCount; ++id) {
         Reader *r = new Reader(this, id, dm, imageCache);
         reader.append(r);
-        connect(reader[id], &Reader::done, this, &MetaRead2::decodeThumbs);
+        connect(reader[id], &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+        connect(reader[id], &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+        connect(reader[id], &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata);
+        connect(reader[id], &Reader::done, this, &MetaRead2::dispatch);
     }
 
     instance = 0;
@@ -249,6 +252,11 @@ void MetaRead2::cleanupIcons()
     }
 }
 
+void MetaRead2::resetTrigger()
+{
+    hasBeenTriggered = false;
+}
+
 void MetaRead2::triggerFileSelectionChange()
 {
     // file selection change and start image caching thread after head start
@@ -263,18 +271,18 @@ void MetaRead2::startReaders()
 {
     if (isDebug || G::isLogger) G::log("MetaRead2::startThumbDecoders");
     qDebug() << "MetaRead2::startThumbDecoders"
-             << "decoderCount =" << decoderCount
+             << "decoderCount =" << readerCount
                 ;
-    for (int i = 0; i < decoderCount; i++) {
+    for (int i = 0; i < readerCount; i++) {
         if (i >= sfRowCount) break;
         if (!reader[i]->isRunning()) {
             reader[i]->fPath = "";
-            decodeThumbs(i);
+            dispatch(i);
         }
     }
 }
 
-void MetaRead2::decodeThumbs(int id)
+void MetaRead2::dispatch(int id)
 {
     if (abort) {
         return;
@@ -352,10 +360,6 @@ void MetaRead2::buildQueue()
             abort = true;
         }
         if (abort) {
-            if (interrupted) {
-                interruptedRow = row;
-            }
-            qDebug() << "MetaRead2::run ** ABORT ** Returning out of loop at row" << row;
             abort = false;
             return;
         }
