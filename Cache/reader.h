@@ -38,8 +38,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToDatamodel(ImageMetadata m, QString src);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(ImageMetadata m);
     void done(int threadId);
 

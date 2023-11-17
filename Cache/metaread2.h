@@ -28,6 +28,7 @@ public:
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
+    void resetTrigger();
 
     int iconChunkSize;
     int firstIconRow;
@@ -56,7 +57,7 @@ signals:
 
 public slots:
     void initialize();
-    void decodeThumbs(int id);
+    void dispatch(int id);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
 
 protected:
@@ -90,7 +91,7 @@ private:
     int instance;
     QVector<Reader*> reader;     // all the decoders
     Reader *d;        // short ptr for current decoder
-    int decoderCount;
+    int readerCount;
     int sfRowCount;
     int dmRowCount;
     int metaReadCount;
