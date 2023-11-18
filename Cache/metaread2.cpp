@@ -51,9 +51,6 @@ MetaRead2::MetaRead2(QObject *parent,
     for (int id = 0; id < readerCount; ++id) {
         Reader *r = new Reader(this, id, dm, imageCache);
         reader.append(r);
-        connect(reader[id], &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-        connect(reader[id], &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-        connect(reader[id], &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata);
         connect(reader[id], &Reader::done, this, &MetaRead2::dispatch);
     }
 
@@ -80,21 +77,29 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
     // Nothing to read
     if (G::allMetadataLoaded && G::allIconsLoaded) {
         if (fileSelectionChanged) {
-            targetRow = row;
-            triggerFileSelectionChange();
+            emit fileSelectionChange(dm->sf->index(row, 0));
         }
         return;
     }
 
-    this->src = src;
     stop();
+
     mutex.lock();
+    this->src = src;
     iconChunkSize = dm->iconChunkSize;
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
     targetRow = startRow;
     abortCleanup = isRunning();
+    isDone = false;
     mutex.unlock();
+
+    //if (isDebug)
+    {
+    qDebug() << "MetaRead2::setStartRow "
+             << "startRow =" << startRow
+             << "fileSelectionChanged =" << fileSelectionChanged;
+    }
     if (!isRunning()) {
         start();
     }
@@ -135,7 +140,6 @@ void MetaRead2::initialize()
     metaReadCount = 0;
     instance = dm->instance;
     queue.clear();
-    imageCachingStarted = false;
 }
 
 QString MetaRead2::diagnostics()
@@ -206,6 +210,14 @@ QString MetaRead2::reportMetaCache()
     return reportString;
 }
 
+bool MetaRead2::readersRunning()
+{
+    for (int id = 0; id < readerCount; ++id) {
+        if (reader[id]->isRunning()) return true;
+    }
+    return false;
+}
+
 void MetaRead2::cleanupIcons()
 {
 /*
@@ -254,25 +266,18 @@ void MetaRead2::cleanupIcons()
 
 void MetaRead2::resetTrigger()
 {
-    hasBeenTriggered = false;
-}
-
-void MetaRead2::triggerFileSelectionChange()
-{
-    // file selection change and start image caching thread after head start
-    if (G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
-    //qDebug() << "MetaRead::triggerFileSelectionChange  targetRow =" << targetRow;
-    QModelIndex sfIdx = dm->sf->index(targetRow, 0);
-    emit fileSelectionChange(sfIdx);
-    hasBeenTriggered = true;
+    //hasBeenTriggered = false;
 }
 
 void MetaRead2::startReaders()
 {
     if (isDebug || G::isLogger) G::log("MetaRead2::startThumbDecoders");
+    if (isDebug) {
     qDebug() << "MetaRead2::startThumbDecoders"
              << "decoderCount =" << readerCount
                 ;
+    }
+
     for (int i = 0; i < readerCount; i++) {
         if (i >= sfRowCount) break;
         if (!reader[i]->isRunning()) {
@@ -284,36 +289,52 @@ void MetaRead2::startReaders()
 
 void MetaRead2::dispatch(int id)
 {
+    // if queue is empty and all metadata loaded we're done
+    if (queue.size() == 0) {
+        if (!isDone && !readersRunning() && dm->isAllMetadataLoaded()) completed();
+        return;
+    }
+
     if (abort) {
         return;
     }
 
     d = reader[id];
-    qDebug() << "MetaRead2::decodeThumbs"
+    if (isDebug)
+    {
+    qDebug() << "MetaRead2::dispatch               "
              << "id =" << id
              << "d->fPath =" << d->fPath
                 ;
+    }
 
-    // update datamodel and imagecache
+    // if returning reader
     if (d->fPath != "") {
         // update progress in case filters panel activated before all metadata loaded
         metaReadCount++;
-        qDebug() << "MetaRead2::decodeThumbs  decoded"
+        if (isDebug)
+        {
+        qDebug() << "MetaRead2::dispatch  decoded  "
                  << "metaReadCount =" << metaReadCount
                  << "sfRowCount =" << sfRowCount
                  << d->fPath;
+        }
         //int progress = 1.0 * metaReadCount / sfRowCount * 100;
         //emit updateProgress(progress);
         rowsWithIcon.append(d->dmIdx.row());
-        // delayed start ImageCache
-        if (metaReadCount == sfRowCount || metaReadCount == imageCacheTriggerCount) {
-            // start image caching thread after head start
-            QModelIndex sfIdx = dm->sf->index(targetRow, 0);
+
+        QModelIndex sfIdx = dm->proxyIndexFromModelIndex(d->dmIdx);
+        int dmRow = d->dmIdx.row();
+        // trigger fileSelectionChange which starts ImageCache
+        if (dmRow == startRow) {
+            //if (isDebug)
+            {
+            qDebug() << "MetaRead2::dispatch  fileSelectionChange"
+                     << "id =" << id
+                     << "row =" << dmRow
+                     << d->fPath;
+            }
             emit fileSelectionChange(sfIdx);
-            imageCachingStarted = true;
-            qDebug() << "MetaRead2::decodeThumbs triggerImageCache"
-                     << metaReadCount
-                     << queue;
         }
     }
 
@@ -328,18 +349,35 @@ void MetaRead2::dispatch(int id)
     int dmRow = dm->rowFromPath(fPath);
     QModelIndex dmIdx = dm->index(dmRow, 0);
     int sfRow = dm->proxyRowFromModelRow(dmIdx.row());
+    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     queue.removeFirst();
-    qDebug() << "MetaRead2::decodeThumbs  next in queue"
+    if (isDebug)
+    {
+    qDebug() << "MetaRead2::dispatch  next in queue"
+             << "id =" << id
+             << "row =" << sfRow
              << fPath
              << "remaining queue count =" << queue.size();
+    }
+
+
+    // progress
+//    if (showProgressInStatusbar) {
+        emit updateProgressInStatusbar(dmRow, dmRowCount);
+        int progress = 1.0 * metaReadCount / dmRowCount * 100;
+        emit updateProgressInFilter(progress);
+//    }
 
     // read icon if in icon range
+    bool isReadIcon = true;
+    /*
     bool isReadIcon = false;
     if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
         if (!dm->iconLoaded(sfRow, instance)) {
             isReadIcon = true;
         }
     }
+    */
 
     // read metadata and icon
     reader[id]->read(dmIdx, fPath, instance, isReadIcon);
@@ -426,6 +464,7 @@ void MetaRead2::completed()
     cleanupIcons();
 
     emit done();
+    isDone = true;
 
     if (isDebug) qDebug() << "MetaRead2::run  Done.";
 }

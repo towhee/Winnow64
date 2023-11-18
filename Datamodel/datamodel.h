@@ -60,6 +60,7 @@ public:
     void remove(QString fPath);
     int insert(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
+    QModelIndex proxyIndexFromModelIndex(QModelIndex dmIdx);
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);
     QModelIndex modelIndexFromProxyIndex(QModelIndex sfIdx);

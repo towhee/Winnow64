@@ -1,9 +1,9 @@
 #include "reader.h"
 
 Reader::Reader(QObject *parent,
-                           int id,
-                           DataModel *dm,
-                           ImageCache *imageCache)
+               int id,
+               DataModel *dm,
+               ImageCache *imageCache)
     : QThread(parent)
 {
     this->dm = dm;
@@ -12,27 +12,20 @@ Reader::Reader(QObject *parent,
     threadId = id;
     instance = 0;
     frameDecoder = new FrameDecoder(this);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    //connect(this, &FrameDecoder::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
-    //connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);
     thumb = new Thumb(dm, metadata, frameDecoder);
+
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    // add metadata to datamodel
-    connect(this, &Reader::addToDatamodel,
-            dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
-    // add to image cache list
-    connect(this, &Reader::addToImageCache,
-            imageCache, &ImageCache::addCacheItemImageMetadata,
-            Qt::BlockingQueuedConnection);
+    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
 
     isDebug = false;
 }
 
 void Reader::read(const QModelIndex dmIdx,
-                          const QString fPath,
-                          const int instance,
-                          const bool isReadIcon)
+                  const QString fPath,
+                  const int instance,
+                  const bool isReadIcon)
 {
     this->dmIdx = dmIdx;
     this->fPath = fPath;
@@ -45,7 +38,12 @@ void Reader::read(const QModelIndex dmIdx,
 bool Reader::readMetadata()
 {
     if (isDebug || G::isLogger) G::log("Reader::readMetadata");
-    qDebug() << "Reader::readMetadata" << fPath;
+    if (isDebug) {
+    qDebug() << "Reader::readMetadata              "
+             << "id =" << threadId
+             << "row =" << dmIdx.row()
+             << fPath;
+    }
     // read metadata from file into metadata->m
     int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
@@ -54,9 +52,6 @@ bool Reader::readMetadata()
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
         emit addToDatamodel(metadata->m, "Reader::readMetadata");
-        if (G::useImageCache) {
-            emit addToImageCache(metadata->m);
-        }
     }
     return isMetaLoaded;
 }
@@ -64,6 +59,12 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     if (isDebug || G::isLogger) G::log("Reader::readMetadata");
+    if (isDebug) {
+    qDebug() << "Reader::readIcon                  "
+             << "id =" << threadId
+             << "row =" << dmIdx.row()
+             << fPath;
+    }
 
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
@@ -82,6 +83,9 @@ void Reader::run()
 {
     if (readMetadata() && isReadIcon) {
         readIcon();
+        if (G::useImageCache) {
+            emit addToImageCache(metadata->m);
+        }
     }
     emit done(threadId);
 }
