@@ -64,12 +64,12 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 private:
-    void triggerFileSelectionChange();
     void read(int startRow = 0, QString src = "");// decoder
 
     void buildQueue();
     void startReaders();
     void completed();
+    bool readersRunning();
 
 //    void iconMax(QPixmap &thumb);
 //    bool isNotLoaded(int sfRow);
@@ -97,18 +97,17 @@ private:
     int metaReadCount;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
-    bool hasBeenTriggered;
+    //bool hasBeenTriggered;
     bool okToTrigger;                       // signal MW::fileSelectionChange
     int thumbDecoderTriggerCount = 20;
     int imageCacheTriggerCount = 200;
+    bool isDone;
 
     QList<QString> queue;
 
     int startRow = 0;
     int targetRow = 0;
     QString src;
-
-    bool imageCachingStarted = false;
 
     QList<int> rowsWithIcon;
 

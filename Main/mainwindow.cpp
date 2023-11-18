@@ -2799,13 +2799,18 @@ void MW::loadConcurrentDone()
     QString src = "MW::loadConcurrentMetaDone ";
     int count = 0;
     /*
-    qDebug() << "MW::loadConcurrentMetaDone" << G::t.elapsed() << "ms"
+    qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
+
+    qDebug() << "MW::loadConcurrentDone  Elapsed ms =" << testTime.elapsed() << ".  "
+             << dm->rowCount() << "images from"
+             << dm->currentFolderPath
+        ;
 
     if (reset(src + QString::number(count++))) return;
 
@@ -2820,8 +2825,6 @@ void MW::loadConcurrentDone()
         progressLabel->setVisible(false);
     }
     G::allIconsLoaded = dm->allIconsLoaded();
-
-    qDebug() << "MW::loadConcurrentMetaDone  Elsped ms =" << testTime.elapsed();
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,

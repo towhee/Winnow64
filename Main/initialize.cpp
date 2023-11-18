@@ -454,10 +454,12 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead2::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
 
+    // not being used:
     // read metadata
     //connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);
     // pause waits until isRunning == false
     //connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead2::interrupt);
+
 #endif // end of MetaRead2
 }
 
