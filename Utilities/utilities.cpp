@@ -38,7 +38,7 @@ QString Utilities::getDriveName(QString path)
 {
     QString name = "";
     QStringList segments = listFromPath(path);
-    qDebug() << "Utilities::getDriveName  path =" << path << "segments =" << segments;
+    //qDebug() << "Utilities::getDriveName  path =" << path << "segments =" << segments;
     if (segments.count() == 0) return "";
     #ifdef Q_OS_WIN
         return segments.at(0);

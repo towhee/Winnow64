@@ -49,7 +49,6 @@ public:
         FileOpen
     } status;
 
-    //QVector<QString> StatusText {
     QStringList statusText {
         "Ready",
         "Busy",

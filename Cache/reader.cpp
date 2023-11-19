@@ -32,6 +32,8 @@ void Reader::read(const QModelIndex dmIdx,
     this->instance = instance;
     this->isReadIcon = isReadIcon;
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
+    status = Status::Success;
+    pending = true;
     start();
 }
 
@@ -52,6 +54,9 @@ bool Reader::readMetadata()
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
         emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    }
+    else {
+        status = Status::MetaFailed;
     }
     return isMetaLoaded;
 }
@@ -74,6 +79,8 @@ void Reader::readIcon()
     }
     else {
         pm = QPixmap(":/images/error_image256.png");
+        if (status == Status::MetaFailed) status = Status::MetaIconFailed;
+        else status = Status::IconFailed;
         qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
     }
     emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
