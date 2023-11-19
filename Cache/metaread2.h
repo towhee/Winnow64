@@ -67,9 +67,10 @@ private:
     void read(int startRow = 0, QString src = "");// decoder
 
     void buildQueue();
-    void startReaders();
-    void completed();
+    void dispatchReaders();
+    void weAreDone();
     bool readersRunning();
+    void redoFailed();
 
 //    void iconMax(QPixmap &thumb);
 //    bool isNotLoaded(int sfRow);
@@ -81,7 +82,6 @@ private:
     bool abortCleanup;
     bool interrupted;
     int interruptedRow;
-    bool decodeThumbsTerminated;
 
     DataModel *dm;
     Metadata *metadata;
@@ -101,12 +101,17 @@ private:
     bool okToTrigger;                       // signal MW::fileSelectionChange
     int thumbDecoderTriggerCount = 20;
     int imageCacheTriggerCount = 200;
+    int redoCount = 0;
+    int redoMax = 5;
     bool isDone;
 
-    QList<QString> queue;
+    //QList<QString> queue;
+    QList<int> queueN;
 
     int startRow = 0;
     int targetRow = 0;
+    int a = 0;
+    int b = -1;
     QString src;
 
     QList<int> rowsWithIcon;

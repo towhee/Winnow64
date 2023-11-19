@@ -13,9 +13,6 @@
 #include <QMutex>
 #include "popup.h"
 #include "Utilities/utilities.h"
-//#include <QMetaObject>
-
-
 
 // METAREAD or METAREAD2: one or the other:
 //#define METAREAD

@@ -33,6 +33,22 @@ public:
     QModelIndex dmIdx = QModelIndex();
     Metadata *metadata;
     QPixmap pm;
+    bool pending = false;
+
+    enum Status {
+        Success,
+        Aborted,
+        MetaFailed,
+        IconFailed,
+        MetaIconFailed
+    } status;
+    QStringList statusText {
+        "Success",
+        "Aborted",
+        "MetaFailed",
+        "IconFailed",
+        "MetaIconFailed"
+    };
 
 protected:
     void run() Q_DECL_OVERRIDE;

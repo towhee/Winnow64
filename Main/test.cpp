@@ -159,7 +159,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    enableSelectionDependentMenus();
+    dm->isAllMetadataLoaded();
     return;
 //    metaReadThread->showProgressInStatusbar = !metaReadThread->showProgressInStatusbar;
     qDebug() << "metaReadThread->showProgressInStatusbar =" << metaReadThread->showProgressInStatusbar;
