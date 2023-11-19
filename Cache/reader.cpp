@@ -37,10 +37,27 @@ void Reader::read(const QModelIndex dmIdx,
     start();
 }
 
+void Reader::stop()
+{
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        //wait();
+        abort = false;
+    }
+    /*
+    qDebug() << "Reader::stop              "
+             << "id =" << threadId;
+    //*/
+}
+
 bool Reader::readMetadata()
 {
     if (isDebug || G::isLogger) G::log("Reader::readMetadata");
-    if (isDebug) {
+    if (isDebug)
+    {
     qDebug() << "Reader::readMetadata              "
              << "id =" << threadId
              << "row =" << dmIdx.row()
@@ -53,7 +70,7 @@ bool Reader::readMetadata()
     if (isMetaLoaded) {
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
-        emit addToDatamodel(metadata->m, "Reader::readMetadata");
+        if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
     }
     else {
         status = Status::MetaFailed;
@@ -64,7 +81,8 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     if (isDebug || G::isLogger) G::log("Reader::readMetadata");
-    if (isDebug) {
+    if (isDebug)
+    {
     qDebug() << "Reader::readIcon                  "
              << "id =" << threadId
              << "row =" << dmIdx.row()
@@ -83,16 +101,16 @@ void Reader::readIcon()
         else status = Status::IconFailed;
         qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
     }
-    emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
+    if (!abort) emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
 }
 
 void Reader::run()
 {
-    if (readMetadata() && isReadIcon) {
-        readIcon();
+    if (!abort && readMetadata() && isReadIcon) {
+        if (!abort) readIcon();
         if (G::useImageCache) {
-            emit addToImageCache(metadata->m);
+            if (!abort) emit addToImageCache(metadata->m);
         }
     }
-    emit done(threadId);
+    if (!abort) emit done(threadId);
 }

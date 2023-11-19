@@ -123,7 +123,7 @@ void ImageCache::stop()
     if (debugCaching)
         qDebug() << "ImageCache::stop";
     if (debugCaching || G::isLogger) G::log("ImageCache::stop");
-    abort = true;
+    //abort = true;
 
     // stop imagecache thread
     if (isRunning()) {

@@ -66,11 +66,9 @@ protected:
 private:
     void read(int startRow = 0, QString src = "");// decoder
 
-    void buildQueue();
     void dispatchReaders();
-    void weAreDone();
     bool readersRunning();
-    void redoFailed();
+    bool redo();
 
 //    void iconMax(QPixmap &thumb);
 //    bool isNotLoaded(int sfRow);
@@ -95,6 +93,7 @@ private:
     int sfRowCount;
     int dmRowCount;
     int metaReadCount;
+    int metaReadItems;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
     //bool hasBeenTriggered;
@@ -105,8 +104,7 @@ private:
     int redoMax = 5;
     bool isDone;
 
-    //QList<QString> queue;
-    QList<int> queueN;
+    QList<int> toRead;
 
     int startRow = 0;
     int targetRow = 0;

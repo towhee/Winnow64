@@ -1771,7 +1771,7 @@ bool DataModel::isAllMetadataLoaded()
     if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
-            //if (isDebug)
+            if (isDebug)
             qDebug() << "DataModel::isAllMetadataLoaded" << "row =" << row << "is not loaded.";
             return false;
         }

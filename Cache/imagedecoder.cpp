@@ -53,7 +53,6 @@ bool ImageDecoder::quit()
 {
     abort = false;
     status = Status::Abort;
-    //emit done(threadId);
     fPath = "";
     QImage blank;
     image = blank;
