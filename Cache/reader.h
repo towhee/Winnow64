@@ -25,6 +25,7 @@ public:
                 const QString fPath,
                 const int instance,
                 const bool isReadIcon);
+    void stop();
 
     int threadId = -1;
     int instance = 0;
@@ -60,9 +61,9 @@ signals:
     void done(int threadId);
 
 private:
-//    QMutex mutex;
-//    QWaitCondition condition;
-//    bool abort = false;
+    QMutex mutex;
+    QWaitCondition condition;
+    bool abort = false;
     bool readMetadata();
     void readIcon();
     DataModel *dm;
