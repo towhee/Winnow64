@@ -2337,8 +2337,9 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
-    //
+    #ifdef METAREAD
     metaReadThread->resetTrigger();
+    #endif
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     folderSelectionChange();
@@ -2387,12 +2388,12 @@ bool MW::stop(QString src)
 //    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
 #endif
 #ifdef METAREAD2
-    disconnect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon);
-    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
-    disconnect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
-    disconnect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    connect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
+//    disconnect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon);
+//    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
+//    disconnect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem);
+//    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
+//    disconnect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+//    connect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
 #endif
     /*
        Program interrupt flags used to stop all folder loading activity.  If

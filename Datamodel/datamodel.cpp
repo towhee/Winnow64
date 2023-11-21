@@ -1702,8 +1702,10 @@ bool DataModel::iconLoaded(int sfRow, int instance)
         return true;
     }
     if (sfRow >= sf->rowCount()) return true;
+    //mutex.lock();
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
     return !(itemFromIndex(dmIdx)->icon().isNull());
+    //mutex.unlock();
 }
 
 int DataModel::iconCount()

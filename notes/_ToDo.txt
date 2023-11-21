@@ -1,6 +1,9 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Zoom bug?
+- MetaRead2 test iconCunkSize < rowCount
+- MetaRead2 test change file selection while still loading
 - Crash when set color red for multi picked select on sd card
 - Select multiple folders
 - Check for updates for macos

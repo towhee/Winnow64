@@ -281,7 +281,6 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         if (G::isWarningLogger)
         qWarning() << "WARNING MetaRead::readMetadata Instance Clash"
                    << "row =" << sfIdx.row();
-        //abort = true;
         return false;
     }
 
@@ -406,7 +405,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     else {
         pm = QPixmap(":/images/error_image256.png");
         if (G::isWarningLogger)
-        qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
+        qWarning() << "WARNING" << "MetaRead::loadIcon" << "Failed to load thumbnail." << fPath;
     }
     if (abort) return;
     emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
