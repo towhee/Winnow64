@@ -28,7 +28,6 @@ public:
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
-    void resetTrigger();
 
     int iconChunkSize;
     int firstIconRow;
@@ -44,9 +43,7 @@ signals:
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 
-    void addToDatamodel(ImageMetadata m, QString src);// decoder
-    void addToImageCache(ImageMetadata m);// decoder
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);  // decoder
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
 
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),
@@ -78,17 +75,15 @@ private:
     QWaitCondition condition;
     bool abort;
     bool abortCleanup;
-    bool interrupted;
-    int interruptedRow;
 
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder; // decoder
+    FrameDecoder *frameDecoder;     // decoder requires this
     ImageCache *imageCache;
-    Thumb *thumb;               // decoder
-    int instance;
-    QVector<Reader*> reader;     // all the decoders
-    Reader *d;        // short ptr for current decoder
+    Thumb *thumb;                   // decoder requires this
+    int instance;                   // new instance for each folder to detect conflict
+    QVector<Reader*> reader;        // all the decoders
+    Reader *d;                      // terse ptr for current decoder
     int readerCount;
     int sfRowCount;
     int dmRowCount;
@@ -96,23 +91,23 @@ private:
     int metaReadItems;
     double expansionFactor = 1.2;
     int iconLimit;                  // iconChunkSize * expansionFactor
-    //bool hasBeenTriggered;
-    bool okToTrigger;                       // signal MW::fileSelectionChange
-    int thumbDecoderTriggerCount = 20;
-    int imageCacheTriggerCount = 200;
     int redoCount = 0;
     int redoMax = 5;
+
     bool isDone;
+    bool aIsDone;
+    bool bIsDone;
+    bool allDone;
 
     QList<int> toRead;
 
     int startRow = 0;
-    int targetRow = 0;
     int a = 0;
     int b = -1;
     QString src;
 
     QList<int> rowsWithIcon;
+    QStringList err;
 
     bool isDebug = false;
     QElapsedTimer t;
