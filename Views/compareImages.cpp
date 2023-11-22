@@ -472,7 +472,7 @@ void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
 
     // update ZoomDlg
     if (hasfocus) {
-        emit zoomChange(zoomValue);
+        emit zoomChange(zoomValue, "CompareImages::zoomChangeFromView");
         emit updateStatus(true, "", "CompareImages::zoomChangeFromView");
     }
 }

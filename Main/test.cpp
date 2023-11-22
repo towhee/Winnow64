@@ -159,6 +159,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    zoomDlg->clearButtons();
+    return;
     dm->isAllMetadataLoaded();
     return;
 //    metaReadThread->showProgressInStatusbar = !metaReadThread->showProgressInStatusbar;
