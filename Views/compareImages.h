@@ -42,7 +42,7 @@ public slots:
 
 signals:
     void updateStatus(bool, QString, QString);
-    void zoomChange(qreal zoomValue);
+    void zoomChange(qreal zoomValue, QString src);
     void togglePick();
 
 private slots:

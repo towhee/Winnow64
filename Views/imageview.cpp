@@ -350,7 +350,7 @@ void ImageView::scale()
     // when resize before first image zoom == inf
     if (zoom > 10) return;
     setTransform(transform);
-    emit zoomChange(zoom);
+    emit zoomChange(zoom, "ImageView::scale");
 
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();

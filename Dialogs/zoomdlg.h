@@ -18,7 +18,8 @@ public:
     ~ZoomDlg() override;
 
 public slots:
-    void zoomChange(qreal zoom);
+    void zoomChange(qreal zoom, QString src);
+    void clearButtons();
     void closeZoomDlg();
     void positionWindow(QRect a, QRect c);
 
@@ -35,6 +36,8 @@ signals:
 
 private:
     Ui::ZoomDlg *ui;
+    bool btnZoomJustPressed;
+    bool isDebug;
 
 private slots:
     void on_zoomSB_valueChanged(int value);
