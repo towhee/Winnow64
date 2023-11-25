@@ -147,6 +147,20 @@ QString MW::diagnostics()
 #endif
     rpt << "\n";
 
+    rpt << "\n" << "G::winOutProfilePath = " << G::winOutProfilePath;
+    rpt << "\n" << "G::strFontSize = " << G::strFontSize;
+    rpt << "\n" << "G::displayPhysicalHorizontalPixels = " << G::s(G::displayPhysicalHorizontalPixels);
+    rpt << "\n" << "G::displayPhysicalVerticalPixels = " << G::s(G::displayPhysicalVerticalPixels);
+    rpt << "\n" << "G::displayVirtualHorizontalPixels = " << G::s(G::displayVirtualHorizontalPixels);
+    rpt << "\n" << "G::displayVirtualVerticalPixels = " << G::s(G::displayVirtualVerticalPixels);
+    rpt << "\n" << "G::actDevicePixelRatio = " << G::s(G::actDevicePixelRatio);
+    rpt << "\n" << "G::sysDevicePixelRatio = " << G::s(G::sysDevicePixelRatio);
+    rpt << "\n" << "G::fontSize = " << G::s(G::fontSize);
+    rpt << "\n" << "G::ptToPx = " << G::ptToPx;
+    rpt << "\n" << "G::dpi = " << G::dpi;
+
+    rpt << "\n";
+
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
