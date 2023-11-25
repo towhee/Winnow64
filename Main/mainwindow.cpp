@@ -1009,10 +1009,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     //*/
 
     /* DEBUG SPECIFIC EVENT (uncomment to use)
-    if (obj->objectName() == "GraphicsEffect") {
-    if (event->type() == QEvent::FocusIn) {
-            qDebug() << event << obj << embelDock->hasFocus();
-    }*/
+    if (obj->objectName() == "VideoWidget") {
+        if (event->type() == QEvent::MouseMove) {
+            qDebug() << event << obj << QCursor::pos();
+        }
+    }//*/
 
     /* DEBUG SPECIFIC OBJECTNAME (uncomment to use)
     if (obj->objectName() == "GraphicsEffect") {
@@ -1165,10 +1166,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (thumbView->mouseOverThumbView) {
         if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
             QKeyEvent *e = static_cast<QKeyEvent *>(event);
-//            if (G::isModifier) {
             if (e->modifiers() != 0) {
                 thumbView->setCursor(Qt::ArrowCursor);
-//                qDebug() << "MW::eventFilter" << "Modifier pressed" << event;
+                //qDebug() << "MW::eventFilter" << "Modifier pressed" << event;
             }
             else {
                 QPoint pos = thumbView->mapFromGlobal(QCursor::pos());
@@ -1388,6 +1388,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::MouseButtonPress) {
         if (obj->objectName() == "StatusProgressLabel") {
             preferences("CacheHeader");
+        }
+    }
+    } // end section
+
+    // VIDEOVIEW MOUSE MOVE SHOW CURSOR
+    {
+    /*
+    QVideoWidget hides mouse movement - detect be monitoring paint and mouse pos.
+    */
+
+    if (obj->objectName() == "VideoView") {
+        if (event->type() == QEvent::Paint) {
+            QPoint diff = QCursor::pos() - videoView->mousePos;
+            if (qAbs(diff.x()) > 5 || qAbs(diff.y()) > 5) showMouseCursor();
         }
     }
     } // end section
@@ -1981,6 +1995,8 @@ void MW::folderSelectionChange()
 
     // update metadata read status light
     updateMetadataThreadRunStatus(true, true, "MW::folderSelectionChange");
+
+    testTime.restart();     // ms to fully load folder and read all the metadata and icons
 
     // load datamodel
     if (!dm->load(G::currRootFolder, G::includeSubfolders)) {
@@ -2748,7 +2764,7 @@ void MW::loadConcurrentNewFolder()
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
     // set selection and current index
-    testTime.restart();
+    //testTime.restart();
     sel->setCurrentRow(targetRow);
 }
 

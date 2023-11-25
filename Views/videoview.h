@@ -17,10 +17,13 @@ public:
     void stop();
     void updatePositionLabel();
     VideoWidget *video;
+    QPoint mousePos;
 
 signals:
     void togglePick();
     void handleDrop(QString fPath);
+    void showMouseCursor();
+    void hideMouseCursor();
 
 protected:
     void wheelEvent(QWheelEvent *event) override;

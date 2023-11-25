@@ -1678,6 +1678,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
+    QMutexLocker locker(&mutex);
 //    lastFunction = "";
 //    if (G::isLogger) G::log("DataModel::iconLoaded");
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
@@ -1702,10 +1703,8 @@ bool DataModel::iconLoaded(int sfRow, int instance)
         return true;
     }
     if (sfRow >= sf->rowCount()) return true;
-    //mutex.lock();
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
     return !(itemFromIndex(dmIdx)->icon().isNull());
-    //mutex.unlock();
 }
 
 int DataModel::iconCount()

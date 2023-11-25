@@ -676,6 +676,10 @@ void MW::createVideoView()
     connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
     // drop event
     connect(videoView, &VideoView::handleDrop, this, &MW::handleDrop);
+    // show mouse cursor
+    connect(videoView, &VideoView::showMouseCursor, this, &MW::showMouseCursor);
+    // hide mouse cursor
+    connect(videoView, &VideoView::hideMouseCursor, this, &MW::hideMouseCursor);
 }
 
 void MW::createImageView()

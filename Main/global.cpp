@@ -302,4 +302,6 @@ namespace G
     {
         popUp = new PopUp(widget, centralWidget);
     }
-}
+
+} // end NameSpace G
+

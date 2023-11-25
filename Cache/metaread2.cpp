@@ -74,13 +74,11 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
         QString s = "row = " + QString::number(row) + " src = " + src + " isRunning = " + running;
         G::log("MetaRead2::setCurrentRow", s);
     }
-    // is this req'd?
-    sfRowCount = dm->sf->rowCount();
-    if (startRow >= sfRowCount) return;
 
     // All loaded, select file
     if (G::allMetadataLoaded && G::allIconsLoaded) {
         if (fileSelectionChanged) {
+            //qDebug() << "Just do fileSelectionChange";
             emit fileSelectionChange(dm->sf->index(row, 0));
         }
         return;
@@ -92,28 +90,32 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
     iconChunkSize = dm->iconChunkSize;
     if (row >= 0 && row < dm->sf->rowCount()) startRow = row;
     else startRow = 0;
-    a = startRow;
-    b = startRow - 1;
     abortCleanup = isRunning();
-    isDone = false;
+    isNewStartRowWhileStillReading = false;
     mutex.unlock();
 
     if (isDebug)
     {
     qDebug() << "\nMetaRead2::setStartRow "
              << "startRow =" << startRow
-             << "a =" << a
-             << "b =" << b
              << "fileSelectionChanged =" << fileSelectionChanged
              << "folder =" << dm->currentFolderPath
+             << "isRunning =" << isRunning()
+             << "isStarted =" << isStarted
+             << "isDone =" << isDone
             ;
     }
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead2::run");
 
-    if (isRunning()) {
-        //dispatchReaders();
+    if (isStarted) {
+        //qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
+        mutex.lock();
+        isNewStartRowWhileStillReading = true;
+        mutex.unlock();
     }
     else {
+        a = startRow;
+        b = startRow;
         start();
     }
 }
@@ -160,7 +162,10 @@ void MetaRead2::initialize()
     metaReadItems = dmRowCount;
     redoCount = 0;
     instance = dm->instance;
-    allDone = false;
+    isStarted = false;
+    firstDone = false;
+    isDone = false;
+    //allDone = false;
     err.clear();
     toRead.clear();
     for (int i = 0; i < dmRowCount; i++) {
@@ -194,21 +199,28 @@ QString MetaRead2::diagnostics()
     rpt << "\n" << "lastIconRow:           " << lastIconRow;
     rpt << "\n" << "rowsWithIcon:          " << rowsWithIcon.size();
     rpt << "\n" << "dm->iconCount:         " << dm->iconCount();
-    rpt << "\n\n";
-    rpt << "toRead: " << toRead.length() << " items\n";
-    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt << "\n";
+    rpt << "\n" << "redoCount:             " << QVariant(redoCount).toString();
+    rpt << "\n" << "isAllMetadataLoaded:   " << QVariant(dm->isAllMetadataLoaded()).toString();
+    rpt << "\n" << "isDone:                " << QVariant(isDone).toString();
+
+    rpt << "\n";
+    rpt << "\n" << "toRead: " << toRead.length() << " items";
     for (int i = 0; i < toRead.length(); i++) {
+        //rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt << "\n";
         rpt << "Item at row ";
         rpt.setFieldWidth(5);
         rpt << toRead.at(i) ;
         rpt << " dm metadata loaded ";
-        rpt << QVariant(dm->isMetadataLoaded(toRead.at(i))).toString() << "\n";
+        rpt << QVariant(dm->isMetadataLoaded(toRead.at(i))).toString();
     }
+    rpt << "\n";
     rpt << "\n" << "Errors: " << err.length() << " items\n";
+    rpt.setFieldWidth(5);
     for (int i = 0; i < err.length(); i++) {
-        rpt.setFieldAlignment(QTextStream::AlignLeft);
-        //rpt.setFieldWidth(5);
-        rpt << err.at(i) << "\n";
+        //rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt << "\n" << err.at(i);
     }
 
     return reportString;
@@ -285,30 +297,52 @@ void MetaRead2::cleanupIcons()
     }
 }
 
-bool MetaRead2::redo()
+void MetaRead2::redo()
 {
-    if (++redoCount > redoMax) {
-        qWarning() << "WARNING MetaRead2::redo limit exceeded: missing metadata or icon" << toRead;
-        return false;
-    }
-    if (isDebug)
+    //if (isDebug)
     {
         qDebug() << "MetaRead2::redo" << "count =" << redoCount << toRead;
     }
+    redoCount++;
     a = startRow;
-    b = a--;
+    b = startRow;
     dispatchReaders();
-    return true;
 }
 
 void MetaRead2::dispatch(int id)
 {
+/*
+    All available readers (each with their own thread) are sent here by dispatchReaders.
+    Each reader is assigned a file, which it reads and then updates the datamodel and
+    imagecache.  When it is finished, the reader signals this function, where it iterates,
+    being dispatched to read another file until all the files have been read by the
+    readers.
+
+    From the startRow position, each datamodel row file is read, alternating ahead and
+    behind.
+
+    Initial conditions: a = b = startRow, isHead = true
+    a = row in ahead position
+    b = row in behind position
+    readers call back to dispatch
+
+    - if reader returning
+        - status update
+        - deplete toRead list
+        - quit if all read
+    - if a is done and b is done then return
+    - if ahead then reader a, else reader b
+    - increment a or decrement b to next datamodel row without metadata
+*/
     reader[id]->pending = false;
     if (abort) return;
 
     static bool isAhead = true;
 
+    // terse pointer to reader[id]
     d = reader[id];
+
+    // If not new reader and all rows already being read, then return
     if (d->fPath == "" && id >= dmRowCount) return;
 
     if (isDebug)
@@ -322,7 +356,7 @@ void MetaRead2::dispatch(int id)
             //<< "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
             << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
             << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-            << "allRead =" << QVariant(allDone).toString().leftJustified(5, ' ')
+            //<< "allRead =" << QVariant(allDone).toString().leftJustified(5, ' ')
             << "a =" << QString::number(a).leftJustified(4, ' ')
             << "b =" << QString::number(b).leftJustified(4, ' ')
             ;
@@ -346,21 +380,22 @@ void MetaRead2::dispatch(int id)
             QString error = "row " + QString::number(dmRow) + " failed: "
                             + d->statusText.at(d->status) + " " + d->fPath;
             err.append(error);
-            if (isDebug)
+            //if (isDebug)
+            {
             qDebug() << "MetaRead2::dispatch  Failure    "
                      << "row =" << dmRow
                      << "status =" << d->statusText.at(d->status)
                      << d->fPath;
+            }
         }
         }
 
-        // track rows with icon in case
+        // track rows with icon
         if (!abort) rowsWithIcon.append(dmRow);
 
-        // trigger fileSelectionChange which starts ImageCache
-        QModelIndex sfIdx;
-        if (!abort) sfIdx = dm->proxyIndexFromModelIndex(d->dmIdx);
+        // trigger fileSelectionChange which starts ImageCache if this row = startRow
         if (dmRow == startRow) {
+            QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(d->dmIdx);
             if (isDebug)
             {
             qDebug() << "MetaRead2::dispatch  fileSelectionChange"
@@ -376,6 +411,7 @@ void MetaRead2::dispatch(int id)
             qDebug().noquote()
                 << "MetaRead2::dispatch     processed:         "
                 << "id =" << QString::number(id).leftJustified(2, ' ')
+                << "startRow =" << QString::number(startRow).leftJustified(4, ' ')
                 << "row =" << QString::number(dmRow).leftJustified(4, ' ')
                 << "a =" << QString::number(a).leftJustified(4, ' ')
                 << "b =" << QString::number(b).leftJustified(4, ' ')
@@ -391,9 +427,52 @@ void MetaRead2::dispatch(int id)
             emit updateProgressInFilter(progress);
         }
 
-        // if all datamodel rows have been read we are done unless a read failure
-        //if (allDone) {
-        //if (metaReadCount >= metaReadItems) {
+        // wait for pending readers to finish
+        if (aIsDone && bIsDone) {
+            bool stillReadersPending = false;
+            //if (isDebug)
+            qDebug().noquote() << "MetaRead2::dispatch     check stillThreadsPending ";
+            for (int id = 0; id < readerCount; ++id) {
+                if (reader[id]->pending /*|| reader[id]->isRunning()*/) {
+                    //if (isDebug)
+                    {
+                            qDebug().noquote()
+                                << "MetaRead2::dispatch     stillThreadsPending "
+                                << "id =" << QString::number(id).leftJustified(2, ' ')
+                                << "row =" << QString::number(reader[id]->dmIdx.row()).leftJustified(4, ' ')
+                                << "allMetadataLoaded =" << dm->isAllMetadataLoaded() ;
+                    }
+                    stillReadersPending = true;
+                    //if (waitForPending.elapsed() < 50)
+                    return;
+                    //break;
+                }
+            }
+
+            // if all readers finished has all metadata been added to datamodel
+            if ((toRead.size() > 0 || !dm->isAllMetadataLoaded()) && (redoCount < redoMax)) {
+                //qDebug() << "MetaRead2::dispatch     No readers pending";
+                qDebug() << "MetaRead2::dispatch     Not all metadata loaded";
+                // try to read again
+                if (!abort) {
+                    redo();
+                }
+            }
+            else {
+                // Now we are done
+                if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead2::run");
+                if (!isDone) {
+                    if (!abort) cleanupIcons();
+                    qDebug() << "MetaRead2::dispatch     We Are Done.  toRead =" << toRead;
+                    if (!abort) emit done();
+                    isDone = true;
+                    isStarted = false;
+                    return;
+                }
+            }
+        } // end aIsDone && bIsDone
+
+        /*
         if (toRead.size() == 0) {
             bool stillReadersPending = false;
             // pending out of order readers to process
@@ -427,7 +506,6 @@ void MetaRead2::dispatch(int id)
             }
             // all readers processed
             else {
-                /* redo
                 // if not all metadata loaded then redo up to redoMax times
                 if (!stillReadersPending && !dm->isAllMetadataLoaded()) {
                     if (!abort) {
@@ -435,7 +513,6 @@ void MetaRead2::dispatch(int id)
                         if (redo()) return;
                     }
                 }
-                //*/
 
                 // Now we are done
                 if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead2::run");
@@ -444,17 +521,45 @@ void MetaRead2::dispatch(int id)
                     qDebug() << "MetaRead2::dispatch     We Are Done.  toRead =" << toRead;
                     if (!abort) emit done();
                     isDone = true;
+                    isStarted = false;
                 }
             }
 
             return;
         }
+        */
     }
 
-    if (allDone) return;
+    // check if new start row while dispatch reading all metadata.  The user may have jumped
+    // to the end of a large folder while metadata is being read.
+    if (isNewStartRowWhileStillReading) {
+        a = startRow;
+        b = startRow;
+        isNewStartRowWhileStillReading = false;
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead2::dispatch isNewStartRowWhileStillReading"
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                ;
+        }
+    }
 
-    aIsDone = (a == dmRowCount - 1);
-    bIsDone = (b < 0);
+    aIsDone = (a == dmRowCount);
+    bIsDone = (b == -1);
+
+    // if done in both directions then return
+    if (aIsDone && bIsDone) {
+        if (!firstDone) {
+            qDebug() << "MetaRead2::dispatch ***** aIsDone && bIsDone";
+            //G::wait(20);
+            QTimer::singleShot(100, this, &MetaRead2::quitAnyway);
+            //waitForPending.restart();
+            firstDone = true;
+        }
+        return;
+    }
 
     // launch a reader
     if (isAhead && aIsDone) isAhead = false;
@@ -463,9 +568,12 @@ void MetaRead2::dispatch(int id)
     isAhead ? dmRow = a : dmRow = b;
     QModelIndex dmIdx = dm->index(dmRow, 0);
     QString fPath = dmIdx.data(G::PathRole).toString();
+    // rgh change to if in icon range isReadIcon = true
     bool isReadIcon = true;
-    reader[id]->pending = true;
+    // read the image file metadata and icon.  When the reader is finished, it will
+    // signal dispatch to loop through to read another file...
     if (!abort) reader[id]->read(dmIdx, fPath, instance, isReadIcon);
+    //reader[id]->pending = true;
 
     if (isDebug)
     {
@@ -476,16 +584,12 @@ void MetaRead2::dispatch(int id)
             << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
             << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
             << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-            << "allDone =" << QVariant(allDone).toString().leftJustified(5, ' ')
             << "a =" << QString::number(a).leftJustified(4, ' ')
             << "b =" << QString::number(b).leftJustified(4, ' ')
             ;
     }
 
-    allDone = (aIsDone && bIsDone);
-    if (allDone) return;
-
-    // Assign a or b to next item to read by a reader
+    // Update a or b to next item to read by a reader
     if (isAhead && !bIsDone) {
         isAhead = !isAhead;
         // find next b
@@ -495,6 +599,7 @@ void MetaRead2::dispatch(int id)
                 return;
             }
         }
+        b--;
     }
     if (isAhead && bIsDone) {
         // find next a
@@ -504,6 +609,7 @@ void MetaRead2::dispatch(int id)
                 return;
             }
         }
+        a++;
     }
     if (!isAhead && !aIsDone) {
         isAhead = !isAhead;
@@ -514,8 +620,9 @@ void MetaRead2::dispatch(int id)
                 return;
             }
         }
+        a++;
     }
-    if (isAhead && bIsDone) {
+    if (!isAhead && aIsDone) {
         // find next b
         for (int i = b - 1; i >= 0; i--) {
             if (!dm->index(i,0).data(G::MetadataLoadedColumn).toBool()) {
@@ -523,6 +630,7 @@ void MetaRead2::dispatch(int id)
                 return;
             }
         }
+        b--;
     }
 
 }
@@ -544,6 +652,14 @@ void MetaRead2::dispatchReaders()
     }
 }
 
+void::MetaRead2::quitAnyway()
+{
+    if (!isDone) {
+        isDone = true;
+        emit done();
+    }
+}
+
 void MetaRead2::run()
 /*
     Loads the metadata and icons into the datamodel (dm) for a folder.  The iteration
@@ -561,5 +677,7 @@ void MetaRead2::run()
                            << "sfRowCount =" << sfRowCount
                               ;
     }
+    isStarted = true;
+    isDone = false;
     dispatchReaders();
 }

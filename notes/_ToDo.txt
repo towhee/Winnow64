@@ -1,7 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Zoom bug?
+- Check zoom magnification in windows
 - MetaRead2 test iconCunkSize < rowCount
 - MetaRead2 test change file selection while still loading
 - Crash when set color red for multi picked select on sd card
@@ -96,6 +96,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Hide mouse cursor in video mode
+- Zoom radio button uncheck when zoom changes
 - Release 1.37
 - Not showing loupe image when jump to end before all metadata has been read
 - Background ingest errors crashing (non-gui attempt use QDialog)

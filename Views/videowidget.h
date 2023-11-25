@@ -37,6 +37,7 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override;
 //    void dropEvent(QDropEvent *event) override;
 //    void dragEnterEvent(QDragEnterEvent *event) override;
