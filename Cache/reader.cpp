@@ -33,6 +33,7 @@ void Reader::read(const QModelIndex dmIdx,
     this->isReadIcon = isReadIcon;
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
     status = Status::Success;
+    pending = true;
     start();
 }
 

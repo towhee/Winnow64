@@ -593,3 +593,13 @@ void MW::setBackupModifiedFiles(bool isBackup)
     qDebug() << "MW::setBackupModifiedFiles";
     G::backupBeforeModifying = isBackup;
 }
+
+void MW::showMouseCursor()
+{
+    setCursor(QCursor(Qt::ArrowCursor));
+}
+
+void MW::hideMouseCursor()
+{
+    setCursor(QCursor(Qt::BlankCursor));
+}

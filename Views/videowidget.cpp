@@ -16,6 +16,7 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
     mediaPlayer->setVideoOutput(this);
     QWidget *child = findChild<QWidget *>();
     child->installEventFilter(this);
+    child->setMouseTracking(true);      // this does not work
 }
 
 void VideoWidget::load(QString fPath)
@@ -107,8 +108,15 @@ void VideoWidget::mousePressEvent(QMouseEvent *event)
     emit togglePlayOrPause();
 }
 
+void VideoWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    // this does not work
+    //qDebug() << "VideoWidget::mousePressEvent" << event;
+}
+
 bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
 {
+    // does not receive mouseMove events
     /*
     qDebug() << "\nVideoWidget::eventFilter"
              << "event:" <<event << "\t"

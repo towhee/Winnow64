@@ -56,6 +56,7 @@ public slots:
     void initialize();
     void dispatch(int id);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
+    void quitAnyway();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -65,7 +66,7 @@ private:
 
     void dispatchReaders();
     bool readersRunning();
-    bool redo();
+    void redo();
 
 //    void iconMax(QPixmap &thumb);
 //    bool isNotLoaded(int sfRow);
@@ -94,16 +95,19 @@ private:
     int redoCount = 0;
     int redoMax = 5;
 
+    bool isStarted;
     bool isDone;
     bool aIsDone;
     bool bIsDone;
-    bool allDone;
+    bool firstDone;
+    QElapsedTimer waitForPending;
 
     QList<int> toRead;
 
     int startRow = 0;
     int a = 0;
     int b = -1;
+    bool isNewStartRowWhileStillReading;
     QString src;
 
     QList<int> rowsWithIcon;

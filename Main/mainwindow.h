@@ -383,6 +383,8 @@ signals:
 
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
+    void showMouseCursor();
+    void hideMouseCursor();
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);

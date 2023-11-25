@@ -150,7 +150,7 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    filters->restore();
+    setCursor(QCursor(Qt::BlankCursor));
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
@@ -159,10 +159,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    zoomDlg->clearButtons();
-    return;
+    setCursor(QCursor(Qt::ArrowCursor));
+
+     return;
+
     dm->isAllMetadataLoaded();
     return;
+
 //    metaReadThread->showProgressInStatusbar = !metaReadThread->showProgressInStatusbar;
     qDebug() << "metaReadThread->showProgressInStatusbar =" << metaReadThread->showProgressInStatusbar;
 }

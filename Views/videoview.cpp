@@ -3,11 +3,15 @@
 VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWidget{parent}
 {
     if (G::isLogger) qDebug() << "VideoView::VideoView";
+    setObjectName("VideoView");
+    setMouseTracking(true);     // this does not work
 
     this->thumbView = thumbView;
     this->sel = sel;
 
     video = new VideoWidget(this);
+    video->setObjectName("VideoWidget");
+    //video->children()[0]->setMouseTracking(true);
 
     setAcceptDrops(true);
     video->setAcceptDrops(true);
@@ -69,6 +73,8 @@ void VideoView::play()
 {
     if (G::isLogger || isDebug)
         qDebug() << "VideoView::play" << video->mediaPlayer->source();
+    mousePos = QCursor::pos();
+    emit hideMouseCursor();
     if (position >= duration) video->setPosition(0);
     video->play();
     t->start();
@@ -77,7 +83,9 @@ void VideoView::play()
 
 void VideoView::pause()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::pause";
+    if (G::isLogger || isDebug)
+        qDebug() << "VideoView::pause";
+    emit showMouseCursor();
     video->pause();
     t->stop();
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
@@ -85,8 +93,13 @@ void VideoView::pause()
 
 void VideoView::stop()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::stop";
+    if (G::isLogger || isDebug)
+        qDebug() << "VideoView::stop";
+    emit showMouseCursor();
     video->stop();
+    QGuiApplication::restoreOverrideCursor();
+    QGuiApplication::restoreOverrideCursor();
+    QGuiApplication::restoreOverrideCursor();
 }
 
 void VideoView::scrubMoved(int ms)
@@ -194,10 +207,12 @@ void VideoView::wheelEvent(QWheelEvent *event)
     }
 }
 
-bool VideoView::event(QEvent *event) {
+bool VideoView::event(QEvent *event)
+{
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
+    //qDebug() << "VideoView::event" << event;
     if (event->type() == QEvent::NativeGesture) {
         if (G::isLogger) qDebug() << "VideoView::event", "QEvent::NativeGesture";
         emit togglePick();
