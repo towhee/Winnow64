@@ -4017,7 +4017,6 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log("MW::setDisplayResolution");
-    return;
 
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
