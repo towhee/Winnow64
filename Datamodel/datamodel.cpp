@@ -309,6 +309,8 @@ bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 int DataModel::insert(QString fPath)
 {
 /*
+    Called by MW::insertFile.
+
     Insert a new image into the data model.  Use when a new image is created by embel export
     or meanStack to quickly refresh the active folder with the just saved image.
 
@@ -354,6 +356,15 @@ int DataModel::insert(QString fPath)
     // add the file data
     addFileDataForRow(dmRow, insertFile);
 
+    // reset loaded flags so MetaRead knows to load
+    G::allMetadataLoaded = false;
+    G::allIconsLoaded = false;
+
+    /*
+    After insertion, in the call function add
+        sel->select(fPath);
+    This will invoke MetaRead which will load the metadata, icon and imageCache.
+    */
     return dmRow;
 }
 

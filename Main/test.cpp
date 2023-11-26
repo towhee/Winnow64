@@ -159,15 +159,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    setCursor(QCursor(Qt::ArrowCursor));
-
-     return;
-
-    dm->isAllMetadataLoaded();
-    return;
-
-//    metaReadThread->showProgressInStatusbar = !metaReadThread->showProgressInStatusbar;
-    qDebug() << "metaReadThread->showProgressInStatusbar =" << metaReadThread->showProgressInStatusbar;
+    QString p1 = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+    QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+//    QString p2 = "/Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg";
+//    QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-06-17_0001.jpg";
+    QFile::copy(p1, p2);
+    insertFile(p2);
+//    metaReadThread->setStartRow(0, false, "Insertion");
+    qDebug() << "MW::test done";
+    sel->select(p2);
+//    thumbView->refreshThumbs();
 }
 
 /*

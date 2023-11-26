@@ -15,8 +15,7 @@
 #include "Utilities/utilities.h"
 
 // METAREAD or METAREAD2: one or the other:
-//#define METAREAD
-#define METAREAD2
+#define METAREAD
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
