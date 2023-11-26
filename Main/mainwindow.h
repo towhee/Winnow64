@@ -1253,6 +1253,7 @@ private:
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
     void renameSelectedFiles();
+    void insertFile(QString fPath);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();

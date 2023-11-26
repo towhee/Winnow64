@@ -450,7 +450,7 @@ void MetaRead::readRow(int sfRow)
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded) {
             if (!readMetadata(sfIdx, fPath)) {
-                return;
+//                return;
             }
         }
     }

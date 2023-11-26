@@ -1860,15 +1860,14 @@ void MW::handleStartupArgs(const QString &args)
             ; //*/
 
         // folder already open
+        QString curr = G::currRootFolder;
         if (fDir == G::currRootFolder) {
             foreach (QString path, embellishedPaths) {
                 // change dir in path to G::currRootFolder
-                dm->insert(path);
+                insertFile(path);
             }
-            G::allMetadataLoaded = false;
-            G::allIconsLoaded = false;
             QString fPath = embellishedPaths.at(0);
-            sel->select(fPath);
+            //sel->select(fPath);
         }
         // open the folder
         else {
@@ -5446,6 +5445,12 @@ void MW::renameSelectedFiles()
     rf.exec();
     // may have renamed current image
     setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
+}
+
+void MW::insertFile(QString fPath)
+{
+    int dmRow = dm->insert(fPath);
+    metaReadThread->setStartRow(dmRow, false, "MW::insertFile");
 }
 
 void MW::deleteSelectedFiles()
