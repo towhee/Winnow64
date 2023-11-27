@@ -110,6 +110,24 @@ public:
         "float8"
     }  */
 
+    // load failure status
+    enum LoadStatus {
+        Success,
+        InstanceClash,
+        NullPath,
+        DoesNotExist,
+        AlreadyOpen,
+        ParseFailed
+    };
+    QStringList loadStatusText {
+        "Success",
+        "Instance clash",
+        "Null file path",
+        "File does not exist",
+        "File is already open",
+        "Metadata parsing failure"
+    };
+
     void clearMetadata();
     bool writeXMP(const QString &imageFileName, QString src = "Undefined");
     static void writeOrientation(QString fPath, QString orientationNumber);

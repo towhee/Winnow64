@@ -168,7 +168,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    metaReadThread->setStartRow(0, false, "Insertion");
     qDebug() << "MW::test done";
     sel->select(p2);
-//    thumbView->refreshThumbs();
 }
 
 /*

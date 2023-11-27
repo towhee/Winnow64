@@ -279,6 +279,7 @@ void DataModel::clearDataModel()
     filters->removeChildrenDynamicFilters();
     // reset remaining criteria without signalling filter change as no new data yet
     filters->clearAll();
+    filters->setEnabled(false);
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear list of fileInfo
@@ -311,8 +312,8 @@ int DataModel::insert(QString fPath)
 /*
     Called by MW::insertFile.
 
-    Insert a new image into the data model.  Use when a new image is created by embel export
-    or meanStack to quickly refresh the active folder with the just saved image.
+    Insert a new image into the data model.  Use when a new image is created by embel
+    export or meanStack to quickly refresh the active folder with the just saved image.
 
     The datamodel must already contain the fPath folder.
 */
@@ -337,6 +338,7 @@ int DataModel::insert(QString fPath)
         }
     }
     if (dmRow >= rowCount()) dmRow = rowCount() - 1;
+
     // insert new row
     insertRow(dmRow);
 
@@ -350,6 +352,7 @@ int DataModel::insert(QString fPath)
 
     // update fPathRow hash
     rebuildRowFromPathHash();
+
     // update imageCount
     imageCount = rowCount();
 
@@ -1169,7 +1172,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     If a folder is opened with combineRawJpg all the metadata for the raw file may not have
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
-*/    
+*/
     lastFunction = "";
     mCopy = m;
     if (G::isLogger) G::log("DataModel::addMetadataForItem");

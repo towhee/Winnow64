@@ -538,8 +538,8 @@ void MetaRead::run()
 
     triggerCount = -1;                     // used to delay start ImageCache
     lastRow = sfRowCount - 1;
-    int a;      // ahead
-    int b;      // back
+    int a = 0;      // ahead
+    int b = 0;      // back
 
     while (a < sfRowCount || b >= 0) {
         if (startRow != -1) {
@@ -614,4 +614,3 @@ void MetaRead::run()
 
     return;
 }
-

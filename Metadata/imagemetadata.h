@@ -121,6 +121,13 @@ public:
     QByteArray iccBuf;
     QString iccSpace;
     QString parseSource;
+    QString parseFailure;
+    enum Parse {
+        Success,
+        BadStartToFile,
+        MissingEXIF,
+        EndianOrderNotFound
+    } parseStatus;
     QString searchStr = "";
 };
 Q_DECLARE_METATYPE(ImageMetadata)

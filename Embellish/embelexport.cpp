@@ -162,7 +162,7 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     Images sent from another program, such as lightroom, are sent here from
     MW::handleStartupArgs.  The current embellish template is saved, the assigned
     template is set, the images are embellished and exported, and the original
-    template is re-established, or the exported folder is opened, with the sort order
+    template is re-established or the exported folder is opened, with the sort order
     set to last modified in reverse.
 
     In Embel it is important to call setRemote(true).  If Embel::isRemote == false then the
@@ -198,7 +198,6 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
     return dstPaths;
-//    return lastFileExportedPath;
 }
 
 void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
@@ -259,7 +258,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-//        qApp->processEvents();
+        qApp->processEvents();
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image

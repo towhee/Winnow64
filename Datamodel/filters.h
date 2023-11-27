@@ -68,6 +68,7 @@ public:
     void setCategoryFilterStatus(QTreeWidgetItem *item);
     void disableColorZeroCountItems();
     void disableAllItems(bool disable);
+    void disableAllHeaders(bool disable);
     void disableColorAllHeaders(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
