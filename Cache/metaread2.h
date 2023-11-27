@@ -100,7 +100,6 @@ private:
     bool aIsDone;
     bool bIsDone;
     bool firstDone;
-    QElapsedTimer waitForPending;
 
     QList<int> toRead;
 

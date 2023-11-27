@@ -158,6 +158,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
+    disableAllHeaders(true);
+
     debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
@@ -495,12 +497,28 @@ void Filters::disableAllItems(bool disable)
     }
 }
 
+void Filters::disableAllHeaders(bool disable)
+{
+    if (G::isLogger) G::log("Filters::disableAllHeaders");
+    if (debugFilters)
+        qDebug() << "Filters::disableAllHeaders"
+                    ;
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if (!(*it)->parent()) {
+            if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
+            else (*it)->setForeground(0, QBrush(G::textColor));
+        }
+        ++it;
+    }
+}
+
 void Filters::disableColorAllHeaders(bool disable)
 {
-    if (G::isLogger) G::log("Filters::disableAllItems");
+    if (G::isLogger) G::log("Filters::disableColorAllHeaders");
     if (debugFilters)
         qDebug() << "Filters::disableColorAllHeaders"
-                    ;
+            ;
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent() && (*it) != search) {
@@ -585,6 +603,7 @@ void Filters::setEachCatTextColor()
         ++it;
     }
 
+    search->setForeground(0, G::textColor);
     if (searchTrue->text(0) != enterSearchString) {
         if (searchTrue->checkState(0) == Qt::Checked)
             search->setForeground(0, QBrush(hdrIsFilteringColor));
@@ -747,6 +766,7 @@ void Filters::startBuildFilters(bool isReset)
         bfProgressBar->setVisible(true);
     }
 //    if (isReset) collapseAll();
+    disableAllHeaders(true);
     setEnabled(false);
 }
 
@@ -792,7 +812,8 @@ void Filters::clearAll()
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
         else {
-            (*it)->setForeground(0, QBrush(G::textColor));
+            (*it)->setForeground(0, QBrush(G::disabledColor));
+            //(*it)->setForeground(0, QBrush(G::textColor));
         }
         ++it;
     }

@@ -827,7 +827,7 @@ void EmbelProperties::setCurrentTemplate(QString name)
     }
     templateListEditor->setValue(templateName);
 
-//    qDebug() << "EmbelProperties::setValue" << templateId << templateName << templatePath;
+    //qDebug() << "EmbelProperties::setValue" << templateId << templateName << templatePath;
 }
 
 void EmbelProperties::sortTemplateList()
@@ -2086,8 +2086,10 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     collapseAll();
     expand(model->index(_templates, 0));
     isTemplateChange = false;
-//    qDebug() << "EmbelProperties::itemChangeTemplate" << "loadImage..."
-//             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
+    /*
+    qDebug() << "EmbelProperties::itemChangeTemplate" << "loadImage..."
+             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
+    //*/
     mw3->imageView->loadImage(mw3->dm->currentFilePath, "EmbelProperties::itemChangeTemplate");
     mw3->imageView->setAlignment(Qt::AlignCenter);
 }

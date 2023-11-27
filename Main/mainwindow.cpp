@@ -1838,8 +1838,8 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
-        setCentralMessage("Loading Embellished ...");
-        qApp->processEvents();
+//        setCentralMessage("Loading Embellished ...");
+//        qApp->processEvents();
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
@@ -1852,7 +1852,7 @@ void MW::handleStartupArgs(const QString &args)
 
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
-        /* debug
+        ///* debug
         qDebug() << "MW::handleStartUpArgs"
                  << "fDir" << fDir
                  << "G::currRootFolder" << G::currRootFolder
@@ -1860,23 +1860,25 @@ void MW::handleStartupArgs(const QString &args)
             ; //*/
 
         // folder already open
-        QString curr = G::currRootFolder;
         if (fDir == G::currRootFolder) {
             foreach (QString path, embellishedPaths) {
                 // change dir in path to G::currRootFolder
+//                QString p1 = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+//                QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+//                QFile::copy(p1, p2);
                 insertFile(path);
             }
             QString fPath = embellishedPaths.at(0);
-            //sel->select(fPath);
+            sel->select(fPath);
         }
         // open the folder
         else {
             // go there ...
-            fsTree->select(fDir);
-            // refresh FSTree counts
-            fsTree->refreshModel();
-            QString fPath = embellishedPaths.at(0);
-            folderAndFileSelectionChange(fPath, "handleStartupArgs");
+//            fsTree->select(fDir);
+//            // refresh FSTree counts
+//            fsTree->refreshModel();
+//            QString fPath = embellishedPaths.at(0);
+//            folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
     }
 
@@ -2392,40 +2394,11 @@ bool MW::stop(QString src)
     dm->instance++;
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
-
-    // clear queued signals from MetaRead
-#ifdef METAREAD
-//    disconnect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
-//    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
-//    disconnect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-//    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-//    disconnect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-//    connect(metaReadThread, &MetaRead::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
-#endif
-#ifdef METAREAD2
-//    disconnect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon);
-//    connect(metaReadThread, &MetaRead2::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
-//    disconnect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem);
-//    connect(metaReadThread, &MetaRead2::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
-//    disconnect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-//    connect(metaReadThread, &MetaRead2::addToImageCache, imageCacheThread, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
-#endif
-    /*
-       Program interrupt flags used to stop all folder loading activity.  If
-       the activity is happening in another thread then it stops when the thread
-       is aborted.  However, after MW::stop has executed, exucution returns to
-       any GUI functions that were interrupted, such as MW::loadLinearNewFolder.
-       The flag "G::dmEmpty is checked to terminate these processes.
-   */
-//    dm->abortLoad();
-//    G::dmEmpty = true;
-
-
     bool isDebugStopping = false;
     QElapsedTimer tStop;
     tStop.restart();
-
     G::t.restart();
+    videoView->stop();
     buildFilters->stop();
     if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop buildFilters:        "
@@ -2825,7 +2798,7 @@ void MW::loadConcurrentDone()
 
     qDebug() << "MW::loadConcurrentDone  Elapsed ms =" << testTime.elapsed() << ".  "
              << dm->rowCount() << "images from"
-             << dm->currentFolderPath
+             << dm->currentFolderPath << "\n"
         ;
 
     if (reset(src + QString::number(count++))) return;

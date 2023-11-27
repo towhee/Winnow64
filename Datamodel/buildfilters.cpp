@@ -217,6 +217,7 @@ void BuildFilters::done()
                ;
     }
 //    dm->sf->suspend(false);
+    filters->setEnabled(true);
     isReset = false;
     filters->filtersBuilt = true;
     emit updateProgress(-1);        // clear progress msg
