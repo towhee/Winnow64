@@ -27,6 +27,7 @@ void Reader::read(const QModelIndex dmIdx,
                   const int instance,
                   const bool isReadIcon)
 {
+    stop();
     this->dmIdx = dmIdx;
     this->fPath = fPath;
     this->instance = instance;
@@ -35,6 +36,15 @@ void Reader::read(const QModelIndex dmIdx,
     status = Status::Success;
     pending = true;
     start();
+    //wait(10);
+    if (isDebug) {
+        qDebug().noquote()
+            << "Reader::read            start               "
+            << "id =" << QString::number(threadId).leftJustified(2, ' ')
+            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "isRunning =" << isRunning()
+            ;
+    }
 }
 
 void Reader::stop()
@@ -44,7 +54,7 @@ void Reader::stop()
         abort = true;
         condition.wakeOne();
         mutex.unlock();
-        //wait();
+        wait();
         abort = false;
     }
     /*
@@ -55,13 +65,15 @@ void Reader::stop()
 
 bool Reader::readMetadata()
 {
-    if (isDebug || G::isLogger) G::log("Reader::readMetadata");
+    if (G::isLogger) G::log("Reader::readMetadata");
     if (isDebug)
     {
-    qDebug() << "Reader::readMetadata              "
-             << "id =" << threadId
-             << "row =" << dmIdx.row()
-             << fPath;
+    qDebug().noquote()
+             << "Reader::readMetadata                        "
+             << "id =" << QString::number(threadId).leftJustified(2, ' ')
+             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+             //<< fPath
+            ;
     }
     // read metadata from file into metadata->m
     int dmRow = dmIdx.row();
@@ -85,13 +97,15 @@ bool Reader::readMetadata()
 
 void Reader::readIcon()
 {
-    if (isDebug || G::isLogger) G::log("Reader::readMetadata");
+    if (G::isLogger) G::log("Reader::readIcon");
     if (isDebug)
     {
-    qDebug() << "Reader::readIcon                  "
-             << "id =" << threadId
-             << "row =" << dmIdx.row()
-             << fPath;
+    qDebug().noquote()
+             << "Reader::readIcon                            "
+             << "id =" << QString::number(threadId).leftJustified(2, ' ')
+             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+             //<< fPath
+            ;
     }
 
     int dmRow = dmIdx.row();
@@ -128,6 +142,14 @@ void Reader::run()
         if (G::useImageCache) {
             if (!abort) emit addToImageCache(metadata->m);
         }
+    }
+    if (isDebug) {
+    qDebug().noquote()
+             << "Reader::run             emiting done        "
+             << "id =" << QString::number(threadId).leftJustified(2, ' ')
+             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+             //<< fPath
+            ;
     }
     if (!abort) emit done(threadId);
 }

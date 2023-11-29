@@ -173,6 +173,9 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 
     // clear dstPaths
     dstPaths.clear();
+    // set remote flag to avoid mainwindow updates
+    embellish->setRemote(true);
+    embelProperties->setRemote(true);
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
@@ -181,7 +184,6 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     if (!isValidExportFolder()) {
         return dstPaths;
     }
-    embellish->setRemote(true);
 
     //QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
     if (G::isFileLogger) Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));

@@ -79,6 +79,7 @@ public:
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
     void setChunkSize(int chunkSize);
+    bool isPath(QString fPath);
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath);
     void rebuildRowFromPathHash();

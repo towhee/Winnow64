@@ -1,11 +1,14 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- MW::updateDisplayResolution() return() ???
+- Delete files can take a long time or stall ie video files in downloads (Ezra)
 - Scroll TableView to end does not scroll ThumbView to end
 - Rethink image file parse failure reporting
 - MetaRead2 test iconCunkSize < rowCount
 - MetaRead2 test change file selection while still loading
 - Crash when set color red for multi picked select on sd card
+- Check multi pick and set color class behavior
 - Select multiple folders
 - Check for updates for macos
 - Add tooltips to menus
@@ -97,6 +100,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Icon cache status not updating for rows less than targetRange
+- Remote embellish title not being added if Winnow not already open (instance clash)
 - Stop video player when change folders
 - Hide mouse cursor in video mode
 - Zoom radio button uncheck when zoom changes

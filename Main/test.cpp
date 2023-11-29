@@ -150,6 +150,10 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    QString pDst = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+    QFile(pDst).moveToTrash();
+    return;
+
     setCursor(QCursor(Qt::BlankCursor));
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
@@ -159,15 +163,26 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString p1 = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-    QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-//    QString p2 = "/Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg";
-//    QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-06-17_0001.jpg";
-    QFile::copy(p1, p2);
-    insertFile(p2);
-//    metaReadThread->setStartRow(0, false, "Insertion");
-    qDebug() << "MW::test done";
-    sel->select(p2);
+    QString pTest = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.JPG";
+    QString pSrc = "/Users/roryhill/Pictures/Zen2048/2023-11-25_0073 Focus Stack.JPG";
+    QString pDst = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
+//    bool result = QFile::copy(pTest, pSrc);
+//    qDebug() << "Test file copy:" << result;
+
+//    QStringList pathList;
+//    pathList << pSrc;
+//    QString templateName = "Zen2048";
+//    EmbelExport embelExport(metadata, dm, icd, embelProperties);
+//    QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
+//    qDebug() << "Embellished:" << embellishedPaths;
+//    if (G::isLogger) G::log("MW::test finished");
+//    return;
+
+    QFile::copy(pTest, pDst);
+    insertFile(pDst);
+    sel->select(pDst);
+
+
 }
 
 /*

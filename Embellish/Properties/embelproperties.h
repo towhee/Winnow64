@@ -123,6 +123,10 @@ public:
     QString metaString(QString key, QString fPath);
     void test1(QIcon icon = QIcon());
     void test2();
+    void setRemote(bool isRemote);
+
+    // control MainWindow updates (suppress if remote == true)
+    bool isRemote = false;
 
 public slots:
     void itemChange(QModelIndex idx) override;

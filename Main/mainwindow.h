@@ -119,7 +119,7 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShiftOnOpen;               // used when opening if shift key pressed
-    QString args;                     // opening args
+    QString args;                     // opening args  // rgh req'd?
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -1247,7 +1247,6 @@ private:
 
     bool isValidPath(QString &path);
     QString getSelectedPath();
-//    bool event(QEvent *event);
     void copyFiles();
     void shareFiles();
     void copyFolderPathFromContext();

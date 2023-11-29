@@ -94,8 +94,8 @@ private:
     int iconLimit;                  // iconChunkSize * expansionFactor
     int redoCount = 0;
     int redoMax = 5;
-
-    bool isStarted;
+    
+    bool isDispatching;
     bool isDone;
     bool aIsDone;
     bool bIsDone;
