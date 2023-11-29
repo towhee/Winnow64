@@ -318,7 +318,7 @@ QString InfoString::parseTokenString(QString &tokenString,
     return s;
 }
 
-QString InfoString:: parseTokenString(QString &tokenString,
+QString InfoString::parseTokenString(QString &tokenString,
                                      QString &fPath)
 {
 /*
@@ -328,8 +328,8 @@ QString InfoString:: parseTokenString(QString &tokenString,
     QFileInfo info(fPath);
     Metadata metadata;
     metadata.loadImageMetadata(info, dm->instance, true, true, false, false,
-                               "InfoString:: parseTokenString", /*isRemote*/true);
-    if (G::isFileLogger) Utilities::log("InfoString:: parseTokenString  title =", metadata.m.title);
+                               "InfoString::parseTokenString", /*isRemote*/true);
+    //if (G::isFileLogger) Utilities::log("InfoString::parseTokenString  title =", metadata.m.title);
     QString s;
     int tokenEnd;
     int i = 0;

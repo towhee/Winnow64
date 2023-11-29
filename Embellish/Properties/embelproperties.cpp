@@ -806,6 +806,12 @@ void EmbelProperties::renameCurrentTemplate()
     emit syncEmbellishMenu();
 }
 
+void EmbelProperties::setRemote(bool remote)
+{
+    isRemote = remote;
+}
+
+
 void EmbelProperties::setCurrentTemplate(QString name)
 {
 /*
@@ -2049,7 +2055,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     if (G::dmEmpty) emit centralMsg(msg);
 
     // update Embellish menu
-    emit templateChanged(templateId);
+    if (!isRemote) emit templateChanged(templateId);
 
     // clear model except for template name header (row 0)
     model->removeRows(1, model->rowCount(QModelIndex()) - 1, QModelIndex());
@@ -5452,8 +5458,12 @@ QString EmbelProperties::metaString(QString key, QString fPath)
 */
     if (G::isLogger) G::log("EmbelProperties::metaString");
     QString tokenString = mw3->infoString->infoTemplates[key];
-    if (G::isFileLogger) Utilities::log("EmbelProperties::metaString", fPath);
-    if (G::isFileLogger) Utilities::log("EmbelProperties::metaString", tokenString);
+    if (G::isFileLogger) {
+        Utilities::log("EmbelProperties::metaString fPath                            ", fPath);
+        Utilities::log("EmbelProperties::metaString tokenString                      ", tokenString);
+        QString meta = mw3->infoString->parseTokenString(tokenString, fPath);
+        Utilities::log("EmbelProperties::metaString mw3->infoString->parseTokenString", meta);
+    }
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
 

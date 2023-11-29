@@ -1794,6 +1794,16 @@ bool DataModel::isAllMetadataLoaded()
     return true;
 }
 
+bool DataModel::isPath(QString fPath)
+{
+    if (G::isLogger) G::log("DataModel::rowFromPath");
+    for (int row = 0; row < rowCount(); ++row) {
+        if (fPath == index(row, 0).data(G::PathRole).toString())
+            return true;
+    }
+    return false;
+}
+
 int DataModel::rowFromPath(QString fPath)
 {
     lastFunction = "";

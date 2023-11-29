@@ -95,6 +95,7 @@ public slots:
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
     void refreshImageCache();
+    void removeCachedImage(QString fPath); // remove image from imageCache and update status
 
 private:
     bool useMutex = false;

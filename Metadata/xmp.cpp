@@ -669,7 +669,8 @@ QString Xmp::getItem(QByteArray item)
 */
     if (G::isLogger) G::log("Xmp::getItem");
 
-    if (G::instanceClash(instance, "Xmp::getItem")) {
+    if (!G::dmEmpty && G::instanceClash(instance, "Xmp::getItem")) {
+        if (G::isFileLogger) Utilities::log("Xmp::getItem Instance clash", item);
         return "";
     }
 

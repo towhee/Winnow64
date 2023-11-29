@@ -513,6 +513,11 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::updateCachedStatus", msg);
     }
+    ///*
+    qDebug() << "MW::updateCachedStatus"
+             << "dmRow =" << dmRow
+             << "isCached =" << isCached
+        ; //*/
 
     if (dmRow == -1) {
         if (G::isWarningLogger)

@@ -421,8 +421,8 @@ void ImageCache::setTargetRange()
         else {
             icd->cacheItemList[i].isTarget = false;
 
-            icd->cacheItemList[i].isCaching = false;    // new
-            icd->cacheItemList[i].isCached = false;     // new
+//            icd->cacheItemList[i].isCaching = false;    // new
+//            icd->cacheItemList[i].isCached = false;     // new
         }
     }
 
@@ -447,7 +447,6 @@ void ImageCache::setTargetRange()
         icd->cache.targetLast = icd->cache.totFiles - 1;
     }
 
-    //    /*
     if (debugCaching) {
         qDebug() << "ImageCache::setTargetRange"
                  << " targetFirst =" << icd->cache.targetFirst
@@ -455,7 +454,6 @@ void ImageCache::setTargetRange()
                  << "isForward =" << icd->cache.isForward
             ;
     }
-    //*/
 
     // remove cached images outside target range
     QVector<QString> keys;
@@ -474,6 +472,7 @@ void ImageCache::setTargetRange()
                 qDebug().noquote()
                     << "ImageCache::setTargetRange outside target range"
                     << "i =" << i
+                    << "isCached =" << icd->cacheItemList.at(i).isCached
                     << "targetFirst =" << icd->cache.targetFirst
                     << "targetLast =" << icd->cache.targetLast
                     << "fPath =" << fPath
@@ -491,6 +490,32 @@ void ImageCache::setTargetRange()
                 icd->cacheItemList[i].attempts = 0;
             }
         }
+    }
+}
+
+void ImageCache::removeCachedImage(QString fPath)
+{
+    if (G::isLogger) G::log("ImageCache::removeCachedImage", fPath);
+    QMutexLocker locker(&gMutex);
+    int i = keyFromPath[fPath];
+    if (debugCaching)
+    {
+        qDebug().noquote()
+            << "ImageCache::removeCachedImage"
+            << "i =" << i
+            << fPath
+            ;
+    }
+    icd->imCache.remove(fPath);
+    if (icd->cacheItemList.at(i).isCached) {
+        icd->cacheItemList[i].isCached = false;
+        emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
+    }
+    if (icd->cacheItemList.at(i).isCaching) {
+        icd->cacheItemList[i].isCaching = false;
+    }
+    if (icd->cacheItemList[i].attempts) {
+        icd->cacheItemList[i].attempts = 0;
     }
 }
 

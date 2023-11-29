@@ -84,7 +84,8 @@ bool ImageDecoder::load()
     if (G::isFlowLogger) G::log("ImageDecoder::load",
                "row = " + QString::number(cacheKey) + "  " + fPath);
     QString fun = "ImageDecoder::load";
-    if (isDebug) G::log(fun, fPath);
+    if (isDebug)
+    qDebug() << fun << fPath;
 
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
@@ -195,6 +196,7 @@ bool ImageDecoder::load()
         if (abort) quit();
 
         // try to decode the jpg data
+        //qDebug() << "ImageDecoder::load" << fPath;
         if (!image.loadFromData(buf, "JPEG")) {
             errMsg = "Could not read JPG because decoder failed.";
             if (G::isWarningLogger)

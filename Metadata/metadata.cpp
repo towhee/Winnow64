@@ -1093,7 +1093,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     if (G::dmEmpty && !isRemote) return false;
 
     // check instance up-to-date
-    if (instance != G::dmInstance) {
+    if (instance != G::dmInstance && !isRemote) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata"
                    << "Instance clash"
@@ -1113,6 +1113,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         qWarning() << "WARNING" << "Metadata::loadImageMetadata"
                    << "NULL FILE REQUESTED FROM "
                    << source;
+        if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata File not exist", fPath);
         return false;
     }
 

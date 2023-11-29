@@ -598,7 +598,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (isStartupArgs) {
         qApp->processEvents();
         handleStartupArgs(args);
-        this->args = args;
+        //this->args = args;   // not req'd for embellish
         return;
     }
     else {
@@ -947,11 +947,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
     QMainWindow::keyReleaseEvent(event);
 }
-
-//bool MW::event(QEvent *event)
-//{
-//    return QMainWindow::event(event);
-//}
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
@@ -1850,9 +1845,10 @@ void MW::handleStartupArgs(const QString &args)
 
         if (!embellishedPaths.size()) return;
 
+        // go to first embellished image
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
-        ///* debug
+        /* debug
         qDebug() << "MW::handleStartUpArgs"
                  << "fDir" << fDir
                  << "G::currRootFolder" << G::currRootFolder
@@ -1862,10 +1858,6 @@ void MW::handleStartupArgs(const QString &args)
         // folder already open
         if (fDir == G::currRootFolder) {
             foreach (QString path, embellishedPaths) {
-                // change dir in path to G::currRootFolder
-//                QString p1 = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-//                QString p2 = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-//                QFile::copy(p1, p2);
                 insertFile(path);
             }
             QString fPath = embellishedPaths.at(0);
@@ -1874,11 +1866,11 @@ void MW::handleStartupArgs(const QString &args)
         // open the folder
         else {
             // go there ...
-//            fsTree->select(fDir);
-//            // refresh FSTree counts
-//            fsTree->refreshModel();
-//            QString fPath = embellishedPaths.at(0);
-//            folderAndFileSelectionChange(fPath, "handleStartupArgs");
+            fsTree->select(fDir);
+            // refresh FSTree counts
+            fsTree->refreshModel();
+            QString fPath = embellishedPaths.at(0);
+            folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
     }
 
@@ -3013,9 +3005,11 @@ void MW::thumbHasScrolled()
     This was to prevent many scroll calls from bunching up. The new approach just aborts
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger)
-        qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
-    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
+    if (G::isLogger) G::log("MW::thumbHasScrolled");
+//    if (G::isLogger)
+//        qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
+
+//    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -3456,6 +3450,8 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 void MW::embelTemplateChange(int id)
 {
     if (G::isLogger) G::log("MW::embelTemplateChange");
+    qDebug() << "MW::embelTemplateChange  embel->isRemote =" << embel->isRemote;
+    if (embel->isRemote) return;
     embelTemplatesActions.at(id)->setChecked(true);
     if (id == 0) {
         embelRunBtn->setVisible(false);
@@ -5422,8 +5418,23 @@ void MW::renameSelectedFiles()
 
 void MW::insertFile(QString fPath)
 {
-    int dmRow = dm->insert(fPath);
-    metaReadThread->setStartRow(dmRow, false, "MW::insertFile");
+    if (G::isLogger) G::log("MW::insertFile");
+    int dmRow;
+    // replace existing image with the same name
+    if (dm->isPath(fPath)) {
+        dmRow = dm->rowFromPath(fPath);
+        QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
+        dm->setData(dmIdx, false);
+        dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insewrt");
+        imageCacheThread->removeCachedImage(fPath);
+        G::allMetadataLoaded = false;
+        G::allIconsLoaded = false;
+    }
+    // insert a new image
+    else {
+        dmRow = dm->insert(fPath);
+    }
+    metaReadThread->setStartRow(dmRow, true, "MW::insertFile");
 }
 
 void MW::deleteSelectedFiles()
