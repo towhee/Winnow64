@@ -1144,7 +1144,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         //*/
         // insert new item in icd->cacheItemList
         row = m.row;
-        qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath;
+        //qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath;
         icd->cacheItem.isUpdated = false;
         icd->cacheItem.key = row;              // need to be able to sync with imageList
         icd->cacheItem.origKey = row;          // req'd while setting target range
@@ -1160,7 +1160,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
 
         // insert new row
-        G::isFlowLogger = true;
         G::isWarningLogger = true;
         icd->cacheItemList.insert(row, icd->cacheItem);
         keyFromPath[m.fPath] = row;

@@ -94,7 +94,7 @@ void MW::loupeDisplay()
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
-        qDebug() << "MW::loupeDisplay" << dm->currentSfRow;
+        //qDebug() << "MW::loupeDisplay" << dm->currentSfRow;
         scrollRow = dm->currentSfRow;
     }
     G::ignoreScrollSignal = false;

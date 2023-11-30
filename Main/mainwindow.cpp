@@ -722,6 +722,8 @@ void MW::showEvent(QShowEvent *event)
     getDisplayProfile();
 
     QMainWindow::showEvent(event);
+
+    //setDisplayResolution();
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 
     G::isInitializing = false;
@@ -1833,9 +1835,6 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
-//        setCentralMessage("Loading Embellished ...");
-//        qApp->processEvents();
-
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
@@ -2376,7 +2375,7 @@ bool MW::stop(QString src)
 
 */
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src);
-    if (G::isLogger || G::isFlowLogger)
+//    if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
                  << "G::currRootFolder =" << G::currRootFolder;
@@ -2392,7 +2391,7 @@ bool MW::stop(QString src)
     G::t.restart();
     videoView->stop();
     buildFilters->stop();
-    if (isDebugStopping)
+//    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop buildFilters:        "
              << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
@@ -2400,7 +2399,7 @@ bool MW::stop(QString src)
     if (G::isLoadConcurrent) {
         G::t.restart();
         bool metaReadThreadStopped = metaReadThread->stop();
-        if (isDebugStopping)
+//        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
                  << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
@@ -2409,7 +2408,7 @@ bool MW::stop(QString src)
     if (G::isLoadLinear) {
         G::t.restart();
         metadataCacheThread->stop();
-        if (isDebugStopping)
+//        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metadataCacheThread: "
                  << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
@@ -2417,19 +2416,19 @@ bool MW::stop(QString src)
 
     G::t.restart();
     imageCacheThread->stop();
-    if (isDebugStopping)
+//    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
              << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
 
     G::t.restart();
     frameDecoder->stop();
-    if (isDebugStopping)
+//    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop frameDecoder:        "
              << "                 "
              << G::t.elapsed() << "ms";
 
-    if (isDebugStopping)
+//    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop total:               "
              << "                 "
              << tStop.elapsed() << "ms";
@@ -2445,6 +2444,8 @@ bool MW::stop(QString src)
     reset("MW::stop");
     G::stop = false;
 
+//    if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop DONE";
     return true;
 }
 
@@ -3450,7 +3451,7 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 void MW::embelTemplateChange(int id)
 {
     if (G::isLogger) G::log("MW::embelTemplateChange");
-    qDebug() << "MW::embelTemplateChange  embel->isRemote =" << embel->isRemote;
+    //qDebug() << "MW::embelTemplateChange  embel->isRemote =" << embel->isRemote;
     if (embel->isRemote) return;
     embelTemplatesActions.at(id)->setChecked(true);
     if (id == 0) {
@@ -3958,7 +3959,7 @@ void MW::setPrefPage(int page)
 void MW::updateDisplayResolution()
 {
     if (G::isLogger) G::log("MW::updateDisplayResolution");
-    return;
+    //return;
     QString monitorScale = QString::number(G::actDevicePixelRatio * 100) + "%";
     QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
             + QString::number(G::displayPhysicalVerticalPixels)
@@ -4030,7 +4031,7 @@ void MW::setDisplayResolution()
              << "prevScreenName =" << prevScreenName
              << "monitorChanged =" << monitorChanged
              << "devicePixelRatioChanged =" << devicePixelRatioChanged;
-//             */
+                //*/
     prevDevicePixelRatio = G::actDevicePixelRatio;
 
     if (!monitorChanged && !devicePixelRatioChanged) return;
@@ -5500,6 +5501,8 @@ void MW::deleteFiles(QStringList paths)
     image cache status bar.
 */
     if (G::isLogger) G::log("MW::deleteFiles");
+    QElapsedTimer t;
+    t.restart();
 
     // if still loading metadata then do not delete
     if (!G::allMetadataLoaded) {
@@ -5517,7 +5520,6 @@ void MW::deleteFiles(QStringList paths)
     int lowRow = 999999;
     for (int i = 0; i < paths.count(); ++i) {
         int row = dm->proxyRowFromPath(paths.at(i));
-//        int row = dm->rowFromPath(paths.at(i));
         if (row < lowRow) {
             lowRow = row;
         }
@@ -5526,13 +5528,12 @@ void MW::deleteFiles(QStringList paths)
     G::ignoreScrollSignal = true;
 
     // delete file(s) in folder on disk, including any xmp sidecars
-
-    // paths of successfully deleted files to remove in datamodel
-    QStringList sldm;
+    QStringList sldm;       // paths of successfully deleted files to remove in datamodel
     bool fileWasLocked = false;
     for (int i = 0; i < paths.count(); ++i) {
         QString fPath = paths.at(i);
         if (QFile::exists(fPath)) {
+            // delete the file
             ImageMetadata m = dm->imMetadata(fPath);
             if (!m.isReadWrite) {
                 fileWasLocked = true;
@@ -5557,11 +5558,6 @@ void MW::deleteFiles(QStringList paths)
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
 
-    // refresh image count in folders and bookmarks: fsTree is signalled by the OS,
-    // updates count and then signals bookmarks to recount all bookmarks
-    fsTree->refreshModel();
-    bookmarks->count();
-
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
         stop("deleteFiles");
@@ -5583,11 +5579,17 @@ void MW::deleteFiles(QStringList paths)
     }
     filters->restore();
 
+    qDebug() << "MW::deleteFiles remove from datamodel      ms =" << t.elapsed(); t.restart();
+
      // cleanup G::rowsWithIcon
     if (G::isLoadConcurrent) metaReadThread->cleanupIcons();
 
+    qDebug() << "MW::deleteFiles clean up icons             ms =" << t.elapsed(); t.restart();
+
     // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);
+
+    qDebug() << "MW::deleteFiles remove from image cache    ms =" << t.elapsed(); t.restart();
 
     G::ignoreScrollSignal = false;
 
@@ -5596,8 +5598,12 @@ void MW::deleteFiles(QStringList paths)
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     sel->select(sfIdx);
 
+    qDebug() << "MW::deleteFiles update current index       ms =" << t.elapsed(); t.restart();
+
     // rebuild filters
     buildFilters->recount();
+    qDebug() << "MW::deleteFiles rebuild filters all done   ms =" << t.elapsed(); t.restart();
+
 }
 
 void MW::deleteFolder()
