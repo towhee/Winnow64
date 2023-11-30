@@ -32,6 +32,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
     void refresh(const QModelIndex &index);
+    void refresh(const QString &dPath);
     bool showImageCount;
     bool &combineRawJpg;
     bool forceRefresh = true;

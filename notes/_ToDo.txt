@@ -1,8 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- MW::updateDisplayResolution() return() ???
-- Delete files can take a long time or stall ie video files in downloads (Ezra)
+- MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
+  until move to another monitor and back
 - Scroll TableView to end does not scroll ThumbView to end
 - Rethink image file parse failure reporting
 - MetaRead2 test iconCunkSize < rowCount

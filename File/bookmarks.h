@@ -16,6 +16,7 @@ public:
     void saveBookmarks(QSettings *setting);
     void select(QString fPath);
     void count();
+    void count(QString fPath);
 
     QSet<QString> bookmarkPaths;
     bool showImageCount;

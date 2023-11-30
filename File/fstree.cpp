@@ -149,6 +149,15 @@ void FSModel::refresh(const QModelIndex &index)
     //qDebug() << "FSModel::refresh" << index << testIdx;
 }
 
+void FSModel::refresh(const QString &dPath)
+{
+    const QModelIndex idx = index(dPath, imageCountColumn);
+    QList<int> roles;
+    roles << Qt::DisplayRole;
+    emit dataChanged(idx, idx, roles);
+    //qDebug() << "FSModel::refresh" << index << testIdx;
+}
+
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
 /*

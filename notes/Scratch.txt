@@ -1,0 +1,8 @@
+test.cpp:167:19: In template: type 'decay_t<MW *>' (aka 'MW *') cannot be used prior to '::' because it has no members
+qfuture_impl.h:180:49: error occurred here
+qtconcurrentstoredfunctioncall.h:189:30: in instantiation of template class 'QtPrivate::ArgResolver<MW *>' requested here
+qtconcurrentstoredfunctioncall.h:212:18: in instantiation of template class 'QtConcurrent::PromiseTaskResolver<MW *, void (MW::*)()>' requested here
+qtconcurrentstoredfunctioncall.h:217:30: in instantiation of template class 'QtConcurrent::TaskResolverHelper<std::integral_constant<bool, false>, MW *, void (MW::*)()>' requested here
+qtconcurrentrun.h:44:12: in instantiation of template class 'QtConcurrent::TaskResolver<MW *, void (MW::*)()>' requested here
+qtconcurrentrun.h:61:12: in instantiation of function template specialization 'QtConcurrent::run<MW *, void (MW::*)()>' requested here
+test.cpp:167:19: in instantiation of function template specialization 'QtConcurrent::run<MW *, void (MW::*)()>' requested here

@@ -129,6 +129,9 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
 bool MetaRead2::stop()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
+    mutex.lock();
+    abort = true;
+    mutex.unlock();
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
@@ -142,14 +145,15 @@ bool MetaRead2::stop()
         condition.wakeOne();
         mutex.unlock();
         wait();
-        abort = false;
     }
 
+    abort = false;
     if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
              << "isRunning =" << isRunning()
-        ;}
+        ;
+    }
     return isRunning();
 }
 
@@ -343,7 +347,7 @@ void MetaRead2::dispatch(int id)
     - increment a or decrement b to next datamodel row without metadata
 */
     reader[id]->pending = false;
-    if (abort || isDone) return;
+    if (abort || isDone || reader[id]->instance != dm->instance)  return;
 
     static bool isAhead = true;
 

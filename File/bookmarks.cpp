@@ -141,6 +141,9 @@ void BookMarks::update()
 
 void BookMarks::count()
 {
+/*
+     Update the image count for all folders in BookMarks
+*/
     if (G::isLogger) G::log("BookMarks::count");
      QTreeWidgetItemIterator it(this);
      while (*it) {
@@ -163,6 +166,40 @@ void BookMarks::count()
          }
          else count = dir->entryInfoList().size();
          (*it)->setText(1, QString::number(count));
+         ++it;
+     }
+}
+
+void BookMarks::count(QString dPath)
+{
+/*
+     Only update the image count for the folder dPath
+*/
+     if (G::isLogger) G::log("BookMarks::count(fPath)");
+     QTreeWidgetItemIterator it(this);
+     while (*it) {
+         QString path = (*it)->toolTip(0);
+         if (path == dPath) {
+             int count = 0;
+             dir->setPath(path);
+             if (combineRawJpg) {
+                 QListIterator<QFileInfo> i(dir->entryInfoList());
+                 while (i.hasNext()) {
+                     QFileInfo info = i.next();
+                     QString fPath = info.path();
+                     QString baseName = info.baseName();
+                     QString suffix = info.suffix().toLower();
+                     QString jpgPath = fPath + "/" + baseName + ".jpg";
+                     if (metadata->hasJpg.contains(suffix)) {
+                         if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
+                     }
+                     count++;
+                 }
+             }
+             else count = dir->entryInfoList().size();
+             (*it)->setText(1, QString::number(count));
+             return;
+         }
          ++it;
      }
 }
