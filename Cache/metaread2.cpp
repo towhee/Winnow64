@@ -166,6 +166,7 @@ void MetaRead2::initialize()
     {
         G::log("MetaRead2::initialize");
     }
+    abort = false;
     rowsWithIcon.clear();
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
@@ -347,7 +348,18 @@ void MetaRead2::dispatch(int id)
     - increment a or decrement b to next datamodel row without metadata
 */
     reader[id]->pending = false;
-    if (abort || isDone || reader[id]->instance != dm->instance)  return;
+    if (abort || isDone || reader[id]->instance != dm->instance) {
+        if (isDebug)
+        qDebug().noquote()
+            << "MetaRead2::dispatch finishing"
+            << "reader =" << id
+            << "abort =" << abort
+            << "isDone =" << isDone
+            << "reader instance =" << reader[id]->instance
+            << "dm instance =" << dm->instance
+               ;
+        return;
+    }
 
     static bool isAhead = true;
 
