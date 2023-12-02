@@ -49,7 +49,7 @@ namespace G
     bool useMultimedia = true;
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
-
+    bool useProcessEvents = true;
     // metadata/icon read method
     QString metaReadInUse;              // used in tooltip
 
@@ -195,7 +195,7 @@ namespace G
         }
         QTime t = QTime::currentTime().addMSecs(ms);
         while (QTime::currentTime() < t) {
-            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+            if (useProcessEvents) qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
         }
         duration += ms;
         return duration;

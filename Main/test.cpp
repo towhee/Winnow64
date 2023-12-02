@@ -163,33 +163,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QtConcurrent::run(this, &MW::refreshFolders);
-
-//    setDisplayResolution();
-//    updateDisplayResolution();
-//    emit resizeMW(this->geometry(), centralWidget->geometry());
-//    return;
-
-    QString pTest = "/Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.JPG";
-    QString pSrc = "/Users/roryhill/Pictures/Zen2048/2023-11-25_0073 Focus Stack.JPG";
-    QString pDst = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-//    bool result = QFile::copy(pTest, pSrc);
-//    qDebug() << "Test file copy:" << result;
-
-//    QStringList pathList;
-//    pathList << pSrc;
-//    QString templateName = "Zen2048";
-//    EmbelExport embelExport(metadata, dm, icd, embelProperties);
-//    QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
-//    qDebug() << "Embellished:" << embellishedPaths;
-//    if (G::isLogger) G::log("MW::test finished");
-//    return;
-
-    QFile::copy(pTest, pDst);
-//    insertFile(pDst);
-//    sel->select(pDst);
-
-
+    bounceFoldersStressTest(500, 30);
 }
 
 /*

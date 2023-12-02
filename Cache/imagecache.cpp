@@ -1114,7 +1114,7 @@ void ImageCache::reportRunStatus()
              << "currentPath =" << currentPath;
 }
 
-void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
+void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
 {
 /*
     Concurrent metadata loading alternative to buildImageCacheList. The imageCacheList
@@ -1127,6 +1127,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
                  << "row =" << m.row << m.fName
                     ;
     if (G::isLogger) G::log("ImageCache::addCacheItemImageMetadata");
+    if (instance != dm->instance) return;
     if (!G::useImageCache) return;  // rgh isolate image cache
     if (G::stop) {
         return;

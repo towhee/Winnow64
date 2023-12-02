@@ -1,6 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Need to delay MetaRead2 trigger fileSelectionChange?
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
 - Scroll TableView to end does not scroll ThumbView to end
@@ -100,6 +101,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Utilities::get16 error if char = A9 (exc char?) fixed
 - Icon cache status not updating for rows less than targetRange
 - Remote embellish title not being added if Winnow not already open (instance clash)
 - Stop video player when change folders

@@ -505,7 +505,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 
     if (G::isLoadLinear) {
         emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
     // do some initializing
@@ -544,7 +544,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
-            qApp->processEvents();
+            if (G::useProcessEvents) qApp->processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }
@@ -579,7 +579,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit centralMsg(s);    // rghmsg
-                    qApp->processEvents();
+                    if (G::useProcessEvents) qApp->processEvents();
                 }
             }
         }
@@ -682,7 +682,7 @@ bool DataModel::addFileData()
                 QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                             " system file info loaded.";
                 emit centralMsg(s);    // rghmsg
-                qApp->processEvents();
+                if (G::useProcessEvents) qApp->processEvents();
             }
         }
     }
@@ -975,7 +975,7 @@ void DataModel::addAllMetadata()
                         " metadata loading...";
             emit centralMsg(s);    // rghmsg
             emit updateProgress(1.0 * row / rowCount() * 100);
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
+            if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
         }
         if (abortLoadingModel || G::dmEmpty) {
             endLoad(false);
@@ -1003,7 +1003,7 @@ void DataModel::addAllMetadata()
     }
     setAllMetadataLoaded(true);
     emit centralMsg("Metadata loaded");
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
+    if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
     endLoad(true);
     /*
     qint64 ms = G::t.elapsed();

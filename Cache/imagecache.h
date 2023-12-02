@@ -89,7 +89,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void addCacheItemImageMetadata(ImageMetadata m);
+    void addCacheItemImageMetadata(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
