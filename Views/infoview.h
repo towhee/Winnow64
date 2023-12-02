@@ -91,7 +91,7 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void dataEdited();
     void updateFilter(BuildFilters::Category category, BuildFilters::AfterAction afterAction);
-    void addToImageCache(ImageMetadata m);
+//    void addToImageCache(ImageMetadata m);
     void setCurrentPosition(QString fPath, QString src);
 
 public slots:

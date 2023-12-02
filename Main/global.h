@@ -175,6 +175,7 @@ namespace G
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;
     extern bool useReadMetadata;
+    extern bool useProcessEvents;
     extern QString metaReadInUse;;
 
     extern QSettings *settings;

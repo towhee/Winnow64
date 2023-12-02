@@ -426,6 +426,11 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
 
     In addition, the XMP offset and nextOffset are set to facilitate editing XMP data.
 */
+    /*
+    qDebug().noquote()
+            << "Jpeg::getJpgSegments"
+            << "fPath =" << m.fPath
+            ; //*/
     segmentHash.clear();
     isXmp = false;
     // big endian by default in Utilities: only IFD/EXIF can be little endian
@@ -437,6 +442,15 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
         quint32 pos = static_cast<quint32>(p.file.pos());
         quint16 len = u.get16(p.file.read(2));
         quint32 nextOffset = pos + len;
+
+        /*
+        qDebug().noquote()
+            << "Jpeg::getJpgSegments"
+            << "marker =" << QString::number(marker, 16).toUpper().leftJustified(8)
+            << "pos =" << QString::number(pos).leftJustified(8)
+            << "len =" << QString::number(len).leftJustified(8)
+            << "nextOffset =" << QString::number(nextOffset).leftJustified(8)
+                ; //*/
 
         // populate segmentCodeHash
         if (segCodeHash.contains(marker) && marker != 0xFFE1) {
@@ -501,8 +515,6 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
             break;
         }
         case 0xFFE0:
-//        case 0xFFE1:
-//        case 0xFFE2:
         case 0xFFE3:
         case 0xFFE4:
         case 0xFFE5:
@@ -553,15 +565,16 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
         p.rpt.setFieldAlignment(QTextStream::AlignLeft);
         p.rpt << "Segment";
         p.rpt.setFieldAlignment(QTextStream::AlignRight);
-        p.rpt << "Offset";
-        p.rpt << "Hex" << "\n";
+        p.rpt << "Offset"<< "Hex" << "\n";
 
         QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
             i.next();
-            p.rpt << i.key()
-                  << ":\t\t" << i.value() << "\t\t"
-                  << QString::number(i.value(), 16).toUpper() << "\n";
+            p.rpt.setFieldAlignment(QTextStream::AlignLeft);
+            p.rpt << i.key();
+            p.rpt.setFieldAlignment(QTextStream::AlignRight);
+            p.rpt << QString::number(i.value());
+            p.rpt << QString::number(i.value(), 16).toUpper() << "\n";
         }
         p.rpt.setFieldAlignment(QTextStream::AlignLeft);
     }

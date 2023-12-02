@@ -293,7 +293,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         path = idx.data(Qt::ToolTipRole).toString();
         // change selection, does not trigger anything
         setCurrentIndex(idx);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
     emit renameEjectAction(path);
 

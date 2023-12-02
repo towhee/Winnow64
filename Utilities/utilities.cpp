@@ -353,17 +353,8 @@ QByteArray Utilities::put8(quint8 x)
 quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 {
     if (c == "" || c.size() < 2) return 0;
-//    Q_ASSERT(c.size() == 2);
-    QChar esc = '\\';
-    QChar first = c[0];
-    if (first == esc) return 0;
-    int len = c.size();
-    int c0 = c[0];
-    int c1 = c[1];
     if (isBigEnd) {
-        // c might be longer than 2 bytes so use last two bytes if big endian
-//        c = c.right(2);
-//        qDebug() << "Utilities::get16" << c.toHex() << a << b << c[a] << c[b];
+        //qDebug() << "Utilities::get16" << c.toHex() << a << b << c[a] << c[b];
         quint16 x = c[0]&0xFF;
         x = static_cast<quint16>((x << 8) | (c[1]&0xFF));
         return x;

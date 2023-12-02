@@ -527,8 +527,8 @@ void MW::createImageCache()
     connect(infoView, &InfoView::setCurrentPosition,
             imageCacheThread, &ImageCache::setCurrentPosition);
     // add to image cache list
-    connect(infoView, &InfoView::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+//    connect(infoView, &InfoView::addToImageCache,
+//            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
 
     // signal ImageCache refresh
     connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);

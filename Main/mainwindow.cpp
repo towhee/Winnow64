@@ -2375,7 +2375,7 @@ bool MW::stop(QString src)
 
 */
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src);
-//    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
                  << "G::currRootFolder =" << G::currRootFolder;
@@ -2390,8 +2390,11 @@ bool MW::stop(QString src)
     tStop.restart();
     G::t.restart();
     videoView->stop();
+    if (isDebugStopping)
+    qDebug() << "MW::stop" << "Stop videoView:           "
+             << G::t.elapsed() << "ms";
     buildFilters->stop();
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop buildFilters:        "
              << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
@@ -2399,7 +2402,7 @@ bool MW::stop(QString src)
     if (G::isLoadConcurrent) {
         G::t.restart();
         bool metaReadThreadStopped = metaReadThread->stop();
-//        if (isDebugStopping)
+        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
                  << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
@@ -2408,7 +2411,7 @@ bool MW::stop(QString src)
     if (G::isLoadLinear) {
         G::t.restart();
         metadataCacheThread->stop();
-//        if (isDebugStopping)
+        if (isDebugStopping)
         qDebug() << "MW::stop" << "Stop metadataCacheThread: "
                  << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
@@ -2416,19 +2419,19 @@ bool MW::stop(QString src)
 
     G::t.restart();
     imageCacheThread->stop();
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
              << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
              << G::t.elapsed() << "ms";
 
     G::t.restart();
     frameDecoder->stop();
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop frameDecoder:        "
              << "                 "
              << G::t.elapsed() << "ms";
 
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop total:               "
              << "                 "
              << tStop.elapsed() << "ms";
@@ -2444,7 +2447,7 @@ bool MW::stop(QString src)
     reset("MW::stop");
     G::stop = false;
 
-//    if (isDebugStopping)
+    if (isDebugStopping)
     qDebug() << "MW::stop" << "Stop DONE";
     return true;
 }
@@ -2865,7 +2868,7 @@ void MW::loadLinearNewFolder()
     if (dm->abortLoadingModel /*|| !G::allMetadataLoaded*/) {
         updateStatus(false, "Image loading has been cancelled", "MW::loadLinearNewFolder");
         setCentralMessage("Image loading has been cancelled 2.");
-        QApplication::processEvents();
+        if (G::useProcessEvents) QApplication::processEvents();
         return;
     }
 
@@ -2881,7 +2884,7 @@ void MW::loadLinearNewFolder()
     // load icons
     qDebug() << "MW::loadLinearNewFolder  load icons";
     setCentralMessage("Reading icons.");
-    QApplication::processEvents();
+    if (G::useProcessEvents) QApplication::processEvents();
     if (reset()) return;
 
     MetadataCache *mct = metadataCacheThread;
@@ -5042,7 +5045,7 @@ QString MW::embedThumbnails()
                   " images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->setProgressVisible(true);
     G::popUp->showPopup(txt, 0, true, 1);
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
@@ -5061,7 +5064,7 @@ QString MW::embedThumbnails()
     G::autoAddMissingThumbnails = true;
     for (int i = 0; i < n; i++) {
         G::popUp->setProgress(i+1);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         int dmRow = rows.at(i);
         QString fileType = dm->index(dmRow, G::TypeColumn).data().toString().toLower();
         if (!metadata->canEmbedThumb.contains(fileType)) continue;

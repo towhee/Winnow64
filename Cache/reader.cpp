@@ -36,7 +36,6 @@ void Reader::read(const QModelIndex dmIdx,
     status = Status::Success;
     pending = true;
     start();
-    //wait(10);
     if (isDebug) {
         qDebug().noquote()
             << "Reader::read            start               "
@@ -54,7 +53,7 @@ void Reader::stop()
         abort = true;
         condition.wakeOne();
         mutex.unlock();
-        wait();
+        //wait();
         abort = false;
     }
     /*
@@ -140,7 +139,7 @@ void Reader::run()
     if (!abort && readMetadata() && isReadIcon) {
         if (!abort) readIcon();
         if (G::useImageCache) {
-            if (!abort) emit addToImageCache(metadata->m);
+            if (!abort) emit addToImageCache(metadata->m, instance);
         }
     }
     if (isDebug) {
