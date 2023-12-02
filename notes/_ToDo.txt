@@ -1,7 +1,6 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Need to delay MetaRead2 trigger fileSelectionChange?
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
 - Scroll TableView to end does not scroll ThumbView to end
