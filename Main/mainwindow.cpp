@@ -1893,14 +1893,15 @@ void MW::folderSelectionChange()
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
     if (G::stop) {
-        //qDebug() << "MW::folderSelectionChange"
-        //         << "**BUSY**" << getSelectedPath();
+        /*
+        qDebug() << "MW::folderSelectionChange"
+                 << "**BUSY**" << getSelectedPath(); //*/
         return;
     }
 
+    // block repeated clicks to folders or bookmarks while processing this one.
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
-
 
     if (G::isLogger || G::isFlowLogger) {
         qDebug() << "\nMW::folderSelectionChange";
@@ -2067,8 +2068,8 @@ void MW::folderSelectionChange()
     250 is the default.
     */
 
-    bookmarkBlocker.unblock();
-    fsTreeBlocker.unblock();
+//    bookmarkBlocker.unblock();
+//    fsTreeBlocker.unblock();
 
     // start loading new folder
     G::t.restart();

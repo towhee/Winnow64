@@ -329,7 +329,7 @@ void MetaRead2::redo()
 void MetaRead2::dispatch(int id)
 {
 /*
-    All available readers (each with their own thread) are sent here by dispatchReaders.
+    All available readers (each with their own thread) are sent here by dispatchReaders().
     Each reader is assigned a file, which it reads and then updates the datamodel and
     imagecache.  When it is finished, the reader signals this function, where it iterates,
     being dispatched to read another file until all the files have been read by the
@@ -352,7 +352,7 @@ void MetaRead2::dispatch(int id)
     - increment a or decrement b to next datamodel row without metadata
 */
     reader[id]->pending = false;
-    if (abort || isDone /*|| reader[id]->instance != dm->instance*/) {
+    if (abort || isDone/* || reader[id]->instance != dm->instance*/) {
         if (isDebug)
         qDebug().noquote()
             << "MetaRead2::dispatch finishing"

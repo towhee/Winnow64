@@ -267,8 +267,34 @@ void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
+/*
+    Checks if the application is busy: If the global G::stop flag is set, indicating that
+    the application is busy, the function ignores the mouse press event, beeps, shows a
+    popup message, and returns immediately.  Note that MW::folderSelectionChage() employes
+    a QSignalBlocker for BookMarks and FSTree which blocks this event.
+
+    Checks if a background ingest is in progress: If the global
+    G::isRunningBackgroundIngest flag is set, indicating that a background ingest is in
+    progress, the function shows a popup message and returns immediately.
+
+    Updates the eject drive menu item: If the mouse press event occurred on a valid item
+    in the BookMarks widget, the function updates the eject drive menu item based on the
+    path of the item.
+
+    Handles right mouse button presses: If the right mouse button was pressed, the
+    function stores the item that was clicked and returns immediately.
+
+    Sets the include subfolders flag: If both the Control and Shift keys were pressed
+    when the mouse button was pressed, the function sets the global G::includeSubfolders
+    flag to true.
+
+    Triggers the itemPressed event: Finally, the function calls the base class’s
+    mousePressEvent function, which triggers the itemPressed event. This event is
+    connected to the MW::bookmarkClicked slot, which updates the FSTree widget and
+    signals the MW::folderSelectionChange event.
+*/
     if (G::isLogger) G::log("BookMarks::mousePressEvent");
-    // rapid mouse press ignore if still running MW::stopAndClearAll
+    // ignore rapid mouse press if still processing MW::stop
     if (G::stop) {
         qApp->beep();
         G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);

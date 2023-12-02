@@ -136,12 +136,9 @@ void Reader::readIcon()
 
 void Reader::run()
 {
-    if (!abort && readMetadata() && isReadIcon) {
-        if (!abort) readIcon();
-        if (G::useImageCache) {
-            if (!abort) emit addToImageCache(metadata->m, instance);
-        }
-    }
+    if (!abort) readMetadata();
+    if (!abort && isReadIcon) readIcon();
+    if (!abort && G::useImageCache) addToImageCache(metadata->m, instance);
     if (isDebug) {
     qDebug().noquote()
              << "Reader::run             emiting done        "
