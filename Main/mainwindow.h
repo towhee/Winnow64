@@ -388,7 +388,8 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void folderSelectionChange();
+    void folderSelectionChangeNoParam();
+    void folderSelectionChange(QString dPath = "");
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void tryLoadImageAgain(QString fPath);

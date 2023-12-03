@@ -1137,15 +1137,10 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     // row same as datamodel
     int row;
     if (!keyFromPath.contains(m.fPath)) {
-        /* Prev code
-        if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
-                       << "cacheKeyHash does not contain" << m.fPath;
-        return;
-        //*/
         // insert new item in icd->cacheItemList
         row = m.row;
-        //qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath;
+        /*
+        qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath; //*/
         icd->cacheItem.isUpdated = false;
         icd->cacheItem.key = row;              // need to be able to sync with imageList
         icd->cacheItem.origKey = row;          // req'd while setting target range
@@ -1545,7 +1540,6 @@ void ImageCache::decodeNextImage(int id)
     if (debugCaching || G::isLogger)
     {
         QString k = QString::number(row).leftJustified((4));
-//        /*
         qDebug().noquote()
             << "ImageCache::decodeNextImage"
             << "decoder" << id
@@ -1557,7 +1551,7 @@ void ImageCache::decodeNextImage(int id)
             << "attempts =" << icd->cacheItemList.at(row).attempts
             << "status =" << icd->cacheItemList.at(row).status
             << icd->cacheItemList.at(row).fPath
-            ; //*/
+            ;
     }
 
     if (!abort) decoder[id]->decode(icd->cacheItemList.at(row), instance);

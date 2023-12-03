@@ -1,12 +1,13 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- 1st item not always showing in loupe (delay trigger fileSelectionChange?)
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
 - Scroll TableView to end does not scroll ThumbView to end
 - Rethink image file parse failure reporting
 - MetaRead2 test iconCunkSize < rowCount
-- MetaRead2 test change file selection while still loading
+- Use Exiftool to save image rotation change?
 - Crash when set color red for multi picked select on sd card
 - Check multi pick and set color class behavior
 - Select multiple folders

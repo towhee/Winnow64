@@ -48,7 +48,7 @@ signals:
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),
                              bool clearSelection = false,
-                             QString src = "MetaRead::triggerCheck");
+                             QString src = "MetaRead2::dispatch");
 
     void done();
 
@@ -67,6 +67,7 @@ private:
     void dispatchReaders();
     bool readersRunning();
     void redo();
+    int pending();
 
 //    void iconMax(QPixmap &thumb);
 //    bool isNotLoaded(int sfRow);

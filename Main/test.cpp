@@ -163,7 +163,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bounceFoldersStressTest(500, 30);
+    //return;
+    prevDevicePixelRatio = -1;
+    prevScreenName = "Nothing";
+    setDisplayResolution();
+    updateDisplayResolution();
+    emit resizeMW(this->geometry(), centralWidget->geometry());
+    QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
+    emit windowHandle()->screenChanged(screen);
+    //qApp->postEvent(this, )
 }
 
 /*
