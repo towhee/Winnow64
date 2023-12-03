@@ -95,7 +95,7 @@ protected:
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
-    void folderSelection();
+    void folderSelection(QString dPath);
     void abortLoadDataModel();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);

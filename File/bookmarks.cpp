@@ -328,7 +328,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // load all subfolders images
+    // include subfolders images
     if ((event->modifiers() & Qt::ControlModifier) && (event->modifiers() & Qt::ShiftModifier)) {
         G::includeSubfolders = true;
     }
@@ -478,7 +478,7 @@ void BookMarks::dropEvent(QDropEvent *event)
 
     if (G::currRootFolder == dropDir) {
         QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-        emit folderSelection();
+        emit folderSelection(dropDir);
     }
 
     // update bookmarks folder count

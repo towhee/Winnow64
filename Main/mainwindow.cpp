@@ -678,6 +678,10 @@ void MW::whenActivated(Qt::ApplicationState state)
     // sometimes windows has not shown all drives yet
     fsTree->refreshModel();
 #endif
+
+    setDisplayResolution();
+    updateDisplayResolution();
+    emit resizeMW(this->geometry(), centralWidget->geometry());
 }
 
 //   EVENT HANDLERS
@@ -723,7 +727,6 @@ void MW::showEvent(QShowEvent *event)
 
     QMainWindow::showEvent(event);
 
-    //setDisplayResolution();
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 
     G::isInitializing = false;
@@ -792,12 +795,12 @@ void MW::moveEvent(QMoveEvent *event)
 */
     if (G::isLogger)
         qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
-//    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-//    show();
     QMainWindow::moveEvent(event);
-    setDisplayResolution();
-    updateDisplayResolution();
-    emit resizeMW(this->geometry(), centralWidget->geometry());
+    if (!G::isInitializing) {
+        setDisplayResolution();
+        updateDisplayResolution();
+        emit resizeMW(this->geometry(), centralWidget->geometry());
+    }
 //    setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
 //    show();
 }
@@ -958,7 +961,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
             && event->type() != QEvent::Timer
-            //&& event->type() != QEvent::MouseMove
+            && event->type() != QEvent::MouseMove
             && event->type() != QEvent::HoverMove
             )
     {
@@ -1887,11 +1890,17 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
-void MW::folderSelectionChange()
+void MW::folderSelectionChangeNoParam() {
+    folderSelectionChange("");
+}
+
+void MW::folderSelectionChange(QString dPath)
 {
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
+    qDebug() << "FMW::folderSelectionChange                   " << G::t.elapsed(); G::t.restart();
+
     if (G::stop) {
         /*
         qDebug() << "MW::folderSelectionChange"
@@ -1922,7 +1931,8 @@ void MW::folderSelectionChange()
 //    if (G::includeSubfolders) subFoldersAction->setChecked(true);
 
     dm->abortLoadingModel = false;
-    G::currRootFolder = getSelectedPath();
+    if (dPath.length()) G::currRootFolder = dPath;
+    else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
@@ -2100,14 +2110,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
-    /*if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src
                  << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
                  << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
                  << current.data(G::PathRole).toString();
-    }//*/
+    }
     if (G::isFlowLogger)
         G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
@@ -2381,6 +2391,7 @@ bool MW::stop(QString src)
                  << "src =" << src
                  << "G::currRootFolder =" << G::currRootFolder;
 
+    if (G::useProcessEvents) qApp->processEvents();
     G::stop = true;
     dm->abortLoadingModel = true;
     dm->instance++;
@@ -2392,50 +2403,50 @@ bool MW::stop(QString src)
     G::t.restart();
     videoView->stop();
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop videoView:           "
-             << G::t.elapsed() << "ms";
+        qDebug() << "MW::stop" << "Stop videoView:           "
+                 << G::t.elapsed() << "ms";
     buildFilters->stop();
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop buildFilters:        "
-             << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
-             << G::t.elapsed() << "ms";
+        qDebug() << "MW::stop" << "Stop buildFilters:        "
+                 << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
+                 << G::t.elapsed() << "ms";
 
     if (G::isLoadConcurrent) {
         G::t.restart();
         bool metaReadThreadStopped = metaReadThread->stop();
         if (isDebugStopping)
-        qDebug() << "MW::stop" << "Stop metaReadThread:      "
-                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
+            qDebug() << "MW::stop" << "Stop metaReadThread:      "
+                     << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
+                     << G::t.elapsed() << "ms";
     }
 
     if (G::isLoadLinear) {
         G::t.restart();
         metadataCacheThread->stop();
         if (isDebugStopping)
-        qDebug() << "MW::stop" << "Stop metadataCacheThread: "
-                 << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
+            qDebug() << "MW::stop" << "Stop metadataCacheThread: "
+                     << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
+                     << G::t.elapsed() << "ms";
     }
 
     G::t.restart();
     imageCacheThread->stop();
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop imageCacheThread:    "
-             << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
-             << G::t.elapsed() << "ms";
+        qDebug() << "MW::stop" << "Stop imageCacheThread:    "
+                 << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
+                 << G::t.elapsed() << "ms";
 
     G::t.restart();
     frameDecoder->stop();
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop frameDecoder:        "
-             << "                 "
-             << G::t.elapsed() << "ms";
+        qDebug() << "MW::stop" << "Stop frameDecoder:        "
+                 << "                 "
+                 << G::t.elapsed() << "ms";
 
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop total:               "
-             << "                 "
-             << tStop.elapsed() << "ms";
+        qDebug() << "MW::stop" << "Stop total:               "
+                 << "                 "
+                 << tStop.elapsed() << "ms";
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted for\n" + oldFolder);
@@ -2449,7 +2460,8 @@ bool MW::stop(QString src)
     G::stop = false;
 
     if (isDebugStopping)
-    qDebug() << "MW::stop" << "Stop DONE";
+        qDebug() << "MW::stop" << "Stop DONE";
+
     return true;
 }
 
@@ -2781,8 +2793,8 @@ void MW::loadConcurrentDone()
 */
     QSignalBlocker blocker(bookmarks);
 
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadConcurrentMetaDone";
-    QString src = "MW::loadConcurrentMetaDone ";
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadConcurrentDone";
+    QString src = "MW::loadConcurrentDone ";
     int count = 0;
     /*
     qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
@@ -2826,14 +2838,15 @@ void MW::loadConcurrentDone()
         launchBuildFilters();   // new folder = true
     }
 
-    if (reset(src + QString::number(count++))) return;
-    updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMetaDone");
+//    if (reset(src + QString::number(count++))) return;
+//    updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
     // resize table columns with all data loaded
     if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     blocker.unblock();
+    QApplication::beep();
 }
 
 void MW::loadLinearNewFolder()
@@ -3293,18 +3306,20 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     Called by signal itemClicked in bookmark.
 */
     if (G::isLogger) qDebug() << "MW::bookmarkClicked";
-    const QString fPath =  item->toolTip(col);
-    isCurrentFolderOkay = isFolderValid(fPath, true, false);
+    const QString dPath = item->toolTip(col);
+    setCentralMessage("Loading " + dPath);
+    qApp->processEvents();
+    isCurrentFolderOkay = isFolderValid(dPath, true, false);
 
     if (isCurrentFolderOkay) {
-        QModelIndex idx = fsTree->fsModel->index(fPath);
+        folderSelectionChange(dPath);
+        QModelIndex idx = fsTree->fsModel->index(dPath);
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
-        fsTree->select(fPath);
+        fsTree->select(dPath);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         // must have focus to show selection in blue instead of gray
         fsTree->setFocus();
-        folderSelectionChange();
     }
     else {
         stop("Bookmark clicked");
@@ -3993,6 +4008,8 @@ void MW::setDisplayResolution()
 
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
+//    bool monitorChanged = true;
+//    bool devicePixelRatioChanged = true;
 
     // ignore until show event
     if (!isVisible()) {
@@ -4005,16 +4022,19 @@ void MW::setDisplayResolution()
     if (screen == nullptr) return;
     monitorChanged = screen->name() != prevScreenName;
 
+    //monitorChanged = true;
+
     /*
     qDebug() << "MW::setDisplayResolution" << "1"
              << "G::isInitializing  =" << G::isInitializing
              << "isVisible()  =" << isVisible()
              << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
              << "screen->name() =" << screen->name()
              << "prevScreenName =" << prevScreenName
              << "monitorChanged =" << monitorChanged
              << "devicePixelRatioChanged =" << devicePixelRatioChanged;
-//             */
+    //*/
     prevScreenName = screen->name();
 
     // Device Pixel Ratios
@@ -4028,9 +4048,10 @@ void MW::setDisplayResolution()
     devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
     /*
     qDebug() << "MW::setDisplayResolution" << "2"
-             << "G::isInitializing  =" << G::isInitializing
-             << "isVisible()  =" << isVisible()
+             << "G::isInitializing =" << G::isInitializing
+             << "isVisible() =" << isVisible()
              << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
              << "screen->name() =" << screen->name()
              << "prevScreenName =" << prevScreenName
              << "monitorChanged =" << monitorChanged
@@ -4038,6 +4059,7 @@ void MW::setDisplayResolution()
                 //*/
     prevDevicePixelRatio = G::actDevicePixelRatio;
 
+//    devicePixelRatioChanged = true;
     if (!monitorChanged && !devicePixelRatioChanged) return;
 
     // Device Pixel Ratio or Monitor change has occurred (default set in initialize())
@@ -4061,12 +4083,13 @@ void MW::setDisplayResolution()
              << "screen->actDevicePixelRatio() =" << screen->devicePixelRatio()
              << "VirtualHorPixels =" << G::displayVirtualHorizontalPixels
              << "PhysicalHorPixels =" << G::displayPhysicalHorizontalPixels
-//             << "screen->physicalSize() =" << screen->physicalSize()
+             //<< "screen->physicalSize() =" << screen->physicalSize()
              << "px per mm =" << dpmm
                 ;
-//    */
+    //*/
 
-    if (devicePixelRatioChanged && !G::isInitializing) {
+    if (devicePixelRatioChanged) {
+    //if (devicePixelRatioChanged && !G::isInitializing) {
         // refresh loupe / compare views to new scale
         if (G::mode == "Loupe") {
             // reload to force complete refresh
@@ -4094,7 +4117,7 @@ void MW::setDisplayResolution()
              << "ScreenH=" << screen->geometry().height()
              << "fitH =" << fitH
                 ;
-//                    */
+    //*/
     // does winnow fit in new screen?
     if (fitW > 1.0 || fitH > 1.0) {
         // does not fit, does width or height require the larger adjustment?
@@ -4118,7 +4141,7 @@ void MW::setDisplayResolution()
     cachePreviewWidth = G::displayPhysicalHorizontalPixels;
     cachePreviewHeight = G::displayPhysicalVerticalPixels;
     /*
-    qDebug() << "MW::setDisplayResolution"
+    qDebug() << "MW::setDisplayResolution DONE"
              << "screen->name() =" << screen->name()
              << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
              << "loc =" << loc
@@ -4127,7 +4150,7 @@ void MW::setDisplayResolution()
              << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels
              << "G::displayVirtualVerticalPixels =" << G::displayVirtualVerticalPixels
                 ;
-//                */
+    //*/
 
     screen = nullptr;
 }

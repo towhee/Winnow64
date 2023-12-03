@@ -235,6 +235,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
              << "isRunning =" << isRunning
              << "G::isLinearLoading =" << G::isLinearLoading;
              //*/
+    qDebug() << "MW::updateMetadataThreadRunStatus" << calledBy;
     if (isRunning) {
         if (G::isLoadLinear) {
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;}");
@@ -250,10 +251,18 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
         }
     }
     else {
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
-        #ifdef Q_OS_WIN
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
-        #endif
+        if (calledBy == "MetaRead2::quitAnyway") {
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;}");
+            #ifdef Q_OS_WIN
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;font-size: 24px;}");
+            #endif
+        }
+        else {
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;}");
+            #ifdef Q_OS_WIN
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;font-size: 24px;}");
+            #endif
+        }
     }
     metadataThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);

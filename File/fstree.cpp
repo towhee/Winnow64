@@ -654,7 +654,7 @@ void FSTree::dropEvent(QDropEvent *event)
 //        QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
         if (G::currRootFolder == dropDir) {
 //            QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-            emit folderSelection();
+            emit folderSelection(dropDir);
         }
         event->acceptProposedAction();
     }

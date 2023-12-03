@@ -937,7 +937,7 @@ void MW::createFSTree()
     #endif
 
     // this works for touchpad tap
-    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
 
     // reselect folder after external program drop onto FSTree
     connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
@@ -979,6 +979,7 @@ void MW::createBookmarks()
     bookmarks->setMaximumWidth(folderMaxWidth);
 
     // this does work for touchpad tap
+    // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
 
