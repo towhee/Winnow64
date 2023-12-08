@@ -1735,12 +1735,43 @@ int DataModel::iconCount()
 
 bool DataModel::allIconsLoaded()
 {
+    /*
+    lastFunction = "";
+    //if (isDebug)
+        qDebug() << "DataModel::allIconsLoaded"
+                 << "startIconRange =" << startIconRange
+                 << "endIconRange =" << endIconRange
+                 << "instance =" << instance
+                 << currentFolderPath
+            ;
+    if (startIconRange < 0 || startIconRange >= sf->rowCount()) return false;
+    if (endIconRange < startIconRange || endIconRange >= sf->rowCount()) return false;
+    for (int row = startIconRange; row < endIconRange; ++row) {
+        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
+    }
+    return true;
+    */
+
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
     }
     return true;
+
+}
+
+bool DataModel::allIconChunkLoaded(int first, int last)
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentFolderPath;
+
+    if (first < 0 || last > sf->rowCount()) return false;
+    for (int row = first; row <= last; ++row) {
+        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
+    }
+    return true;
+
 }
 
 void DataModel::setChunkSize(int chunkSize)

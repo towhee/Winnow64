@@ -83,6 +83,8 @@
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
+#include "Cache/testthread.h"
+
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #include "Main/winnativeeventfilter.h"
@@ -1320,6 +1322,8 @@ private:
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;
     bool testCrash = false;
+
+    TestThread *tt = new TestThread(this);
 
     void toggleRory();
     void rory();

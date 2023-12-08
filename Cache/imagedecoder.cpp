@@ -44,9 +44,9 @@ void ImageDecoder::stop()
         condition.wakeOne();
         mutex.unlock();
         wait();
-//        abort = false;
+        //abort = false;
     }
-//    quit();
+    //quit();
 }
 
 bool ImageDecoder::quit()
@@ -97,7 +97,7 @@ bool ImageDecoder::load()
 
     // get image type (extension)
     // QFileInfo fileInfo(fPath);  // crash occasionally using QFileInfo to get suffix
-//    ext = fPath.section('.', -1).toLower();
+    //ext = fPath.section('.', -1).toLower();  // also crash occasionally
     ext = n.ext;
 
     // ignore video files
@@ -114,12 +114,6 @@ bool ImageDecoder::load()
                    << fPath;
         errMsg = "Could not read metadata.";
         status = Status::NoMetadata;
-        // pause for metadata to be loaded
-//        msleep(100);
-//        if (!metadata->hasHeic.contains(ext)) {
-//            qDebug() << "ImageDecoder::load" << "Could not read metadata" << ext << fPath;
-//            return false;
-//        }
     }
 
     if (abort) quit();
@@ -140,26 +134,6 @@ bool ImageDecoder::load()
         status = Status::FileOpen;
         return false;
     }
-
-//    if (!imFile.open(QIODevice::ReadOnly)) {
-//        imFile.close();
-//        QString errMsg = "Could not open file.";
-//        if (G::isWarningLogger)
-//        qWarning() << "WARNING" << "ImageDecoder::load" <<  errMsg << fPath;
-//        G::error(errMsg, fun, fPath);
-//        // check if drive ejected or folder deleted by another app
-//        QDir dir(Utilities::getFolderPath(fPath));
-//        if (!dir.exists()) {
-//            status = Status::NoDir;
-//            errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
-//            if (G::isWarningLogger)
-//            qWarning() << "WARNING" << "ImageDecoder::load  Folder is missing, deleted or in a drive that has been ejected" << fPath;
-//        }
-//        else {
-//            status = Status::FileOpen;
-//        }
-//        return false;
-//    }
 
     // JPG format (including embedded in raw files)
     if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
@@ -270,7 +244,6 @@ bool ImageDecoder::load()
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "
                           "Trying Qt tiff library to decode" + fPath + ". ";
-//            G::error("ImageDecoder::load", fPath, err);
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load "
                      << "Could not decode using Winnow Tiff decoder.  "
@@ -326,11 +299,6 @@ bool ImageDecoder::load()
 
 void ImageDecoder::setReady()
 {
-    if (isDebug) {
-//        mutex.lock();
-//        G::log("ImageDecoder::setRead", "Thread " + QString::number(threadId));
-//        mutex.unlock();
-    }
     status = Status::Ready;
 }
 
@@ -338,9 +306,9 @@ void ImageDecoder::rotate()
 {
     if (G::isFlowLogger) G::log("ImageDecoder::rotate", "row = " + QString::number(cacheKey));
     if (isDebug) {
-//        mutex.lock();
-//        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
-//        mutex.unlock();
+        mutex.lock();
+        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
+        mutex.unlock();
     }
     QTransform trans;
     int degrees = 0;
@@ -384,9 +352,9 @@ void ImageDecoder::colorManage()
 {
     if (G::isFlowLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
     if (isDebug) {
-//        mutex.lock();
-//        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
-//        mutex.unlock();
+        mutex.lock();
+        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
+        mutex.unlock();
     }
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(n.iccBuf, image);
@@ -395,14 +363,13 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-//    if (isDebug) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
-//    /*
-    if (isDebug) {
+    if (isDebug) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+    if (isDebug)
+    {
         mutex.lock();
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
         mutex.unlock();
     }
-    //*/
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;

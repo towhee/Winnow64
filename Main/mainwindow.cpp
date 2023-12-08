@@ -1899,7 +1899,7 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
-    qDebug() << "FMW::folderSelectionChange                   " << G::t.elapsed(); G::t.restart();
+    G::t.restart();
 
     if (G::stop) {
         /*
@@ -1916,7 +1916,6 @@ void MW::folderSelectionChange(QString dPath)
         qDebug() << "\nMW::folderSelectionChange";
     }
 
-    G::t.restart();
     /*
     qDebug() << " ";
     qDebug() << "MW::folderSelectionChange"
@@ -2082,7 +2081,9 @@ void MW::folderSelectionChange(QString dPath)
 //    fsTreeBlocker.unblock();
 
     // start loading new folder
-    G::t.restart();
+    qDebug().noquote()
+             << "MW::folderSelectionChange                "
+             << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
     buildFilters->reset();
     if (G::isLoadLinear) {
         // metadata and icons loaded in GUI thread
@@ -2110,6 +2111,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
+    G::t.restart();
     if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::fileSelectionChange"
@@ -2551,7 +2553,7 @@ void MW::updateDefaultIconChunkSize(int size)
     if (size > dm->iconChunkSize) {
         dm->iconChunkSize = size;
         metadataCacheThread->metadataChunkSize = size;
-        metaReadThread->iconChunkSize = size;
+        //metaReadThread->iconChunkSize = size;
     }
 }
 
@@ -2627,14 +2629,17 @@ bool MW::updateIconRange(QString src)
         metadataCacheThread->lastIconVisible = lastVisible;
         metadataCacheThread->visibleIcons = visibleIcons;
     }
-//    else {
-//        // DataModel (Concurrent metadata loading) icon range
-//        int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
-//        if (firstChunkRow < 0) firstChunkRow = 0;
-//        int lastChunkRow = firstChunkRow + dm->iconChunkSize;
-//        if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
-//        int midChunkRow = firstChunkRow + (lastChunkRow - firstChunkRow) / 2;
-//    }
+    else {
+        // DataModel (Concurrent metadata loading) icon range
+        int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
+        if (firstChunkRow < 0) firstChunkRow = 0;
+        int lastChunkRow = firstChunkRow + dm->iconChunkSize;
+        if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
+        int midChunkRow = firstChunkRow + (lastChunkRow - firstChunkRow) / 2;
+        dm->startIconRange = firstChunkRow;
+        dm->endIconRange = lastChunkRow;
+        dm->midIconRange = midChunkRow;
+    }
 
     if (!dm->checkChunkSize) return false;
 
@@ -2805,7 +2810,9 @@ void MW::loadConcurrentDone()
                 ;
                 //*/
 
-    qDebug() << "MW::loadConcurrentDone  Elapsed ms =" << testTime.elapsed() << ".  "
+    qDebug().noquote()
+             << "MW::loadConcurrentDone       Elapsed     "
+             << QString::number(testTime.elapsed()).rightJustified((5)) << "ms"
              << dm->rowCount() << "images from"
              << dm->currentFolderPath << "\n"
         ;
@@ -2846,7 +2853,7 @@ void MW::loadConcurrentDone()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     blocker.unblock();
-    QApplication::beep();
+    //QApplication::beep();
 }
 
 void MW::loadLinearNewFolder()

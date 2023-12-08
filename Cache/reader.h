@@ -35,6 +35,7 @@ public:
     Metadata *metadata;
     QPixmap pm;
     bool pending = false;
+    bool loadedIcon = false;
 
     enum Status {
         Success,
