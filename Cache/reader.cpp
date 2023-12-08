@@ -27,7 +27,7 @@ void Reader::read(const QModelIndex dmIdx,
                   const int instance,
                   const bool isReadIcon)
 {
-    stop();
+    abort = false;
     this->dmIdx = dmIdx;
     this->fPath = fPath;
     this->instance = instance;
@@ -35,6 +35,7 @@ void Reader::read(const QModelIndex dmIdx,
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
     status = Status::Success;
     pending = true;
+    loadedIcon = false;
     start();
     if (isDebug) {
         qDebug().noquote()
@@ -48,18 +49,12 @@ void Reader::read(const QModelIndex dmIdx,
 
 void Reader::stop()
 {
+    //qDebug() << "Reader::stop" << threadId << "isRunning =" << isRunning();
     if (isRunning()) {
         mutex.lock();
         abort = true;
-        condition.wakeOne();
         mutex.unlock();
-        //wait();
-        abort = false;
     }
-    /*
-    qDebug() << "Reader::stop              "
-             << "id =" << threadId;
-    //*/
 }
 
 bool Reader::readMetadata()
@@ -78,6 +73,7 @@ bool Reader::readMetadata()
     int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
+    if (abort) return false;
     if (isMetaLoaded) {
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
@@ -86,6 +82,7 @@ bool Reader::readMetadata()
             status = Status::MetaFailed;
             qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
         }
+        if (!abort) emit addToImageCache(metadata->m, instance);
     }
     else {
         status = Status::MetaFailed;
@@ -110,6 +107,7 @@ void Reader::readIcon()
     int dmRow = dmIdx.row();
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
+    if (abort) return;
     if (isVideo) return;
     if (thumbLoaded) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -132,13 +130,15 @@ void Reader::readIcon()
         else status = Status::IconFailed;
         qWarning() << "WARNING" << "MetadataCache::loadIcon  row =" << dmRow << "Failed - emit setIcon." << fPath;
     }
+    else {
+        loadedIcon = true;
+    }
 }
 
 void Reader::run()
 {
-    if (!abort) readMetadata();
+    if (!abort && !G::allMetadataLoaded) readMetadata();
     if (!abort && isReadIcon) readIcon();
-    if (!abort && G::useImageCache) addToImageCache(metadata->m, instance);
     if (isDebug) {
     qDebug().noquote()
              << "Reader::run             emiting done        "

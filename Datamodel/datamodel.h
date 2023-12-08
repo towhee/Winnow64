@@ -77,6 +77,7 @@ public:
     int iconCount();
     void clearAllIcons();
     bool allIconsLoaded();
+    bool allIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
     void setChunkSize(int chunkSize);
     bool isPath(QString fPath);
@@ -108,8 +109,8 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
-//    int startIconRange;                 // used to determine MetaRead priority queue
-//    int endIconRange;                   // used to determine MetaRead priority queue
+    int startIconRange;                 // used in allIconsLoaded()
+    int endIconRange;                   // used in allIconsLoaded()
     int midIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)

@@ -1,12 +1,11 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- 1st item not always showing in loupe (delay trigger fileSelectionChange?)
+- When insert missing thumbnails update missing thumb status in thumbs
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
 - Scroll TableView to end does not scroll ThumbView to end
 - Rethink image file parse failure reporting
-- MetaRead2 test iconCunkSize < rowCount
 - Use Exiftool to save image rotation change?
 - Crash when set color red for multi picked select on sd card
 - Check multi pick and set color class behavior
@@ -101,6 +100,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Progress bar not being reset
 - Utilities::get16 error if char = A9 (exc char?) fixed
 - Icon cache status not updating for rows less than targetRange
 - Remote embellish title not being added if Winnow not already open (instance clash)

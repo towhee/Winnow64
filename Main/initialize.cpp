@@ -1,7 +1,7 @@
 #include "Main/mainwindow.h"
 
 void MW::initialize()
-{
+{    
     if (G::isLogger) G::log("MW::initialize");
     //connect(windowHandle(), &QWindow::screenChanged, this, &MW::restoreLastSessionGeometryState);
     setWindowTitle(winnowWithVersion);
@@ -357,14 +357,17 @@ void MW::createMDCache()
 //            sel, &Selection::first);
 
     // MetaRead and MetaRead2
-    if (isSettings) {
-        if (settings->contains("iconChunkSize")) {
-            dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
-        }
-    }
-    else {
-        settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
-    }
+//    if (isSettings) {
+//        if (settings->contains("iconChunkSize")) {
+//            dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
+//        }
+//    }
+//    else {
+//        settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
+//    }
+
+    dm->defaultIconChunkSize = 20000;
+
     dm->setChunkSize(dm->defaultIconChunkSize);
 
     /*
@@ -377,7 +380,7 @@ void MW::createMDCache()
     // Runs a single thread to load metadata and thumbnails
     G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
-    metaReadThread->iconChunkSize = dm->iconChunkSize;
+    //metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead
@@ -417,7 +420,7 @@ void MW::createMDCache()
     // Runs multiple reader threads to load metadata and thumbnails
     G::metaReadInUse = "Concurrent multi-threaded metadata and thumbnail loading";
     metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCacheThread);
-    metaReadThread->iconChunkSize = dm->iconChunkSize;
+    // metaReadThread->iconChunkSize = dm->iconChunkSize;
     metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead2

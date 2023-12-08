@@ -24,12 +24,14 @@ public:
               ImageCache *imageCache);
     ~MetaRead2() override;
 
+    int readerCount;
+    QVector<Reader*> reader;        // all the decoders
+
     bool stop();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
 
-    int iconChunkSize;
     int firstIconRow;
     int lastIconRow;
 
@@ -65,13 +67,10 @@ private:
     void read(int startRow = 0, QString src = "");// decoder
 
     void dispatchReaders();
-    bool readersRunning();
     void redo();
     int pending();
-
-//    void iconMax(QPixmap &thumb);
-//    bool isNotLoaded(int sfRow);
-//    bool inIconRange(int sfRow);
+    inline bool needToRead(int row);
+    void setIconRange();
 
     QMutex mutex;
     QWaitCondition condition;
@@ -83,10 +82,10 @@ private:
     FrameDecoder *frameDecoder;     // decoder requires this
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
+    QIcon nullIcon;
+    bool fileSelectionChanged;
     int instance;                   // new instance for each folder to detect conflict
-    QVector<Reader*> reader;        // all the decoders
     Reader *d;                      // terse ptr for current decoder
-    int readerCount;
     int sfRowCount;
     int dmRowCount;
     int metaReadCount;
@@ -105,12 +104,12 @@ private:
     QList<int> toRead;
 
     int startRow = 0;
+    int lastRow;
     int a = 0;
     int b = -1;
     bool isNewStartRowWhileStillReading;
     QString src;
 
-    QList<int> rowsWithIcon;
     QStringList err;
 
     bool isDebug = false;

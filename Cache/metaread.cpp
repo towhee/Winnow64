@@ -96,10 +96,32 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
     this->src = src;
 
     mutex.lock();
-    iconChunkSize = dm->iconChunkSize;
+    //iconChunkSize = dm->iconChunkSize;
     sfRowCount = dm->sf->rowCount();
     if (row >= 0 && row < sfRowCount) startRow = row;
     else startRow = 0;
+
+    sfRowCount = dm->sf->rowCount();
+    lastRow = sfRowCount - 1;
+    // icon range size in case changes ie thumb size change
+    //iconChunkSize = dm->iconChunkSize;
+    iconLimit = static_cast<int>(dm->iconChunkSize * 1.2);
+    // adjust icon range to startRow
+    firstIconRow = startRow - dm->iconChunkSize / 2;
+    if (firstIconRow < 0) firstIconRow = 0;
+    lastIconRow = firstIconRow + dm->iconChunkSize - 1;
+    if (lastIconRow > lastRow) lastIconRow = lastRow;
+    ///*
+            qDebug() << "MetaRead::start"
+                     << "startRow =" << startRow
+                     << "firstIconRow =" << firstIconRow
+                     << "lastIconRow =" << lastIconRow
+                     << "iconChunkSize =" << dm->iconChunkSize
+                ; //*/
+    // housekeeping
+    instance = dm->instance;
+    abort = false;
+
     triggerCount = 0;
     targetRow = startRow;
     hasBeenTriggered = false;
@@ -110,7 +132,6 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
     mutex.unlock();
 
     if (!isRunning()) {
-        //start(QThread::LowestPriority);
         start(QThread::HighestPriority);
     }
 }
@@ -187,20 +208,22 @@ QString MetaRead::diagnostics()
     rpt << "\n" << "dm->currentSfRow:       " << dm->currentSfRow;
     rpt << "\n";
     rpt << "\n" << "defaultIconChunkSize:   " << dm->defaultIconChunkSize;
-    rpt << "\n" << "iconChunkSize:          " << iconChunkSize;
+    rpt << "\n" << "iconChunkSize:          " << dm->iconChunkSize;
+    //rpt << "\n" << "iconChunkSize:          " << iconChunkSize;
     rpt << "\n" << "iconLimit:              " << iconLimit;
     rpt << "\n" << "firstIconRow:           " << firstIconRow;
     rpt << "\n" << "lastIconRow:            " << lastIconRow;
     rpt << "\n" << "rowsWithIcon:           " << rowsWithIcon.size();
     rpt << "\n" << "dm->iconCount:          " << dm->iconCount();
     rpt << "\n";
-//    rpt << "rowsWithIcon in datamodel:";
-//    rpt.setFieldAlignment(QTextStream::AlignRight);
-//    rpt.setFieldWidth(9);
-//    for (int i = 0; i < dm->rowCount(); i++) {
-//        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
-//        rpt << "\n" << i;
-//    }
+    rpt << "\n";
+    rpt << "rowsWithIcon in datamodel:";
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(9);
+    for (int i = 0; i < dm->rowCount(); i++) {
+        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
+        rpt << "\n" << i;
+    }
 
     rpt << "\n\n" ;
     return reportString;
@@ -237,10 +260,10 @@ void MetaRead::cleanupIcons()
     if (isDebug) G::log("MetaRead::cleanupIcons");
 
     // check if datamodel size is less than assigned icon cache chunk size
-    if (iconChunkSize >= sfRowCount) return;
+    if (dm->iconChunkSize >= sfRowCount) return;
 
     int i = 0;
-    while (rowsWithIcon.size() > iconChunkSize) {
+    while (rowsWithIcon.size() > dm->iconChunkSize) {
         if (i >= rowsWithIcon.size()) break;
         if (abortCleanup) break;
         int dmRow = rowsWithIcon.at(i);
@@ -450,7 +473,6 @@ void MetaRead::readRow(int sfRow)
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded) {
             if (!readMetadata(sfIdx, fPath)) {
-//                return;
             }
         }
     }
@@ -474,7 +496,7 @@ void MetaRead::readRow(int sfRow)
 
     // add to ImageCache icd->cacheItemList (used to manage image cache)
     if (G::useImageCache) {
-        emit addToImageCache(metadata->m);
+        emit addToImageCache(metadata->m, instance);
     }
 
     if (isDebug)
@@ -523,7 +545,6 @@ void MetaRead::run()
     proceeds from the start row in an ahead/behind progression.
 */
     if (isDebug) G::log("MetaRead::run", src);
-
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::run"
@@ -532,42 +553,13 @@ void MetaRead::run()
                            << "sfRowCount =" << sfRowCount
                               ;
     }
-    if (startRow >= sfRowCount) return;
 
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead::run");
 
-    triggerCount = -1;                     // used to delay start ImageCache
-    lastRow = sfRowCount - 1;
-    int a = 0;      // ahead
-    int b = 0;      // back
+    int a = startRow;       // forward counter
+    int b = startRow - 1;   // backward counter
 
     while (a < sfRowCount || b >= 0) {
-        if (startRow != -1) {
-            a = startRow;       // forward counter
-            b = startRow - 1;   // backward counter
-            sfRowCount = dm->sf->rowCount();
-            lastRow = sfRowCount - 1;
-            // icon range size in case changes ie thumb size change
-            iconChunkSize = dm->iconChunkSize;
-            iconLimit = static_cast<int>(iconChunkSize * 1.2);
-            // adjust icon range to startRow
-            firstIconRow = startRow - iconChunkSize / 2;
-            if (firstIconRow < 0) firstIconRow = 0;
-            lastIconRow = firstIconRow + iconChunkSize - 1;
-            if (lastIconRow > lastRow) lastIconRow = lastRow;
-            /*
-            qDebug() << "MetaRead::run startRow != -1"
-                     << "b =" << b
-                     << "a =" << a
-                     << "firstIconRow =" << firstIconRow
-                     << "lastIconRow =" << lastIconRow
-                     << "iconChunkSize =" << iconChunkSize
-                ; //*/
-            // housekeeping
-            startRow = -1;
-            instance = dm->instance;
-            abort = false;
-        }
 
         if (a < sfRowCount) {
             if (!abort) readRow(a);
@@ -582,7 +574,7 @@ void MetaRead::run()
         }
 
         // terminate loop
-        if (b < firstIconRow && a > lastIconRow) break;
+        if (G::allMetadataLoaded && (b < firstIconRow && a > lastIconRow)) break;
 
         if (abort) {
             if (isDebug)
@@ -598,11 +590,7 @@ void MetaRead::run()
         emit fileSelectionChange(sfIdx);
     }
 
-    if (isDebug)
-        qDebug() << "MetaRead::run  Completed loop XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";    // finished or aborted
-
     if (instance != dm->instance) return;
-
     if (!abort) if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead::run");
     if (!abort) G::allMetadataLoaded = true;
     if (!abort) cleanupIcons();
@@ -610,7 +598,6 @@ void MetaRead::run()
     if (isDebug) qDebug() << "MetaRead::run  Done.";
 
     abort = false;
-    //qDebug() << "Concurrent elapsed sec:" << t.elapsed() * 1.0 / 1000 << G::currRootFolder;
 
     return;
 }

@@ -150,10 +150,6 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    QString pDst = "/Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-25_0073 Focus Stack_Zen2048.JPG";
-    QFile(pDst).moveToTrash();
-    return;
-
     setCursor(QCursor(Qt::BlankCursor));
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
@@ -163,7 +159,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    //return;
+    stop();
+    for (int i = 0; i < metaReadThread->readerCount; i++) {
+        qDebug() << i << metaReadThread->reader[i]->isRunning();
+    }
+    return;
+
     prevDevicePixelRatio = -1;
     prevScreenName = "Nothing";
     setDisplayResolution();
