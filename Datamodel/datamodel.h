@@ -90,6 +90,8 @@ public:
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
     bool isSelected(int row);
+    void saveSelection();
+    void restoreSelection();
 
     QMutex mutex;
 
@@ -176,6 +178,8 @@ private:
     QFileInfo fileInfo;
     QImage emptyImg;
     bool includeSubfolders = false;
+
+    QItemSelection savedSelection;
 
     bool endLoad(bool success);
     bool addFileData();

@@ -323,6 +323,14 @@ void MW::resortImageCache()
 //    emit setImageCachePosition(dm->currentFilePath);
 }
 
+void MW::enableStatusBarBtns()
+{
+    if (G::isLogger) G::log("MW::enableStatusBarBtns");
+    bool enable = dm->rowCount() > 0;
+    colorManageToggleBtn->setEnabled(enable);
+    reverseSortBtn->setEnabled(enable);
+}
+
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /*

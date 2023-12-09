@@ -351,6 +351,7 @@ void IconViewDelegate::paint(QPainter *painter,
     /* debug
     qDebug() << "IconViewDelegate::paint  "
              << "row =" << index.row()
+             << "index =" << index
              << "option.state =" << option.state
              //<< "option.state just enabled =" << enabled
              //<< "option.type =" << option.type
@@ -593,6 +594,11 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);
     }
+
+    qDebug() << "IconViewDelegate::paint  "
+             << "row =" << index.row()
+             << "index =" << index
+             << "isMissingThumb" << isMissingThumb;
 
     // draw the missing thumb circle
     if (isMissingThumb && !G::isSlideShow) {

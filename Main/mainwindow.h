@@ -83,8 +83,6 @@
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
-#include "Cache/testthread.h"
-
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #include "Main/winnativeeventfilter.h"
@@ -428,6 +426,7 @@ private slots:
     void exportEmbelFromAction(QAction *embelExportAction);
     void exportEmbel();
     void enableSelectionDependentMenus();
+    void enableStatusBarBtns();
     void enableEjectUsbMenu(QString path);
     void renameEjectUsbMenu(QString path);
     void ejectUsb(QString path);
@@ -1322,8 +1321,6 @@ private:
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;
     bool testCrash = false;
-
-    TestThread *tt = new TestThread(this);
 
     void toggleRory();
     void rory();

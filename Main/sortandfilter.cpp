@@ -121,6 +121,7 @@ void MW::filterChange(QString source)
     //qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
+        sel->select(newSfIdx);
     }
 
     // update priorities in image cache
@@ -129,7 +130,7 @@ void MW::filterChange(QString source)
 
     // selection, fileSelectionChange, renew image cache
     //qDebug() << "MW::filterChange  sfIdx =" << newSfIdx;
-    sel->select(newSfIdx);
+//    sel->select(newSfIdx);
 
     QApplication::restoreOverrideCursor();
 }
@@ -831,7 +832,9 @@ void MW::setColorClass()
         G::popUp->end();
     }
 
+//    QItemSelection isel = dm->selectionModel->selection();
     filterChange(src);
+//    dm->selectionModel->select(isel, QItemSelectionModel::Select);
 
     // auto advance
     if (autoAdvance) sel->next();

@@ -340,7 +340,9 @@ void IconView::refreshThumb(QModelIndex idx, int role)
 void IconView::refreshThumbs() {
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
     int last = dm->sf->rowCount() - 1;
-    dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0));
+    QVector<int> roles;
+    roles.append(Qt::DecorationRole);
+    dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
 }
 
 void IconView::setThumbParameters()
