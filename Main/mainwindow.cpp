@@ -2113,6 +2113,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     and delegate use of the current index must check the column.
 */
     G::t.restart();
+    /*
     if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::fileSelectionChange"
@@ -2121,6 +2122,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                  << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
                  << current.data(G::PathRole).toString();
     }
+    //*/
     if (G::isFlowLogger)
         G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
@@ -2773,6 +2775,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
+    /*
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
@@ -2781,12 +2784,14 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
+                    //*/
     }
     if (G::allMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
         if (G::allIconsLoaded) return;
     }
-    if (!dm->abortLoadingModel && !G::allIconsLoaded) {
+    if (G::stop || dm->abortLoadingModel) return;
+    if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
