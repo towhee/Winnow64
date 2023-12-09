@@ -2006,6 +2006,7 @@ void MW::folderSelectionChange(QString dPath)
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
         enableSelectionDependentMenus();
+        enableStatusBarBtns();
         if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", "MW::folderSelectionChange");
             setCentralMessage("Image loading has been cancelled");
@@ -2176,6 +2177,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
+    enableStatusBarBtns();
 
     // the file path is used as an index in ImageView
     QString fPath = current.data(G::PathRole).toString();
@@ -2839,6 +2841,7 @@ void MW::loadConcurrentDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
+    enableStatusBarBtns();
     if (reset(src + QString::number(count++))) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
         //qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
@@ -3332,6 +3335,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         stop("Bookmark clicked");
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
+        enableStatusBarBtns();
     }
 }
 

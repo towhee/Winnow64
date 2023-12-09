@@ -2062,6 +2062,18 @@ QModelIndex DataModel::modelIndexFromProxyIndex(QModelIndex sfIdx)
     return sf->mapToSource(sfIdx);
 }
 
+void DataModel::saveSelection()
+{
+    if (G::isLogger) G::log("DataModel::saveSelection");
+    savedSelection = selectionModel->selection();
+}
+
+void DataModel::restoreSelection()
+{
+    if (G::isLogger) G::log("DataModel::restoreSelection");
+    selectionModel->select(savedSelection, QItemSelectionModel::Select);
+}
+
 bool DataModel::isSelected(int row)
 {
 /*
@@ -2563,12 +2575,13 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                              << (dataValue == filterValue)
                                 ;
                                 //*/
-//                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
-//                             << dataModelColumn << G::KeywordsColumn
-//                             << dataValue.typeId()
-//                             << QMetaType::QStringList
-//                                ;
-                    //*/
+                    /*
+                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
+                             << dataModelColumn << G::KeywordsColumn
+                             << dataValue.typeId()
+                             << QMetaType::QStringList
+                                ;
+                                //*/
                     if (dataValue.typeId() == QMetaType::QStringList) {  // keywords
                         if (dataValue.toStringList().contains(filterValue)) isMatch = true;
                     }

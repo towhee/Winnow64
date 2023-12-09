@@ -1,14 +1,11 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- When insert missing thumbnails update missing thumb status in thumbs
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
-- Scroll TableView to end does not scroll ThumbView to end
 - Rethink image file parse failure reporting
 - Use Exiftool to save image rotation change?
 - Crash when set color red for multi picked select on sd card
-- Check multi pick and set color class behavior
 - Select multiple folders
 - Check for updates for macos
 - Add tooltips to menus
@@ -100,6 +97,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Multi pick and set color class clears selection
+- When insert missing thumbnails update missing thumb status in thumbs
 - Progress bar not being reset
 - Utilities::get16 error if char = A9 (exc char?) fixed
 - Icon cache status not updating for rows less than targetRange
