@@ -1121,7 +1121,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     metadata information is added row by row, triggered by signal addToImageCache in
     MetaRead::readMetadata.
 */
-    if (G::isFlowLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
+    //if (G::isFlowLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
     if (debugCaching)
         qDebug() << "ImageCache::addCacheItemImageMetadata"
                  << "row =" << m.row << m.fName

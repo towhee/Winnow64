@@ -80,7 +80,12 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     bool isFileSelectionChange = true;
 
     if (G::isLoadLinear) emit fileSelectionChange(sfIdx);
-    else emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
+    else {
+        qDebug() << "Selection::setCurrentIndex about to emit loadConcurrent"
+                 << sfIdx.row()
+                 << isFileSelectionChange;
+        emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
+    }
 }
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)

@@ -1,9 +1,20 @@
-MW::eventFilter event: QEvent(ScreenChangeInternal, 0x16ce98570)
-    event->type: QEvent::ScreenChangeInternal
-    obj: MW(0x16ce9a2c8, name = "MW")
-    obj->objectName: "MW" object->metaObject()->className: MW
+71 MW::eventFilter                                    Key = 16777236
+41 Selection::setCurrentIndex                         row = 1 clearSelection = true
+ 0 MW::loadConcurrent                                 row = 1 G::allIconsLoaded = true
+1,097 MW::fileSelectionChange                             /Users/roryhill/Pictures/2022/202204/2022-04-15_Nora/2022-04-15_0002.arw
 
-MW::eventFilter event: QEvent(DevicePixelRatioChange, 0x16ce986d0)
-    event->type: QEvent::DevicePixelRatioChange
-    obj: QWidgetWindow(0x600003ede340, name = "MWWindow")
-    obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
+65 ImageCache::setCurrentPosition                     row = 1
+12 ImageCache::run
+ 0 ImageCache::setPriorities                          row = 1
+31 ImageCache::setTargetRange
+ 1 ImageCache::launchDecoders
+ 1 ImageCache::fillCache  Launch Decoder              Row/cacheKey = -1 Decoder = 0 Status = Ready
+ 0 ImageCache::nextToCache                            Decoder = 0
+ 1 ImageCache::cacheUpToDate                          Start
+ 2 ImageCache::cacheUpToDate                          true
+ 0 ImageCache::fillCache  Caching done.               Row = -1 Decoder = 0
+ 0 ImageCache::cacheUpToDate                          Start
+
+
+86 MW::eventFilter                                    Key = 16777236
+66 Selection::setCurrentIndex                         row = 1 clearSelection = true
