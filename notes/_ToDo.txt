@@ -97,6 +97,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Central widget going blank when rapidly scroll up/down in gridView
 - Multi pick and set color class clears selection
 - When insert missing thumbnails update missing thumb status in thumbs
 - Progress bar not being reset

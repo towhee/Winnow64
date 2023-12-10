@@ -99,6 +99,7 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
     }
 
     // load datamodel with metadata and icons
+    //QMutexLocker locker(&mutex);
     mutex.lock();
     this->src = src;
     sfRowCount = dm->sf->rowCount();
@@ -130,21 +131,8 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
              << "isDone =" << isDone
             ;
     }
-    if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead2::run");
 
-    /*
-    if (isRunning()) {
-    mutex.lock();
-    isNewStartRowWhileStillReading = true;
-    mutex.unlock();
-    }
-    else {
-        a = startRow;
-        b = startRow;
-        start();
-    }
-    return;
-    */
+    if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead2::run");
 
     if (isRunning()) {
         //qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";

@@ -682,7 +682,7 @@ QModelIndex IconView::upIndex(int fromCell)
     if (isDebug) G::log("IconView::upIndex", objectName());
     int toCell = fromCell - viewport()->width() / getCellSize().width();
     if (toCell < 0) toCell = fromCell;
-    if (!isCellVisible(toCell)) scrollToRow(toCell, "IconView::upIndex");
+    scrollToRow(toCell, "IconView::upIndex");
     return dm->sf->index(toCell, 0);
     //return moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier);
 }
@@ -695,7 +695,7 @@ QModelIndex IconView::downIndex(int fromCell)
     int max = dm->sf->rowCount() - 1;
     int toCell = fromCell + viewport()->width() / getCellSize().width();
     if (toCell > max) toCell = fromCell;
-    if (!isCellVisible(toCell)) scrollToRow(toCell, "IconView::downIndex");
+    scrollToRow(toCell, "IconView::downIndex");
     return dm->sf->index(toCell, 0);
     //return moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier);
 }
