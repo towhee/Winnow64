@@ -2219,24 +2219,26 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // update loupe/video view
     if (G::useMultimedia) videoView->stop();
-    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (isVideo) {
-        if (G::useMultimedia) {
-            if (G::mode == "Loupe") {
-                centralLayout->setCurrentIndex(VideoTab);
+    if (G::mode == "Loupe") {
+        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+        if (isVideo) {
+            if (G::useMultimedia) {
+                if (G::mode == "Loupe") {
+                    centralLayout->setCurrentIndex(VideoTab);
+                }
+                videoView->load(fPath);
+                videoView->play();
             }
-            videoView->load(fPath);
-            videoView->play();
         }
-    }
-    else if (G::useImageView) {
-        if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
-            updateClassification();
-            if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-        }
-        else {
-            if (!imageView->isFirstImageNewFolder && G::isWarningLogger)
-                qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+        else if (G::useImageView) {
+            if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+                updateClassification();
+                if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+            }
+            else {
+                if (!imageView->isFirstImageNewFolder && G::isWarningLogger)
+                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+            }
         }
     }
 
@@ -2263,7 +2265,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                     ;
         //*/
         if (!(G::isSlideShow && isSlideShowRandom)
-//            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
+            //&& (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (!workspaceChanged)
             && (G::mode != "Compare")
             && (G::useImageCache)
@@ -2786,11 +2788,11 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                     ;
                     //*/
     }
+    if (G::stop || dm->abortLoadingModel) return;
     if (G::allMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
         if (G::allIconsLoaded) return;
     }
-    if (G::stop || dm->abortLoadingModel) return;
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
