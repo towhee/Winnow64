@@ -1693,20 +1693,11 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
     QMutexLocker locker(&mutex);
-//    lastFunction = "";
-//    if (G::isLogger) G::log("DataModel::iconLoaded");
+    if (G::isLogger) G::log("DataModel::iconLoaded");
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
                           << "row =" << sfRow
                           << currentFolderPath;
-    /*
-    qDebug() << "DataModel::iconLoaded"
-             << "G::stop =" << G::stop
-             << "sfRow =" << sfRow
-             << "rowCount() =" << rowCount()
-             << "Instance =" << instance
-             << currentFolderPath;
-             //*/
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         if (G::isWarningLogger)
@@ -1823,6 +1814,21 @@ bool DataModel::isAllMetadataLoaded()
         }
     }
     return true;
+}
+
+QList<int> DataModel::metadataNotLoaded()
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance << currentFolderPath;
+    QList<int> rows;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+            if (isDebug)
+            qDebug() << "DataModel::metadataNotLoaded" << "row =" << row << "is not loaded.";
+            rows << row;
+        }
+    }
+    return rows;
 }
 
 bool DataModel::isPath(QString fPath)

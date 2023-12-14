@@ -62,6 +62,7 @@
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 #include "loadusbdlg.h"
+#include "deleteusbdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/renamefile.h"
 #include "Utilities/usb.h"
@@ -699,6 +700,7 @@ private:
     QAction *openAction;
     QAction *refreshCurrentAction;
     QAction *openUsbAction;
+    QAction *eraseUsbAction;
     QAction *revealFileAction;
     QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
@@ -1258,6 +1260,8 @@ private:
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();
+    void deleteAllImageUsbDCIM(QString rootPath, QString name);
+    void eraseUSBDriveImages();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);

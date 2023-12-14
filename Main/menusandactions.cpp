@@ -42,6 +42,12 @@ void MW::createFileActions()
     addAction(openUsbAction);
     connect(openUsbAction, &QAction::triggered, this, &MW::openUsbFolder);
 
+    eraseUsbAction = new QAction(tr("Erase Usb Folder"), this);
+    eraseUsbAction->setObjectName("eraseUsbFolder");
+    eraseUsbAction->setShortcutVisibleInContextMenu(true);
+    addAction(eraseUsbAction);
+    connect(eraseUsbAction, &QAction::triggered, this, &MW::eraseUSBDriveImages);
+
     openWithMenu = new QMenu(tr("Open With..."));
 
     openWithMenuAction = new QAction(tr("Open With..."), this);
@@ -1579,6 +1585,7 @@ void MW::createFileMenu()
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
     fileMenu->addAction(openUsbAction);
+    fileMenu->addAction(eraseUsbAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
     openWithMenu->addSeparator();

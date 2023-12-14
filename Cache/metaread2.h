@@ -36,6 +36,7 @@ public:
     int lastIconRow;
 
     bool showProgressInStatusbar = true;
+    bool isDebug = false;
 
 signals:
     void stopped(QString src);
@@ -58,7 +59,7 @@ public slots:
     void initialize();
     void dispatch(int id);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
-    void quitAnyway();
+    void quitAfterTimeout();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -70,6 +71,9 @@ private:
     void redo();
     int pending();
     inline bool needToRead(int row);
+    bool nextA();
+    bool nextB();
+    bool nextRowToRead();
     void setIconRange();
 
     QMutex mutex;
@@ -99,20 +103,21 @@ private:
     bool isDone;
     bool aIsDone;
     bool bIsDone;
-    bool firstDone;
+    bool quitAfterTimeoutInitiated;
 
     QList<int> toRead;
 
     int startRow = 0;
     int lastRow;
+    int nextRow = 0;
     int a = 0;
     int b = -1;
+    bool isAhead;
     bool isNewStartRowWhileStillReading;
     QString src;
 
     QStringList err;
 
-    bool isDebug = false;
     QElapsedTimer t;
     QElapsedTimer tAbort;
     quint32 ms;

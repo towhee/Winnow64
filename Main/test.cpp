@@ -159,16 +159,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    metaReadThread->stop();
-    return;
-
-    colorManageToggleBtn->setEnabled(false);
-    return;
-
-    stop();
-    for (int i = 0; i < metaReadThread->readerCount; i++) {
-        qDebug() << i << metaReadThread->reader[i]->isRunning();
-    }
+    eraseUSBDriveImages();  // /Volumes/DEL1 128GB/DCIM
     return;
 
     prevDevicePixelRatio = -1;
