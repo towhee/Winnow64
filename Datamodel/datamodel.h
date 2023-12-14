@@ -74,6 +74,7 @@ public:
     bool subFolderImagesLoaded = false;
     bool isMetadataLoaded(int sfRow);
     bool isAllMetadataLoaded();
+    QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
     bool allIconsLoaded();

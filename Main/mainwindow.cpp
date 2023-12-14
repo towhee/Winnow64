@@ -5680,11 +5680,12 @@ void MW::deleteFolder()
                        + dirToDelete +
                        "<br>to the " + trash);
         msgBox.setInformativeText("Do you want continue?");
+        msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
-        msgBox.setIcon(QMessageBox::Warning);
         QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
                     "QPushButton:default {background-color: rgb(68,95,118);}";
+        msgBox.setStyleSheet(s);
         msgBox.setStyleSheet(css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
@@ -5706,6 +5707,99 @@ void MW::deleteFolder()
         bookmarks->bookmarkPaths.remove(dirToDelete);
         bookmarks->reloadBookmarks();
     }
+}
+
+void MW::deleteAllImageUsbDCIM(QString rootPath, QString name)
+{
+    if (G::isLogger) G::log("MW::deleteAllImageUsbDCIM");
+
+    // ignore if no DCIM folder
+    QString dcimPath = rootPath + "/DCIM";
+    QDir dcimDir = QDir(dcimPath);
+    qDebug() << "MW::deleteUsbDCIM" << dcimPath;
+    if (!dcimDir.exists()) {
+        QString msg = "Drive " + name +
+                      " does not contain a folder called DCIM.";
+        QMessageBox::information(this, "Invalid drive", msg);
+        return;
+    }
+
+    // warning
+    QMessageBox msgBox;
+    msgBox.setWindowTitle("Delete All Images on " + name);
+#ifdef Q_OS_WIN
+    QString trash = "recycle bin";
+#endif
+#ifdef Q_OS_MAC
+    QString trash = "trash";
+#endif
+    msgBox.setText("This operation will DELETE ALL\n"
+                   "the images on drive\n\n"
+                   + name + "\n\n"
+                   "The images will NOT be copied to the " + trash);
+    msgBox.setInformativeText("Do you want continue?");
+    msgBox.setStandardButtons(QMessageBox::Cancel | QMessageBox::Yes);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    int ret = msgBox.exec();
+    if (ret == QMessageBox::Cancel) return;
+
+    // delete
+    qDebug() << "MW::deleteUsbDCIM   removed" << dcimPath;
+    dcimDir.removeRecursively();
+
+    QString msg = "All images removed from " + name;
+    G::popUp->showPopup(msg);
+}
+
+void MW::eraseUSBDriveImages()
+{
+/*
+    A list of available USB drives are listed in a dialog for the user.  For the selected
+    drive, all the subfolders in the DCIM folder are deleted.
+*/
+    if (G::isLogger) G::log("MW::deleteUsbDCIM");
+
+    struct  UsbInfo {
+        QString rootPath;
+        QString name;
+        QString description;
+    };
+    UsbInfo usbInfo;
+
+    QMap<QString, UsbInfo> usbMap;
+    QStringList usbDrives;
+    int n = 0;
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                if (Usb::isUsb(storage.rootPath())) {
+                    usbInfo.rootPath = storage.rootPath();
+                    usbInfo.name = storage.name();
+                    QString count = QString::number(n) + ". ";
+                    if (usbInfo.name.length() > 0)
+                    usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+                    else
+                    usbInfo.description = count + usbInfo.rootPath;
+                    usbMap.insert(usbInfo.description, usbInfo);
+
+                    usbDrives << usbInfo.description;
+                    n++;
+                }
+            }
+        }
+    }
+
+    // select drive
+    QString drive;
+    DeleteUsbDlg *deleteUsbDlg = new DeleteUsbDlg(this, usbDrives, drive);
+    if (!deleteUsbDlg->exec()) {
+        qDebug() << "MW::deleteUsbDCIM cancelled";
+        return;
+    }
+
+    deleteAllImageUsbDCIM(usbMap[drive].rootPath, usbMap[drive].name);
+
+
 }
 
 void MW::openUsbFolder()
