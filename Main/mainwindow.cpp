@@ -1912,10 +1912,9 @@ void MW::folderSelectionChange(QString dPath)
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
 
-    if (G::isLogger || G::isFlowLogger) {
-        qDebug() << "\nMW::folderSelectionChange";
-    }
-
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange");
     /*
     qDebug() << " ";
     qDebug() << "MW::folderSelectionChange"
@@ -2083,7 +2082,7 @@ void MW::folderSelectionChange(QString dPath)
 
     // start loading new folder
     qDebug().noquote()
-             << "MW::folderSelectionChange                "
+             << "            MW::folderSelectionChange                "
              << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
     buildFilters->reset();
     if (G::isLoadLinear) {
@@ -2394,10 +2393,10 @@ bool MW::stop(QString src)
 
 */
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src);
-    if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::stop"
-                 << "src =" << src
-                 << "G::currRootFolder =" << G::currRootFolder;
+//    if (G::isLogger || G::isFlowLogger)
+//        qDebug() << "MW::stop"
+//                 << "src =" << src
+//                 << "G::currRootFolder =" << G::currRootFolder;
 
     if (G::useProcessEvents) qApp->processEvents();
     G::stop = true;
@@ -2405,7 +2404,7 @@ bool MW::stop(QString src)
     dm->instance++;
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
-    bool isDebugStopping = false;
+    bool isDebugStopping = true;
     QElapsedTimer tStop;
     tStop.restart();
     G::t.restart();
@@ -2576,6 +2575,8 @@ bool MW::updateIconRange(QString src)
     if (G::isInitializing) return false;
 
     if (G::isLogger || G::isFlowLogger)
+        G::log("MW::updateIconRange", "src = " + src);
+    if (G::isLogger)
         qDebug() << "   MW::updateIconRange  src =" << src;
 
 //    qDebug() << "   MW::updateIconRange  src =" << src
@@ -2697,7 +2698,8 @@ void MW::loadConcurrentNewFolder()
 */
 {
     QString fun = "MW::loadConcurrentNewFolder";
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
+    if (G::isLogger)
         qDebug().noquote() << fun << G::currRootFolder;
 
     QString src = "MW::loadConcurrentNewFolder ";
@@ -2807,7 +2809,7 @@ void MW::loadConcurrentDone()
 */
     QSignalBlocker blocker(bookmarks);
 
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadConcurrentDone";
+    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentDone", dm->currentFolderPath);
     QString src = "MW::loadConcurrentDone ";
     int count = 0;
     /*
@@ -2820,7 +2822,7 @@ void MW::loadConcurrentDone()
                 //*/
 
     qDebug().noquote()
-             << "MW::loadConcurrentDone       Elapsed     "
+             << "            MW::loadConcurrentDone       Elapsed     "
              << QString::number(testTime.elapsed()).rightJustified((5)) << "ms"
              << dm->rowCount() << "images from"
              << dm->currentFolderPath << "\n"

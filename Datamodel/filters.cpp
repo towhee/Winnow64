@@ -301,8 +301,8 @@ void Filters::removeChildrenDynamicFilters()
     folder is selected.  This function removes any pre-existing children to
     prevent duplication and orphans.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
+    if (debugFilters)
         qDebug() << "Filters::removeChildrenDynamicFilters"
                     ;
     picks->takeChildren();
@@ -751,8 +751,8 @@ void Filters::loadingDataModel(bool isLoaded)
 
 void Filters::startBuildFilters(bool isReset)
 {
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
+    if (debugFilters)
         qDebug() << "Filters::startBuildFilters"
                     ;
     if (isReset) removeChildrenDynamicFilters();
@@ -797,8 +797,8 @@ void Filters::clearAll()
     Uncheck all the filter items but do not signal filter change.  This is called when a new
     folder is selected to reset the filter criteria.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::clearAll");
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::clearAll");
+    if (debugFilters)
         qDebug() << "Filters::clearAll"
                     ;
     QTreeWidgetItemIterator it(this);
@@ -1182,12 +1182,12 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
     The itemMap contains the total unfiltered count for the item.  This is set for both
     unfiltered and filtered totals since the DataModel has not been filtered at this time.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addCategoryItems", category->text(0));
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+//    if (G::isLogger || G::isFlowLogger)
+//        G::log("Filters::addCategoryItems", category->text(0));
+    if (debugFilters)
         qDebug() << "Filters::addCategoryItems"
                  << "category =" << category->text(0)
                     ;
-//    qDebug() << "Filters::addCategoryItems  Category =" << category->text(0);
 
     // add all remaining items in unique itemList to filter tree
     QTreeWidgetItem *item;

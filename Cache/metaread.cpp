@@ -72,7 +72,9 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
 
     Invoked by MW::loadCurrent.
 */
-    if (isDebug || G::isFlowLogger) {
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::setCurrentRow", "row = " + QString::number(row));
+    if (isDebug)
+    {
         qDebug() << "MetaRead::setCurrentRow"
                  << "row =" << row
                  << "fileSelectionChanged =" << fileSelectionChanged
@@ -287,9 +289,7 @@ void MetaRead::cleanupIcons()
 
 bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
-    if (isDebug) G::log("MetaRead::readMetadata");
-    if (G::isFlowLogger2) qDebug() << "MetaRead::readMetadata" << "row =" << sfIdx.row() << fPath;
-    if (G::isFlowLogger) G::log("MetaRead::readMetadata", "row = " + QString::number(sfIdx.row()));
+    if (G::isLogger) G::log("MetaRead::readMetadata", "row = " + QString::number(sfIdx.row()));
 
     if (isDebug)
     {
@@ -382,10 +382,9 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
-    if (isDebug) G::log("MetaRead::readIcon");
-    if (G::isFlowLogger2) qDebug() << "MetaRead::readIcon" << "row =" << sfIdx.row() << fPath;
-    if (G::isFlowLogger) G::log("MetaRead::readIcon", "row = " + QString::number(sfIdx.row()));
-    if (isDebug) {
+    if (G::isLogger) G::log("MetaRead::readIcon");
+    if (isDebug)
+    {
         qDebug().noquote() << "MetaRead::readIcon"
                            << "start  row =" << sfIdx.row()
                               ;
@@ -444,7 +443,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (G::isFlowLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));
+    if (G::isLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead::readRow"
@@ -515,7 +514,7 @@ void MetaRead::resetTrigger()
 void MetaRead::triggerFileSelectionChange()
 {
     // file selection change and start image caching thread after head start
-    if (G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
     //qDebug() << "MetaRead::triggerFileSelectionChange  targetRow =" << targetRow;
     QModelIndex sfIdx = dm->sf->index(targetRow, 0);
     emit fileSelectionChange(sfIdx);

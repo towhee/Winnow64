@@ -479,8 +479,9 @@ void IconView::updateVisible(QString src)
         By iterating back and forth the firstVisible and lastVisible is determined.
 */
     if (G::isInitializing || G::dmEmpty) return;
-
-    if (isDebug || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
+        G::log("IconView::updateVisible", objectName() + "src = " + src);
+    if (isDebug)
         qDebug() << "   IconView::updateVisible"
                  << objectName()
                  << "IconView::updateVisible src =" << src ;

@@ -30,7 +30,6 @@
 class ImageCache : public QThread
 {
     Q_OBJECT
-
 public:
     ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm);
     ~ImageCache() override;

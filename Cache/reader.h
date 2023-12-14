@@ -20,6 +20,7 @@ public:
                  int id,
                  DataModel *dm,
                  ImageCache *imageCache);
+    //~Reader() override;
 
     void read(const QModelIndex dmIdx,
                 const QString fPath,

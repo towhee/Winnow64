@@ -287,7 +287,6 @@ void ImageCache::setPriorities(int key)
     following the order (2 ahead, one behind) and assigned an increasing sort order key, which
     is used by setTargetRange to sort icd->cacheItemList by priority.
 */
-    if (G::isFlowLogger) G::log("ImageCache::setPriorities", "row = " + QString::number(key));
     if (debugCaching) {
         qDebug().noquote() << "ImageCache::setPriorities" << "  starting with row =" << key;  // row = key
     }
@@ -382,7 +381,7 @@ void ImageCache::setTargetRange()
     Any images in imCache that are no longer in the target range are removed.
 */
 {
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setTargetRange");
+    if (G::isLogger) G::log("ImageCache::setTargetRange");
     if (debugCaching)
         qDebug() << "ImageCache::setTargetRange";
 
@@ -534,7 +533,6 @@ bool ImageCache::nextToCache(int id)
       maxAttemptsToCacheImage.
 
 */
-    if (G::isFlowLogger) G::log("ImageCache::nextToCache", "Decoder = " + QString::number(id));
     if (debugCaching) qDebug() << "ImageCache::nextToCache";
     if (G::isLogger) G::log("ImageCache::nextToCache");
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
@@ -625,7 +623,7 @@ bool ImageCache::cacheUpToDate()
 /*
     Determine if all images in the target range are cached or being cached.
 */
-    if (G::isFlowLogger) G::log("ImageCache::cacheUpToDate", "Start");
+    if (G::isLogger) G::log("ImageCache::cacheUpToDate", "Start");
     isCacheUpToDate = true;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
         if (icd->cacheItemList[i].isVideo) continue;
@@ -651,7 +649,7 @@ bool ImageCache::cacheUpToDate()
                  << "targetLast =" << icd->cache.targetLast
             ;
     }
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger)
         G::log("ImageCache::cacheUpToDate", QVariant(isCacheUpToDate).toString());
     return isCacheUpToDate;
 }
@@ -1121,12 +1119,11 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     metadata information is added row by row, triggered by signal addToImageCache in
     MetaRead::readMetadata.
 */
-    //if (G::isFlowLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
+    if (G::isLogger) G::log("ImageCache::addCacheItemImageMetadata", "Row = " + QString::number(m.row));
     if (debugCaching)
         qDebug() << "ImageCache::addCacheItemImageMetadata"
                  << "row =" << m.row << m.fName
                     ;
-    if (G::isLogger) G::log("ImageCache::addCacheItemImageMetadata");
     if (instance != dm->instance) return;
     if (!G::useImageCache) return;  // rgh isolate image cache
     if (G::stop) {
@@ -1230,7 +1227,6 @@ void ImageCache::buildImageCacheList()
     It is built from dm->sf (sorted / filtered datamodel).
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
-    if (G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
     if (debugCaching)
         qDebug() << "ImageCache::buildImageCacheList";
     icd->cacheItemList.clear();
@@ -1302,7 +1298,6 @@ void ImageCache::initImageCache(int &cacheMaxMB,
                                 int &cacheWtAhead)
 {
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::initImageCache");
-    if (G::isFlowLogger) G::log("ImageCache::initImageCache");
     if (!G::useImageCache) return;   // rgh isolate image cache
 
     if (debugCaching) qDebug() << "ImageCache::initImageCache  dm->instance =" << dm->instance;
@@ -1373,7 +1368,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     The image cache is now ready to run by calling setCachePosition().
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
-    if (G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
     if (debugCaching)
     {
         qDebug() << "ImageCache::rebuildImageCacheParameters";
@@ -1532,7 +1526,6 @@ void ImageCache::decodeNextImage(int id)
     The decoders run in separate threads. When they complete the decoding they signal
     back to fillCache.
 */
-    if (G::isFlowLogger) G::log("ImageCache::decodeNextImage", "Decoder = " + QString::number(id));
     int row = icd->cache.toCacheKey;
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].threadId = id;
@@ -1563,8 +1556,6 @@ void ImageCache::cacheImage(int id, int cacheKey)
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
     Do not cache video files, but do show them as cached for the cache status display.
 */
-    if (G::isFlowLogger) G::log("ImageCache::decodeNextImage", "row = " + QString::number(cacheKey));
-    if (cacheKey == 22)
     if (debugCaching || G::isLogger)
     {
         QString k = QString::number(cacheKey).leftJustified((4));
@@ -1719,7 +1710,7 @@ void ImageCache::fillCache(int id)
         }
     }
 
-    if (G::isFlowLogger) G::log("ImageCache::fillCache  Launch Decoder",
+    if (G::isLogger) G::log("ImageCache::fillCache  Launch Decoder",
                "Row/cacheKey = " + QString::number(cacheKey) +
                " Decoder = " + QString::number(id) +
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
@@ -1884,11 +1875,6 @@ void ImageCache::fillCache(int id)
         if (icd->cache.isShowCacheStatus) {
             updateStatus("Update all rows", "ImageCache::fillCache after check cacheUpToDate");
         }
-        if (G::isFlowLogger)
-        {
-            G::log("ImageCache::fillCache  Caching done.",
-            "Row = " + QString::number(cacheKey) + " Decoder = " + QString::number(id));
-        }
         if (debugCaching)
         {
             qDebug() << "ImageCache::fillCache  Finished"
@@ -1900,7 +1886,7 @@ void ImageCache::fillCache(int id)
 
 void ImageCache::launchDecoders()
 {
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::launchDecoders");
+    if (G::isLogger) G::log("ImageCache::launchDecoders");
 
     if (!isRunning()) {
         start(QThread::LowestPriority);
@@ -1930,7 +1916,7 @@ void ImageCache::run()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::run");
+    if (G::isLogger) G::log("ImageCache::run");
     if (icd->cacheItemList.length() == 0) {
         //qDebug().noquote() << "ImageCache::run  icd->cacheItemList.length() == 0";
         return;

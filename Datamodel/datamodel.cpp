@@ -269,7 +269,7 @@ void DataModel::setModelProperties()
 void DataModel::clearDataModel()
 {
     lastFunction = "";
-    if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::clearDataModel";
+    if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
     // clear the model
     if (mLock) return;
     if (isDebug) qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
@@ -492,10 +492,10 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
       but on demand when the user selects the filter panel or a menu filter command.
 */
     lastFunction = "";
-//    if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
+    if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
 
     clearDataModel();
-    if (isDebug || G::isLogger || G::isFlowLogger)
+    if (isDebug)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
@@ -608,8 +608,8 @@ bool DataModel::addFileData()
     • ErrColumn
 */
     lastFunction = "";
-//    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
-    if (isDebug || G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
+    if (isDebug)
         qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
 //    QString logmsg = QString::number(fileInfoList.count()) + " images";
 //    qDebug() << "DataModel::addFileDataForRow" << logmsg;
