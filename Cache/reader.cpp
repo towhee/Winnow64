@@ -18,6 +18,9 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
+//    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
+//    connect(this, &Reader::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
+//    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
 
     isDebug = false;
 }
@@ -27,6 +30,7 @@ void Reader::read(const QModelIndex dmIdx,
                   const int instance,
                   const bool isReadIcon)
 {
+    if (isRunning()) stop();
     abort = false;
     this->dmIdx = dmIdx;
     this->fPath = fPath;
@@ -34,10 +38,10 @@ void Reader::read(const QModelIndex dmIdx,
     this->isReadIcon = isReadIcon;
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
     status = Status::Success;
-    pending = true;
+    pending = true;     // set to false when processed in MetaRead2::dispatch
     loadedIcon = false;
-    start();
-    if (isDebug) {
+    if (isDebug)
+    {
         qDebug().noquote()
             << "Reader::read            start               "
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
@@ -45,15 +49,22 @@ void Reader::read(const QModelIndex dmIdx,
             << "isRunning =" << isRunning()
             ;
     }
+    start();
 }
 
 void Reader::stop()
 {
     //qDebug() << "Reader::stop" << threadId << "isRunning =" << isRunning();
     if (isRunning()) {
+        //requestInterruption();
+        //wait();
+
         mutex.lock();
         abort = true;
+//        condition.wakeOne();
         mutex.unlock();
+//        wait();
+//        abort = false;
     }
 }
 
@@ -77,12 +88,19 @@ bool Reader::readMetadata()
     if (isMetaLoaded) {
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
+
         if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+//        if (!abort) dm->addMetadataForItem(metadata->m, "Reader::readMetadata");
+        if (abort) quit();
+
         if (!dm->isMetadataLoaded(dmRow)) {
             status = Status::MetaFailed;
             qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
         }
+
         if (!abort) emit addToImageCache(metadata->m, instance);
+        if (abort) quit();
+
     }
     else {
         status = Status::MetaFailed;
@@ -124,7 +142,12 @@ void Reader::readIcon()
         qWarning() << "WARNING" << "MetadataCache::loadIcon  row =" << dmRow << "Failed - null icon." << fPath;
         return;
     }
+
     if (!abort) emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
+    //if (!abort) dm->setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
+    if (abort) quit();
+
+
     if (!dm->iconLoaded(dmRow, instance)) {
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
@@ -139,13 +162,14 @@ void Reader::run()
 {
     if (!abort && !G::allMetadataLoaded) readMetadata();
     if (!abort && isReadIcon) readIcon();
-    if (isDebug) {
+    if (isDebug)
+    {
     qDebug().noquote()
              << "Reader::run             emiting done        "
              << "id =" << QString::number(threadId).leftJustified(2, ' ')
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-             //<< fPath
             ;
     }
     if (!abort) emit done(threadId);
+    if (abort) qDebug() << "Reader::run aborted";
 }

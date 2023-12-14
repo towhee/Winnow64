@@ -113,7 +113,8 @@ void BuildFilters::build(AfterAction newAction)
     tab or triggering a query from the filter menu.  This avoids building Filters until
     they are required.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::build";
+    if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
     {
         qDebug()
@@ -208,7 +209,8 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
 
 void BuildFilters::done()
 {
-    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::done";
+    if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::done", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
     {
         qDebug()
@@ -237,7 +239,7 @@ void BuildFilters::reset(bool collapse)
     Called when a new folder is being loaded. The Filters tree dynamic category items are
     all removed, and relevent variables are reset.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::reset";
+    if (G::isLogger || G::isFlowLogger) G::log("BuildFilters::reset");
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::reset"
@@ -672,7 +674,8 @@ void BuildFilters::time(QString msg)
 
 void BuildFilters::run()
 {
-    if (G::isLogger || G::isFlowLogger) {mutex.lock(); qDebug() << "BuildFilters::run"; mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::run", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
     {
         qDebug()

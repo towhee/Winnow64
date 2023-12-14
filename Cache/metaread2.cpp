@@ -119,7 +119,7 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
    // mutex.unlock();
 
     qDebug().noquote()
-             << "MetaRead2::setStartRow                   "
+             << "            MetaRead2::setStartRow                   "
              << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
     if (isDebug)
     {
@@ -167,14 +167,6 @@ bool MetaRead2::stop()
     abort = true;
     mutex.unlock();
 
-    // stop all readers
-    for (int id = 0; id < readerCount; ++id) {
-        if (isDebug) {
-            qDebug() << "MetaRead2::stop   stopping reader" << id;
-        }
-        reader[id]->stop();
-    }
-
     // stop MetaRead2
     if (isRunning()) {
         mutex.lock();
@@ -183,10 +175,20 @@ bool MetaRead2::stop()
         mutex.unlock();
         quit();
         wait();
+        //abort = false;
+    }
+
+    // stop all readers
+    for (int id = 0; id < readerCount; ++id) {
+        //if (isDebug)
+        {
+        qDebug() << "MetaRead2::stop   stopping reader" << id;
+        }
+        reader[id]->stop();
     }
 
     abort = false;
-    if (isDebug)
+    //if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
              << "isRunning =" << isRunning()
@@ -293,10 +295,10 @@ QString MetaRead2::diagnostics()
     rpt << "\n" << "redoCount:                " << QVariant(redoCount).toString();
     rpt << "\n" << "redoMax:                  " << QVariant(redoMax).toString();
 
+    // toRead
     rpt << "\n";
     rpt << "\n" << "toRead: " << toRead.length() << " items";
     for (int i = 0; i < toRead.length(); i++) {
-        //rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt << "\n";
         rpt << "Item at row ";
         rpt.setFieldWidth(5);
@@ -311,8 +313,30 @@ QString MetaRead2::diagnostics()
         rpt << "\n" << err.at(i);
     }
 
+    // readers
     rpt << "\n";
     rpt << "\n";
+    rpt << "Reader status:";
+    for (int id = 0; id < readerCount; id++) {
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(4);
+        rpt << "\n" << id;
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(11);
+        rpt << " isRunning";
+        rpt.setFieldWidth(7);
+        rpt << QVariant(reader[id]->isRunning()).toString();
+        rpt.setFieldWidth(8);
+        rpt << "pending";
+        rpt.setFieldWidth(7);
+        rpt << QVariant(reader[id]->pending).toString();
+        rpt << "status " << reader[id]->statusText.at(reader[id]->status);
+    }
+
+    // rows with icons
+    rpt << "\n";
+    rpt << "\n";
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
     rpt << "Icon rows in datamodel:";
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
@@ -322,6 +346,7 @@ QString MetaRead2::diagnostics()
     }
 
     rpt << "\n\n" ;
+
     return reportString;
 }
 
@@ -465,7 +490,7 @@ int MetaRead2::pending()
 
 void MetaRead2::redo()
 {
-    //if (isDebug)
+    if (isDebug)
     {
         qDebug() << "MetaRead2::redo                             "
                  << "count =" << redoCount << toRead;
@@ -602,6 +627,7 @@ void MetaRead2::dispatch(int id)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 //<< "startRow =" << QString::number(startRow).leftJustified(4, ' ')
                 << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+                << "isRunning =" << QVariant(d->isRunning()).toString().leftJustified(5)
                 << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
                 << "toRead =" << toRead.size()
                 << "rowCount =" << dm->rowCount()
@@ -610,7 +636,7 @@ void MetaRead2::dispatch(int id)
                 << "startRow =" << QString::number(startRow).leftJustified(4, ' ')
                 << "isReadIcon =" << QVariant(d->isReadIcon).toString().leftJustified(5)
                 << "iconLoaded =" << QVariant(dm->iconLoaded(dmRow, instance)).toString().leftJustified(5)
-                << "isRunning =" << QVariant(isRunning()).toString().leftJustified(5)
+                //<< "isRunning =" << QVariant(isRunning()).toString().leftJustified(5)
                 ;
         }
 
@@ -678,9 +704,12 @@ void MetaRead2::dispatch(int id)
                 if (!abort) cleanupIcons();
                 //if (isDebug)
                 qDebug().noquote()
-                         << "MetaRead2::dispatch     We Are Done.     "
-                         << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
-                         << dm->currentFolderPath << "toRead =" << toRead;
+                    << "            MetaRead2::dispatch     We Are Done.     "
+                    << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
+                    << dm->currentFolderPath
+                    << "toRead =" << toRead
+                    << "pending =" << pending()
+                    ;
                 if (!abort) emit done();
                 isDone = true;
                 quit();
@@ -743,7 +772,8 @@ void MetaRead2::dispatch(int id)
     // if done in both directions return
     if (aIsDone && bIsDone) {
         if (!quitAfterTimeoutInitiated) {
-            if (isDebug) {
+            if (isDebug)
+            {
                 qDebug().noquote()
                     << "MetaRead2::dispatch aIsDone && bIsDone   "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
@@ -751,7 +781,7 @@ void MetaRead2::dispatch(int id)
             isDispatching = false;
             // if pending readers not all processed in delay ms then quit anyway
             int delay = 1000;
-            qDebug() << "MetaRead2::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in" << delay << "ms";
+            //qDebug() << "MetaRead2::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in" << delay << "ms";
             QTimer::singleShot(delay, this, &MetaRead2::quitAfterTimeout);
         }
         return;
@@ -826,7 +856,7 @@ void MetaRead2::run()
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::run", src);
-    //if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote() << "MetaRead2::run                             "
                            << "startRow =" << startRow
