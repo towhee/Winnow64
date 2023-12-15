@@ -31,14 +31,13 @@ void MW::loupeDisplay()
     //req'd to set G::mode = "Loupe" when starting program to show videos (better way??)
     //if (G::isInitializing) return;
 
-    if (!G::isInitializing && (G::isLogger || G::isFlowLogger))
+    if (!G::isInitializing && G::isLogger)
         qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
                  << QVariant(wasThumbDockVisible).toString();
 
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", "MW::loupeDisplay");
-//    updateIconRange(-1, "MW::loupeDisplay");
 
     // save selection as tableView is hidden and not synced
     sel->save();

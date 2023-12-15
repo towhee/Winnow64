@@ -1912,9 +1912,6 @@ void MW::folderSelectionChange(QString dPath)
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
 
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
-    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange");
     /*
     qDebug() << " ";
     qDebug() << "MW::folderSelectionChange"
@@ -1932,6 +1929,10 @@ void MW::folderSelectionChange(QString dPath)
     if (dPath.length()) G::currRootFolder = dPath;
     else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
+
+    //if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 
@@ -2080,10 +2081,18 @@ void MW::folderSelectionChange(QString dPath)
 //    bookmarkBlocker.unblock();
 //    fsTreeBlocker.unblock();
 
+    if (G::isLogger || G::isFlowLogger)
+    {
+        QString msg = QString::number(testTime.elapsed()) + " ms " +
+                      QString::number(dm->rowCount()) + " images from " +
+                      dm->currentFolderPath;
+        G::log("MW::folderSelectionChange load dm file info", msg);
+        G::t.restart();
+    }
     // start loading new folder
-    qDebug().noquote()
-             << "            MW::folderSelectionChange                "
-             << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
+//    qDebug().noquote()
+//             << "            MW::folderSelectionChange                "
+//             << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
     buildFilters->reset();
     if (G::isLoadLinear) {
         // metadata and icons loaded in GUI thread
@@ -2123,7 +2132,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
     //*/
     if (G::isFlowLogger)
-        G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
+        G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger)
@@ -2392,11 +2401,14 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isFlowLogger) G::log("MW::stop", "src = " + src);
-//    if (G::isLogger || G::isFlowLogger)
-//        qDebug() << "MW::stop"
-//                 << "src =" << src
-//                 << "G::currRootFolder =" << G::currRootFolder;
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
+    /*
+    if (G::isLogger || G::isFlowLogger)
+        qDebug() << "MW::stop"
+                 << "src =" << src
+                 << "G::currRootFolder =" << G::currRootFolder;
+    //*/
 
     if (G::useProcessEvents) qApp->processEvents();
     G::stop = true;
@@ -2408,52 +2420,78 @@ bool MW::stop(QString src)
     QElapsedTimer tStop;
     tStop.restart();
     G::t.restart();
+
     videoView->stop();
-    if (isDebugStopping)
+    {
+    if (isDebugStopping && G::isFlowLogger)
+        G::log("MW::stop videoView", QString::number(G::t.elapsed()) + " ms");
+    if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop videoView:           "
                  << G::t.elapsed() << "ms";
+    G::t.restart();
+    }
     buildFilters->stop();
-    if (isDebugStopping)
+    {
+    if (isDebugStopping && G::isFlowLogger)
+        G::log("MW::stop buildFilters", QString::number(G::t.elapsed()) + " ms");
+    if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop buildFilters:        "
                  << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
+    G::t.restart();
+    }
 
     if (G::isLoadConcurrent) {
-        G::t.restart();
         bool metaReadThreadStopped = metaReadThread->stop();
-        if (isDebugStopping)
+        {
+        if (isDebugStopping && G::isFlowLogger)
+            G::log("MW::stop metaReadThread", QString::number(G::t.elapsed()) + " ms");
+        if (isDebugStopping  && !G::isFlowLogger)
             qDebug() << "MW::stop" << "Stop metaReadThread:      "
                      << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
                      << G::t.elapsed() << "ms";
+        }
+        G::t.restart();
     }
 
     if (G::isLoadLinear) {
-        G::t.restart();
         metadataCacheThread->stop();
-        if (isDebugStopping)
+        {
+        if (isDebugStopping  && !G::isFlowLogger)
             qDebug() << "MW::stop" << "Stop metadataCacheThread: "
                      << "isRunning =" << (metadataCacheThread->isRunning() ? "true " : "false")
                      << G::t.elapsed() << "ms";
+        G::t.restart();
+        }
     }
 
-    G::t.restart();
     imageCacheThread->stop();
-    if (isDebugStopping)
+    {
+    if (isDebugStopping && G::isFlowLogger)
+        G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
+    if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop imageCacheThread:    "
                  << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
 
     G::t.restart();
+    }
     frameDecoder->stop();
-    if (isDebugStopping)
+    {
+    if (isDebugStopping && G::isFlowLogger)
+        G::log("MW::stop frameDecoder", QString::number(G::t.elapsed()) + " ms");
+    if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop frameDecoder:        "
                  << "                 "
                  << G::t.elapsed() << "ms";
-
-    if (isDebugStopping)
+    // total stop time
+    if (isDebugStopping && G::isFlowLogger)
+        G::log("MW::stop total", QString::number(tStop.elapsed()) + " ms");
+    if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop total:               "
                  << "                 "
                  << tStop.elapsed() << "ms";
+    }
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted for\n" + oldFolder);
@@ -2466,8 +2504,11 @@ bool MW::stop(QString src)
     reset("MW::stop");
     G::stop = false;
 
-    if (isDebugStopping)
+    {
+    if (G::isFlowLogger) G::log("MW::stop DONE", "src = " + src);
+    if (isDebugStopping && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop DONE";
+    }
 
     return true;
 }
@@ -2809,7 +2850,14 @@ void MW::loadConcurrentDone()
 */
     QSignalBlocker blocker(bookmarks);
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentDone", dm->currentFolderPath);
+    // time series to load new folder
+    if (G::isLogger || G::isFlowLogger)
+    {
+        QString msg = QString::number(testTime.elapsed()) + " ms " +
+                      QString::number(dm->rowCount()) + " images from " +
+                      dm->currentFolderPath;
+        G::log("MW::loadConcurrentDone", msg);
+    }
     QString src = "MW::loadConcurrentDone ";
     int count = 0;
     /*
@@ -2820,13 +2868,14 @@ void MW::loadConcurrentDone()
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
-
+    /*
     qDebug().noquote()
              << "            MW::loadConcurrentDone       Elapsed     "
              << QString::number(testTime.elapsed()).rightJustified((5)) << "ms"
              << dm->rowCount() << "images from"
              << dm->currentFolderPath << "\n"
         ;
+    */
 
     if (reset(src + QString::number(count++))) return;
 

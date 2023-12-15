@@ -1484,7 +1484,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    //if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
                "row = " + QString::number(dm->currentSfRow));
     if (debugCaching)
