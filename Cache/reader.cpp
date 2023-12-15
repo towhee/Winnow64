@@ -18,9 +18,6 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
-//    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem/*, Qt::BlockingQueuedConnection*/);
-//    connect(this, &Reader::setIcon, dm, &DataModel::setIcon/*, Qt::BlockingQueuedConnection*/);
-//    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata/*, Qt::BlockingQueuedConnection*/);
 
     isDebug = false;
 }
@@ -53,18 +50,19 @@ void Reader::read(const QModelIndex dmIdx,
 }
 
 void Reader::stop()
+/*
+    Reader uses BlockingQueuedConnections to update the datamodel and imagecache.  This
+    conflicts with using wait() so I use an event loop instead.
+*/
 {
-    //qDebug() << "Reader::stop" << threadId << "isRunning =" << isRunning();
     if (isRunning()) {
-        //requestInterruption();
-        //wait();
-
         mutex.lock();
         abort = true;
-//        condition.wakeOne();
         mutex.unlock();
-//        wait();
-//        abort = false;
+
+        QEventLoop loop;
+        connect(this, &Reader::finished, &loop, &QEventLoop::quit);
+        loop.exec();
     }
 }
 
@@ -90,8 +88,7 @@ bool Reader::readMetadata()
         metadata->m.instance = instance;
 
         if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-//        if (!abort) dm->addMetadataForItem(metadata->m, "Reader::readMetadata");
-        if (abort) quit();
+        //if (abort) quit();
 
         if (!dm->isMetadataLoaded(dmRow)) {
             status = Status::MetaFailed;
@@ -99,7 +96,7 @@ bool Reader::readMetadata()
         }
 
         if (!abort) emit addToImageCache(metadata->m, instance);
-        if (abort) quit();
+        //if (abort) quit();
 
     }
     else {
@@ -144,8 +141,7 @@ void Reader::readIcon()
     }
 
     if (!abort) emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-    //if (!abort) dm->setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-    if (abort) quit();
+    //if (abort) quit();
 
 
     if (!dm->iconLoaded(dmRow, instance)) {
@@ -171,5 +167,5 @@ void Reader::run()
             ;
     }
     if (!abort) emit done(threadId);
-    if (abort) qDebug() << "Reader::run aborted";
+    //if (abort) qDebug() << "Reader::run aborted";
 }

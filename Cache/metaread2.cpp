@@ -118,9 +118,10 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
     isDone = false;
    // mutex.unlock();
 
-    qDebug().noquote()
-             << "            MetaRead2::setStartRow                   "
-             << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
+//    qDebug().noquote()
+//        << "            MetaRead2::setStartRow                   "
+//        << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
+
     if (isDebug)
     {
     qDebug() << "\nMetaRead2::setStartRow "
@@ -163,32 +164,25 @@ bool MetaRead2::stop()
     if (isDebug) {
         qDebug() << "MetaRead2::stop";
     }
-    mutex.lock();
-    abort = true;
-    mutex.unlock();
 
-    // stop MetaRead2
+    // stop MetaRead2 first so not calling readers
     if (isRunning()) {
         mutex.lock();
         abort = true;
         condition.wakeOne();
         mutex.unlock();
+        // quit() signals event loop in run() to terminate
         quit();
         wait();
-        //abort = false;
     }
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
-        //if (isDebug)
-        {
-        qDebug() << "MetaRead2::stop   stopping reader" << id;
-        }
         reader[id]->stop();
     }
 
     abort = false;
-    //if (isDebug)
+    if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
              << "isRunning =" << isRunning()
@@ -702,7 +696,8 @@ void MetaRead2::dispatch(int id)
             if (!isDone) {
                 if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead2::dispatch");
                 if (!abort) cleanupIcons();
-                //if (isDebug)
+                if (G::isLogger || G::isFlowLogger)  G::log("MW::dispath", "Done");
+                if (isDebug)
                 qDebug().noquote()
                     << "            MetaRead2::dispatch     We Are Done.     "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
@@ -830,7 +825,9 @@ void::MetaRead2::quitAfterTimeout()
             }
         }
 
-        //if (isDebug)
+        if (G::isLogger || G::isFlowLogger)  G::log("MW::quitAfterTimeout", "Done");
+
+        if (isDebug)
         {
             qDebug().noquote()
                  << "MetaRead2::quitAfterTimeout  We Are Done."
@@ -850,7 +847,7 @@ void MetaRead2::run()
     proceeds from the start row in an ahead/behind progression.
 
     Readers are dispatched and iterate in the dispatch function via signals.  As a result,
-    we loop after calling dispatchReaders() waiting for a finished signal.  The finished
+    we loop after calling dispatchReaders(), waiting for a finished signal.  The finished
     signal is sent from the QThread quit function, which is called from dispatch() when
     abort == true or all the datamodel has been loaded.
 */
