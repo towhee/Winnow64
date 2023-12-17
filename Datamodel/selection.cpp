@@ -122,6 +122,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
 
+    #ifdef METAREAD2
     if (ok) {
         G::popUp->reset();
     }
@@ -129,6 +130,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         G::popUp->showPopup("Selection is disabled");
         qApp->beep();
     }
+    #endif
 
     //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
     ///*
