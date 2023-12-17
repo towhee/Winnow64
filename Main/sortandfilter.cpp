@@ -450,7 +450,7 @@ void MW::sortChange(QString source)
     sel->select(idx);
 
     scrollToCurrentRow();
-    G::popUp->end();
+    G::popUp->reset();
 
 }
 
@@ -650,7 +650,7 @@ void MW::setRating()
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
     }
 
     filterChange(src);
@@ -829,7 +829,7 @@ void MW::setColorClass()
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
     }
 
 //    QItemSelection isel = dm->selectionModel->selection();

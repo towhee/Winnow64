@@ -43,7 +43,7 @@ public slots:
               bool isAutoSize = true,
               float opacity = 0.75,
               Qt::Alignment alignment = Qt::AlignHCenter);
-    void end();
+    void reset();
 
 private slots:
     void hide();

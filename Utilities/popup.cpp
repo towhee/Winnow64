@@ -48,7 +48,7 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     setLayout(&layout);
 
     hideTimer = new QTimer();
-    connect(hideTimer, &QTimer::timeout, this, &PopUp::end);
+    connect(hideTimer, &QTimer::timeout, this, &PopUp::reset);
 }
 
 void PopUp::paintEvent(QPaintEvent *event)
@@ -119,7 +119,7 @@ void PopUp::showPopup(const QString &text,
     if (popupDuration > 0) hideTimer->start(popupDuration);
 }
 
-void PopUp::end()
+void PopUp::reset()
 {
     okayToHide = true;
     openAndNoTimeout = false;

@@ -63,7 +63,20 @@ void Reader::stop()
         QEventLoop loop;
         connect(this, &Reader::finished, &loop, &QEventLoop::quit);
         loop.exec();
+        wait();
     }
+    //if (isDebug)
+    {
+        qDebug() << "Reader::stop"
+                 << threadId
+                 << "isRunning =" << isRunning()
+            ;
+    }
+}
+
+inline bool Reader::instanceOk()
+{
+    return instance == G::dmInstance;
 }
 
 bool Reader::readMetadata()
@@ -156,8 +169,8 @@ void Reader::readIcon()
 
 void Reader::run()
 {
-    if (!abort && !G::allMetadataLoaded) readMetadata();
-    if (!abort && isReadIcon) readIcon();
+    if (!abort && !G::allMetadataLoaded && instanceOk()) readMetadata();
+    if (!abort && isReadIcon && instanceOk()) readIcon();
     if (isDebug)
     {
     qDebug().noquote()
@@ -166,6 +179,6 @@ void Reader::run()
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
             ;
     }
-    if (!abort) emit done(threadId);
+    if (!abort && instanceOk()) emit done(threadId);
     //if (abort) qDebug() << "Reader::run aborted";
 }

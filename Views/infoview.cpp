@@ -235,7 +235,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     if (count > 1) count = 0;
     if (usedPopUp) {
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
     }
 }
 

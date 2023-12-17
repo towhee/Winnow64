@@ -398,8 +398,8 @@ void ImageCache::setTargetRange()
     float sumMB = 0;
     float prevMB = 0;
     priorityList.clear();  // crash
-    int items = icd->cacheItemList.length();
-    int memCap = icd->cache.maxMB;
+//    int items = icd->cacheItemList.length();
+//    int memCap = icd->cache.maxMB;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList.at(i).isVideo) {
             icd->cacheItemList[i].isTarget = false;
@@ -1190,9 +1190,14 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
 
+    // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
     float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
+    if (row < 20)
+        qDebug() << "ImageCache::addCacheItemImageMetadata"
+                 << "w =" << w
+                 << "h =" << h
+                 << "sizeMB =" << sizeMB;
     if (sizeMB > 0) {
-        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
         icd->cacheItemList[row].sizeMB = sizeMB;
         icd->cacheItemList[row].estSizeMB = false;
     }
@@ -1266,6 +1271,11 @@ void ImageCache::buildImageCacheList()
                 m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
                 m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
                 int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+                if (i < 20)
+                    qDebug() << "ImageCache::buildImageCacheList"
+                             << "w =" << w
+                             << "h =" << h
+                             << "sizeMB =" << sizeMB;
                 if (sizeMB) {
                     // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
                     icd->cacheItem.sizeMB = sizeMB;
@@ -1324,6 +1334,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     icd->cache.isForward = true;
     // the amount of memory to allocate to the cache
     icd->cache.maxMB = cacheMaxMB;
+    qDebug() << "ImageCache::initImageCache  icd->cache.maxMB =" << icd->cache.maxMB;
     icd->cache.minMB = cacheMinMB;
     icd->cache.isShowCacheStatus = isShowCacheStatus;
     icd->cache.wtAhead = cacheWtAhead;
@@ -1566,6 +1577,11 @@ void ImageCache::cacheImage(int id, int cacheKey)
                            //<< "dm->currentFilePath =" << dm->currentFilePath
             ;
     }
+
+    /* Safety check do not exceed max cache size.  The metadata determination of the image size
+       could be wrong, resulting in icd->cacheItem.sizeMB being wrong.  If this is the case, then
+       the target range will be wrong too.  */
+    if ((icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB) > icd->cache.maxMB) return;
 
     // cache the image
     if (decoder[id]->status != ImageDecoder::Status::Video) {

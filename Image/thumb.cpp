@@ -227,6 +227,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
     if (isDebug) qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
+        qWarning() << "WARNING" << "Thumb::loadThumb instance clash";
         return false;
     }
     this->instance = instance;
@@ -383,7 +384,7 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
         QFile::remove(thumbList.at(i));
     }
     G::popUp->setProgressVisible(false);
-    G::popUp->end();
+    G::popUp->reset();
 }
 
 /*

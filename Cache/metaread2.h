@@ -43,6 +43,7 @@ signals:
     void updateScroll();
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void centralMsg(QString message);
+    void okToSelect(bool ok);
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 

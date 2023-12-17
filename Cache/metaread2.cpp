@@ -181,8 +181,10 @@ bool MetaRead2::stop()
         reader[id]->stop();
     }
 
+    if (isRunning()) terminate();
+    wait();
     abort = false;
-    if (isDebug)
+    //if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
              << "isRunning =" << isRunning()
@@ -328,16 +330,16 @@ QString MetaRead2::diagnostics()
     }
 
     // rows with icons
-    rpt << "\n";
-    rpt << "\n";
-    rpt.setFieldAlignment(QTextStream::AlignLeft);
-    rpt << "Icon rows in datamodel:";
-    rpt.setFieldAlignment(QTextStream::AlignRight);
-    rpt.setFieldWidth(9);
-    for (int i = 0; i < dm->rowCount(); i++) {
-        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
-        rpt << "\n" << i;
-    }
+//    rpt << "\n";
+//    rpt << "\n";
+//    rpt.setFieldAlignment(QTextStream::AlignLeft);
+//    rpt << "Icon rows in datamodel:";
+//    rpt.setFieldAlignment(QTextStream::AlignRight);
+//    rpt.setFieldWidth(9);
+//    for (int i = 0; i < dm->rowCount(); i++) {
+//        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
+//        rpt << "\n" << i;
+//    }
 
     rpt << "\n\n" ;
 
@@ -576,6 +578,9 @@ void MetaRead2::dispatch(int id)
     if (d->fPath != "" && d->instance == dm->instance) {
         int dmRow = d->dmIdx.row();
 
+        metaReadCount++;
+        if (metaReadCount == 1) emit okToSelect(true);
+
         // deplete toRead
         for (int i = 0; i < toRead.size(); i++) {
             if (toRead.at(i) == dmRow) {
@@ -600,7 +605,11 @@ void MetaRead2::dispatch(int id)
 
         // trigger fileSelectionChange which starts ImageCache if this row = startRow
         if (fileSelectionChanged && dmRow == startRow) {
-            QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(d->dmIdx);  // rghZ
+            QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(d->dmIdx);  // rghZ already a filter??
+            if (G::isFlowLogger)
+            {
+                G::log("MetaRead2::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
+            }
             if (isDebug) // trigger fileSelectionChange
             {
             qDebug().noquote()
@@ -635,7 +644,6 @@ void MetaRead2::dispatch(int id)
         }
 
         // report progress
-        metaReadCount++;
         if (showProgressInStatusbar) {
             emit updateProgressInStatusbar(dmRow, dmRowCount);
             int progress = 1.0 * metaReadCount / dmRowCount * 100;
@@ -731,10 +739,6 @@ void MetaRead2::dispatch(int id)
                 ;
         }
     }
-
-//    aIsDone = (a == sfRowCount);
-//    bIsDone = (b == -1);
-
 
     // launch a reader
 
