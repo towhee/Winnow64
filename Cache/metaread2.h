@@ -82,6 +82,8 @@ private:
     bool abort;
     bool abortCleanup;
 
+    QEventLoop runloop;
+
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;     // decoder requires this
