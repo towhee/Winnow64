@@ -1,1 +1,339 @@
 
+
+=======================================  Metadata Diagnostics for Current Image  =======================================
+
+File name = /Users/roryhill/Pictures/_test6/2021-01-15_0001.arw
+
+--------------------------------------------------------  IFD0  --------------------------------------------------------
+IFDOffset  Hex: 8   Dec: 8   Tag count: 21   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0        10         A    254    FE        4         1           1   NewSubfileType
+  1        22        16    259   103        3         1           6   Compression
+  2        34        22    270   10E        2        32         266   ImageDescription
+  3        46        2E    271   10F        2         5         298   Make
+  4        58        3A    272   110        2         9         304   Model
+  5        70        46    274   112        3         1           1   Orientation
+  6        82        52    282   11A        5         1         314   XResolution
+  7        94        5E    283   11B        5         1         322   YResolution
+  8       106        6A    296   128        3         1           2   ResolutionUnit
+  9       118        76    305   131        2        15         330   Software
+ 10       130        82    306   132        2        20         346   ModifyDate
+ 11       142        8E    315   13B        2        10         366   Artist
+ 12       154        9A    330   14A        4         1      128900   SubIFDs
+ 13       166        A6    513   201        4         1      131234   ThumbnailOffset
+ 14       178        B2    514   202        4         1      314100   ThumbnailLength
+ 15       190        BE    531   213        3         1           2   YCbCrPositioning
+ 16       202        CA    700   2BC        1      4096         376   ApplicationNotes / XMP
+ 17       214        D6  33432  8298        2        15        4472   Copyright
+ 18       226        E2  34665  8769        4         1        4594   ExifIFDOffset
+ 19       238        EE  50341  C4A5        7       106        4488   PrintIM
+ 20       250        FA  50740  C634        1         4       49090   SR2Private / DNGPrivateData
+          262       106    nextIFDOffset = 43076 / A844 (+ start offset if JPG)
+
+------------------------------------------------------  SubIFD0  ------------------------------------------------------
+IFDOffset  Hex: 1F784   Dec: 128900   Tag count: 35   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0    128902     1F786    254    FE        4         1           0   NewSubfileType
+  1    128914     1F792    256   100        3         1        6048   ImageWidth
+  2    128926     1F79E    257   101        3         1        4024   ImageHeight
+  3    128938     1F7AA    258   102        3         1          12   BitsPerSample
+  4    128950     1F7B6    259   103        3         1       32767   Compression
+  5    128962     1F7C2    262   106        3         1       32803   PhotometricInterpretation
+  6    128974     1F7CE    277   115        3         1           1   SamplesPerPixel
+  7    128986     1F7DA    284   11C        3         1           1   PlanarConfiguration
+  8    128998     1F7E6    282   11A        5         1      129326   XResolution
+  9    129010     1F7F2    283   11B        5         1      129334   YResolution
+ 10    129022     1F7FE    296   128        3         1           2   ResolutionUnit
+ 11    129034     1F80A  33421  828D        3         2      131074   CFARepeatPatternDim
+ 12    129046     1F816  33422  828E        1         4    33620224   CFAPattern2
+ 13    129058     1F822  28672  7000        3         1           2   SonyRawFileType
+ 14    129070     1F82E  28673  7001        3         1           1   Undefined tag
+ 15    129082     1F83A  28688  7010        3         4      129342   Undefined tag
+ 16    129094     1F846  28689  7011        3         4      129350   Undefined tag
+ 17    129106     1F852  28704  7020        4         1           0   Undefined tag
+ 18    129118     1F85E    273   111        4         1      446464   StripOffsets
+ 19    129130     1F86A    278   116        3         1        4024   RowsPerStrip
+ 20    129142     1F876    279   117        4         1    24337152   StripByteCounts
+ 21    129154     1F882  28721  7031        3         1         257   Undefined tag
+ 22    129166     1F88E  28722  7032        8        17      129358   VignettingCorrParams
+ 23    129178     1F89A  28724  7034        3         1           1   Undefined tag
+ 24    129190     1F8A6  28725  7035        8        33      129392   ChromaticAberrationCorrParams
+ 25    129202     1F8B2  28726  7036        3         1           0   Undefined tag
+ 26    129214     1F8BE  28727  7037        8        17      129458   DistortionCorrParams
+ 27    129226     1F8CA  29456  7310        3         4      129492   Undefined tag
+ 28    129238     1F8D6  29459  7313        8         4      129500   Undefined tag
+ 29    129250     1F8E2  50717  C61D        3         1       16380   WhiteLevel
+ 30    129262     1F8EE  29462  7316        3         1         128   Undefined tag
+ 31    129274     1F8FA  50719  C61F        4         2      129508   DefaultCropOrigin
+ 32    129286     1F906  50720  C620        4         2      129516   DefaultCropSize
+ 33    129298     1F912  29895  74C7        4         2      129524   Undefined tag
+ 34    129310     1F91E  29896  74C8        4         2      129532   Undefined tag
+       129322     1F92A    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+--------------------------------------------------------  IFD1  --------------------------------------------------------
+IFDOffset  Hex: A844   Dec: 43076   Tag count: 16   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0     43078      A846    254    FE        4         1           1   NewSubfileType
+  1     43090      A852    259   103        3         1           6   Compression
+  2     43102      A85E    270   10E        2        32       43274   ImageDescription
+  3     43114      A86A    271   10F        2         5       43306   Make
+  4     43126      A876    272   110        2         9       43312   Model
+  5     43138      A882    274   112        3         1           1   Orientation
+  6     43150      A88E    282   11A        5         1       43322   XResolution
+  7     43162      A89A    283   11B        5         1       43330   YResolution
+  8     43174      A8A6    296   128        3         1           2   ResolutionUnit
+  9     43186      A8B2    305   131        2        15       43338   Software
+ 10     43198      A8BE    306   132        2        20       43354   ModifyDate
+ 11     43210      A8CA    315   13B        2        10       43374   Artist
+ 12     43222      A8D6    513   201        4         1       43400   ThumbnailOffset
+ 13     43234      A8E2    514   202        4         1        4324   ThumbnailLength
+ 14     43246      A8EE    531   213        3         1           2   YCbCrPositioning
+ 15     43258      A8FA  33432  8298        2        15       43384   Copyright
+        43270      A906    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+------------------------------------------------------  IFD Exif  ------------------------------------------------------
+IFDOffset  Hex: 11F2   Dec: 4594   Tag count: 44   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0      4596      11F4  33434  829A        5         1        5128   ExposureTime
+  1      4608      1200  33437  829D        5         1        5136   FNumber
+  2      4620      120C  34850  8822        3         1           1   ExposureProgram
+  3      4632      1218  34855  8827        3         1         800   ISO
+  4      4644      1224  34864  8830        3         1           2   SensitivityType
+  5      4656      1230  34866  8832        4         1         800   RecommendedExposureIndex
+  6      4668      123C  36864  9000        7         4   825438768   ExifVersion
+  7      4680      1248  36867  9003        2        20        5144   DateTimeOriginal
+  8      4692      1254  36868  9004        2        20        5164   CreateDate
+  9      4704      1260  36880  9010        2         7        5184   OffsetTime
+ 10      4716      126C  36881  9011        2         7        5192   OffsetTimeOriginal
+ 11      4728      1278  36882  9012        2         7        5200   OffsetTimeDigitized
+ 12      4740      1284  37121  9101        7         4      197121   ComponentsConfiguration
+ 13      4752      1290  37122  9102        5         1        5208   CompressedBitsPerPixel
+ 14      4764      129C  37379  9203       10         1        5216   BrightnessValue
+ 15      4776      12A8  37380  9204       10         1        5224   ExposureCompensation
+ 16      4788      12B4  37381  9205        5         1        5232   MaxApertureValue
+ 17      4800      12C0  37383  9207        3         1           5   MeteringMode
+ 18      4812      12CC  37384  9208        3         1           0   LightSource
+ 19      4824      12D8  37385  9209        3         1          16   Flash
+ 20      4836      12E4  37386  920A        5         1        5240   FocalLength
+ 21      4848      12F0  37500  927C        7     37654        5260   MakerNotes
+ 22      4860      12FC  37510  9286        7        64       42914   UserComment
+ 23      4872      1308  37520  9290        2         4     3356721   SubSecTime
+ 24      4884      1314  37521  9291        2         4     3356721   SubSecTimeOriginal
+ 25      4896      1320  37522  9292        2         4     3356721   SubSecTimeDigitized
+ 26      4908      132C  40960  A000        7         4   808464688   FlashpixVersion
+ 27      4920      1338  40961  A001        3         1           1   ColorSpace
+ 28      4932      1344  40962  A002        4         1        6000   ExifImageWidth
+ 29      4944      1350  40963  A003        4         1        4000   ExifImageHeight
+ 30      4956      135C  40965  A005        4         1       43046   InteropOffset
+ 31      4968      1368  41728  A300        7         1           3   FileSource
+ 32      4980      1374  41729  A301        7         1           1   SceneType
+ 33      4992      1380  41985  A401        3         1           0   CustomRendered
+ 34      5004      138C  41986  A402        3         1           1   ExposureMode
+ 35      5016      1398  41987  A403        3         1           0   WhiteBalance
+ 36      5028      13A4  41988  A404        5         1       42978   DigitalZoomRatio
+ 37      5040      13B0  41989  A405        3         1         306   FocalLengthIn35mmFormat
+ 38      5052      13BC  41990  A406        3         1           0   SceneCaptureType
+ 39      5064      13C8  41992  A408        3         1           1   Contrast
+ 40      5076      13D4  41993  A409        3         1           0   Saturation
+ 41      5088      13E0  41994  A40A        3         1           2   Sharpness
+ 42      5100      13EC  42034  A432        5         4       42986   LensInfo
+ 43      5112      13F8  42036  A434        2        28       43018   LensModel
+         5124      1404    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+------------------------------------------------  IFD Sony Maker Note  ------------------------------------------------
+IFDOffset  Hex: 148C   Dec: 5260   Tag count: 102   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0      5262      148E   4099  1003        4        16        6486   Panorama
+  1      5274      149A   8192  2000        7         1           0   Unknown
+  2      5286      14A6   8194  2002        4         1           0   Unknown
+  3      5298      14B2   8195  2003        2       256        6550   Unknown
+  4      5310      14BE   8196  2004        9         1  4294967295   Contrast
+  5      5322      14CA   8197  2005        9         1           0   Saturation
+  6      5334      14D6   8198  2006        9         1           2   Sharpness
+  7      5346      14E2   8199  2007        9         1           0   Brightness
+  8      5358      14EE   8200  2008        4         1           0   LongExposureNoiseReduction
+  9      5370      14FA   8201  2009        3         1           0   HighISONoiseReduction
+ 10      5382      1506   8202  200A        4         1           0   High Definition Range Mode
+ 11      5394      1512   8204  200C        4         3        6806   Undefined tag
+ 12      5406      151E   8205  200D        5         1        6818   Undefined tag
+ 13      5418      152A   8212  2014        9         2        6826   WBShiftAB_GM
+ 14      5430      1536   8230  2026        9         2        6834   Undefined tag
+ 15      5442      1542  12288  3000        7       390        6842   Shot Information IFD
+ 16      5454      154E  45088  B020        2        16        7232   Color Reproduction
+ 17      5466      155A  45089  B021        4         1           0   Color Temperature
+ 18      5478      1566  45090  B022        4         1           0   Color Compensation Filter
+ 19      5490      1572  45091  B023        4         1           0   Scene Mode
+ 20      5502      157E  45092  B024        4         1           0   Zone Matching
+ 21      5514      158A  45093  B025        4         1           0   Dynamic Range Optimizer
+ 22      5526      1596  45094  B026        4         1           1   Image stabilization
+ 23      5538      15A2  45097  B029        4         1           0   Color Mode
+ 24      5550      15AE  45099  B02B        4         2        7248   Full Image Size
+ 25      5562      15BA  45100  B02C        4         2        7256   Preview image size
+ 26      5574      15C6  45056  B000        1         4      328451   File Format
+ 27      5586      15D2    258   102        4         1           6   Image quality
+ 28      5598      15DE    260   104       10         1        7264   Flash exposure compensation in EV
+ 29      5610      15EA    274   112        4         1           0   White Balance Fine Tune Value
+ 30      5622      15F6    277   115        4         1           0   White balance
+ 31      5634      1602  45057  B001        3         1         376   Sony Model ID
+ 32      5646      160E   8203  200B        4         1           0   Multi Frame Noise Reduction
+ 33      5658      161A   8206  200E        3         1           0   Undefined tag
+ 34      5670      1626   8207  200F        4         1           0   Undefined tag
+ 35      5682      1632   8209  2011        4         1           2   Undefined tag
+ 36      5694      163E   8210  2012        4         1           2   Undefined tag
+ 37      5706      164A   8211  2013        4         1           0   Undefined tag
+ 38      5718      1656   8213  2015        3         1       65535   Undefined tag
+ 39      5730      1662  45095  B027        4         1       65535   Lens identifier
+ 40      5742      166E  45098  B02A        1         8        7272   Undefined tag
+ 41      5754      167A   8214  2016        3         1           0   Undefined tag
+ 42      5766      1686   8215  2017        4         1           0   Undefined tag
+ 43      5778      1692   8216  2018        4         1           0   Undefined tag
+ 44      5790      169E   8217  2019        4         1           0   Undefined tag
+ 45      5802      16AA   8218  201A        4         1           0   Undefined tag
+ 46      5814      16B6   8219  201B        1         1           3   Undefined tag
+ 47      5826      16C2   8220  201C        1         1           3   AFAreaModeSetting
+ 48      5838      16CE   8221  201D        3         2    17170812   Undefined tag
+ 49      5850      16DA   8222  201E        1         1           0   Undefined tag
+ 50      5862      16E6   8223  201F        1         4           0   Undefined tag
+ 51      5874      16F2   8224  2020        1        10        7280   Undefined tag
+ 52      5886      16FE   8225  2021        1         1           0   Undefined tag
+ 53      5898      170A   8234  202A        7        66        7290   Undefined tag
+ 54      5910      1716   8227  2023        4         1           0   Undefined tag
+ 55      5922      1722   8229  2025        1         4           0   Undefined tag
+ 56      5934      172E  20481  5001        5         1        7356   Undefined tag
+ 57      5946      173A  20482  5002        1         1         128   Undefined tag
+ 58      5958      1746   8231  2027        3         4        7364   Undefined tag
+ 59      5970      1752   8232  2028        3         2           0   Undefined tag
+ 60      5982      175E   8235  202B        1         1           0   Undefined tag
+ 61      5994      176A   8236  202C        3         1         256   Undefined tag
+ 62      6006      1776   8237  202D       10         1        7372   Undefined tag
+ 63      6018      1782   8233  2029        3         1           0   Undefined tag
+ 64      6030      178E   8238  202E        3         2       65537   Undefined tag
+ 65      6042      179A   8239  202F        7         6        7380   Undefined tag
+ 66      6054      17A6   8248  2038        1         1           0   Undefined tag
+ 67      6066      17B2  45121  B041        3         1          15   Exposure Mode
+ 68      6078      17BE  45125  B045        3         1           0   Undefined tag
+ 69      6090      17CA  45126  B046        3         1           0   Undefined tag
+ 70      6102      17D6  45128  B048        8         1           0   Flash Level
+ 71      6114      17E2  45129  B049        3         1           2   Release Mode
+ 72      6126      17EE  45130  B04A        3         1           3   Shot number in continuous burst mode
+ 73      6138      17FA  45131  B04B        3         1           2   Anti-Blur
+ 74      6150      1806  45132  B04C        5         1        7394   Undefined tag
+ 75      6162      1812  45133  B04D        3         1           0   Undefined tag
+ 76      6174      181E  45135  B04F        3         1           0   Dynamic Range Optimizer
+ 77      6186      182A  45136  B050        3         1  4294967295   Undefined tag
+ 78      6198      1836  45137  B051        3         1           0   Undefined tag
+ 79      6210      1842  45138  B052        3         1           0   Intelligent Auto
+ 80      6222      184E  45139  B053        3         1           0   Undefined tag
+ 81      6234      185A  45140  B054        3         1           0   White balance 2
+ 82      6246      1866  37888  9400        7       556        7402   Undefined tag
+ 83      6258      1872  37889  9401        7      4096        7958   Undefined tag
+ 84      6270      187E  37890  9402        7       400       12054   Undefined tag
+ 85      6282      188A  37891  9403        7      1000       12454   Undefined tag
+ 86      6294      1896  37892  9404        7       556       13454   Undefined tag
+ 87      6306      18A2  37893  9405        7      2300       14010   Undefined tag
+ 88      6318      18AE  37894  9406        7        64       16310   Undefined tag
+ 89      6330      18BA  37895  9407        7        64       16374   Undefined tag
+ 90      6342      18C6  37896  9408        7      1000       16438   Undefined tag
+ 91      6354      18D2  37897  9409        7      1344       17438   Undefined tag
+ 92      6366      18DE  37898  940A        7       552       18782   Undefined tag
+ 93      6378      18EA  37899  940B        7       400       19334   Undefined tag
+ 94      6390      18F6  37900  940C        7        64       19734   Undefined tag
+ 95      6402      1902  37901  940D        7      1260       19798   Undefined tag
+ 96      6414      190E  37902  940E        7     12288       21058   Undefined tag
+ 97      6426      191A  41216  A100        7        64       33346   Undefined tag
+ 98      6438      1926   8208  2010        7      6352       33410   Undefined tag
+ 99      6450      1932  37903  940F        7      2048       39762   Undefined tag
+100      6462      193E  36944  9050        7       944       41810   ShutterCount Subdir
+101      6474      194A  37906  9412        7       160       42754   Undefined tag
+         6486      1956    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+--------------------------------------------------  Winnow datamodel  --------------------------------------------------
+fPath ................... /Users/roryhill/Pictures/_test6/2021-01-15_0001.arw
+fName ................... 2021-01-15_0001.arw
+type .................... ARW
+video ................... false
+size .................... 24783616
+createdDate ............. 2021-01-15T09:14:20.000
+modifiedDate ............ 2023-12-16T08:40:24.000
+year .................... 2021
+day ..................... 2021-01-15
+
+pick .................... true
+ingested ................ false
+metadataLoaded .......... true
+isSearch ................ false
+
+width ................... 6048
+height .................. 4024
+widthPreview ............ 1616
+heightPreview ........... 1080
+dimensions .............. 6048x4024
+megapixels .............. 24.34000015258789
+loadMsecPerMp ........... 0
+aspectRatio ............. 1.5
+orientation ............. 1
+orientationOffset ....... 0
+rotationDegrees ......... 0
+
+make .................... SONY
+model ................... Sony ILCE-9M2
+exposureTime ............ 1/500 sec
+aperture ................ f/6.3
+ISO ..................... 800
+exposureCompensation .... 0.0 EV
+focalLength ............. 306mm
+lens .................... FE 200-600mm F5.6-6.3 G OSS
+shootingInfo ............ Sony ILCE-9M2  306mm  1/500 sec at f/6.3, ISO 800
+gpsCoord ................
+keywords ................
+duration ................
+cameraSN ................
+lensSN ..................
+shutterCount ............ 1071
+nikonLensCode ...........
+
+title ...................
+_title ..................
+creator ................. Rory Hill
+_creator ................
+copyright ............... 2020 Rory Hill
+_copyright ..............
+email ...................
+_email ..................
+url .....................
+_url ....................
+label ...................
+_label ..................
+rating ..................
+_rating .................
+
+offsetFull .............. 131234
+lengthFull .............. 314100
+offsetThumb ............. 43400
+lengthThumb ............. 4324
+samplesPerPixel ......... 0
+isBigEndian ............. false
+ifd0Offset .............. 0
+isXmp ................... true
+xmpSegmentOffset ........ 0
+xmpSegmentLength ........ 23723
+iccSegmentOffset ........ 0
+iccSegmentLength ........ 0
+iccSpace ................ 0
+
+searchStr ............... /users/roryhill/pictures/_test6/2021-01-15_0001.arw2023-12-16 08:40:24sonysony ilce-9m2fe 200-600mm f5.6-6.3 g osssony ilce-9m2  306mm  1/500 sec at f/6.3, iso 800rory hill2020 rory hill
+
+------------------------------------------------  Embedded XMP Extract  ------------------------------------------------
+<x:xmpmeta
+        xmlns:x = "adobe:ns:meta/"
+        x:xmptk = "">
+        <rdf:RDF
+                xmlns:rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description
+                        rdf:about = ""
+                        xmlns:xmp = "http://ns.adobe.com/xap/1.0/">
+                        <xmp:Rating>0</xmp:Rating>
+                </rdf:Description>
+        </rdf:RDF>
+</x:xmpmeta>
+

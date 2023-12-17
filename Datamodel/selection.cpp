@@ -44,6 +44,8 @@ Selection::Selection(QWidget *parent,
     this->gridView = gridView;
     this->tableView = tableView;
     sm = dm->selectionModel;
+    // disable selection until a datamodel has been loaded
+    ok = false;
     isDebug = false;
 }
 
@@ -119,6 +121,15 @@ void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
+
+    if (ok) {
+        G::popUp->reset();
+    }
+    else {
+        G::popUp->showPopup("Selection is disabled");
+        qApp->beep();
+    }
+
     //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
     ///*
     bool isNoModifier = modifiers & Qt::NoModifier;
@@ -161,6 +172,14 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
     setCurrentIndex(sfIdx);
 }
 
+void Selection::okToSelect(bool isOk)
+/*
+    It is not ok to select while the datamodel is being built.
+*/
+{
+    if (G::isLogger || isDebug) G::log("Selection::toggleSelect");
+    ok = isOk;
+}
 
 void Selection::toggleSelect(QModelIndex sfIdx)
 {

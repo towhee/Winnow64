@@ -626,12 +626,12 @@ void FSTree::dropEvent(QDropEvent *event)
     }
     if (G::stopCopyingFiles) {
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
         G::popUp->showPopup("Terminated " + operation + "operation", 2000);
     }
     else {
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;

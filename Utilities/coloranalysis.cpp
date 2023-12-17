@@ -48,7 +48,7 @@ void ColorAnalysis::process(QStringList &fPathList)
     }
 
     G::popUp->setProgressVisible(false);
-    G::popUp->end();
+    G::popUp->reset();
     if (abort) return;
 
     QTextBrowser *tb = new QTextBrowser;
@@ -69,7 +69,7 @@ void ColorAnalysis::abortHueReport()
     abort = true;
     G::isRunningColorAnalysis = false;
     G::popUp->setProgressVisible(false);
-    G::popUp->end();
+    G::popUp->reset();
     G::popUp->showPopup("Hue report has been aborted.");
     qDebug() << "ColorAnalysis::abortHueReport" << abort;
 //    qApp->processEvents();

@@ -14,7 +14,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     uturn           randomly change direction
 */
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
-    G::popUp->end();
+    G::popUp->reset();
 
     int msPerFolder = secPerFolder * 1000;
     //qDebug() << "MW::traverseFolderStressTest" << msPerImage << msPerFolder;
@@ -92,7 +92,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
 {
     if (G::isLogger) G::log("MW::bounceFoldersStressTest");
     qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
-    G::popUp->end();
+    G::popUp->reset();
 
     if (!msPerImage) {
         msPerImage = QInputDialog::getInt(this,
@@ -150,6 +150,9 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    bounceFoldersStressTest(100, 1);
+    return;
+
     setCursor(QCursor(Qt::BlankCursor));
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
@@ -159,7 +162,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    eraseUSBDriveImages();  // /Volumes/DEL1 128GB/DCIM
+    diagnosticsMetadataCache();
+    diagnosticsImageCache();
     return;
 
     prevDevicePixelRatio = -1;

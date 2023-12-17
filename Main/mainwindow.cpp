@@ -852,7 +852,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-        G::popUp->end();
+        G::popUp->reset();
         // end stress test
         if (isStressTest) isStressTest = false;
         // stop loading a new folder
@@ -927,7 +927,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         }
         else {  // slideshow is inactive
             if (isSlideShowHelpVisible) {
-                G::popUp->end();
+                G::popUp->reset();
                 isSlideShowHelpVisible = false;
             }
             if (event->key() == Qt::Key_Space) {
@@ -947,7 +947,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     }
 
     if (event->key() == Qt::Key_Space) {
-        G::popUp->end();
+        G::popUp->reset();
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -1041,7 +1041,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             if (obj->objectName() == "MWWindow") {
                 QKeyEvent *e = static_cast<QKeyEvent *>(event);
-                if (G::isLogger || G::isFlowLogger) {
+                if (G::isLogger) {
                     qDebug() << "MW::eventFilter" << e->type() << e
                              << "key =" << e->key()
                              << "modifier =" << e->modifiers()
@@ -1930,7 +1930,6 @@ void MW::folderSelectionChange(QString dPath)
     else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
 
-    //if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
 
@@ -2410,12 +2409,17 @@ bool MW::stop(QString src)
                  << "G::currRootFolder =" << G::currRootFolder;
     //*/
 
+    // ignore if already stopping
+    if (G::stop) return false;
+
     if (G::useProcessEvents) qApp->processEvents();
     G::stop = true;
+    sel->okToSelect(false);
     dm->abortLoadingModel = true;
     dm->instance++;
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
+
     bool isDebugStopping = true;
     QElapsedTimer tStop;
     tStop.restart();
@@ -2570,8 +2574,6 @@ bool MW::reset(QString src)
     setThreadRunStatusInactive();
 
     //setCentralMessage("Image loading has been aborted");
-
-//    G::stop = false;
     return true;
 }
 
@@ -2833,7 +2835,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     }
     if (G::stop || dm->abortLoadingModel) return;
     if (G::allMetadataLoaded && isFileSelectionChange) {
-        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex());
+        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
         if (G::allIconsLoaded) return;
     }
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
@@ -5183,7 +5185,7 @@ QString MW::embedThumbnails()
     buildFilters->updateCategory(BuildFilters::MissingThumbEdit, BuildFilters::NoAfterAction);
 
     G::popUp->setProgressVisible(false);
-    G::popUp->end();
+    G::popUp->reset();
 
     QString msg;
     QString br;

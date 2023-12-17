@@ -68,6 +68,7 @@ private:
     bool abort = false;
     bool readMetadata();
     void readIcon();
+    inline bool instanceOk();
     DataModel *dm;
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;

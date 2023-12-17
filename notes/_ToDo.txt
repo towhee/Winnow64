@@ -1,6 +1,10 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
+- Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
+  May need a global wait for abort like used in threads
+- ARW file preview size is wrong ?
 - MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
   until move to another monitor and back
 - Rethink image file parse failure reporting
@@ -97,6 +101,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImageCache running amok
 - Central widget going blank when rapidly scroll up/down in gridView
 - Multi pick and set color class clears selection
 - When insert missing thumbnails update missing thumb status in thumbs

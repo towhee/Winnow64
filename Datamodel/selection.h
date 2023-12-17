@@ -59,6 +59,7 @@ public slots:
     void prevPage(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void nextPick(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void prevPick(Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void okToSelect(bool isOk);
 
 private:
     DataModel *dm;
@@ -67,6 +68,8 @@ private:
     TableView *tableView;
     QModelIndex shiftAnchorIndex;
     QModelIndex shiftExtendIndex;
+
+    bool ok;
 
     bool isDebug;
 };

@@ -443,6 +443,8 @@ void MW::createMDCache()
     // update gridView in case scrolling has occurred
     connect(metaReadThread, &MetaRead2::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
+    // loading image metadata into datamodel, okay to select
+    connect(metaReadThread, &MetaRead2::okToSelect, sel, &Selection::okToSelect);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentDone);
     // Signal to change selection, fileSelectionChange, update ImageCache

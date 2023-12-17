@@ -103,7 +103,7 @@ void MW::prevRandomSlide()
                  "press <font color=\"white\"><b>Esc</b></font> to quit slideshow."
                  , "MW::prevRandomSlide");
     // hide popup if showing
-    G::popUp->end();
+    G::popUp->reset();
 }
 
 void MW::slideShowResetDelay()

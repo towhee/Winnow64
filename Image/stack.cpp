@@ -20,7 +20,7 @@ void Stack::stop()
     abort = true;
     G::isRunningStackOperation = false;
     G::popUp->setProgressVisible(false);
-    G::popUp->end();
+    G::popUp->reset();
     G::popUp->showPopup("Stack operation has been aborted.");
     qDebug() << "Stack::stop" << abort;
 //    qApp->processEvents();
@@ -100,7 +100,7 @@ QString Stack::mean()
                               "<p>Press <font color=\"red\"><b>Spacebar</b></font> to continue."
                               ;
                 G::popUp->setProgressVisible(false);
-                G::popUp->end();
+                G::popUp->reset();
                  G::popUp->showPopup(txt, 0, true, 1);
                 return "";
             }
@@ -186,7 +186,7 @@ QString Stack::mean()
         qDebug() << "Stack::mean" << "et exit code =" << ret;
 
         G::popUp->setProgressVisible(false);
-        G::popUp->end();
+        G::popUp->reset();
     }
 
     delete pix;
