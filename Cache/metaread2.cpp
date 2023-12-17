@@ -159,6 +159,19 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
 }
 
 bool MetaRead2::stop()
+/*
+    MetaRead2::run dispatches all the readers and would finish immediately.  To prevent
+    that, a QEventLoop called runloop runs inside MetaRead2::run, and it waits for the
+    threads finished signal (emitted after quit() is invoked).
+
+    To stop the MetaRead2 thread:
+    - set abort = true
+    - quit()
+    - check thread finished
+    - check runloop finished
+    - if not, force termination
+    - reset abort = false
+*/
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
     if (isDebug) {
@@ -174,6 +187,7 @@ bool MetaRead2::stop()
         // quit() signals event loop in run() to terminate
         quit();
         wait();
+        if (runloop.isRunning()) runloop.quit();
     }
 
     // stop all readers
@@ -181,9 +195,11 @@ bool MetaRead2::stop()
         reader[id]->stop();
     }
 
+    // failsafe terminate in case abort has failed
     if (isRunning()) terminate();
     wait();
     abort = false;
+
     //if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
@@ -869,8 +885,7 @@ void MetaRead2::run()
 
     isDone = false;
 
-    QEventLoop loop;
-    connect(this, &MetaRead2::finished, &loop, &QEventLoop::quit);
+    connect(this, &MetaRead2::finished, &runloop, &QEventLoop::quit);
     dispatchReaders();
-    loop.exec();
+    runloop.exec();
 }
