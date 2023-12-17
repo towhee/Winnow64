@@ -15,7 +15,12 @@
 #include "Utilities/utilities.h"
 
 // METAREAD or METAREAD2: one or the other:
+#ifdef Q_OS_WIN
+#define METAREAD
+#endif
+#ifdef Q_OS_MAC
 #define METAREAD2
+#endif
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
