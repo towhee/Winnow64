@@ -2862,7 +2862,7 @@ void MW::loadConcurrentDone()
     }
     QString src = "MW::loadConcurrentDone ";
     int count = 0;
-    /*
+    ///*
     qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
