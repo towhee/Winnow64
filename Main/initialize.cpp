@@ -1555,6 +1555,7 @@ void MW::createDocks()
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
+    MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);

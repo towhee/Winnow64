@@ -52,7 +52,7 @@ void Reader::read(const QModelIndex dmIdx,
 void Reader::stop()
 /*
     Reader uses BlockingQueuedConnections to update the datamodel and imagecache.  This
-    conflicts with using wait() so I use an event loop instead.
+    conflicts with using wait() - use an event loop instead.
 */
 {
     if (isRunning()) {
@@ -65,7 +65,7 @@ void Reader::stop()
         loop.exec();
         wait();
     }
-    //if (isDebug)
+    if (isDebug)
     {
         qDebug() << "Reader::stop"
                  << threadId

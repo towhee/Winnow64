@@ -150,6 +150,7 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+
     bounceFoldersStressTest(100, 1);
     return;
 
@@ -162,6 +163,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    metaReadThread->stop();
+    diagnosticsMetadataCache();
+    return;
+
     diagnosticsMetadataCache();
     diagnosticsImageCache();
     return;

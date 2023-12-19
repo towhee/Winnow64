@@ -101,6 +101,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Right side ocked tabs showing at bottom instead of top
 - ImageCache running amok
 - Central widget going blank when rapidly scroll up/down in gridView
 - Multi pick and set color class clears selection

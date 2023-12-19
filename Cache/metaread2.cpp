@@ -174,7 +174,8 @@ bool MetaRead2::stop()
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
-    if (isDebug) {
+    if (isDebug)
+    {
         qDebug() << "MetaRead2::stop";
     }
 
@@ -187,7 +188,7 @@ bool MetaRead2::stop()
         // quit() signals event loop in run() to terminate
         quit();
         wait();
-        if (runloop.isRunning()) runloop.quit();
+        //if (runloop.isRunning()) runloop.quit();
     }
 
     // stop all readers
@@ -200,7 +201,7 @@ bool MetaRead2::stop()
     wait();
     abort = false;
 
-    //if (isDebug)
+    if (isDebug)
     {
     qDebug() << "MetaRead2::stop"
              << "isRunning =" << isRunning()
@@ -216,11 +217,11 @@ void MetaRead2::initialize()
 {
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MetaRead2::initialize");
+        G::log("MetaRead2::initialize", dm->currentFolderPath);
     }
     if (isDebug)
     {
-        qDebug() << "\nMetaRead2::dispatch     initialize          "
+        qDebug() << "\nMetaRead2::initialize     initialize      "
                  << dm->currentFolderPath;
     }
     abort = false;
@@ -302,6 +303,7 @@ QString MetaRead2::diagnostics()
     rpt << "\n";
     rpt << "\n" << "abort:                    " << QVariant(abort).toString();
     rpt << "\n" << "isRunning:                " << QVariant(isRunning()).toString();
+    rpt << "\n" << "isRunloop:                " << QVariant(runloop.isRunning()).toString();
     rpt << "\n" << "isDispatching:            " << QVariant(isDispatching).toString();
     rpt << "\n";
     rpt << "\n" << "redoCount:                " << QVariant(redoCount).toString();
@@ -384,7 +386,8 @@ void MetaRead2::cleanupIcons()
     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
     the current datamodel row dm->currentSfRow.
 */
-    if (isDebug || G::isLogger) G::log("MetaRead2::cleanupIcons");
+    if (G::isLogger) G::log("MetaRead2::cleanupIcons");
+    if (isDebug) qDebug() << "MetaRead2::cleanupIcons";
 
     // check if datamodel size is less than assigned icon cache chunk size
     if (dm->iconChunkSize >= sfRowCount) {
@@ -568,8 +571,11 @@ void MetaRead2::dispatch(int id)
     {
         QString  row;
         d->fPath == "" ? row = "-1" : row = QString::number(d->dmIdx.row());
+        QString s;
+        if (d->fPath == "") s = "MetaRead2::dispatch     reader starting     ";
+        else s = "MetaRead2::dispatch     reader returning    ";
         qDebug().noquote()
-            << "MetaRead2::dispatch     current top         "
+            << "MetaRead2::dispatch     reader              "
             << "id =" << QString::number(id).leftJustified(2, ' ')
             << "row =" << row.leftJustified(4, ' ')
             //<< "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
@@ -638,11 +644,11 @@ void MetaRead2::dispatch(int id)
         }
 
         if (isDebug)  // returning reader, row has been processed by reader
-        if (toRead.size() < 30) // only last 30 rows in datamodel
+        //if (toRead.size() < 10) // only last 10 rows in datamodel
         {
             bool allLoaded = (dm->isAllMetadataLoaded() && dm->allIconsLoaded());
             qDebug().noquote()
-                << "MetaRead2::dispatch     processed:          "
+                << "MetaRead2::dispatch     processed           "
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 //<< "startRow =" << QString::number(startRow).leftJustified(4, ' ')
                 << "row =" << QString::number(dmRow).leftJustified(4, ' ')
@@ -683,7 +689,7 @@ void MetaRead2::dispatch(int id)
             if (isDebug)  // dispatch for all rows completed
             {
                 qDebug().noquote()
-                    << "MetaRead2::dispatch     aIsDone && bIsDone  "
+                    << "MetaRead2::dispatch     all dispatch done   "
                     << "id =" << QString::number(id).leftJustified(2, ' ')
                     << "row =" << QString::number(reader[id]->dmIdx.row()).leftJustified(4, ' ')
                     << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
@@ -723,7 +729,7 @@ void MetaRead2::dispatch(int id)
                 if (G::isLogger || G::isFlowLogger)  G::log("MW::dispath", "Done");
                 if (isDebug)
                 qDebug().noquote()
-                    << "            MetaRead2::dispatch     We Are Done.     "
+                    << "MetaRead2::dispatch     We Are Done.     "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
                     << dm->currentFolderPath
                     << "toRead =" << toRead
@@ -745,7 +751,7 @@ void MetaRead2::dispatch(int id)
         a = startRow;
         b = startRow - 1;
         isNewStartRowWhileStillReading = false;
-        //if (isDebug)
+        if (isDebug)
         {
             qDebug().noquote()
                 << "MetaRead2::dispatch isNewStartRowWhileStillReading"
@@ -767,7 +773,7 @@ void MetaRead2::dispatch(int id)
         if (isDebug)
         {
             qDebug().noquote()
-                << "MetaRead2::dispatch     read current item   "
+                << "MetaRead2::dispatch     launch reader       "
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 << "row =" << QString::number(nextRow).leftJustified(4, ' ')
                 << "isReadIcon =" << QVariant(isReadIcon).toString().leftJustified(5, ' ')
@@ -790,13 +796,18 @@ void MetaRead2::dispatch(int id)
             if (isDebug)
             {
                 qDebug().noquote()
-                    << "MetaRead2::dispatch aIsDone && bIsDone   "
+                    << "MetaRead2::dispatch     aIsDone && bIsDone "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
             quitAfterTimeoutInitiated = true;
             isDispatching = false;
             // if pending readers not all processed in delay ms then quit anyway
             int delay = 1000;
-            //qDebug() << "MetaRead2::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in" << delay << "ms";
+            if (isDebug)
+            {
+                qDebug()
+                    << "MetaRead2::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in"
+                    << delay << "ms";
+            }
             QTimer::singleShot(delay, this, &MetaRead2::quitAfterTimeout);
         }
         return;
@@ -831,7 +842,7 @@ void MetaRead2::dispatchReaders()
 void::MetaRead2::quitAfterTimeout()
 {
     if (!isDone) {
-        if ((!pending()) && (redoCount < redoMax)) {
+        if ((pending()) && (redoCount < redoMax)) {
             if (isDebug) {
                 qDebug()
                     << "MetaRead2::dispatch     Redo                "
@@ -885,7 +896,8 @@ void MetaRead2::run()
 
     isDone = false;
 
-    connect(this, &MetaRead2::finished, &runloop, &QEventLoop::quit);
+    //connect(this, &MetaRead2::finished, &runloop, &QEventLoop::quit);
     dispatchReaders();
-    runloop.exec();
+    //wait();
+    //runloop.exec();
 }
