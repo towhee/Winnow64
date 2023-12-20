@@ -3603,6 +3603,9 @@ void MW::setCacheMethod(QString method)
         #ifdef METAREAD2
         G::metaReadInUse = "Concurrent2 multi-threaded metadata and thumbnail loading";
         #endif
+        #ifdef METAREAD3
+        G::metaReadInUse = "Concurrent2 multi-threaded metadata and thumbnail loading";
+        #endif
         QString mtrl = "Turns red when metadata / thumbnail caching in progress\n" +
                 G::metaReadInUse;
         metadataThreadRunningLabel->setToolTip(mtrl);

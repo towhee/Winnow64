@@ -44,6 +44,7 @@
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
 #include "Cache/metaread2.h"
+//#include "Cache/metaread3.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
@@ -1046,6 +1047,9 @@ private:
 #endif
 #ifdef METAREAD2
     MetaRead2 *metaReadThread;
+#endif
+#ifdef METAREAD3
+    MetaRead3 *metaReadThread;
 #endif
     ImageCache *imageCacheThread;
     FrameDecoder *frameDecoder;

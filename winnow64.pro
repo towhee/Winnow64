@@ -49,6 +49,8 @@ QT += multimediawidgets
 QT += concurrent
 
 HEADERS += Cache/cachedata.h
+#    Cache/metaread3.h \
+#    Cache/reader3.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -176,6 +178,8 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp
+#    Cache/metaread3.cpp \
+#    Cache/reader3.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp

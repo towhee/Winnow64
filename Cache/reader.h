@@ -39,6 +39,7 @@ public:
     bool loadedIcon = false;
 
     enum Status {
+        Ready,
         Success,
         Aborted,
         MetaFailed,
@@ -46,6 +47,7 @@ public:
         MetaIconFailed
     } status;
     QStringList statusText {
+        "Ready",
         "Success",
         "Aborted",
         "MetaFailed",
