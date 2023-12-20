@@ -1,7 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Raw/Jpg working?
+- Raw/Jpg not working in metaread2
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads

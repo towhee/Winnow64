@@ -828,7 +828,9 @@ void MetaRead2::dispatch(int id)
 
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
-        QModelIndex dmIdx = dm->index(nextRow, 0);
+        QModelIndex sfIdx = dm->sf->index(nextRow, 0);
+        QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
+        //QModelIndex dmIdx = dm->index(nextRow, 0);
         QString fPath = dmIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
         bool isReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
