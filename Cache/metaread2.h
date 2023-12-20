@@ -92,7 +92,7 @@ private:
     QIcon nullIcon;
     bool fileSelectionChanged;
     int instance;                   // new instance for each folder to detect conflict
-    Reader *d;                      // terse ptr for current decoder
+    Reader *r;                      // terse ptr for current decoder
     int sfRowCount;
     int dmRowCount;
     int metaReadCount;
