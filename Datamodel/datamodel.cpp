@@ -429,7 +429,7 @@ void DataModel::find(QString text)
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::find");
     if (isDebug) qDebug() << "DataModel::find" << "instance =" << instance << text;
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     for (int row = 0; row < sf->rowCount(); ++row) {
         QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
         qDebug() << "DataModel::find" << searchableText;
@@ -438,7 +438,6 @@ void DataModel::find(QString text)
             setData(idx, "true");
         }
     }
-    mutex.unlock();
 }
 
 void DataModel::abortLoad()
@@ -656,9 +655,9 @@ bool DataModel::addFileData()
             prevRawIdx = index(row, 0);
         }
 
+        QMutexLocker locker(&mutex);
         // if row/jpg pair
         if (suffix == "jpg" && baseName == prevRawBaseName) {
-            mutex.lock();
             // hide raw version
             setData(prevRawIdx, true, G::DupHideRawRole);
             // set raw version other index to jpg pair
@@ -673,7 +672,6 @@ bool DataModel::addFileData()
                 setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
             else
                 setData(index(row, G::TypeColumn), "JPG");
-            mutex.unlock();
         }
 
         // Load folder progress
@@ -721,7 +719,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // string to hold aggregated text for searching
     QString search = fPath;
 
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
     QString tip = fPath;  //fileInfo.absoluteFilePath();
     if (showThumbNailSymbolHelp) tip += thumbnailHelp;
@@ -763,7 +761,6 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
     setData(index(row, G::SearchTextColumn), search);
     setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
-    mutex.unlock();
 }
 
 bool DataModel::updateFileData(QFileInfo fileInfo)
@@ -775,7 +772,8 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     if (!fPathRow.contains(fPath)) return false;
     int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return false;
-    mutex.lock();
+
+    QMutexLocker locker(&mutex);
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
@@ -786,7 +784,6 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     setData(index(row, G::CreatedColumn), s);
     qDebug() << "DataModel::updateFileData" << s;
 
-    mutex.unlock();
     return true;
 }
 
@@ -815,7 +812,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
                           << "row =" << row
                           << currentFolderPath;
 
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     metadata->m.row = row;  // rgh is this req'd
 
     // file info (calling Metadata not required)
@@ -854,9 +851,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::imMetadata")) {
             m.metadataLoaded = true;
-            mutex.unlock();
             addMetadataForItem(metadata->m, "DataModel::imMetadata");
-            mutex.lock();
             success = true;
         }
     }
@@ -867,7 +862,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "DataModel::imMetadata" << "Metadata not loaded to model for" << fPath;
         }
-        mutex.unlock();
+        //mutex.unlock();
         return m;
     }
 
@@ -947,7 +942,6 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     if (updateInMetadata) metadata->m = m;
 
-    mutex.unlock();
     return m;
 }
 
@@ -1039,8 +1033,6 @@ bool DataModel::readMetadataForItem(int row, int instance)
     }
     if (G::stop) return false;
 
-//    mutex.lock();
-
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
     // load metadata
@@ -1082,7 +1074,6 @@ bool DataModel::readMetadataForItem(int row, int instance)
             return false;
         }
     }
-//    mutex.unlock();
     return true;
 }
 
@@ -1420,7 +1411,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                     ;
         return;
     }
-//    QModelIndex cIdx = index(dmIdx.row(),dmIdx.column());
+
     /*
     qDebug() << "DataModel::setValue"
 //             << "Instance =" << instance
@@ -1435,7 +1426,6 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
              << "align =" << align
              << currentFolderPath;
     //*/
-    mutex.lock();
     /*
     qDebug() << "DataModel::setValue"
              << "dmIdx.isValid =" << dmIdx.isValid()
@@ -1448,9 +1438,9 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
         qWarning() << "WARNING" << "DataModel::setValue" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
+    QMutexLocker locker(&mutex);
     setData(dmIdx, value, role);
     setData(dmIdx, align, Qt::TextAlignmentRole);
-    mutex.unlock();
 }
 
 void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
@@ -1485,10 +1475,9 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
         qWarning() << "WARNING" << "DataModel::setValueSf" << "sfIdx.isValid() =" << sfIdx.isValid() << sfIdx;
         return;
     }
-    mutex.lock();
-    sf->setData(sfIdx, value, role);
+    QMutexLocker locker(&mutex);
+    //sf->setData(sfIdx, value, role);
     setData(sfIdx, align, Qt::TextAlignmentRole);
-    mutex.unlock();
 }
 
 void DataModel::setCurrent(QModelIndex sfIdx, int instance)
@@ -1503,13 +1492,12 @@ void DataModel::setCurrent(QModelIndex sfIdx, int instance)
     }
 
     // update current index parameters
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     currentSfIdx = sfIdx;
     currentSfRow = sfIdx.row();
     currentDmIdx = sf->mapToSource(currentSfIdx);
     currentDmRow = currentDmIdx.row();
     currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
-    mutex.unlock();
     if (isDebug)
     {
         qDebug() << "DataModel::setCurrent"
@@ -1551,9 +1539,8 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
         qWarning() << "WARNING" << "DataModel::setValuePath" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     setData(dmIdx, value, role);
-    mutex.unlock();
 }
 
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
@@ -1598,7 +1585,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     int row = dmIdx.row();
     //qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
 
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     if (modelDuration == "") {
         duration /= 1000;
@@ -1621,7 +1608,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
             //setIconMax(pm);
         }
     }
-    mutex.unlock();
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
@@ -1775,7 +1761,7 @@ void DataModel::clearAllIcons()
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance << currentFolderPath;
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     QStandardItem *item;
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::clearAllIcons  itemFromIndex  row =" << row;
@@ -1784,7 +1770,6 @@ void DataModel::clearAllIcons()
             item->setIcon(QIcon());
         }
     }
-    mutex.unlock();
 }
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)
@@ -1857,13 +1842,11 @@ int DataModel::proxyRowFromPath(QString fPath)
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
     int dmRow;
     int sfRow = -1;
-    //mutex.lock();
     if (fPathRow.contains(fPath)) {
         dmRow = fPathRow[fPath];
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
         if (sfIdx.isValid()) sfRow = sfIdx.row();
     }
-    //mutex.unlock();
     return sfRow;
 }
 
@@ -1949,7 +1932,7 @@ void DataModel::searchStringChange(QString searchString)
                   << "searchString =" << searchString
                   << currentFolderPath;
     // update datamodel search string match
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row)  {
         // no search string
         if (filters->ignoreSearchStrings.contains(searchString)) {
@@ -1962,7 +1945,6 @@ void DataModel::searchStringChange(QString searchString)
             setData(index(row, G::SearchColumn), searchableText.contains(searchString));
         }
     }
-    mutex.unlock();
 }
 
 void DataModel::rebuildTypeFilter()
@@ -2251,11 +2233,10 @@ void DataModel::clearPicks()
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::clearPicks");
     if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance << currentFolderPath;
-    mutex.lock();
+    QMutexLocker locker(&mutex);
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
-    mutex.unlock();
 }
 
 void DataModel::setThumbnailLegend()
