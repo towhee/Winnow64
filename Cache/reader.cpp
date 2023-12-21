@@ -19,7 +19,7 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
 
-    isDebug = false;
+    isDebug = true;
 }
 
 void Reader::read(const QModelIndex dmIdx,
@@ -55,19 +55,32 @@ void Reader::stop()
     conflicts with using wait() - use an event loop instead.
 */
 {
+    if (isDebug)
+    {
+        qDebug() << "Reader::stop commencing"
+                 << threadId
+                 << "isRunning =" << isRunning()
+            ;
+    }
+
     if (isRunning()) {
         mutex.lock();
         abort = true;
         mutex.unlock();
-
+        // BlockingQueuedConnections conflicts with wait()
         QEventLoop loop;
         connect(this, &Reader::finished, &loop, &QEventLoop::quit);
         loop.exec();
-        wait();
+        //wait();
     }
+
+    status = Status::Ready;
+    pending = false;
+    fPath = "";
+
     if (isDebug)
     {
-        qDebug() << "Reader::stop"
+        qDebug() << "Reader::stop done"
                  << threadId
                  << "isRunning =" << isRunning()
             ;

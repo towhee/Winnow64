@@ -1,7 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Raw/Jpg not working in metaread2
+- FS and Bookmarks show not selected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads
@@ -102,6 +102,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Raw/Jpg not working in metaread2
 - Right side ocked tabs showing at bottom instead of top
 - ImageCache running amok
 - Central widget going blank when rapidly scroll up/down in gridView

@@ -1899,18 +1899,13 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
-    G::t.restart();
 
-    if (G::stop) {
-        /*
-        qDebug() << "MW::folderSelectionChange"
-                 << "**BUSY**" << getSelectedPath(); //*/
-        return;
-    }
-
-    // block repeated clicks to folders or bookmarks while processing this one.
-    QSignalBlocker bookmarkBlocker(bookmarks);
-    QSignalBlocker fsTreeBlocker(fsTree);
+//    if (G::stop) {
+//        /*
+//        qDebug() << "MW::folderSelectionChange"
+//                 << "**BUSY**" << getSelectedPath(); //*/
+//        return;
+//    }
 
     /*
     qDebug() << " ";
@@ -1921,6 +1916,11 @@ void MW::folderSelectionChange(QString dPath)
         ;//*/
 
     if (!stop("MW::folderSelectionChange()")) return;
+
+    G::t.restart();
+    // block repeated clicks to folders or bookmarks while processing this one.
+    QSignalBlocker bookmarkBlocker(bookmarks);
+    QSignalBlocker fsTreeBlocker(fsTree);
 
 //    // might have selected subfolders usiing shift+command click
 //    if (G::includeSubfolders) subFoldersAction->setChecked(true);
