@@ -63,7 +63,7 @@
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 #include "loadusbdlg.h"
-#include "deleteusbdlg.h"
+#include "erasememcardimagesdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/renamefile.h"
 #include "Utilities/usb.h"
@@ -434,6 +434,7 @@ private slots:
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
+    void renameEraseMemCardFromContextMenu(QString path);
     void updateCachedStatus(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
 //    void searchTextEdit();
@@ -701,7 +702,6 @@ private:
     QAction *openAction;
     QAction *refreshCurrentAction;
     QAction *openUsbAction;
-    QAction *eraseUsbAction;
     QAction *revealFileAction;
     QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
@@ -723,6 +723,8 @@ private:
     QAction *ingestAction;
     QAction *ejectAction;
     QAction *ejectActionFromContextMenu;
+    QAction *eraseUsbAction;
+    QAction *eraseUsbActionFromContextMenu;
     QAction *colorManageAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
@@ -1264,8 +1266,9 @@ private:
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();
-    void deleteAllImageUsbDCIM(QString rootPath, QString name);
-    void eraseUSBDriveImages();
+    void deleteAllImageMemCard(QString rootPath, QString name);
+    void eraseMemCardImages();
+    void eraseMemCardImagesFromContextMenu();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);

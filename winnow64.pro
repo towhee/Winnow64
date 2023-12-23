@@ -69,7 +69,8 @@ HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/addthumbnailsdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
-HEADERS += Dialogs/deleteusbdlg.h
+HEADERS += \
+    Dialogs/erasememcardimagesdlg.h
 HEADERS += Dialogs/editlistdlg.h
 HEADERS += Dialogs/imagedlg.h
 HEADERS += Dialogs/ingestdlg.h
@@ -195,7 +196,8 @@ SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/addthumbnailsdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
-SOURCES += Dialogs/deleteusbdlg.cpp
+SOURCES += \
+    Dialogs/erasememcardimagesdlg.cpp
 SOURCES += Dialogs/editlistdlg.cpp
 SOURCES += Dialogs/imagedlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
@@ -342,7 +344,7 @@ SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/deleteusbdlg.ui
+    Dialogs/erasememcardimagesdlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui

@@ -1890,7 +1890,8 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
-void MW::folderSelectionChangeNoParam() {
+void MW::folderSelectionChangeNoParam()
+{
     folderSelectionChange("");
 }
 
@@ -1899,22 +1900,6 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
-
-//    if (G::stop) {
-//        /*
-//        qDebug() << "MW::folderSelectionChange"
-//                 << "**BUSY**" << getSelectedPath(); //*/
-//        return;
-//    }
-
-    /*
-    qDebug() << " ";
-    qDebug() << "MW::folderSelectionChange"
-             << getSelectedPath()
-             << "G::includeSubfolders"
-             << G::includeSubfolders
-        ;//*/
-
     if (!stop("MW::folderSelectionChange()")) return;
 
     G::t.restart();
@@ -5765,14 +5750,14 @@ void MW::deleteFolder()
     }
 }
 
-void MW::deleteAllImageUsbDCIM(QString rootPath, QString name)
+void MW::deleteAllImageMemCard(QString rootPath, QString name)
 {
     if (G::isLogger) G::log("MW::deleteAllImageUsbDCIM");
 
     // ignore if no DCIM folder
     QString dcimPath = rootPath + "/DCIM";
     QDir dcimDir = QDir(dcimPath);
-    qDebug() << "MW::deleteUsbDCIM" << dcimPath;
+    qDebug() << "MW::deleteAllImageMemCard" << dcimPath;
     if (!dcimDir.exists()) {
         QString msg = "Drive " + name +
                       " does not contain a folder called DCIM.";
@@ -5783,12 +5768,12 @@ void MW::deleteAllImageUsbDCIM(QString rootPath, QString name)
     // warning
     QMessageBox msgBox;
     msgBox.setWindowTitle("Delete All Images on " + name);
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     QString trash = "recycle bin";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     QString trash = "trash";
-#endif
+    #endif
     msgBox.setText("This operation will DELETE ALL\n"
                    "the images on drive\n\n"
                    + name + "\n\n"
@@ -5800,20 +5785,24 @@ void MW::deleteAllImageUsbDCIM(QString rootPath, QString name)
     if (ret == QMessageBox::Cancel) return;
 
     // delete
-    qDebug() << "MW::deleteUsbDCIM   removed" << dcimPath;
-    dcimDir.removeRecursively();
+    qDebug() << "MW::deleteAllImageMemCard   removed" << dcimPath;
+    //dcimDir.removeRecursively();
 
     QString msg = "All images removed from " + name;
     G::popUp->showPopup(msg);
+
+    if (G::currRootFolder.contains(rootPath)) {
+        folderSelectionChange(rootPath);
+    }
 }
 
-void MW::eraseUSBDriveImages()
+void MW::eraseMemCardImages()
 {
 /*
     A list of available USB drives are listed in a dialog for the user.  For the selected
     drive, all the subfolders in the DCIM folder are deleted.
 */
-    if (G::isLogger) G::log("MW::deleteUsbDCIM");
+    if (G::isLogger) G::log("MW::eraseMemCardImages");
 
     struct  UsbInfo {
         QString rootPath;
@@ -5829,17 +5818,20 @@ void MW::eraseUSBDriveImages()
         if (storage.isValid() && storage.isReady()) {
             if (!storage.isReadOnly()) {
                 if (Usb::isUsb(storage.rootPath())) {
-                    usbInfo.rootPath = storage.rootPath();
-                    usbInfo.name = storage.name();
-                    QString count = QString::number(n) + ". ";
-                    if (usbInfo.name.length() > 0)
-                    usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
-                    else
-                    usbInfo.description = count + usbInfo.rootPath;
-                    usbMap.insert(usbInfo.description, usbInfo);
+                    QString dcimPath = storage.rootPath() + "/DCIM";
+                    if (QDir(dcimPath).exists(dcimPath)) {
+                        usbInfo.rootPath = storage.rootPath();
+                        usbInfo.name = storage.name();
+                        QString count = QString::number(n) + ". ";
+                        if (usbInfo.name.length() > 0)
+                        usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+                        else
+                        usbInfo.description = count + usbInfo.rootPath;
+                        usbMap.insert(usbInfo.description, usbInfo);
 
-                    usbDrives << usbInfo.description;
-                    n++;
+                        usbDrives << usbInfo.description;
+                        n++;
+                    }
                 }
             }
         }
@@ -5847,15 +5839,22 @@ void MW::eraseUSBDriveImages()
 
     // select drive
     QString drive;
-    DeleteUsbDlg *deleteUsbDlg = new DeleteUsbDlg(this, usbDrives, drive);
+    EraseMemCardDlg *deleteUsbDlg = new EraseMemCardDlg(this, usbDrives, drive);
     if (!deleteUsbDlg->exec()) {
-        qDebug() << "MW::deleteUsbDCIM cancelled";
+        qDebug() << "MW::eraseMemCardImages cancelled";
         return;
     }
 
-    deleteAllImageUsbDCIM(usbMap[drive].rootPath, usbMap[drive].name);
+    //qDebug() << "MW::eraseMemCardImages" << usbMap[drive].rootPath << usbMap[drive].name;
+    deleteAllImageMemCard(usbMap[drive].rootPath, usbMap[drive].name);
+}
 
-
+void MW::eraseMemCardImagesFromContextMenu()
+{
+    if (G::isLogger) G::log("MW::eraseMemCardImagesFromContextMenu");
+    //qDebug() << "MW::eraseMemCardImagesFromContextMenu"
+    //         << mouseOverFolderPath;
+    deleteAllImageMemCard(mouseOverFolderPath, mouseOverFolderPath);
 }
 
 void MW::openUsbFolder()
@@ -5879,17 +5878,20 @@ void MW::openUsbFolder()
         if (storage.isValid() && storage.isReady()) {
             if (!storage.isReadOnly()) {
                 if (Usb::isUsb(storage.rootPath())) {
-                    usbInfo.rootPath = storage.rootPath();
-                    usbInfo.name = storage.name();
-                    QString count = QString::number(n) + ". ";
-                    if (usbInfo.name.length() > 0)
+                    QString dcimPath = storage.rootPath() + "/DCIM";
+                    if (QDir(dcimPath).exists(dcimPath)) {
+                        usbInfo.rootPath = storage.rootPath();
+                        usbInfo.name = storage.name();
+                        QString count = QString::number(n) + ". ";
+                        if (usbInfo.name.length() > 0)
                         usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
-                    else
+                        else
                         usbInfo.description = count + usbInfo.rootPath;
-                    usbMap.insert(usbInfo.description, usbInfo);
+                        usbMap.insert(usbInfo.description, usbInfo);
 
-                    usbDrives << usbInfo.description;
-                    n++;
+                        usbDrives << usbInfo.description;
+                        n++;
+                    }
                 }
             }
         }
