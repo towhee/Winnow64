@@ -80,6 +80,8 @@ TableView::TableView(QWidget *parent, DataModel *dm)
 
     // default column widths
     resizeColumns();
+
+    //connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &TableView::onHorizontalScrollBarChanged);
 }
 
 void TableView::updateVisible(QString src)
@@ -234,13 +236,61 @@ QModelIndex TableView::pageUpIndex(int fromRow)
 
 bool TableView::eventFilter(QObject *obj, QEvent *event)
 {
-//    if((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
-//            && scrollWhenReady
-//            && obj->objectName() == "QScrollBar")
+    if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer))
+    {
+        //qDebug() << "TableView::eventFilter  obj =" << obj->objectName().leftJustified(30) << "event =" << event;
+    }
+//    if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
+//        && scrollWhenReady
+//        && obj->objectName() == "QScrollBar")
 //    {
 //        scrollToCurrent();
 //    }
     return QWidget::eventFilter(obj, event);
+}
+
+void TableView::onHorizontalScrollBarChanged(int value)
+{
+    qDebug() << "TableView::onHorizontalScrollBarChanged" << value;
+    if (okToFreeze) freezeFirstColumn();
+    okToFreeze = true;
+}
+
+bool TableView::isColumnVisibleInViewport(int col)
+{
+    int x = columnViewportPosition(col);
+    int hscroll = horizontalScrollBar()->value();
+    int viewportWidth = viewport()->width();
+
+    return x >= hscroll && x <= hscroll + viewportWidth;
+}
+
+ QList<int> TableView::visibleColumns()
+{
+    QList<int> visibleColumns;
+    for (int col = 0; col < G::TotalColumns; ++col) {
+        if (isColumnVisibleInViewport(col)) visibleColumns << col;
+    }
+    //qDebug() << "TableView::visibleColumns" << visibleColumns;
+    return visibleColumns;
+}
+
+void TableView::freezeFirstColumn()
+{
+    int col;
+    for (col = 2; col < G::TotalColumns; ++col) {
+        setColumnHidden(col, false);
+    }
+    for (col = 2; col < G::TotalColumns; ++col) {
+        if (isColumnVisibleInViewport(col)) break;
+    }
+    int lastToHide = col;
+    for (col = 2; col < lastToHide; ++col) {
+        setColumnHidden(col, true);
+    }
+//    okToFreeze = false;
+//    horizontalScrollBar()->setValue(0);
+    //qDebug() << "TableView::visibleColumns" << visibleColumns;
 }
 
 void TableView::resizeColumns()

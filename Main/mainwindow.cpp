@@ -2405,7 +2405,7 @@ bool MW::stop(QString src)
     G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
 
-    bool isDebugStopping = true;
+    bool isDebugStopping = false;
     QElapsedTimer tStop;
     tStop.restart();
     G::t.restart();
@@ -5786,7 +5786,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
 
     // delete
     qDebug() << "MW::deleteAllImageMemCard   removed" << dcimPath;
-    //dcimDir.removeRecursively();
+    dcimDir.removeRecursively();
 
     QString msg = "All images removed from " + name;
     G::popUp->showPopup(msg);
@@ -5828,7 +5828,6 @@ void MW::eraseMemCardImages()
                         else
                         usbInfo.description = count + usbInfo.rootPath;
                         usbMap.insert(usbInfo.description, usbInfo);
-
                         usbDrives << usbInfo.description;
                         n++;
                     }
@@ -5925,6 +5924,7 @@ void MW::openUsbFolder()
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
+        G::popUp->showPopup("Loading " + fPath);
     }
     else {
         setWindowTitle(winnowWithVersion);
