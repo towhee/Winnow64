@@ -16,7 +16,7 @@
 
 // METAREAD or METAREAD2: one or the other:
 #ifdef Q_OS_WIN
-#define METAREAD
+#define METAREAD2
 #endif
 #ifdef Q_OS_MAC
 #define METAREAD2

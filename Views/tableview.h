@@ -26,12 +26,18 @@ public:
     int visibleRowCount;
     bool isCurrentVisible;
 
+    bool isColumnVisibleInViewport(int columnIndex);
+    QList<int> visibleColumns();
+    void freezeFirstColumn();
+    bool okToFreeze = true;
+
 public slots:
     void showOrHide();
     QModelIndex pageUpIndex(int fromRow = 0);
     QModelIndex pageDownIndex(int fromRow);
     void updateVisible(QString src);
     void resizeColumns();
+    void onHorizontalScrollBarChanged(int value);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

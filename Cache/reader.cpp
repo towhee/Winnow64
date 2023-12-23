@@ -19,7 +19,7 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
 
-    isDebug = true;
+    isDebug = false;
 }
 
 void Reader::read(const QModelIndex dmIdx,
