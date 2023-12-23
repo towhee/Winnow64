@@ -15,6 +15,7 @@ public:
     static bool eject(QString driveName);
     static bool isUsb(QString path);
     static bool isEjectable(QString path);
+    static bool isMemCardWithDCIM(QString path);
 };
 
 #endif // USB_H

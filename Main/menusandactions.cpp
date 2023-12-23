@@ -24,7 +24,7 @@ void MW::createFileActions()
     // File menu
     int n;          // used to populate action lists
 
-    openAction = new QAction(tr("Open Folder"), this);
+    openAction = new QAction(tr("Open Folder..."), this);
     openAction->setObjectName("openFolder");
     openAction->setShortcutVisibleInContextMenu(true);
     addAction(openAction);
@@ -36,17 +36,11 @@ void MW::createFileActions()
     addAction(refreshCurrentAction);
     connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshCurrentFolder);
 
-    openUsbAction = new QAction(tr("Open Usb Folder"), this);
+    openUsbAction = new QAction(tr("Open Memory Card..."), this);
     openUsbAction->setObjectName("openUsbFolder");
     openUsbAction->setShortcutVisibleInContextMenu(true);
     addAction(openUsbAction);
     connect(openUsbAction, &QAction::triggered, this, &MW::openUsbFolder);
-
-    eraseUsbAction = new QAction(tr("Erase Usb Folder"), this);
-    eraseUsbAction->setObjectName("eraseUsbFolder");
-    eraseUsbAction->setShortcutVisibleInContextMenu(true);
-    addAction(eraseUsbAction);
-    connect(eraseUsbAction, &QAction::triggered, this, &MW::eraseUSBDriveImages);
 
     openWithMenu = new QMenu(tr("Open With..."));
 
@@ -284,17 +278,29 @@ void MW::createFileActions()
     }
     addActions(ingestHistoryFolderActions);
 
-    ejectAction = new QAction(tr("Eject Usb Drive"), this);
+    ejectAction = new QAction(tr("Eject Memory Card"), this);
     ejectAction->setObjectName("ejectUsbDrive");
     ejectAction->setShortcutVisibleInContextMenu(true);
     addAction(ejectAction);
     connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromMainMenu);
 
-    ejectActionFromContextMenu = new QAction(tr("Eject Usb Drive"), this);
+    ejectActionFromContextMenu = new QAction(tr("Eject Memory Card"), this);
     ejectActionFromContextMenu->setObjectName("ejectUsbDriveFromContext");
     ejectActionFromContextMenu->setShortcutVisibleInContextMenu(true);
     addAction(ejectActionFromContextMenu);
     connect(ejectActionFromContextMenu, &QAction::triggered, this, &MW::ejectUsbFromContextMenu);
+
+    eraseUsbAction = new QAction(tr("Erase Memory Card Images..."), this);
+    eraseUsbAction->setObjectName("eraseUsbFolder");
+    eraseUsbAction->setShortcutVisibleInContextMenu(true);
+    addAction(eraseUsbAction);
+    connect(eraseUsbAction, &QAction::triggered, this, &MW::eraseMemCardImages);
+
+    eraseUsbActionFromContextMenu = new QAction(tr("Erase Memory Card Images"), this);
+    eraseUsbActionFromContextMenu->setObjectName("eraseUsbFolderFromContext");
+    eraseUsbActionFromContextMenu->setShortcutVisibleInContextMenu(true);
+    addAction(eraseUsbActionFromContextMenu);
+    connect(eraseUsbActionFromContextMenu, &QAction::triggered, this, &MW::eraseMemCardImagesFromContextMenu);
 
     colorManageAction = new QAction(tr("Color manage"), this);
     colorManageAction->setObjectName("colorManage");
@@ -1585,7 +1591,6 @@ void MW::createFileMenu()
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
     fileMenu->addAction(openUsbAction);
-    fileMenu->addAction(eraseUsbAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
     openWithMenu->addSeparator();
@@ -1616,6 +1621,7 @@ void MW::createFileMenu()
     connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeIngestHistoryFolder(QAction*)));
     fileMenu->addAction(ejectAction);
+    fileMenu->addAction(eraseUsbAction);
 
     fileMenu->addSeparator();
     fileMenu->addAction(colorManageAction);
@@ -1928,6 +1934,7 @@ void MW::createFSTreeContextMenu()
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(ejectActionFromContextMenu);
+    fsTreeActions->append(eraseUsbActionFromContextMenu);
     fsTreeActions->append(separatorAction1);
     //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
@@ -1957,6 +1964,7 @@ void MW::createBookmarksContextMenu()
     favActions->append(copyFolderPathFromContextAction);
     favActions->append(separatorAction);
     favActions->append(ejectActionFromContextMenu);
+    favActions->append(eraseUsbActionFromContextMenu);
     favActions->append(separatorAction1);
     favActions->append(removeBookmarkAction);
     // docking panels context menus
@@ -2107,21 +2115,45 @@ void MW::enableEjectUsbMenu(QString path)
 void MW::renameEjectUsbMenu(QString path)
 {
     QString drive = "";
+    QString text;
+    bool enabled;
     if (Usb::isEjectable(path)) {
         //qDebug() << "MW::renameEjectUsbMenu  enable";
-        ejectAction->setEnabled(true);
-        ejectActionFromContextMenu->setEnabled(true);
+        enabled = true;
         drive = Utilities::getDriveName(path);
         drive = Utilities::enquote(drive);
+        text = "Eject Memory Card " + drive;
+    }
+    else {
+        enabled = false;
+        text = "Eject Memory Card";
     }
     //qDebug() << "MW::renameEjectUsbMenu" << path << drive;
-    ejectAction->setText("Eject Usb Drive " + drive);
-    ejectActionFromContextMenu->setText("Eject Usb Drive " + drive);
-    if (drive == "") {
-        //qDebug() << "MW::renameEjectUsbMenu  disable";
-        ejectAction->setEnabled(false);
-        ejectActionFromContextMenu->setEnabled(false);
+    ejectAction->setEnabled(enabled);
+    ejectActionFromContextMenu->setEnabled(enabled);
+    ejectAction->setText(text);
+    ejectActionFromContextMenu->setText(text);
+}
+
+void MW::renameEraseMemCardFromContextMenu(QString path)
+{
+    QString drive = "";
+    QString text;
+    bool enabled;
+    if (Usb::isMemCardWithDCIM(path)) {
+        //qDebug() << "MW::renameEjectUsbMenu  enable";
+        enabled = true;
+        drive = Utilities::getDriveName(path);
+        drive = Utilities::enquote(drive);
+        text = "Erase all images on Memory Card " + drive;
     }
+    else {
+        enabled = false;
+        text = "Erase Memory Card Images";
+    }
+    //qDebug() << "MW::renameEjectUsbMenu" << path << drive;
+    eraseUsbActionFromContextMenu->setEnabled(enabled);
+    eraseUsbActionFromContextMenu->setText(text);
 }
 
 void MW::enableSelectionDependentMenus()

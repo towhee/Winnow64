@@ -90,3 +90,23 @@ bool Usb::isEjectable(QString path)
     }
     return false;
 }
+
+bool Usb::isMemCardWithDCIM(QString path)
+{
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                if (isUsb(storage.rootPath())) {
+                    QString dcimPath = storage.rootPath() + "/DCIM";
+                    if (QDir(dcimPath).exists(dcimPath)) {
+                        QString rootPath = storage.rootPath();
+                        QString name = storage.name();
+                        //qDebug() << "Usb::isMemCardWithDCIM" << rootPath << name;
+                        if (path.contains(rootPath)) return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}

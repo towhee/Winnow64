@@ -516,6 +516,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         path = idx.data(Qt::ToolTipRole).toString();
     }
     emit renameEjectAction(path);
+    emit renameEraseMemCardContextAction(path);
 
     if (event->button() == Qt::RightButton) {
         return;

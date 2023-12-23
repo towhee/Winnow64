@@ -99,6 +99,7 @@ signals:
     void abortLoadDataModel();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);
+    void renameEraseMemCardContextAction(QString path);
 
 private:
 	QModelIndex dndOrigSelection;

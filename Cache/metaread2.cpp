@@ -115,7 +115,7 @@ MetaRead2::MetaRead2(QObject *parent,
 
     instance = 0;
     abort = false;
-    isDebug = true;
+    isDebug = false;
 }
 
 MetaRead2::~MetaRead2()
