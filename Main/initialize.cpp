@@ -982,7 +982,7 @@ void MW::createFSTree()
     // rename menu item "Eject USB drive <x>" and enable/disable
     connect(fsTree, &FSTree::renameEjectAction, this, &MW::renameEjectUsbMenu);
 
-    // rename menu item "Erase USB drive images <x>" and enable/disable for context menu only
+    // rename menu item "Erase mem card images" and enable/disable for context menu only
     connect(fsTree, &FSTree::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
 
     // watch for drive removal (not working)
@@ -1037,6 +1037,9 @@ void MW::createBookmarks()
 
     // rename menu item "Eject USB drive <x>" and enable/disable
     connect(bookmarks, &BookMarks::renameEjectAction, this, &MW::renameEjectUsbMenu);
+
+    // rename menu item "Erase mem card images" and enable/disable for context menu only
+    connect(bookmarks, &BookMarks::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
 }
 
 void MW::createAppStyle()
