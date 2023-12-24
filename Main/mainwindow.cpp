@@ -2124,7 +2124,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+//    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2263,6 +2263,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
+            ///*
+            qDebug() << "MW::fileSelectionChange setImageCachePosition"
+                     << dm->currentFilePath
+                        ;
+                        //*/
             emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
         }
     }
@@ -2847,7 +2852,7 @@ void MW::loadConcurrentDone()
     }
     QString src = "MW::loadConcurrentDone ";
     int count = 0;
-    ///*
+    /*
     qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
