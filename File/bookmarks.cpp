@@ -322,6 +322,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         if (G::useProcessEvents) qApp->processEvents();
     }
     emit renameEjectAction(path);
+    emit renameEraseMemCardContextAction(path);
 
     if (event->button() == Qt::RightButton) {
         rightClickItem = itemAt(event->pos());

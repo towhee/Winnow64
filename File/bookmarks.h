@@ -58,6 +58,7 @@ signals:
     void refreshFSTree();
     void folderSelection(QString dPath);
     void renameEjectAction(QString path);
+    void renameEraseMemCardContextAction(QString path);
 };
 
 #endif // BOOKMARKS_H
