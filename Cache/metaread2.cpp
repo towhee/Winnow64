@@ -691,12 +691,14 @@ void MetaRead2::dispatch(int id)
             {
                 G::log("MetaRead2::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
             }
-            if (isDebug) // fileSelectionChange
+            //if (isDebug) // fileSelectionChange
             {
-            qDebug().noquote()
-                << "MetaRead2::dispatch     fileSelectionChange "
-                << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+                bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
+                qDebug().noquote()
+                    << "\nMetaRead2::dispatch     fileSelectionChange "
+                    << "id =" << QString::number(id).leftJustified(2, ' ')
+                    << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+                    << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
                     << r->fPath;
             }
             if (!abort) emit fileSelectionChange(sfIdx);

@@ -251,6 +251,7 @@ bool TableView::eventFilter(QObject *obj, QEvent *event)
 
 void TableView::onHorizontalScrollBarChanged(int value)
 {
+    // not working to scroll left, need to use double tableview method
     qDebug() << "TableView::onHorizontalScrollBarChanged" << value;
     if (okToFreeze) freezeFirstColumn();
     okToFreeze = true;
@@ -277,6 +278,7 @@ bool TableView::isColumnVisibleInViewport(int col)
 
 void TableView::freezeFirstColumn()
 {
+    // not working to scroll left, need to use double tableview method
     int col;
     for (col = 2; col < G::TotalColumns; ++col) {
         setColumnHidden(col, false);

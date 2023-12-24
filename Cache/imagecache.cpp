@@ -1492,9 +1492,9 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     //if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
                "row = " + QString::number(dm->currentSfRow));
-    if (debugCaching)
+    //if (debugCaching)
     {
-        qDebug() << " ";
+        //qDebug() << " ";
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path
                            << "src =" << src
                            << "isRunning =" << isRunning();
