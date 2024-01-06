@@ -1838,6 +1838,8 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
+        //setCentralWidget(blankView);  // crash
+
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 

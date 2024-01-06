@@ -164,7 +164,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     //qDebug() << tableView->visibleColumns();
-    tableView->horizontalScrollBar()->setValue(0);
+    QModelIndex idx = dm->sf->index(2,0);
+    qDebug() << idx << idx.data(G::IconRectRole);
     return;
 
     metaReadThread->stop();

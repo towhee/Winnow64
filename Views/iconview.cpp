@@ -279,6 +279,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // in imageView
     connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
+
     connect(this, &IconView::setValueSf, dm, &DataModel::setValueSf);
 }
 
@@ -929,10 +930,10 @@ void IconView::justify(JustifyAction action)
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 {
 /*
-    thumbViewDelegate triggers this to provide rect data to calc thumb mouse
+    IconViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot.
 */
-    //qDebug() << "IconView::updateThumbRectRole" << index;
+    //qDebug() << "IconView::updateThumbRectRole" << index << iconRect;
     QString src = "IconView::updateThumbRectRole";
     emit setValueSf(index, iconRect, dm->instance, src, G::IconRectRole);
 }
@@ -1526,6 +1527,12 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     qreal vScale = static_cast<qreal>(cH) / imH;
 
     iconRect = idx.data(G::IconRectRole).toRect();
+    /*
+    qDebug() << "IconView::zoomCursor"
+             << "idx =" << idx
+             << "idx.data(G::IconRectRole) =" << idx.data(G::IconRectRole)
+             << "iconRect =" << iconRect;
+    //*/
     int w, h;       // zoom frame width and height in pixels
 
     if (hScale < 1 || vScale <= 1 ) {
@@ -1584,7 +1591,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
                  << "h =" << h
                  << "ivA =" << ivA;
             */
-        /*
+        ///*
             qDebug() << "IconView::zoomCursor"
                      << "zoom =" << zoom
                      << "zoomFit =" << zoomFit

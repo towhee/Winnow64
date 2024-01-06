@@ -1476,7 +1476,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
         return;
     }
     QMutexLocker locker(&mutex);
-    //sf->setData(sfIdx, value, role);
+    sf->setData(sfIdx, value, role);
     setData(sfIdx, align, Qt::TextAlignmentRole);
 }
 

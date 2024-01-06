@@ -102,6 +102,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- IconView box cursor no longer working
 - Raw/Jpg not working in metaread2
 - Right side ocked tabs showing at bottom instead of top
 - ImageCache running amok
