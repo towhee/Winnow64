@@ -196,6 +196,7 @@ namespace G
     extern QFile logFile;
     extern QFile errlogFile;
     extern bool isDev;
+    extern bool isRemote;
 
     // Rory version
     extern bool isRory;

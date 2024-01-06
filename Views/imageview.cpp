@@ -149,6 +149,10 @@ bool ImageView::loadImage(QString fPath, QString src)
 */
     //qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
     if (G::isLogger || G::isFlowLogger) G::log("ImageView::loadImage", "Src:" + src + " " + fPath);
+
+    // ignore if result of remote operation
+    if (G::isRemote) return false;
+
     // No folder selected yet
     if (!fPath.length()) {
         //qWarning() << "WARNING" << "ImageView::loadImage" << "Src =" << src << "No folder selected";

@@ -171,6 +171,9 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 */
     if (G::isLogger) G::log("EmbelExport::exportRemoteFiles");
 
+    // set global isRemote flag
+    G::isRemote = true;
+
     // clear dstPaths
     dstPaths.clear();
     // set remote flag to avoid mainwindow updates
@@ -199,6 +202,10 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     embelProperties->setCurrentTemplate("Do not Embellish");
 
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
+
+    // set global isRemote flag
+    G::isRemote = false;
+
     return dstPaths;
 }
 
