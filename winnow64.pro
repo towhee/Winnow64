@@ -48,7 +48,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Dialogs/viscmpdlg.h
 #    Cache/metaread3.h \
 #    Cache/reader3.h
 HEADERS += Cache/framedecoder.h
@@ -178,7 +179,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Dialogs/viscmpdlg.cpp
 #    Cache/metaread3.cpp \
 #    Cache/reader3.cpp
 SOURCES += Cache/framedecoder.cpp
@@ -344,7 +346,8 @@ SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/erasememcardimagesdlg.ui
+    Dialogs/erasememcardimagesdlg.ui \
+    Dialogs/viscmpdlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui

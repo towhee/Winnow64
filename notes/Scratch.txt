@@ -1,0 +1,9 @@
+Compare Src images A to Library Images B
+
+Generate path list of src images and thumbnails
+Generate path list of library images and thumbnails
+Iterate src list
+  Iterate library list
+    If not same file type then break
+    If not same aspect then break
+    If

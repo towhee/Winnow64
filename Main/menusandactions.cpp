@@ -567,6 +567,12 @@ void MW::createEditActions()
     addAction(mediaReadSpeedAction);
     connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
 
+    visCmpImagesAction = new QAction(tr("Visually compare images"), this);
+    visCmpImagesAction->setObjectName("visCmpImages");
+    visCmpImagesAction->setShortcutVisibleInContextMenu(true);
+    addAction(visCmpImagesAction);
+    connect(visCmpImagesAction, &QAction::triggered, this, &MW::visCmpImages);
+
     reportHueCountAction = new QAction(tr("Report hue count"), this);
     reportHueCountAction->setObjectName("reportHueCount");
     reportHueCountAction->setShortcutVisibleInContextMenu(true);
@@ -1685,6 +1691,7 @@ void MW::createEditMenu()
     editMenu->addSeparator();
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(mediaReadSpeedAction);
+    utilitiesMenu->addAction(visCmpImagesAction);
     utilitiesMenu->addAction(embedThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);

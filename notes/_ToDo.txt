@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Crash when delete tiff file
+- Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
