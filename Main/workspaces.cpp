@@ -266,7 +266,7 @@ void MW::defaultWorkspace()
            static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
         size(), desktop));
-    menuBarVisibleAction->setChecked(true);
+    //menuBarVisibleAction->setChecked(true);
     statusBarVisibleAction->setChecked(true);
 
     folderDockVisibleAction->setChecked(true);

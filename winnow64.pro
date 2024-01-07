@@ -15,7 +15,7 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 # MacOS universal binaries
 #QMAKE_APPLE_DEVICE_ARCHS = arm64
-#QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
+QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
 
 CONFIG += c++1z
 win32:QMAKE_CXXFLAGS += /std:c++17
