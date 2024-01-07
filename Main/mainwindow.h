@@ -56,6 +56,7 @@
 #include "ingestdlg.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
+#include "viscmpdlg.h"
 //#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
@@ -732,6 +733,7 @@ private:
     QAction *showImageCountAction;
     QAction *runDropletAction;
     QAction *reportMetadataAction;
+    QAction *visCmpImagesAction;
     QAction *mediaReadSpeedAction;
     QAction *reportHueCountAction;
     QAction *meanStackAction;
@@ -1321,6 +1323,7 @@ private:
     void logReport();
 
     void mediaReadSpeed();
+    void visCmpImages();
     void reportHueCount();
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);

@@ -6161,6 +6161,13 @@ void MW::mediaReadSpeed()
     QMessageBox::information(this, "", msg);
 }
 
+void MW::visCmpImages()
+{
+    if (G::isLogger) G::log("MW::visCmpImages");
+    VisCmpDlg visCmpDlg;
+    visCmpDlg.exec();
+}
+
 void MW::help()
 {
     if (G::isLogger) G::log("MW::help");

@@ -118,6 +118,7 @@ bool Tiff::parse(MetadataParameters &p,
 */
     if (G::isLogger) G::log("Tiff::parse");
     //file.open happens in readMetadata
+    qDebug() << "Tiff::parse" << p.file.fileName();
 
     Utilities u;
     quint32 startOffset = 0;
@@ -1264,11 +1265,10 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
 */
     TiffStrips tiffStrips;
     int alphaRowComponent = t.bytesPerRow / 3;
-    /*
+    ///*
     qDebug() << "Tiff::lzwDecompress"
              << "t.predictor =" << t.predictor
              << "t.bytesPerRow =" << t.bytesPerRow
-             << "t.fName =" << t.fName
                 ;
                 //*/
 
