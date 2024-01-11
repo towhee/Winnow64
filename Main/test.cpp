@@ -163,9 +163,29 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    //qDebug() << tableView->visibleColumns();
-    QModelIndex idx = dm->sf->index(2,0);
-    qDebug() << idx << idx.data(G::IconRectRole);
+    //double d[2][3]= {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
+    QVector<QVector<double>> d = {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
+    qDebug() << "before";
+    for (int a = 0; a < 2; a++) {
+        for (int b = 0; b < 3; b++) {
+            qDebug() << d[a][b];
+        }
+    }
+
+    // Sort each row individually
+    for(auto& vec : d) {
+        std::sort(vec.begin(), vec.end());
+    }
+//    for (int i = 0; i < 2; i++) {
+//        std::sort(d[i], d[i]+3);
+//    }
+
+    qDebug() << "after";
+    for (int a = 0; a < 2; a++) {
+        for (int b = 0; b < 3; b++) {
+            qDebug() << d[a][b];
+        }
+    }
     return;
 
     metaReadThread->stop();
@@ -175,16 +195,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     diagnosticsMetadataCache();
     diagnosticsImageCache();
     return;
-
-    prevDevicePixelRatio = -1;
-    prevScreenName = "Nothing";
-    setDisplayResolution();
-    updateDisplayResolution();
-    emit resizeMW(this->geometry(), centralWidget->geometry());
-    QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
-    emit windowHandle()->screenChanged(screen);
-    //qApp->postEvent(this, )
 }
 
 /*

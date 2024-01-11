@@ -586,6 +586,29 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
     }
 }
 
+void Effects::grayScale(QImage &img)
+{
+    QVector<QVector<QRgb>> s(img.height());
+    imageToVector2D(img, s);
+    for (int y = 0; y < img.height(); ++y) {
+        for (int x = 0; x < img.width(); ++x) {
+            QColor rgb(s[y][x]);
+//            QColor gScale = rgb.
+//            int hue = hsl.hslHue();
+//            if (hue >= 0 && hue < 360) hues[hue]++;
+            /* debug
+            if (y == 0 && x == 0) {
+                qDebug() << "Effects::hueCount"
+                         << "s[y][x] =" << s[y][x]
+                         << "rgb =" << rgb
+                         << "hsl =" << hsl
+                         << "hue =" << hue
+                            ;
+            } */
+        }
+    }
+}
+
 /* 2D EFFECTS ********************************************************************************/
 
 #define ConvolveAccumulate(weight, pixel) \

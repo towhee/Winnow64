@@ -34,8 +34,6 @@ public:
     bool metadataLoaded = false;            // all metadata except thumb
     bool isEmbeddedThumbMissing = false;
     bool isThumbLoaded = false;             // refers to thumb only
-//    bool thumbUnavailable = false;          // no embedded thumb
-//    bool imageUnavailable = false;          // no embedded preview
 
     bool isSearch = false;
     QString type = "";

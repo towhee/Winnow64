@@ -182,5 +182,7 @@
         <file>images/icon16/delta_red_16.png</file>
         <file>images/icon16/danger_red_16.png</file>
         <file>images/icon16/delta_bw_16.png</file>
+        <file>images/dragfoldershere.png</file>
+        <file>images/prev.png</file>
     </qresource>
 </RCC>

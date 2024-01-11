@@ -241,8 +241,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         QFile(fPath).setPermissions(newPermissions);
     }
     QString ext = fileInfo.suffix().toLower();
-    int dmRow = dm->rowFromPath(fPath);
 
+    int dmRow = dm->rowFromPath(fPath);
     isDimensions = dm->index(dmRow, G::WidthColumn).data().toInt() > 0;
     isAspectRatio = dm->index(dmRow, G::AspectRatioColumn).data().toInt() > 0;
     isThumbOffset = dm->index(dmRow, G::OffsetThumbColumn).data().toInt() > 0;

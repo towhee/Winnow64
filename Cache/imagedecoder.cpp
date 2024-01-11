@@ -392,3 +392,30 @@ void ImageDecoder::run()
     }
     /*if (!abort)*/ emit done(threadId);
 }
+
+bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
+{
+/*
+    This function is called externally and does not require the DataModel and does not
+    spawn a separate thread.
+
+    It is used by VisCmpDlg.
+*/
+    this->metadata = metadata;
+    fPath = m.fPath;
+    n.fPath = m.fPath;
+    n.ext = m.ext;
+    n.metadataLoaded = m.metadataLoaded;
+    n.offsetFull = m.offsetFull;
+    n.lengthFull = m.lengthFull;
+    n.samplesPerPixel = m.samplesPerPixel;
+
+    if (load()) {
+        //if (metadata->rotateFormats.contains(ext)) rotate();
+        //rotate();
+        colorManage();
+        img = image;
+        return true;
+    }
+    return false;
+}

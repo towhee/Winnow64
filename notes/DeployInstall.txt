@@ -26,7 +26,7 @@ NORMAL DEPLOYMENT
           or
           lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.37.app/Contents/MacOS/Winnow
           result: x86_64 arm64
-        - In Disk Utility: File > New Image > Image from Folder...
+        - In Disk Utility.app: File > New Image > Image from Folder...
             - select /Users/roryhill/Projects/WinnowInstall/Winnow.
             - save as Winnow1.37.dmg (in  /Users/roryhill/Projects/WinnowInstall).
         - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
