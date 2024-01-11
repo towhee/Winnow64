@@ -49,7 +49,8 @@ QT += multimediawidgets
 QT += concurrent
 
 HEADERS += Cache/cachedata.h \
-    Dialogs/viscmpdlg.h
+    Dialogs/viscmpdlg.h \
+    Image/autonomousimage.h
 #    Cache/metaread3.h \
 #    Cache/reader3.h
 HEADERS += Cache/framedecoder.h
@@ -180,7 +181,8 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
-    Dialogs/viscmpdlg.cpp
+    Dialogs/viscmpdlg.cpp \
+    Image/autonomousimage.cpp
 #    Cache/metaread3.cpp \
 #    Cache/reader3.cpp
 SOURCES += Cache/framedecoder.cpp

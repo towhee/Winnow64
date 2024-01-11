@@ -33,6 +33,7 @@ public:
 
     QImage convolve(QImage &img, int mDim, double *matrix);
     void hueCount(QImage &img, QVector<int> &hues);
+    void grayScale(QImage &img);
 
     void test(QImage &img);
     void brightenPixel(QRgb &p, double deltaEv, double opacity = 1);

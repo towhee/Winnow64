@@ -2126,7 +2126,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-//    /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2265,7 +2265,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
-            ///*
+            /*
             qDebug() << "MW::fileSelectionChange setImageCachePosition"
                      << dm->currentFilePath
                         ;
@@ -6164,7 +6164,7 @@ void MW::mediaReadSpeed()
 void MW::visCmpImages()
 {
     if (G::isLogger) G::log("MW::visCmpImages");
-    VisCmpDlg visCmpDlg;
+    VisCmpDlg visCmpDlg(dm, metadata);
     visCmpDlg.exec();
 }
 

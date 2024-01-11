@@ -24,6 +24,7 @@ public:
                  DataModel *dm,
                  Metadata *metadata);
     void decode(ImageCacheData::CacheItem item, int instance);
+    bool decode(QImage &img, Metadata *metadata, ImageMetadata &m);
     void setReady();
     void stop();
 

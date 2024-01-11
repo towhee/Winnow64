@@ -1266,11 +1266,13 @@ void ImageCache::buildImageCacheList()
                 m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
                 m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
                 int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+                /*
                 if (i < 20)
                     qDebug() << "ImageCache::buildImageCacheList"
                              << "w =" << w
                              << "h =" << h
                              << "sizeMB =" << sizeMB;
+                //*/
                 if (sizeMB) {
                     // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
                     icd->cacheItem.sizeMB = sizeMB;
@@ -1492,7 +1494,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     //if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isFlowLogger) G::log("ImageCache::setCurrentPosition",
                "row = " + QString::number(dm->currentSfRow));
-    //if (debugCaching)
+    if (debugCaching)
     {
         //qDebug() << " ";
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path
