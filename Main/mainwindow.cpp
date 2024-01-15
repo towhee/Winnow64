@@ -6165,7 +6165,12 @@ void MW::visCmpImages()
 {
     if (G::isLogger) G::log("MW::visCmpImages");
     VisCmpDlg visCmpDlg(dm, metadata);
-    visCmpDlg.exec();
+    if (visCmpDlg.exec()) {
+        // add true to compare filter
+        buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
+        // update filter counts
+        filterChange();
+    }
 }
 
 void MW::help()

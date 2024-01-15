@@ -406,13 +406,15 @@ bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
     n.fPath = m.fPath;
     n.ext = m.ext;
     n.metadataLoaded = m.metadataLoaded;
+    n.orientation = m.orientation;
+    n.rotationDegrees = m.rotationDegrees;
     n.offsetFull = m.offsetFull;
     n.lengthFull = m.lengthFull;
     n.samplesPerPixel = m.samplesPerPixel;
 
     if (load()) {
         //if (metadata->rotateFormats.contains(ext)) rotate();
-        //rotate();
+        if (metadata->rotateFormats.contains(ext)) rotate();
         colorManage();
         img = image;
         return true;

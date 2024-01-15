@@ -135,6 +135,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
     filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
+    filterCategoryToDmColumn[catCompare] = G::CompareColumn;
 
     createPredefinedFilters();
     createDynamicFilters();
@@ -236,6 +237,7 @@ void Filters::createDynamicFilters()
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
     missingThumbs = new QTreeWidgetItem(this);
+    compare = new QTreeWidgetItem(this);
 
     createFilter(picks, catPick);
     createFilter(ratings, catRating);
@@ -250,6 +252,7 @@ void Filters::createDynamicFilters()
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
     createFilter(missingThumbs, catMissingThumbs);
+    createFilter(compare, catCompare);
 }
 
 void Filters::setCategoryBackground(QTreeWidgetItem *cat)
@@ -292,6 +295,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
     setCategoryBackground(missingThumbs);
+    setCategoryBackground(compare);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -318,6 +322,7 @@ void Filters::removeChildrenDynamicFilters()
     keywords->takeChildren();
     creators->takeChildren();
     missingThumbs->takeChildren();
+    compare->takeChildren();
 }
 
 void Filters::setPicksState(bool isChecked)
@@ -657,7 +662,7 @@ void Filters::disableEmptyCat()
     while (*it) {
         // categories
         if (!(*it)->parent() && (*it) != search) {
-//            qDebug() << (*it)->text(0) << (*it)->childCount();
+            //qDebug() << (*it)->text(0) << (*it)->childCount();
             if ((*it)->childCount() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
@@ -762,10 +767,10 @@ void Filters::startBuildFilters(bool isReset)
         msgFrame->setVisible(true);
         filterLabel->setText(buildingFiltersMsg);
         filterLabel->setVisible(true);
-//        setProgressBarStyle();
+        //setProgressBarStyle();
         bfProgressBar->setVisible(true);
     }
-//    if (isReset) collapseAll();
+    //if (isReset) collapseAll();
     disableAllHeaders(true);
     setEnabled(false);
 }
@@ -787,8 +792,8 @@ void Filters::finishedBuildFilters()
     msgFrame->setVisible(false);
     // disableColorZeroCountItems();
     setEnabled(true);
-//    if (isSolo) collapseAll();
-//    else expandAll();
+    //if (isSolo) collapseAll();
+    //else expandAll();
 }
 
 void Filters::clearAll()
@@ -893,9 +898,11 @@ void Filters::restore()
         searchTrue->setText(0, searchTextState);
 
         emit filterChange("Filters::checkItem");
-//        qDebug().noquote()
-//            << itemStates.at(i).parent.leftJustified(15)
-//            << itemStates.at(i).item.leftJustified(50, '.') + "Checked";
+        /*
+        qDebug().noquote()
+            << itemStates.at(i).parent.leftJustified(15)
+            << itemStates.at(i).item.leftJustified(50, '.') + "Checked";
+            //*/
     }
 
 }
@@ -1001,6 +1008,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
     collapse(indexFromItem(missingThumbs));
+    collapse(indexFromItem(compare));
 }
 
 void Filters::toggleExpansion()
@@ -1188,6 +1196,16 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         qDebug() << "Filters::addCategoryItems"
                  << "category =" << category->text(0)
                     ;
+
+    // eliminate any items in itemMap that are already items in the category to avoid
+    // duplicates
+    for (int i = 0; i < category->childCount(); ++i) {
+        QTreeWidgetItem* child = category->child(i);
+        QString text = child->text(0);
+        if (itemMap.contains(text)) {
+            itemMap.remove(text);
+        }
+    }
 
     // add all remaining items in unique itemList to filter tree
     QTreeWidgetItem *item;

@@ -38,11 +38,19 @@ public:
     explicit VisCmpDlg(DataModel *dm, Metadata *metadata, QWidget *parent = nullptr);
     ~VisCmpDlg();
 
+protected:
+    void resizeEvent(QResizeEvent*) override;
+
 private slots:
     void on_compareBtn_clicked();
     void on_prevToolBtn_clicked();
     void on_nextToolBtn_clicked();
     void on_tv_clicked(const QModelIndex &index);
+    void on_updateDupsAndQuitBtn_clicked();
+    void on_cancelBtn_clicked();
+    void on_matchBtn_clicked();
+    void on_abortBtn_clicked();
+    void on_helpBtn_clicked();
 
 private:
     Ui::VisCmpDlg *ui;
@@ -55,27 +63,54 @@ private:
         int index;
         QString fPath;
         QImage im;
+        QString type;
+        QString createdDate;
+        QString aspect;
+        QString duration;
         double delta;
     };
 
     struct R {
-        int index;
+        int bId;
         QString fPath;
+        bool sameType;
+        bool sameCreationDate;
+        bool sameAspect;
+        bool sameDuration;
+        bool sameMeta;
         double delta;
+        int sameMetaId;
+        int samePixelsId;
     };
 
     QList<B> bItems;
-    QVector<QVector<R>> result;
+    QVector<QVector<R>> results;
+    int currentMatch;
 
     int previewLongSide;
+    QSize previewSize;
+    QPixmap pA;
+    QPixmap pB;
 
     QStandardItemModel model;
     void preview(QString fPath, QImage &image);
-    void buildBItemsList(QString dPath);
+    void buildBItemsList(QStringList &dPaths);
     int reportRGB(QImage &im);
     int compareRGB(QImage &imA, QImage &imB);
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
+    QString currentBString(int b);
+    void buildBList();
+    void pixelCompare();
+    void buildResults();
+    void updateResults();
+    void reportResults();
+    bool sameFileType(int a, int b);
+    bool sameCreationDate(int a, int b/*, ImageMetadata *m*/);
+    bool sameAspect(int a, int b/*, ImageMetadata *m*/);
+    bool sameDuration(int a, int b);
+
+    bool abort;
 };
 
 #endif // VISCMPDLG_H

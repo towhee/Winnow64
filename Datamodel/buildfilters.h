@@ -35,7 +35,8 @@ public:
         LabelEdit,
         TitleEdit,
         CreatorEdit,
-        MissingThumbEdit
+        MissingThumbEdit,
+        CompareEdit
     } category;
 
     void stop();
@@ -61,6 +62,7 @@ public slots:
     void update();
     void updateCategory(BuildFilters::Category category,
                         BuildFilters::AfterAction newAction = NoAfterAction);
+    void updateCategoryItems(QTreeWidgetItem *item, int dmColumn);
 
 private:
     void abortIfRunning();

@@ -567,7 +567,7 @@ void MW::createEditActions()
     addAction(mediaReadSpeedAction);
     connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
 
-    visCmpImagesAction = new QAction(tr("Visually compare images"), this);
+    visCmpImagesAction = new QAction(tr("Find duplicates"), this);
     visCmpImagesAction->setObjectName("visCmpImages");
     visCmpImagesAction->setShortcutVisibleInContextMenu(true);
     addAction(visCmpImagesAction);

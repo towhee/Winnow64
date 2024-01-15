@@ -94,6 +94,7 @@ namespace G
         KeywordsColumn,
         MetadataLoadedColumn,
         MissingThumbColumn,
+        CompareColumn,
         // original values
         _RatingColumn,
         _LabelColumn,

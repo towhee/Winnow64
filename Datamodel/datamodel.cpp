@@ -265,6 +265,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
 }
 void DataModel::clearDataModel()
 {
@@ -799,7 +800,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     Used by ImageDecoder, InfoString, IngestDlg and XMP sidecars.
 */
-    lastFunction = "";
+    //lastFunction = "";
     if (G::isLogger) G::log("DataModel::imMetadata", fPath);
 //    qDebug() << "DataModel::imMetadata" << "Instance =" << instance << currentFolderPath;
     ImageMetadata m;
@@ -939,6 +940,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
 
     m.searchStr = index(row, G::SearchTextColumn).data().toString();
+    m.compare = index(row, G::CompareColumn).data().toBool();
 
     if (updateInMetadata) metadata->m = m;
 
@@ -1223,16 +1225,19 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (m._rating == "0") m.rating = "";
     setData(index(row, G::_RatingColumn), m._rating);
 
-    // rghcreate
+    // Creation dates
+    // resolve system vs exif creation dates
+    QString sysCreatedDT = index(row, G::CreatedColumn).data().toString();
+    QString exifCreatedDT = m.createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
     QDateTime createdDT;
-    if (m.createdDate.isValid()) createdDT = m.createdDate;
-    else createdDT = index(row, G::CreatedColumn).data().toDateTime();
-//    if (index(row, G::CreatedColumn).data().toString().length())
-//        createdDT = index(row, G::CreatedColumn).data().toDateTime();
-//    else
-//        createdDT = m.createdDate;
+    if (m.createdDate.isValid() && exifCreatedDT != sysCreatedDT) {
+        setData(index(row, G::CreatedColumn), exifCreatedDT);
+        createdDT = m.createdDate;
+    }
+    else {
+        createdDT = index(row, G::CreatedColumn).data().toDateTime();
+    }
     if (createdDT.isValid()) {
-        setData(index(row, G::CreatedColumn), createdDT.toString("yyyy-MM-dd hh:mm:ss.zzz"));
         setData(index(row, G::YearColumn), createdDT.toString("yyyy"));
         setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
     }
@@ -1332,6 +1337,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
+    setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
