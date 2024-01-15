@@ -163,6 +163,20 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    QString root = "/Users/roryhill/Pictures/Test";
+//    QStringList dPaths;
+//    dPaths << root;
+//    QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+//    while (it.hasNext()) {
+//        it.next();
+//        dPaths << it.filePath();
+//    }
+//    for (QString s : dPaths) qDebug() << s;
+//    return;
+
+    visCmpImages();
+    return;
+
     //double d[2][3]= {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
     QVector<QVector<double>> d = {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
     qDebug() << "before";

@@ -17,6 +17,7 @@
          *keywords;
          *creators;
          *missingThumbs;
+         *compare;
          *focalLengths;
          *years;
          *days;
@@ -196,7 +197,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
                 << "filters->filtersBuilt =" << filters->filtersBuilt
                    ;
     }
-//    dm->sf->suspend(true);
+    //dm->sf->suspend(true);
     abortIfRunning();
     afterAction = newAction;
     this->category = category;
@@ -229,8 +230,8 @@ void BuildFilters::done()
     if (afterAction == AfterAction::Search) emit searchTextEdit();
     afterAction = AfterAction::NoAfterAction;
     dm->sf->filterChange();
-//    qint64 msec = buildFiltersTimer.elapsed();
-//    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
+    //qint64 msec = buildFiltersTimer.elapsed();
+    //qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::reset(bool collapse)
@@ -359,6 +360,11 @@ void BuildFilters::updateUnfilteredCounts()
     filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
     map.clear();
 
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->compare);
+    map.clear();
+
     for (int row = 0; row < rows; row++) {
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
@@ -453,6 +459,11 @@ void BuildFilters::updateFilteredCounts()
     filters->updateFilteredCountPerItem(map, filters->missingThumbs);
     map.clear();
 
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    filters->updateFilteredCountPerItem(map, filters->compare);
+    map.clear();
+
     for (int row = 0; row < rows; row++) {
         QStringList x = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
@@ -507,6 +518,10 @@ void BuildFilters::updateCategoryItems()
         col = G::MissingThumbColumn;
         cat = filters->missingThumbs;
         break;
+    case Category::CompareEdit:
+        col = G::CompareColumn;
+        cat = filters->compare;
+        break;
     }
 
     for (int row = 0; row < dm->rowCount(); row++)
@@ -520,6 +535,23 @@ void BuildFilters::updateCategoryItems()
     for (int row = 0; row < dm->sf->rowCount(); row++)
         map[dm->sf->index(row, col).data().toString()]++;
     filters->updateFilteredCountPerItem(map, cat);
+}
+
+void BuildFilters::updateCategoryItems(QTreeWidgetItem *item, int dmColumn)
+{
+/*
+    Dynamically update the filter if items in a category have by changed in the datamodel;
+    For example, if visCmpImages updates the datamodel colum "compare" then the compare
+    filter, which may have only contained the item = false, could now also have item = true.
+
+    Example:
+    buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
+    filterChange();     // updata filter counts
+*/
+    QMap<QString,int> map;
+    for (int row = 0; row < dm->rowCount(); row++)
+        map[dm->index(row, dmColumn).data().toString().trimmed()]++;
+    filters->addCategoryItems(map, item);
 }
 
 void BuildFilters::appendUniqueItems()
@@ -644,6 +676,14 @@ void BuildFilters::appendUniqueItems()
         map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->missingThumbs);
     time("Initialize missing thumbs");
+    emit updateProgress(progress += progressInc);
+    map.clear();
+
+    // duplicate found (compare)
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    filters->addCategoryItems(map, filters->compare);
+    time("Initialize compare");
     emit updateProgress(progress += progressInc);
     map.clear();
 

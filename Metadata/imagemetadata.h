@@ -127,6 +127,7 @@ public:
         EndianOrderNotFound
     } parseStatus;
     QString searchStr = "";
+    bool compare = false;
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

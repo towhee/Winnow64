@@ -28,6 +28,7 @@ public:
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
     QTreeWidgetItem *missingThumbs;
+    QTreeWidgetItem *compare;
 
     QTreeWidgetItem *activeCategory;   // category just filtered
 
@@ -45,6 +46,7 @@ public:
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
     QString catMissingThumbs = "Missing thumbs";
+    QString catCompare = "Duplicate found";
 
     QMap<QString,int> filterCategoryToDmColumn;
 //    QHash<QString,QString>categories;
