@@ -118,6 +118,7 @@ bool Reader::readMetadata()
 
         if (!dm->isMetadataLoaded(dmRow)) {
             status = Status::MetaFailed;
+            if (G::isWarningLogger)
             qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
         }
 
@@ -127,6 +128,7 @@ bool Reader::readMetadata()
     }
     else {
         status = Status::MetaFailed;
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
     }
     return isMetaLoaded;

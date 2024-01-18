@@ -120,31 +120,39 @@ void ImageCache::stop()
     image caching thread without a new one starting when there has been a
     folder change. The cache status label in the status bar will be hidden.
 */
-    if (debugCaching)
-        qDebug() << "ImageCache::stop";
+    //if (debugCaching)
+    qDebug() << "ImageCache::stop  isRunning =" << isRunning();
     if (debugCaching || G::isLogger) G::log("ImageCache::stop");
-    //abort = true;
 
-    // stop imagecache thread
-    if (isRunning()) {
-        if (useMutex) gMutex.lock();
-        abort = true;
-        condition.wakeOne();
-        if (useMutex) gMutex.unlock();
-        wait();
-        abort = false;
-    }
+    // stop ImageCache first to prevent more decoder dispatch
+    if (useMutex) gMutex.lock();
+    abort = true;
+    if (useMutex) gMutex.unlock();
 
     // stop decoder threads
     for (int id = 0; id < decoderCount; ++id) {
         decoder[id]->stop();
     }
 
+    /* stop imagecache thread if running, which is unlikely as run() initiates the
+       fillCache cycle and ends */
+    if (isRunning()) {
+        if (useMutex) gMutex.lock();
+        //abort = true;
+        condition.wakeOne();
+        if (useMutex) gMutex.unlock();
+        wait();
+    }
+
+    abort = false;
+
     // signal MW all stopped if a folder change
     //if (G::stop) emit stopped("ImageCache");
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+
+    qDebug() << "ImageCache::stop  STOPPED";
 }
 
 float ImageCache::getImCacheSize()
@@ -321,8 +329,11 @@ void ImageCache::setPriorities(int key)
     int behindPos;
 
     // update priorities
-    if (key < icd->cacheItemList.length())
+    if (key < icd->cacheItemList.length()) {
+        //gMutex.lock();//rgh
         icd->cacheItemList[key].priority = 0;
+        //gMutex.unlock();
+    }
     int i = 1;                  // start at 1 because current pos preset to zero
     if (icd->cache.isForward) {
         aheadPos = key + 1;
@@ -331,13 +342,17 @@ void ImageCache::setPriorities(int key)
             for (int b = behindPos; b > behindPos - behindAmount; --b) {
                 for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
                     if (a >= icd->cacheItemList.length()) break;
+                    //gMutex.lock();//rgh
                     icd->cacheItemList[a].priority = i++;
+                    //gMutex.unlock();
                     if (i >= icd->cacheItemList.length()) break;
                     if (a == aheadPos + aheadAmount - 1 && b < 0) aheadPos += aheadAmount;
                 }
                 aheadPos += aheadAmount;
                 if (b < 0) break;
+                //gMutex.lock();//rgh
                 icd->cacheItemList[b].priority = i++;
+                //gMutex.unlock();
                 if (i > icd->cacheItemList.length()) break;
             }
             behindPos -= behindAmount;
@@ -350,14 +365,18 @@ void ImageCache::setPriorities(int key)
             for (int b = behindPos; b < behindPos + behindAmount; ++b) {
                 for (int a = aheadPos; a > aheadPos - aheadAmount; --a) {
                     if (a < 0) break;
+                    //gMutex.lock();//rgh
                     icd->cacheItemList[a].priority = i++;
+                    //gMutex.unlock();
                     if (i >= icd->cacheItemList.length()) break;
                     if (a == aheadPos - aheadAmount + 1 && b > icd->cache.totFiles)
                         aheadPos -= aheadAmount;
                 }
                 aheadPos -= aheadAmount;
                 if (b >= icd->cacheItemList.length()) break;
+                //gMutex.lock();//rgh
                 icd->cacheItemList[b].priority = i++;
+                //gMutex.unlock();
                 if (i > icd->cacheItemList.length()) break;
             }
             behindPos += behindAmount;
@@ -462,9 +481,9 @@ void ImageCache::setTargetRange()
         QString fPath = keys.at(key);
         // i = cacheKey
         // could be issue when deleting an image
-        if (!keyFromPath.contains(fPath)) continue;
+        if (!keyFromPath.contains(fPath)) continue; // filter crash
 
-        int i = keyFromPath[fPath];
+        int i = keyFromPath[fPath]; // filter crash
         if (i < icd->cache.targetFirst || i > icd->cache.targetLast) {
             if (debugCaching)
             {
@@ -1231,6 +1250,7 @@ void ImageCache::buildImageCacheList()
         qDebug() << "ImageCache::buildImageCacheList";
     icd->cacheItemList.clear();
     keyFromPath.clear();
+    pathFromKey.clear();
     // the total memory size of all the images in the folder currently selected
     int folderMB = 0;
     icd->cache.totFiles = dm->sf->rowCount();
@@ -1322,7 +1342,6 @@ void ImageCache::initImageCache(int &cacheMaxMB,
 
     // update folder change instance
     instance = dm->instance;
-    G::imageCacheInstance = instance;
 
     // cache is a structure to hold cache management parameters
     icd->cache.key = 0;
@@ -1375,7 +1394,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     The image cache is now ready to run by calling setCachePosition().
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
-    if (debugCaching)
+    //if (debugCaching)
     {
         qDebug() << "ImageCache::rebuildImageCacheParameters";
     }
@@ -1386,14 +1405,18 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     // update currentPath
     currentPath = currentImageFullPath;
 
+    // update instance
+    instance = dm->instance;
+
     // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
+
+    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters after buildImageCacheList()"; // << reportImCache();
 
     // update cacheItemList
     icd->cache.key = 0;
     // list of files in cacheItemList (all the filtered files) used to check for surplus
     QStringList filteredList;
-
     // assign cache.key and update isCached status in cacheItemList
     for (int row = 0; row < icd->cacheItemList.length(); ++row) {
         QString fPath = pathFromKey[row];
@@ -1412,7 +1435,8 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         //*/
     }
 
-    //qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before remove surplus" << reportImCache();
+    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before remove surplus" << reportImCache();
+
     // remove surplus images in icd->imCache
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
@@ -1429,7 +1453,9 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     if (source == "SortChange") icd->cache.isForward = !icd->cache.isForward;
 
     setPriorities(icd->cache.key);
+    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before setTargetRange()";
     setTargetRange();
+
     //qDebug().noquote() << "ImageCache::rebuildImageCacheParameters" << diagnostics();
 
     if (icd->cache.isShowCacheStatus)
@@ -1485,7 +1511,7 @@ void ImageCache::cacheSizeChange()
     }
 }
 
-void ImageCache::setCurrentPosition(QString path, QString src)
+void ImageCache::setCurrentPosition(QString fPath, QString src)
 {
 /*
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
@@ -1497,7 +1523,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (debugCaching)
     {
         //qDebug() << " ";
-        qDebug().noquote() << "ImageCache::setCurrentPosition" << path
+        qDebug().noquote() << "ImageCache::setCurrentPosition" << fPath
                            << "src =" << src
                            << "isRunning =" << isRunning();
     }
@@ -1506,19 +1532,25 @@ void ImageCache::setCurrentPosition(QString path, QString src)
             qWarning() << "WARNING"
                        << "ImageCache::setCurrentPosition"
                        << "Instance clash"
-                       << dm->rowFromPath(path)
+                       << dm->rowFromPath(fPath)
                        << src
-                       << path;
+                       << fPath;
         return;
     }
 
     if (useMutex) gMutex.lock();
-    currentPath = path;
+    currentPath = fPath;
     icd->cache.key = dm->currentSfRow;
     if (useMutex) gMutex.unlock();
 
+    // image not cached
+    if (!icd->imCache.contains(fPath)) {
+        emit centralMsg("Loading Image...");
+    }
+
     if (isRunning()) {
         // reset target range
+        qDebug() << "ImageCache::setCurrent Position before updateTargets";
         updateTargets();
     }
     else {
@@ -1692,33 +1724,36 @@ void ImageCache::fillCache(int id)
     }
     // returning decoder
     else {
-        cacheKey = keyFromPath[decoder[id]->fPath];
-        if (debugCaching)
-        {
-            qDebug().noquote() << "ImageCache::fillCache"
-                               << "     returning decoder" << id
-                               << "row =" << cacheKey
-                               << "status =" << decoder[id]->status
-                               << "status =" << decoder[id]->statusText.at(decoder[id]->status)
-                ;
-        }
-        bool isImage = decoder[id]->image.width() > 0;
-        if (!isImage) {
-            QString k = QString::number(cacheKey).leftJustified((4));
+        if (decoder[id]->instance == dm->instance) {
+            cacheKey = keyFromPath[decoder[id]->fPath];
             if (debugCaching)
             {
-            qDebug().noquote() << "ImageCache::fillCache"
-                               << "     decoder" << id
-                               << "row =" << cacheKey
-                               << "NULL IMAGE"
-                ;
+                qDebug().noquote() << "ImageCache::fillCache"
+                                   << "     returning decoder" << id
+                                   << "row =" << cacheKey
+                                   << "status =" << decoder[id]->status
+                                   << "status =" << decoder[id]->statusText.at(decoder[id]->status)
+                                   << "isRunning =" << isRunning()
+                    ;
             }
-        }
-        icd->cacheItemList[cacheKey].isCaching = false;
-        icd->cacheItemList[cacheKey].errMsg = decoder[id]->errMsg;
-        icd->cacheItemList[cacheKey].status = static_cast<int>(decoder[id]->status);
-        if (decoder[id]->status == ImageDecoder::Status::Video) {
-            icd->cacheItemList[cacheKey].isCached = true;
+            bool isImage = decoder[id]->image.width() > 0;
+            if (!isImage) {
+                QString k = QString::number(cacheKey).leftJustified((4));
+                if (debugCaching)
+                {
+                qDebug().noquote() << "ImageCache::fillCache"
+                                   << "     decoder" << id
+                                   << "row =" << cacheKey
+                                   << "NULL IMAGE"
+                    ;
+                }
+            }
+            icd->cacheItemList[cacheKey].isCaching = false;
+            icd->cacheItemList[cacheKey].errMsg = decoder[id]->errMsg;
+            icd->cacheItemList[cacheKey].status = static_cast<int>(decoder[id]->status);
+            if (decoder[id]->status == ImageDecoder::Status::Video) {
+                icd->cacheItemList[cacheKey].isCached = true;
+            }
         }
     }
 
@@ -1942,6 +1977,7 @@ void ImageCache::run()
     memChk();
 
     // reset target range
+    qDebug() << "ImageCache::run before updateTargets";
     updateTargets();
 
     // if cache is up-to-date our work is done

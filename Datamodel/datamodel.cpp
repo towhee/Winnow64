@@ -291,6 +291,13 @@ void DataModel::clearDataModel()
     isMissingEmbeddedThumb = false;
 }
 
+void DataModel::newInstance()
+{
+    if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
+    instance++;
+    G::dmInstance = instance;
+}
+
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 {
 /*
@@ -744,6 +751,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::CompareColumn), false);
     // G::CreatedColumn is extracted from the image metadata, not QFileInfo
 
     // rghcreate
@@ -1067,10 +1075,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
         // cannot read this file type, load empty metadata
         else {
             errMsg = "Cannot read file type";
-//            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
+            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
             G::error(errMsg, fun, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
+            metadata->m.compare = false;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
 //            mutex.unlock();
             return false;
@@ -1230,7 +1239,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     QString sysCreatedDT = index(row, G::CreatedColumn).data().toString();
     QString exifCreatedDT = m.createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
     QDateTime createdDT;
-    if (m.createdDate.isValid() && exifCreatedDT != sysCreatedDT) {
+    if (m.createdDate.isValid() /*&& exifCreatedDT != sysCreatedDT*/) {
         setData(index(row, G::CreatedColumn), exifCreatedDT);
         createdDT = m.createdDate;
     }
@@ -1252,6 +1261,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
+    /*
+    double ar = aspectRatio(m.width, m.height, m.orientation);
+    qDebug().noquote()
+             << "DataModel::addMetadataForItem"
+             << QString::number(row).rightJustified(4)
+             << "aspect ratio =" << QString::number(ar, 'f', 2)
+             << "\tw =" << QString::number(m.width).rightJustified(4)
+             << "h =" << QString::number(m.height).rightJustified(4)
+             << "orientation =" << m.orientation
+             << m.fPath;
+    //*/
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -1315,6 +1335,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::UrlColumn), m.url);
      search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
+    setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::OffsetFullColumn), m.offsetFull);
     setData(index(row, G::LengthFullColumn), m.lengthFull);
     setData(index(row, G::WidthPreviewColumn), m.widthPreview);
@@ -1396,7 +1417,7 @@ double DataModel::aspectRatio(int w, int h, int orientation)
     if (isDebug) qDebug() << "DataModel::aspectRatio" << "instance =" << instance << currentFolderPath;
     if (w == 0 || h == 0) return 1.0;
     // portrait
-    if (orientation == 8) return h * 1.0 / w;
+    if (orientation == 6 || orientation == 8) return h * 1.0 / w;
     // landscape
     else return w * 1.0 / h;
 }

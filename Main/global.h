@@ -167,8 +167,6 @@ namespace G
 
     extern QWaitCondition metaReadDone;
     extern int dmInstance;
-    extern int metadataInstance;
-    extern int imageCacheInstance;
 
     // limit functionality for testing
     extern bool useApplicationStateChanged;

@@ -160,7 +160,7 @@ void BuildFilters::update()
     abortIfRunning();
     if (filters->filtersBuilt) {
         action = Action::Update;
-        if (G::allMetadataLoaded) start(NormalPriority);
+        /*if (G::allMetadataLoaded)*/ start(NormalPriority);
     }
     else build();
 }
@@ -169,7 +169,7 @@ void BuildFilters::recount()
 {
 /*
     Counts the filtered and unfiltered items without rebuilding the filters.  This is used
-    when images are deleted.
+    when images are deleted or added to the current folder (ie remote embellish).
 */
     updateUnfilteredCounts();
     updateFilteredCounts();
@@ -197,7 +197,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
                 << "filters->filtersBuilt =" << filters->filtersBuilt
                    ;
     }
-    //dm->sf->suspend(true);
+    dm->sf->suspend(true);
     abortIfRunning();
     afterAction = newAction;
     this->category = category;
@@ -230,6 +230,9 @@ void BuildFilters::done()
     if (afterAction == AfterAction::Search) emit searchTextEdit();
     afterAction = AfterAction::NoAfterAction;
     dm->sf->filterChange();
+
+    filters->expandAllFilters();
+
     //qint64 msec = buildFiltersTimer.elapsed();
     //qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
@@ -551,6 +554,7 @@ void BuildFilters::updateCategoryItems(QTreeWidgetItem *item, int dmColumn)
     QMap<QString,int> map;
     for (int row = 0; row < dm->rowCount(); row++)
         map[dm->index(row, dmColumn).data().toString().trimmed()]++;
+    qDebug() << "BuildFilters::updateCategoryItems  map =" << map;
     filters->addCategoryItems(map, item);
 }
 

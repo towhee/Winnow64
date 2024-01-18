@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- Crash when reject files and then filter on rejected
+- If delete an imag, then remote embellish to same folder, then blank icon
 - Crash when delete tiff file
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes

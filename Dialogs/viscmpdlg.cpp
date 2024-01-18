@@ -143,6 +143,8 @@ void VisCmpDlg::setupModel()
     ui->tv->setColumnWidth(1, w1);
     ui->tv->setColumnWidth(2, w2);
     ui->tv->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+
+    isDebug = false;
 }
 
 void VisCmpDlg::preview(QString fPath, QImage &image)
@@ -358,6 +360,12 @@ QString VisCmpDlg::currentBString(int b)
            + " possible matches";
 }
 
+void VisCmpDlg::clear()
+{
+    results.clear();
+    bItems.clear();
+}
+
 void VisCmpDlg::buildBItemsList(QStringList &dPaths)
 {
     QDir *dir = new QDir;
@@ -375,26 +383,39 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         B bItem;
         for (int i = 0; i < dir->entryInfoList().size(); i++) {
             bItem.fPath = dir->entryInfoList().at(i).filePath();
-            // get metadata info for the B file
-            QFileInfo fInfo(bItem.fPath);
-            ImageMetadata *m;
-            if (metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")) {
-                m = &metadata->m;
-                bItem.type = QFileInfo(m->fPath).suffix().toLower();
-                bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
-                double aspect;
-                if (m->orientation == 0) aspect = m->height * 1.0 / m->width;
-                else aspect = m->width * 1.0 / m->height;
-                bItem.aspect = QString::number(aspect,'f', 1);
-            }
 
             // get the thumbnail (used to compare to A thumbnail in datamodel)
             QImage image;
-            bool isThumb = true;
-            autonomousImage->thumbNail(bItem.fPath, image, G::maxIconSize);
-            bItem.im = image;
+            if (ui->pixelCompare) {
+                autonomousImage->thumbNail(bItem.fPath, image, G::maxIconSize);
+                bItem.im = image;
+            }
+
+            // get metadata info for the B file to calc aspect
+            QFileInfo fInfo(bItem.fPath);
+            //ImageMetadata *m;
+            if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")){
+                // deal with failure
+                //continue;
+            }
+            ImageMetadata *m = &metadata->m;
+            bItem.type = QFileInfo(metadata->m.fPath).suffix().toLower();
+            bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+            if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
+                double aspect;
+                if (m->width && m->height) {
+                    if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
+                    else aspect = m->width * 1.0 / m->height;
+                }
+                else {
+                    if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
+                    else aspect = 0;
+                }
+                bItem.aspect = QString::number(aspect,'f', 2);
+            }
             bItems.append(bItem);
-            ///*
+            /*
             qDebug() << "VisCmpDlg::buildBItemsList" << i << bItem.fPath;
             //reportRGB(image);
             //*/
@@ -445,15 +466,19 @@ void VisCmpDlg::buildBList()
             }
         }
     }
-    qDebug() << "bExcludeFolderPaths list:";
-    foreach (QString s, bExcludeFolderPaths) qDebug() << "" << s;
+    if (isDebug) {
+        qDebug() << "bExcludeFolderPaths list:";
+        foreach (QString s, bExcludeFolderPaths) qDebug() << "" << s;
+    }
 
     // remove exclude folders from bFolderPaths
     foreach (const QString &s, bExcludeFolderPaths) {
         bFolderPaths.removeAll(s);
     }
-    qDebug() << "bFolderPaths list after exclusion:";
-    foreach (QString s, bFolderPaths) qDebug() << "" << s;
+    if (isDebug) {
+        qDebug() << "bFolderPaths list after exclusion:";
+        foreach (QString s, bFolderPaths) qDebug() << "" << s;
+    }
 
     // build bItems
     buildBItemsList(bFolderPaths);
@@ -473,32 +498,35 @@ bool VisCmpDlg::sameFileType(int a, int b)
     QString pathB = bItems.at(b).fPath;
     QString extB = QFileInfo(pathB).suffix().toLower();
     bool isSame = (extA == extB);
+    if (isDebug)
     qDebug() << "FileType     a =" << a << extA << "b =" << b << extB<< "isSame" << isSame;
     return isSame;
 }
 
-bool VisCmpDlg::sameCreationDate(int a, int b/*, ImageMetadata *m*/)
+bool VisCmpDlg::sameCreationDate(int a, int b)
 {
     QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
     QString dateB = bItems.at(b).createdDate;
     //QString dateB = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
     bool isSame = (dateA == dateB);
+    if (isDebug)
     qDebug() << "CreationDate a =" << a << dateA << "b =" << b << dateB << "isSame" << isSame;
     return isSame;
 }
 
-bool VisCmpDlg::sameAspect(int a, int b/*, ImageMetadata *m*/)
+bool VisCmpDlg::sameAspect(int a, int b)
 {
     // A datamodel
+    if (a == 7 && b == 7) {
+        int x = 0;
+    }
     double aspect = dm->sf->index(a, G::AspectRatioColumn).data().toDouble();
-    QString aspectA = QString::number(aspect,'f', 1);
+    QString aspectA = QString::number(aspect,'f', 2);
     // B collection
     QString aspectB = bItems.at(b).aspect;
-//    if (m->orientation == 0) aspect = m->height * 1.0 / m->width;
-//    else aspect = m->width * 1.0 / m->height;
-//    QString aspectB = QString::number(aspect,'f', 1);
     bool isSame = (aspectA == aspectB);
-    qDebug() << "sameAspect   a =" << a << aspectA << "b =" << b << aspectA << "isSame" << isSame;
+    if (isDebug)
+    qDebug() << "sameAspect   a =" << a << aspectA << "b =" << b << aspectB << "isSame" << isSame;
     return isSame;
 }
 
@@ -517,45 +545,41 @@ void VisCmpDlg::buildResults()
     }
 
     // compare criteria
+    if (isDebug)
+    qDebug() << "\nVisCmpDlg::buildResults\n";
 
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         for (int b = 0; b < bItems.count(); b++) {
-            // get metadata info for the B file
-//            QFileInfo fileInfo(bItems.at(b).fPath);
-////            QFileInfo fileInfo(results[a][b].fPath);
-//            ImageMetadata *m;
-//            if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")) {
-//                m = &metadata->m;
-//                qDebug() << "buildResults loadImageMetadata a =" << a << "b =" << b;
-//            }
-//            else {
-//                // failure consequences
-//                qDebug() << "buildResults loadImageMetadata failed a =" << a << "b =" << b
-//                         << "results[a][b].fPath" << results[a][b].fPath;
-//                break;
-//            }
-
+            if (isDebug)
+            qDebug() << "VisCmpDlg::buildResults  A ="
+                     <<  dm->sf->index(a,G::NameColumn).data().toString()
+                     <<  "B =" << bItems.at(b).fPath
+                ;
             // same file type
             if (ui->sameFileTypeCB->isChecked()) {
                 results[a][b].sameType = sameFileType(a, b);
+                if (isDebug)
                 qDebug() << "VisCmpDlg::buildResults results[a][b].sameType" << results[a][b].sameType;
             }
 
             // same creation date
             if (ui->sameCreationDateCB->isChecked()) {
                 results[a][b].sameCreationDate = sameCreationDate(a, b/*, m*/);
+                if (isDebug)
                 qDebug() << "VisCmpDlg::buildResults results[a][b].sameCreationDate" << results[a][b].sameCreationDate;
             }
 
             // same aspect
             if (ui->sameAspectCB->isChecked()) {
                 results[a][b].sameAspect = sameAspect(a, b/*, m*/);
+                if (isDebug)
                 qDebug() << "VisCmpDlg::buildResults results[a][b].sameAspect" << results[a][b].sameAspect;
             }
             // same duration (video)
             if (ui->sameDurationCB->isChecked()) {
 
             }
+            if (isDebug)
             qDebug() << "\n";
         }
     }
@@ -584,6 +608,7 @@ void VisCmpDlg::updateResults()
             else isAspect = true;
             if (cmpDuration) isDuration = results[a][b].sameDuration;
             else isDuration = true;
+            if (isDebug)
             qDebug() << "a =" << a << "b =" << b
                      << "sameType =" << results[a][b].sameType
                      << "sameCreationDate =" << results[a][b].sameCreationDate
@@ -607,6 +632,29 @@ void VisCmpDlg::updateResults()
     }
 }
 
+void::VisCmpDlg::reportAspects()
+{
+    qDebug() << "\n" << "VisCmpDlg::reportAspects";
+    for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
+        QFileInfo fInfo(bItems.at(b).fPath);
+        QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
+        metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true);
+        ImageMetadata *m = &metadata->m;
+        // QString::number().rightJustified(3)
+        qDebug().noquote()
+                 << QString::number(a).rightJustified(3)
+                 << QString::number(b).rightJustified(3)
+                 //<< dm->sf->index(a,G::NameColumn).data().toString()
+                 << "aspectA/B" << QString::number(dm->sf->index(a,G::AspectRatioColumn).data().toDouble(), 'f', 2)
+                 << bItems.at(b).aspect
+                 << "m >> w" << QString::number(m->width).rightJustified(5)
+                 << "h" << QString::number(m->height).rightJustified(5)
+                 << "orientation" << QString::number(m->orientation).rightJustified(1)
+                 << fInfo.fileName()
+            ;
+    }
+}
+
 void::VisCmpDlg::reportResults()
 {
     qDebug() << "\n" << "VisCmpDlg::reportResults";
@@ -616,7 +664,7 @@ void::VisCmpDlg::reportResults()
         QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
         QString typeA = QFileInfo(pathA).suffix().toLower();
         QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
-        QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 1);
+        QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
         for (int b = 0; b < bItems.count(); b++) {
             QString typeB = bItems.at(b).type;
             QString dateB = bItems.at(b).createdDate;
@@ -637,6 +685,7 @@ void::VisCmpDlg::reportResults()
 
 void VisCmpDlg::on_compareBtn_clicked()
 {
+    clear();
     buildBList();
     buildResults();
     if (ui->pixelCompare->isChecked()) pixelCompare();
@@ -650,6 +699,8 @@ void VisCmpDlg::on_compareBtn_clicked()
     ui->tv->setEnabled(true);
     //ui->tv->setCurrentIndex(model.index(0,0));
     //on_tv_clicked(model.index(0,0));
+
+    //reportAspects();
 }
 
 void VisCmpDlg::on_prevToolBtn_clicked()
@@ -659,6 +710,7 @@ void VisCmpDlg::on_prevToolBtn_clicked()
         int a = ui->tv->currentIndex().row();
         int b = currentMatch;
         QString fPath = results[a][b].fPath;
+        if (isDebug)
         qDebug() << "VisCmpDlg::on_prevToolBtn_clicked currentMatch =" << currentMatch << "a =" << a << "b =" << b;
         QImage image;
         preview(fPath, image);
@@ -696,6 +748,7 @@ void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
     if (index.column() == 0) return;
     currentMatch = 0;
     // larger A image (candidate)
+    if (isDebug)
     qDebug() << "VisCmpDlg::on_tv_clicked  index =" << index;
     int a = index.row();
     QString fPath = dm->sf->index(a,0).data(G::PathRole).toString();
@@ -740,8 +793,10 @@ void VisCmpDlg::on_cancelBtn_clicked()
 void VisCmpDlg::on_updateDupsAndQuitBtn_clicked()
 {
     for (int a = 0; a < dm->sf->rowCount(); a++) {
+        /*
         qDebug() << "VisCmpDlg::on_updateDupsAndQuitBtn_clicked"
                  << model.itemFromIndex(model.index(a,0))->checkState();
+        //*/
         QModelIndex idx = dm->sf->index(a, G::CompareColumn);
         dm->sf->setData(idx, false);
         if (model.itemFromIndex(model.index(a,0))->checkState() == Qt::Checked) {
@@ -756,6 +811,7 @@ void VisCmpDlg::resizeEvent(QResizeEvent *event)
     QDialog::resizeEvent(event);
     int w = ui->candidateLbl->width();
     int h = ui->candidateLbl->height();
+    if (isDebug)
     qDebug() << "VisCmpDlg::resizeEvent" << "w =" << w << "h =" << h;
     ui->candidateLbl->setPixmap(pA.scaled(w, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     ui->matchLbl->setPixmap(pB.scaled(w, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -763,6 +819,7 @@ void VisCmpDlg::resizeEvent(QResizeEvent *event)
 
 void VisCmpDlg::on_helpBtn_clicked()
 {
+    reportAspects();
     reportResults();
 }
 

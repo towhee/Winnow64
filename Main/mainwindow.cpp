@@ -1864,6 +1864,9 @@ void MW::handleStartupArgs(const QString &args)
             foreach (QString path, embellishedPaths) {
                 insertFile(path);
             }
+            // update filter counts
+            buildFilters->recount();
+            // select first new embellished image
             QString fPath = embellishedPaths.at(0);
             sel->select(fPath);
         }
@@ -2265,9 +2268,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
-            /*
+//            /*
             qDebug() << "MW::fileSelectionChange setImageCachePosition"
                      << dm->currentFilePath
+                     << "centralLayout->currentIndex()" << centralLayout->currentIndex()
                         ;
                         //*/
             emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
@@ -2408,8 +2412,9 @@ bool MW::stop(QString src)
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
-    dm->instance++;
-    G::dmInstance = dm->instance;
+    dm->newInstance();
+//    dm->instance++;
+//    G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
 
     bool isDebugStopping = false;
@@ -6166,10 +6171,12 @@ void MW::visCmpImages()
     if (G::isLogger) G::log("MW::visCmpImages");
     VisCmpDlg visCmpDlg(dm, metadata);
     if (visCmpDlg.exec()) {
+        qDebug() << "MW::visCmpImages accepted";
         // add true to compare filter
         buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
+        buildFilters->update();
         // update filter counts
-        filterChange();
+        //filterChange("MW::visCmpImages");
     }
 }
 
