@@ -485,6 +485,11 @@ void Selection::chkForDeselection(int sfRow)
     }
 }
 
+void Selection::clear()
+{
+    sm->clear();
+}
+
 int Selection::count()
 {
     return sm->selectedRows().count();

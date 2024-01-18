@@ -783,6 +783,8 @@ bool Metadata::parseHEIF()
     if (G::isLogger) G::log("Metadata::parseHEIF");
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
+        if (G::isWarningLogger)
+        qDebug() << "Metadata::parseHEIF  is a jpg";
         parseJPG(0);
     }
 #ifdef Q_OS_WIN
@@ -910,6 +912,7 @@ void Metadata::clearMetadata()
     m.iccSegmentLength = 0;
     m.iccBuf.clear();
     m.isEmbeddedThumbMissing = false;
+    m.compare = false;
     m.width = 0;
     m.height = 0;
     m.orientation = 1;

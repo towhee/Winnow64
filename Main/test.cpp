@@ -163,16 +163,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QString root = "/Users/roryhill/Pictures/Test";
-//    QStringList dPaths;
-//    dPaths << root;
-//    QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-//    while (it.hasNext()) {
-//        it.next();
-//        dPaths << it.filePath();
-//    }
-//    for (QString s : dPaths) qDebug() << s;
-//    return;
+    imageCacheThread->stop();
+    qDebug() << "IMAGECACHE STOPPED";
+    return;
 
     visCmpImages();
     return;

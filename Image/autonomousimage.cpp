@@ -158,15 +158,14 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
         return false;
     }
 
-    ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff;
 
     // Attempt to decode tiff thumbnail by sampling tiff raw data
     bool getThumb = true;
-    if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) return true;
+    if (isThumbOffset && tiff.decode(*m, fPath, image, getThumb, G::maxIconSize)) return true;
 
     // try load entire tif using Winnow decoder
-    if (!tiff.decode(fPath, m.offsetFull, image)) return true;
+    if (!tiff.decode(fPath, m->offsetFull, image)) return true;
 
     // use Qt tiff library to decode
     if (image.load(fPath)) return true;

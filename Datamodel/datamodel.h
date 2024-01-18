@@ -51,6 +51,7 @@ public:
     bool readMetadataForItem(int row, int instance);
     bool refreshMetadataForItem(int row, int instance);
     void clearDataModel();
+    void newInstance();
     bool hasFolderChanged();
     bool contains(QString &path);
     void find(QString text);

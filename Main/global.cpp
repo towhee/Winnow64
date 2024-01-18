@@ -35,8 +35,6 @@ namespace G
 
     QWaitCondition metaReadDone;
     int dmInstance;
-    int metadataInstance;
-    int imageCacheInstance;
 
     // limit functionality for testing
     bool useApplicationStateChanged = false;

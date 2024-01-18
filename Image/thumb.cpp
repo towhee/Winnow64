@@ -314,7 +314,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         }
     }
 
-    /*if (metadata->rotateFormats.contains(ext)) */checkOrientation(fPath, image);
+    if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     QFile(fPath).setPermissions(oldPermissions);
 
     /*

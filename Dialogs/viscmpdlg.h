@@ -100,17 +100,20 @@ private:
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
     QString currentBString(int b);
+    void clear();
     void buildBList();
     void pixelCompare();
     void buildResults();
     void updateResults();
     void reportResults();
+    void reportAspects();
     bool sameFileType(int a, int b);
     bool sameCreationDate(int a, int b/*, ImageMetadata *m*/);
     bool sameAspect(int a, int b/*, ImageMetadata *m*/);
     bool sameDuration(int a, int b);
 
     bool abort;
+    bool isDebug = false;
 };
 
 #endif // VISCMPDLG_H

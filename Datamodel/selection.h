@@ -30,6 +30,7 @@ public:
     bool isSelected(int sfRow);
     int startSelectionBlock(int rowInBlock);
     int endSelectionBlock(int rowInBlock);
+    void clear();
     int count();
     void save();
     void recover();

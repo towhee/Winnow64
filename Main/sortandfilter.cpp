@@ -63,14 +63,22 @@ void MW::launchBuildFilters(bool force)
 void MW::filterChange(QString source)
 {
 /*
-    All filter changes should be routed to here as a central clearing house. The
-    datamodel filter is refreshed, the filter panel counts are updated, the current index
-    is updated, the image cache is rebuilt to match the current filter, any prior
-    selection that is still available is set, the thumb and grid first/last/thumbsPerPage
-    parameters are recalculated and icons are loaded if necessary.
+    All filter changes should be routed to here as a central clearing house.
+
+    - the datamodel filter is refreshed
+    - the filter panel counts are updated
+    - the current index is updated
+    - any prior selection that is still available is set
+    - the image cache is rebuilt to match the current filter
+    - the thumb and grid first/last/thumbsPerPage parameters are recalculated
+      and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
     //qDebug() << "MW::filterChange" << "called from:" << source;
+
+    bool rptTimer = true;
+    //QElapsedTimer G:t;
+    G::t.restart();
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -79,6 +87,14 @@ void MW::filterChange(QString source)
     }
 
     if (G::stop) return;
+
+    sel->clear();
+
+    // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
+    // and MetaRead2 for the prior datamodel filter.
+    dm->newInstance();
+    // stop ImageCache
+    imageCacheThread->stop();
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
@@ -91,6 +107,8 @@ void MW::filterChange(QString source)
         if (!G::allMetadataLoaded) return;
     }
 
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->addAllMetadata";
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
@@ -98,11 +116,17 @@ void MW::filterChange(QString source)
     isFilterChange = true;      // prevent unwanted fileSelectionChange()
     dm->sf->filterChange();
 
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->sf->filterChange()";
+
     // update filter panel image count by filter item
     buildFilters->update();
 
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  buildFilters->update()";
+
     // recover sort after filtration
     sortChange("filterChange");
+
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  sortChange(filterChange)";
 
     isFilterChange = false;     // allow fileSelectionChange()
 
@@ -121,18 +145,22 @@ void MW::filterChange(QString source)
     //qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
-        sel->select(newSfIdx);
     }
+    sel->select(newSfIdx);
 
     // update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
+
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  imageCacheThread->rebuildImageCacheParameters";
 
     // selection, fileSelectionChange, renew image cache
     //qDebug() << "MW::filterChange  sfIdx =" << newSfIdx;
 //    sel->select(newSfIdx);
 
     QApplication::restoreOverrideCursor();
+
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  finished";
 }
 
 void MW::quickFilter()

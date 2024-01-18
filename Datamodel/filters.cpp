@@ -1282,6 +1282,7 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     for (int i = 0; i < category->childCount(); i++) {
         category->child(i)->setData(2, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
+        //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
         if (itemMap.contains(key))
             category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
     }
@@ -1387,6 +1388,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
+    qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "Filters::itemClickedSignal";
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||

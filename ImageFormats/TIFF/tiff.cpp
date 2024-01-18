@@ -118,7 +118,7 @@ bool Tiff::parse(MetadataParameters &p,
 */
     if (G::isLogger) G::log("Tiff::parse");
     //file.open happens in readMetadata
-    qDebug() << "Tiff::parse" << p.file.fileName();
+    //qDebug() << "Tiff::parse" << p.file.fileName();
 
     Utilities u;
     quint32 startOffset = 0;
