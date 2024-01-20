@@ -162,10 +162,10 @@ namespace G
     extern bool dmEmpty;
     extern bool isLinearLoadDone;
     extern bool isInitializing;
+    extern bool metaReadDone;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
 
-    extern QWaitCondition metaReadDone;
     extern int dmInstance;
 
     // limit functionality for testing

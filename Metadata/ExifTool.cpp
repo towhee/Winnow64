@@ -1,21 +1,20 @@
 #include "Metadata/ExifTool.h"
 
-/*
-
-*/
-
 ExifTool::ExifTool()
 {
     if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
-#endif
+    #endif
     // confirm exifToolPath exists
     if (!QFile(exifToolPath).exists())
         qWarning() << "WARNING" << "ExifTool::ExifTool" << exifToolPath << "is missing";
+    //process.setStandardOutputFile("/Users/roryhill/Pictures/_ThumbTest/PNG_.txt");
+    //result.open(QIODevice::ReadWrite);
+    //process.setStandardOutputProcess(&result);
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
@@ -78,6 +77,20 @@ void ExifTool::copyICC(QString src, QString dst)
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
     process.write(args);
+}
+
+QString ExifTool::readTag(QString src, QString tag)
+{
+    // Prepare the arguments
+    QStringList args;
+    args += "-T";
+    args += "-" + tag;            // tag
+    args += src;                    // src file
+    execute(args);
+    process.waitForFinished(1);
+    QString output = process.readAllStandardOutput();
+    qDebug() << "ExifTool::readTag" << output;
+    return output; //output.trimmed();
 }
 
 // not used

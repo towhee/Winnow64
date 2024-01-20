@@ -213,6 +213,7 @@ Flow Flags:
     G::isInitializing
     G::stop
     G::dmEmpty
+    G::metaReadDone
     G::allMetadataLoaded
     G::allIconsLoaded
     G::isLinearLoadDone
@@ -856,7 +857,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // end stress test
         if (isStressTest) isStressTest = false;
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) stop("Escape key");
+        else if (!G::allMetadataLoaded || !G::metaReadDone) stop("Escape key");
         // stop background ingest
         else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -2532,6 +2533,7 @@ bool MW::reset(QString src)
     //qDebug() << "MW::reset src =" << src;
 
     G::dmEmpty = true;
+    G::metaReadDone = false;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::isLinearLoadDone = false;
@@ -2824,6 +2826,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
                  << "src =" << src
+                 << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "dm->abortLoadingModel =" << dm->abortLoadingModel
@@ -2848,6 +2851,7 @@ void MW::loadConcurrentDone()
     Signalled from MetaRead::run when finished
 */
     QSignalBlocker blocker(bookmarks);
+    G::metaReadDone = true;
 
     // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
@@ -2864,6 +2868,7 @@ void MW::loadConcurrentDone()
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
+             << "G::metaReadDone =" << G::metaReadDone
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
@@ -5526,6 +5531,7 @@ void MW::insertFile(QString fPath)
         dm->setData(dmIdx, false);
         dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insewrt");
         imageCacheThread->removeCachedImage(fPath);
+        G::metaReadDone = false;
         G::allMetadataLoaded = false;
         G::allIconsLoaded = false;
     }
@@ -5543,7 +5549,7 @@ void MW::deleteSelectedFiles()
 */
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
     // make sure datamodel is loaded
-    if (!G::allMetadataLoaded) {
+    if (!G::metaReadDone) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
@@ -5603,7 +5609,7 @@ void MW::deleteFiles(QStringList paths)
     t.restart();
 
     // if still loading metadata then do not delete
-    if (!G::allMetadataLoaded) {
+    if (!G::metaReadDone) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
@@ -5657,7 +5663,7 @@ void MW::deleteFiles(QStringList paths)
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
 
     // if all images in folder were deleted
-    if (sldm.count() == dm->rowCount()) {
+    if (sldm.count() == dm->sf->rowCount()) {
         stop("deleteFiles");
         folderSelectionChange();
         return;

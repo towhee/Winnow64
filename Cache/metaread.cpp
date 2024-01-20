@@ -80,6 +80,7 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
                  << "fileSelectionChanged =" << fileSelectionChanged
                  << "isRunning =" << isRunning()
                  << "src =" << src
+                 << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                     ;

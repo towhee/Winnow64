@@ -1,5 +1,17 @@
+EXIFTOOL
+exiftool [OPTIONS] [-TAG...] [--TAG...] FILE..
+
+console output -o OUTFILE or FMT (-out) replace OUTFILE with -
+-echo[NUM] TEXT
+
+exiftool -T -createdate /Users/roryhill/Pictures/_ThumbTest/PNG.png >> /Users/roryhill/Pictures/_ThumbTest/PNG_.txt
+
+exiftool -T -createdate PNG.png
+exiftool -T -w /Users/roryhill/Pictures/_ThumbTest/PNG_.txt -createdate /Users/roryhill/Pictures/_ThumbTest/PNG.png
+
 CreationDate a = 35 "2022-07-27 11:44:52.000" b = 35 "2016-09-11 15:52:30.000" isSame false
 2018-03-31 09:35:01
+
 
 VisCmpDlg::reportAspectss
  0   0 aspectA 1.50 m >> w  8000 h  5320 orientation 1 ARW A7R2.arw
@@ -44,3 +56,105 @@ VisCmpDlg::reportAspectss
 39  39 aspectA 1.50 m >> w  8640 h  5760 orientation 1 TIF Sony A1 LD TIF GPS.tif
 40  40 aspectA 1.50 m >> w  8256 h  5504 orientation 1 TIF Zerene.tif
 41  41 aspectA 1.78 m >> w  5472 h  3078 orientation 1 TIF.tif
+
+// header file
+#ifndef EXIFTOOL_H
+#define EXIFTOOL_H
+
+#include <QtWidgets>
+#include "Main/global.h"
+#include "Utilities/utilities.h"
+
+class ExifTool : public QObject
+{
+    Q_OBJECT
+
+public:
+    ExifTool();
+    int execute(QStringList &args);
+    void copyAllTags(QString src, QString dst);
+    void copyICC(QString src, QString dst);
+    void setOverWrite(bool overWrite);
+    int close();
+
+private:
+    QString exifToolPath;
+    QProcess process;
+    bool isOverWrite = false;
+};
+
+#endif // EXIFTOOL_H
+
+// cpp file
+#include "Metadata/ExifTool.h"
+
+ExifTool::ExifTool()
+{
+#ifdef Q_OS_WIN
+    exifToolPath = qApp->applicationDirPath() + "/et.exe";
+#endif
+#ifdef Q_OS_MAC
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+#endif
+    // confirm exifToolPath exists
+    if (!QFile(exifToolPath).exists())
+        qWarning() << "WARNING" << "ExifTool::ExifTool" << exifToolPath << "is missing";
+    QStringList startArgs;
+    startArgs << "-stay_open";
+    startArgs << "True";
+    startArgs << "-@";
+    startArgs << "-";
+    startArgs << "-execute";
+    process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
+    process.waitForStarted(3000);
+}
+
+int ExifTool::execute(QStringList &args)
+{
+    /* all args that are a path to an image should be converted to a url
+       ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
+    if (G::isFileLogger) Utilities::log("ExifTool::execute", exifToolPath);
+    return QProcess::execute(exifToolPath, args);
+}
+
+void ExifTool::setOverWrite(bool overWrite)
+{
+    isOverWrite = overWrite;
+}
+
+int ExifTool::close()
+{
+    QByteArray closeArgs;
+    closeArgs += "-stay_open\n";
+    closeArgs += "False\n";
+    process.write(closeArgs);
+    if (!process.waitForFinished(30000)) {
+       if (G::isFileLogger) Utilities::log("ExifTool::close", "process.waitForFinished failed");
+        return -1;
+    }
+    return process.exitCode();
+}
+
+void ExifTool::copyAllTags(QString src, QString dst)
+{
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += src.toUtf8() + "\n";
+    args += "-all:all\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+}
+
+void ExifTool::copyICC(QString src, QString dst)
+{
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += src.toUtf8() + "\n";
+    args += "-icc_profile\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+}

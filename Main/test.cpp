@@ -163,6 +163,29 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QString src = "/Users/roryhill/Pictures/_ThumbTest/PNG.png";
+    QString output = metadata->readExifToolTag(src, "createdate");
+    return;
+
+//    QString exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+//    QStringList args;
+//    args += "-T";
+//    args += "-createdate";            // tag
+//    args += src;                    // src file
+//    QProcess process;
+//    process.start(exifToolPath, args);
+//    process.waitForFinished();
+//    // Read the output into a QString
+//    QString output = process.readAllStandardOutput();
+//    qDebug() << output;
+//    return;
+
+    ExifTool exifTool;
+    QString createdate = exifTool.readTag(src, "createdate");
+    exifTool.close();
+    qDebug() << "createdate" << createdate;
+    return;
+
     imageCacheThread->stop();
     qDebug() << "IMAGECACHE STOPPED";
     return;

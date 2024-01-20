@@ -143,7 +143,7 @@ void BuildFilters::build(AfterAction newAction)
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
-    if (G::allMetadataLoaded) start(NormalPriority);
+    if (G::metaReadDone) start(NormalPriority);
 }
 
 void BuildFilters::update()
@@ -160,7 +160,7 @@ void BuildFilters::update()
     abortIfRunning();
     if (filters->filtersBuilt) {
         action = Action::Update;
-        /*if (G::allMetadataLoaded)*/ start(NormalPriority);
+        if (G::metaReadDone) start(NormalPriority);
     }
     else build();
 }
@@ -203,7 +203,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     this->category = category;
     if (filters->filtersBuilt) {
         action = Action::UpdateCategory;
-        if (G::allMetadataLoaded) start(NormalPriority);
+        if (G::metaReadDone) start(NormalPriority);
     }
     else build();
 }

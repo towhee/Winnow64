@@ -376,50 +376,62 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
 
+    // build list of image files
+    ui->progressLbl->setText("Building list of image files");
+    QStringList bFiles;
     for (QString dPath : dPaths) {
-        ui->progressLbl->setText("Generating thumnails for folder " + dPath);
         dir->setPath(dPath);
-        //list.clear();
-        B bItem;
         for (int i = 0; i < dir->entryInfoList().size(); i++) {
-            bItem.fPath = dir->entryInfoList().at(i).filePath();
-
-            // get the thumbnail (used to compare to A thumbnail in datamodel)
-            QImage image;
-            if (ui->pixelCompare) {
-                autonomousImage->thumbNail(bItem.fPath, image, G::maxIconSize);
-                bItem.im = image;
-            }
-
-            // get metadata info for the B file to calc aspect
-            QFileInfo fInfo(bItem.fPath);
-            //ImageMetadata *m;
-            if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")){
-                // deal with failure
-                //continue;
-            }
-            ImageMetadata *m = &metadata->m;
-            bItem.type = QFileInfo(metadata->m.fPath).suffix().toLower();
-            bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
-
-            if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
-                double aspect;
-                if (m->width && m->height) {
-                    if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
-                    else aspect = m->width * 1.0 / m->height;
-                }
-                else {
-                    if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
-                    else aspect = 0;
-                }
-                bItem.aspect = QString::number(aspect,'f', 2);
-            }
-            bItems.append(bItem);
-            /*
-            qDebug() << "VisCmpDlg::buildBItemsList" << i << bItem.fPath;
-            //reportRGB(image);
-            //*/
+            bFiles << dir->entryInfoList().at(i).filePath();
         }
+    }
+    int totIterations = bFiles.count();
+
+    // populate bItems;
+    ui->progressLbl->setText("Reading metadata for " + QString::number(totIterations) + " source files");
+    int counter = 0;
+    for (QString fPath : bFiles) {
+        counter++;
+        ui->progressBar->setValue(1.0 * counter / totIterations * 100);
+
+        B bItem;
+        bItem.fPath = fPath;
+
+        // get the thumbnail (used to compare to A thumbnail in datamodel)
+        QImage image;
+        if (ui->pixelCompare) {
+            autonomousImage->thumbNail(bItem.fPath, image, G::maxIconSize);
+            bItem.im = image;
+        }
+
+        // get metadata info for the B file to calc aspect
+        QFileInfo fInfo(fPath);
+        //ImageMetadata *m;
+        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")){
+            // deal with failure
+            //continue;
+        }
+        ImageMetadata *m = &metadata->m;
+        bItem.type = QFileInfo(metadata->m.fPath).suffix().toLower();
+        bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
+            double aspect;
+            if (m->width && m->height) {
+                if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
+                else aspect = m->width * 1.0 / m->height;
+            }
+            else {
+                if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
+                else aspect = 0;
+            }
+            bItem.aspect = QString::number(aspect,'f', 2);
+        }
+        bItems.append(bItem);
+        /*
+        qDebug() << "VisCmpDlg::buildBItemsList" << i << bItem.fPath;
+        //reportRGB(image);
+        //*/
     }
 }
 

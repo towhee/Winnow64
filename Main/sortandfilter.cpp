@@ -12,7 +12,7 @@
     When a folder is first selected only type 1 information is known for all the files in the
     folder unless the folder is small enough so all the files were read in one pass. Filtering
     and sorting can only occur when the filter item is known for all the files. This is
-    tracked by G::allMetadataLoaded.
+    tracked by G::metaReadDone.
 
     Type 2 Filtration steps:
 
@@ -50,7 +50,7 @@ void MW::launchBuildFilters(bool force)
 */
     if (G::isLogger) G::log("MW::launchBuildFilters");
     if (G::isInitializing) return;
-    if (!G::allMetadataLoaded) {
+    if (!G::metaReadDone) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
@@ -78,23 +78,26 @@ void MW::filterChange(QString source)
 
     bool rptTimer = true;
     //QElapsedTimer G:t;
-    G::t.restart();
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange";
 
     // ignore if new folder is being loaded
-    if (!G::allMetadataLoaded) {
+    if (!G::metaReadDone) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
-
-    if (G::stop) return;
-
-    sel->clear();
 
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead2 for the prior datamodel filter.
     dm->newInstance();
     // stop ImageCache
     imageCacheThread->stop();
+    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  imageCacheThread->stop()";
+
+    if (G::stop) return;
+    G::popUp->showPopup("Executing filter...", 0);  // creates pop up window with message
+    //qApp->processEvents();
+
+    sel->clear();
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
@@ -102,9 +105,13 @@ void MW::filterChange(QString source)
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
         dm->forceBuildFilters = true;
-        if (!G::allMetadataLoaded) dm->addAllMetadata();
+        if (!G::metaReadDone) dm->addAllMetadata();
         // failed to load all metadata - maybe terminated by user pressing ESC
-        if (!G::allMetadataLoaded) return;
+
+        if (!G::metaReadDone) {
+            G::popUp->showPopup("Failed to load all metadata...");
+            return;
+        }
     }
 
     if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->addAllMetadata";
@@ -137,6 +144,7 @@ void MW::filterChange(QString source)
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
+        G::popUp->reset();
         return;
     }
 
@@ -147,6 +155,7 @@ void MW::filterChange(QString source)
         newSfIdx = dm->sf->index(0,0);
     }
     sel->select(newSfIdx);
+    thumbView->scrollToCurrent("MW::filterChange");
 
     // update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
@@ -159,6 +168,7 @@ void MW::filterChange(QString source)
 //    sel->select(newSfIdx);
 
     QApplication::restoreOverrideCursor();
+    G::popUp->reset();
 
     if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  finished";
 }
@@ -221,7 +231,7 @@ void MW::invertFilters()
 
 */
     if (G::isLogger) G::log("MW::invertFilters");
-    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
+    if (!G::metaReadDone) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
         G::popUp->showPopup("No images available to invert filtration", 2000);
@@ -259,7 +269,7 @@ void MW::uncheckAllFilters()
 void MW::clearAllFilters()
 {
     if (G::isLogger) G::log("MW::clearAllFilters");
-    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
+    if (!G::metaReadDone) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
@@ -361,7 +371,7 @@ void MW::sortChange(QString source)
 */
     if (G::isLogger || G::isFlowLogger)qDebug() << "MW::sortChange  Src:" << source;
 
-    if (G::isInitializing || !G::allMetadataLoaded) return;
+    if (G::isInitializing || !G::metaReadDone) return;
 
     QList<G::dataModelColumns> coreSorts;
     coreSorts << G::NameColumn << G::TypeColumn << G::SizeColumn << G::CreatedColumn << G::ModifiedColumn;
@@ -379,7 +389,7 @@ void MW::sortChange(QString source)
 //                */
 
     // reset sort to file name if was sorting on non-core metadata while folder still loading
-    if (!G::allMetadataLoaded && !coreSorts.contains(sortColumn)) {
+    if (!G::metaReadDone && !coreSorts.contains(sortColumn)) {
         prevSortColumn = G::NameColumn;
         updateSortColumn(G::NameColumn);
     }
@@ -396,6 +406,7 @@ void MW::sortChange(QString source)
     /*
     qDebug() << "MW::sortChange"
              << "sortMenuUpdateToMatchTable =" << sortMenuUpdateToMatchTable
+             << "G::metaReadDone =" << G::metaReadDone
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
              << "sortColumn =" << sortColumn
              << "G::NameColumn =" << G::NameColumn
@@ -405,21 +416,21 @@ void MW::sortChange(QString source)
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
+    if (!G::metaReadDone && sortColumn > G::CreatedColumn)
         doNotSort = true;
-    if (!G::allMetadataLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
+    if (!G::metaReadDone && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
         doNotSort = true;
-    if (G::allMetadataLoaded && !sortHasChanged)
+    if (G::metaReadDone && !sortHasChanged)
         doNotSort = true;
     if (doNotSort) return;
 
     // Need all metadata loaded before sorting non-fileSystem metadata
     // rgh all metadata always loaded now - change this?
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
+    if (!G::metaReadDone && sortColumn > G::CreatedColumn)
         loadEntireMetadataCache("SortChange");
 
     // failed to load all metadata, restore prior sort in menu and return
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
+    if (!G::metaReadDone && sortColumn > G::CreatedColumn) {
         /*
         qDebug() << "MW::sortChange" << "failed"
                  << "sortColumn =" << sortColumn
@@ -439,7 +450,7 @@ void MW::sortChange(QString source)
              ;
 //             */
 
-    if (G::allMetadataLoaded) {
+    if (G::metaReadDone) {
         G::popUp->showPopup("Sorting...", 0);
     }
     else {
@@ -448,10 +459,10 @@ void MW::sortChange(QString source)
 
     thumbView->sortThumbs(sortColumn, isReverseSort);
 
-//    if (!G::allMetadataLoaded) return;
+//    if (!G::metaReadDone) return;
 
     // get the current selected item
-    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::metaReadDone) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
@@ -489,10 +500,10 @@ void MW::sortReverse()
 {
     thumbView->sortThumbs(G::NameColumn, isReverseSort);
 
-    //    if (!G::allMetadataLoaded) return;
+    //    if (!G::metaReadDone) return;
 
     // get the current selected item
-    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::metaReadDone) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;

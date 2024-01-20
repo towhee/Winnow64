@@ -1,8 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- Crash when reject files and then filter on rejected
-- If delete an imag, then remote embellish to same folder, then blank icon
+- If delete an image, then remote embellish to same folder, then blank icon
+- Runaway memory consumption
 - Crash when delete tiff file
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes
@@ -106,6 +106,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Stuttering in TheFrame folder rapid progression
+- Crash when delete all filtered images
+- Crash when reject files and then filter on rejected
 - IconView box cursor no longer working
 - Raw/Jpg not working in metaread2
 - Right side ocked tabs showing at bottom instead of top

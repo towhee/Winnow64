@@ -30,10 +30,10 @@ namespace G
     bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
                                         // all new folder processes.
     bool isLinearLoadDone;
+    bool metaReadDone;
     bool allMetadataLoaded;
     bool allIconsLoaded;
 
-    QWaitCondition metaReadDone;
     int dmInstance;
 
     // limit functionality for testing
