@@ -2269,10 +2269,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             && (G::useImageCache)
            )
         {
-//            /*
+            ///*
             qDebug() << "MW::fileSelectionChange setImageCachePosition"
                      << dm->currentFilePath
-                     << "centralLayout->currentIndex()" << centralLayout->currentIndex()
                         ;
                         //*/
             emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
@@ -2821,7 +2820,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
-    /*
+//    /*
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
@@ -2834,7 +2833,9 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                     //*/
     }
     if (G::stop || dm->abortLoadingModel) return;
-    if (G::allMetadataLoaded && isFileSelectionChange) {
+    bool isMetadataLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+    //if (G::allMetadataLoaded && isFileSelectionChange) {
+    if (G::metaReadDone && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
         if (G::allIconsLoaded) return;
     }
@@ -6175,8 +6176,8 @@ void MW::mediaReadSpeed()
 void MW::visCmpImages()
 {
     if (G::isLogger) G::log("MW::visCmpImages");
-    VisCmpDlg visCmpDlg(dm, metadata);
-    if (visCmpDlg.exec()) {
+    VisCmpDlg *visCmpDlg = new VisCmpDlg(nullptr, dm, metadata);
+    if (visCmpDlg->exec()) {
         qDebug() << "MW::visCmpImages accepted";
         // add true to compare filter
         buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);

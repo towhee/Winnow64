@@ -231,7 +231,7 @@ void BuildFilters::done()
     afterAction = AfterAction::NoAfterAction;
     dm->sf->filterChange();
 
-    filters->expandAllFilters();
+    //filters->expandAllFilters();
 
     //qint64 msec = buildFiltersTimer.elapsed();
     //qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";

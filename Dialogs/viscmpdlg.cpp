@@ -18,6 +18,7 @@ void DragToList::showEvent(QShowEvent *event)
     These actions must be run after the dialog constructor is finished.
 */
     setStyleSheet(
+        "color: yellow;"
         "background-image: url(:/images/dragfoldershere.png)"
         );
     event->accept();
@@ -66,7 +67,7 @@ Comparison terms:
 
 */
 
-VisCmpDlg::VisCmpDlg(DataModel *dm, Metadata *metadata, QWidget *parent) :
+VisCmpDlg::VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     QDialog(parent),
     ui(new Ui::VisCmpDlg),
     dm(dm),
@@ -76,7 +77,9 @@ VisCmpDlg::VisCmpDlg(DataModel *dm, Metadata *metadata, QWidget *parent) :
     int id = 0; // dummy variable req'd by ImaeDecoder
     imageDecoder = new ImageDecoder(this, id, dm, metadata);
     ui->setupUi(this);
-    //setStyleSheet(G::css);
+    setStyleSheet(G::css);
+
+    // candidate images tableview
     ui->tv->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tv->setEnabled(false);
     ui->tv->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
@@ -92,16 +95,24 @@ VisCmpDlg::VisCmpDlg(DataModel *dm, Metadata *metadata, QWidget *parent) :
         "QHeaderView::section {"
         "border:none;"
         "}");
+
+    // Image comparison
     QImage prevIm(":/images/prev.png");
     QImage nextIm(":/images/next.png");
     ui->prevToolBtn->setIcon(QIcon(QPixmap::fromImage(prevIm.scaled(16,16))));
     ui->nextToolBtn->setIcon(QIcon(QPixmap::fromImage(nextIm.scaled(16,16))));
+    ui->deltaLbl->setText("");
+    ui->currentLbl->setText("");
     //ui->progressLbl->setText("");    //ui->currentLbl->setText("");
     abort = false;
     ui->sameFileTypeCB->setChecked(true);
     ui->sameCreationDateCB->setChecked(true);
     ui->sameAspectCB->setChecked(true);
     setupModel();
+
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(winId(), G::backgroundColor);
+    #endif
 }
 
 VisCmpDlg::~VisCmpDlg()
@@ -143,6 +154,8 @@ void VisCmpDlg::setupModel()
     ui->tv->setColumnWidth(1, w1);
     ui->tv->setColumnWidth(2, w2);
     ui->tv->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+
+    // format
 
     isDebug = false;
 }
@@ -295,8 +308,8 @@ void VisCmpDlg::pixelCompare()
         // compare to each thumb in bList
         for (int b = 0; b < bItems.size(); b++) {
             if (abort) {
-                abort = false;
                 ui->progressLbl->setText("Search aborted");
+                clear();
                 return;
             }
             QImage imB = bItems.at(b).im;
@@ -362,8 +375,16 @@ QString VisCmpDlg::currentBString(int b)
 
 void VisCmpDlg::clear()
 {
+    abort = false;
+    ui->progressBar->setValue(0);
     results.clear();
     bItems.clear();
+}
+
+void VisCmpDlg::on_clrFoldersBtn_clicked()
+{
+    ui->includeSubfolders->clear();
+    ui->excludeSubfolders->clear();
 }
 
 void VisCmpDlg::buildBItemsList(QStringList &dPaths)
@@ -379,7 +400,7 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
     // build list of image files
     ui->progressLbl->setText("Building list of image files");
     QStringList bFiles;
-    for (QString dPath : dPaths) {
+    foreach (QString dPath, dPaths) {
         dir->setPath(dPath);
         for (int i = 0; i < dir->entryInfoList().size(); i++) {
             bFiles << dir->entryInfoList().at(i).filePath();
@@ -388,11 +409,25 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
     int totIterations = bFiles.count();
 
     // populate bItems;
-    ui->progressLbl->setText("Reading metadata for " + QString::number(totIterations) + " source files");
+    QString s = "Reading metadata for " + QString::number(totIterations) + " source files";
+    ui->progressLbl->setText(s);
     int counter = 0;
-    for (QString fPath : bFiles) {
+    foreach (QString fPath, bFiles) {
+        if (abort) {
+            ui->progressLbl->setText("Search aborted");
+            clear();
+            return;
+        }
+
         counter++;
-        ui->progressBar->setValue(1.0 * counter / totIterations * 100);
+        int pctProgress = 1.0 * counter / totIterations * 100;
+        ui->progressBar->setValue(pctProgress);
+        qApp->processEvents();
+        ///*
+        qDebug() << "VisCmpDlg::buildBItemsList" << counter << totIterations << pctProgress;
+//        G::wait(10);
+//        continue;
+        //*/
 
         B bItem;
         bItem.fPath = fPath;
@@ -406,7 +441,7 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
 
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
-        //ImageMetadata *m;
+
         if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")){
             // deal with failure
             //continue;
@@ -442,14 +477,15 @@ void VisCmpDlg::buildBList()
     A list images in the datamodel.
 */
     // build include folders list bFolderPaths
+    ui->progressLbl->setText("Building list of image folders");
     QStringList bFolderPaths;
-    for (int cF = 0; cF < ui->cmpToFolders->count(); cF++) {
-        QString root = ui->cmpToFolders->item(cF)->text();
+    for (int cF = 0; cF < ui->includeSubfolders->count(); cF++) {
+        QString root = ui->includeSubfolders->item(cF)->text();
         if (!root.isEmpty() && root[root.length()-1] == '/') {
             root.chop(1);
         }
         bFolderPaths << root;
-        if (ui->includeSubfolders->isChecked()) {
+        if (ui->includeSubfoldersCB->isChecked()) {
             QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
             while (it.hasNext()) {
                 it.next();
@@ -459,8 +495,8 @@ void VisCmpDlg::buildBList()
     }
     /*
     qDebug() << "bFolderPaths list:";
-    //*/
     foreach (QString s, bFolderPaths) qDebug() << "" << s;
+    //*/
 
     // build exclude folders list bExcludeFolderPaths
     QStringList bExcludeFolderPaths;
@@ -470,7 +506,7 @@ void VisCmpDlg::buildBList()
             root.chop(1);
         }
         bExcludeFolderPaths << root;
-        if (ui->includeSubfolders->isChecked()) {
+        if (ui->includeSubfoldersCB->isChecked()) {
             QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
             while (it.hasNext()) {
                 it.next();
@@ -597,8 +633,9 @@ void VisCmpDlg::buildResults()
     }
 }
 
-void VisCmpDlg::updateResults()
+int VisCmpDlg::updateResults()
 {
+    int matches = 0;
     // update local model results table
     bool cmpType = ui->sameFileTypeCB->isChecked();
     bool cmpDate = ui->sameCreationDateCB->isChecked();
@@ -629,6 +666,7 @@ void VisCmpDlg::updateResults()
 
             bool isMetaMatch = isType && isDate && isAspect && isDuration;
             if (isMetaMatch) results[a][b].sameMeta = true;
+            if (isMetaMatch) matches++;
             if (isMetaMatch) results[a][b].sameMetaId = b;
             if (isMetaMatch && !cmpPixels) {
                 model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
@@ -642,6 +680,7 @@ void VisCmpDlg::updateResults()
             }
         }
     }
+    return matches;
 }
 
 void::VisCmpDlg::reportAspects()
@@ -697,15 +736,16 @@ void::VisCmpDlg::reportResults()
 
 void VisCmpDlg::on_compareBtn_clicked()
 {
+    isRunning = true;
     clear();
     buildBList();
     buildResults();
     if (ui->pixelCompare->isChecked()) pixelCompare();
-    updateResults();
+    int matches = updateResults();
+    isRunning = false;
 
-
-
-    ui->progressLbl->setText("Search completed");
+    QString x = QString::number(matches);
+    ui->progressLbl->setText("Search completed.  " + x + " matches found.  See candidate images table.");
 
     // show first best match
     ui->tv->setEnabled(true);
@@ -787,8 +827,8 @@ void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
 
 void VisCmpDlg::on_abortBtn_clicked()
 {
-
-    abort = true;
+    if (isRunning) abort = true;
+    else clear();
 }
 
 void VisCmpDlg::on_matchBtn_clicked()
@@ -831,7 +871,27 @@ void VisCmpDlg::resizeEvent(QResizeEvent *event)
 
 void VisCmpDlg::on_helpBtn_clicked()
 {
-    reportAspects();
-    reportResults();
+
+
+//    reportAspects();
+//    reportResults();
+}
+
+void VisCmpDlg::progressMsg(QString msg)
+{
+    ui->progressLbl->setText(msg);
+    QApplication::processEvents();
+}
+
+void VisCmpDlg::on_toggleTvHideChecked_clicked()
+{
+    for (int row = 0; row < model.rowCount(); ++row) {
+    QModelIndex index = model.index(row, 0);
+    Qt::CheckState state = model.data(index, Qt::CheckStateRole).value<Qt::CheckState>();
+    if (state != Qt::Checked) ui->tv->setRowHidden(row, okToHide);
+    }
+    okToHide = !okToHide;
+    if (okToHide) ui->toggleTvHideChecked->setText("Hide checked images");
+    else ui->toggleTvHideChecked->setText("Show checked images");
 }
 

@@ -9,6 +9,9 @@
 #include "Image/thumb.h"
 #include "Image/autonomousimage.h"
 #include "Cache/imagedecoder.h"
+#ifdef Q_OS_WIN
+#include "Utilities/win.h"
+#endif
 
 class DragToList : public QListWidget
 {
@@ -35,7 +38,7 @@ class VisCmpDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit VisCmpDlg(DataModel *dm, Metadata *metadata, QWidget *parent = nullptr);
+    explicit VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata);
     ~VisCmpDlg();
 
 protected:
@@ -51,6 +54,10 @@ private slots:
     void on_matchBtn_clicked();
     void on_abortBtn_clicked();
     void on_helpBtn_clicked();
+
+    void on_clrFoldersBtn_clicked();
+
+    void on_toggleTvHideChecked_clicked();
 
 private:
     Ui::VisCmpDlg *ui;
@@ -104,7 +111,7 @@ private:
     void buildBList();
     void pixelCompare();
     void buildResults();
-    void updateResults();
+    int updateResults();
     void reportResults();
     void reportAspects();
     bool sameFileType(int a, int b);
@@ -112,7 +119,11 @@ private:
     bool sameAspect(int a, int b/*, ImageMetadata *m*/);
     bool sameDuration(int a, int b);
 
+    void progressMsg(QString msg);
+    bool okToHide = true;
+
     bool abort;
+    bool isRunning = false;
     bool isDebug = false;
 };
 

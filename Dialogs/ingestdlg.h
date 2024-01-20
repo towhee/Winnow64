@@ -16,28 +16,6 @@
 #include "Utilities/win.h"
 #endif
 
-/*
-void getPicks()
-QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
-void IngestDlg::renameIfExists(QString &destination, QString &baseName, QString dotSuffix)
-SIGNAL: void updateProgress(int progress)
-struct d {
-    QString folderPath;
-    QString folderPath2;
-    bool isBackup;
-    bool integrityCheck
-    bool ingestIncludeXmpSidecar
-    bool combineRawJpg
-    QString tokenString;
-    QList<QFileInfo> pickList;      // create
-    DataModel *dm
-    Metadata *metadata
-    QStringList failedToCopy;       // ingesting only
-    QStringList integrityFailure;   // ingesting only
-    bool failedToCopy               // ingesting only
-};
-*/
-
 namespace Ui {
 class IngestDlg;
 }

@@ -120,7 +120,7 @@ void ImageCache::stop()
     image caching thread without a new one starting when there has been a
     folder change. The cache status label in the status bar will be hidden.
 */
-    //if (debugCaching)
+    if (debugCaching)
     qDebug() << "ImageCache::stop  isRunning =" << isRunning();
     if (debugCaching || G::isLogger) G::log("ImageCache::stop");
 
@@ -151,8 +151,6 @@ void ImageCache::stop()
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
-
-    qDebug() << "ImageCache::stop  STOPPED";
 }
 
 float ImageCache::getImCacheSize()
