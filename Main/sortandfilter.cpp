@@ -77,8 +77,7 @@ void MW::filterChange(QString source)
     //qDebug() << "MW::filterChange" << "called from:" << source;
 
     bool rptTimer = true;
-    //QElapsedTimer G:t;
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange";
+    //if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange";
 
     // ignore if new folder is being loaded
     if (!G::metaReadDone) {
@@ -91,7 +90,6 @@ void MW::filterChange(QString source)
     dm->newInstance();
     // stop ImageCache
     imageCacheThread->stop();
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  imageCacheThread->stop()";
 
     if (G::stop) return;
     G::popUp->showPopup("Executing filter...", 0);  // creates pop up window with message
@@ -114,8 +112,6 @@ void MW::filterChange(QString source)
         }
     }
 
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->addAllMetadata";
-
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
@@ -123,17 +119,13 @@ void MW::filterChange(QString source)
     isFilterChange = true;      // prevent unwanted fileSelectionChange()
     dm->sf->filterChange();
 
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->sf->filterChange()";
+    //if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->sf->filterChange()";
 
     // update filter panel image count by filter item
     buildFilters->update();
 
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  buildFilters->update()";
-
     // recover sort after filtration
     sortChange("filterChange");
-
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  sortChange(filterChange)";
 
     isFilterChange = false;     // allow fileSelectionChange()
 
@@ -161,16 +153,8 @@ void MW::filterChange(QString source)
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  imageCacheThread->rebuildImageCacheParameters";
-
-    // selection, fileSelectionChange, renew image cache
-    //qDebug() << "MW::filterChange  sfIdx =" << newSfIdx;
-//    sel->select(newSfIdx);
-
     QApplication::restoreOverrideCursor();
     G::popUp->reset();
-
-    if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  finished";
 }
 
 void MW::quickFilter()

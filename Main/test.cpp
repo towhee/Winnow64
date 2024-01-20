@@ -163,6 +163,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    visCmpImages();
+    return;
+
     QString src = "/Users/roryhill/Pictures/_ThumbTest/PNG.png";
     QString output = metadata->readExifToolTag(src, "createdate");
     return;
@@ -188,9 +191,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     imageCacheThread->stop();
     qDebug() << "IMAGECACHE STOPPED";
-    return;
-
-    visCmpImages();
     return;
 
     //double d[2][3]= {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};

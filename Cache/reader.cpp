@@ -109,7 +109,7 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
-    if (isMetaLoaded) {
+    //if (isMetaLoaded) {
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
 
@@ -125,12 +125,12 @@ bool Reader::readMetadata()
         if (!abort) emit addToImageCache(metadata->m, instance);
         //if (abort) quit();
 
-    }
-    else {
-        status = Status::MetaFailed;
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
-    }
+//    }
+//    else {
+//        status = Status::MetaFailed;
+//        if (G::isWarningLogger)
+//        qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
+//    }
     return isMetaLoaded;
 }
 
