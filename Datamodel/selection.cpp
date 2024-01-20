@@ -487,7 +487,8 @@ void Selection::chkForDeselection(int sfRow)
 
 void Selection::clear()
 {
-    sm->clear();
+    //sm->clear();
+    sm->select(dm->currentDmIdx, QItemSelectionModel::ClearAndSelect);
 }
 
 int Selection::count()

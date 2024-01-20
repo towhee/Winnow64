@@ -21,6 +21,13 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     panasonic = new Panasonic;
     sony = new Sony;
     tiff = new Tiff;
+
+    #ifdef Q_OS_WIN
+    exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    #endif
+    #ifdef Q_OS_MAC
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    #endif
 }
 
 /* METADATA NOTES
@@ -90,6 +97,7 @@ void Metadata::initSupportedFiles()
                         << "hif"
                         << "nef"
                         << "orf"
+                        //<< "png"
                         << "raf"
                         << "sr2"
                         << "rw2"
@@ -982,6 +990,23 @@ void Metadata::testNewFileFormat(const QString &path)
 //    reportMetadata();
 }
 
+QString Metadata::readExifToolTag(QString fPath, QString tag)
+{
+    QStringList args;
+    args += "-T";
+    args += "-" + tag;            // tag
+    args += fPath;                    // src file
+    QProcess process;
+    process.start(exifToolPath, args);
+    process.waitForFinished();
+    QString output = process.readAllStandardOutput();
+    if (output.endsWith("\n")) {
+        output.chop(1);
+    }
+    qDebug() << "Metadata::readExifToolTag" << output << fPath;
+    return output;
+}
+
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger) G::log("Metadata::readMetadata", "Source: " + source);
@@ -1135,6 +1160,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     if (!hasMetadataFormats.contains(ext)) {
         bool parsedSidcar = false;
+        // get exif image created for image formats not included in Winnow
+        QString createdDate = readExifToolTag(m.fPath, "createdate");
+        m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
         m.metadataLoaded = true;
         if (G::useSidecar) {
             p.file.setFileName(fPath);

@@ -598,7 +598,7 @@ bool ImageCache::nextToCache(int id)
         }
         if (icd->cacheItemList.at(i).status == inValidImage) continue;
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage &&
-            !G::allMetadataLoaded) continue;
+            !G::metaReadDone) continue;
         if (icd->cacheItemList.at(i).isCaching && id != icd->cacheItemList.at(i).threadId) continue;
 
         // debug multi attempts
@@ -1104,7 +1104,6 @@ QString ImageCache::reportCacheProgress(QString action)
         rpt.setFieldWidth(8); rpt << "eTarget";
         rpt.setFieldWidth(7); rpt << "nCache";
         rpt.setFieldWidth(9); rpt << "nDecache\n";
-        qDebug() << G::t.restart() << "\t" << reportString;
         return reportString;
     }
 
@@ -1275,7 +1274,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
         icd->cacheItem.metadataLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
-        if ((G::allMetadataLoaded)) {
+        if ((G::metaReadDone)) {
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.isVideo = m.video;
@@ -1316,7 +1315,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItemList.append(icd->cacheItem);
     } // next row
 
-    if (G::allMetadataLoaded) icd->cache.folderMB = folderMB;
+    if (G::metaReadDone) icd->cache.folderMB = folderMB;
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,
@@ -1394,7 +1393,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     The image cache is now ready to run by calling setCachePosition().
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::rebuildImageCacheParameters");
-    //if (debugCaching)
+    if (debugCaching)
     {
         qDebug() << "ImageCache::rebuildImageCacheParameters";
     }
@@ -1410,8 +1409,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
-
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters after buildImageCacheList()"; // << reportImCache();
 
     // update cacheItemList
     icd->cache.key = 0;
@@ -1435,8 +1432,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         //*/
     }
 
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before remove surplus" << reportImCache();
-
     // remove surplus images in icd->imCache
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
@@ -1447,16 +1442,12 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
             icd->imCache.remove(keys.at(i));
         }
     }
-    //qDebug().noquote() << "ImageCache::rebuildImageCacheParameters after remove surplus" << reportImCache();
 
     // if the sort has been reversed
     if (source == "SortChange") icd->cache.isForward = !icd->cache.isForward;
 
     setPriorities(icd->cache.key);
-    qDebug().noquote() << "ImageCache::rebuildImageCacheParameters before setTargetRange()";
     setTargetRange();
-
-    //qDebug().noquote() << "ImageCache::rebuildImageCacheParameters" << diagnostics();
 
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
@@ -1637,6 +1628,8 @@ void ImageCache::cacheImage(int id, int cacheKey)
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
+            // clear "Loading Image..." central msg
+            emit centralMsg("");
             // load in ImageView
             emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
             // revert central view
@@ -1977,7 +1970,6 @@ void ImageCache::run()
     memChk();
 
     // reset target range
-    qDebug() << "ImageCache::run before updateTargets";
     updateTargets();
 
     // if cache is up-to-date our work is done

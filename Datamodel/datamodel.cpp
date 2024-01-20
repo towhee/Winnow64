@@ -368,6 +368,7 @@ int DataModel::insert(QString fPath)
     addFileDataForRow(dmRow, insertFile);
 
     // reset loaded flags so MetaRead knows to load
+    G::metaReadDone = false;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
 
@@ -2542,7 +2543,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
         if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
 
-    if (!G::allMetadataLoaded) return true;
+    if (!G::metaReadDone) return true;
     //if (!G::isNewFolderLoaded) return true;
     //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
 

@@ -1386,6 +1386,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "item =" << item->text(0)
                  << "parent =" << item->parent()->text(0)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
+                 << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
     qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "Filters::itemClickedSignal";
@@ -1393,14 +1394,19 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::allMetadataLoaded ||
+        !G::metaReadDone ||
         buildingFilters)
     {
+        qDebug() << "Filters::itemClickedSignal failed"
+                 << "G::metaReadDone =" << G::metaReadDone
+                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "buildingFilters =" << buildingFilters
+            ;
         return;
     }
 
     if (!itemCheckStateHasChanged) {
-        /*
+        ///*
         qDebug() << "Filters::itemClickedSignal"
                  << "item->parent() =" << item->parent()->text(0)
                  << "item =" << item->text(0)
@@ -1478,7 +1484,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
 
     // ignore mouse clicks on decoration to the header
     if (p.x() < indentation) p.setX(indentation);
-
+    qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "Filters::mousePressEvent";
     QTreeWidgetItem *item = itemFromIndex(idx);
     bool isLeftBtn = event->button() == Qt::LeftButton;
     bool isHdr = idx.parent() == QModelIndex();

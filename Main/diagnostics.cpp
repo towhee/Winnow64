@@ -6,11 +6,12 @@ void MW::reportState(QString title)
     qDebug()
         << "\nWINNOW STATE" << title
         << "\nFLAGS:"
-        << "\nG::isLinearLoading                    " << G::isLoadLinear
+        << "\nG::isLinearLoading                     " << G::isLoadLinear
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
-        << "\nG::isLinearLoadDone                   " << G::isLinearLoadDone
+        << "\nG::isLinearLoadDone                    " << G::isLinearLoadDone
+        << "\nG::metaReadDone                        " << G::metaReadDone
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
         << "\nG::stop                                " << G::stop
@@ -165,6 +166,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
     rpt << "\n" << "G::isLinearLoadDone = " << G::s(G::isLinearLoadDone);
+    rpt << "\n" << "G::metaReadDone = " << G::s(G::metaReadDone);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);

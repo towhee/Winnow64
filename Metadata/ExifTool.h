@@ -14,6 +14,7 @@ public:
     int execute(QStringList &args);
     void copyAllTags(QString src, QString dst);
     void copyICC(QString src, QString dst);
+    QString readTag(QString fPath, QString tag);
     void writeTitle(QString dst, QString val);
     void writeXMP(QString dst, QString tag, QString val);
     void readXMP(QString dst, QString tag, QString &val);
@@ -29,6 +30,7 @@ private:
     QString exifToolPath;
     QProcess process;
     bool isOverWrite = false;
+    QBuffer result;
 };
 
 #endif // EXIFTOOL_H

@@ -45,6 +45,7 @@ class Metadata : public QObject
 public:
     Metadata(QObject *parent = nullptr);
     bool readMetadata(bool report, const QString &path, QString source);
+    QString readExifToolTag(QString fPath, QString tag);
 //    bool writeXMP(QStringList &paths, const QString tag, const QString tagValue);
     QString diagnostics(QString fPath);
     void reportMetadata();
@@ -181,6 +182,7 @@ private:
     QHash<int,int> orientationToDegrees;
     QHash<int,int> orientationFromDegrees;
 
+    QString exifToolPath;
     QString reportString;
     quint32 order;
 

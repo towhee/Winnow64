@@ -344,7 +344,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     if (G::isLogger) G::log("MW::sortIndicatorChanged");
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
 //    qDebug() << "MW::sortIndicatorChanged" << column << columnName << sortOrder << sortColumn;
-    if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
+    if (!G::metaReadDone && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
