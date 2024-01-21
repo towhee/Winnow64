@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1349</width>
-    <height>1098</height>
+    <width>1342</width>
+    <height>1115</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -677,7 +677,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QGroupBox" name="resultBox">
+          <widget class="QGroupBox" name="compareImagesBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -908,7 +908,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QFrame" name="frame">
+             <widget class="QFrame" name="LowerFrame">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -929,17 +929,26 @@
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_5">
                <item>
-                <spacer name="horizontalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                <widget class="QFrame" name="frame">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
                  </property>
-                 <property name="sizeHint" stdset="0">
+                 <property name="minimumSize">
                   <size>
                    <width>400</width>
-                   <height>20</height>
+                   <height>0</height>
                   </size>
                  </property>
-                </spacer>
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                </widget>
                </item>
                <item>
                 <layout class="QVBoxLayout" name="verticalLayout_14">
@@ -956,7 +965,7 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>300</width>
+                     <width>400</width>
                      <height>0</height>
                     </size>
                    </property>
@@ -1147,22 +1156,6 @@
                   </spacer>
                  </item>
                 </layout>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_6">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Fixed</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
                </item>
               </layout>
              </widget>
