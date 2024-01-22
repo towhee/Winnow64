@@ -1216,7 +1216,7 @@
                <number>0</number>
               </property>
               <property name="topMargin">
-               <number>12</number>
+               <number>0</number>
               </property>
               <property name="rightMargin">
                <number>0</number>
@@ -1275,7 +1275,7 @@
                 <item>
                  <widget class="QPushButton" name="toggleTvHideChecked">
                   <property name="text">
-                   <string>Hide checked images</string>
+                   <string>Hide unchecked images</string>
                   </property>
                  </widget>
                 </item>
@@ -1365,6 +1365,9 @@
           <width>0</width>
           <height>0</height>
          </size>
+        </property>
+        <property name="toolTip">
+         <string>All checked items in the candidate images table will be set in the Winnow filters under &quot;Duplicates found&quot;.</string>
         </property>
         <property name="text">
          <string>Done</string>
