@@ -166,8 +166,17 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     visCmpImages();
     return;
 
-    QString src = "/Users/roryhill/Pictures/_ThumbTest/PNG.png";
-    QString output = metadata->readExifToolTag(src, "createdate");
+    QString src = "/Users/roryhill/Pictures/_ThumbTest/MOV iphone.MOV";
+//    ExifTool exifTool;
+//    QString createdate = exifTool.readTag(src, "createdate");
+//    exifTool.close();
+//    qDebug() << "createdate" << createdate;
+//    return;
+
+
+    //QString src = "/Users/roryhill/Pictures/_ThumbTest/PNG.png";
+    QString output = metadata->readExifToolTag(src, "duration#");
+    qDebug() << "duration" << output;
     return;
 
 //    QString exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
@@ -183,48 +192,48 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    qDebug() << output;
 //    return;
 
-    ExifTool exifTool;
-    QString createdate = exifTool.readTag(src, "createdate");
-    exifTool.close();
-    qDebug() << "createdate" << createdate;
-    return;
+//    ExifTool exifTool;
+//    QString createdate = exifTool.readTag(src, "createdate");
+//    exifTool.close();
+//    qDebug() << "createdate" << createdate;
+//    return;
 
-    imageCacheThread->stop();
-    qDebug() << "IMAGECACHE STOPPED";
-    return;
+//    imageCacheThread->stop();
+//    qDebug() << "IMAGECACHE STOPPED";
+//    return;
 
-    //double d[2][3]= {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
-    QVector<QVector<double>> d = {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
-    qDebug() << "before";
-    for (int a = 0; a < 2; a++) {
-        for (int b = 0; b < 3; b++) {
-            qDebug() << d[a][b];
-        }
-    }
-
-    // Sort each row individually
-    for(auto& vec : d) {
-        std::sort(vec.begin(), vec.end());
-    }
-//    for (int i = 0; i < 2; i++) {
-//        std::sort(d[i], d[i]+3);
+//    //double d[2][3]= {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
+//    QVector<QVector<double>> d = {{3.0, 5.0, 1.5}, {17.2, 6.3, 25.1}};
+//    qDebug() << "before";
+//    for (int a = 0; a < 2; a++) {
+//        for (int b = 0; b < 3; b++) {
+//            qDebug() << d[a][b];
+//        }
 //    }
 
-    qDebug() << "after";
-    for (int a = 0; a < 2; a++) {
-        for (int b = 0; b < 3; b++) {
-            qDebug() << d[a][b];
-        }
-    }
-    return;
+//    // Sort each row individually
+//    for(auto& vec : d) {
+//        std::sort(vec.begin(), vec.end());
+//    }
+////    for (int i = 0; i < 2; i++) {
+////        std::sort(d[i], d[i]+3);
+////    }
 
-    metaReadThread->stop();
-    diagnosticsMetadataCache();
-    return;
+//    qDebug() << "after";
+//    for (int a = 0; a < 2; a++) {
+//        for (int b = 0; b < 3; b++) {
+//            qDebug() << d[a][b];
+//        }
+//    }
+//    return;
 
-    diagnosticsMetadataCache();
-    diagnosticsImageCache();
-    return;
+//    metaReadThread->stop();
+//    diagnosticsMetadataCache();
+//    return;
+
+//    diagnosticsMetadataCache();
+//    diagnosticsImageCache();
+//    return;
 }
 
 /*

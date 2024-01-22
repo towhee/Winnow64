@@ -2217,8 +2217,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // update loupe/video view
     if (G::useMultimedia) videoView->stop();
+    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (G::mode == "Loupe") {
-        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
         if (isVideo) {
             if (G::useMultimedia) {
                 if (G::mode == "Loupe") {
@@ -2264,12 +2264,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         //*/
         if (!(G::isSlideShow && isSlideShowRandom)
             //&& (key == Qt::NoModifier || key == Qt::KeypadModifier)
+            && !isVideo
             && (!workspaceChanged)
             && (G::mode != "Compare")
             && (G::useImageCache)
            )
         {
-            ///*
+            /*
             qDebug() << "MW::fileSelectionChange setImageCachePosition"
                      << dm->currentFilePath
                         ;

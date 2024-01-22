@@ -107,7 +107,7 @@ VisCmpDlg::VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     abort = false;
     ui->sameFileTypeCB->setChecked(true);
     ui->sameCreationDateCB->setChecked(true);
-    ui->sameAspectCB->setChecked(true);
+    ui->sameAspectCB->setChecked(false);
     setupModel();
 
     #ifdef Q_OS_WIN
@@ -423,11 +423,6 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         int pctProgress = 1.0 * counter / totIterations * 100;
         ui->progressBar->setValue(pctProgress);
         qApp->processEvents();
-        ///*
-        qDebug() << "VisCmpDlg::buildBItemsList" << counter << totIterations << pctProgress;
-//        G::wait(10);
-//        continue;
-        //*/
 
         B bItem;
         bItem.fPath = fPath;
@@ -442,13 +437,35 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
 
-        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")){
+        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::buildBItemsList")) {
             // deal with failure
             //continue;
         }
         ImageMetadata *m = &metadata->m;
-        bItem.type = QFileInfo(metadata->m.fPath).suffix().toLower();
+
+        // type
+        bItem.type = QFileInfo(fPath).suffix().toLower();
+
+        // create date
         bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        // duration
+        if (ui->sameDurationCB->isChecked()) {
+            QString s = metadata->readExifToolTag(fPath, "duration#");
+            quint64 duration = static_cast<quint64>(s.toDouble());
+            //duration /= 1000;
+            QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
+                               duration % 60, (duration * 1000) % 1000);
+            QString format = "mm:ss";
+            if (duration > 3600) format = "hh:mm:ss";
+            bItem.duration = durationTime.toString(format);
+            qDebug() << "VisCmpDlg::buildBItemsList"
+                     << "s =" << s
+                     << "duration =" << duration
+                     << "durationTime =" << durationTime
+                     << "bItem.duration =" << bItem.duration
+                ;
+        }
 
         if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
             double aspect;
@@ -565,9 +582,6 @@ bool VisCmpDlg::sameCreationDate(int a, int b)
 bool VisCmpDlg::sameAspect(int a, int b)
 {
     // A datamodel
-    if (a == 7 && b == 7) {
-        int x = 0;
-    }
     double aspect = dm->sf->index(a, G::AspectRatioColumn).data().toDouble();
     QString aspectA = QString::number(aspect,'f', 2);
     // B collection
@@ -578,12 +592,40 @@ bool VisCmpDlg::sameAspect(int a, int b)
     return isSame;
 }
 
+bool VisCmpDlg::sameDuration(int a, int b)
+{
+    // A datamodel
+    QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
+    if (durationA.length() == 0) durationA = "00:00";
+    // B collection
+    QString durationB = bItems.at(b).duration;
+    bool isSame = (durationA == durationB);
+    if (isDebug)
+    qDebug() << "sameDuration   a =" << a << durationA << "b =" << b << durationB << "isSame" << isSame;
+    return isSame;
+}
+
 void VisCmpDlg::buildResults()
 {
 /*
-    The results vector matrix: results[a][b] is a R item.
+    The results vector matrix: results[a][b] is an R item.
         a = index for datamodel item
         b = index for bItems (list of all B images)
+
+        R parameters:
+            int bId;
+            QString fPath;
+            bool sameType;
+            bool sameCreationDate;
+            bool sameAspect;
+            bool sameDuration;
+            bool sameMeta;
+            double delta;
+            int sameMetaId;
+            int samePixelsId;
+
+    Example: is datamodel item a type the same as bItems type
+             results[a][b].sameType
 */
     // initialize result vector [A indexs][BItems]
     results.clear();
@@ -612,20 +654,22 @@ void VisCmpDlg::buildResults()
 
             // same creation date
             if (ui->sameCreationDateCB->isChecked()) {
-                results[a][b].sameCreationDate = sameCreationDate(a, b/*, m*/);
+                results[a][b].sameCreationDate = sameCreationDate(a, b);
                 if (isDebug)
                 qDebug() << "VisCmpDlg::buildResults results[a][b].sameCreationDate" << results[a][b].sameCreationDate;
             }
 
             // same aspect
             if (ui->sameAspectCB->isChecked()) {
-                results[a][b].sameAspect = sameAspect(a, b/*, m*/);
+                results[a][b].sameAspect = sameAspect(a, b);
                 if (isDebug)
                 qDebug() << "VisCmpDlg::buildResults results[a][b].sameAspect" << results[a][b].sameAspect;
             }
             // same duration (video)
             if (ui->sameDurationCB->isChecked()) {
-
+                results[a][b].sameDuration = sameDuration(a, b);
+                if (isDebug)
+                qDebug() << "VisCmpDlg::buildResults results[a][b].sameDuration" << results[a][b].sameDuration;
             }
             if (isDebug)
             qDebug() << "\n";
@@ -708,28 +752,61 @@ void::VisCmpDlg::reportAspects()
 
 void::VisCmpDlg::reportResults()
 {
-    qDebug() << "\n" << "VisCmpDlg::reportResults";
-    qDebug() << "A count =" << dm->sf->rowCount() << "B count =" << bItems.count();
+    qDebug() << "\n" << "VisCmpDlg::reportResults"
+             << "  A count =" << dm->sf->rowCount() << "B count =" << bItems.count();
+    QString s = " ";
+    QString rpt;
+    int aDigits = QString::number(dm->sf->rowCount()).length() + 1;
+    int bDigits = QString::number(bItems.count()).length() + 1;
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
         QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
         QString typeA = QFileInfo(pathA).suffix().toLower();
         QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
         QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
+        QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
+        if (durationA.length() == 0) durationA = "00:00";
         for (int b = 0; b < bItems.count(); b++) {
-            QString typeB = bItems.at(b).type;
-            QString dateB = bItems.at(b).createdDate;
-            QString aspectB = bItems.at(b).aspect;
-            QString same = results[a][b].sameMeta ? "true" : "false";
+            rpt = "";
+            rpt += "  a " + QString::number(a).leftJustified(aDigits);
+            rpt += "b " + QString::number(b).leftJustified(bDigits);
+            QString match = results[a][b].sameMeta ? "true" : "false";
+            rpt += "  Match " + match.leftJustified(5);
+            if (ui->sameFileTypeCB->isChecked()) {
+                QString sameType = results[a][b].sameType ? "true" : "false";
+                QString typeB = bItems.at(b).type;
+                rpt += "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
+            }
+            if (ui->sameCreationDateCB->isChecked()) {
+                QString sameCreationDate = results[a][b].sameCreationDate ? "true" : "false";
+                QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
+                rpt += "    DATE " + sameCreationDate.leftJustified(6) + dateA + s + dateB;
+            }
+            if (ui->sameAspectCB->isChecked()) {
+                QString sameAspect = results[a][b].sameAspect ? "true" : "false";
+                QString aspectB = bItems.at(b).aspect;
+                rpt += "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
+            }
+            if (ui->sameDurationCB->isChecked()) {
+                QString sameDuration = results[a][b].sameDuration ? "true" : "false";
+                QString durationB = bItems.at(b).duration;
+                rpt += "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
+            }
+            rpt += "    A: " + fileNameA;
+            rpt += "B: " + bItems.at(b).fPath;
+
+            qDebug().noquote() << rpt;
+            /*
             qDebug().noquote()
-                << "  " << "a =" << a << "b =" << b
-                << " SAME" << same.leftJustified(5)
-                << " TYPE" << (typeA + ":" + typeB).leftJustified(9)
-                << " DATE" << dateA + ":" + dateB
-                << " ASPECT" << (aspectA + ":" + aspectB).leftJustified(7)
-                << " A" << fileNameA
-                << "B" << bItems.at(b).fPath
-                ;
+                << "  " << "a =" << QString::number(a).rightJustified(4)
+                << "b =" << QString::number(b).rightJustified(4)
+                << "  SAME" << match.leftJustified(5)
+                << "    TYPE" << (typeA + s + typeB).leftJustified(9) + s + sameType.leftJustified(5)
+                << "    DATE" << dateA + s + dateB + s + sameCreationDate.leftJustified(5)
+                << "    ASPECT" << (aspectA + s + aspectB).leftJustified(7) + s + sameAspect.leftJustified(5)
+                << " A:" << fileNameA
+                << "B:" << bItems.at(b).fPath
+                ;  //*/
         }
     }
 }
@@ -746,6 +823,7 @@ void VisCmpDlg::on_compareBtn_clicked()
 
     QString x = QString::number(matches);
     ui->progressLbl->setText("Search completed.  " + x + " matches found.  See candidate images table.");
+    ui->progressBar->setValue(0);
 
     // show first best match
     ui->tv->setEnabled(true);
@@ -873,8 +951,8 @@ void VisCmpDlg::on_helpBtn_clicked()
 {
 
 
-//    reportAspects();
-//    reportResults();
+    reportAspects();
+    reportResults();
 }
 
 void VisCmpDlg::progressMsg(QString msg)
@@ -891,7 +969,7 @@ void VisCmpDlg::on_toggleTvHideChecked_clicked()
     if (state != Qt::Checked) ui->tv->setRowHidden(row, okToHide);
     }
     okToHide = !okToHide;
-    if (okToHide) ui->toggleTvHideChecked->setText("Hide checked images");
-    else ui->toggleTvHideChecked->setText("Show checked images");
+    if (okToHide) ui->toggleTvHideChecked->setText("Hide unchecked images");
+    else ui->toggleTvHideChecked->setText("Show unchecked images");
 }
 

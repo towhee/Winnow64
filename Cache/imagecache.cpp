@@ -1532,8 +1532,9 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     icd->cache.key = dm->currentSfRow;
     if (useMutex) gMutex.unlock();
 
-    // image not cached
-    if (!icd->imCache.contains(fPath)) {
+    // image not cached and not video
+    bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;
+    if (!icd->imCache.contains(fPath) && !isVideo) {
         emit centralMsg("Loading Image...");
     }
 
