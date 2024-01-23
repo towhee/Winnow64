@@ -52,6 +52,7 @@ void DragToList::dropEvent(QDropEvent *event)
             }
         }
         event->acceptProposedAction();
+        emit dropped();
     }
 }
 
@@ -104,15 +105,19 @@ VisCmpDlg::VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     ui->deltaLbl->setText("");
     ui->currentLbl->setText("");
     //ui->progressLbl->setText("");    //ui->currentLbl->setText("");
-    abort = false;
+    ui->includeSubfoldersCB->setChecked(false);
     ui->sameFileTypeCB->setChecked(true);
     ui->sameCreationDateCB->setChecked(true);
     ui->sameAspectCB->setChecked(false);
+    ui->sameDurationCB->setChecked(true);
     setupModel();
 
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
+
+    abort = false;
+    isDebug = false;
 }
 
 VisCmpDlg::~VisCmpDlg()
@@ -128,6 +133,7 @@ void VisCmpDlg::setupModel()
     model.setHorizontalHeaderItem(1, new QStandardItem("Delta"));
     model.setHorizontalHeaderItem(2, new QStandardItem(""));    // icon
     model.setHorizontalHeaderItem(3, new QStandardItem("File Name"));
+    model.setHorizontalHeaderItem(4, new QStandardItem("Match"));
 
     // populate model
     for (int a = 0; a < dm->sf->rowCount(); a++) {
@@ -420,7 +426,10 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         }
 
         counter++;
+        QString s = "Reading target images: " + QString::number(counter) + " of "
+                    + QString::number(totIterations);
         int pctProgress = 1.0 * counter / totIterations * 100;
+        ui->progressLbl->setText(s);
         ui->progressBar->setValue(pctProgress);
         qApp->processEvents();
 
@@ -451,20 +460,24 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
 
         // duration
         if (ui->sameDurationCB->isChecked()) {
-            QString s = metadata->readExifToolTag(fPath, "duration#");
-            quint64 duration = static_cast<quint64>(s.toDouble());
-            //duration /= 1000;
-            QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
-                               duration % 60, (duration * 1000) % 1000);
-            QString format = "mm:ss";
-            if (duration > 3600) format = "hh:mm:ss";
-            bItem.duration = durationTime.toString(format);
-            qDebug() << "VisCmpDlg::buildBItemsList"
-                     << "s =" << s
-                     << "duration =" << duration
-                     << "durationTime =" << durationTime
-                     << "bItem.duration =" << bItem.duration
-                ;
+            if (metadata->videoFormats.contains(bItem.type)) {
+                QString s = metadata->readExifToolTag(fPath, "duration#");
+                quint64 duration = static_cast<quint64>(s.toDouble());
+                //duration /= 1000;
+                QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
+                                   duration % 60, (duration * 1000) % 1000);
+                QString format = "mm:ss";
+                if (duration > 3600) format = "hh:mm:ss";
+                bItem.duration = durationTime.toString(format);
+                /*
+                qDebug() << "VisCmpDlg::buildBItemsList"
+                         << "s =" << s
+                         << "duration =" << duration
+                         << "durationTime =" << durationTime
+                         << "bItem.duration =" << bItem.duration
+                    ; //*/
+            }
+            else bItem.duration = "00:00";
         }
 
         if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
@@ -484,6 +497,90 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         qDebug() << "VisCmpDlg::buildBItemsList" << i << bItem.fPath;
         //reportRGB(image);
         //*/
+    }
+}
+
+void VisCmpDlg::getMetadataBItems()
+{
+    int totIterations = bItems.count();
+
+    // populate bItems;
+    QString s = "Reading metadata for " + QString::number(totIterations) + " source files";
+    ui->progressLbl->setText(s);
+    int counter = 0;
+    for (int i = 0; i < bItems.count(); i++ ) {
+        if (abort) {
+            ui->progressLbl->setText("Search aborted");
+            clear();
+            return;
+        }
+
+        counter++;
+        QString s = "Reading target images: " + QString::number(counter) + " of "
+                    + QString::number(totIterations);
+        int pctProgress = 1.0 * counter / totIterations * 100;
+        ui->progressLbl->setText(s);
+        ui->progressBar->setValue(pctProgress);
+        qApp->processEvents();
+
+        QString fPath = bItems.at(i).fPath;
+
+        // get the thumbnail (used to compare to A thumbnail in datamodel)
+        QImage image;
+        if (ui->pixelCompare) {
+            autonomousImage->thumbNail(fPath, image, G::maxIconSize);
+            bItems[i].im = image;
+        }
+
+        // get metadata info for the B file to calc aspect
+        QFileInfo fInfo(fPath);
+
+        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::buildBItemsList")) {
+            // deal with failure
+            //continue;
+        }
+        ImageMetadata *m = &metadata->m;
+
+        // type
+        bItems[i].type = QFileInfo(fPath).suffix().toLower();
+
+        // create date
+        bItems[i].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        // duration
+        if (ui->sameDurationCB->isChecked()) {
+            if (metadata->videoFormats.contains(bItems.at(i).type)) {
+                QString s = metadata->readExifToolTag(fPath, "duration#");
+                quint64 duration = static_cast<quint64>(s.toDouble());
+                //duration /= 1000;
+                QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
+                                   duration % 60, (duration * 1000) % 1000);
+                QString format = "mm:ss";
+                if (duration > 3600) format = "hh:mm:ss";
+                bItems[i].duration = durationTime.toString(format);
+                /*
+                qDebug() << "VisCmpDlg::buildBItemsList"
+                         << "s =" << s
+                         << "duration =" << duration
+                         << "durationTime =" << durationTime
+                         << "bItem.duration =" << bItem.duration
+                    ; //*/
+            }
+            else bItems[i].duration = "00:00";
+        }
+
+        if (ui->sameAspectCB->isChecked() && ui->pixelCompare) {
+            double aspect;
+            if (m->width && m->height) {
+                if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
+                else aspect = m->width * 1.0 / m->height;
+            }
+            else {
+                if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
+                else aspect = 0;
+            }
+            bItems[i].aspect = QString::number(aspect,'f', 2);
+        }
     }
 }
 
@@ -545,12 +642,34 @@ void VisCmpDlg::buildBList()
         foreach (QString s, bFolderPaths) qDebug() << "" << s;
     }
 
-    // build bItems
-    buildBItemsList(bFolderPaths);
-    if (bItems.size() == 0) {
-        G::popUp->showPopup("No compare to images...");
-        return;
+    // populate bItems fPath
+    QDir *dir = new QDir;
+    QStringList *fileFilters = new QStringList;
+    foreach (const QString &str, metadata->supportedFormats) {
+        fileFilters->append("*." + str);
     }
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    // build list of image files in bItems
+    //ui->progressLbl->setText("Building list of image files");
+    QStringList bFiles;
+    foreach (QString dPath, bFolderPaths) {
+        dir->setPath(dPath);
+        for (int i = 0; i < dir->entryInfoList().size(); i++) {
+            B bItem;
+            bItem.fPath = dir->entryInfoList().at(i).filePath();
+            //qDebug() << bItem.fPath;
+            bItems << bItem;
+        }
+    }
+
+    // build bItems
+//    buildBItemsList(bFolderPaths);
+//    if (bItems.size() == 0) {
+//        G::popUp->showPopup("No compare to images...");
+//        return;
+//    }
     /*
     qDebug() << "VisCmpDlg::on_compareBtn_clicked  bItems.size() =" << bItems.size();
     //*/
@@ -603,6 +722,54 @@ bool VisCmpDlg::sameDuration(int a, int b)
     if (isDebug)
     qDebug() << "sameDuration   a =" << a << durationA << "b =" << b << durationB << "isSame" << isSame;
     return isSame;
+}
+
+void VisCmpDlg::findMatches()
+{
+    qDebug() << "\nVisCmpDlg::findMatches\n";
+    matchCount = 0;
+    int aCount =  dm->sf->rowCount();
+    int bCount =  bItems.count();
+    for (int a = 0; a < aCount; a++) {
+        int pctProgress = 1.0 * (a+1) / aCount * 100;
+        ui->progressBar->setValue(pctProgress);
+        qApp->processEvents();
+        for (int b = 0; b < bCount; b++) {
+            QString s = "a = " + QString::number(a+1) + " of " + QString::number(aCount) + "   " +
+                        "b = " + QString::number(b+1) + " of " + QString::number(bCount);
+            ui->progressLbl->setText(s);
+            //qDebug() << s;
+//            reportFindMatch(a, b);
+
+            // same file type
+            if (ui->sameFileTypeCB->isChecked()) {
+                if (!sameFileType(a, b)) continue;
+            }
+            // same creation date
+            if (ui->sameCreationDateCB->isChecked()) {
+                if (!sameCreationDate(a, b)) continue;
+            }
+            // same aspect
+            if (ui->sameAspectCB->isChecked()) {
+                if (!sameAspect(a, b)) continue;
+            }
+            // same duration (video)
+            if (ui->sameDurationCB->isChecked()) {
+                if (!sameDuration(a, b)) continue;
+            }
+            // item match
+            model.setData(model.index(a,4), bItems.at(b).fPath);
+            model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
+            matchCount++;
+            reportFindMatch(a, b);
+            /*
+            qDebug() //<< "VisCmpDlg::findMatches"
+                     << QString::number(a).leftJustified(5)
+                     << bItems.at(b).fPath
+                ; //*/
+            break;
+        }
+    }
 }
 
 void VisCmpDlg::buildResults()
@@ -727,7 +894,23 @@ int VisCmpDlg::updateResults()
     return matches;
 }
 
-void::VisCmpDlg::reportAspects()
+void VisCmpDlg::reportbItems()
+{
+    qDebug() << "VisCmpDlg::reportbItems";
+    int counter = 0;
+    foreach (B bItem, bItems) {
+        qDebug().noquote()
+                 << QString::number(counter).leftJustified(5)
+                 << "TYPE" << bItem.type.leftJustified(8)
+                 << "DATE" << bItem.createdDate.leftJustified(25)
+                 << "ASPECT" << bItem.aspect.leftJustified(6)
+                 << "DURATION" << bItem.duration.leftJustified(10)
+                 << bItem.fPath;
+        counter++;
+    }
+}
+
+void VisCmpDlg::reportAspects()
 {
     qDebug() << "\n" << "VisCmpDlg::reportAspects";
     for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
@@ -748,6 +931,52 @@ void::VisCmpDlg::reportAspects()
                  << fInfo.fileName()
             ;
     }
+}
+
+void::VisCmpDlg::reportFindMatch(int a, int b)
+{
+    QString s = " ";
+    QString rpt;
+    rpt = "a = " + QString::number(a).leftJustified(5) + " b = " + QString::number(b).leftJustified(5);
+
+    // A items
+    QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
+    QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
+    QString typeA = QFileInfo(pathA).suffix().toLower();
+    QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
+    QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
+    QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
+    if (durationA.length() == 0) durationA = "00:00";
+
+    QString same;
+    if (ui->sameFileTypeCB->isChecked()) {
+        QString typeB = bItems.at(b).type;
+        bool same = typeA == typeB;
+        QString sameType = same ? "true" : "false";
+        rpt += "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
+    }
+    if (ui->sameCreationDateCB->isChecked()) {
+        QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
+        bool same = dateA == dateB;
+        QString sameDate = same ? "true" : "false";
+        rpt += "    DATE " + sameDate.leftJustified(6) + dateA + s + dateB;
+    }
+    if (ui->sameAspectCB->isChecked()) {
+        QString aspectB = bItems.at(b).aspect;
+        bool same = aspectA == aspectB;
+        QString sameAspect = same ? "true" : "false";
+        rpt += "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
+    }
+    if (ui->sameDurationCB->isChecked()) {
+        QString durationB = bItems.at(b).duration;
+        bool same = durationA == durationB;
+        QString sameDuration = same ? "true" : "false";
+        rpt += "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
+    }
+    rpt += "    A: " + fileNameA.leftJustified(40);
+    rpt += "B: " + bItems.at(b).fPath;
+
+    qDebug().noquote() << rpt;
 }
 
 void::VisCmpDlg::reportResults()
@@ -816,21 +1045,26 @@ void VisCmpDlg::on_compareBtn_clicked()
     isRunning = true;
     clear();
     buildBList();
-    buildResults();
-    if (ui->pixelCompare->isChecked()) pixelCompare();
-    int matches = updateResults();
+    getMetadataBItems();
+    findMatches();
+
+    // debugging
+    bool isDebug = false;
+    if (isDebug) {
+        buildResults();  // populate results[a][b] for debugging
+        //if (ui->pixelCompare->isChecked()) pixelCompare();
+        matchCount = updateResults();
+        reportResults();
+    }
+
     isRunning = false;
 
-    QString x = QString::number(matches);
+    QString x = QString::number(matchCount);
     ui->progressLbl->setText("Search completed.  " + x + " matches found.  See candidate images table.");
     ui->progressBar->setValue(0);
 
     // show first best match
     ui->tv->setEnabled(true);
-    //ui->tv->setCurrentIndex(model.index(0,0));
-    //on_tv_clicked(model.index(0,0));
-
-    //reportAspects();
 }
 
 void VisCmpDlg::on_prevToolBtn_clicked()
@@ -882,8 +1116,12 @@ void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
     qDebug() << "VisCmpDlg::on_tv_clicked  index =" << index;
     int a = index.row();
     QString fPath = dm->sf->index(a,0).data(G::PathRole).toString();
+    QString mPath = model.index(a, 4).data().toString();
     qDebug() << "VisCmpDlg::on_tv_clicked  row (a) ="
-             << a << "col =" << index.column() << "fPath =" << fPath;
+             << a << "col =" << index.column()
+             << "fPath =" << fPath
+             << "match =" << mPath
+        ;
     QImage image;
     preview(fPath, image);
     pA = QPixmap::fromImage(image);
@@ -892,15 +1130,18 @@ void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
     ui->candidateLbl->setPixmap(pA.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     // larger B image (collection) best match
-    int b = 0;
-    fPath = results[a][b].fPath;
-    preview(fPath, image);
+
+    // if debugging and buildResults
+//    int b = 0;
+//    fPath = results[a][b].fPath;
+//    preview(fPath, image);
+    preview(mPath, image);
     pB = QPixmap::fromImage(image);
     ui->matchLbl->setPixmap(pB.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     // best match delta
-    ui->deltaLbl->setText(QString::number(results[a][b].delta));
-    ui->currentLbl->setText(currentBString(b));
+//    ui->deltaLbl->setText(QString::number(results[a][b].delta));
+//    ui->currentLbl->setText(currentBString(b));
 }
 
 void VisCmpDlg::on_abortBtn_clicked()
@@ -949,8 +1190,8 @@ void VisCmpDlg::resizeEvent(QResizeEvent *event)
 
 void VisCmpDlg::on_helpBtn_clicked()
 {
-
-
+    reportbItems();
+    return;
     reportAspects();
     reportResults();
 }

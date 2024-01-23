@@ -282,8 +282,8 @@ bool Jpeg::parse(MetadataParameters &p,
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
         double x = u.getReal(p.file,
-                                      ifd->ifdDataHash.value(33434).tagValue + startOffset,
-                                      isBigEnd);
+                             ifd->ifdDataHash.value(33434).tagValue + startOffset,
+                             isBigEnd);
         if (x < 1) {
             double recip = static_cast<double>(1 / x);
             if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));

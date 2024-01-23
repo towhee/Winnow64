@@ -1003,7 +1003,7 @@ QString Metadata::readExifToolTag(QString fPath, QString tag)
     if (output.endsWith("\n")) {
         output.chop(1);
     }
-    qDebug() << "Metadata::readExifToolTag" << output << fPath;
+    //qDebug() << "Metadata::readExifToolTag" << output << fPath;
     return output;
 }
 
