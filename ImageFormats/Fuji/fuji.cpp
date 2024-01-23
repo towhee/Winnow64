@@ -199,19 +199,19 @@ bool Fuji::parse(MetadataParameters &p,
     jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
 
     // EXIF: created datetime
-    if (ifd->ifdDataHash.contains(33434)) {
-        QString createdExif;
-        createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
-                                  ifd->ifdDataHash.value(36868).tagCount).left(19);
-        if (createdExif.length() > 0)
-            m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+    if (ifd->ifdDataHash.contains(36868)) {
+        QString createDate;
+        createDate = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+                                 ifd->ifdDataHash.value(36868).tagCount);
+        if (createDate.length() > 0)
+            m.createdDate = QDateTime::fromString(createDate, "yyyy:MM:dd hh:mm:ss");
     }
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
         double x = u.getReal(p.file,
-                                      ifd->ifdDataHash.value(33434).tagValue + startOffset,
-                                      isBigEnd);
+                             ifd->ifdDataHash.value(33434).tagValue + startOffset,
+                             isBigEnd);
         if (x < 1 ) {
             int t = qRound(1 / x);
             m.exposureTime = "1/" + QString::number(t);

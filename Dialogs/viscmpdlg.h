@@ -21,6 +21,9 @@ public:
     explicit DragToList(QWidget *parent = nullptr);
     QStringList list;
 
+signals:
+    void dropped();
+
 protected:
     //void keyPressEvent(QKeyEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -54,10 +57,9 @@ private slots:
     void on_matchBtn_clicked();
     void on_abortBtn_clicked();
     void on_helpBtn_clicked();
-
     void on_clrFoldersBtn_clicked();
-
     void on_toggleTvHideChecked_clicked();
+    void buildBList();
 
 private:
     Ui::VisCmpDlg *ui;
@@ -102,22 +104,27 @@ private:
     QStandardItemModel model;
     void preview(QString fPath, QImage &image);
     void buildBItemsList(QStringList &dPaths);
+    void getMetadataBItems();
     int reportRGB(QImage &im);
     int compareRGB(QImage &imA, QImage &imB);
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
     QString currentBString(int b);
     void clear();
-    void buildBList();
     void pixelCompare();
+    void findMatches();
     void buildResults();
     int updateResults();
+    void reportFindMatch(int a, int b);
+    void reportbItems();
     void reportResults();
     void reportAspects();
     bool sameFileType(int a, int b);
     bool sameCreationDate(int a, int b/*, ImageMetadata *m*/);
     bool sameAspect(int a, int b/*, ImageMetadata *m*/);
     bool sameDuration(int a, int b);
+
+    int matchCount = 0;
 
     void progressMsg(QString msg);
     bool okToHide = true;
