@@ -163,6 +163,27 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    dm->sf->setData(dm->sf->index(2, G::LabelColumn), "Blue");
+    dm->sf->filterChange();
+    dm->sf->suspend(true);
+    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
+    dm->sf->suspend(false);
+    QModelIndex dmIdx = dm->currentDmIdx;
+    QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    if (!newSfIdx.isValid()) {
+        newSfIdx = dm->sf->index(0,0);
+    }
+    sel->select(newSfIdx);
+    thumbView->scrollToCurrent("MW::filterChange");
+    return;
+
+    qDebug()
+             << "dm->sf->rowCount() =" << dm->sf->rowCount();
+    return;
+    bool test = filters->isAnyCatItemChecked(filters->labels);
+    qDebug() << test;
+    return;
+
     visCmpImages();
     return;
 

@@ -423,6 +423,21 @@ bool Filters::isLabelChecked(QString label)
     return false;
 }
 
+bool Filters::isAnyCatItemChecked(QTreeWidgetItem *category)
+{
+    if (G::isLogger) G::log("Filters::isAnyLabelChecked");
+    for (int i = 0; i < category->childCount(); ++i) {
+        //if (debugFilters)
+        qDebug() << "Filters::isLabelChecked"
+                 << "label =" << category->child(i)->text(0)
+                 << "checkState =" << category->child(i)->checkState(0)
+            ;
+        if (category->child(i)->checkState(0) == Qt::Checked) return true;
+    }
+    // nothing checked
+    return false;
+}
+
 bool Filters::isOnlyMostRecentDayChecked()
 {
 /*
@@ -1317,6 +1332,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     filteredItemCount is updated.
 */
     //if (G::isLogger) G::log("Filters::dataChanged");
+    //qDebug() << "Filters::dataChanged" << topLeft << bottomRight;
 
     // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {

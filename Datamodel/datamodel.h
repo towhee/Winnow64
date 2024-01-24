@@ -18,9 +18,10 @@ class SortFilter : public QSortFilterProxyModel
 public:
     SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
     bool isFinished();
+    bool isSuspended();
 
 public slots:
-    void filterChange();
+    void filterChange(QString src = "");
     void suspend(bool suspendFiltering);
 
 private slots:
