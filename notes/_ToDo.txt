@@ -1,6 +1,8 @@
 WHAT'S NEW
 
 BUGS / TO DO
+- If filter on color, then change color then crash
+- Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
 - If delete an image, then remote embellish to same folder, then blank icon
 - Runaway memory consumption?
 - Crash when delete fixed??

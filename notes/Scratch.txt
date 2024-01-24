@@ -1,160 +1,19 @@
-EXIFTOOL
-exiftool [OPTIONS] [-TAG...] [--TAG...] FILE..
+Changes to setColorClass
+    // suspend filters until datamodel updated
+    dm->sf->suspend(true);
 
-console output -o OUTFILE or FMT (-out) replace OUTFILE with -
--echo[NUM] TEXT
+    // reactivate filtering
+    dm->sf->suspend(false);
 
-exiftool -T -createdate /Users/roryhill/Pictures/_ThumbTest/PNG.png >> /Users/roryhill/Pictures/_ThumbTest/PNG_.txt
+    // update items in filters
+    buildFilters->updateCategoryItems(filters->labels, G::LabelColumn);
 
-exiftool -T -createdate PNG.png
-exiftool -T -w /Users/roryhill/Pictures/_ThumbTest/PNG_.txt -createdate /Users/roryhill/Pictures/_ThumbTest/PNG.png
-
-CreationDate a = 35 "2022-07-27 11:44:52.000" b = 35 "2016-09-11 15:52:30.000" isSame false
-2018-03-31 09:35:01
-
-
-VisCmpDlg::reportAspectss
- 0   0 aspectA 1.50 m >> w  8000 h  5320 orientation 1 ARW A7R2.arw
- 1   1 aspectA 1.51 m >> w  9600 h  6376 orientation 1 ARW A7R4.arw
- 2   2 aspectA 1.46 m >> w  9728 h  6656 orientation 1 ARW A7R5.ARW
- 3   3 aspectA 1.50 m >> w  6048 h  4024 orientation 1 ARW A9.ARW
- 4   4 aspectA 1.50 m >> w  6048 h  4024 orientation 1 ARW A9II 2.ARW
- 5   5 aspectA 1.50 m >> w  6048 h  4024 orientation 1 ARW A9II.arw
- 6   6 aspectA 1.50 m >> w  5504 h  3672 orientation 1 ARW.ARW
- 7   7 aspectA 0.67 m >> w  5472 h  3648 orientation 8 CR2.CR2
- 8   8 aspectA 1.50 m >> w  8192 h  5464 orientation 1 CR3.CR3
- 9   9 aspectA 1.51 m >> w  2496 h  1648 orientation 1 D2H_0014.NEF
-10  10 aspectA 1.50 m >> w  8640 h  5760 orientation 1 DNG Sony A1 LR GPS.dng
-11  11 aspectA 1.50 m >> w  5952 h  3968 orientation 1 DNGLeicaM10.DNG
-12  12 aspectA 1.50 m >> w  6330 h  4220 orientation 1 DNGNikonD850FromLightroom.dng
-13  13 aspectA 1.50 m >> w  8640 h  5760 orientation 1 DxO_DeepPRIME.dng
-14  14 aspectA 1.33 m >> w  4032 h  3024 orientation 0 HEIC IPhone.heic
-15  15 aspectA 1.33 m >> w  4032 h  3024 orientation 6 HEIC iphone2.HEIC
-16  16 aspectA 1.33 m >> w  4032 h  3024 orientation 1 HEIC.heic
-17  17 aspectA 0.00 m >> w     0 h     0 orientation 1 Heic1.heic
-18  18 aspectA 1.00 m >> w  2848 h  2850 orientation 0 JPG D2X 2.jpg
-19  19 aspectA 1.60 m >> w  2880 h  1800 orientation 0 JPG D2X 3.jpg
-20  20 aspectA 1.51 m >> w  4288 h  2848 orientation 0 JPG D2X.jpg
-21  21 aspectA 0.67 m >> w  1363 h  2048 orientation 1 JPG D700.jpg
-22  22 aspectA 1.46 m >> w  2048 h  1400 orientation 1 JPG D800E.jpg
-23  23 aspectA 1.29 m >> w  3665 h  2832 orientation 0 JPG IPhone.jpg
-24  24 aspectA 1.50 m >> w  3776 h  2520 orientation 1 JPG RX100.JPG
-25  25 aspectA 1.50 m >> w  3034 h  2024 orientation 1 NEF D100.nef
-26  26 aspectA 0.67 m >> w  6016 h  4016 orientation 8 NEF D7200.NEF
-27  27 aspectA 1.51 m >> w  7424 h  4924 orientation 1 NEF D800E Landscape.NEF
-28  28 aspectA 1.51 m >> w  7424 h  4924 orientation 1 NEF D800E.NEF
-29  29 aspectA 1.50 m >> w  7380 h  4928 orientation 1 NEF D810.NEF
-30  30 aspectA 1.50 m >> w  8288 h  5520 orientation 1 NEF D850 2.nef
-31  31 aspectA 1.50 m >> w  8288 h  5520 orientation 1 NEF D850 3.nef
-32  32 aspectA 1.50 m >> w  8288 h  5520 orientation 1 NEF D850.NEF
-33  33 aspectA 1.50 m >> w  8280 h  5520 orientation 1 NEF Z9.NEF
-34  34 aspectA 1.34 m >> w  4640 h  3472 orientation 1 ORF E-M1.ORF
-35  35 aspectA 1.10 m >> w     0 h     0 orientation 1 PNG.png
-36  36 aspectA 1.33 m >> w  4000 h  3000 orientation 1 RAF Fuji GFX 50SII.RAF
-37  37 aspectA 1.50 m >> w  1920 h  1280 orientation 1 RAF FujiXT2.RAF
-38  38 aspectA 1.33 m >> w  5192 h  3896 orientation 1 RW2 GX9.RW2
-39  39 aspectA 1.50 m >> w  8640 h  5760 orientation 1 TIF Sony A1 LD TIF GPS.tif
-40  40 aspectA 1.50 m >> w  8256 h  5504 orientation 1 TIF Zerene.tif
-41  41 aspectA 1.78 m >> w  5472 h  3078 orientation 1 TIF.tif
-
-// header file
-#ifndef EXIFTOOL_H
-#define EXIFTOOL_H
-
-#include <QtWidgets>
-#include "Main/global.h"
-#include "Utilities/utilities.h"
-
-class ExifTool : public QObject
-{
-    Q_OBJECT
-
-public:
-    ExifTool();
-    int execute(QStringList &args);
-    void copyAllTags(QString src, QString dst);
-    void copyICC(QString src, QString dst);
-    void setOverWrite(bool overWrite);
-    int close();
-
-private:
-    QString exifToolPath;
-    QProcess process;
-    bool isOverWrite = false;
-};
-
-#endif // EXIFTOOL_H
-
-// cpp file
-#include "Metadata/ExifTool.h"
-
-ExifTool::ExifTool()
-{
-#ifdef Q_OS_WIN
-    exifToolPath = qApp->applicationDirPath() + "/et.exe";
-#endif
-#ifdef Q_OS_MAC
-    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
-#endif
-    // confirm exifToolPath exists
-    if (!QFile(exifToolPath).exists())
-        qWarning() << "WARNING" << "ExifTool::ExifTool" << exifToolPath << "is missing";
-    QStringList startArgs;
-    startArgs << "-stay_open";
-    startArgs << "True";
-    startArgs << "-@";
-    startArgs << "-";
-    startArgs << "-execute";
-    process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
-    process.waitForStarted(3000);
-}
-
-int ExifTool::execute(QStringList &args)
-{
-    /* all args that are a path to an image should be converted to a url
-       ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    if (G::isFileLogger) Utilities::log("ExifTool::execute", exifToolPath);
-    return QProcess::execute(exifToolPath, args);
-}
-
-void ExifTool::setOverWrite(bool overWrite)
-{
-    isOverWrite = overWrite;
-}
-
-int ExifTool::close()
-{
-    QByteArray closeArgs;
-    closeArgs += "-stay_open\n";
-    closeArgs += "False\n";
-    process.write(closeArgs);
-    if (!process.waitForFinished(30000)) {
-       if (G::isFileLogger) Utilities::log("ExifTool::close", "process.waitForFinished failed");
-        return -1;
+    // update filter counts if there is a color filter checked
+    if (filters->isAnyCatItemChecked(filters->labels)) {
+        buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
+        filterChange(src);
     }
-    return process.exitCode();
-}
 
-void ExifTool::copyAllTags(QString src, QString dst)
-{
-    QByteArray args;
-    args += "-TagsFromFile\n";
-    args += src.toUtf8() + "\n";
-    args += "-all:all\n";
-    if (isOverWrite) args += "-overwrite_original\n";
-    args += dst.toUtf8() + "\n";
-    args += "-execute\n";
-    process.write(args);
-}
 
-void ExifTool::copyICC(QString src, QString dst)
-{
-    QByteArray args;
-    args += "-TagsFromFile\n";
-    args += src.toUtf8() + "\n";
-    args += "-icc_profile\n";
-    if (isOverWrite) args += "-overwrite_original\n";
-    args += dst.toUtf8() + "\n";
-    args += "-execute\n";
-    process.write(args);
-}
+When edit datamodel the following filter/sort steps must occur:
+-

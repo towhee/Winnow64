@@ -65,6 +65,7 @@ void MW::filterChange(QString source)
 /*
     All filter changes should be routed to here as a central clearing house.
 
+    - the datamodel instance is incremented
     - the datamodel filter is refreshed
     - the filter panel counts are updated
     - the current index is updated
@@ -74,32 +75,25 @@ void MW::filterChange(QString source)
       and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    //qDebug() << "MW::filterChange" << "called from:" << source;
-
-    bool rptTimer = true;
-    //if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange";
+    qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::metaReadDone) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
+    if (G::stop) return;
 
+    G::popUp->showPopup("Executing filter...", 0);
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead2 for the prior datamodel filter.
     dm->newInstance();
     // stop ImageCache
     imageCacheThread->stop();
-
-    if (G::stop) return;
-    G::popUp->showPopup("Executing filter...", 0);  // creates pop up window with message
-    //qApp->processEvents();
-
     sel->clear();
-
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
-
+    /*
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
         dm->forceBuildFilters = true;
@@ -110,16 +104,15 @@ void MW::filterChange(QString source)
             G::popUp->showPopup("Failed to load all metadata...");
             return;
         }
-    }
-
+    } //*/
     QApplication::setOverrideCursor(Qt::WaitCursor);
+
+     // prevent unwanted fileSelectionChange()
+    isFilterChange = true;
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
-    isFilterChange = true;      // prevent unwanted fileSelectionChange()
-    dm->sf->filterChange();
-
-    //if (rptTimer) qDebug().noquote() << QString::number(G::t.restart()).rightJustified(5) << "MW::filterChange  dm->sf->filterChange()";
+    dm->sf->filterChange("MW::filterChange");
 
     // update filter panel image count by filter item
     buildFilters->update();
@@ -127,7 +120,8 @@ void MW::filterChange(QString source)
     // recover sort after filtration
     sortChange("filterChange");
 
-    isFilterChange = false;     // allow fileSelectionChange()
+    // allow fileSelectionChange()
+    isFilterChange = false;
 
     // update the status panel filtration status
     updateStatusBar();
@@ -140,18 +134,22 @@ void MW::filterChange(QString source)
         return;
     }
 
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
     // is the DataModel current index still in the filter.  If not, set to zero
+    QModelIndex dmIdx = dm->currentDmIdx;
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    //qDebug() << "MW::filterChange  mapFromSource sfIdx =" << newSfIdx << newSfIdx.isValid();
     if (!newSfIdx.isValid()) {
         newSfIdx = dm->sf->index(0,0);
     }
-    sel->select(newSfIdx);
-    thumbView->scrollToCurrent("MW::filterChange");
-
-    // update priorities in image cache
+    // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
+
+    // select after filtration
+    sel->select(newSfIdx);
+    thumbView->scrollToCurrent("MW::filterChange");
 
     QApplication::restoreOverrideCursor();
     G::popUp->reset();
@@ -353,7 +351,8 @@ void MW::sortChange(QString source)
     The sort order (ascending or descending) can be set by the menu, the button icon on the
     statusbar or a workspace change.
 */
-    if (G::isLogger || G::isFlowLogger)qDebug() << "MW::sortChange  Src:" << source;
+    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::sortChange  Src:" << source;
+    qDebug() << "MW::sortChange  Src:" << source;
 
     if (G::isInitializing || !G::metaReadDone) return;
 
@@ -566,6 +565,7 @@ void MW::setRating()
     for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
+    qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -676,7 +676,7 @@ void MW::setRating()
         G::popUp->reset();
     }
 
-    filterChange(src);
+    filterChange("MW::setRating");
 
     // auto advance
     if (autoAdvance) sel->next();
@@ -754,6 +754,7 @@ void MW::setColorClass()
     color class for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setColorClass");
+    qDebug() << "MW::setColorClass";
     // do not set color class if slideshow is on
     if (G::isSlideShow) return;
 
@@ -779,7 +780,7 @@ void MW::setColorClass()
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
         QModelIndex idx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
-        if(idx.data(Qt::EditRole).toString() != colorClass) {
+        if (idx.data(Qt::EditRole).toString() != colorClass) {
             isAlreadyLabel = false;
             break;
         }
@@ -797,12 +798,16 @@ void MW::setColorClass()
     }
     //*/
 
-    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
+    // copy selection to list of dm rows (proxy filter changes during iteration when
+    // change datamodel)
     QList<int> rows;
     for (int i = 0; i < n; ++i) {
         int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
         rows.append(dmRow);
     }
+
+    // suspend filters until datamodel updated
+    //dm->sf->suspend(true);
 
     // update the data model
     QString src = "MW::setColorClass";
@@ -840,24 +845,18 @@ void MW::setColorClass()
         }
     }
 
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
-    tableView->resizeColumnToContents(G::LabelColumn);
+    filterChange("MW::setColorClass");
+    dm->sf->suspend(true);
+    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
+    dm->sf->suspend(false);
 
     // update ImageView classification badge
     updateClassification();
-
-    // update filter counts
-    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
     }
-
-//    QItemSelection isel = dm->selectionModel->selection();
-    filterChange(src);
-//    dm->selectionModel->select(isel, QItemSelectionModel::Select);
 
     // auto advance
     if (autoAdvance) sel->next();

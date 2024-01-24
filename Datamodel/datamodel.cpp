@@ -2537,19 +2537,17 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) return true;
 
+    // still loading metadata
+    if (!G::metaReadDone) return true;
+
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
         if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
 
-    if (!G::metaReadDone) return true;
-    //if (!G::isNewFolderLoaded) return true;
-    //qDebug() << "SortFilter::filterAcceptsRow  sourceRow =" << sourceRow;
-
     finished = false;
     static int counter = 0;
-    //counter++;
     int dataModelColumn = 0;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
@@ -2645,7 +2643,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     return isMatch;
 }
 
-void SortFilter::filterChange()
+void SortFilter::filterChange(QString src)
 {
 /*
     Note: required because invalidateFilter is private and cannot be called from
@@ -2660,7 +2658,11 @@ void SortFilter::filterChange()
     filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     if (G::isLogger) G::log("SortFilter::filterChange");
-    invalidateFilter();
+
+    if (suspendFiltering) return;
+
+    invalidateRowsFilter();
+//    invalidateFilter();
 
     // force wait until finished to prevent sorting/editing datamodel
     int waitMs = 2000;
@@ -2674,7 +2676,11 @@ void SortFilter::filterChange()
             qDebug() << "SortFilter::filterChange  timeIsUp triggered";
         }
     }
-    //qDebug() << "SortFilter::filterChange" << ms;
+    qDebug() << "SortFilter::filterChange" << ms
+             << "finished =" << finished
+             << "proxy row count =" << rowCount()
+             << "src =" << src
+                ;
 }
 
 void SortFilter::suspend(bool suspendFiltering)
@@ -2684,6 +2690,7 @@ void SortFilter::suspend(bool suspendFiltering)
     When false the filtering is refreshed.
 */
     if (G::isLogger) G::log("SortFilter::suspend");
+    //QMutexLocker locker(&mutex);
     this->suspendFiltering = suspendFiltering;
     if (!suspendFiltering) invalidateFilter();
 }
@@ -2691,4 +2698,9 @@ void SortFilter::suspend(bool suspendFiltering)
 bool SortFilter::isFinished()
 {
     return finished;
+}
+
+bool SortFilter::isSuspended()
+{
+    return suspendFiltering;
 }

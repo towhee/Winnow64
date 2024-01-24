@@ -402,21 +402,13 @@ void ImageCache::setTargetRange()
     if (debugCaching)
         qDebug() << "ImageCache::setTargetRange";
 
-    //QMutexLocker locker(&gMutex);
-    //gMutex.lock();
-    //icd->mutex.lock();
-
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
-    //icd->mutex.unlock();
-    //gMutex.unlock();
 
     // assign target files to cache
     float sumMB = 0;
     float prevMB = 0;
     priorityList.clear();  // crash
-//    int items = icd->cacheItemList.length();
-//    int memCap = icd->cache.maxMB;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList.at(i).isVideo) {
             icd->cacheItemList[i].isTarget = false;
@@ -757,7 +749,6 @@ void ImageCache::removeFromCache(QStringList &pathList)
         // rgh change [] to at()
         QString fPath = icd->cacheItemList[i].fPath;
         icd->cacheItemList[i].key = i;
-        icd->cacheItemList[i].origKey = i;
         if (icd->cacheItemList[i].isCached) {
             icd->cache.currMB += icd->cacheItemList[i].sizeMB;
         }
@@ -820,6 +811,8 @@ QString ImageCache::reportCacheParameters()
     rpt << "G::dmInstance            = " << G::dmInstance << "\n";
 
     rpt << "\n";
+    rpt << "key                      = " << icd->cache.key << "\n";
+    rpt << "prevKey                  = " << icd->cache.prevKey << "\n";
     rpt << "directionChangeThreshold = " << icd->cache.directionChangeThreshold << "\n";
     rpt << "wtAhead                  = " << icd->cache.wtAhead << "\n";
     rpt << "isForward                = " << (icd->cache.isForward ? "true" : "false") << "\n";
@@ -1156,7 +1149,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath; //*/
         icd->cacheItem.isUpdated = false;
         icd->cacheItem.key = row;              // need to be able to sync with imageList
-        icd->cacheItem.origKey = row;          // req'd while setting target range
         icd->cacheItem.fPath = m.fPath;
         icd->cacheItem.ext = m.ext;
         icd->cacheItem.status = 0;
@@ -1176,7 +1168,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         // increment key for rest of list
         for (int i = row + 1; i < icd->cacheItemList.size(); i++) {
             icd->cacheItemList[i].key = i;
-            icd->cacheItemList[i].origKey = i;
         }
     }
     else row = keyFromPath[m.fPath];
@@ -1261,7 +1252,6 @@ void ImageCache::buildImageCacheList()
            cache status and make future caching decisions for each image  */
         icd->cacheItem.isUpdated = false;
         icd->cacheItem.key = i;              // need to be able to sync with imageList
-        icd->cacheItem.origKey = i;          // req'd while setting target range
         icd->cacheItem.fPath = fPath;
         icd->cacheItem.ext = fPath.section('.', -1).toLower();
         icd->cacheItem.status = 0;
@@ -1450,7 +1440,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
 
-    setCurrentPosition(currentPath, "ImageCache::rebuildImageCacheParameters");
+    //setCurrentPosition(currentPath, "ImageCache::rebuildImageCacheParameters");
 }
 
 void ImageCache::refreshImageCache()

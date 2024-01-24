@@ -229,7 +229,7 @@ void BuildFilters::done()
     if (afterAction == AfterAction::MostRecentDay) emit filterLastDay();
     if (afterAction == AfterAction::Search) emit searchTextEdit();
     afterAction = AfterAction::NoAfterAction;
-    dm->sf->filterChange();
+    dm->sf->filterChange("BuildFilters::done");
 
     //filters->expandAllFilters();
 
@@ -540,7 +540,7 @@ void BuildFilters::updateCategoryItems()
     filters->updateFilteredCountPerItem(map, cat);
 }
 
-void BuildFilters::updateCategoryItems(QTreeWidgetItem *item, int dmColumn)
+void BuildFilters::updateCategoryItems(QTreeWidgetItem *category, int dmColumn)
 {
 /*
     Dynamically update the filter if items in a category have by changed in the datamodel;
@@ -549,13 +549,13 @@ void BuildFilters::updateCategoryItems(QTreeWidgetItem *item, int dmColumn)
 
     Example:
     buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
-    filterChange();     // updata filter counts
+    filterChange();     // update filter counts
 */
     QMap<QString,int> map;
     for (int row = 0; row < dm->rowCount(); row++)
         map[dm->index(row, dmColumn).data().toString().trimmed()]++;
     qDebug() << "BuildFilters::updateCategoryItems  map =" << map;
-    filters->addCategoryItems(map, item);
+    filters->addCategoryItems(map, category);
 }
 
 void BuildFilters::appendUniqueItems()
