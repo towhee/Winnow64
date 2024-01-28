@@ -276,6 +276,7 @@ namespace G
     extern bool isLoadConcurrent;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;
+    extern bool isFilter;
 
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;

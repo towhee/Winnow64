@@ -26,7 +26,8 @@ public:
         NoAfterAction,
         Search,
         QuickFilter,
-        MostRecentDay
+        MostRecentDay,
+        NoFilterChange
     } afterAction;
 
     enum Category {
@@ -56,13 +57,15 @@ signals:
     void quickFilter();
     void filterLastDay();
     void searchTextEdit();
+    void filterChange(QString src);
 
 public slots:
     void build(BuildFilters::AfterAction newAction = NoAfterAction);
     void update();
     void updateCategory(BuildFilters::Category category,
                         BuildFilters::AfterAction newAction = NoAfterAction);
-    void updateCategoryItems(QTreeWidgetItem *item, int dmColumn);
+    void updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn);
+   // void updateCategoryItems(QTreeWidgetItem *item, int dmColumn);
 
 private:
     void abortIfRunning();

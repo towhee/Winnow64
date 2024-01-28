@@ -232,10 +232,10 @@ void IngestDlg::renameIfExists(QString &destination,
 void IngestDlg::getPicks()
 {
 /*
-    This function generates a list of picked images to ingest from the filtered data. The
-    datamodel dm, not the proxy dm->sf, is used, as the user may have sorted the view, and we
-    need the original datamodel dm order to efficiently deal with the combined raw/jpg
-    scenario.
+    This function generates a list of picked images to ingest from the datamodel. The
+    datamodel dm, not the proxy dm->sf, is used, as the user may have filtered and/or
+    sorted the view, and we need the original datamodel dm order to efficiently deal with
+    the combined raw/jpg scenario.
 
     The datamodel is sorted by file path. Raw files with the same path precede jpg files with
     duplicate names. Two roles track duplicates: G::DupHideRawRole flags jpg files with

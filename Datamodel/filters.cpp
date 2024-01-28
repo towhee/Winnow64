@@ -428,13 +428,34 @@ bool Filters::isAnyCatItemChecked(QTreeWidgetItem *category)
     if (G::isLogger) G::log("Filters::isAnyLabelChecked");
     for (int i = 0; i < category->childCount(); ++i) {
         //if (debugFilters)
-        qDebug() << "Filters::isLabelChecked"
+        qDebug() << "Filters::isAnyCatItemChecked"
                  << "label =" << category->child(i)->text(0)
                  << "checkState =" << category->child(i)->checkState(0)
             ;
         if (category->child(i)->checkState(0) == Qt::Checked) return true;
     }
     // nothing checked
+    return false;
+}
+
+bool Filters::isAnyFilter()
+{
+/*
+    This is used to determine the filter status in MW::updateFilterStatus
+*/
+    if (G::isLogger) G::log("Filters::isAnyFilter");
+    if (debugFilters)
+        qDebug() << "Filters::isAnyFilter"
+            ;
+    QTreeWidgetItemIterator it(this);
+    if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
+        return true;
+    while (*it) {
+        if ((*it)->parent() && (*it) != searchTrue) {
+            if ((*it)->checkState(0) == Qt::Checked) return true;
+        }
+        ++it;
+    }
     return false;
 }
 
@@ -568,27 +589,6 @@ void Filters::updateProgress(int progress)
 void Filters::setProgressBarStyle()
 {
 //    bfProgressBar->setStyleSheet("QProgressBar::chunk{background-color:cadetblue;}");
-}
-
-bool Filters::isAnyFilter()
-{
-/*
-    This is used to determine the filter status in MW::updateFilterStatus
-*/
-    if (G::isLogger) G::log("Filters::isAnyFilter");
-    if (debugFilters)
-        qDebug() << "Filters::isAnyFilter"
-                    ;
-    QTreeWidgetItemIterator it(this);
-    if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
-        return true;
-    while (*it) {
-        if ((*it)->parent() && (*it) != searchTrue) {
-            if ((*it)->checkState(0) == Qt::Checked) return true;
-        }
-        ++it;
-    }
-    return false;
 }
 
 void Filters::setEachCatTextColor()
@@ -1300,6 +1300,46 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
         //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
         if (itemMap.contains(key))
             category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
+    }
+
+    // sort the result
+    //category->sortChildren(0, Qt::AscendingOrder);
+}
+
+void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
+{
+    /*
+    All the unique values for a category are collected into a QMap object in
+    BuildFilters. The list is passed here, where category child items that are checked and
+    have a zero unfiltered count are unchecked.
+
+    For example, if the Pick category picked items is checked, and all the datamodel picked
+    rows have been unpicked, then the filter picked item will be checked but have a zero
+    filtered count.  The filter picked item must be unchecked to avoid a proxy filter null
+    result.
+*/
+    //if (debugFilters || G::isLogger || G::isFlowLogger)
+        qDebug() << "Filters::updateZeroCountCheckedItems"
+                 << "category =" << category->text(0)
+            ;
+
+    for (int i = 0; i < category->childCount(); i++) {
+        //category->child(i)->setData(2, Qt::EditRole, 0);
+        // is the item checked
+        qDebug() << "Filters::updateZeroCountCheckedItems prior"
+                 << "item =" << category->child(i)->text(0)
+                 << "checkState =" << category->child(i)->checkState(0);
+        if (category->child(i)->checkState(0) == Qt::Checked) {
+            QString key = category->child(i)->text(0);
+            //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
+            // if the unfiltered item count zero then uncheck item
+            if (itemMap.contains(key) && itemMap.value(key) == 0) {
+                category->child(i)->setCheckState(0, Qt::Unchecked);
+                qDebug() << "Filters::updateZeroCountCheckedItems after"
+                         << "item =" << category->child(i)->text(0)
+                         << "checkState =" << category->child(i)->checkState(0);
+            }
+        }
     }
 
     // sort the result

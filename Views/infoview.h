@@ -17,7 +17,8 @@ class InfoView : public QTreeView
 	Q_OBJECT
 
 public:
-    InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView);
+    InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView,
+             Filters *filters, BuildFilters *buildFilters);
     void updateInfo(const int &row);
     void clearInfo();
     void refreshLayout();
@@ -91,6 +92,7 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void dataEdited();
     void updateFilter(BuildFilters::Category category, BuildFilters::AfterAction afterAction);
+    void filterChange(QString source);
 //    void addToImageCache(ImageMetadata m);
     void setCurrentPosition(QString fPath, QString src);
 
@@ -115,6 +117,8 @@ private:
     DataModel *dm;
     Metadata *metadata;
     IconView *thumbView;
+    Filters *filters;
+    BuildFilters *buildFilters;
     QString fPath;
     QStringList editFields;
 

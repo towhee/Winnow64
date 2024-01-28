@@ -2144,6 +2144,13 @@ int DataModel::nearestPick()    // not used
     return 0;
 }
 
+QModelIndex DataModel::nearestFiltered(QModelIndex dmIdx)
+{
+    for (int i = dmIdx.row(); i >= 0; i--) {
+
+    }
+}
+
 bool DataModel::getSelection(QStringList &list)
 {
 /*
@@ -2246,8 +2253,8 @@ bool DataModel::isPick()
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::isPick");
     if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentFolderPath;
-    for (int row = 0; row < sf->rowCount(); ++row) {
-        QModelIndex idx = sf->index(row, G::PickColumn);
+    for (int row = 0; row < rowCount(); ++row) {
+        QModelIndex idx = index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "Picked") return true;
     }
     return false;
@@ -2565,7 +2572,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             false but the row could still be accepted if another item in the same
             category does match.
             */
-            if ((*filter)->checkState(0) != Qt::Unchecked) {
+            if ((*filter)->checkState(0) != Qt::Unchecked) {  // crash
                 if ((*filter) == filters->searchTrue &&
                     (*filter)->text(0) == filters->enterSearchString)
                 {
@@ -2692,7 +2699,7 @@ void SortFilter::suspend(bool suspendFiltering)
     if (G::isLogger) G::log("SortFilter::suspend");
     //QMutexLocker locker(&mutex);
     this->suspendFiltering = suspendFiltering;
-    if (!suspendFiltering) invalidateFilter();
+    //if (!suspendFiltering) invalidateFilter();
 }
 
 bool SortFilter::isFinished()

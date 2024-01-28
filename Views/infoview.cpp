@@ -86,12 +86,14 @@ public:
     It is used to show some file, image and application state information.
 */
 
-InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView)
+InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView, Filters *filters, BuildFilters *buildFilters)
     : QTreeView(parent)
 {
     if (G::isLogger) G::log("InfoView::InfoView");    this->dm = dm;
     this->metadata = metadata;
     this->thumbView = thumbView;        // req'd to update metadata in dm for selections
+    this->filters = filters;
+    this->buildFilters = buildFilters;
 
     ok = new QStandardItemModel(this);
     setupOk();
@@ -226,10 +228,20 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             emit dataEdited();
         }
 
-        dm->sf->suspend(false);
+        //dm->sf->suspend(false);
         // update filters
-        if (field == "Title*") emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
-        if (field == "Creator*") emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
+        if (field == "Title*") {
+            buildFilters->updateCategory(BuildFilters::TitleEdit);
+            //emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
+            if (filters->isAnyCatItemChecked(filters->titles))
+                emit filterChange("InfoView::dataChange");
+        }
+        if (field == "Creator*") {
+            buildFilters->updateCategory(BuildFilters::CreatorEdit);
+            //emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
+            if (filters->isAnyCatItemChecked(filters->creators))
+                emit filterChange("InfoView::dataChange");
+        }
     }
     count++;
     if (count > 1) count = 0;

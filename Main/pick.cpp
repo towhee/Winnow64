@@ -51,15 +51,22 @@ void MW::togglePickUnlessRejected()
     }
     if (n > 1) pushPick("End multiple select");
 
-    updateClassification();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    // update filter counts before filterChange
+    buildFilters->updateCategory(BuildFilters::PickEdit);
+    // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    if (picksBeingFiltered) {
+        filterChange("MW::togglePick");
+    }
+    else {
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+    }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", "MW::togglePickUnlessRejected");
-
-    // update filter counts
-    buildFilters->updateCategory(BuildFilters::PickEdit);
+    updateStatus(true, "", "MW::togglePick");
+    updateClassification();
+    updateClassification();
 }
 
 void MW::togglePickMouseOverItem(QModelIndex idx)
@@ -145,18 +152,27 @@ void MW::togglePick()
     }
     if (n > 1) pushPick("End multiple select");
 
-    updateClassification();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    // avoid null proxy filter
+//    buildFilters->updateZeroCountCheckedItems(filters->picks, G::PickColumn);
+
+    // update filter counts before filterChange
+    buildFilters->updateCategory(BuildFilters::PickEdit);
+    // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    if (picksBeingFiltered) {
+        filterChange("MW::togglePick");
+    }
+    else {
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+    }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "", "MW::togglePick");
-
-    // update filter counts
-    buildFilters->updateCategory(BuildFilters::PickEdit);
+    updateClassification();
 
     // auto advance
-    if (autoAdvance) sel->next();
+    if (autoAdvance && !picksBeingFiltered) sel->next();
 }
 
 void MW::toggleReject()
@@ -196,18 +212,21 @@ void MW::toggleReject()
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
-    updateClassification();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    // update filter counts before filterChange
+    buildFilters->updateCategory(BuildFilters::PickEdit);
+    // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    if (picksBeingFiltered) {
+        filterChange("MW::togglePick");
+    }
+    else {
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+    }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "", "MW::toggleReject");
-
-    // update filter counts
-    buildFilters->updateCategory(BuildFilters::PickEdit);
-
-    // auto advance
-    if (autoAdvance) sel->next();
+    updateClassification();
 }
 
 int MW::pickLogCount()

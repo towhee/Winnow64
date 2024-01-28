@@ -66,7 +66,7 @@ void MW::filterChange(QString source)
     All filter changes should be routed to here as a central clearing house.
 
     - the datamodel instance is incremented
-    - the datamodel filter is refreshed
+    - the datamodel proxy filter is refreshed
     - the filter panel counts are updated
     - the current index is updated
     - any prior selection that is still available is set
@@ -84,7 +84,7 @@ void MW::filterChange(QString source)
     }
     if (G::stop) return;
 
-    G::popUp->showPopup("Executing filter...", 0);
+    //G::popUp->showPopup("Executing filter...", 0);
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead2 for the prior datamodel filter.
     dm->newInstance();
@@ -112,6 +112,7 @@ void MW::filterChange(QString source)
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
+    dm->sf->suspend(false);
     dm->sf->filterChange("MW::filterChange");
 
     // update filter panel image count by filter item
@@ -139,10 +140,22 @@ void MW::filterChange(QString source)
 
     // is the DataModel current index still in the filter.  If not, set to zero
     QModelIndex dmIdx = dm->currentDmIdx;
+    QModelIndex sfIdx = dm->currentSfIdx;
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    int sfRow = sfIdx.row();
+    int sfRows = dm->sf->rowCount();
     if (!newSfIdx.isValid()) {
-        newSfIdx = dm->sf->index(0,0);
+        if (sfRow < sfRows) newSfIdx = dm->sf->index(sfRow, 0);
+        else newSfIdx = dm->sf->index(sfRows-1, 0);
     }
+    qDebug() << "MW::filterChange index update"
+             << "dmIdx =" << dmIdx
+             << "sfIdx =" << sfIdx
+             << "sfRrow =" << sfRow
+             << "sfRows =" << sfRows
+             << "newSfIdx =" << newSfIdx
+        ;
+
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
@@ -235,17 +248,19 @@ void MW::uncheckAllFilters()
     if (G::isLogger) G::log("MW::uncheckAllFilters");
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
-//    filterRating1Action->setChecked(false);
-//    filterRating2Action->setChecked(false);
-//    filterRating3Action->setChecked(false);
-//    filterRating4Action->setChecked(false);
-//    filterRating5Action->setChecked(false);
-//    filterRedAction->setChecked(false);
-//    filterYellowAction->setChecked(false);
-//    filterGreenAction->setChecked(false);
-//    filterBlueAction->setChecked(false);
-//    filterPurpleAction->setChecked(false);
     filterLastDayAction->setChecked(false);
+    /*
+    filterRating1Action->setChecked(false);
+    filterRating2Action->setChecked(false);
+    filterRating3Action->setChecked(false);
+    filterRating4Action->setChecked(false);
+    filterRating5Action->setChecked(false);
+    filterRedAction->setChecked(false);
+    filterYellowAction->setChecked(false);
+    filterGreenAction->setChecked(false);
+    filterBlueAction->setChecked(false);
+    filterPurpleAction->setChecked(false);
+    */
 }
 
 void MW::clearAllFilters()
@@ -587,9 +602,6 @@ void MW::setRating()
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
-    qDebug() << "MW::setRating" << rating
-             << "selection.count() =" << selection.count()
-                ;
     // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -662,21 +674,20 @@ void MW::setRating()
         }
     }
 
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    filterChange("MW::setRating");
+    //dm->sf->suspend(true);
+    buildFilters->updateCategory(BuildFilters::RatingEdit);
+    //dm->sf->suspend(false);
 
     // update ImageView classification badge
     updateClassification();
 
     // update filter list and counts
-    buildFilters->updateCategory(BuildFilters::RatingEdit, BuildFilters::NoAfterAction);
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
     }
-
-    filterChange("MW::setRating");
 
     // auto advance
     if (autoAdvance) sel->next();
@@ -754,7 +765,7 @@ void MW::setColorClass()
     color class for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setColorClass");
-    qDebug() << "MW::setColorClass";
+    //qDebug() << "MW::setColorClass";
     // do not set color class if slideshow is on
     if (G::isSlideShow) return;
 
@@ -806,9 +817,6 @@ void MW::setColorClass()
         rows.append(dmRow);
     }
 
-    // suspend filters until datamodel updated
-    //dm->sf->suspend(true);
-
     // update the data model
     QString src = "MW::setColorClass";
     for (int i = 0; i < n; ++i) {
@@ -846,9 +854,9 @@ void MW::setColorClass()
     }
 
     filterChange("MW::setColorClass");
-    dm->sf->suspend(true);
-    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
-    dm->sf->suspend(false);
+    //dm->sf->suspend(true);
+    buildFilters->updateCategory(BuildFilters::LabelEdit);
+    //dm->sf->suspend(false);
 
     // update ImageView classification badge
     updateClassification();

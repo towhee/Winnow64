@@ -1,8 +1,22 @@
 #include "buildfilters.h"
 
 /*
-    The DataModel is filtered based on which items are checked in the filter tree
-    class Filters.  The actual filtering happens in SortFilter::filterAcceptsRow.
+    Classes involved in filtering:
+
+        DataModel                       Dataset
+        SortFilter                      Proxy
+        Filters                         QTreeWidget of filter items
+        BuildFilters                    Update Filters
+        MW - sortandfilter.cpp
+           - pick.cpp
+
+    DataModel and Proxies
+
+        dm is the instance of the datamodel and includes the entire dataset.
+
+        dm->sf is the proxy and is filtered based on which items are checked
+        in the filter tree class Filters.  The actual filtering happens in
+        SortFilter::filterAcceptsRow.
 
     Filters are based on Categories that contain items.  The categories are:
 
@@ -11,16 +25,16 @@
          *ratings;
          *labels;
          *types;
+         *years;
+         *days;
          *models;
-         *titles;
          *lenses;
+         *focalLengths;
+         *titles;
          *keywords;
          *creators;
          *missingThumbs;
          *compare;
-         *focalLengths;
-         *years;
-         *days;
 
     An item is a unique value for its category in the DataModel.  For example,
     in the category "types", items could include JPG, NEF, PNG ...
@@ -40,6 +54,33 @@
 
         reset() is called from MW::folderSelectionChange, setting isRest = true and
         isReset is set to false in BuildFilters::done.
+
+    Dynamic category items
+
+        Picks, Ratings, Color classes, Titles and Creator can be edited at runtime,
+        dynamically affecting sort and filter operations.
+
+        The steps are:
+
+            - edit the datamodel
+            - update filter category items and counts: BuildFilters::updateCategory
+            - if category is being filtered then MW::filterChange
+            - else refresh views
+            - update status bar
+
+    Filter Change
+
+        All filter change executions must be invoked by calling MW::filterChange to
+        ensure all the followed occur:
+
+            - the datamodel instance is incremented
+            - the datamodel proxy filter is refreshed
+            - the filter panel counts are updated
+            - the current index is updated
+            - any prior selection that is still available is set
+            - the image cache is rebuilt to match the current filter
+            - the thumb and grid first/last/thumbsPerPage parameters are recalculated
+              and icons are loaded if necessary.
 */
 
 BuildFilters::BuildFilters(QObject *parent,
@@ -219,7 +260,6 @@ void BuildFilters::done()
             << "afterAction =" << afterAction
                ;
     }
-//    dm->sf->suspend(false);
     filters->setEnabled(true);
     isReset = false;
     filters->filtersBuilt = true;
@@ -228,13 +268,11 @@ void BuildFilters::done()
     if (afterAction == AfterAction::QuickFilter) emit quickFilter();
     if (afterAction == AfterAction::MostRecentDay) emit filterLastDay();
     if (afterAction == AfterAction::Search) emit searchTextEdit();
+//    if (afterAction != AfterAction::NoFilterChange)
+//        dm->sf->filterChange("BuildFilters::done");
+        // emit filterChange("BuildFilters::done");     // endless loop
     afterAction = AfterAction::NoAfterAction;
-    dm->sf->filterChange("BuildFilters::done");
 
-    //filters->expandAllFilters();
-
-    //qint64 msec = buildFiltersTimer.elapsed();
-    //qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::reset(bool collapse)
@@ -483,6 +521,14 @@ void BuildFilters::updateCategoryItems()
     Called when a category item has been edited.  The old name is removed from the
     category items, the new one is appended and the items are resorted.  The item
     counts for this category only are updated.
+
+    Example:
+    BuildFilters::updateCategory(category, BuildFilters::NoAfterAction)
+    Run
+    BuildFilters::updateCategoryItems
+    BuildFilters::done
+
+    Call with BuildFilters::NoFilterChange to prevent a SortFilter update.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::updateCategory";
     if (debugBuildFilters)
@@ -538,25 +584,64 @@ void BuildFilters::updateCategoryItems()
     for (int row = 0; row < dm->sf->rowCount(); row++)
         map[dm->sf->index(row, col).data().toString()]++;
     filters->updateFilteredCountPerItem(map, cat);
+
+    // filter
+    //if (G::isFilter) emit filterChange("BuildFilters::updateCategory");
 }
 
-void BuildFilters::updateCategoryItems(QTreeWidgetItem *category, int dmColumn)
+void BuildFilters::updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn)
 {
 /*
-    Dynamically update the filter if items in a category have by changed in the datamodel;
-    For example, if visCmpImages updates the datamodel colum "compare" then the compare
-    filter, which may have only contained the item = false, could now also have item = true.
+    If a category item is checked, so the datamodel is being filtered on this item, and then
+    all the datamodel rows with the item value are changed, then the updated proxy filter will
+    be null because the filter item is still checked.
 
-    Example:
-    buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
-    filterChange();     // update filter counts
+    For example:
+        - make some picks
+        - filter on picked (check filter pick item)
+        - select all
+        - unpick
+    This results in the picked filter item still being checked, but no longer visible, and a
+    null proxy filter.
+
+    This function iterates through all checked items in the category, and if the datamodel
+    count for the item is zero, unchecks the item.
+
+    This function should be called before invoking MW::filterChange().
+    This function executes in the gui thread.
 */
+    if (debugBuildFilters)
+    {
+        qDebug() << "BuildFilters::zeroCountCheckedItems";
+    }
+
     QMap<QString,int> map;
-    for (int row = 0; row < dm->rowCount(); row++)
-        map[dm->index(row, dmColumn).data().toString().trimmed()]++;
-    qDebug() << "BuildFilters::updateCategoryItems  map =" << map;
-    filters->addCategoryItems(map, category);
+    int rows = dm->sf->rowCount();
+
+    // get datamodel filtered counts for category (ie picks)
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::PickColumn).data().toString().trimmed()]++;
+
+    filters->updateZeroCountCheckedItems(map, cat);
 }
+
+//void BuildFilters::updateCategoryItems(QTreeWidgetItem *category, int dmColumn)
+//{
+///*
+//    Dynamically update the filter if items in a category have by changed in the datamodel;
+//    For example, if visCmpImages updates the datamodel colum "compare" then the compare
+//    filter, which may have only contained the item = false, could now also have item = true.
+
+//    Example:
+//    buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
+//    filterChange();     // update filter counts
+//*/
+//    QMap<QString,int> map;
+//    for (int row = 0; row < dm->rowCount(); row++)
+//        map[dm->index(row, dmColumn).data().toString().trimmed()]++;
+//    qDebug() << "BuildFilters::updateCategoryItems  map =" << map;
+//    filters->addCategoryItems(map, category);
+//}
 
 void BuildFilters::appendUniqueItems()
 {
@@ -747,6 +832,8 @@ void BuildFilters::run()
         break;
     // category item edited
     case Action::UpdateCategory:
+        // no change to SortFilter
+        //afterAction = AfterAction::NoFilterChange;
         if (!abort) updateCategoryItems();
     }
 
@@ -761,5 +848,4 @@ void BuildFilters::run()
              << "Src:" << dm->currentFolderPath
                 ;
                   //*/
-
 }

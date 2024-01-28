@@ -264,6 +264,7 @@ void MW::createDataModel()
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
     connect(buildFilters, &BuildFilters::searchTextEdit, this, &MW::searchTextEdit);
+    connect(buildFilters, &BuildFilters::filterChange, this, &MW::filterChange);
 
     // test how to add to datamodel from another thread
     connect(this, &MW::testAddToDM, dm, &DataModel::addMetadataForItem);
@@ -832,7 +833,7 @@ void MW::createInfoView()
 */
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::createInfoView");
-    infoView = new InfoView(this, dm, metadata, thumbView);
+    infoView = new InfoView(this, dm, metadata, thumbView, filters, buildFilters);
     infoView->setMaximumWidth(folderMaxWidth);
 
     if (isSettings) {
@@ -941,6 +942,7 @@ void MW::createInfoView()
             this, SLOT(metadataChanged(QStandardItem*)));
     // update filters
     connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::updateCategory);
+    connect(infoView, &InfoView::filterChange, this, &MW::filterChange);
 }
 
 void MW::createEmbel()

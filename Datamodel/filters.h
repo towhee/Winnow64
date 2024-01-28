@@ -64,6 +64,7 @@ public:
     void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();

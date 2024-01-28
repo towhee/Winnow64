@@ -125,8 +125,10 @@ void MW::updateStatusBar()
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 
-    filterStatusLabel->setVisible(filters->isAnyFilter());
+    G::isFilter = filters->isAnyFilter();
+    filterStatusLabel->setVisible(G::isFilter);
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
+
     if (subFoldersAction->isChecked()) G::includeSubfolders = true;
     rawJpgStatusLabel->setVisible(combineRawJpgAction->isChecked());
     slideShowStatusLabel->setVisible(G::isSlideShow);
