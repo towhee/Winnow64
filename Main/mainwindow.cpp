@@ -539,7 +539,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
-    createCentralWidget();      // req'd by ImageView, CompareView
+    createCentralWidget();      // req'd by ImageView, CompareView, ...
     createFilterView();         // req'd by DataModel (dm)
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
     createThumbView();          // dependent on QSetting, filterView
@@ -548,7 +548,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelectionModel();     // dependent on ThumbView, ImageView
     createSelection();          // dependent on DataModel, ThumbView, GridView, TableView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
-    createInfoView();           // dependent on DataModel, Metadata, ThumbView
+    createInfoView();           // dependent on DataModel, Metadata, ThumbView, Filters, BuildFilters
     createFrameDecoder();       // dependent on DataModel
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
@@ -956,7 +956,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-    /* ALL EVENTS (uncomment to use)
+//    /* ALL EVENTS (uncomment to use)
     if (event->type()
                              != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
@@ -1461,6 +1461,7 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     }
 //    qDebug() << "MW::focusChange" << previous << current;
     if (current == nullptr) return;
+    // following does nothing, enableGoKeyActions has been commented out.  Remove??
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
     if (previous == nullptr) return;    // suppress compiler warning
@@ -4989,8 +4990,10 @@ void MW::ingest()
 
         updateStatus(true, "", "MW::ingest");
     }
-    else QMessageBox::information(this,
-         "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+    else {
+             QMessageBox::information(this,
+             "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+    }
 }
 
 void MW::rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure)
@@ -5584,6 +5587,7 @@ void MW::deleteSelectedFiles()
         //msgBox.show();
         //msgBox.move(centralWidget->geometry().center());
         int ret = msgBox.exec();
+        resetFocus();
         if (ret == QMessageBox::Cancel) return;
     }
 
@@ -5597,7 +5601,7 @@ void MW::deleteSelectedFiles()
         paths.append(fPath);
     }
 
-    deleteFiles(paths);
+    //deleteFiles(paths);
 }
 
 void MW::deleteFiles(QStringList paths)
@@ -5709,7 +5713,6 @@ void MW::deleteFiles(QStringList paths)
     // rebuild filters
     buildFilters->recount();
     qDebug() << "MW::deleteFiles rebuild filters all done   ms =" << t.elapsed(); t.restart();
-
 }
 
 void MW::deleteFolder()
@@ -5752,6 +5755,7 @@ void MW::deleteFolder()
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         int ret = msgBox.exec();
+        resetFocus();
         if (ret == QMessageBox::Cancel) return;
     }
 
@@ -5802,6 +5806,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     msgBox.setStandardButtons(QMessageBox::Cancel | QMessageBox::Yes);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     int ret = msgBox.exec();
+    resetFocus();
     if (ret == QMessageBox::Cancel) return;
 
     // delete
@@ -5978,6 +5983,7 @@ void MW::revealLogFile()
     QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
     layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
     int ret = msgBox.exec();
+    resetFocus();
     if (ret == QMessageBox::Cancel) return;
 
     // open explorer/finder at WinnowLog.txt location
@@ -6181,10 +6187,8 @@ void MW::visCmpImages()
     if (visCmpDlg->exec()) {
         qDebug() << "MW::visCmpImages accepted";
         // add true to compare filter
-        buildFilters->updateCategoryItems(filters->compare, G::CompareColumn);
-        buildFilters->update();
-        // update filter counts
-        //filterChange("MW::visCmpImages");
+        buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);
+        filterChange("MW::visCmpImages");
     }
 }
 

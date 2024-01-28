@@ -1,7 +1,7 @@
 WHAT'S NEW
 
 BUGS / TO DO
-- If filter on color, then change color then crash
+- When copy or move images, also include any xmp files
 - Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
 - If delete an image, then remote embellish to same folder, then blank icon
 - Runaway memory consumption?

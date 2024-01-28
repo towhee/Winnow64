@@ -134,6 +134,7 @@ namespace G
     bool isLoadConcurrent;
     bool renderVideoThumb;
     bool includeSubfolders;
+    bool isFilter;
     bool isRemote;
 
     // ingest

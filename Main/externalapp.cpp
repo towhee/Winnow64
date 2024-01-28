@@ -122,6 +122,7 @@ void MW::runExternalApp()
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         int ret = msgBox.exec();
+        resetFocus();
         if (ret == QMessageBox::Cancel) return;
     }
 

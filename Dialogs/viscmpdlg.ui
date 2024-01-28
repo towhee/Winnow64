@@ -217,7 +217,7 @@
             </font>
            </property>
            <property name="title">
-            <string>Look for duplicates in these folders</string>
+            <string>Look for duplicates in these target folders</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_9">
             <property name="spacing">

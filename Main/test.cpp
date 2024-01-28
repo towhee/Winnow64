@@ -163,6 +163,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QMessageBox::information(this, "Oops",
+       "There are no picks or selected images to report.    ",
+       QMessageBox::Ok);
+    resetFocus();
+    return;
+
     dm->sf->setData(dm->sf->index(2, G::LabelColumn), "Blue");
     dm->sf->filterChange();
     dm->sf->suspend(true);

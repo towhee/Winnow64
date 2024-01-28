@@ -68,7 +68,11 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     this->instance = instance;
     errMsg = "";
     if (G::isLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
-    //qDebug() << "ImageDecoder::decode" << fPath;
+    /*
+    qDebug() << "ImageDecoder::decode                              "
+             << "decoder" << threadId
+             << "row =" << cacheKey
+             << fPath; //*/
     start(QThread::LowestPriority);
 }
 
@@ -396,7 +400,7 @@ void ImageDecoder::run()
 bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
 {
 /*
-    This function is called externally and does not require the DataModel and does not
+    This function is called externally, does not require the DataModel and does not
     spawn a separate thread.
 
     It is used by VisCmpDlg.

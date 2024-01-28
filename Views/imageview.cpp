@@ -159,6 +159,9 @@ bool ImageView::loadImage(QString fPath, QString src)
         return false;
     }
 
+    // Already displayed
+    //if (fPath == currentImagePath) return true;
+
     // could be a popup from a prior uncached image being loaded
     //G::popUp->end();
 

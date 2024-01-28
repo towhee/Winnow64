@@ -1,19 +1,98 @@
-Changes to setColorClass
-    // suspend filters until datamodel updated
-    dm->sf->suspend(true);
+Two datamodel rows are picked
+Filtering on picked
+Select two rows and change to unpicked
 
-    // reactivate filtering
-    dm->sf->suspend(false);
+zeroCountCheckedItems
 
-    // update items in filters
-    buildFilters->updateCategoryItems(filters->labels, G::LabelColumn);
-
-    // update filter counts if there is a color filter checked
-    if (filters->isAnyCatItemChecked(filters->labels)) {
-        buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction);
-        filterChange(src);
-    }
+FilterChange happens
+Update pick category item totals
+Picked count is now zero
+Filter picked is still checked
 
 
-When edit datamodel the following filter/sort steps must occur:
--
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==============================================   ImageCache Diagnostics  ==============================================
+
+Load algorithm: Concurrent
+
+isRunning                = false
+abort                    = false
+
+instance                 = 0
+G::dmInstance            = 0
+
+key                      = 0
+prevKey                  = 0
+directionChangeThreshold = 3
+wtAhead                  = 7
+isForward                = true
+totFiles                 = 10
+currMB                   = 426.812
+currMB Check             = 426.812
+maxMB                    = 32000
+minMB                    = 32000
+folderMB                 = 0          (if all metadata loaded)
+targetFirst              = 0
+targetLast               = 9
+decoderCount             = 20
+
+currentPath              = /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
+cacheSizeHasChanged      = true
+filterOrSortHasChanged   = false
+isCacheUpToDate          = true
+
+cacheItemList:
+      Key Priority   Thread   Target Attempts  Caching   Cached   Status imCached dmCached Metadata    Video     SizeMB Estimate   Offset   Length   File Name                                                                                           Error message
+        0        0        0     true        1    false     true     Done     true     true     true    false     10.311        0        0  1763414   /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
+        1        1        7     true        8    false     true     Done     true     true     true    false    189.844        0   266240  2729604   /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
+        2        2        5     true        3    false     true     Done     true     true     true    false     37.500        0        0  5943861   /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
+        3        3       -1    false        0    false    false    Ready    false    false     true     true      0.000        0        0        0   /Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4
+        4        4        3     true        1    false     true     Done     true     true     true    false     46.512        0        0  3622206   /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
+        5        5        4     true        1    false     true     Done     true     true     true    false     11.993        0        0  2453130   /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
+        6        6        5     true        1    false     true     Done     true     true     true    false     13.847        0        0  3024258   /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
+        7        7        6     true        1    false     true     Done     true     true     true    false     12.000        0        0   327967   /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
+        8        8        7     true        1    false     true     Done     true     true     true    false    104.804        0        0 13295083   /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
+        9        9       -1    false        0    false    false    Ready    false    false     true     true      0.000        0        0        0   /Users/roryhill/Pictures/_test1/DC7E14D5-EC64-4F55-8D2E-1095285D8F97.MP4
+8 images reported as cached.
+
+priorityList:
+ Priority      Key   Path
+        0        0   /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
+        1        1   /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
+        2        2   /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
+        3        4   /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
+        4        5   /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
+        5        6   /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
+        6        7   /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
+        7        8   /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
+
+imCache hash: 8 items
+  Hash  Priority   Key     W     H    MB  Path
+     1         0     0  2120  1275    10  /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
+     4         1     1  8640  5760   189  /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
+     3         2     2  3840  2560    37  /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
+     5         3     4  3024  4032    46  /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
+     2         4     5  2120  1483    11  /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
+     6         5     6  2200  1650    13  /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
+     7         6     7  1536  2048    12  /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
+     0         7     8  6495  4230   104  /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
+
+8 images in image cache.
+422 MB consumed
