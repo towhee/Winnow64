@@ -62,6 +62,7 @@ public:
     int decoderCount = 1;
 
     bool debugCaching = false;
+    bool debugLog = false;
     QString source;                 // temp for debugging
 
     //    ImageCacheData::Cache icd->cache;
@@ -145,6 +146,7 @@ private:
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
+    void log(const QString function, const QString comment = "");
 
     //    void updateImageCacheList();    //
     //    void refreshImageCache();

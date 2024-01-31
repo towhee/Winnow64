@@ -2,7 +2,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - When copy or move images, also include any xmp files
-- Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
+When copy or move images, should the filter be maintained?  Popup?
 - If delete an image, then remote embellish to same folder, then blank icon
 - Runaway memory consumption?
 - Crash when delete fixed??
@@ -108,6 +108,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Crash MW::4265 waking from sleep mode EXC_BAD_ACCESS (SIGSEGV)
+- Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
 - Filter delay fixed
 - Correct createdate for all image files using Exiftool
 - Stuttering in TheFrame folder rapid progression

@@ -912,7 +912,7 @@ void Filters::restore()
         // restore search text
         searchTrue->setText(0, searchTextState);
 
-        emit filterChange("Filters::checkItem");
+        emit filterChange("Filters::restore");
         /*
         qDebug().noquote()
             << itemStates.at(i).parent.leftJustified(15)

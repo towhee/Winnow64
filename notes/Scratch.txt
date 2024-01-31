@@ -1,98 +1,32 @@
-Two datamodel rows are picked
-Filtering on picked
-Select two rows and change to unpicked
+MW::handleStartUpArgs fDir "/Users/roryhill/Pictures/Zen2048/Test1" G::currRootFolder "/Users/roryhill/Pictures/Zen2048/Test1" first path = "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+MW::insertFile
 
-zeroCountCheckedItems
+MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = false isDone = false instance = 5 / 5
+MetaRead2::run                              startRow = 1 a = 1 b = 0 sfRowCount = 5
+MetaRead2::dispatchReaders readerCount = 20
+MetaRead2::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 1    b = 0
+MetaRead2::dispatch     launch reader        nextRow = 1 firstIconRow = 0 lastIconRow = 4
+Reader::read            start                id = 0  row = 1    isRunning = false
+MetaRead2::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 2    b = 0
+Selection::select QString "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+MetaRead2::dispatch     reader starting      id = 2  row = -1   aIsDone = true  bIsDone = true  a = 5    b = -1
+Selection::select QModelIndex sfIdx = QModelIndex(1,0,0x600003bbad00,SortFilter(0x600000509050))
+MetaRead2::dispatch     reader starting      id = 3  row = -1   aIsDone = true  bIsDone = true  a = 5    b = -1
+Reader::readMetadata                         id = 0  row = 1
 
-FilterChange happens
-Update pick category item totals
-Picked count is now zero
-Filter picked is still checked
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-==============================================   ImageCache Diagnostics  ==============================================
-
-Load algorithm: Concurrent
-
-isRunning                = false
-abort                    = false
-
-instance                 = 0
-G::dmInstance            = 0
-
-key                      = 0
-prevKey                  = 0
-directionChangeThreshold = 3
-wtAhead                  = 7
-isForward                = true
-totFiles                 = 10
-currMB                   = 426.812
-currMB Check             = 426.812
-maxMB                    = 32000
-minMB                    = 32000
-folderMB                 = 0          (if all metadata loaded)
-targetFirst              = 0
-targetLast               = 9
-decoderCount             = 20
-
-currentPath              = /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
-cacheSizeHasChanged      = true
-filterOrSortHasChanged   = false
-isCacheUpToDate          = true
-
-cacheItemList:
-      Key Priority   Thread   Target Attempts  Caching   Cached   Status imCached dmCached Metadata    Video     SizeMB Estimate   Offset   Length   File Name                                                                                           Error message
-        0        0        0     true        1    false     true     Done     true     true     true    false     10.311        0        0  1763414   /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
-        1        1        7     true        8    false     true     Done     true     true     true    false    189.844        0   266240  2729604   /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
-        2        2        5     true        3    false     true     Done     true     true     true    false     37.500        0        0  5943861   /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
-        3        3       -1    false        0    false    false    Ready    false    false     true     true      0.000        0        0        0   /Users/roryhill/Pictures/_test1/2022-09-03_Nora.MP4
-        4        4        3     true        1    false     true     Done     true     true     true    false     46.512        0        0  3622206   /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
-        5        5        4     true        1    false     true     Done     true     true     true    false     11.993        0        0  2453130   /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
-        6        6        5     true        1    false     true     Done     true     true     true    false     13.847        0        0  3024258   /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
-        7        7        6     true        1    false     true     Done     true     true     true    false     12.000        0        0   327967   /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
-        8        8        7     true        1    false     true     Done     true     true     true    false    104.804        0        0 13295083   /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
-        9        9       -1    false        0    false    false    Ready    false    false     true     true      0.000        0        0        0   /Users/roryhill/Pictures/_test1/DC7E14D5-EC64-4F55-8D2E-1095285D8F97.MP4
-8 images reported as cached.
-
-priorityList:
- Priority      Key   Path
-        0        0   /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
-        1        1   /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
-        2        2   /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
-        3        4   /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
-        4        5   /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
-        5        6   /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
-        6        7   /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
-        7        8   /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
-
-imCache hash: 8 items
-  Hash  Priority   Key     W     H    MB  Path
-     1         0     0  2120  1275    10  /Users/roryhill/Pictures/_test1/2006-04-17_0044_Zen2048.JPG
-     4         1     1  8640  5760   189  /Users/roryhill/Pictures/_test1/2022-04-12_0001.arw
-     3         2     2  3840  2560    37  /Users/roryhill/Pictures/_test1/2022-08-21_0001.jpg
-     5         3     4  3024  4032    46  /Users/roryhill/Pictures/_test1/2023-06-17_0001.jpg
-     2         4     5  2120  1483    11  /Users/roryhill/Pictures/_test1/2023-11-07_1163 Focus Stack_Zen2048.JPG
-     6         5     6  2200  1650    13  /Users/roryhill/Pictures/_test1/2023-11-25_0073 Focus Stack.jpg
-     7         6     7  1536  2048    12  /Users/roryhill/Pictures/_test1/3125adc8-2afe-4deb-8a39-f86063c0f76d.JPG
-     0         7     8  6495  4230   104  /Users/roryhill/Pictures/_test1/52365273213_cd5aba771c_o.jpg
-
-8 images in image cache.
-422 MB consumed
+MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = true isDone = false instance = 5 / 5
+MetaRead2::setStartRow isNewStartRowWhileStillReading = true
+MetaRead2::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 5    b = -1
+MetaRead2::dispatch     launch reader        nextRow = 1 firstIconRow = 0 lastIconRow = 4
+Reader::read            start                id = 1  row = 1    isRunning = false
+MetaRead2::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1
+MetaRead2::dispatch     reader starting      id = 3  row = -1   aIsDone = true  bIsDone = true  a = 5    b = -1
+Reader::readMetadata                         id = 1  row = 1
+qt.gui.imageio.jpeg: Corrupt JPEG data: 3 extraneous bytes before marker 0xd9
+qt.gui.imageio.jpeg: Corrupt JPEG data: 3 extraneous bytes before marker 0xd9
+MetaRead2::dispatch     reader returning     id = 1  row = 1    aIsDone = true  bIsDone = true  a = 5    b = -1
+WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+MetaRead2::dispatch     reader returning     id = 0  row = 1    aIsDone = true  bIsDone = true  a = 5    b = -1
+WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+qt.gui.imageio.jpeg: Corrupt JPEG data: premature end of data segment
+qt.gui.imageio.jpeg: Corrupt JPEG data: premature end of data segment

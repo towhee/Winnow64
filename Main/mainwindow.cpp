@@ -956,7 +956,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-//    /* ALL EVENTS (uncomment to use)
+    /* ALL EVENTS (uncomment to use)
     if (event->type()
                              != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
@@ -1048,7 +1048,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                              << "modifier =" << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
                         ;}
-                if (G::isFlowLogger) G::log("skipline");
+                if (G::isFlowLogger) G::logger.skipLine();
                 if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
 
                 // ignore if modifier pressed
@@ -1854,7 +1854,7 @@ void MW::handleStartupArgs(const QString &args)
         // go to first embellished image
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
-        /* debug
+//        /* debug
         qDebug() << "MW::handleStartUpArgs"
                  << "fDir" << fDir
                  << "G::currRootFolder" << G::currRootFolder
@@ -1868,6 +1868,7 @@ void MW::handleStartupArgs(const QString &args)
             }
             // update filter counts
             buildFilters->recount();
+            //filterChange("MW::handleStartupArgs_remoteEmbellish");
             // select first new embellished image
             QString fPath = embellishedPaths.at(0);
             sel->select(fPath);
@@ -1922,7 +1923,7 @@ void MW::folderSelectionChange(QString dPath)
     else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
 
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
@@ -2398,7 +2399,7 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
     /*
     if (G::isLogger || G::isFlowLogger)
@@ -2931,7 +2932,7 @@ void MW::loadLinearNewFolder()
     still used (as a separate thread) for updating icons when scroll, resize or change icon
     selection.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+//    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isLogger || G::isFlowLogger) G::log("MW::loadLinearNewFolder");
 
     QString src = "MW::loadLinearNewFolder ";
@@ -3023,7 +3024,7 @@ void MW::loadLinearNewFolder()
     }
 
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadLinearNewFolder  DONE\n";
-//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+//    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
 }
 
 void MW::loadImageCacheForNewFolder()
@@ -3033,7 +3034,7 @@ void MW::loadImageCacheForNewFolder()
     been loaded for a new folder selection. The imageCache loads images until the
     assigned amount of memory has been consumed or all the images are cached.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("skipline");
+//    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::loadImageCacheForNewFolder";
 
     // clear the central
@@ -4249,6 +4250,19 @@ void MW::getDisplayProfile()
     ICC::setOutProfile();
     #endif
     #ifdef Q_OS_MAC
+    /* crash waking sleep
+Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
+0   CoreFoundation                	       0x1872a96f0 CF_IS_OBJC + 24
+1   CoreFoundation                	       0x187168ba4 CFURLCopyFileSystemPath + 76
+2   Winnow                        	       0x100ed92b4 Mac::getDisplayProfileURL() + 224 (mac.mm:116)
+3   Winnow                        	       0x100da2f40 MW::getDisplayProfile() + 152 (mainwindow.cpp:4252)
+4   Winnow                        	       0x100da2494 MW::setDisplayResolution() + 1476 (mainwindow.cpp:4218)
+5   Winnow                        	       0x100da48cc MW::moveEvent(QMoveEvent*) + 256 (mainwindow.cpp:801)
+6   QtWidgets                     	       0x102699e54 QWidget::event(QEvent*) + 980
+7   QtWidgets                     	       0x1027b6344 QMainWindow::event(QEvent*) + 380 (qmainwindow.cpp:1321)
+8   QtWidgets                     	       0x1026509f0 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3287)
+9   QtWidgets                     	       0x102652368 QApplication::notify(QObject*, QEvent*) + 3356
+    */
     G::winOutProfilePath = Mac::getDisplayProfileURL();
     ICC::setOutProfile();
     #endif
@@ -5528,13 +5542,14 @@ void MW::renameSelectedFiles()
 void MW::insertFile(QString fPath)
 {
     if (G::isLogger) G::log("MW::insertFile");
+    qDebug() << "MW::insertFile";
     int dmRow;
     // replace existing image with the same name
     if (dm->isPath(fPath)) {
         dmRow = dm->rowFromPath(fPath);
         QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
         dm->setData(dmIdx, false);
-        dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insewrt");
+        dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
         imageCacheThread->removeCachedImage(fPath);
         G::metaReadDone = false;
         G::allMetadataLoaded = false;
@@ -5544,6 +5559,7 @@ void MW::insertFile(QString fPath)
     else {
         dmRow = dm->insert(fPath);
     }
+    metaReadThread->syncInstance();
     metaReadThread->setStartRow(dmRow, true, "MW::insertFile");
 }
 
@@ -5601,7 +5617,7 @@ void MW::deleteSelectedFiles()
         paths.append(fPath);
     }
 
-    //deleteFiles(paths);
+    deleteFiles(paths);
 }
 
 void MW::deleteFiles(QStringList paths)

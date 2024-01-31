@@ -67,7 +67,10 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
-    if (!sfIdx.isValid()) return;
+    if (!sfIdx.isValid()) {
+        qWarning() << "WARNING" << "Selection::setCurrentIndex  invalid index" << sfIdx;
+        return;
+    }
 
     if (G::isFlowLogger || isDebug)
         G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()) +
@@ -106,7 +109,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select QString");
-    //qDebug() << "Selection::select QString" << fPath;
+    qDebug() << "Selection::select QString" << fPath;
     select(dm->proxyIndexFromPath(fPath), modifiers);
 }
 
@@ -141,7 +144,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
     }
 #endif
 
-    //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
+    qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
     ///*
     bool isNoModifier = modifiers & Qt::NoModifier;
     bool isControlModifier = modifiers & Qt::ControlModifier;

@@ -151,8 +151,10 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
-    bounceFoldersStressTest(100, 1);
+    filters->restore();
     return;
+
+    bounceFoldersStressTest(100, 1);
 
     setCursor(QCursor(Qt::BlankCursor));
     return;
@@ -163,6 +165,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    filters->save();
+    clearAllFilters();
+    return;
+
+
     QMessageBox::information(this, "Oops",
        "There are no picks or selected images to report.    ",
        QMessageBox::Ok);

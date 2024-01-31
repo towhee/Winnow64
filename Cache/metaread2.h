@@ -27,6 +27,7 @@ public:
     int readerCount;
     QVector<Reader*> reader;        // all the decoders
 
+    void syncInstance();
     bool stop();
     QString diagnostics();
     QString reportMetaCache();

@@ -1,48 +1,12 @@
-FrameDecoder::FrameDecoder(QObject *parent)
-{
-    status = Status::Idle;
-    mediaPlayer = new QMediaPlayer();
-    videoSink = new QVideoSink;
-    mediaPlayer->setVideoOutput(videoSink);
-    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
-}
+MW::handleStartUpArgs fDir "/Users/roryhill/Pictures/Zen2048/Test1" G::currRootFolder "/Users/roryhill/Pictures/Zen2048/Test1" first path = "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+MW::insertFile
 
-void FrameDecoder::addToQueue(QString path, QModelIndex dmIdx, int dmInstance)
-{
-    Item item;
-    item.fPath = path;
-    item.dmIdx = dmIdx;
-    item.dmInstance = dmInstance;
-    queue.append(item);
-    if (status == Status::Idle) getNextThumbNail();
-}
+MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = false isDone = false instance = 13 / 23
+MetaRead2::run                              startRow = 1 a = 1 b = 0 sfRowCount = 5
+MetaRead2::dispatchReaders readerCount = 20
+Selection::select QString "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
+Selection::select QModelIndex sfIdx = QModelIndex(1,0,0x6000079f99e0,SortFilter(0x600000509050))
 
-void FrameDecoder::getNextThumbNail(QString src)
-{
-    if (queue.isEmpty()) {
-        status = Status::Idle;
-        return;
-    }
-    status = Status::Busy;
-    mediaPlayer->setSource(queue.at(0).fPath);
-    mediaPlayer->play();
-}
-
-void FrameDecoder::frameChanged(const QVideoFrame frame)
-{
-    if (G::isLogger) G::log("FrameDecoder::frameChanged");
-    // ignore frameChanged signals before next mediaPlayer source is set
-    if (mediaPlayer->playbackState() == QMediaPlayer::PlaybackState::StoppedState) return;
-
-    QImage im = frame.toImage();
-    QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    qint64 duration = mediaPlayer->duration();
-    emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
-    mediaPlayer->stop();
-    if (!queue.isEmpty()) queue.remove(0);
-
-    // exhaust QVideoSink frameChanged signals after mediaPlayer is stopped
-    qApp->processEvents(QEventLoop::AllEvents); // would prefer not to use this as it is risky
-
-    getNextThumbNail("frameChanged");
-}
+MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = false isDone = false instance = 13 / 23
+MetaRead2::run                              startRow = 1 a = 1 b = 0 sfRowCount = 5
+MetaRead2::dispatchReaders readerCount = 20

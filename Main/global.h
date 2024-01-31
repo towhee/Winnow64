@@ -13,6 +13,7 @@
 #include <QMutex>
 #include "popup.h"
 #include "Utilities/utilities.h"
+#include "Main/logger.h"
 
 // METAREAD or METAREAD2: one or the other:
 #ifdef Q_OS_WIN
@@ -305,6 +306,7 @@ namespace G
 //    extern QList<int>rowsWithIcon;
 
 //    extern bool empty();
+    extern Logger logger;
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;
     extern void log(QString functionName = "",

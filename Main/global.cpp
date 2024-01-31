@@ -201,6 +201,8 @@ namespace G
         return duration;
     }
 
+    Logger logger;
+
     void track(QString functionName, QString comment, bool hideTime)
     {
         qint64 nsecsElapsed = t.nsecsElapsed();
@@ -222,6 +224,8 @@ namespace G
 
     void log(QString functionName, QString comment, bool zeroElapsedTime)
     {
+        logger.log(functionName, comment);
+        return;
         static QMutex mutex;
         QMutexLocker locker(&mutex);
         static QString prevFunctionName = "";

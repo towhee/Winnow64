@@ -173,7 +173,7 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
     isDone = false;
     mutex.unlock();
 
-    if (isDebug)
+    //if (isDebug)
     {
     qDebug() << "\nMetaRead2::setStartRow "
              << "startRow =" << startRow
@@ -193,9 +193,8 @@ void MetaRead2::setStartRow(int row, bool fileSelectionChanged, QString src)
 
     if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead2::run");
 
-    //if (isRunning()) {
     if (isDispatching) {
-        //qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
+        qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
         mutex.lock();
         isNewStartRowWhileStillReading = true;
         mutex.unlock();
@@ -293,6 +292,12 @@ void MetaRead2::initialize()
     for (int i = 0; i < dmRowCount; i++) {
         toRead.append(i);
     }
+}
+
+void MetaRead2::syncInstance()
+{
+    if (G::isLogger) G::log("MetaRead2::syncInstance");
+    instance = dm->instance;
 }
 
 void MetaRead2::setIconRange()
@@ -604,14 +609,16 @@ void MetaRead2::dispatch(int id)
     r->pending = false;
 
     if (abort || instance != dm->instance) {
-        if (isDebug) {
+        //if (isDebug)
+        {
         qDebug().noquote()
             << "MetaRead2::dispatch aborting "
             << "reader =" << id
             << "abort =" << abort
             << "isDone =" << isDone
-            << "reader instance =" << reader[id]->instance
             << "dm instance =" << dm->instance
+            << "instance =" << instance
+            << "reader instance =" << reader[id]->instance
                ;
         }
         r->status = Reader::Status::Ready;
@@ -622,7 +629,7 @@ void MetaRead2::dispatch(int id)
     // New reader and less rows than readers, end reader
     if (r->fPath == "" && id >= dmRowCount) return;
 
-    if (isDebug)
+    //if (isDebug)
     {
         QString  row;
         r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
@@ -839,7 +846,15 @@ void MetaRead2::dispatch(int id)
         //QModelIndex dmIdx = dm->index(nextRow, 0);
         QString fPath = dmIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
-        bool isReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
+//        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead2::dispatch     launch reader       "
+                << "nextRow =" << nextRow
+                << "firstIconRow =" << firstIconRow
+                << "lastIconRow =" << lastIconRow
+               ;
+        }       bool isReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
         if (isDebug)
         {
             qDebug().noquote()
@@ -891,7 +906,8 @@ void MetaRead2::dispatch(int id)
 void MetaRead2::dispatchReaders()
 {
     if (G::isLogger) G::log("MetaRead2::dispatchReaders");
-    if (isDebug) {
+    //if (isDebug)
+    {
     qDebug().noquote()
              << "MetaRead2::dispatchReaders"
              << "readerCount =" << readerCount
@@ -963,7 +979,7 @@ void MetaRead2::run()
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::run", src);
-    if (isDebug)
+    //if (isDebug)
     {
         qDebug().noquote() << "MetaRead2::run                             "
                            << "startRow =" << startRow
