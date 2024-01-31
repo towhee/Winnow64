@@ -190,7 +190,7 @@ void BuildFilters::build(AfterAction newAction)
 void BuildFilters::update()
 {
 /*
-    Update the filtered item counts.
+    Update the filtered item counts in a separate thread.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::update";
     if (debugBuildFilters)
@@ -210,7 +210,8 @@ void BuildFilters::recount()
 {
 /*
     Counts the filtered and unfiltered items without rebuilding the filters.  This is used
-    when images are deleted or added to the current folder (ie remote embellish).
+    when images are deleted or added to the current folder (ie remote embellish).  This
+    happens in whatever thread calls this function.
 */
     updateUnfilteredCounts();
     updateFilteredCounts();

@@ -45,7 +45,7 @@ public:
         bool isUpdated;             // item updated by MetaRead or MDCache
         bool isCaching;             // decoder is working on image
         int attempts;               // number of tries to cache item
-        int threadId;               // decoder thread working on image
+        int decoderId;               // decoder thread working on image
         bool isCached;              // has image been cached
         int status;                 // decoder return status
         bool isTarget;              // is this image targeted to be cached

@@ -109,11 +109,14 @@ QString Mac::getDisplayProfileURL()
     if (G::isLogger) G::log("Mac::getDisplayProfileURL");
     ColorSyncIteratorData data;
     data.dispuuid = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
-    data.url = nullptr;//NULL;
+    data.url = nullptr;
     ColorSyncIterateDeviceProfiles(colorSyncIterateCallback, (void *)&data);
     CFRelease(data.dispuuid);
     // can crash after macos in sleep mode
-    CFStringRef urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
+    CFStringRef urlstr;
+    if (data.url != nullptr) {
+      urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
+    }
     CFRelease(data.url);
 //    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);

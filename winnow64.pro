@@ -50,7 +50,8 @@ QT += concurrent
 
 HEADERS += Cache/cachedata.h \
     Dialogs/viscmpdlg.h \
-    Image/autonomousimage.h
+    Image/autonomousimage.h \
+    Main/logger.h
 #    Cache/metaread3.h \
 #    Cache/reader3.h
 HEADERS += Cache/framedecoder.h
@@ -182,7 +183,8 @@ HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
     Dialogs/viscmpdlg.cpp \
-    Image/autonomousimage.cpp
+    Image/autonomousimage.cpp \
+    Main/logger.cpp
 #    Cache/metaread3.cpp \
 #    Cache/reader3.cpp
 SOURCES += Cache/framedecoder.cpp
