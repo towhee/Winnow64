@@ -3,7 +3,6 @@ WHAT'S NEW
 BUGS / TO DO
 - When copy or move images, also include any xmp files
 When copy or move images, should the filter be maintained?  Popup?
-- If delete an image, then remote embellish to same folder, then blank icon
 - Runaway memory consumption?
 - Crash when delete fixed??
 - Select Photos/2020-2029 stalls while loading metadata and icons
@@ -16,7 +15,6 @@ When copy or move images, should the filter be maintained?  Popup?
   until move to another monitor and back
 - Rethink image file parse failure reporting
 - Use Exiftool to save image rotation change?
-- Crash when set color red for multi picked select on sd card
 - Select multiple folders
 - Check for updates for macos
 - Add tooltips to menus
@@ -108,6 +106,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- If delete an image, then remote embellish to same folder, then blank icon
 - Crash MW::4265 waking from sleep mode EXC_BAD_ACCESS (SIGSEGV)
 - Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
 - Filter delay fixed

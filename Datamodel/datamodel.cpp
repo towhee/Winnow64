@@ -2683,11 +2683,12 @@ void SortFilter::filterChange(QString src)
             qDebug() << "SortFilter::filterChange  timeIsUp triggered";
         }
     }
+    /*
     qDebug() << "SortFilter::filterChange" << ms
              << "finished =" << finished
              << "proxy row count =" << rowCount()
              << "src =" << src
-                ;
+                ; //*/
 }
 
 void SortFilter::suspend(bool suspendFiltering)

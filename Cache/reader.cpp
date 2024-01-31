@@ -37,7 +37,7 @@ void Reader::read(const QModelIndex dmIdx,
     status = Status::Success;
     pending = true;     // set to false when processed in MetaRead2::dispatch
     loadedIcon = false;
-    //if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << "Reader::read            start               "
@@ -95,7 +95,7 @@ inline bool Reader::instanceOk()
 bool Reader::readMetadata()
 {
     if (G::isLogger) G::log("Reader::readMetadata");
-    //if (isDebug)
+    if (isDebug)
     {
     qDebug().noquote()
              << "Reader::readMetadata                        "

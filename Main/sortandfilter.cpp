@@ -75,7 +75,7 @@ void MW::filterChange(QString source)
       and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    //qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::metaReadDone) {
@@ -90,7 +90,7 @@ void MW::filterChange(QString source)
     dm->newInstance();
     // stop ImageCache
     imageCacheThread->stop();
-    sel->clear();
+
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
     /*
@@ -138,30 +138,28 @@ void MW::filterChange(QString source)
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    // is the DataModel current index still in the filter.  If not, set to zero
-    QModelIndex dmIdx = dm->currentDmIdx;
-    QModelIndex sfIdx = dm->currentSfIdx;
+    // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    int sfRow = sfIdx.row();
+    bool newSelectReqd = false;
+    int oldRow = dm->currentDmIdx.row();
     int sfRows = dm->sf->rowCount();
     if (!newSfIdx.isValid()) {
-        if (sfRow < sfRows) newSfIdx = dm->sf->index(sfRow, 0);
+        newSelectReqd = true;
+        if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
         else newSfIdx = dm->sf->index(sfRows-1, 0);
     }
-    qDebug() << "MW::filterChange index update"
-             << "dmIdx =" << dmIdx
-             << "sfIdx =" << sfIdx
-             << "sfRrow =" << sfRow
-             << "sfRows =" << sfRows
-             << "newSfIdx =" << newSfIdx
-        ;
 
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
 
     // select after filtration
-    sel->select(newSfIdx);
+    if (newSelectReqd) {
+        sel->select(newSfIdx);
+    }
+    else {
+        sel->updateCurrentIndex(newSfIdx);
+    }
     thumbView->scrollToCurrent("MW::filterChange");
 
     QApplication::restoreOverrideCursor();
@@ -367,7 +365,7 @@ void MW::sortChange(QString source)
     statusbar or a workspace change.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::sortChange  Src:" << source;
-    qDebug() << "MW::sortChange  Src:" << source;
+    //qDebug() << "MW::sortChange  Src:" << source;
 
     if (G::isInitializing || !G::metaReadDone) return;
 
