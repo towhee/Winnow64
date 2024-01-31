@@ -109,7 +109,7 @@ private:
     bool bIsDone;
     bool quitAfterTimeoutInitiated;
 
-    QList<int> toRead;
+    //QList<int> toRead;  // to be removed
 
     int startRow = 0;
     int lastRow;
