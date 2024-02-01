@@ -90,7 +90,7 @@ public:
     int nextPick();
     int prevPick();
     int nearestPick();
-    QModelIndex nearestFiltered(QModelIndex dmIdx);
+    //QModelIndex nearestFiltered(QModelIndex dmIdx);
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
     bool isSelected(int row);
