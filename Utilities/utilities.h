@@ -20,10 +20,12 @@ public:
     static QString getDriveName(QString path);
     static QString getDrive(QString path);
     static QString getFileName(QString srcPath);
+    static QString getSuffix(QString srcPath);
     static QString getFolderPath(QString fPath);
+    static QString assocXmpPath(QString fPath);
     static QString replaceFileName(QString srcPath, QString newName);
     static QString replaceSuffix(QString srcPath, QString newSuffix);
-    static QStringList getPossibleSidecars(QString srcPath);
+    static QStringList getSidecarPaths(QString srcPath);
 
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");

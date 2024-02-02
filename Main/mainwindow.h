@@ -110,7 +110,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.38" ;
+    QString versionNumber = "1.37.5" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -968,7 +968,7 @@ private:
     QAction *testNewFileFormatAction;    // only available via shortcut key "Shift+Ctrl+Alt+F"
 
     // Might need
-    QAction *pasteAction;
+    QAction *pasteFilesAction;
     QAction *pasteImageAction;
 
     // Not needed
@@ -1259,7 +1259,10 @@ private:
 
     bool isValidPath(QString &path);
     QString getSelectedPath();
+
+    // located in fileoperations.cpp
     void copyFiles();
+    void pasteFiles();
     void shareFiles();
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
@@ -1271,6 +1274,7 @@ private:
     void deleteAllImageMemCard(QString rootPath, QString name);
     void eraseMemCardImages();
     void eraseMemCardImagesFromContextMenu();
+
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);
