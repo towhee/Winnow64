@@ -75,7 +75,7 @@ void MW::filterChange(QString source)
       and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    //qDebug() << "MW::filterChange" << "called from:" << source;
+    qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::metaReadDone) {
@@ -119,7 +119,7 @@ void MW::filterChange(QString source)
     buildFilters->update();
 
     // recover sort after filtration
-    sortChange("filterChange");
+    //sortChange("filterChange");
 
     // allow fileSelectionChange()
     isFilterChange = false;
@@ -453,7 +453,10 @@ void MW::sortChange(QString source)
         setCentralMessage("Sorting images");
     }
 
+    // save selection prior to sorting
+    sel->save();
     thumbView->sortThumbs(sortColumn, isReverseSort);
+    sel->recover();
 
 //    if (!G::metaReadDone) return;
 
@@ -464,11 +467,11 @@ void MW::sortChange(QString source)
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-    dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+    //dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
-    dm->currentFilePath = fPath;
+    //dm->currentFilePath = fPath;
 
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
@@ -481,8 +484,7 @@ void MW::sortChange(QString source)
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
-//    fileSelectionChange(idx, idx, true, "MW::sortChange");
-    sel->select(idx);
+//    sel->select(idx);
 
     scrollToCurrentRow();
     G::popUp->reset();

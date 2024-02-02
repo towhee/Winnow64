@@ -2,7 +2,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - When copy or move images, also include any xmp files
-When copy or move images, should the filter be maintained?  Popup?
+- When copy or move images, should the filter be maintained?  Popup?
 - Runaway memory consumption?
 - Crash when delete fixed??
 - Select Photos/2020-2029 stalls while loading metadata and icons
@@ -106,6 +106,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Moved file operation functions from mainwindow.cpp to fileoperations.cpp
+- Selection lost when filter
 - If delete an image, then remote embellish to same folder, then blank icon
 - Crash MW::4265 waking from sleep mode EXC_BAD_ACCESS (SIGSEGV)
 - Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)

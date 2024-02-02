@@ -511,22 +511,57 @@ void Selection::save()
     (thumbView, gridView and tableViews) share the same selection model, because when a view
     is hidden it loses the current index and selection, which has to be re-established each
     time it is made visible.
+
+    It is also used prior to a filtration and/or sort.  The QItemSelectionModel uses proxy
+    indexes, which get scrambled after filter/sort opeartions, so the selection is converted
+    into datamodel indexes when saved.
 */
     if (G::isLogger || isDebug) G::log("Selection::save");
+    /* old code
     selectedRows = sm->selectedRows();
-    dm->currentSfIdx = sm->currentIndex();
+    selectedIndexes = sm->selectedIndexes();
+    //*/
+
+    // save model indexs, not proxy
+    QModelIndex dmIdx;
+    dmSelectedRows.clear();
+    foreach (QModelIndex sfIdx, sm->selectedRows()) {
+        dmSelectedRows << dm->sf->mapToSource(sfIdx);
+    }
+    dmCurrentIndex = dm->sf->mapToSource(sm->currentIndex());
+
+    qDebug() << "Selection::saven";
+    foreach (QModelIndex dmIdx, dmSelectedRows)
+        qDebug() << "dmSelectedRow =" << dmIdx.row();
+
 }
 
 void Selection::recover()
 {
+/*
+    The selection is saved in source (datamodel) indexes.  QItemSelectionModel uses proxy
+    indexes, so the saved selection and current index are translated back into proxy
+    indexes before restting the selection.
+
+    Only the 0 column indexes are saved, as all selections in Winnow are by row.
+*/
     if (G::isLogger || isDebug) G::log("Selection::recover");
     QItemSelection selection;
-    QModelIndex idx;
-    sm->clear();
-    foreach (idx, selectedRows) {
+    //sm->clear();
+    /*
+    foreach (QModelIndex idx, selectedIndexes) {
         selection.select(idx, idx);
     }
     sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    //*/
+
+    foreach (QModelIndex dmIdx, dmSelectedRows) {
+        QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
+        selection.select(sfIdx, sfIdx);
+    }
+    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    dm->currentSfIdx = dm->sf->mapFromSource(dmCurrentIndex);
+    sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::NoUpdate);
 }
 
 void Selection::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

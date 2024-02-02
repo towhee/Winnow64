@@ -84,10 +84,23 @@ QString Utilities::getFileName(QString srcPath)
     return fileInfo.fileName();
 }
 
+QString Utilities::getSuffix(QString srcPath)
+{
+    if (G::isLogger) G::log("Utilities::getFileName");
+    QFileInfo fileInfo(srcPath);
+    return fileInfo.suffix().toLower();
+}
+
 QString Utilities::getFolderPath(QString fPath)
 {
     if (G::isLogger) G::log("Utilities::getFolderPath");
     return QFileInfo((fPath)).dir().absolutePath();
+}
+
+QString Utilities::assocXmpPath(QString fPath)
+{
+    if (G::isLogger) G::log("Utilities::assocXmpPath");
+    return QFileInfo((fPath)).dir().absolutePath() + "/" + QFileInfo((fPath)).baseName() + ".xmp";
 }
 
 QString Utilities::replaceFileName(QString srcPath, QString newName)
@@ -110,15 +123,19 @@ QString Utilities::replaceSuffix(QString srcPath, QString newSuffix)
     return sourceFolderPath + "/" + sourceBaseName + "." + newSuffix;
 }
 
-QStringList Utilities::getPossibleSidecars(QString srcPath)
+QStringList Utilities::getSidecarPaths(QString srcPath)
 {
     if (G::isLogger) G::log("Utilities::getPossibleSidecars");
+    QStringList extensions;
+    extensions << ".xmp" << ".txt";
     QStringList sidecarPaths;
     QFileInfo fileInfo(srcPath);
     QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
     QString sourceBaseName = fileInfo.baseName();
-    sidecarPaths << sourceFolderPath + "/" + sourceBaseName + ".xmp";
-    sidecarPaths << sourceFolderPath + "/" + sourceBaseName + ".txt";
+    foreach (QString ext, extensions) {
+        QString sideCarPath = sourceFolderPath + "/" + sourceBaseName + ext;
+        if (QFile(sideCarPath).exists()) sidecarPaths << sideCarPath;
+    }
     return sidecarPaths;
 }
 
