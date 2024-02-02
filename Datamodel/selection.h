@@ -37,6 +37,10 @@ public:
     //void report();
 
     QModelIndexList selectedRows;
+    QModelIndexList selectedIndexes;
+    QModelIndexList dmSelectedRows;
+    QModelIndexList dmSelectedIndexes;
+    QModelIndex dmCurrentIndex;
     QItemSelectionModel *sm;
 
 signals:

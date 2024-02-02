@@ -8,7 +8,7 @@
         Filters                         QTreeWidget of filter items
         BuildFilters                    Update Filters
         MW - sortandfilter.cpp
-           - pick.cpp
+        MW - pick.cpp
 
     DataModel and Proxies
 

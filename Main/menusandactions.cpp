@@ -1548,11 +1548,12 @@ void MW::createMiscActions()
     //    connect(enterAction, SIGNAL(triggered()), this, SLOT(enter()));
 
     // used in fsTree and bookmarks
-    pasteAction = new QAction(tr("Paste files"), this);
-    pasteAction->setObjectName("paste");
-    pasteAction->setShortcutVisibleInContextMenu(true);
-    addAction(pasteAction);
-    //        connect(pasteAction, SIGNAL(triggered()), this, SLOT(about()));
+    pasteFilesAction = new QAction(tr("Paste files"), this);
+    pasteFilesAction->setObjectName("paste");
+    pasteFilesAction->setShortcutVisibleInContextMenu(true);
+    pasteFilesAction->setShortcut(QKeySequence("Ctrl+V"));
+    addAction(pasteFilesAction);
+    connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
 
     // initially enable/disable actions
     embedThumbnailsAction->setEnabled(G::modifySourceFiles);
@@ -1658,6 +1659,7 @@ void MW::createEditMenu()
     editMenu->addAction(copyFilesAction);
     editMenu->addAction(copyImageAction);
     editMenu->addAction(copyImagePathFromContextAction);
+    editMenu->addAction(pasteFilesAction);
     editMenu->addSeparator();
     editMenu->addAction(deleteImagesAction);
     editMenu->addAction(deleteActiveFolderAction);
@@ -1948,7 +1950,7 @@ void MW::createFSTreeContextMenu()
     fsTreeActions->append(copyFolderPathFromContextAction);
     fsTreeActions->append(deleteFSTreeFolderAction);
     fsTreeActions->append(separatorAction2);
-    fsTreeActions->append(pasteAction);
+    fsTreeActions->append(pasteFilesAction);
     fsTreeActions->append(separatorAction3);
     fsTreeActions->append(addBookmarkActionFromContext);
     // docking panels context menus
@@ -1973,7 +1975,10 @@ void MW::createBookmarksContextMenu()
     favActions->append(ejectActionFromContextMenu);
     favActions->append(eraseUsbActionFromContextMenu);
     favActions->append(separatorAction1);
+    favActions->append(pasteFilesAction);
+    favActions->append(separatorAction2);
     favActions->append(removeBookmarkAction);
+
     // docking panels context menus
     bookmarks->addActions(*favActions);
     bookmarks->setContextMenuPolicy(Qt::ActionsContextMenu);

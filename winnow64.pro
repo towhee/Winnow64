@@ -48,12 +48,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    Dialogs/viscmpdlg.h \
-    Image/autonomousimage.h \
-    Main/logger.h
-#    Cache/metaread3.h \
-#    Cache/reader3.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -72,9 +67,8 @@ HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/addthumbnailsdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
-HEADERS += \
-    Dialogs/erasememcardimagesdlg.h
 HEADERS += Dialogs/editlistdlg.h
+HEADERS += Dialogs/erasememcardimagesdlg.h
 HEADERS += Dialogs/imagedlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/ingesterrors.h
@@ -88,9 +82,10 @@ HEADERS += Dialogs/renamedlg.h
 HEADERS += Dialogs/saveasdlg.h
 HEADERS += Dialogs/selectionorpicksdlg.h
 HEADERS += Dialogs/testaligndlg.h
-HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
+HEADERS += Dialogs/viscmpdlg.h
+HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/zoomdlg.h
 HEADERS += Effects/effects.h
 HEADERS += Effects/graphicseffect.h
@@ -103,6 +98,7 @@ HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/ingest.h
+HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/stack.h
@@ -129,6 +125,7 @@ HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
+HEADERS += Main/logger.h
 HEADERS += Main/mainwindow.h
 HEADERS += Main/qtlocalpeer.h
 HEADERS += Main/qtlockedfile.h
@@ -182,11 +179,7 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
-    Dialogs/viscmpdlg.cpp \
-    Image/autonomousimage.cpp \
-    Main/logger.cpp
-#    Cache/metaread3.cpp \
-#    Cache/reader3.cpp
+    Main/fileoperations.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -202,9 +195,8 @@ SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/addthumbnailsdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
-SOURCES += \
-    Dialogs/erasememcardimagesdlg.cpp
 SOURCES += Dialogs/editlistdlg.cpp
+SOURCES += Dialogs/erasememcardimagesdlg.cpp
 SOURCES += Dialogs/imagedlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/ingesterrors.cpp
@@ -220,6 +212,7 @@ SOURCES += Dialogs/selectionorpicksdlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
 SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
+SOURCES += Dialogs/viscmpdlg.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
 SOURCES += Effects/effects.cpp
@@ -231,6 +224,7 @@ SOURCES += Embellish/embelexport.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/ingest.cpp
+SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
@@ -284,10 +278,10 @@ SOURCES += Main/draganddrop.cpp
 SOURCES += Main/externalapp.cpp
 SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
+SOURCES += Main/logger.cpp
 SOURCES += Main/menusandactions.cpp
 SOURCES += Main/navigate.cpp
 SOURCES += Main/pick.cpp
-SOURCES += Main/selection_.cpp
 SOURCES += Main/setandupdate.cpp
 SOURCES += Main/settings.cpp
 SOURCES += Main/slideshow.cpp
