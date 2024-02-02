@@ -445,7 +445,7 @@ void BookMarks::dropEvent(QDropEvent *event)
             srcPaths << srcPath;
             // copy any sidecars if internal drag operation
             if (event->source()) {
-                QStringList srcSidecarPaths = Utilities::getPossibleSidecars(srcPath);
+                 QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
                 foreach (QString srcSidecarPath, srcSidecarPaths) {
                     if (QFile(srcSidecarPath).exists()) {
                         QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);

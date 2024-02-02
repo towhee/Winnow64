@@ -1677,6 +1677,8 @@ void IconView::startDrag(Qt::DropActions)
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
+        QString xmpPath = Utilities::assocXmpPath(fPath);
+        if (xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
     }
 
     QDrag *drag = new QDrag(this);

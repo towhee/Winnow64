@@ -151,7 +151,7 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
-    filters->restore();
+    sel->recover();
     return;
 
     bounceFoldersStressTest(100, 1);
@@ -165,8 +165,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << dm->currentSfIdx.row();
-    sel->sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::Select);
+    sel->save();
 }
 
 /*
