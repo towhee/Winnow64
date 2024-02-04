@@ -55,7 +55,6 @@ private slots:
     void on_tv_clicked(const QModelIndex &index);
     void on_updateDupsAndQuitBtn_clicked();
     void on_cancelBtn_clicked();
-    void on_matchBtn_clicked();
     void on_abortBtn_clicked();
     void on_helpBtn_clicked();
     void on_clrFoldersBtn_clicked();

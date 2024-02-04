@@ -1152,12 +1152,6 @@ void FindDuplicatesDlg::on_abortBtn_clicked()
     else clear();
 }
 
-void FindDuplicatesDlg::on_matchBtn_clicked()
-{
-    int a = ui->tv->currentIndex().row();
-    model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
-}
-
 void FindDuplicatesDlg::on_cancelBtn_clicked()
 {
     reject();

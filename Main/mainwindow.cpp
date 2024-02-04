@@ -2857,6 +2857,8 @@ void MW::loadConcurrentDone()
     QSignalBlocker blocker(bookmarks);
     G::metaReadDone = true;
 
+    static QString prevRootFolder = "";
+
     // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
     {
@@ -2887,10 +2889,18 @@ void MW::loadConcurrentDone()
 
     if (reset(src + QString::number(count++))) return;
 
-    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails) {
+    if (!ignoreAddThumbnailsDlg
+        && prevRootFolder != G::currRootFolder
+        && !G::autoAddMissingThumbnails)
+    {
+        qDebug() << "MW::loadConcurrentDone"
+                 << "prevRootFolder =" << prevRootFolder
+                 << "G::currRootFolder =" << G::currRootFolder
+            ;
         chkMissingEmbeddedThumbnails();
         if (reset(src + QString::number(count++))) return;
     }
+    prevRootFolder = G::currRootFolder;
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     if (G::showProgress == G::ShowProgress::MetaCache) {
@@ -5724,12 +5734,15 @@ void MW::mediaReadSpeed()
     QMessageBox::information(this, "", msg);
 }
 
-void MW::visCmpImages()
+void MW::findDuplicates()
 {
-    if (G::isLogger) G::log("MW::visCmpImages");
+    if (G::isLogger) G::log("MW::findDuplicates");
     FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
+    findDuplicatesDlg->setStyleSheet(G::css);
+    // minimize dialog size fitting contents
+    findDuplicatesDlg->resize(100, 100);
     if (findDuplicatesDlg->exec()) {
-        qDebug() << "MW::visCmpImages accepted";
+        qDebug() << "MW::findDuplicates accepted";
         // add true to compare filter
         buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);
         filterChange("MW::visCmpImages");
