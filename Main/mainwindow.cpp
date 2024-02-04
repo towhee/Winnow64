@@ -5727,8 +5727,8 @@ void MW::mediaReadSpeed()
 void MW::visCmpImages()
 {
     if (G::isLogger) G::log("MW::visCmpImages");
-    VisCmpDlg *visCmpDlg = new VisCmpDlg(nullptr, dm, metadata);
-    if (visCmpDlg->exec()) {
+    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
+    if (findDuplicatesDlg->exec()) {
         qDebug() << "MW::visCmpImages accepted";
         // add true to compare filter
         buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);

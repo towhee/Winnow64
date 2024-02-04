@@ -1,5 +1,5 @@
-#include "Dialogs/viscmpdlg.h"
-#include "ui_viscmpdlg.h"
+#include "Dialogs/FindDuplicatesDlg.h"
+#include "ui_FindDuplicatesDlg.h"
 #include "Effects/effects.h"
 
 /*******************************************************************************************/
@@ -68,9 +68,9 @@ Comparison terms:
 
 */
 
-VisCmpDlg::VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
+FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     QDialog(parent),
-    ui(new Ui::VisCmpDlg),
+    ui(new Ui::FindDuplicatesDlg),
     dm(dm),
     metadata(metadata)
 {
@@ -120,12 +120,12 @@ VisCmpDlg::VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     isDebug = false;
 }
 
-VisCmpDlg::~VisCmpDlg()
+FindDuplicatesDlg::~FindDuplicatesDlg()
 {
     delete ui;
 }
 
-void VisCmpDlg::setupModel()
+void FindDuplicatesDlg::setupModel()
 {
     model.setRowCount(dm->sf->rowCount());
     model.setColumnCount(4);
@@ -155,22 +155,24 @@ void VisCmpDlg::setupModel()
     int w0 = fm.boundingRect("=Dup=").width();
     int w1 = fm.boundingRect("=Factor=").width();
     int w2 = fm.boundingRect("=Icon=").width();
+    int w3 = fm.boundingRect("=name twenty wide=").width();
     //int w3 = ui->tv->width() - w0 - w1 - w2;
     ui->tv->setColumnWidth(0, w0);
     ui->tv->setColumnWidth(1, w1);
     ui->tv->setColumnWidth(2, w2);
-    ui->tv->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    ui->tv->setColumnWidth(3, w3);
+    ui->tv->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
 
     // format
 
     isDebug = false;
 }
 
-void VisCmpDlg::preview(QString fPath, QImage &image)
+void FindDuplicatesDlg::preview(QString fPath, QImage &image)
 {
     QFileInfo fileInfo(fPath);
     ImageMetadata *m;
-    if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "VisCmpDlg::preview")) {
+    if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview")) {
         m = &metadata->m;
     }
     else {
@@ -182,11 +184,11 @@ void VisCmpDlg::preview(QString fPath, QImage &image)
     imageDecoder->decode(image, metadata, *m);
 }
 
-int VisCmpDlg::reportRGB(QImage &im)
+int FindDuplicatesDlg::reportRGB(QImage &im)
 {
     int w = im.width();
     int h = im.height();
-    qDebug() << "VisCmpDlg::reportRGB:"
+    qDebug() << "FindDuplicatesDlg::reportRGB:"
              << "w =" << w
              << "h =" << h
         ;
@@ -204,7 +206,7 @@ int VisCmpDlg::reportRGB(QImage &im)
     }
 }
 
-double VisCmpDlg::compareImagesHues(QImage &imA, QImage &imB)
+double FindDuplicatesDlg::compareImagesHues(QImage &imA, QImage &imB)
 {
     Effects effect;
     QVector<int> huesA(360, 0);
@@ -214,7 +216,7 @@ double VisCmpDlg::compareImagesHues(QImage &imA, QImage &imB)
     double deltaHue = 0;
     /*
     qDebug().noquote()
-             << "VisCmpDlg::visCmpImagesHues"
+             << "FindDuplicatesDlg::visCmpImagesHues"
              << "A: w =" << imA.width() << "h =" << imA.height() << "pixelsA =" << pixelsA
              << "B: w =" << imB.width() << "h =" << imB.height() << "pixelsB =" << pixelsA
         ; //*/
@@ -227,7 +229,7 @@ double VisCmpDlg::compareImagesHues(QImage &imA, QImage &imB)
         deltaHue += diff;
         /*
         qDebug().noquote()
-                 << "VisCmpDlg::visCmpImagesHues"
+                 << "FindDuplicatesDlg::visCmpImagesHues"
                  << QString::number(hue).leftJustified(4)
                  << "A =" << QString::number(huesA.at(hue)).leftJustified(4)
                  << "B =" << QString::number(huesB.at(hue)).leftJustified(4)
@@ -240,14 +242,14 @@ double VisCmpDlg::compareImagesHues(QImage &imA, QImage &imB)
     deltaHue = deltaHue / pixelsA * 100;
     /*
     qDebug().noquote()
-        << "VisCmpDlg::visCmpImagesHues"
+        << "FindDuplicatesDlg::visCmpImagesHues"
         << "normalized deltaHue =" << deltaHue / pixelsA * 100
         ; //*/
 
     return deltaHue;
 }
 
-int VisCmpDlg::compareRGB(QImage &imA, QImage &imB)
+int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
 {
     int w, h;
     if (imA.width() < imB.width()) w = imA.width();
@@ -255,7 +257,7 @@ int VisCmpDlg::compareRGB(QImage &imA, QImage &imB)
     if (imA.height() < imB.height()) h = imA.height();
     else h = imB.height();
     /*
-    qDebug() << "VisCmpDlg::compareRGB:"
+    qDebug() << "FindDuplicatesDlg::compareRGB:"
              << "w =" << w
              << "h =" << h
              << "aW =" << imA.width()
@@ -293,7 +295,7 @@ int VisCmpDlg::compareRGB(QImage &imA, QImage &imB)
     return delta;
 }
 
-void VisCmpDlg::pixelCompare()
+void FindDuplicatesDlg::pixelCompare()
 {
     quint64 totIterations = dm->sf->rowCount() * bItems.count();
     ui->progressLbl->setText("Searching for duplicates in " + QString::number(totIterations) + " combinations");
@@ -303,7 +305,7 @@ void VisCmpDlg::pixelCompare()
         QString aFPath = dm->sf->index(a,0).data(G::PathRole).toString();
         QString aFName = dm->sf->index(a,G::NameColumn).data().toString();
         /*
-        qDebug() << "VisCmpDlg::on_compareBtn_clicked"
+        qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked"
                  << "a =" << a
                  << "aFile =" << aFPath;
         //*/
@@ -332,7 +334,7 @@ void VisCmpDlg::pixelCompare()
             qApp->processEvents();
 
             /*
-            qDebug() << "VisCmpDlg::on_compareBtn_clicked"
+            qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked"
                      << "a =" << a
                      << "b =" << b
                      << "delta =" << deltaRGB
@@ -355,7 +357,7 @@ void VisCmpDlg::pixelCompare()
     }
 
     /* report deltas
-    qDebug() << "VisCmpDlg::on_compareBtn_clicked report deltas: a b delta bIndex";
+    qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked report deltas: a b delta bIndex";
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         QString aFName = dm->sf->index(a,G::NameColumn).data().toString();
         for (int b = 0; b < bItems.size(); b++) {
@@ -372,14 +374,14 @@ void VisCmpDlg::pixelCompare()
     //*/
 }
 
-QString VisCmpDlg::currentBString(int b)
+QString FindDuplicatesDlg::currentBString(int b)
 {
     return QString::number(b) + " of "
            + QString::number(bItems.count())
            + " possible matches";
 }
 
-void VisCmpDlg::clear()
+void FindDuplicatesDlg::clear()
 {
     abort = false;
     ui->progressBar->setValue(0);
@@ -387,13 +389,13 @@ void VisCmpDlg::clear()
     bItems.clear();
 }
 
-void VisCmpDlg::on_clrFoldersBtn_clicked()
+void FindDuplicatesDlg::on_clrFoldersBtn_clicked()
 {
     ui->includeSubfolders->clear();
     ui->excludeSubfolders->clear();
 }
 
-void VisCmpDlg::buildBItemsList(QStringList &dPaths)
+void FindDuplicatesDlg::buildBItemsList(QStringList &dPaths)
 {
     QDir *dir = new QDir;
     QStringList *fileFilters = new QStringList;
@@ -446,7 +448,7 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
 
-        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::buildBItemsList")) {
+        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             // deal with failure
             //continue;
         }
@@ -470,7 +472,7 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
                 if (duration > 3600) format = "hh:mm:ss";
                 bItem.duration = durationTime.toString(format);
                 /*
-                qDebug() << "VisCmpDlg::buildBItemsList"
+                qDebug() << "FindDuplicatesDlg::buildBItemsList"
                          << "s =" << s
                          << "duration =" << duration
                          << "durationTime =" << durationTime
@@ -494,13 +496,13 @@ void VisCmpDlg::buildBItemsList(QStringList &dPaths)
         }
         bItems.append(bItem);
         /*
-        qDebug() << "VisCmpDlg::buildBItemsList" << i << bItem.fPath;
+        qDebug() << "FindDuplicatesDlg::buildBItemsList" << i << bItem.fPath;
         //reportRGB(image);
         //*/
     }
 }
 
-void VisCmpDlg::getMetadataBItems()
+void FindDuplicatesDlg::getMetadataBItems()
 {
     int totIterations = bItems.count();
 
@@ -535,7 +537,7 @@ void VisCmpDlg::getMetadataBItems()
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
 
-        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "VisCmpDlg::buildBItemsList")) {
+        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             // deal with failure
             //continue;
         }
@@ -559,7 +561,7 @@ void VisCmpDlg::getMetadataBItems()
                 if (duration > 3600) format = "hh:mm:ss";
                 bItems[i].duration = durationTime.toString(format);
                 /*
-                qDebug() << "VisCmpDlg::buildBItemsList"
+                qDebug() << "FindDuplicatesDlg::buildBItemsList"
                          << "s =" << s
                          << "duration =" << duration
                          << "durationTime =" << durationTime
@@ -584,7 +586,7 @@ void VisCmpDlg::getMetadataBItems()
     }
 }
 
-void VisCmpDlg::buildBList()
+void FindDuplicatesDlg::buildBList()
 {
 /*
     Build a B list (collection or library) of images to look for duplicates of the candidate
@@ -671,11 +673,11 @@ void VisCmpDlg::buildBList()
 //        return;
 //    }
     /*
-    qDebug() << "VisCmpDlg::on_compareBtn_clicked  bItems.size() =" << bItems.size();
+    qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked  bItems.size() =" << bItems.size();
     //*/
 }
 
-bool VisCmpDlg::sameFileType(int a, int b)
+bool FindDuplicatesDlg::sameFileType(int a, int b)
 {
     QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
     QString extA = QFileInfo(pathA).suffix().toLower();
@@ -687,7 +689,7 @@ bool VisCmpDlg::sameFileType(int a, int b)
     return isSame;
 }
 
-bool VisCmpDlg::sameCreationDate(int a, int b)
+bool FindDuplicatesDlg::sameCreationDate(int a, int b)
 {
     QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
     QString dateB = bItems.at(b).createdDate;
@@ -698,7 +700,7 @@ bool VisCmpDlg::sameCreationDate(int a, int b)
     return isSame;
 }
 
-bool VisCmpDlg::sameAspect(int a, int b)
+bool FindDuplicatesDlg::sameAspect(int a, int b)
 {
     // A datamodel
     double aspect = dm->sf->index(a, G::AspectRatioColumn).data().toDouble();
@@ -711,7 +713,7 @@ bool VisCmpDlg::sameAspect(int a, int b)
     return isSame;
 }
 
-bool VisCmpDlg::sameDuration(int a, int b)
+bool FindDuplicatesDlg::sameDuration(int a, int b)
 {
     // A datamodel
     QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
@@ -724,9 +726,9 @@ bool VisCmpDlg::sameDuration(int a, int b)
     return isSame;
 }
 
-void VisCmpDlg::findMatches()
+void FindDuplicatesDlg::findMatches()
 {
-    qDebug() << "\nVisCmpDlg::findMatches\n";
+    qDebug() << "\nFindDuplicatesDlg::findMatches\n";
     matchCount = 0;
     int aCount =  dm->sf->rowCount();
     int bCount =  bItems.count();
@@ -763,7 +765,7 @@ void VisCmpDlg::findMatches()
             matchCount++;
             reportFindMatch(a, b);
             /*
-            qDebug() //<< "VisCmpDlg::findMatches"
+            qDebug() //<< "FindDuplicatesDlg::findMatches"
                      << QString::number(a).leftJustified(5)
                      << bItems.at(b).fPath
                 ; //*/
@@ -772,7 +774,7 @@ void VisCmpDlg::findMatches()
     }
 }
 
-void VisCmpDlg::buildResults()
+void FindDuplicatesDlg::buildResults()
 {
 /*
     The results vector matrix: results[a][b] is an R item.
@@ -803,12 +805,12 @@ void VisCmpDlg::buildResults()
 
     // compare criteria
     if (isDebug)
-    qDebug() << "\nVisCmpDlg::buildResults\n";
+    qDebug() << "\nFindDuplicatesDlg::buildResults\n";
 
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         for (int b = 0; b < bItems.count(); b++) {
             if (isDebug)
-            qDebug() << "VisCmpDlg::buildResults  A ="
+            qDebug() << "FindDuplicatesDlg::buildResults  A ="
                      <<  dm->sf->index(a,G::NameColumn).data().toString()
                      <<  "B =" << bItems.at(b).fPath
                 ;
@@ -816,27 +818,27 @@ void VisCmpDlg::buildResults()
             if (ui->sameFileTypeCB->isChecked()) {
                 results[a][b].sameType = sameFileType(a, b);
                 if (isDebug)
-                qDebug() << "VisCmpDlg::buildResults results[a][b].sameType" << results[a][b].sameType;
+                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameType" << results[a][b].sameType;
             }
 
             // same creation date
             if (ui->sameCreationDateCB->isChecked()) {
                 results[a][b].sameCreationDate = sameCreationDate(a, b);
                 if (isDebug)
-                qDebug() << "VisCmpDlg::buildResults results[a][b].sameCreationDate" << results[a][b].sameCreationDate;
+                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameCreationDate" << results[a][b].sameCreationDate;
             }
 
             // same aspect
             if (ui->sameAspectCB->isChecked()) {
                 results[a][b].sameAspect = sameAspect(a, b);
                 if (isDebug)
-                qDebug() << "VisCmpDlg::buildResults results[a][b].sameAspect" << results[a][b].sameAspect;
+                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameAspect" << results[a][b].sameAspect;
             }
             // same duration (video)
             if (ui->sameDurationCB->isChecked()) {
                 results[a][b].sameDuration = sameDuration(a, b);
                 if (isDebug)
-                qDebug() << "VisCmpDlg::buildResults results[a][b].sameDuration" << results[a][b].sameDuration;
+                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameDuration" << results[a][b].sameDuration;
             }
             if (isDebug)
             qDebug() << "\n";
@@ -844,7 +846,7 @@ void VisCmpDlg::buildResults()
     }
 }
 
-int VisCmpDlg::updateResults()
+int FindDuplicatesDlg::updateResults()
 {
     int matches = 0;
     // update local model results table
@@ -894,9 +896,9 @@ int VisCmpDlg::updateResults()
     return matches;
 }
 
-void VisCmpDlg::reportbItems()
+void FindDuplicatesDlg::reportbItems()
 {
-    qDebug() << "VisCmpDlg::reportbItems";
+    qDebug() << "FindDuplicatesDlg::reportbItems";
     int counter = 0;
     foreach (B bItem, bItems) {
         qDebug().noquote()
@@ -910,9 +912,9 @@ void VisCmpDlg::reportbItems()
     }
 }
 
-void VisCmpDlg::reportAspects()
+void FindDuplicatesDlg::reportAspects()
 {
-    qDebug() << "\n" << "VisCmpDlg::reportAspects";
+    qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
     for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
         QFileInfo fInfo(bItems.at(b).fPath);
         QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
@@ -933,7 +935,7 @@ void VisCmpDlg::reportAspects()
     }
 }
 
-void::VisCmpDlg::reportFindMatch(int a, int b)
+void::FindDuplicatesDlg::reportFindMatch(int a, int b)
 {
     QString s = " ";
     QString rpt;
@@ -979,9 +981,9 @@ void::VisCmpDlg::reportFindMatch(int a, int b)
     qDebug().noquote() << rpt;
 }
 
-void::VisCmpDlg::reportResults()
+void::FindDuplicatesDlg::reportResults()
 {
-    qDebug() << "\n" << "VisCmpDlg::reportResults"
+    qDebug() << "\n" << "FindDuplicatesDlg::reportResults"
              << "  A count =" << dm->sf->rowCount() << "B count =" << bItems.count();
     QString s = " ";
     QString rpt;
@@ -1040,7 +1042,7 @@ void::VisCmpDlg::reportResults()
     }
 }
 
-void VisCmpDlg::on_compareBtn_clicked()
+void FindDuplicatesDlg::on_compareBtn_clicked()
 {
     isRunning = true;
     clear();
@@ -1067,7 +1069,7 @@ void VisCmpDlg::on_compareBtn_clicked()
     ui->tv->setEnabled(true);
 }
 
-void VisCmpDlg::on_prevToolBtn_clicked()
+void FindDuplicatesDlg::on_prevToolBtn_clicked()
 {
     if (currentMatch > 0) {
         currentMatch--;
@@ -1075,7 +1077,7 @@ void VisCmpDlg::on_prevToolBtn_clicked()
         int b = currentMatch;
         QString fPath = results[a][b].fPath;
         if (isDebug)
-        qDebug() << "VisCmpDlg::on_prevToolBtn_clicked currentMatch =" << currentMatch << "a =" << a << "b =" << b;
+        qDebug() << "FindDuplicatesDlg::on_prevToolBtn_clicked currentMatch =" << currentMatch << "a =" << a << "b =" << b;
         QImage image;
         preview(fPath, image);
         ui->matchLbl->setPixmap(QPixmap::fromImage(image.scaled(previewSize, Qt::KeepAspectRatio)));
@@ -1088,7 +1090,7 @@ void VisCmpDlg::on_prevToolBtn_clicked()
 }
 
 
-void VisCmpDlg::on_nextToolBtn_clicked()
+void FindDuplicatesDlg::on_nextToolBtn_clicked()
 {
     if (currentMatch + 1 < bItems.count()) {
         currentMatch++;
@@ -1107,17 +1109,17 @@ void VisCmpDlg::on_nextToolBtn_clicked()
 }
 
 
-void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
+void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
 {
     if (index.column() == 0) return;
     currentMatch = 0;
     // larger A image (candidate)
     if (isDebug)
-    qDebug() << "VisCmpDlg::on_tv_clicked  index =" << index;
+    qDebug() << "FindDuplicatesDlg::on_tv_clicked  index =" << index;
     int a = index.row();
     QString fPath = dm->sf->index(a,0).data(G::PathRole).toString();
     QString mPath = model.index(a, 4).data().toString();
-    qDebug() << "VisCmpDlg::on_tv_clicked  row (a) ="
+    qDebug() << "FindDuplicatesDlg::on_tv_clicked  row (a) ="
              << a << "col =" << index.column()
              << "fPath =" << fPath
              << "match =" << mPath
@@ -1144,28 +1146,28 @@ void VisCmpDlg::on_tv_clicked(const QModelIndex &index)
 //    ui->currentLbl->setText(currentBString(b));
 }
 
-void VisCmpDlg::on_abortBtn_clicked()
+void FindDuplicatesDlg::on_abortBtn_clicked()
 {
     if (isRunning) abort = true;
     else clear();
 }
 
-void VisCmpDlg::on_matchBtn_clicked()
+void FindDuplicatesDlg::on_matchBtn_clicked()
 {
     int a = ui->tv->currentIndex().row();
     model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
 }
 
-void VisCmpDlg::on_cancelBtn_clicked()
+void FindDuplicatesDlg::on_cancelBtn_clicked()
 {
     reject();
 }
 
-void VisCmpDlg::on_updateDupsAndQuitBtn_clicked()
+void FindDuplicatesDlg::on_updateDupsAndQuitBtn_clicked()
 {
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         /*
-        qDebug() << "VisCmpDlg::on_updateDupsAndQuitBtn_clicked"
+        qDebug() << "FindDuplicatesDlg::on_updateDupsAndQuitBtn_clicked"
                  << model.itemFromIndex(model.index(a,0))->checkState();
         //*/
         QModelIndex idx = dm->sf->index(a, G::CompareColumn);
@@ -1177,32 +1179,41 @@ void VisCmpDlg::on_updateDupsAndQuitBtn_clicked()
     accept();
 }
 
-void VisCmpDlg::resizeEvent(QResizeEvent *event)
+void FindDuplicatesDlg::resizeEvent(QResizeEvent *event)
 {
     QDialog::resizeEvent(event);
     int w = ui->candidateLbl->width();
     int h = ui->candidateLbl->height();
     if (isDebug)
-    qDebug() << "VisCmpDlg::resizeEvent" << "w =" << w << "h =" << h;
+    qDebug() << "FindDuplicatesDlg::resizeEvent" << "w =" << w << "h =" << h;
     ui->candidateLbl->setPixmap(pA.scaled(w, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     ui->matchLbl->setPixmap(pB.scaled(w, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
-void VisCmpDlg::on_helpBtn_clicked()
+void FindDuplicatesDlg::on_helpBtn_clicked()
 {
-    reportbItems();
-    return;
-    reportAspects();
-    reportResults();
+//    reportbItems();
+//    return;
+//    reportAspects();
+//    reportResults();
+
+    QDialog *dlg = new QDialog;
+    Ui::HelpFindDuplicatesDlg *ui = new Ui::HelpFindDuplicatesDlg;
+    ui->setupUi(dlg);
+    ui->textBrowser->setOpenExternalLinks(true);
+    dlg->setWindowTitle("Find Duplicates");
+    dlg->setStyleSheet(G::css);
+    dlg->exec();
+
 }
 
-void VisCmpDlg::progressMsg(QString msg)
+void FindDuplicatesDlg::progressMsg(QString msg)
 {
     ui->progressLbl->setText(msg);
     QApplication::processEvents();
 }
 
-void VisCmpDlg::on_toggleTvHideChecked_clicked()
+void FindDuplicatesDlg::on_toggleTvHideChecked_clicked()
 {
     for (int row = 0; row < model.rowCount(); ++row) {
     QModelIndex index = model.index(row, 0);

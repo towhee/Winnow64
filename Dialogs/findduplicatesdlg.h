@@ -1,5 +1,5 @@
-#ifndef VISCMPDLG_H
-#define VISCMPDLG_H
+#ifndef FINDDUPLICATESDLG_H
+#define FINDDUPLICATESDLG_H
 
 #include <QtWidgets>
 #include <QDialog>
@@ -9,6 +9,7 @@
 #include "Image/thumb.h"
 #include "Image/autonomousimage.h"
 #include "Cache/imagedecoder.h"
+#include "ui_helpfindduplicates.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif
@@ -33,16 +34,16 @@ protected:
 };
 
 namespace Ui {
-class VisCmpDlg;
+class FindDuplicatesDlg;
 }
 
-class VisCmpDlg : public QDialog
+class FindDuplicatesDlg : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit VisCmpDlg(QWidget *parent, DataModel *dm, Metadata *metadata);
-    ~VisCmpDlg();
+    explicit FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata);
+    ~FindDuplicatesDlg();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -62,7 +63,7 @@ private slots:
     void buildBList();
 
 private:
-    Ui::VisCmpDlg *ui;
+    Ui::FindDuplicatesDlg *ui;
     DataModel *dm;
     Metadata *metadata;
     AutonomousImage *autonomousImage;
@@ -134,4 +135,4 @@ private:
     bool isDebug = false;
 };
 
-#endif // VISCMPDLG_H
+#endif // FINDDUPLICATESDLG_H

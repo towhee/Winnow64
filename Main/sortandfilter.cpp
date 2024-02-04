@@ -69,10 +69,13 @@ void MW::filterChange(QString source)
     - the datamodel proxy filter is refreshed
     - the filter panel counts are updated
     - the current index is updated
-    - any prior selection that is still available is set
+    //- any prior selection that is still available is set
     - the image cache is rebuilt to match the current filter
     - the thumb and grid first/last/thumbsPerPage parameters are recalculated
       and icons are loaded if necessary.
+
+    Save and recover selection is not required for filter operations.  It is
+    required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
     qDebug() << "MW::filterChange" << "called from:" << source;
@@ -126,6 +129,7 @@ void MW::filterChange(QString source)
 
     // update the status panel filtration status
     updateStatusBar();
+    updateStatus(true, "", "MW::filterChange");
 
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
