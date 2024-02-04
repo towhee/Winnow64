@@ -161,9 +161,7 @@ public:
 
 private slots:
     void updateFolderPaths();
-
     void on_autoRadio_toggled(bool checked);
-
     void on_autoIngestTab_currentChanged(int);
     void on_selectFolderBtn_clicked();
     void on_selectFolderBtn_2_clicked();
@@ -177,7 +175,6 @@ private slots:
     void on_descriptionLineEdit_2_textChanged(const QString);
     void on_editDescriptionListBtn_clicked();
     void on_editDescriptionListBtn_2_clicked();
-
     void on_filenameTemplatesBtn_clicked();
     void on_filenameTemplatesCB_currentTextChanged(const QString &arg1);
     void on_spinBoxStartNumber_textChanged(const QString);

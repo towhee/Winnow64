@@ -1,0 +1,4 @@
+QDialog *dlg = new QDialog;
+Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
+ui->setupUi(dlg);
+dlg->show();

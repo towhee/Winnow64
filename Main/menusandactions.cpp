@@ -2147,6 +2147,19 @@ void MW::renameEjectUsbMenu(QString path)
     ejectActionFromContextMenu->setText(text);
 }
 
+void MW::renamePasteFilesMenu(QString folderName)
+{
+    if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
+        QString txt = "Paste files into " + Utilities::enquote(folderName);
+        pasteFilesAction->setText(txt);
+        pasteFilesAction->setEnabled(true);
+    }
+    else {
+        pasteFilesAction->setText("Paste files");
+        pasteFilesAction->setEnabled(false);
+    }
+}
+
 void MW::renameEraseMemCardFromContextMenu(QString path)
 {
     QString drive = "";

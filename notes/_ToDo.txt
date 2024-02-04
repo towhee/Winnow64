@@ -1,7 +1,11 @@
 WHAT'S NEW
+- MetaRead2
+- Fix filters (faster + bug fixes)
+- Find duplicates
+- CreateDate fixes
+- Copy / paste
 
 BUGS / TO DO
-- When copy or move images, also include any xmp files
 - When copy or move images, should the filter be maintained?  Popup?
 - Runaway memory consumption?
 - Crash when delete fixed??
@@ -106,6 +110,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- When copy or move images, also include any xmp/txt files
+- When unfilter, status total not always correct
 - Moved file operation functions from mainwindow.cpp to fileoperations.cpp
 - Selection lost when filter
 - If delete an image, then remote embellish to same folder, then blank icon
@@ -118,7 +124,7 @@ DONE/FIXED
 - Crash when reject files and then filter on rejected
 - IconView box cursor no longer working
 - Raw/Jpg not working in metaread2
-- Right side ocked tabs showing at bottom instead of top
+- Right side locked tabs showing at bottom instead of top
 - ImageCache running amok
 - Central widget going blank when rapidly scroll up/down in gridView
 - Multi pick and set color class clears selection

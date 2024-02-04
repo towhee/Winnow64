@@ -56,7 +56,7 @@
 #include "ingestdlg.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
-#include "viscmpdlg.h"
+#include "findduplicatesdlg.h"
 //#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
@@ -432,6 +432,7 @@ private slots:
     void enableStatusBarBtns();
     void enableEjectUsbMenu(QString path);
     void renameEjectUsbMenu(QString path);
+    void renamePasteFilesMenu(QString folderName);
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();

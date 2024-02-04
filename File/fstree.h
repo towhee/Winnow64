@@ -100,6 +100,7 @@ signals:
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
+    void renamePasteContextAction(QString folderName);
 
 private:
 	QModelIndex dndOrigSelection;

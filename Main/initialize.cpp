@@ -987,6 +987,9 @@ void MW::createFSTree()
     // rename menu item "Erase mem card images" and enable/disable for context menu only
     connect(fsTree, &FSTree::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
 
+    // rename menu item "Paste files" and enable/disable for context menu only
+    connect(fsTree, &FSTree::renamePasteContextAction, this, &MW::renamePasteFilesMenu);
+
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
     // this does not work to detect ejecting a drive
