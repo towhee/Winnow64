@@ -1543,7 +1543,7 @@ void IngestDlg::on_helpBtn_clicked()
     ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Ingest Automatic Path Help");
     dlg->setStyleSheet(G::css);
-    dlg->setWindowModality(Qt::WindowModal);
+    //dlg->setWindowModality(Qt::WindowModal);
     dlg->exec();
 //    dlg->setWindowModality(Qt::ApplicationModal);
 //    dlg->show();

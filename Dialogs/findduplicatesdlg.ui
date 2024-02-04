@@ -7,13 +7,25 @@
     <x>0</x>
     <y>0</y>
     <width>1465</width>
-    <height>1084</height>
+    <height>982</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Find Duplicate Images</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_13">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
    <item>
     <widget class="QFrame" name="upperMainFrame">
      <property name="sizePolicy">
@@ -38,7 +50,7 @@
       <item>
        <widget class="QFrame" name="leftFrame">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -71,7 +83,7 @@
          <item>
           <widget class="QGroupBox" name="collectionBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -85,7 +97,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>160</height>
+             <height>150</height>
             </size>
            </property>
            <property name="font">
@@ -99,6 +111,12 @@
            <layout class="QVBoxLayout" name="verticalLayout_9">
             <property name="spacing">
              <number>1</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
             </property>
             <item>
              <widget class="QFrame" name="frame_2">
@@ -304,10 +322,16 @@
                <item>
                 <widget class="QCheckBox" name="includeSubfoldersCB">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>30</height>
+                  </size>
                  </property>
                  <property name="text">
                   <string>Include subfolders</string>
@@ -321,7 +345,7 @@
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
-                   <width>640</width>
+                   <width>20</width>
                    <height>20</height>
                   </size>
                  </property>
@@ -330,7 +354,7 @@
                <item>
                 <widget class="QPushButton" name="clrFoldersBtn">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -339,6 +363,12 @@
                   <size>
                    <width>0</width>
                    <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>30</height>
                   </size>
                  </property>
                  <property name="text">
@@ -382,7 +412,7 @@
            <property name="minimumSize">
             <size>
              <width>801</width>
-             <height>200</height>
+             <height>0</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -397,7 +427,7 @@
             </font>
            </property>
            <property name="title">
-            <string>Critea</string>
+            <string>Criterea</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_18">
             <property name="spacing">
@@ -405,6 +435,9 @@
             </property>
             <item>
              <layout class="QGridLayout" name="gridLayout">
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <property name="horizontalSpacing">
                <number>-1</number>
               </property>
@@ -540,10 +573,26 @@
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>1</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_5">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>10</height>
                   </size>
                  </property>
                 </spacer>
@@ -705,6 +754,12 @@
             <string>Compare images (select from candidate images table)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
             <item>
              <layout class="QVBoxLayout" name="ImagsVerticalLayout">
               <property name="leftMargin">
@@ -910,7 +965,7 @@
             <item>
              <widget class="QFrame" name="LowerFrame">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -918,7 +973,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>80</height>
+                <height>0</height>
                </size>
               </property>
               <property name="frameShape">
@@ -928,6 +983,18 @@
                <enum>QFrame::Raised</enum>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item>
                 <widget class="QFrame" name="frame">
                  <property name="sizePolicy">
@@ -982,6 +1049,9 @@
                     <enum>QFrame::Raised</enum>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_7">
+                    <property name="spacing">
+                     <number>-1</number>
+                    </property>
                     <property name="leftMargin">
                      <number>0</number>
                     </property>
@@ -1098,7 +1168,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>32</height>
+                     <height>16777215</height>
                     </size>
                    </property>
                    <property name="frameShape">
@@ -1112,7 +1182,7 @@
                      <number>0</number>
                     </property>
                     <property name="topMargin">
-                     <number>12</number>
+                     <number>0</number>
                     </property>
                     <property name="rightMargin">
                      <number>0</number>
@@ -1122,6 +1192,12 @@
                     </property>
                     <item>
                      <widget class="QLabel" name="currentLbl">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
                       <property name="minimumSize">
                        <size>
                         <width>350</width>
@@ -1131,7 +1207,7 @@
                       <property name="maximumSize">
                        <size>
                         <width>16777215</width>
-                        <height>20</height>
+                        <height>16777215</height>
                        </size>
                       </property>
                       <property name="text">
@@ -1141,19 +1217,6 @@
                     </item>
                    </layout>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="verticalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>10</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -1320,13 +1383,13 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="topMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
        <number>12</number>
       </property>
       <property name="bottomMargin">
-       <number>18</number>
+       <number>0</number>
       </property>
       <item>
        <widget class="QPushButton" name="helpBtn">
