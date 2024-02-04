@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1465</width>
-    <height>982</height>
+    <width>1441</width>
+    <height>985</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Find Duplicate Images</string>
@@ -47,6 +53,9 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_13">
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QFrame" name="leftFrame">
         <property name="sizePolicy">
@@ -81,9 +90,9 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QGroupBox" name="collectionBox">
+          <widget class="QGroupBox" name="targetBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -97,7 +106,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>150</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -110,13 +119,13 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_9">
             <property name="spacing">
-             <number>1</number>
+             <number>0</number>
             </property>
             <property name="topMargin">
-             <number>0</number>
+             <number>12</number>
             </property>
             <property name="bottomMargin">
-             <number>0</number>
+             <number>12</number>
             </property>
             <item>
              <widget class="QFrame" name="frame_2">
@@ -187,7 +196,7 @@
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Include images in these folders</string>
+                     <string>Include images in these folders:</string>
                     </property>
                    </widget>
                   </item>
@@ -236,7 +245,7 @@
                    <number>0</number>
                   </property>
                   <property name="topMargin">
-                   <number>0</number>
+                   <number>6</number>
                   </property>
                   <property name="rightMargin">
                    <number>0</number>
@@ -253,7 +262,7 @@
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Exclude images in these folders</string>
+                     <string>Exclude images in these folders:</string>
                     </property>
                    </widget>
                   </item>
@@ -312,6 +321,9 @@
               <layout class="QHBoxLayout" name="horizontalLayout_6">
                <property name="leftMargin">
                 <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>6</number>
                </property>
                <property name="rightMargin">
                 <number>0</number>
@@ -611,7 +623,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>8</height>
+                     <height>5</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -621,7 +633,10 @@
                     </size>
                    </property>
                    <property name="autoFillBackground">
-                    <bool>true</bool>
+                    <bool>false</bool>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(33, 33, 33);</string>
                    </property>
                    <property name="value">
                     <number>0</number>
@@ -754,7 +769,16 @@
             <string>Compare images (select from candidate images table)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
             <property name="topMargin">
+             <number>12</number>
+            </property>
+            <property name="rightMargin">
              <number>0</number>
             </property>
             <property name="bottomMargin">
@@ -783,16 +807,16 @@
                  <enum>QLayout::SetMinimumSize</enum>
                 </property>
                 <property name="leftMargin">
-                 <number>6</number>
+                 <number>3</number>
                 </property>
                 <property name="topMargin">
-                 <number>6</number>
+                 <number>0</number>
                 </property>
                 <property name="rightMargin">
                  <number>6</number>
                 </property>
                 <property name="bottomMargin">
-                 <number>6</number>
+                 <number>0</number>
                 </property>
                 <item>
                  <widget class="QGroupBox" name="AImageBox">
@@ -899,7 +923,7 @@
                    <string notr="true">border-width: 0</string>
                   </property>
                   <property name="title">
-                   <string>Match from collection</string>
+                   <string>Match from targeted images</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <property name="leftMargin">
@@ -965,7 +989,7 @@
             <item>
              <widget class="QFrame" name="LowerFrame">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -1050,7 +1074,7 @@
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_7">
                     <property name="spacing">
-                     <number>-1</number>
+                     <number>0</number>
                     </property>
                     <property name="leftMargin">
                      <number>0</number>
@@ -1126,7 +1150,7 @@
                      </layout>
                     </item>
                     <item>
-                     <spacer name="horizontalSpacer_7">
+                     <spacer name="horizontalSpacer_2">
                       <property name="orientation">
                        <enum>Qt::Horizontal</enum>
                       </property>
@@ -1139,26 +1163,20 @@
                      </spacer>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="matchBtn">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
+                     <spacer name="horizontalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
                       </property>
-                      <property name="maximumSize">
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
                        <size>
-                        <width>16777215</width>
-                        <height>32</height>
+                        <width>40</width>
+                        <height>20</height>
                        </size>
                       </property>
-                      <property name="text">
-                       <string>Match</string>
-                      </property>
-                      <property name="autoDefault">
-                       <bool>false</bool>
-                      </property>
-                     </widget>
+                     </spacer>
                     </item>
                    </layout>
                   </widget>

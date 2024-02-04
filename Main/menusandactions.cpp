@@ -571,7 +571,7 @@ void MW::createEditActions()
     visCmpImagesAction->setObjectName("visCmpImages");
     visCmpImagesAction->setShortcutVisibleInContextMenu(true);
     addAction(visCmpImagesAction);
-    connect(visCmpImagesAction, &QAction::triggered, this, &MW::visCmpImages);
+    connect(visCmpImagesAction, &QAction::triggered, this, &MW::findDuplicates);
 
     reportHueCountAction = new QAction(tr("Report hue count"), this);
     reportHueCountAction->setObjectName("reportHueCount");

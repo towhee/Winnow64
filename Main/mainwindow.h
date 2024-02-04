@@ -525,7 +525,7 @@ private slots:
     void loadConcurrentNewFolder();
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
 
-    void loadConcurrentDone();
+    void loadConcurrentDone(QString src);
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
@@ -1328,7 +1328,7 @@ private:
     void logReport();
 
     void mediaReadSpeed();
-    void visCmpImages();
+    void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
