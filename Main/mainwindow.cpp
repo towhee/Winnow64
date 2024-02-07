@@ -2801,6 +2801,9 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
+    // reset warning missing embedded thumbs
+    warnMissingEmbeddedThumbs = true;
+
     // set selection and current index
     //testTime.restart();
     sel->setCurrentRow(targetRow);
@@ -2857,8 +2860,6 @@ void MW::loadConcurrentDone()
     QSignalBlocker blocker(bookmarks);
     G::metaReadDone = true;
 
-    static QString prevRootFolder = "";
-
     // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
     {
@@ -2890,17 +2891,19 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
 
     if (!ignoreAddThumbnailsDlg
-        && prevRootFolder != G::currRootFolder
+        && warnMissingEmbeddedThumbs
         && !G::autoAddMissingThumbnails)
     {
+        warnMissingEmbeddedThumbs = false;
         qDebug() << "MW::loadConcurrentDone"
-                 << "prevRootFolder =" << prevRootFolder
-                 << "G::currRootFolder =" << G::currRootFolder
+                 << "warnMissingEmbeddedThumbs =" << warnMissingEmbeddedThumbs
             ;
         chkMissingEmbeddedThumbnails();
+        qDebug() << "MW::loadConcurrentDone after chkMissingEmbeddedThumbnails: "
+                 << "warnMissingEmbeddedThumbs =" << warnMissingEmbeddedThumbs
+            ;
         if (reset(src + QString::number(count++))) return;
     }
-    prevRootFolder = G::currRootFolder;
 
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     if (G::showProgress == G::ShowProgress::MetaCache) {
@@ -3902,6 +3905,7 @@ void MW::preferences(QString text)
     if (G::isLogger) G::log("MW::preferences");
     if (preferencesDlg == nullptr) {
         pref = new Preferences(this);
+        //pref->resizeColumns();
         if (text != "") pref->expandBranch(text);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     }
