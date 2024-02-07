@@ -525,7 +525,7 @@ private slots:
     void loadConcurrentNewFolder();
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
 
-    void loadConcurrentDone(QString src);
+    void loadConcurrentDone();
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
@@ -1115,6 +1115,7 @@ private:
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;
     QString refreshCurrentPath;
+    bool warnMissingEmbeddedThumbs = false;
 
     bool simulateJustInstalled;
     bool isSettings = false;
