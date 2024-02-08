@@ -1017,7 +1017,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }//*/
 
     /* DEBUG SPECIFIC OBJECTNAME (uncomment to use)
-    if (obj->objectName() == "GraphicsEffect") {
+    if (obj->objectName() == "QTabBar") {
 //        if (event->type()        != QEvent::Paint
 //                && event->type() != QEvent::UpdateRequest
 //                && event->type() != QEvent::ZeroTimerEvent
@@ -1205,7 +1205,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     Show a tooltip for docked widget tabs.
     */
     static int prevTabIndex = -1;
-    if (QString(obj->metaObject()->className()) == "QTabBar") {
+    //if (QString(obj->metaObject()->className()) == "QTabBar") {
+    if (QString(obj->metaObject()->className()) == "QMainWindowTabBar") {
         /*
         // Set rich text label to tabified dock widgets tabbar tabs
         if (event->type() == QEvent::ChildAdded) {
