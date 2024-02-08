@@ -469,7 +469,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
     else labelColorToUse = G::backgroundColor;
 
-    // start painting
+    // start painting (painters algorithm - last over first)
 
     // paint the background label color and border
     painter->setBrush(labelColorToUse);
@@ -505,6 +505,23 @@ void IconViewDelegate::paint(QPainter *painter,
         ;
 //             */
 
+    int videoDurationHt = 0;
+    if (isVideo) {
+        QFont videoFont = painter->font();
+        videoFont.setPixelSize(G::fontSize);
+        painter->setFont(videoFont);
+        QRectF bRect;
+        painter->setPen(G::backgroundColor);
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
+        painter->setBrush(G::backgroundColor);
+        painter->drawRect(bRect);
+        painter->setPen(videoTextColor);
+        QString vText;
+        G::renderVideoThumb ? vText = duration : vText = "Video";
+        painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, vText);
+        videoDurationHt = bRect.height();
+    }
+
     // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
         // label/rating rect located top-right as containment for circle
@@ -529,10 +546,8 @@ void IconViewDelegate::paint(QPainter *painter,
             int b = (thumbRect.width() - w) / 2;
             int h = bRect.height() * 0.5;
             int t = h / 5;      // translate to center * in ratingRect
-            QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - h + 6);
-            QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() + 6);
-//            QPoint ratingTopLeft(frameRect.right() - w, frameRect.top());
-//            QPoint ratingBottomRight(frameRect.right(), frameRect.top() + h);
+            QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - h + 6 - videoDurationHt);
+            QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() + 6 - videoDurationHt);
             QRect ratingRect(ratingTopLeft, ratingBottomRight);
 
             // draw stars
@@ -544,21 +559,6 @@ void IconViewDelegate::paint(QPainter *painter,
             painter->setPen(ratingTextPen);
             painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignCenter, stars);
         }
-    }
-
-    if (isVideo) {
-        QFont videoFont = painter->font();
-        videoFont.setPixelSize(G::fontSize);
-        painter->setFont(videoFont);
-        QRectF bRect;
-        painter->setPen(G::backgroundColor);
-        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
-        painter->setBrush(G::backgroundColor);
-        painter->drawRect(bRect);
-        painter->setPen(videoTextColor);
-        QString vText;
-        G::renderVideoThumb ? vText = duration : vText = "Video";
-        painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, vText);
     }
 
     // show lock if file does not have read/write permissions
