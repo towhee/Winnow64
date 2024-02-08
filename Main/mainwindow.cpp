@@ -1224,6 +1224,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
             int i = tabBar->tabAt(e->pos());
+            qDebug() << "tabBarTexttabBar->tabText(i) =" << tabBar->tabText(i);
             if (tabBar->tabText(i) == filterDockTabText) {
                 filterDockTabMousePress();
             }
@@ -2857,8 +2858,10 @@ void MW::loadConcurrentDone()
 /*
     Signalled from MetaRead::run when finished
 */
-    QSignalBlocker blocker(bookmarks);
+    if (G::metaReadDone) return;
     G::metaReadDone = true;
+
+    QSignalBlocker blocker(bookmarks);
 
     // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
@@ -2895,13 +2898,7 @@ void MW::loadConcurrentDone()
         && !G::autoAddMissingThumbnails)
     {
         warnMissingEmbeddedThumbs = false;
-        qDebug() << "MW::loadConcurrentDone"
-                 << "warnMissingEmbeddedThumbs =" << warnMissingEmbeddedThumbs
-            ;
         chkMissingEmbeddedThumbnails();
-        qDebug() << "MW::loadConcurrentDone after chkMissingEmbeddedThumbnails: "
-                 << "warnMissingEmbeddedThumbs =" << warnMissingEmbeddedThumbs
-            ;
         if (reset(src + QString::number(count++))) return;
     }
 

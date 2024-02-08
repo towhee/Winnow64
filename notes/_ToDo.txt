@@ -6,13 +6,13 @@ WHAT'S NEW
 - Copy / paste
 
 BUGS / TO DO
-- Embed thumbnails dialog opens all the time
+- If filters hidden when filters build then they are not updated
+- Ratings covers video label on thumbs
 - When copy or move images, should the filter be maintained?  Popup?
 0x103133cc0 Mac::getDisplayProfileURL() + 256
 0x10301b464 MW::getDisplayProfile() + 180
 0x10301a6b8 MW::setDisplayResolution() + 1096
 - Runaway memory consumption?
-- Crash when delete fixed??
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
@@ -114,6 +114,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Prefs column 0 not getting width set correctly
+- Embed thumbnails dialog opens all the time
 - Duplicates found filter category shout be highlighted if any true items
 - When copy or move images, also include any xmp/txt files
 - When unfilter, status total not always correct

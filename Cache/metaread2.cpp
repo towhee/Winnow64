@@ -851,7 +851,8 @@ void MetaRead2::dispatch(int id)
     }
 
     // if done in both directions fire delay to quit in case isDone fails
-    if (aIsDone && bIsDone) {
+    //if (aIsDone && bIsDone) {
+    if (aIsDone && bIsDone && !isDone) {
         if (!quitAfterTimeoutInitiated) {
             if (isDebug)
             {
