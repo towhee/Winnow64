@@ -328,7 +328,7 @@ void MW::resortImageCache()
 void MW::enableStatusBarBtns()
 {
     if (G::isLogger) G::log("MW::enableStatusBarBtns");
-    bool enable = dm->rowCount() > 0;
+    bool enable = dm->rowCount() > 0 && G::metaReadDone;
     colorManageToggleBtn->setEnabled(enable);
     reverseSortBtn->setEnabled(enable);
 }

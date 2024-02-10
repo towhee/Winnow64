@@ -5,9 +5,9 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
 {
     this->dm = dm;
     this->metadata = metadata;
-#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+    #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     QImageReader::setAllocationLimit(1024);
-#endif
+    #endif
     connect(this, &Pixmap::setValue, dm, &DataModel::setValue);
 }
 

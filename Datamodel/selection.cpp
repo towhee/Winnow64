@@ -530,10 +530,10 @@ void Selection::save()
     }
     dmCurrentIndex = dm->sf->mapToSource(sm->currentIndex());
 
-    //qDebug() << "Selection::saved";
+    /*qDebug() << "Selection::saved";
     foreach (QModelIndex dmIdx, dmSelectedRows)
         qDebug() << "dmSelectedRow =" << dmIdx.row();
-
+    //*/
 }
 
 void Selection::recover()

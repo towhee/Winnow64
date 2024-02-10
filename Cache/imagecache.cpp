@@ -619,7 +619,7 @@ bool ImageCache::nextToCache(int id)
         // invalid image
         if (icd->cacheItemList.at(i).status == inValidImage) {
             qDebug() << "ImageCache::nextToCache invalid image" << i;
-            continue;
+            //continue;
         }
 
         // max attempts exceeded
@@ -1820,10 +1820,16 @@ void ImageCache::fillCache(int id)
                                    << "isRunning =" << isRunning()
                     ;
             }
+
+            /*
+            If the returning decoder has an error status, then record the status for potential
+            debugging.  Since there is no image, it will not be added to the imCache, and it
+            will remain in the decoder queue until maxAttemptsToCacheImage is exceeded.
+            */
             bool isImage = decoder[id]->image.width() > 0;
             if (!isImage) {
-                QString k = QString::number(cacheKey).leftJustified((4));
                 if (debugCaching)
+                QString k = QString::number(cacheKey).leftJustified((4));
                 {
                 qDebug().noquote() << "ImageCache::fillCache"
                                    << "     decoder" << id
@@ -1984,7 +1990,7 @@ void ImageCache::fillCache(int id)
     }
 
     // add decoded QImage to imCache.
-    if (cacheKey != -1) {
+    if (cacheKey != -1 && decoder[id]->status == ImageDecoder::Status::Done) {
         cacheImage(id, cacheKey);
     }
 
