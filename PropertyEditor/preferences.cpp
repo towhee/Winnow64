@@ -825,7 +825,7 @@ void Preferences::addItems()
     i.key = "classificationBadgeInImageDiameter";
     i.delegateType = DT_Slider;
     i.type = "int";
-    i.min = 10;
+    i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
     addItem(i);

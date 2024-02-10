@@ -76,6 +76,7 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 
+    pref->resizeColumns();
 //    pref->expandBranch("Metadata panel items");
 
     #ifdef Q_OS_WIN

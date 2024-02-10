@@ -11,7 +11,7 @@
 
     Steps:
 
-        • Call setCurrentRow.  The current row can be any row in the datamodel.
+        • Call setStartRow.  The start row can be any row in the datamodel.
 
         • Dispatch is called for each reader.  Each time dispatch is called it iterates
           through the datamodel in a ahead/behind order.
@@ -31,6 +31,13 @@
         • thumbnails are scrolled
         • the gridView or thumbView are resized
         • there is an insertion into the datamodel
+
+    Immediately show image in loupe view while MetaRead2 is working
+
+        • if the new start row has already been read, fileSelectionChange is called
+          from MW::loadCurrent.
+        • if the new start row has not been read, fileSelectionChange is emitted
+          from dispatch when a reader returns after reading the start row.
 
     Note: All data in the DataModel must be set using a queued connection.  When subsequent
     actions are dependent on the data being set use Qt::BlockingQueuedConnection.
@@ -435,6 +442,12 @@ inline bool MetaRead2::needToRead(int row)
             return true;
         }
     }
+
+    /* Check if setStartRow called while still reading metadata, and the metadata has been read
+       for the new start row.  This enables viewing images while MetaRead2 is still reading
+       the metadata and icons.  */
+    //if (fileSelectionChanged && row == startRow) emit fileSelectionChange(dm->sf->index(row, 0));
+
     return false;
 }
 
@@ -851,7 +864,8 @@ void MetaRead2::dispatch(int id)
     }
 
     // if done in both directions fire delay to quit in case isDone fails
-    if (aIsDone && bIsDone) {
+    //if (aIsDone && bIsDone) {
+    if (aIsDone && bIsDone && !isDone) {
         if (!quitAfterTimeoutInitiated) {
             if (isDebug)
             {

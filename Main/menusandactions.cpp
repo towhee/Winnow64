@@ -571,7 +571,7 @@ void MW::createEditActions()
     visCmpImagesAction->setObjectName("visCmpImages");
     visCmpImagesAction->setShortcutVisibleInContextMenu(true);
     addAction(visCmpImagesAction);
-    connect(visCmpImagesAction, &QAction::triggered, this, &MW::visCmpImages);
+    connect(visCmpImagesAction, &QAction::triggered, this, &MW::findDuplicates);
 
     reportHueCountAction = new QAction(tr("Report hue count"), this);
     reportHueCountAction->setObjectName("reportHueCount");
@@ -2145,6 +2145,19 @@ void MW::renameEjectUsbMenu(QString path)
     ejectActionFromContextMenu->setEnabled(enabled);
     ejectAction->setText(text);
     ejectActionFromContextMenu->setText(text);
+}
+
+void MW::renamePasteFilesMenu(QString folderName)
+{
+    if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
+        QString txt = "Paste files into " + Utilities::enquote(folderName);
+        pasteFilesAction->setText(txt);
+        pasteFilesAction->setEnabled(true);
+    }
+    else {
+        pasteFilesAction->setText("Paste files");
+        pasteFilesAction->setEnabled(false);
+    }
 }
 
 void MW::renameEraseMemCardFromContextMenu(QString path)

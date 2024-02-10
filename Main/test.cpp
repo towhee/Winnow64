@@ -165,7 +165,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    sel->save();
+    reverseSortBtn->setEnabled(false);
 }
 
 /*

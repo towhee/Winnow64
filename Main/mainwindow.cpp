@@ -1017,7 +1017,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }//*/
 
     /* DEBUG SPECIFIC OBJECTNAME (uncomment to use)
-    if (obj->objectName() == "GraphicsEffect") {
+    if (obj->objectName() == "QTabBar") {
 //        if (event->type()        != QEvent::Paint
 //                && event->type() != QEvent::UpdateRequest
 //                && event->type() != QEvent::ZeroTimerEvent
@@ -1202,10 +1202,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     // DOCK TAB TOOLTIPS
     {
     /*
-    Show a tooltip for docked widget tabs.
+    Show a tooltip for docked widget tabs.  Call filterDockTabMousePress if filter tab.
     */
     static int prevTabIndex = -1;
-    if (QString(obj->metaObject()->className()) == "QTabBar") {
+    QString tabBarClassName = "QTabBar";
+    #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+    tabBarClassName = "QMainWindowTabBar";
+    #endif
+    if (QString(obj->metaObject()->className()) == tabBarClassName) {
+
         /*
         // Set rich text label to tabified dock widgets tabbar tabs
         if (event->type() == QEvent::ChildAdded) {
@@ -1217,10 +1222,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
                 }
             }
-        }
-        //*/
+        }  //*/
 
-        if (event->type() == QEvent::MouseButtonPress) {      // HoverMove / MouseMove work
+        // build filters when filter tab mouse clicked
+        if (event->type() == QEvent::MouseButtonPress) {
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
             int i = tabBar->tabAt(e->pos());
@@ -1229,6 +1234,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
 
+        // show tool tip for tab
         if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -1242,39 +1248,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
                 prevTabIndex = i;
                 QToolTip::showText(e->globalPos(), tip);
-                /*
-                if (tabBar->tabText(i) == metadataDockTabText) {
-                    tip = "Metadata Panel";
-                    DockWidget *dw;
-//                    dw = qobject_cast<QDockWidget*>(tabBar->tabData(i).value<void*>());
-//                    bool found = metadataDock == qobject_cast<quintptr>(tabBar->tabData(i));
-//                    bool found = metadataDock == qobject_cast<DockWidget*>(tabBar->tabData(i).value<void*>());
-//                    QDockWidget *dw = qvariant_cast<QDockWidget*>(tabBar->tabData(i));
-//                    DockWidget *dw = qobject_cast<DockWidget*>(tabBar->tabData(i).value<void*>());
-                    QVariant v = tabBar->tabData(i);
-                    dw = qvariant_cast<DockWidget *>(tabBar->tabData(i));
-                    bool test = v.canConvert<QDockWidget>();
-//                    bool test = dw == nullptr;
-                    qulonglong ptr = reinterpret_cast<qulonglong>(obj);
-//                    quintptr ptr = reinterpret_cast<quintptr>(obj);
-                    qDebug() << "MW::eventFilter FILTERDOCK CLICKED"
-//                             << tabBar->tabData(i).value<void*>()
-                             << tabBar->tabData(i)
-                             << "metadataDock ptr =" << ptr
-//                             << "dw = nullptr" << test
-                             << metadataDock
-                            ;
-                    // 105,553,159,400,032
-//                    tabBar->setTabIcon(i, QIcon(":/images/icon16/anchor.png"));
-//                    qDebug() << "MW::eventFilter QTabBar"
-//                             << tabBar->
-                }
-                    */
             }
         }
         if (event->type() == QEvent::Leave) {
             prevTabIndex = -1;
         }
+
         /* experimenting to maybe replace text with an icon
         if (event->type() == QEvent::ChildAdded) {
             QChildEvent *e = static_cast<QChildEvent*>(event);
@@ -2791,6 +2770,7 @@ void MW::loadConcurrentNewFolder()
         isShowCacheProgressBar, cacheWtAhead);
 
     // no sorting or filtering until all metadata loaded
+    reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
@@ -2801,6 +2781,9 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
+    // reset warning missing embedded thumbs
+    warnMissingEmbeddedThumbs = true;
+
     // set selection and current index
     //testTime.restart();
     sel->setCurrentRow(targetRow);
@@ -2809,8 +2792,6 @@ void MW::loadConcurrentNewFolder()
 void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.
-
-    isCurrent defaults to true.  MetaRead will
 
     Called after a scroll event in IconView or TableView by thumbHeasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
@@ -2836,12 +2817,17 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                     //*/
     }
     if (G::stop || dm->abortLoadingModel) return;
+
     bool isMetadataLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
     //if (G::allMetadataLoaded && isFileSelectionChange) {
-    if (G::metaReadDone && isFileSelectionChange) {
+    if (isMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
         if (G::allIconsLoaded) return;
     }
+//    if (G::metaReadDone && isFileSelectionChange) {
+//        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
+//        if (G::allIconsLoaded) return;
+//    }
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
@@ -2854,8 +2840,10 @@ void MW::loadConcurrentDone()
 /*
     Signalled from MetaRead::run when finished
 */
-    QSignalBlocker blocker(bookmarks);
+    if (G::metaReadDone) return;
     G::metaReadDone = true;
+
+    QSignalBlocker blocker(bookmarks);
 
     // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
@@ -2887,7 +2875,11 @@ void MW::loadConcurrentDone()
 
     if (reset(src + QString::number(count++))) return;
 
-    if (!ignoreAddThumbnailsDlg && !G::autoAddMissingThumbnails) {
+    if (!ignoreAddThumbnailsDlg
+        && warnMissingEmbeddedThumbs
+        && !G::autoAddMissingThumbnails)
+    {
+        warnMissingEmbeddedThumbs = false;
         chkMissingEmbeddedThumbnails();
         if (reset(src + QString::number(count++))) return;
     }
@@ -2904,6 +2896,7 @@ void MW::loadConcurrentDone()
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP
     It is also okay to filter.  */
 
+    reverseSortBtn->setEnabled(true);
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
@@ -3892,6 +3885,7 @@ void MW::preferences(QString text)
     if (G::isLogger) G::log("MW::preferences");
     if (preferencesDlg == nullptr) {
         pref = new Preferences(this);
+        //pref->resizeColumns();
         if (text != "") pref->expandBranch(text);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     }
@@ -5724,12 +5718,15 @@ void MW::mediaReadSpeed()
     QMessageBox::information(this, "", msg);
 }
 
-void MW::visCmpImages()
+void MW::findDuplicates()
 {
-    if (G::isLogger) G::log("MW::visCmpImages");
-    VisCmpDlg *visCmpDlg = new VisCmpDlg(nullptr, dm, metadata);
-    if (visCmpDlg->exec()) {
-        qDebug() << "MW::visCmpImages accepted";
+    if (G::isLogger) G::log("MW::findDuplicates");
+    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
+    findDuplicatesDlg->setStyleSheet(G::css);
+    // minimize dialog size fitting contents
+    findDuplicatesDlg->resize(100, 100);
+    if (findDuplicatesDlg->exec()) {
+        qDebug() << "MW::findDuplicates accepted";
         // add true to compare filter
         buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);
         filterChange("MW::visCmpImages");
