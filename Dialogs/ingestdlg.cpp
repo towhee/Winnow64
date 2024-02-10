@@ -4,6 +4,30 @@
 #include <QDebug>
 
 /*
+class DialogThread : public QThread
+{
+    Q_OBJECT
+
+public:
+    DialogThread(QObject *parent = 0) : QThread(parent) { }
+
+protected:
+    void run() override {
+        QDialog *dlg = new QDialog;
+        Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
+        ui->setupUi(dlg);
+        dlg->exec();
+        delete ui;
+        delete dlg;
+    }
+};
+
+// Usage:
+    DialogThread *thread = new DialogThread(this);
+    thread->start();
+*/
+
+/*
 When this dialog is invoked the files that have been picked are copied to a primary
 destination folder, and optionally, to a backup location.  This process is known as
 ingestion: selecting and copying images from a camera card to a computer.  If backround
@@ -1508,20 +1532,28 @@ void IngestDlg::on_helpBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_helpBtn_clicked");
 
+    // experiment to show dlg in another thread so modal
+//    DialogThread *thread = new DialogThread(this);
+//    thread->start();
+//    return;
+
     QDialog *dlg = new QDialog;
     Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
     ui->setupUi(dlg);
     ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Ingest Automatic Path Help");
     dlg->setStyleSheet(G::css);
+    //dlg->setWindowModality(Qt::WindowModal);
     dlg->exec();
+//    dlg->setWindowModality(Qt::ApplicationModal);
+//    dlg->show();
+//    dlg->raise(); // Bring the dialog to the front
+//    dlg->activateWindow(); // Activate the dialog
 
 //    QFile f(":/Docs/ingestautopath.html");
 //    f.open(QIODevice::ReadOnly);
 //    QDialog *dlg = new QDialog;
 //    QTextBrowser *text = new QTextBrowser;
-////    QString style = "background-color: rgb(55,55,55); font-size:" + G::fontSize + "px;";
-////    text->setStyleSheet(style);
 //    text->setMinimumWidth(600);
 //    text->setMinimumHeight(600);
 //    text->setContentsMargins(9,9,9,9);

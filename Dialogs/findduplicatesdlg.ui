@@ -1,19 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>VisCmpDlg</class>
- <widget class="QDialog" name="VisCmpDlg">
+ <class>FindDuplicatesDlg</class>
+ <widget class="QDialog" name="FindDuplicatesDlg">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1342</width>
-    <height>1115</height>
+    <width>1441</width>
+    <height>985</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Find Duplicate Images</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_13">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
    <item>
     <widget class="QFrame" name="upperMainFrame">
      <property name="sizePolicy">
@@ -35,133 +53,13 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_13">
-      <item>
-       <widget class="QFrame" name="rightFrame">
-        <property name="minimumSize">
-         <size>
-          <width>400</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>400</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_4">
-           <item>
-            <widget class="QGroupBox" name="groupBox_5">
-             <property name="font">
-              <font>
-               <pointsize>13</pointsize>
-              </font>
-             </property>
-             <property name="title">
-              <string>Candidate Images</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_2">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>12</number>
-              </property>
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_5">
-                <property name="leftMargin">
-                 <number>12</number>
-                </property>
-                <property name="topMargin">
-                 <number>18</number>
-                </property>
-                <property name="rightMargin">
-                 <number>6</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>6</number>
-                </property>
-                <item>
-                 <widget class="QTableView" name="tv">
-                  <property name="focusPolicy">
-                   <enum>Qt::NoFocus</enum>
-                  </property>
-                  <property name="selectionMode">
-                   <enum>QAbstractItemView::SingleSelection</enum>
-                  </property>
-                  <property name="selectionBehavior">
-                   <enum>QAbstractItemView::SelectRows</enum>
-                  </property>
-                  <property name="showGrid">
-                   <bool>false</bool>
-                  </property>
-                  <property name="gridStyle">
-                   <enum>Qt::NoPen</enum>
-                  </property>
-                  <attribute name="horizontalHeaderVisible">
-                   <bool>true</bool>
-                  </attribute>
-                  <attribute name="horizontalHeaderHighlightSections">
-                   <bool>false</bool>
-                  </attribute>
-                  <attribute name="verticalHeaderVisible">
-                   <bool>false</bool>
-                  </attribute>
-                  <attribute name="verticalHeaderDefaultSectionSize">
-                   <number>40</number>
-                  </attribute>
-                  <attribute name="verticalHeaderHighlightSections">
-                   <bool>false</bool>
-                  </attribute>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="toggleTvHideChecked">
-                  <property name="text">
-                   <string>Hide unchecked images</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
-      </item>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QFrame" name="leftFrame">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -192,9 +90,9 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QGroupBox" name="collectionBox">
+          <widget class="QGroupBox" name="targetBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -208,7 +106,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>160</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -221,7 +119,13 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_9">
             <property name="spacing">
-             <number>1</number>
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>12</number>
+            </property>
+            <property name="bottomMargin">
+             <number>12</number>
             </property>
             <item>
              <widget class="QFrame" name="frame_2">
@@ -292,7 +196,7 @@
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Include images in these folders</string>
+                     <string>Include images in these folders:</string>
                     </property>
                    </widget>
                   </item>
@@ -341,7 +245,7 @@
                    <number>0</number>
                   </property>
                   <property name="topMargin">
-                   <number>0</number>
+                   <number>6</number>
                   </property>
                   <property name="rightMargin">
                    <number>0</number>
@@ -358,7 +262,7 @@
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Exclude images in these folders</string>
+                     <string>Exclude images in these folders:</string>
                     </property>
                    </widget>
                   </item>
@@ -418,6 +322,9 @@
                <property name="leftMargin">
                 <number>0</number>
                </property>
+               <property name="topMargin">
+                <number>6</number>
+               </property>
                <property name="rightMargin">
                 <number>0</number>
                </property>
@@ -427,10 +334,16 @@
                <item>
                 <widget class="QCheckBox" name="includeSubfoldersCB">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>30</height>
+                  </size>
                  </property>
                  <property name="text">
                   <string>Include subfolders</string>
@@ -444,7 +357,7 @@
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
-                   <width>640</width>
+                   <width>20</width>
                    <height>20</height>
                   </size>
                  </property>
@@ -453,7 +366,7 @@
                <item>
                 <widget class="QPushButton" name="clrFoldersBtn">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -462,6 +375,12 @@
                   <size>
                    <width>0</width>
                    <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>30</height>
                   </size>
                  </property>
                  <property name="text">
@@ -505,7 +424,7 @@
            <property name="minimumSize">
             <size>
              <width>801</width>
-             <height>200</height>
+             <height>0</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -520,7 +439,7 @@
             </font>
            </property>
            <property name="title">
-            <string>Critea</string>
+            <string>Criterea</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_18">
             <property name="spacing">
@@ -528,6 +447,9 @@
             </property>
             <item>
              <layout class="QGridLayout" name="gridLayout">
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <property name="horizontalSpacing">
                <number>-1</number>
               </property>
@@ -663,10 +585,26 @@
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>1</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_5">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>10</height>
                   </size>
                  </property>
                 </spacer>
@@ -685,7 +623,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>8</height>
+                     <height>5</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -695,7 +633,10 @@
                     </size>
                    </property>
                    <property name="autoFillBackground">
-                    <bool>true</bool>
+                    <bool>false</bool>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(33, 33, 33);</string>
                    </property>
                    <property name="value">
                     <number>0</number>
@@ -828,6 +769,21 @@
             <string>Compare images (select from candidate images table)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>12</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
             <item>
              <layout class="QVBoxLayout" name="ImagsVerticalLayout">
               <property name="leftMargin">
@@ -851,16 +807,16 @@
                  <enum>QLayout::SetMinimumSize</enum>
                 </property>
                 <property name="leftMargin">
-                 <number>6</number>
+                 <number>3</number>
                 </property>
                 <property name="topMargin">
-                 <number>6</number>
+                 <number>0</number>
                 </property>
                 <property name="rightMargin">
                  <number>6</number>
                 </property>
                 <property name="bottomMargin">
-                 <number>6</number>
+                 <number>0</number>
                 </property>
                 <item>
                  <widget class="QGroupBox" name="AImageBox">
@@ -967,7 +923,7 @@
                    <string notr="true">border-width: 0</string>
                   </property>
                   <property name="title">
-                   <string>Match from collection</string>
+                   <string>Match from targeted images</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <property name="leftMargin">
@@ -1041,7 +997,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>80</height>
+                <height>0</height>
                </size>
               </property>
               <property name="frameShape">
@@ -1051,6 +1007,18 @@
                <enum>QFrame::Raised</enum>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item>
                 <widget class="QFrame" name="frame">
                  <property name="sizePolicy">
@@ -1105,6 +1073,9 @@
                     <enum>QFrame::Raised</enum>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_7">
+                    <property name="spacing">
+                     <number>0</number>
+                    </property>
                     <property name="leftMargin">
                      <number>0</number>
                     </property>
@@ -1179,7 +1150,7 @@
                      </layout>
                     </item>
                     <item>
-                     <spacer name="horizontalSpacer_7">
+                     <spacer name="horizontalSpacer_2">
                       <property name="orientation">
                        <enum>Qt::Horizontal</enum>
                       </property>
@@ -1192,26 +1163,20 @@
                      </spacer>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="matchBtn">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
+                     <spacer name="horizontalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
                       </property>
-                      <property name="maximumSize">
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
                        <size>
-                        <width>16777215</width>
-                        <height>32</height>
+                        <width>40</width>
+                        <height>20</height>
                        </size>
                       </property>
-                      <property name="text">
-                       <string>Match</string>
-                      </property>
-                      <property name="autoDefault">
-                       <bool>false</bool>
-                      </property>
-                     </widget>
+                     </spacer>
                     </item>
                    </layout>
                   </widget>
@@ -1221,7 +1186,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>32</height>
+                     <height>16777215</height>
                     </size>
                    </property>
                    <property name="frameShape">
@@ -1235,7 +1200,7 @@
                      <number>0</number>
                     </property>
                     <property name="topMargin">
-                     <number>12</number>
+                     <number>0</number>
                     </property>
                     <property name="rightMargin">
                      <number>0</number>
@@ -1245,6 +1210,12 @@
                     </property>
                     <item>
                      <widget class="QLabel" name="currentLbl">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
                       <property name="minimumSize">
                        <size>
                         <width>350</width>
@@ -1254,7 +1225,7 @@
                       <property name="maximumSize">
                        <size>
                         <width>16777215</width>
-                        <height>20</height>
+                        <height>16777215</height>
                        </size>
                       </property>
                       <property name="text">
@@ -1265,19 +1236,6 @@
                    </layout>
                   </widget>
                  </item>
-                 <item>
-                  <spacer name="verticalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>10</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
                 </layout>
                </item>
               </layout>
@@ -1285,6 +1243,141 @@
             </item>
            </layout>
           </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="rightFrame">
+        <property name="minimumSize">
+         <size>
+          <width>600</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>400</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QGroupBox" name="groupBox_5">
+             <property name="font">
+              <font>
+               <pointsize>13</pointsize>
+              </font>
+             </property>
+             <property name="title">
+              <string>Candidate Images</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_2">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_5">
+                <property name="leftMargin">
+                 <number>12</number>
+                </property>
+                <property name="topMargin">
+                 <number>18</number>
+                </property>
+                <property name="rightMargin">
+                 <number>6</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>6</number>
+                </property>
+                <item>
+                 <widget class="QTableView" name="tv">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="focusPolicy">
+                   <enum>Qt::NoFocus</enum>
+                  </property>
+                  <property name="selectionMode">
+                   <enum>QAbstractItemView::SingleSelection</enum>
+                  </property>
+                  <property name="selectionBehavior">
+                   <enum>QAbstractItemView::SelectRows</enum>
+                  </property>
+                  <property name="showGrid">
+                   <bool>false</bool>
+                  </property>
+                  <property name="gridStyle">
+                   <enum>Qt::NoPen</enum>
+                  </property>
+                  <attribute name="horizontalHeaderVisible">
+                   <bool>true</bool>
+                  </attribute>
+                  <attribute name="horizontalHeaderHighlightSections">
+                   <bool>false</bool>
+                  </attribute>
+                  <attribute name="verticalHeaderVisible">
+                   <bool>false</bool>
+                  </attribute>
+                  <attribute name="verticalHeaderDefaultSectionSize">
+                   <number>40</number>
+                  </attribute>
+                  <attribute name="verticalHeaderHighlightSections">
+                   <bool>false</bool>
+                  </attribute>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="toggleTvHideChecked">
+                  <property name="text">
+                   <string>Hide unchecked images</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -1308,13 +1401,13 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="topMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
        <number>12</number>
       </property>
       <property name="bottomMargin">
-       <number>18</number>
+       <number>0</number>
       </property>
       <item>
        <widget class="QPushButton" name="helpBtn">
@@ -1383,7 +1476,7 @@
   <customwidget>
    <class>DragToList</class>
    <extends>QListWidget</extends>
-   <header>viscmpdlg.h</header>
+   <header>findduplicatesdlg.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -117,6 +117,7 @@ bool ImageDecoder::load()
                    << fPath;
         errMsg = "Could not read metadata.";
         status = Status::NoMetadata;
+        return false;
     }
 
     if (abort) quit();
@@ -403,7 +404,7 @@ bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
     This function is called externally, does not require the DataModel and does not
     spawn a separate thread.
 
-    It is used by VisCmpDlg.
+    It is used by FindDuplicatesDlg.
 */
     this->metadata = metadata;
     fPath = m.fPath;

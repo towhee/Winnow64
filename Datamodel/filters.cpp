@@ -603,10 +603,11 @@ void Filters::setEachCatTextColor()
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent() && (*it) != search) {
-            if ((*it)->childCount() < 2)
+            if ((*it)->childCount() == 0)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
-//            else if ((*it) == activeCategory)
-//                (*it)->setForeground(0, QBrush(Qt::darkGreen));
+            // category only has one item and item not "true"
+            else if ((*it)->childCount() == 1 && (*it)->child(0)->text(0) != "true")
+                (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 bool isChecked = false;
                 for (int i = 0; i < (*it)->childCount(); i++) {

@@ -48,7 +48,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Utilities/showhelp.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -84,7 +85,8 @@ HEADERS += Dialogs/selectionorpicksdlg.h
 HEADERS += Dialogs/testaligndlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
-HEADERS += Dialogs/viscmpdlg.h
+HEADERS += \
+    Dialogs/findduplicatesdlg.h
 HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/zoomdlg.h
 HEADERS += Effects/effects.h
@@ -179,7 +181,8 @@ HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
-    Main/fileoperations.cpp
+    Main/fileoperations.cpp \
+    Utilities/showhelp.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -212,7 +215,8 @@ SOURCES += Dialogs/selectionorpicksdlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
 SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
-SOURCES += Dialogs/viscmpdlg.cpp
+SOURCES += \
+    Dialogs/findduplicatesdlg.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
 SOURCES += Effects/effects.cpp
@@ -345,7 +349,8 @@ SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
     Dialogs/erasememcardimagesdlg.ui \
-    Dialogs/viscmpdlg.ui
+    Dialogs/findduplicatesdlg.ui \
+    Help/helpfindduplicates.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui

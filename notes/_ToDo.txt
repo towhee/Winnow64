@@ -1,10 +1,18 @@
 WHAT'S NEW
+- MetaRead2
+- Fix filters (faster + bug fixes)
+- Find duplicates
+- CreateDate fixes
+- Copy / paste
 
 BUGS / TO DO
-- When copy or move images, also include any xmp files
+- Check copying message
+- Select all 2022 √ and filter right away caused crash
 - When copy or move images, should the filter be maintained?  Popup?
+0x103133cc0 Mac::getDisplayProfileURL() + 256
+0x10301b464 MW::getDisplayProfile() + 180
+0x10301a6b8 MW::setDisplayResolution() + 1096
 - Runaway memory consumption?
-- Crash when delete fixed??
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
@@ -106,6 +114,14 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Ratings covers video label on thumbs
+- Immediately start viewing images while MetaRead2 still reading metadata and icons
+- eventFilter updated metaObject className QTabBar QMainWindowTabBar version 6.7.0
+- Prefs column 0 not getting width set correctly
+- Embed thumbnails dialog opens all the time
+- Duplicates found filter category shout be highlighted if any true items
+- When copy or move images, also include any xmp/txt files
+- When unfilter, status total not always correct
 - Moved file operation functions from mainwindow.cpp to fileoperations.cpp
 - Selection lost when filter
 - If delete an image, then remote embellish to same folder, then blank icon
@@ -118,7 +134,7 @@ DONE/FIXED
 - Crash when reject files and then filter on rejected
 - IconView box cursor no longer working
 - Raw/Jpg not working in metaread2
-- Right side ocked tabs showing at bottom instead of top
+- Right side locked tabs showing at bottom instead of top
 - ImageCache running amok
 - Central widget going blank when rapidly scroll up/down in gridView
 - Multi pick and set color class clears selection

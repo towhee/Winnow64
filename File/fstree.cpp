@@ -512,11 +512,14 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // update eject drive menu item if ejectable
     QModelIndex idx = indexAt(event->pos());
     QString path = "";
+    QString folderName = "";
     if (idx.isValid()) {
         path = idx.data(Qt::ToolTipRole).toString();
+        folderName = QFileInfo(path).fileName();
     }
     emit renameEjectAction(path);
     emit renameEraseMemCardContextAction(path);
+    emit renamePasteContextAction(folderName);
 
     if (event->button() == Qt::RightButton) {
         return;

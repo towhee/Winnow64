@@ -56,7 +56,7 @@
 #include "ingestdlg.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
-#include "viscmpdlg.h"
+#include "findduplicatesdlg.h"
 //#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
@@ -432,6 +432,7 @@ private slots:
     void enableStatusBarBtns();
     void enableEjectUsbMenu(QString path);
     void renameEjectUsbMenu(QString path);
+    void renamePasteFilesMenu(QString folderName);
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
@@ -1114,6 +1115,7 @@ private:
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;
     QString refreshCurrentPath;
+    bool warnMissingEmbeddedThumbs = false;
 
     bool simulateJustInstalled;
     bool isSettings = false;
@@ -1327,7 +1329,7 @@ private:
     void logReport();
 
     void mediaReadSpeed();
-    void visCmpImages();
+    void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
