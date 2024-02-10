@@ -117,6 +117,7 @@ bool ImageDecoder::load()
                    << fPath;
         errMsg = "Could not read metadata.";
         status = Status::NoMetadata;
+        return false;
     }
 
     if (abort) quit();
