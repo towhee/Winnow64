@@ -934,7 +934,8 @@ void Metadata::clearMetadata()
     m.ISO = "";
     m.ISONum = 0;
     m.exposureCompensation = "";
-    m.exposureCompensationNum = 0;  // crazy value so cane check if not found
+    m.exposureCompensationNum = 0;  // crazy value so cane check if not
+    m.shootingInfo = "";
     m.focalLength = "";
     m.focalLengthNum = 0;
     m.focusX = 0;
@@ -1055,6 +1056,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
+        // check for heic with jpg extension
+        if (ext == "jpg" && Utilities::getString(p.file, 4, 8) == "ftypheic") ext = "heic";
+        p.file.seek(0);
         if (ext == "arw")  parsed = parseSony();
         if (ext == "cr2")  parsed = parseCanon();
         if (ext == "cr3")  parsed = parseCanonCR3();

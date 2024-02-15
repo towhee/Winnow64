@@ -1220,6 +1220,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
 
     QString search = index(row, G::SearchTextColumn).data().toString();
+    //QString search = "";
 
 //    mutex.lock();
     mLock = true;
@@ -2076,6 +2077,35 @@ QModelIndex DataModel::modelIndexFromProxyIndex(QModelIndex sfIdx)
 {
     if (G::isLogger) G::log("DataModel::modelIndexFromProxyIndex");
     return sf->mapToSource(sfIdx);
+}
+
+int DataModel::nearestProxyRowFromDmRow(int dmRow)
+{
+    // does proxy contain dmRow
+    QModelIndex dmIdx = index(dmRow, 0);
+    QModelIndex sfIdx = sf->mapFromSource(dmIdx);
+    if (sfIdx.isValid()) return sfIdx.row();
+
+    // find nearest
+    for (int i = 0; i < sf->rowCount(); i++) {
+        // backward
+        if (dmRow - i >= 0) {
+            dmIdx = index(dmRow - i, 0);
+        sfIdx = sf->mapFromSource(dmIdx);
+            if (sfIdx.isValid()) {
+                    return sfIdx.row();
+            }
+        }
+        // ahead
+        if (dmRow + i < sf->rowCount()) {
+            dmIdx = index(dmRow + i, 0);
+            sfIdx = sf->mapFromSource(dmIdx);
+            if (sfIdx.isValid()) {
+                    return sfIdx.row();
+            }
+        }
+    }
+    return -1;
 }
 
 void DataModel::saveSelection()

@@ -392,8 +392,10 @@ void TableView::createOkToShow()
     }
     showOrHide();
 
-    connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
-            this, SLOT(showOrHide()));
+    connect(ok, &QStandardItemModel::dataChanged, this, &TableView::showOrHide);
+
+//    connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
+//            this, SLOT(showOrHide()));
 }
 
 void TableView::showOrHide()

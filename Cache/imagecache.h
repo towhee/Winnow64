@@ -54,6 +54,7 @@ public:
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCacheParameters();
+    QString reportCacheDecoders();
     QString reportCache(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();

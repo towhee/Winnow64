@@ -62,6 +62,11 @@ int main(int argc, char *argv[])
     QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
                      &mw, &MW::whenActivated);
 
+//#ifdef Q_OS_MAC
+//    MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
+//    [NSApp setDelegate:delegate];
+//#endif
+
     return instance.exec();
     //*/
 }
