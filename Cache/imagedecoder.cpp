@@ -109,17 +109,6 @@ bool ImageDecoder::load()
         return false;
     }
 
-    // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
-                   << "threadId =" << threadId
-                   << fPath;
-        errMsg = "Could not read metadata.";
-        status = Status::NoMetadata;
-        return false;
-    }
-
     if (abort) quit();
 
     QFile imFile(fPath);
@@ -137,6 +126,31 @@ bool ImageDecoder::load()
     if (!imFile.open(QIODevice::ReadOnly)) {
         status = Status::FileOpen;
         return false;
+    }
+
+    // is metadata loaded rgh use isMeta in cacheItemList?
+    if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
+        if (G::isWarningLogger)
+        qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
+                   << "threadId =" << threadId
+                   << fPath;
+        errMsg = "Could not read metadata.";
+        status = Status::NoMetadata;
+        // even though could not read metadata try to load image using Qt
+        if (image.load(fPath)) {
+            imFile.close();
+            return true;
+        }
+        else {
+            imFile.close();
+            if (G::isWarningLogger)
+                qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
+                           << "threadId =" << threadId
+                           << fPath;
+            errMsg = "Could not read metadata.";
+            status = Status::NoMetadata;
+            return false;
+        }
     }
 
     // JPG format (including embedded in raw files)

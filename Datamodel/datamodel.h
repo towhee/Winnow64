@@ -66,6 +66,7 @@ public:
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);
     QModelIndex modelIndexFromProxyIndex(QModelIndex sfIdx);
+    int nearestProxyRowFromDmRow(int dmRow);
     QString diagnostics();
     QString diagnosticsErrors();
     QString diagnosticsForCurrentRow();

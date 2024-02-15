@@ -1262,7 +1262,7 @@ bool Heic::ipmaBox(quint32 &offset, quint32 &length)
         file->seek(offset + 8);
         quint16 x = Utilities::get16(file->read(2));
         auto version = (x & 0b1111000000000000) >> 12;      // first 4 bits
-        auto flags =   (x & 0b0000111111111111);            // first 4 bits
+        auto flags =   (x & 0b0000111111111111);            // next 12 bits
 
         file->seek(offset + 12);
         quint32 entry_count = Utilities::get32(file->read(4));

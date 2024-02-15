@@ -1,4 +1,33 @@
-QDialog *dlg = new QDialog;
-Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
-ui->setupUi(dlg);
-dlg->show();
+24       60        9     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  3175725   /Users/roryhill/Downloads/IMG_0322.JPG
+25       57        7     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0326.JPG
+26       54        6     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0327.JPG
+27       51        4     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0336.JPG
+28       48        3     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0338.JPG
+29       45        1     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0341.JPG
+30       42       -1    false        0    false    false    Ready    false    false     true     true     true     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0352.MOV
+31       39        9     true    15838     true    false FileOpen    false     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0354.JPG
+32       36        2     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  2506389   /Users/roryhill/Downloads/IMG_0356.jpg
+33       33        5     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  1899834   /Users/roryhill/Downloads/IMG_0359.jpg
+34       30        8     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  1593169   /Users/roryhill/Downloads/IMG_0365.jpg
+35       27       11     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  2338949   /Users/roryhill/Downloads/IMG_0373.JPG
+36       24       14     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0375.HEIC
+37       21       17     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0376.HEIC
+38       18       15     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0377.HEIC
+39       15       -1    false        0    false    false    Ready    false    false     true     true     true      2.034        1        0        0   /Users/roryhill/Downloads/IMG_0378.MOV
+Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCached Metadata   Update    Video     SizeMB Estimate   Offset   Length   File Name                                                                                           Error message
+40       12       -1    false        0    false    false    Ready    false     true     true     true     true      2.034        1        0        0   /Users/roryhill/Downloads/IMG_0381.MOV
+41        9        5     true    18910     true    false FileOpen    false     true     true     true    false     46.000        0        0  2504550   /Users/roryhill/Downloads/IMG_0382.jpg
+42        6       19     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0397.HEIC
+43        3       12     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0472.HEIC
+44        0       10     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0480.HEIC
+45        1        0     true    14003     true    false FileOpen    false     true     true     true    false      2.486        1        0        0   /Users/roryhill/Downloads/IMG_0492.HEIC
+46        2       13     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0494.HEIC
+47        4       -1    false        0    false    false    Ready    false    false     true     true     true      3.206        1        0        0   /Users/roryhill/Downloads/IMG_0505.mov
+48        5        9     true        1    false     true     Done     true     true     true     true    false     58.000        0        0  4388680   /Users/roryhill/Downloads/IMG_0510.jpg
+49        7        8     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0512.HEIC
+50        8        2     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  3570182   /Users/roryhill/Downloads/IMG_0518.JPG
+51       10       17     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0534.HEIC
+52       11       14     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0536.HEIC
+53       13       11     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0537.HEIC
+54       14       -1    false        0    false    false    Ready    false    false     true     true     true      3.008        1        0        0   /Users/roryhill/Downloads/IMG_0539.MOV
+55       16       15     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0540.HEIC

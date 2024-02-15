@@ -624,7 +624,7 @@ bool ImageCache::nextToCache(int id)
 
         // max attempts exceeded
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage && !G::metaReadDone) {
-            qDebug() << "ImageCache::nextToCache exceeded max attempts" << i;
+            //qDebug() << "ImageCache::nextToCache exceeded max attempts" << i;
             continue;
         }
 
@@ -801,14 +801,18 @@ void ImageCache::removeFromCache(QStringList &pathList)
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPathToRemove = pathList.at(i);
         icd->imCache.remove(fPathToRemove);
-        for (int j = 0; j < icd->cacheItemList.length(); ++j) {
+        for (int j = icd->cacheItemList.length() - 1; j >= 0; --j) {
             QString fPath = pathFromKey[j];
-            //gMutex.lock();
             if (fPath == fPathToRemove) {
                 icd->cacheItemList.removeAt(j);
             }
-            //gMutex.unlock();
         }
+//        for (int j = 0; j < icd->cacheItemList.length(); ++j) {
+//            QString fPath = pathFromKey[j];
+//            if (fPath == fPathToRemove) {
+//                icd->cacheItemList.removeAt(j);
+//            }
+//        }
     }
     icd->cache.totFiles = icd->cacheItemList.length();
 
@@ -865,6 +869,7 @@ QString ImageCache::diagnostics()
     rpt << "Load algorithm: " << (G::isLoadLinear == true ? "Linear" : "Concurrent");
     rpt << "\n";
     rpt << reportCacheParameters();
+    rpt << reportCacheDecoders();
     rpt << reportCache("");
     rpt << reportImCache();
 
@@ -910,6 +915,34 @@ QString ImageCache::reportCacheParameters()
     rpt << "cacheSizeHasChanged      = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
     rpt << "filterOrSortHasChanged   = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
     rpt << "isCacheUpToDate          = " << (isCacheUpToDate ? "true" : "false") << "\n";
+    return reportString;
+}
+
+QString ImageCache::reportCacheDecoders()
+{
+    log("reportCacheDecoders");
+    if (debugCaching) qDebug() << "ImageCache::reportCacheDecoders";
+
+    QString reportString;
+
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "\nDecoders:\n";
+    rpt << "   ";
+    rpt << "ID  ";
+    rpt << "Status        ";
+    rpt << "Instance ";
+    rpt << "\n";
+    for (int id = 0; id < decoderCount; ++id) {
+        rpt << "   ";
+        rpt << QString::number(id).leftJustified(4);
+        rpt << decoder[id]->statusText.at(decoder[id]->status).leftJustified(14);
+        rpt << QString::number(instance).leftJustified(9);
+        rpt << "\n";
+    }
+
     return reportString;
 }
 
@@ -1582,12 +1615,13 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
-//    if (debugCaching)
-//    {
-//        qDebug().noquote() << "ImageCache::setCurrentPosition" << fPath
-//                           << "src =" << src
-//                           << "isRunning =" << isRunning();
-//    }
+    if (debugCaching)
+    {
+        qDebug().noquote() << "ImageCache::setCurrentPosition" << fPath
+                           << "src =" << src
+                           << "isRunning =" << isRunning();
+    }
+
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
         if (G::isWarningLogger)
             qWarning() << "WARNING"
@@ -1597,6 +1631,14 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
                        << src
                        << fPath;
         return;
+    }
+
+    // reset decoders status if necessary
+    for (int id = 0; id < decoderCount; ++id) {
+        ImageDecoder *d = decoder[id];
+        if (!d->isRunning() && d->status != ImageDecoder::Status::Ready) {
+            d->setReady();
+        }
     }
 
     if (useMutex) gMutex.lock();

@@ -216,7 +216,7 @@ void MW::deleteSelectedFiles()
     }
 
     if (deleteWarning) {
-        QMessageBox msgBox;
+        QMessageBox msgBox(this);
         int msgBoxWidth = 300;
         msgBox.setWindowTitle("Delete Images");
 #ifdef Q_OS_WIN
@@ -235,8 +235,17 @@ void MW::deleteSelectedFiles()
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-        //msgBox.show();
-        //msgBox.move(centralWidget->geometry().center());
+        msgBox.show();
+        QPoint pos = geometry().center() + QPoint(0, 300);
+        qDebug() << "MW::deleteSelectedFiles before move"
+                 << "msgBox =" << msgBox.pos()
+                 << "geometry().topLeft() =" << geometry().topLeft()
+                 << "geometry().center() =" << geometry().center()
+                 << "geometry() =" << geometry()
+                 << "pos =" << pos
+            ;
+        msgBox.move(geometry().center());
+//        msgBox.move(QPoint(0,0));
         int ret = msgBox.exec();
         resetFocus();
         if (ret == QMessageBox::Cancel) return;
@@ -260,7 +269,7 @@ void MW::deleteFiles(QStringList paths)
     /*
     Delete from disk, remove from datamodel, remove from ImageCache and update the
     image cache status bar.
-*/
+    */
     if (G::isLogger) G::log("MW::deleteFiles");
     QElapsedTimer t;
     t.restart();
@@ -279,10 +288,15 @@ void MW::deleteFiles(QStringList paths)
     /* save the index to the first row in selection (order depends on how selection was
        made) to insure the correct index is selected after deletion.  */
     int lowRow = 999999;
-    for (int i = 0; i < paths.count(); ++i) {
-        int row = dm->proxyRowFromPath(paths.at(i));
-        if (row < lowRow) {
-            lowRow = row;
+    if (dm->sf->rowCount() == 1) {
+        lowRow = dm->rowFromPath(paths.at(0));
+    }
+    else {
+        for (int i = 0; i < paths.count(); ++i) {
+            int row = dm->proxyRowFromPath(paths.at(i));
+            if (row < lowRow) {
+                lowRow = row;
+            }
         }
     }
 
@@ -354,16 +368,25 @@ void MW::deleteFiles(QStringList paths)
 
     G::ignoreScrollSignal = false;
 
+    // rebuild filters
+    buildFilters->build();
+    //    buildFilters->recount();
+    qDebug() << "MW::deleteFiles rebuild filters all done   ms =" << t.elapsed(); t.restart();
+
     // update current index
+    int sfRow;
+    qDebug() << "MW::deleteFiles  lowRow1 =" << lowRow;
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
-    QModelIndex sfIdx = dm->sf->index(lowRow, 0);
+    qDebug() << "MW::deleteFiles  lowRow2 =" << lowRow;
+    sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
+
+    qDebug() << "MW::deleteFiles  sfRow =" << sfRow;
+    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    qDebug() << "MW::deleteFiles sfIdx.row() =" << sfIdx.row();
     sel->select(sfIdx);
 
     qDebug() << "MW::deleteFiles update current index       ms =" << t.elapsed(); t.restart();
 
-    // rebuild filters
-    buildFilters->recount();
-    qDebug() << "MW::deleteFiles rebuild filters all done   ms =" << t.elapsed(); t.restart();
 }
 
 void MW::deleteFolder()

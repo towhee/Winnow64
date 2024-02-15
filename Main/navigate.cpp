@@ -174,3 +174,62 @@ void MW::scrollToCurrentRow()
     metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
 }
 
+void MW::jump()
+{
+    class LineEditDialog : public QDialog {
+
+    public:
+        LineEditDialog(QWidget *parent = nullptr) : QDialog(parent) {
+            setWindowFlags(windowFlags() | Qt::FramelessWindowHint);       // Set on top of all windows
+            QHBoxLayout *layout = new QHBoxLayout(this);
+            QFontMetrics fm(this->font());
+            QLabel *label = new QLabel;
+            label->setText("Jump to row");
+            label->setFixedWidth(fm.boundingRect("----Jump to row----").width());
+            layout->addWidget(label);
+            lineEdit = new QLineEdit(this);
+            lineEdit->setFixedWidth(fm.boundingRect("9999999").width());
+            layout->addWidget(lineEdit);
+            setLayout(layout);
+            layout->setSpacing(1);
+            int w = label->width() + lineEdit->width() + 20;
+            setFixedWidth(w);
+        }
+
+        QString text() const {
+            return lineEdit->text();
+        }
+
+    protected:
+        void keyPressEvent(QKeyEvent *event) override {
+            if (event->key() == Qt::Key_Return || (event->key() == Qt::Key_Enter)) {
+                accept();
+            } else if (event->key() == Qt::Key_Escape) {
+                reject();
+            } else {
+                QDialog::keyPressEvent(event);
+            }
+        }
+
+    private:
+        QLineEdit *lineEdit;
+    };
+
+//    QStringList empty;
+//    QString srow = Utilities::inputText("Jump","Enter row:", empty, "");
+
+    LineEditDialog dialog(this);
+    QString srow;
+    if(dialog.exec() == QDialog::Accepted) {
+        srow = dialog.text();
+    }
+
+    bool ok;
+    int sfRow = srow.toInt(&ok);
+    if (ok) {
+        sfRow--;        // IconView is 1 to rowCount
+        if (sfRow >= dm->sf->rowCount()) sfRow = dm->sf->rowCount() - 1;
+        if (sfRow < 0) sfRow = 0;
+        sel->select(sfRow);
+    }
+}

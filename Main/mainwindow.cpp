@@ -831,6 +831,7 @@ void MW::keyPressEvent(QKeyEvent *event)
     if (G::isLogger) G::log("MW::keyPressEvent");
 
     if (event->key() == Qt::Key_Return) {
+        qDebug() << "MW::keyPressEvent Key_Return";
         if (G::mode == "Loupe") {
             if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
                 if (G::useMultimedia) videoView->playOrPause();
@@ -956,6 +957,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
+    // return false to propagate events
     /* ALL EVENTS (uncomment to use)
     if (event->type()
                              != QEvent::Paint
@@ -1427,7 +1429,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
-    return QWidget::eventFilter(obj, event);
+    //return QWidget::eventFilter(obj, event);
+    return false;
 }
 
 void MW::focusChange(QWidget *previous, QWidget *current)
@@ -2791,7 +2794,8 @@ void MW::loadConcurrentNewFolder()
 
 void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 /*
-    Starts or redirects MetaRead metadata and thumb loading at sfRow.
+    Starts or redirects MetaRead metadata and thumb loading at sfRow.  If all
+    metadata and icons have been read then fileSelectionChange is called.
 
     Called after a scroll event in IconView or TableView by thumbHeasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
@@ -2800,12 +2804,12 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
-    { // debug
+    // debug
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
-//    /*
     if (G::isLogger || G::isFlowLogger)
+    {
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
                  << "src =" << src
@@ -2814,20 +2818,16 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
-                    //*/
     }
+
     if (G::stop || dm->abortLoadingModel) return;
 
     bool isMetadataLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-    //if (G::allMetadataLoaded && isFileSelectionChange) {
     if (isMetadataLoaded && isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
         if (G::allIconsLoaded) return;
     }
-//    if (G::metaReadDone && isFileSelectionChange) {
-//        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
-//        if (G::allIconsLoaded) return;
-//    }
+
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
@@ -2864,7 +2864,7 @@ void MW::loadConcurrentDone()
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
-    /*
+    /* elapsed time
     qDebug().noquote()
              << "            MW::loadConcurrentDone       Elapsed     "
              << QString::number(testTime.elapsed()).rightJustified((5)) << "ms"

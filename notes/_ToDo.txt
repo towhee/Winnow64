@@ -4,6 +4,7 @@ WHAT'S NEW
 - Find duplicates
 - CreateDate fixes
 - Copy / paste
+- Jump to row
 
 BUGS / TO DO
 - Check copying message

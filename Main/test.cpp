@@ -165,7 +165,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    reverseSortBtn->setEnabled(false);
+//    sel->save();
+//    return;
+
+    QMessageBox msgBox;
+    msgBox.setGeometry(100, 100, 200, 200);
+//    msgBox.show();
+//    QTimer::singleShot(0, [&msgBox] () { msgBox.move(100, 100); });
+//    QApplication::processEvents();
+    //msgBox.move(100, 100);
+    msgBox.exec();
+    qDebug() << "done";
 }
 
 /*

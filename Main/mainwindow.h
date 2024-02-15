@@ -508,6 +508,7 @@ private slots:
     void keyScrollPageDown();
     void keyScrollPageUp();
     void scrollToCurrentRow();
+    void jump();
     void zoomToggle();
     // status functions
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
@@ -776,6 +777,8 @@ private:
 //    QAction *keyEndAction;
 //    QAction *keyPageUpAction;
 //    QAction *keyPageDownAction;
+
+    QAction *jumpAction;
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;

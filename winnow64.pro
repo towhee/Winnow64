@@ -17,7 +17,8 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #QMAKE_APPLE_DEVICE_ARCHS = arm64
 #QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
 
-CONFIG += c++1z
+//CONFIG += c++1z
+CONFIG += c++17
 win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
 win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
