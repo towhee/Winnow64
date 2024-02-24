@@ -2804,7 +2804,6 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
-    // debug
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
@@ -2822,17 +2821,26 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
     if (G::stop || dm->abortLoadingModel) return;
 
-    bool isMetadataLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-    if (isMetadataLoaded && isFileSelectionChange) {
-        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
-        if (G::allIconsLoaded) return;
+    // Scroll
+    if (!isFileSelectionChange && !G::allIconsLoaded) {
+        frameDecoder->clear();
+        updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
+        metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
+        return;
     }
 
-    if (!G::allMetadataLoaded || !G::allIconsLoaded) {
+    // Change selection while MetaRead not finished
+    //if (!G::metaReadDone || !G::allIconsLoaded) {
+    if (!G::metaReadDone) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
     }
+    // Change selection
+    else if (isFileSelectionChange) {
+        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
+    }
+
 }
 
 void MW::loadConcurrentDone()
@@ -2942,7 +2950,7 @@ void MW::loadLinearNewFolder()
     // add all metadata to datamodel
     G::t.restart();
     dm->addAllMetadata();
-    if (!dm->isAllMetadataLoaded()) {
+    if (!dm->isAllMetadataAttempted()) {
         qWarning() << "WARNING" << "MW::loadLinearNewFolder" << "Not all metadata loaded";
 //        return;
     }
@@ -3269,7 +3277,7 @@ void MW::loadEntireMetadataCache(QString source)
              << "G::isInitializing: " << G::isInitializing
              ;
     if (G::isInitializing) return;
-    if (dm->isAllMetadataLoaded()) return;
+    if (dm->isAllMetadataAttempted()) return;
 
     updateIconRange("MW::loadEntireMetadataCache");
 
@@ -5381,12 +5389,14 @@ void MW::refreshCurrentFolder()
 
             // update thumbnail in case image has changed
             QImage image;
+            QPixmap pm;
             bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, "MW::refreshCurrentFolder");
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                QModelIndex dmIdx = dm->index(dmRow, 0);
-                dm->setIcon(dmIdx, pm, dm->instance, src);
-            }
+            if (thumbLoaded)
+                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            else
+                pm = QPixmap(":/images/error_image256.png");
+            QModelIndex dmIdx = dm->index(dmRow, 0);
+            dm->setIcon(dmIdx, pm, dm->instance, src);
         }
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
 //        metadataCacheThread->loadNewFolder(true);

@@ -234,14 +234,16 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     // get status information
     QFileInfo fileInfo(fPath);
+
     // check permissions
     oldPermissions = fileInfo.permissions();
     if (!(oldPermissions & QFileDevice::ReadUser)) {
         QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
         QFile(fPath).setPermissions(newPermissions);
     }
-    QString ext = fileInfo.suffix().toLower();
 
+    // get relevent metadata
+    QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->rowFromPath(fPath);
     isDimensions = dm->index(dmRow, G::WidthColumn).data().toInt() > 0;
     isAspectRatio = dm->index(dmRow, G::AspectRatioColumn).data().toInt() > 0;
@@ -258,63 +260,58 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
                 //*/
     isEmbeddedThumb = offsetThumb && lengthThumb;
     bool isVideo = metadata->videoFormats.contains(ext);
-    // req'd ??
-    bool isMetadataLoaded = dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
 
-    bool success = false;
+    bool loaded = false;
 
-    // if video file then just show video icon unless G::renderVideoThumb
+    // if video file then just show video icon unless G::renderVideoThumb and return
     if (isVideo) {
         if (G::renderVideoThumb) {
             loadFromVideo(fPath, dmRow);
         }
-        success = true;
+        loaded = true;
     }
+    else {
+        // raw image file or tiff with embedded jpg thumbnail
+        if (!loaded && isEmbeddedThumb) {
+            loaded = loadFromJpgData(fPath, image);
+        }
 
-    // raw image file or tiff with embedded jpg
-    else if (isEmbeddedThumb) {
-        success = loadFromJpgData(fPath, image);
-    }
+//        // The image type might not have metadata we can read, so load entire image and resize
+//        if (!loaded && !metadata->hasMetadataFormats.contains(ext)) {
+//            loaded = loadFromEntireFile(fPath, image, dmRow);
+//        }
 
-    // The image type might not have metadata we can read, so load entire image and resize
-    else if (!metadata->hasMetadataFormats.contains(ext)) {
-        success = loadFromEntireFile(fPath, image, dmRow);
-    }
+        if (!loaded && ext == "heic") {
+            loaded = loadFromHeic(fPath, image);
+        }
 
-    else if (ext == "heic") {
-        success = loadFromHeic(fPath, image);
-    }
+        if (!loaded && ext == "tif") {
+            loaded = loadFromTiff(fPath, image, dmRow);
+        }
 
-    else if (ext == "tif") {
-        success = loadFromTiff(fPath, image, dmRow);
-    }
+        // all other image files
+        if (!loaded) {
+            // read the image file (supported by Qt), scaling to thumbnail size
+            loaded = loadFromEntireFile(fPath, image, dmRow);
+        }
 
-    // all other image files
-    else  {
-        // read the image file (supported by Qt), scaling to thumbnail size
-        success = loadFromEntireFile(fPath, image, dmRow);
-        image.convertTo(QImage::Format_RGB32);
-    }
-
-    if (!isVideo) {
-        if (success && !isVideo) {
+        if (loaded) {
             // scale to max icon size
             image = image.scaled(thumbMax, Qt::KeepAspectRatio);
             image.convertTo(QImage::Format_RGB32);
 
             // rotate if there is orientation metadata
-            //if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
+            if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
         }
         else {
             // show bad image png
-            QString path = ":/images/badImage1.png";
-            loadFromEntireFile(path, image, dmRow);
-            G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
-            qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
+    //        QString path = ":/images/badImage1.png";
+    //        loadFromEntireFile(path, image, dmRow);
+    //        G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
+    //        qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
         }
     }
 
-    if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     QFile(fPath).setPermissions(oldPermissions);
 
     /*
@@ -322,7 +319,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
              << "dmRow =" << dmRow
              << "success =" << success
         ; //*/
-    return success;
+    return loaded;
 }
 
 void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)

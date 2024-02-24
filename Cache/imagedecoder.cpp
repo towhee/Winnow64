@@ -136,6 +136,7 @@ bool ImageDecoder::load()
                    << fPath;
         errMsg = "Could not read metadata.";
         status = Status::NoMetadata;
+
         // even though could not read metadata try to load image using Qt
         if (image.load(fPath)) {
             imFile.close();
@@ -312,6 +313,7 @@ bool ImageDecoder::load()
         return false;
     }
 
+    status = Status::Done;
     return true;
 }
 
