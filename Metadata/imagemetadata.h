@@ -31,6 +31,7 @@ public:
     bool pick = false;
     bool ingested = false;
     bool video = false;
+    bool metadataAttempted = false;         // all metadata except thumb
     bool metadataLoaded = false;            // all metadata except thumb
     bool isEmbeddedThumbMissing = false;
     bool isThumbLoaded = false;             // refers to thumb only

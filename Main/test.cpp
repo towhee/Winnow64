@@ -165,21 +165,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    sel->save();
-//    return;
-
-    QMessageBox msgBox;
-    msgBox.setGeometry(100, 100, 200, 200);
-//    msgBox.show();
-//    QTimer::singleShot(0, [&msgBox] () { msgBox.move(100, 100); });
-//    QApplication::processEvents();
-    //msgBox.move(100, 100);
-    msgBox.exec();
-    qDebug() << "done";
+    //QModelIndex sfIdx = dm->sf->index(0,0);
+    sel->select(0);
 }
-
 /*
    Performance
+468,338 MetaRead2::dispatch: return from reader            id =  9 row =  792
         Big max number of thumbnails
         Turn color management off
         Hide caching progress

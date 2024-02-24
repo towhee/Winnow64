@@ -101,7 +101,7 @@ bool Reader::readMetadata()
              << "Reader::readMetadata                        "
              << "id =" << QString::number(threadId).leftJustified(2, ' ')
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-             //<< fPath
+             << fPath
             ;
     }
     // read metadata from file into metadata->m
@@ -112,6 +112,8 @@ bool Reader::readMetadata()
     //if (isMetaLoaded) {
         metadata->m.row = dmRow;
         metadata->m.instance = instance;
+        metadata->m.metadataAttempted = true;
+        metadata->m.metadataLoaded = isMetaLoaded;
 
         if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
         //if (abort) quit();
@@ -149,9 +151,13 @@ void Reader::readIcon()
 
     int dmRow = dmIdx.row();
     QImage image;
+    // get thumbnail or err.png
     bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
     if (abort) return;
     if (isVideo) return;
+
+    //pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+
     if (thumbLoaded) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     }

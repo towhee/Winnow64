@@ -47,6 +47,16 @@ public:
               Filters *filters,
               bool &combineRawJpg);
 
+//    enum Status {
+//        MetaAttempted = 1,
+//        MetaRead = 2,
+//        IconRead = 4,
+//        ImageDecodable = 8
+//    };
+//    inline Status operator| (Status a, Status b) {
+//        return static_cast<Status> (static_cast<int> (a) | static_cast<int> (b));
+//    }
+
     void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
@@ -75,7 +85,9 @@ public:
     bool metadataLoaded(int dmRow);
     bool missingThumbnails();
     bool subFolderImagesLoaded = false;
+    bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
+    bool isAllMetadataAttempted();
     bool isAllMetadataLoaded();
     QList<int> metadataNotLoaded();
     int iconCount();

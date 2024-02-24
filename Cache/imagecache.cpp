@@ -542,7 +542,7 @@ bool ImageCache::nextToCache(int id)
       maxAttemptsToCacheImage.
 
 */
-    log("nextToCache", "CacheUpToDate = " + QVariant(cacheUpToDate()).toString());
+    //log("nextToCache", "CacheUpToDate = " + QVariant(cacheUpToDate()).toString());
     bool debugThis = false;
     if (debugCaching) qDebug() << "ImageCache::nextToCache";
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
@@ -573,6 +573,7 @@ bool ImageCache::nextToCache(int id)
         int i = priorityList.at(p);
         //qDebug() << p << i << priorityList;
 
+        /*
         log("nextToCache row",
             "decoder " + QString::number(id).leftJustified(3) +
             "row = " + QString::number(i).leftJustified(5) +
@@ -582,6 +583,7 @@ bool ImageCache::nextToCache(int id)
             "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3) +
             "decoder status = " + decoder.at(id)->statusText.at(icd->cacheItemList.at(i).status)
             );
+        */
 
         // out of range
         if (i >= icd->cacheItemList.size()) {
@@ -656,6 +658,7 @@ bool ImageCache::nextToCache(int id)
                      << "decoder status =" << icd->cacheItemList.at(i).status
                 ;
         }
+        /*
         log("nextToCache result",
             "decoder " + QString::number(id).leftJustified(3) +
             "row = " + QString::number(i).leftJustified(5) +
@@ -665,6 +668,7 @@ bool ImageCache::nextToCache(int id)
             "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3) +
             "decoder status = " + decoder.at(id)->statusText.at(icd->cacheItemList.at(i).status)
             );
+        */
         return true;
     }
     icd->cache.toCacheKey = -1;
@@ -686,7 +690,7 @@ bool ImageCache::cacheUpToDate()
 /*
     Determine if all images in the target range are cached or being cached.
 */
-    log("cacheUpToDate", "Start");
+    //log("cacheUpToDate", "Start");
     bool debugThis = false;
     isCacheUpToDate = true;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
@@ -694,6 +698,7 @@ bool ImageCache::cacheUpToDate()
         if (i >= icd->cacheItemList.count()) break;
         // check if image was passed over while rapidly traversing the folder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).decoderId == -1) {
+            /*
             log("cacheUpToDate passover",
                     "row = " + QString::number(i).leftJustified(5) +
                     "row decoder = " + QString::number(icd->cacheItemList.at(i).decoderId).leftJustified(3) +
@@ -701,6 +706,7 @@ bool ImageCache::cacheUpToDate()
                     "isCaching = " + QVariant(icd->cacheItemList.at(i).isCaching).toString().leftJustified(6) +
                     "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
                 );
+            */
             icd->cacheItemList[i].isCached = false;
             icd->cacheItemList[i].isCaching = false;
             isCacheUpToDate = false;
@@ -708,6 +714,7 @@ bool ImageCache::cacheUpToDate()
         }
         // check if caching image is in progress
         if (!icd->cacheItemList.at(i).isCached && !icd->cacheItemList.at(i).isCaching) {
+            /*
             log("cacheUpToDate noactivity",
                 "row = " + QString::number(i).leftJustified(5) +
                     "row decoder = " + QString::number(icd->cacheItemList.at(i).decoderId).leftJustified(3) +
@@ -715,6 +722,7 @@ bool ImageCache::cacheUpToDate()
                     "isCaching = " + QVariant(icd->cacheItemList.at(i).isCaching).toString().leftJustified(6) +
                     "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
                 );
+            */
             if (debugThis)
             qDebug() << "ImageCache::cacheUpToDate  failed on row" << i
                      << "isCached =" << icd->cacheItemList.at(i).isCached
@@ -732,13 +740,13 @@ bool ImageCache::cacheUpToDate()
                  << "targetLast =" << icd->cache.targetLast
             ;
     }
-    log("cacheUpToDate", QVariant(isCacheUpToDate).toString());
+    //log("cacheUpToDate", QVariant(isCacheUpToDate).toString());
     return isCacheUpToDate;
 }
 
 void ImageCache::setSizeMB(int id, int cacheKey)
 {
-    /*
+/*
     For images that Winnow does not have the metadata describing the size (width and
     height), ie PNG files, an initial sizeMB is estimated to be used in the target range.
     After a decoder has converted the file into a QImage the sizeMB, dimensions (w,h) and
@@ -930,15 +938,17 @@ QString ImageCache::reportCacheDecoders()
     reportString = "";
     rpt.setString(&reportString);
     rpt << "\nDecoders:\n";
-    rpt << "   ";
-    rpt << "ID  ";
+    rpt << "  ID  ";
     rpt << "Status        ";
+    rpt << "  Key  ";
     rpt << "Instance ";
     rpt << "\n";
     for (int id = 0; id < decoderCount; ++id) {
-        rpt << "   ";
-        rpt << QString::number(id).leftJustified(4);
+        rpt << QString::number(id).rightJustified(4);
+        rpt << "  ";
         rpt << decoder[id]->statusText.at(decoder[id]->status).leftJustified(14);
+        rpt << QString::number(decoder[id]->cacheKey).rightJustified(5);
+        rpt << "  ";
         rpt << QString::number(instance).leftJustified(9);
         rpt << "\n";
     }
@@ -1007,10 +1017,10 @@ QString ImageCache::reportCache(QString title)
             rpt.setFieldWidth(1);
             rpt.setFieldWidth(3);
             rpt << "   ";
-            rpt.setFieldWidth(50);
+            rpt.setFieldWidth(30);
             rpt << "File Name";
             rpt << " ";
-            rpt.setFieldWidth(40);
+            rpt.setFieldWidth(50);
             rpt << "Error message";
             rpt.setFieldWidth(0);
             rpt << "\n";
@@ -1044,12 +1054,12 @@ QString ImageCache::reportCache(QString title)
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(3);
         rpt << "   ";
-        rpt.setFieldWidth(50);
-        rpt << icd->cacheItemList.at(i).fPath;
+        rpt.setFieldWidth(30);
+        rpt << Utilities::getFileName(icd->cacheItemList.at(i).fPath);
         rpt.setFieldWidth(1);
         rpt << " ";
-        rpt.setFieldWidth(40);
-        rpt << icd->cacheItemList.at(i).errMsg.left(40);
+        rpt.setFieldWidth(50);
+        rpt << icd->cacheItemList.at(i).errMsg.left(50);
         rpt.setFieldWidth(0);
         rpt << "\n";
         if (icd->cacheItemList.at(i).isCached) cachedCount++;
@@ -1274,6 +1284,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = row;
+        //icd->cacheItem.metadataLoaded = true;
         icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
 
         // insert new row
@@ -1673,6 +1684,7 @@ void ImageCache::decodeNextImage(int id)
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].decoderId = id;
     icd->cacheItemList[row].attempts += 1;
+    /*
     log("decodeNextImage",
         "decoder " + QString::number(id).leftJustified(3) +
         "row = " + QString::number(icd->cache.toCacheKey).leftJustified(5) +
@@ -1683,6 +1695,7 @@ void ImageCache::decodeNextImage(int id)
         "isMetadata = " + QVariant(icd->cacheItemList.at(row).metadataLoaded).toString().leftJustified(6) +
         "status = " + decoder.at(id)->statusText.at(icd->cacheItemList.at(row).status)
         );
+    */
     if (debugCaching || G::isLogger)
     {
         QString k = QString::number(row).leftJustified((4));
@@ -1712,7 +1725,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
     QString comment = "decoder " + QString::number(id).leftJustified(3) +
                       "row = " + QString::number(cacheKey).leftJustified(5) +
                       "decoder[id]->fPath =" + decoder[id]->fPath;
-    log ("cacheImage", comment);
+    if (G::isLogger || G::isFlowLogger) log ("cacheImage", comment);
     if (debugCaching)
     {
         QString k = QString::number(cacheKey).leftJustified((4));

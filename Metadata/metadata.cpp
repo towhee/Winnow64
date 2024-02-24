@@ -900,6 +900,8 @@ void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
+    m.metadataAttempted = false;
+    m.metadataLoaded = false;
     m.offsetFull = 0;
     m.lengthFull = 0;
     m.widthPreview = 0;
@@ -1167,7 +1169,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         // get exif image created for image formats not included in Winnow
         QString createdDate = readExifToolTag(m.fPath, "createdate");
         m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
-        m.metadataLoaded = true;
+        //m.metadataLoaded = true;
         if (G::useSidecar) {
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadOnly)) {
@@ -1189,6 +1191,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
+    m.metadataAttempted = true;
     if (!m.metadataLoaded) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;

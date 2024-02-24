@@ -32,6 +32,7 @@ namespace G
     bool isLinearLoadDone;
     bool metaReadDone;
     bool allMetadataLoaded;
+    bool allMetadataAttempted;
     bool allIconsLoaded;
 
     int dmInstance;
