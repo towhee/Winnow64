@@ -1,33 +1,180 @@
-24       60        9     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  3175725   /Users/roryhill/Downloads/IMG_0322.JPG
-25       57        7     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0326.JPG
-26       54        6     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0327.JPG
-27       51        4     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0336.JPG
-28       48        3     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0338.JPG
-29       45        1     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0341.JPG
-30       42       -1    false        0    false    false    Ready    false    false     true     true     true     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0352.MOV
-31       39        9     true    15838     true    false FileOpen    false     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0354.JPG
-32       36        2     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  2506389   /Users/roryhill/Downloads/IMG_0356.jpg
-33       33        5     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  1899834   /Users/roryhill/Downloads/IMG_0359.jpg
-34       30        8     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  1593169   /Users/roryhill/Downloads/IMG_0365.jpg
-35       27       11     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  2338949   /Users/roryhill/Downloads/IMG_0373.JPG
-36       24       14     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0375.HEIC
-37       21       17     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0376.HEIC
-38       18       15     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0377.HEIC
-39       15       -1    false        0    false    false    Ready    false    false     true     true     true      2.034        1        0        0   /Users/roryhill/Downloads/IMG_0378.MOV
-Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCached Metadata   Update    Video     SizeMB Estimate   Offset   Length   File Name                                                                                           Error message
-40       12       -1    false        0    false    false    Ready    false     true     true     true     true      2.034        1        0        0   /Users/roryhill/Downloads/IMG_0381.MOV
-41        9        5     true    18910     true    false FileOpen    false     true     true     true    false     46.000        0        0  2504550   /Users/roryhill/Downloads/IMG_0382.jpg
-42        6       19     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0397.HEIC
-43        3       12     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0472.HEIC
-44        0       10     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0480.HEIC
-45        1        0     true    14003     true    false FileOpen    false     true     true     true    false      2.486        1        0        0   /Users/roryhill/Downloads/IMG_0492.HEIC
-46        2       13     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0494.HEIC
-47        4       -1    false        0    false    false    Ready    false    false     true     true     true      3.206        1        0        0   /Users/roryhill/Downloads/IMG_0505.mov
-48        5        9     true        1    false     true     Done     true     true     true     true    false     58.000        0        0  4388680   /Users/roryhill/Downloads/IMG_0510.jpg
-49        7        8     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0512.HEIC
-50        8        2     true        1    false     true     Done     true     true     true     true    false     46.000        0        0  3570182   /Users/roryhill/Downloads/IMG_0518.JPG
-51       10       17     true        1    false     true     Done     true     true     true     true    false     46.000        0        0        0   /Users/roryhill/Downloads/IMG_0534.HEIC
-52       11       14     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0536.HEIC
-53       13       11     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0537.HEIC
-54       14       -1    false        0    false    false    Ready    false    false     true     true     true      3.008        1        0        0   /Users/roryhill/Downloads/IMG_0539.MOV
-55       16       15     true        1    false     true     Done     true     true     true     true    false     46.512        0        0        0   /Users/roryhill/Downloads/IMG_0540.HEIC
+currentPath              = /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
+cacheSizeHasChanged      = true
+filterOrSortHasChanged   = false
+isCacheUpToDate          = true
+
+Decoders:
+  ID  Status          Key    DM Instance
+   0  Ready            46             17
+   1  Ready            46             17
+   2  Ready             1             17
+   3  Ready            42             17
+   4  Ready            34             17
+   5  Ready            40             17
+   6  Ready             6             17
+   7  Ready             0             17
+   8  Ready             8             17
+   9  Ready            44             17
+  10  Ready            33             17
+  11  Ready            39             17
+  12  Ready            37             17
+  13  Ready             1             17
+  14  Ready            45             17
+  15  Ready            41             17
+  16  Ready            36             17
+  17  Ready            32             17
+  18  Ready            38             17
+  19  Ready            43             17
+
+cacheItemList:
+      Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCached Metadata   Update    Video     SizeMB Estimate   Offset   Length   File Name                                                   Error message
+        0        7        7     true        2    false     true     Done     true     true     true     true    false    173.344        0  1035776  1929805   2018-01-14_0001.NEF
+        1        5       13     true        4    false     true     Done     true     true     true     true    false    173.344        0  1040896  2602412   2018-01-14_0002.NEF
+        2        4        2     true        1    false     true     Done     true     true     true     true    false    173.344        0  1053696  2894163   2018-01-14_0003.NEF
+        3        2        3     true        1    false     true     Done     true     true     true     true    false    173.344        0  1068032  2830566   2018-01-14_0005.NEF            Could not read metadata.
+        4        1        4     true        1    false     true     Done     true     true     true     true    false    173.344        0   992768  2463032   2018-01-14_0007.NEF            Could not read metadata.
+        5        0        5     true        1    false     true     Done     true     true    false    false    false      0.000        0        0  3441490   2018-01-14_0008.NEF            Could not read metadata.
+        6        3        6     true        1    false     true     Done     true     true     true     true    false    173.344        0  1073152  4079505   2018-01-14_0009.NEF
+        7        6        7     true        1    false     true     Done     true     true     true     true    false    173.344        0  1013248  3177730   2018-01-14_0010.NEF
+        8        8        8     true        1     true    false    Ready    false    false     true     true    false    173.344        0  1021440  3302506   2018-01-14_0011.NEF
+        9        9        9     true        1    false     true     Done     true     true     true     true    false    173.344        0  1038336  4074799   2018-01-14_0012.NEF            Could not read metadata.
+       10       10       10     true        1    false     true     Done     true     true     true     true    false    173.344        0  1012736  2695360   2018-01-14_0013.NEF            Could not read metadata.
+       11       11       11     true        1    false     true     Done     true     true     true     true    false    173.344        0  1036800  3704594   2018-01-14_0014.NEF            Could not read metadata.
+       12       12       12     true        1    false     true     Done     true     true     true     true    false    173.344        0  1031168  3978811   2018-01-14_0015.NEF            Could not read metadata.
+       13       13       13     true        1    false     true     Done     true     true     true     true    false    173.344        0  1164288  2391262   2018-01-14_0016.NEF            Could not read metadata.
+       14       14       14     true        1    false     true     Done     true     true     true     true    false    173.344        0  1090048  3781305   2018-01-14_0017.NEF            Could not read metadata.
+       15       15       15     true        1    false     true     Done     true     true     true     true    false    173.344        0  1091584  3789924   2018-01-14_0018.NEF            Could not read metadata.
+       16       16       16     true        1    false     true     Done     true     true     true     true    false    173.344        0  1091072  3588605   2018-01-14_0019.NEF            Could not read metadata.
+       17       17       17     true        1    false     true     Done     true     true     true     true    false    173.344        0  1091584  3613411   2018-01-14_0020.NEF            Could not read metadata.
+       18       18       18     true        1    false     true     Done     true     true     true     true    false    173.344        0  1082368  3632473   2018-01-14_0021.NEF            Could not read metadata.
+       19       19       19     true        1    false     true     Done     true     true     true     true    false    173.344        0  1092096  3587428   2018-01-14_0022.NEF            Could not read metadata.
+       20       20       19     true        1    false     true     Done     true     true     true     true    false    173.344        0  1024512  4265669   2018-01-14_0023.NEF            Could not read metadata.
+       21       21        9     true        1    false     true     Done     true     true     true     true    false    173.344        0  1021440  4132283   2018-01-14_0024.NEF            Could not read metadata.
+       22       22        4     true        1    false     true     Done     true     true     true     true    false    173.344        0  1076224  4070781   2018-01-14_0025.NEF            Could not read metadata.
+       23       23       11     true        1    false     true     Done     true     true     true     true    false    173.344        0  1122816  4080630   2018-01-14_0026.NEF            Could not read metadata.
+       24       24       12     true        1    false     true     Done     true     true     true     true    false    173.344        0  1150464  4134081   2018-01-14_0027.NEF            Could not read metadata.
+       25       25       16     true        1    false     true     Done     true     true     true     true    false    173.344        0   992768  4136897   2018-01-14_0028.NEF            Could not read metadata.
+       26       26        3     true        1    false     true     Done     true     true     true     true    false    173.344        0  1030144  4280951   2018-01-14_0029.NEF            Could not read metadata.
+       27       27       13     true        1    false     true     Done     true     true     true     true    false    173.344        0  1018880  4149196   2018-01-14_0030.NEF            Could not read metadata.
+       28       28        5     true        1    false     true     Done     true     true     true     true    false    173.344        0  1021440  4150627   2018-01-14_0031.NEF            Could not read metadata.
+       29       29       14     true        1    false     true     Done     true     true     true     true    false    173.344        0  1048576  4064708   2018-01-14_0032.NEF            Could not read metadata.
+       30       30       15     true        1    false     true     Done     true     true     true     true    false    173.344        0  1072640  4085633   2018-01-14_0033.NEF            Could not read metadata.
+       31       31       18     true        1    false     true     Done     true     true     true     true    false    173.344        0  1047552  4026870   2018-01-14_0034.NEF            Could not read metadata.
+       32       32       17     true        1    false     true     Done     true     true     true     true    false    173.344        0  1066496  3916554   2018-01-14_0035.NEF
+       33       33       10     true        1    false     true     Done     true     true     true     true    false    173.344        0  1090560  4524856   2018-01-14_0036.NEF
+       34       34        4     true        1     true    false    Ready    false    false     true     true    false    173.344        0  1091584  4522392   2018-01-14_0037.NEF
+       35       35       13     true        1    false     true     Done     true     true     true     true    false    173.344        0  1110528  2100869   2018-01-14_0038.NEF
+       36       36       16     true        1    false     true     Done     true     true     true     true    false    173.344        0  1263616  4688061   2018-01-14_0039.NEF
+       37       37       12     true        1    false     true     Done     true     true     true     true    false    173.344        0  1270272  4971540   2018-01-14_0040.NEF
+       38       38       18     true        1    false     true     Done     true     true     true     true    false    173.344        0  1277952  5033550   2018-01-14_0041.NEF
+       39       39       11     true        1    false     true     Done     true     true     true     true    false    173.344        0  1299456  5345390   2018-01-14_0042.NEF
+      Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCached Metadata   Update    Video     SizeMB Estimate   Offset   Length   File Name                                                   Error message
+       40       40        5     true        1    false     true     Done     true     true     true     true    false    173.344        0  1215488  4293799   2018-01-14_0043.NEF
+       41       41       15     true        1    false     true     Done     true     true     true     true    false    173.344        0  1247232  4601252   2018-01-14_0044.NEF
+       42       42        3     true        1    false     true     Done     true     true     true     true    false    173.344        0  1234432  4523169   2018-01-14_0045.NEF
+       43       43       19     true        1     true    false    Ready    false    false     true     true    false    173.344        0  1247232  4650062   2018-01-14_0046.NEF
+       44       44        9     true        1     true    false    Ready    false    false     true     true    false    173.344        0  1225216  4466877   2018-01-14_0047.NEF
+       45       45       14     true        1    false     true     Done     true     true     true     true    false    173.344        0  1141760  3746082   2018-01-14_0048.NEF
+       46       46        0     true        1    false     true     Done     true     true     true     true    false    173.344        0  1205248  4901359   2018-01-14_0049.NEF
+       47       47       -1    false        0    false    false    Ready    false    false     true     true    false    173.344        0  1175040  4381908   2018-01-14_0050.NEF
+43 images reported as cached.
+
+priorityList:
+ Priority      Key   Path
+        0        5   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
+        1        4   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0007.NEF
+        2        3   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0005.NEF
+        3        6   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
+        4        2   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0003.NEF
+        5        1   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0002.NEF
+        6        7   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0010.NEF
+        7        0   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
+        8        8   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
+        9        9   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0012.NEF
+       10       10   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0013.NEF
+       11       11   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
+       12       12   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0015.NEF
+       13       13   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0016.NEF
+       14       14   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0017.NEF
+       15       15   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0018.NEF
+       16       16   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0019.NEF
+       17       17   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0020.NEF
+       18       18   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0021.NEF
+       19       19   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0022.NEF
+       20       20   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0023.NEF
+       21       21   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0024.NEF
+       22       22   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0025.NEF
+       23       23   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0026.NEF
+       24       24   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0027.NEF
+       25       25   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0028.NEF
+       26       26   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0029.NEF
+       27       27   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0030.NEF
+       28       28   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0031.NEF
+       29       29   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0032.NEF
+       30       30   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0033.NEF
+       31       31   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0034.NEF
+       32       32   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0035.NEF
+       33       33   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0036.NEF
+       34       34   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0037.NEF
+       35       35   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0038.NEF
+       36       36   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0039.NEF
+       37       37   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0040.NEF
+       38       38   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0041.NEF
+       39       39   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0042.NEF
+       40       40   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0043.NEF
+       41       41   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0044.NEF
+       42       42   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0045.NEF
+       43       43   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0046.NEF
+       44       44   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0047.NEF
+       45       45   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0048.NEF
+       46       46   /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0049.NEF
+
+imCache hash: 43 items
+  Hash  Priority   Key     W     H    MB  Path
+     3         0     5   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
+    34         1     4   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0007.NEF
+    26         2     3   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0005.NEF
+     4         3     6  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
+    29         4     2  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0003.NEF
+     6         5     1  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0002.NEF
+    36         6     7  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0010.NEF
+    11         7     0  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
+    10         9     9   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0012.NEF
+    41        10    10   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0013.NEF
+    14        11    11   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
+    31        12    12   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0015.NEF
+    37        13    13   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0016.NEF
+    42        14    14   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0017.NEF
+    30        15    15   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0018.NEF
+     2        16    16   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0019.NEF
+    32        17    17   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0020.NEF
+    16        18    18   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0021.NEF
+    15        19    19   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0022.NEF
+    39        20    20   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0023.NEF
+    22        21    21   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0024.NEF
+    13        22    22   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0025.NEF
+     9        23    23   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0026.NEF
+    35        24    24   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0027.NEF
+    23        25    25   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0028.NEF
+    24        26    26   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0029.NEF
+    12        27    27   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0030.NEF
+     5        28    28   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0031.NEF
+    20        29    29   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0032.NEF
+    28        30    30   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0033.NEF
+    19        31    31   160   120     0  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0034.NEF
+    27        32    32  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0035.NEF
+    38        33    33  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0036.NEF
+    33        35    35  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0038.NEF
+     7        36    36  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0039.NEF
+     8        37    37  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0040.NEF
+    21        38    38  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0041.NEF
+    25        39    39  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0042.NEF
+    18        40    40  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0043.NEF
+     0        41    41  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0044.NEF
+     1        42    42  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0045.NEF
+    40        45    45  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0048.NEF
+    17        46    46  8256  5504   173  /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0049.NEF
+
+43 images in image cache.
+2941 MB consumed
+

@@ -941,7 +941,7 @@ QString ImageCache::reportCacheDecoders()
     rpt << "  ID  ";
     rpt << "Status        ";
     rpt << "  Key  ";
-    rpt << "Instance ";
+    rpt << "  DM Instance ";
     rpt << "\n";
     for (int id = 0; id < decoderCount; ++id) {
         rpt << QString::number(id).rightJustified(4);
@@ -949,7 +949,7 @@ QString ImageCache::reportCacheDecoders()
         rpt << decoder[id]->statusText.at(decoder[id]->status).leftJustified(14);
         rpt << QString::number(decoder[id]->cacheKey).rightJustified(5);
         rpt << "  ";
-        rpt << QString::number(instance).leftJustified(9);
+        rpt << QString::number(instance).rightJustified(13);
         rpt << "\n";
     }
 
@@ -1019,6 +1019,7 @@ QString ImageCache::reportCache(QString title)
             rpt << "   ";
             rpt.setFieldWidth(30);
             rpt << "File Name";
+            rpt.setFieldWidth(1);
             rpt << " ";
             rpt.setFieldWidth(50);
             rpt << "Error message";
@@ -1845,7 +1846,8 @@ void ImageCache::fillCache(int id)
 
     // check if aborted
     if (abort || decoder[id]->status == ImageDecoder::Status::Abort) {
-        //icd->cacheItemList[cacheKey].isCaching = false;
+        icd->cacheItemList[cacheKey].isCaching = false;
+        icd->cacheItemList[cacheKey].isCached = false;
         decoder[id]->status = ImageDecoder::Status::Ready;
         return;
     }
@@ -1865,6 +1867,13 @@ void ImageCache::fillCache(int id)
     else {
         if (decoder[id]->instance == dm->instance) {
             cacheKey = keyFromPath[decoder[id]->fPath];
+            icd->cacheItemList[cacheKey].isCaching = false;
+            icd->cacheItemList[cacheKey].errMsg = decoder[id]->errMsg;
+            icd->cacheItemList[cacheKey].status = static_cast<int>(decoder[id]->status);
+            if (decoder[id]->status == ImageDecoder::Status::Video) {
+                icd->cacheItemList[cacheKey].isCached = true;
+            }
+
             if (debugCaching)
             {
                 qDebug().noquote() << "ImageCache::fillCache"
@@ -1875,38 +1884,15 @@ void ImageCache::fillCache(int id)
                                    << "isRunning =" << isRunning()
                     ;
             }
-
-            /*
-            If the returning decoder has an error status, then record the status for potential
-            debugging.  Since there is no image, it will not be added to the imCache, and it
-            will remain in the decoder queue until maxAttemptsToCacheImage is exceeded.
-            */
-            bool isImage = decoder[id]->image.width() > 0;
-            if (!isImage) {
-                if (debugCaching)
-                QString k = QString::number(cacheKey).leftJustified((4));
-                {
-                qDebug().noquote() << "ImageCache::fillCache"
-                                   << "     decoder" << id
-                                   << "row =" << cacheKey
-                                   << "NULL IMAGE"
-                    ;
-                }
-            }
-            icd->cacheItemList[cacheKey].isCaching = false;
-            icd->cacheItemList[cacheKey].errMsg = decoder[id]->errMsg;
-            icd->cacheItemList[cacheKey].status = static_cast<int>(decoder[id]->status);
-            if (decoder[id]->status == ImageDecoder::Status::Video) {
-                icd->cacheItemList[cacheKey].isCached = true;
-            }
         }
     }
 
-    if (G::isLogger)
+    if (G::isLogger) {
         G::log("fillCache  Launch Decoder",
                "Row/cacheKey = " + QString::number(cacheKey) +
                " Decoder = " + QString::number(id) +
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
+    }
 
     // Error checking
     {
@@ -1927,6 +1913,7 @@ void ImageCache::fillCache(int id)
 
         // range check
         if (cacheKey != -1 && cacheKey >= icd->cacheItemList.length()) {
+            cacheKey = -1;
             if (icd->cacheItemList.length() > 0) {
                 if (G::isWarningLogger)
                     qWarning() << "WARNING" << "ImageCache::fillCache  Out of range error:"
@@ -1940,9 +1927,8 @@ void ImageCache::fillCache(int id)
                               QString::number(icd->cacheItemList.length());
                 G::error(err, "ImageCache::fillCache", decoder[id]->fPath);
             }
-            cacheKey = -1;
         }
-        //        /*
+
         // File does not exist
         if (decoder[id]->status == ImageDecoder::Status::BlankFilePath) {
             cacheKey = -1;
@@ -1997,7 +1983,7 @@ void ImageCache::fillCache(int id)
         }
 
         // other
-        if (decoder[id]->status != ImageDecoder::Status::Done && decoder[id]->fPath != "") {
+        if (decoder[id]->status != ImageDecoder::Status::Success && decoder[id]->fPath != "") {
             cacheKey = -1;
             if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageCache::fillCache  Decoder status not = Done:"
@@ -2015,15 +2001,18 @@ void ImageCache::fillCache(int id)
                 emit centralMsg(decoder[id]->errMsg);
             }
         }
+        // reset isCaching
+        else {
+            icd->cacheItemList[cacheKey].isCaching = false;
+        }
 
     }
 
-//    QString comment = "decoder " + QString::number(id).leftJustified(3) +
-//                      "row = " + QString::number(cacheKey).leftJustified(5) +
-//                      "decoder[id]->fPath =" + decoder[id]->fPath;
+    /*
     log("fillCache", "decoder " + QString::number(id).leftJustified(3) +
                      "row = " + QString::number(cacheKey).leftJustified(5) +
                      "decoder[id]->fPath = " + decoder[id]->fPath);
+    */
     if (debugCaching || G::isLogger)
     {
         if (cacheKey == -1) {
@@ -2045,7 +2034,7 @@ void ImageCache::fillCache(int id)
     }
 
     // add decoded QImage to imCache.
-    if (cacheKey != -1 && decoder[id]->status == ImageDecoder::Status::Done) {
+    if (cacheKey != -1 && decoder[id]->status == ImageDecoder::Status::Success) {
         cacheImage(id, cacheKey);
     }
 

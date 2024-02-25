@@ -276,11 +276,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             loaded = loadFromJpgData(fPath, image);
         }
 
-//        // The image type might not have metadata we can read, so load entire image and resize
-//        if (!loaded && !metadata->hasMetadataFormats.contains(ext)) {
-//            loaded = loadFromEntireFile(fPath, image, dmRow);
-//        }
-
         if (!loaded && ext == "heic") {
             loaded = loadFromHeic(fPath, image);
         }
@@ -303,13 +298,15 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             // rotate if there is orientation metadata
             if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
         }
+        /*
         else {
             // show bad image png
-    //        QString path = ":/images/badImage1.png";
-    //        loadFromEntireFile(path, image, dmRow);
-    //        G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
-    //        qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
+            QString path = ":/images/badImage1.png";
+            loadFromEntireFile(path, image, dmRow);
+            G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
+            qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
         }
+        */
     }
 
     QFile(fPath).setPermissions(oldPermissions);

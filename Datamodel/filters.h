@@ -112,6 +112,8 @@ public slots:
     void setLabelState(QString label, bool isChecked);  // color class red, yellow...
     bool isRatingChecked(QString rating);
     bool isLabelChecked(QString label);
+    bool isTitleChecked(QString title);
+    bool isCreatorChecked(QString creator);
     bool isAnyCatItemChecked(QTreeWidgetItem *category);
     void updateProgress(int progress);
     void startBuildFilters(bool isReset = false);
