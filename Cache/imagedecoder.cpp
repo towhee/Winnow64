@@ -98,9 +98,9 @@ bool ImageDecoder::load()
         return false;
     }
 
-    // get image type (extension)
-    // QFileInfo fileInfo(fPath);  // crash occasionally using QFileInfo to get suffix
-    //ext = fPath.section('.', -1).toLower();  // also crash occasionally
+    /* get image type (extension)
+       can cuase crash: QFileInfo fileInfo(fPath);  or
+                        ext = fPath.section('.', -1).toLower(); */
     ext = n.ext;
 
     // ignore video files
@@ -109,7 +109,7 @@ bool ImageDecoder::load()
         return false;
     }
 
-    if (abort) quit();
+    //if (abort) quit();
 
     QFile imFile(fPath);
 
@@ -128,30 +128,21 @@ bool ImageDecoder::load()
         return false;
     }
 
-    // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
-                   << "threadId =" << threadId
-                   << fPath;
-        errMsg = "Could not read metadata.";
-        status = Status::NoMetadata;
-
-        // even though could not read metadata try to load image using Qt
+    // if no metadata may still be able to load image using Qt (except raw files)
+    if (!n.metadataLoaded && !metadata->hasJpg.contains(ext)) {
         if (image.load(fPath)) {
             imFile.close();
             return true;
         }
-        else {
-            imFile.close();
-            if (G::isWarningLogger)
-                qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
-                           << "threadId =" << threadId
-                           << fPath;
-            errMsg = "Could not read metadata.";
-            status = Status::NoMetadata;
-            return false;
-        }
+
+        imFile.close();
+        if (G::isWarningLogger)
+            qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
+                       << "threadId =" << threadId
+                       << fPath;
+        errMsg = "Could not read metadata.";
+        status = Status::NoMetadata;
+        return false;
     }
 
     // JPG format (including embedded in raw files)
@@ -186,10 +177,7 @@ bool ImageDecoder::load()
             return false;
         }
 
-        if (abort) quit();
-
         // try to decode the jpg data
-        //qDebug() << "ImageDecoder::load" << fPath;
         if (!image.loadFromData(buf, "JPEG")) {
             errMsg = "Could not read JPG because decoder failed.";
             if (G::isWarningLogger)
@@ -267,7 +255,7 @@ bool ImageDecoder::load()
             qWarning() << "WARNING" << "ImageDecoder::load "
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
-            if (abort) quit();
+            //if (abort) quit();
 
             // use Qt tiff decoder
             if (!image.load(fPath)) {
@@ -313,7 +301,7 @@ bool ImageDecoder::load()
         return false;
     }
 
-    status = Status::Done;
+    status = Status::Success;
     return true;
 }
 
@@ -394,8 +382,8 @@ void ImageDecoder::run()
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         if (G::isWarningLogger)
-        qWarning() << "WARNING" << "ImageDecoder::run  Instance clash" << fPath;
-        /*if (!abort) */emit done(threadId);
+            qWarning() << "WARNING" << "ImageDecoder::run  Instance clash" << fPath;
+        emit done(threadId);
         return;
     }
 
@@ -403,7 +391,7 @@ void ImageDecoder::run()
         if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
-        status = Status::Done;
+        status = Status::Success;
     }
 
     if (isDebug) {
@@ -411,14 +399,14 @@ void ImageDecoder::run()
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
         mutex.unlock();
     }
-    /*if (!abort)*/ emit done(threadId);
+    emit done(threadId);
 }
 
 bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
 {
 /*
     This function is called externally, does not require the DataModel and does not
-    spawn a separate thread.
+    run in a separate thread.
 
     It is used by FindDuplicatesDlg.
 */

@@ -170,7 +170,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 }
 /*
    Performance
-468,338 MetaRead2::dispatch: return from reader            id =  9 row =  792
         Big max number of thumbnails
         Turn color management off
         Hide caching progress
