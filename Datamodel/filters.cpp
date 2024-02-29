@@ -461,7 +461,7 @@ bool Filters::isAnyCatItemChecked(QTreeWidgetItem *category)
 {
     if (G::isLogger) G::log("Filters::isAnyLabelChecked");
     for (int i = 0; i < category->childCount(); ++i) {
-        //if (debugFilters)
+        if (debugFilters)
         qDebug() << "Filters::isAnyCatItemChecked"
                  << "label =" << category->child(i)->text(0)
                  << "checkState =" << category->child(i)->checkState(0)
