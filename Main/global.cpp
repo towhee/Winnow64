@@ -102,6 +102,7 @@ namespace G
 
     // ui
     int wheelSensitivity = 40;
+    bool wheelSpinning = false;
 
     // caching
     bool loadOnlyVisibleIcons;          // not used

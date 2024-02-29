@@ -250,6 +250,7 @@ namespace G
     extern double iconOpacity;
 
     extern int wheelSensitivity;
+    extern bool wheelSpinning;
 
     extern QString mode;
     extern QString fileSelectionChangeSource;
