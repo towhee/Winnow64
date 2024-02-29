@@ -531,6 +531,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     settings->setValue("appPath", qApp->applicationDirPath());
 
+    // Initialize some variables
+    initialize();
+
     // Loggers
     /*
     if (G::isLogger && G::sendLogToConsole == false) startLog();

@@ -74,6 +74,7 @@
 
 #include "Utilities/coloranalysis.h"
 #include "Image/stack.h"
+#include <QSoundEffect>
 
 #include "Utilities/performance.h"
 #include "ui_helpform.h"
@@ -1089,6 +1090,8 @@ private:
 //    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 //    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
+
+    QSoundEffect *pickClick;
 
     QHash<QString, bool> stopped;
 

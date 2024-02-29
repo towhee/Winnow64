@@ -184,5 +184,6 @@
         <file>images/icon16/delta_bw_16.png</file>
         <file>images/prev.png</file>
         <file>images/dragfoldershere.png</file>
+        <file>Sounds/ingest.wav</file>
     </qresource>
 </RCC>

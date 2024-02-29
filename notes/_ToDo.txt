@@ -5,8 +5,10 @@ WHAT'S NEW
 - CreateDate fixes
 - Copy / paste
 - Jump to row
+- Pick audio
 
 BUGS / TO DO
+- Kill scroll leave central window
 - Check copying message
 - Select all 2022 √ and filter right away caused crash
 - When copy or move images, should the filter be maintained?  Popup?
