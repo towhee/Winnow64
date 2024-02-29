@@ -120,6 +120,10 @@ ImageView::ImageView(QWidget *parent,
     mouseMovementTimer = new QTimer(this);
 //    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
+    // mouse wheel is spinning
+    wheelTimer.setSingleShot(true);
+    connect(&wheelTimer, &QTimer::timeout, this, &ImageView::wheelStopped);
+
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
@@ -969,16 +973,35 @@ void ImageView::scrollContentsBy(int dx, int dy)
 
 // MOUSE CONTROL
 
-//void ImageView::dragMoveEvent(QDragMoveEvent *event)
-//{
-//    qDebug() << G::t.restart() << "\t" << "drag";
-//}
+void ImageView::enterEvent(QEnterEvent *event)
+{
+    wheelSpinningOnEntry = G::wheelSpinning;
+    qDebug() << "ImageView::enterEvent" << objectName()
+             << "G::wheelSpinning =" << G::wheelSpinning
+             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
+        ;
+}
+
+void ImageView::leaveEvent(QEvent *event)
+{
+    wheelSpinningOnEntry = false;
+}
+
 void ImageView::wheelEvent(QWheelEvent *event)
 {
+/*
+    Mouse wheel scrolling / trackpad swiping = next/previous image.
+*/
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
 
-    // wheel scrolling / trackpad swiping = next/previous image
+    if (wheelSpinningOnEntry && G::wheelSpinning) {
+        qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        return;
+    }
+    wheelSpinningOnEntry = false;
+
+    //
     static QElapsedTimer t;
 
     static bool first = true;
@@ -991,38 +1014,34 @@ void ImageView::wheelEvent(QWheelEvent *event)
     int delta = event->angleDelta().y();
 
     if (t.elapsed() > G::wheelSensitivity) {
-        if (qAbs(delta) ==0) return;
+        if (qAbs(delta) == 0) return;
         if (delta > 0) sel->prev();
         else sel->next();
         t.restart();
     }
-    /*
-    static int deltaSum = 0;
-    static int prevDelta = 0;
-    int delta = event->angleDelta().y();
-    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
-        deltaSum = delta;
-    }
-    deltaSum += delta;
 
-    if (deltaSum > G::wheelSensitivity) {
-        sel->prev();
-        deltaSum = 0;
-    }
+    // set spinning flag in case mouse moves to another object while still spinning
+    G::wheelSpinning = true;
+    // singleshot to flag when wheel has stopped spinning
+    wheelTimer.start(100);
 
-    if (deltaSum < (-G::wheelSensitivity)) {
-        qDebug() << t.elapsed();
-        t.restart();
-        sel->next();
-        deltaSum = 0;
-    }
-    */
+    qDebug() << "ImageView::wheelEvent"
+             << "G::wheelSpinning =" << G::wheelSpinning
+             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
+        ;
+}
+
+void ImageView::wheelStopped()
+{
+    G::wheelSpinning = false;
+    wheelSpinningOnEntry = false;
+    qDebug() << "ImageView::wheelStopped";
 }
 
 bool ImageView::event(QEvent *event) {
-    /*
-        Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
-    */
+/*
+    Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
+*/
     //qDebug() << "ImageView::event" << event << event->type();
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
@@ -1050,7 +1069,6 @@ bool ImageView::event(QEvent *event) {
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("ImageView::mouseDoubleClickEvent");
-    //qDebug() << "ImageView::mouseDoubleClickEvent";
     return;
 }
 
