@@ -80,12 +80,16 @@ public slots:
     void refreshModel();
 
 private slots:
+    void wheelStopped();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;       // debugging
     void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
     void mouseMoveEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
@@ -111,6 +115,8 @@ private:
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
     QElapsedTimer t;
+    QTimer wheelTimer;
+    bool wheelSpinningOnEntry;
 };
 
 #endif // FSTREE_H
