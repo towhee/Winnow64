@@ -2191,12 +2191,12 @@ int DataModel::nearestPick()    // not used
     return 0;
 }
 
-QModelIndex DataModel::nearestFiltered(QModelIndex dmIdx)
-{
-    for (int i = dmIdx.row(); i >= 0; i--) {
+//QModelIndex DataModel::nearestFiltered(QModelIndex dmIdx)
+//{
+//    for (int i = dmIdx.row(); i >= 0; i--) {
 
-    }
-}
+//    }
+//}
 
 bool DataModel::getSelection(QStringList &list)
 {
