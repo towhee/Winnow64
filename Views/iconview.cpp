@@ -1208,7 +1208,6 @@ void IconView::enterEvent(QEnterEvent *event)
 void IconView::leaveEvent(QEvent *event)
 {
     if (isDebug) G::log("IconView::leaveEvent", objectName());
-//    qDebug() << "IconView::leaveEvent" << event << QWidget::mapFromGlobal(QCursor::pos());
     wheelSpinningOnEntry = false;
     mouseOverThumbView = false;
     setCursor(Qt::ArrowCursor);
@@ -1254,25 +1253,24 @@ void IconView::wheelEvent(QWheelEvent *event)
     G::wheelSpinning = true;
     // singleshot to flag when wheel has stopped spinning
     wheelTimer.start(100);
-
+    /*
     qDebug() << "IconView::wheelEvent"
              << "G::wheelSpinning =" << G::wheelSpinning
              << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ;
+        ; //*/
 }
 
 void IconView::wheelStopped()
 {
     G::wheelSpinning = false;
     wheelSpinningOnEntry = false;
-    qDebug() << "ImageView::wheelStopped";
 }
 
 bool IconView::event(QEvent *event) {
 /*
      Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    //if (isDebug) G::log("IconView::event");
+    if (isDebug) G::log("IconView::event");
     /*
     qDebug() << "IconView::event" << event;
     //*/

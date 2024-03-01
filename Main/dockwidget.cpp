@@ -159,16 +159,20 @@ void DockTitleBar::setTitle(QString title)
 
 void DockTitleBar::setStyle()
 {
-    int g1 = G::backgroundShade;
-    int g0 = g1 - 10;
-    if (g0 < 0) g0 = 0;
+//    int g1 = G::backgroundShade;
+//    int g0 = g1 - 10;
+//    if (g0 < 0) g0 = 0;
+
+//    QString bg = G::backgroundColor.name();
 //    int c = G::backgroundShade + 30;
-    QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-                "stop: 0 " + QColor(g1,g1,g1).name() + ", "
-                "stop: 1 " + QColor(g0,g0,g0).name() + ");"
+    QString s = //"background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+                //"stop: 0 " + QColor(g1,g1,g1).name() + ", "
+                //"stop: 1 " + QColor(g0,g0,g0).name() + ");"
+                //"background: " + bg + ";"
                 "padding-left: 2px;"
 //                "padding-bottom: 2px;"
                 "border: none;"
+                "color: #6CC1E8;"
                 "font-size:" + G::strFontSize + "pt;";
     setStyleSheet(s);
 }
