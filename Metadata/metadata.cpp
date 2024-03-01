@@ -900,6 +900,8 @@ void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
+    m.metadataAttempted = false;
+    m.metadataLoaded = false;
     m.offsetFull = 0;
     m.lengthFull = 0;
     m.widthPreview = 0;
@@ -934,7 +936,8 @@ void Metadata::clearMetadata()
     m.ISO = "";
     m.ISONum = 0;
     m.exposureCompensation = "";
-    m.exposureCompensationNum = 0;  // crazy value so cane check if not found
+    m.exposureCompensationNum = 0;  // crazy value so cane check if not
+    m.shootingInfo = "";
     m.focalLength = "";
     m.focalLengthNum = 0;
     m.focusX = 0;
@@ -1055,6 +1058,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
+        // check for heic with jpg extension
+        if (ext == "jpg" && Utilities::getString(p.file, 4, 8) == "ftypheic") ext = "heic";
+        p.file.seek(0);
         if (ext == "arw")  parsed = parseSony();
         if (ext == "cr2")  parsed = parseCanon();
         if (ext == "cr3")  parsed = parseCanonCR3();
@@ -1163,7 +1169,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         // get exif image created for image formats not included in Winnow
         QString createdDate = readExifToolTag(m.fPath, "createdate");
         m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
-        m.metadataLoaded = true;
+        //m.metadataLoaded = true;
         if (G::useSidecar) {
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadOnly)) {
@@ -1185,6 +1191,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
+    m.metadataAttempted = true;
     if (!m.metadataLoaded) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;

@@ -228,19 +228,28 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             emit dataEdited();
         }
 
-        //dm->sf->suspend(false);
-        // update filters
+        /* update filters
+        must execute in order:
+        - suspend proxy updates
+        - update filter category
+        - if cat checked clear selection
+        - update proxy (filterChange) */
+
         if (field == "Title*") {
+            dm->sf->suspend(true);
             buildFilters->updateCategory(BuildFilters::TitleEdit);
             //emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->titles))
-                emit filterChange("InfoView::dataChange");
+                thumbView->selectionModel()->clear();
+            emit filterChange("InfoView::dataChange");
         }
         if (field == "Creator*") {
+            dm->sf->suspend(true);
             buildFilters->updateCategory(BuildFilters::CreatorEdit);
             //emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->creators))
-                emit filterChange("InfoView::dataChange");
+                thumbView->selectionModel()->clear();
+            emit filterChange("InfoView::dataChange");
         }
     }
     count++;
@@ -335,6 +344,7 @@ void InfoView::setupOk()
     ok->setData(ok->index(CreatedRow, 0, fileInfoIdx), "Created");
     ok->setData(ok->index(ModifiedRow, 0, fileInfoIdx), "Modified");
     ok->setData(ok->index(DimensionsRow, 0, fileInfoIdx), "Dimensions");
+    ok->setData(ok->index(PreviewDimensionsRow, 0, fileInfoIdx), "Preview dim");
     ok->setData(ok->index(MegaPixelsRow, 0, fileInfoIdx), "Megapixels");
     ok->setData(ok->index(ModelRow, 0, imageInfoIdx), "Model");
     ok->setData(ok->index(LensRow, 0, imageInfoIdx), "Lens");
@@ -490,6 +500,9 @@ void InfoView::updateInfo(const int &row)
 
     s = dm->sf->index(row, G::DimensionsColumn).data().toString();
     ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), s);
+    s = dm->sf->index(row, G::WidthPreviewColumn).data().toString() + "x" +
+        dm->sf->index(row, G::HeightPreviewColumn).data().toString();
+    ok->setData(ok->index(PreviewDimensionsRow, 1, fileInfoIdx), s);
     s = dm->sf->index(row, G::MegaPixelsColumn).data().toString();
     ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), s);
     s = dm->sf->index(row, G::CameraModelColumn).data().toString();

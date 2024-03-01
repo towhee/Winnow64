@@ -304,6 +304,10 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
 
+    // mouse wheel is spinning
+    wheelTimer.setSingleShot(true);
+    connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
+
     connect(this, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expand(const QModelIndex&)));
 }
 
@@ -483,6 +487,47 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 
 void FSTree::keyPressEvent(QKeyEvent *event){
     // prevent default key actions
+}
+
+void FSTree::enterEvent(QEnterEvent *event)
+{
+    wheelSpinningOnEntry = G::wheelSpinning;
+    qDebug() << "ImageView::enterEvent" << objectName()
+             << "G::wheelSpinning =" << G::wheelSpinning
+             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
+        ;
+}
+
+void FSTree::wheelEvent(QWheelEvent *event)
+{
+/*
+    Not being used.
+    Mouse wheel scrolling / trackpad swiping = next/previous image.
+*/
+    if (wheelSpinningOnEntry && G::wheelSpinning) {
+        qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        return;
+    }
+    wheelSpinningOnEntry = false;
+    // set spinning flag in case mouse moves to another object while still spinning
+    G::wheelSpinning = true;
+    // singleshot to flag when wheel has stopped spinning
+    wheelTimer.start(100);
+
+    // add code to scroll FSTree if desired
+}
+
+void FSTree::leaveEvent(QEvent *event)
+{
+    // not being used
+    wheelSpinningOnEntry = false;
+}
+
+void FSTree::wheelStopped()
+{
+    G::wheelSpinning = false;
+    wheelSpinningOnEntry = false;
+    qDebug() << "ImageView::wheelStopped";
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)

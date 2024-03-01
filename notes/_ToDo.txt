@@ -4,6 +4,8 @@ WHAT'S NEW
 - Find duplicates
 - CreateDate fixes
 - Copy / paste
+- Jump to row
+- Pick audio
 
 BUGS / TO DO
 - Check copying message
@@ -12,7 +14,6 @@ BUGS / TO DO
 0x103133cc0 Mac::getDisplayProfileURL() + 256
 0x10301b464 MW::getDisplayProfile() + 180
 0x10301a6b8 MW::setDisplayResolution() + 1096
-- Runaway memory consumption?
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - FS and Bookmarks show not selected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
@@ -103,6 +104,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
 - Portrait aspect ratios wrong
@@ -114,6 +116,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Added preview dimensions to InfoView
+- Fixed image verses preview image dimensions in dng where largest preview is smaller than raw
+- Kill mouse scroll between imageview, iconview and fstree
 - Ratings covers video label on thumbs
 - Immediately start viewing images while MetaRead2 still reading metadata and icons
 - eventFilter updated metaObject className QTabBar QMainWindowTabBar version 6.7.0

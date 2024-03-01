@@ -149,6 +149,17 @@ void Preferences::itemChange(QModelIndex idx)
 
     }
 
+    if (source == "playPickAudio") {
+        bool value = v.toBool();
+        mw->settings->setValue("playPickAudio", value);
+    }
+
+    if (source == "pickAudioVolume") {
+        int value = v.toInt();
+        mw->pickClick->setVolume(value * 1.0 / 100);
+        mw->settings->setValue("pickAudioVolume", value);
+    }
+
     if (source == "showCacheProgressBar") {
         mw->isShowCacheProgressBar = v.toBool();
         mw->setImageCacheParameters();
@@ -964,6 +975,52 @@ void Preferences::addItems()
     i.key = "showThumbNailSymbolHelp";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
+    addItem(i);
+
+    // Ingest audio Header
+    i.name = "PickAudioHeader";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Ingest audio feedback";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Play audio feedback when pick, unpick or reject
+    i.name = "playPickAudio";
+    i.parentName = "PickAudioHeader";
+    i.captionText = "Make a click sound when pick, unpick or reject";
+    i.tooltip = "Make a click sound when pick, unpick or reject.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    if (mw->settings->contains("playPickAudio"))
+        i.value = mw->settings->value("playPickAudio").toBool();
+    else
+        i.value = true;
+    i.key = "playPickAudio";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Pick audio volume
+    i.name = "pickAudioVolume";
+    i.parentName = "PickAudioHeader";
+    i.tooltip = "The image number is located in the top left corner.  This property\n"
+                "adjusts the size of the number.";
+    i.captionText = "Pick audio volume";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 25;
+    if (mw->settings->contains("pickAudioVolume"))
+        i.value = mw->settings->value("pickAudioVolume").toInt();
+    else
+        i.value = 25;
+    i.key = "pickAudioVolume";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
     addItem(i);
 
     }

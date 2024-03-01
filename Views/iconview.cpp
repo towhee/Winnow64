@@ -275,6 +275,10 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
     isDebug = false;
 
+    // mouse wheel is spinning
+    wheelTimer.setSingleShot(true);
+    connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
+
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
     connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
@@ -1191,10 +1195,20 @@ void IconView::scrollToCurrent(QString source)
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
 
+void IconView::enterEvent(QEnterEvent *event)
+{
+    if (isDebug) G::log("IconView::enterEvent", objectName());
+    wheelSpinningOnEntry = G::wheelSpinning;
+    qDebug() << "IconView::enterEvent" << objectName()
+             << "G::wheelSpinning =" << G::wheelSpinning
+             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
+        ;
+}
+
 void IconView::leaveEvent(QEvent *event)
 {
     if (isDebug) G::log("IconView::leaveEvent", objectName());
-//    qDebug() << "IconView::leaveEvent" << event << QWidget::mapFromGlobal(QCursor::pos());
+    wheelSpinningOnEntry = false;
     mouseOverThumbView = false;
     setCursor(Qt::ArrowCursor);
     prevIdx = model()->index(-1, -1);
@@ -1206,6 +1220,12 @@ void IconView::wheelEvent(QWheelEvent *event)
     if (G::isInitializing) return;
     if (isDebug)
         qDebug() << "IconView::wheelEvent" << objectName() << event;
+
+    if (wheelSpinningOnEntry && G::wheelSpinning) {
+        qDebug() << "IconView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        return;
+    }
+    wheelSpinningOnEntry = false;
 
     static int deltaSum = 0;
     static int prevDelta = 0;
@@ -1228,13 +1248,29 @@ void IconView::wheelEvent(QWheelEvent *event)
         QListView::wheelEvent(event);
         deltaSum = 0;
     }
+
+    // set spinning flag in case mouse moves to another object while still spinning
+    G::wheelSpinning = true;
+    // singleshot to flag when wheel has stopped spinning
+    wheelTimer.start(100);
+    /*
+    qDebug() << "IconView::wheelEvent"
+             << "G::wheelSpinning =" << G::wheelSpinning
+             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
+        ; //*/
+}
+
+void IconView::wheelStopped()
+{
+    G::wheelSpinning = false;
+    wheelSpinningOnEntry = false;
 }
 
 bool IconView::event(QEvent *event) {
 /*
      Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    //if (isDebug) G::log("IconView::event");
+    if (isDebug) G::log("IconView::event");
     /*
     qDebug() << "IconView::event" << event;
     //*/

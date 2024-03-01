@@ -231,6 +231,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
 
+    setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
@@ -267,6 +268,11 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
 }
+
+//inline DataModel::Status operator| (DataModel::Status a, DataModel::Status b) {
+//    return static_cast<DataModel::Status> (static_cast<int> (a) | static_cast<int> (b));
+//}
+
 void DataModel::clearDataModel()
 {
     lastFunction = "";
@@ -766,6 +772,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
     setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::MetadataAttemptedColumn), false);
     setData(index(row, G::MetadataLoadedColumn), false);
     setData(index(row, G::SearchColumn), "false");
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
@@ -878,6 +885,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();
+    m.metadataAttempted = index(row, G::MetadataAttemptedColumn).data().toBool();
     m.metadataLoaded = index(row, G::MetadataLoadedColumn).data().toBool();
     m.permissions = index(row, G::PermissionsColumn).data().toUInt();
     m.isReadWrite = index(row, G::ReadWriteColumn).data().toBool();
@@ -987,7 +995,7 @@ void DataModel::addAllMetadata()
             setAllMetadataLoaded(false);
             return;
         }
-        // is metadata already cached
+        // is metadata already cached (or attempted?)
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -1221,13 +1229,12 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
-//    mutex.lock();
     mLock = true;
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LabelColumn), m.label);
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-     search += m.label;
+    search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
     setData(index(row, G::RatingColumn), m.rating);
     if (m.rating == "0") m.rating = "";
@@ -1344,7 +1351,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
     setData(index(row, G::LengthThumbColumn), m.lengthThumb);
     setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
-    line = 1110;
     setData(index(row, G::isBigEndianColumn), m.isBigEnd);
     setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
@@ -1357,6 +1363,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
+    setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::CompareColumn), m.compare);
@@ -1372,7 +1379,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
-//    mutex.unlock();
     mLock = false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
     return true;
@@ -1740,27 +1746,13 @@ int DataModel::iconCount()
 
 bool DataModel::allIconsLoaded()
 {
-    /*
-    lastFunction = "";
-    //if (isDebug)
-        qDebug() << "DataModel::allIconsLoaded"
-                 << "startIconRange =" << startIconRange
-                 << "endIconRange =" << endIconRange
-                 << "instance =" << instance
-                 << currentFolderPath
-            ;
-    if (startIconRange < 0 || startIconRange >= sf->rowCount()) return false;
-    if (endIconRange < startIconRange || endIconRange >= sf->rowCount()) return false;
-    for (int row = startIconRange; row < endIconRange; ++row) {
-        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
-    }
-    return true;
-    */
-
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
-        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
+        if (itemFromIndex(index(row, 0))->icon().isNull()) {
+            //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
+            return false;
+        }
     }
     return true;
 
@@ -1773,7 +1765,10 @@ bool DataModel::allIconChunkLoaded(int first, int last)
 
     if (first < 0 || last > sf->rowCount()) return false;
     for (int row = first; row <= last; ++row) {
-        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
+        if (itemFromIndex(index(row, 0))->icon().isNull()) {
+            //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
+            return false;
+        }
     }
     return true;
 
@@ -1808,11 +1803,32 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
     filters->loadingDataModel(isLoaded);
 }
 
+bool DataModel::isMetadataAttempted(int sfRow)
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << currentFolderPath;
+    return index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+}
+
 bool DataModel::isMetadataLoaded(int sfRow)
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << currentFolderPath;
     return index(sfRow, G::MetadataLoadedColumn).data().toBool();
+}
+
+bool DataModel::isAllMetadataAttempted()
+{
+    lastFunction = "";
+    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
+            if (isDebug)
+            qDebug() << "DataModel::isAllMetadataAttempted" << "row =" << row << "is not loaded.";
+            return false;
+        }
+    }
+    return true;
 }
 
 bool DataModel::isAllMetadataLoaded()
@@ -1835,7 +1851,9 @@ QList<int> DataModel::metadataNotLoaded()
     if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance << currentFolderPath;
     QList<int> rows;
     for (int row = 0; row < rowCount(); ++row) {
-        if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+        if (index(row, G::MetadataAttemptedColumn).data().toBool() &&
+            !index(row, G::MetadataLoadedColumn).data().toBool())
+        {
             if (isDebug)
             qDebug() << "DataModel::metadataNotLoaded" << "row =" << row << "is not loaded.";
             rows << row;
@@ -2076,6 +2094,35 @@ QModelIndex DataModel::modelIndexFromProxyIndex(QModelIndex sfIdx)
 {
     if (G::isLogger) G::log("DataModel::modelIndexFromProxyIndex");
     return sf->mapToSource(sfIdx);
+}
+
+int DataModel::nearestProxyRowFromDmRow(int dmRow)
+{
+    // does proxy contain dmRow
+    QModelIndex dmIdx = index(dmRow, 0);
+    QModelIndex sfIdx = sf->mapFromSource(dmIdx);
+    if (sfIdx.isValid()) return sfIdx.row();
+
+    // find nearest
+    for (int i = 0; i < sf->rowCount(); i++) {
+        // backward
+        if (dmRow - i >= 0) {
+            dmIdx = index(dmRow - i, 0);
+        sfIdx = sf->mapFromSource(dmIdx);
+            if (sfIdx.isValid()) {
+                    return sfIdx.row();
+            }
+        }
+        // ahead
+        if (dmRow + i < sf->rowCount()) {
+            dmIdx = index(dmRow + i, 0);
+            sfIdx = sf->mapFromSource(dmIdx);
+            if (sfIdx.isValid()) {
+                    return sfIdx.row();
+            }
+        }
+    }
+    return -1;
 }
 
 void DataModel::saveSelection()

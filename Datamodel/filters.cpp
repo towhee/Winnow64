@@ -423,11 +423,45 @@ bool Filters::isLabelChecked(QString label)
     return false;
 }
 
+bool Filters::isTitleChecked(QString title)
+{
+    if (G::isLogger) G::log("Filters::isTitleChecked");
+    if (debugFilters)
+        qDebug() << "Filters::isTitleChecked"
+                 << "title =" << title
+            ;
+    for (int i = 0; i < titles->childCount(); i++) {
+        if (titles->child(i)->text(0) == title) {
+            if (titles->child(i)->checkState(0) == Qt::Checked) return true;
+            else return false;
+        }
+    }
+    // not found
+    return false;
+}
+
+bool Filters::isCreatorChecked(QString creator)
+{
+    if (G::isLogger) G::log("Filters::isCreatorChecked");
+    if (debugFilters)
+        qDebug() << "Filters::isCreatorChecked"
+                 << "creator =" << creator
+            ;
+    for (int i = 0; i < creators->childCount(); i++) {
+        if (creators->child(i)->text(0) == creator) {
+            if (creators->child(i)->checkState(0) == Qt::Checked) return true;
+            else return false;
+        }
+    }
+    // not found
+    return false;
+}
+
 bool Filters::isAnyCatItemChecked(QTreeWidgetItem *category)
 {
     if (G::isLogger) G::log("Filters::isAnyLabelChecked");
     for (int i = 0; i < category->childCount(); ++i) {
-        //if (debugFilters)
+        if (debugFilters)
         qDebug() << "Filters::isAnyCatItemChecked"
                  << "label =" << category->child(i)->text(0)
                  << "checkState =" << category->child(i)->checkState(0)

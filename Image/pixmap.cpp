@@ -87,7 +87,9 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     int dmRow = dm->rowFromPath(fPath);
 
     // is metadata loaded
-    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+    if (dm->index(dmRow, G::MetadataAttemptedColumn).data().toBool() &&
+        !dm->index(dmRow, G::MetadataLoadedColumn).data().toBool())
+    {
         if (!dm->readMetadataForItem(dmRow, dm->instance)) {
             QString err = "Could not load metadata";
             G::error(err, fun, fPath);

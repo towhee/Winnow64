@@ -93,6 +93,7 @@ namespace G
         EmailColumn,
         UrlColumn,
         KeywordsColumn,
+        MetadataAttemptedColumn,
         MetadataLoadedColumn,
         MissingThumbColumn,
         CompareColumn,
@@ -164,6 +165,7 @@ namespace G
     extern bool isLinearLoadDone;
     extern bool isInitializing;
     extern bool metaReadDone;
+    extern bool allMetadataAttempted;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
 
@@ -248,6 +250,7 @@ namespace G
     extern double iconOpacity;
 
     extern int wheelSensitivity;
+    extern bool wheelSpinning;
 
     extern QString mode;
     extern QString fileSelectionChangeSource;

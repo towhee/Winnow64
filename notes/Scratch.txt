@@ -1,4 +1,102 @@
-QDialog *dlg = new QDialog;
-Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
-ui->setupUi(dlg);
-dlg->show();
+1425       24        3     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  2454158   A1_03821.ARW                   Could not read because decoder failed.
+1426       23        3     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   237568  2436998   A1_03822.ARW                   Could not read because decoder failed.
+1427       22        5     true        6    false     true     Done     true     true     true     true    false    189.844        0   233472  2415962   A1_03823.ARW
+1428       21        5     true        9    false     true     Done     true     true     true     true    false    189.844        0   241664  2491090   A1_03824.ARW
+1429       20        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   245760  2529596   A1_03825.ARW                   Could not read because decoder failed.
+1430       19        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  2454858   A1_03826.ARW                   Could not read because decoder failed.
+1431       18        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  2413468   A1_03827.ARW                   Could not read because decoder failed.
+1432       17        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   237568  2404305   A1_03828.ARW                   Could not read because decoder failed.
+1433       16        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   237568  2418356   A1_03829.ARW                   Could not read because decoder failed.
+1434       15        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  2447480   A1_03830.ARW                   Could not read because decoder failed.
+1435       14        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   237568  2433381   A1_03831.ARW                   Could not read because decoder failed.
+1436       13        3     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   233472  2363350   A1_03832.ARW                   Could not read because decoder failed.
+1437       12        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   229376  2362189   A1_03833.ARW                   Could not read because decoder failed.
+1438       11        7     true       10    false     true     Done     true     true     true     true    false    189.844        0   229376  2362556   A1_03834.ARW
+1439       10        1     true        1    false     true     Done     true     true     true     true    false    189.844        0   229376  2378746   A1_03835.ARW
+ Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCached Metadata   Update    Video     SizeMB Estimate   Offset   Length   File Name                      Error message
+1440        9        3     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   229376  2370121   A1_03836.ARW                   Could not read because decoder failed.
+1441        8        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   217088  2289855   A1_03837.ARW                   Could not read because decoder failed.
+1442        7        4     true        5    false     true     Done     true     true     true     true    false    189.844        0   208896  2246270   A1_03838.ARW
+1443        6        3     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   208896  2245991   A1_03839.ARW                   Could not read because decoder failed.
+1444        5        7     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   212992  2244879   A1_03840.ARW                   Could not read because decoder failed.
+1445        4       13     true        6    false     true     Done     true     true     true     true    false    189.844        0   221184  2316162   A1_03841.ARW
+1446        3        4     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  1917919   A1_03842.ARW                   Could not read because decoder failed.
+1447        2       12     true        4    false     true     Done     true     true     true     true    false    189.844        0   241664  1915711   A1_03843.ARW
+1448        1        1     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  1924012   A1_03844.ARW                   Could not read because decoder failed.
+1449        0        2     true       11    false    false  Invalid    false    false     true     true    false    189.844        0   241664  1930503   A1_03845.ARW                   Could not read because decoder failed.
+24 images reported as cached.
+
+priorityList:
+Priority      Key   Path
+   0     1449   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03845.ARW
+   1     1448   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03844.ARW
+   2     1447   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03843.ARW
+   3     1446   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03842.ARW
+   4     1445   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03841.ARW
+   5     1444   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03840.ARW
+   6     1443   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03839.ARW
+   7     1442   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03838.ARW
+   8     1441   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03837.ARW
+   9     1440   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03836.ARW
+  10     1439   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03835.ARW
+  11     1438   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03834.ARW
+  12     1437   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03833.ARW
+  13     1436   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03832.ARW
+  14     1435   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03831.ARW
+  15     1434   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03830.ARW
+  16     1433   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03829.ARW
+  17     1432   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03828.ARW
+  18     1431   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03827.ARW
+  19     1430   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03826.ARW
+  20     1429   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03825.ARW
+  21     1428   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03824.ARW
+  22     1427   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03823.ARW
+  23     1426   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03822.ARW
+  24     1425   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03821.ARW
+  25     1424   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03820.ARW
+  26     1423   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03819.ARW
+  27     1422   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03818.ARW
+  28     1421   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03817.ARW
+  29     1420   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03816.ARW
+  30     1419   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03815.ARW
+  31     1418   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03814.ARW
+  32     1417   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03813.ARW
+  33     1416   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03812.ARW
+  34     1415   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03811.ARW
+  35     1414   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03810.ARW
+  36     1413   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03809.ARW
+  37     1412   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03808.ARW
+  38     1411   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03807.ARW
+  39     1410   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03806.ARW
+  40     1409   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03805.ARW
+  41     1408   /Volumes/Black128GB2/DCIM/100MSDCF/A1_03804.ARW
+
+imCache hash: 24 items
+Hash  Priority   Key     W     H    MB  Path
+22         2  1447  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03843.ARW
+2         4  1445  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03841.ARW
+19         7  1442  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03838.ARW
+15        10  1439  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03835.ARW
+8        11  1438  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03834.ARW
+1        21  1428  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03824.ARW
+4        22  1427  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03823.ARW
+16        25  1424  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03820.ARW
+12        26  1423  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03819.ARW
+13        27  1422  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03818.ARW
+17        28  1421  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03817.ARW
+5        29  1420  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03816.ARW
+6        30  1419  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03815.ARW
+21        31  1418  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03814.ARW
+18        32  1417  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03813.ARW
+3        33  1416  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03812.ARW
+11        34  1415  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03811.ARW
+7        35  1414  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03810.ARW
+9        36  1413  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03809.ARW
+10        37  1412  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03808.ARW
+20        38  1411  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03807.ARW
+23        39  1410  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03806.ARW
+0        40  1409  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03805.ARW
+14        41  1408  8640  5760   189  /Volumes/Black128GB2/DCIM/100MSDCF/A1_03804.ARW
+
+24 images in image cache.
+4536 MB consumed

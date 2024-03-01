@@ -392,21 +392,16 @@ void TableView::createOkToShow()
     }
     showOrHide();
 
-    connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
-            this, SLOT(showOrHide()));
+    connect(ok, &QStandardItemModel::dataChanged, this, &TableView::showOrHide);
 }
 
 void TableView::showOrHide()
 {
 /*
-The ok datamodel (table fields to show) is edited in the preferences dialog
-and this slot is then signalled to update which fields are visible.
+    The ok datamodel (table fields to show) is edited in the preferences dialog
+    and this slot is then signalled to update which fields are visible.
 */
-    for(int i = 0; i < ok->rowCount(); i++) {
-//        if (!G::showAllTableColumns && i > G::UrlColumn) {
-//            hideColumn(i + 1);
-//            continue;
-//        }
+    for (int i = 0; i < ok->rowCount(); i++) {
         bool showField = ok->index(i, 1).data().toBool();
         if (showField) showColumn(i + 1);
         else hideColumn(i + 1);
@@ -419,17 +414,6 @@ and this slot is then signalled to update which fields are visible.
 //------------------------------------------------------------------------------
 //   DELEGATES
 //------------------------------------------------------------------------------
-
-//FileItemDelegate::FileItemDelegate(QObject* parent): QStyledItemDelegate(parent)
-//{
-//}
-
-//QSize FileItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-//{
-////    QFontMetrics fm(option.font);
-////    int width = fm.width("2019-02-25_0001.jpg    ");
-////    return QSize(width, option.rect.height());
-//}
 
 CreatedItemDelegate::CreatedItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

@@ -118,7 +118,7 @@ bool DNG::parse(MetadataParameters &p,
 
     QList<JpgInfo> jpgs;
     QList<quint32> ifdOffsets;
-    if(ifd->ifdDataHash.contains(330)) {
+    if (ifd->ifdDataHash.contains(330)) {
         int count = static_cast<int>(ifd->ifdDataHash.value(330).tagCount);
         if (count > 1) {
             quint32 addr = ifd->ifdDataHash.value(330).tagValue;
@@ -169,16 +169,24 @@ bool DNG::parse(MetadataParameters &p,
                 }
                 count++;
             }
+            // check embedded raw file to determine true imagea dimensions as the preview
+            // might be smaller (for reporting only)
+            else {
+                if (ifd->ifdDataHash.contains(256) && ifd->ifdDataHash.contains(257)) {
+                    m.width =static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+                    m.height =static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+                }
+            }
         }
         if (jpgs.length() > 0) {
-            m.width = static_cast<uint>(jpgs.at(largeJpg).width);
-            m.height = static_cast<uint>(jpgs.at(largeJpg).height);
+            m.widthPreview = static_cast<uint>(jpgs.at(largeJpg).width);
+            m.heightPreview = static_cast<uint>(jpgs.at(largeJpg).height);
+            if (m.widthPreview > m.width) {
+                m.width = m.widthPreview;
+                m.height = m.heightPreview;
+            }
             m.offsetFull = static_cast<uint>(jpgs.at(largeJpg).offset);
             m.lengthFull = static_cast<uint>(jpgs.at(largeJpg).length);
-            m.widthPreview = m.width;
-            m.heightPreview = m.height;
-//            m.offsetSmall = static_cast<uint>(jpgs.at(smallJpg).offset);
-//            m.lengthSmall = static_cast<uint>(jpgs.at(smallJpg).length);
             m.offsetThumb = static_cast<uint>(jpgs.at(smallJpg).offset);
             m.lengthThumb = static_cast<uint>(jpgs.at(smallJpg).length);
         }
