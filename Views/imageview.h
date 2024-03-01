@@ -113,6 +113,7 @@ signals:
     void newTile();
 
 private slots:
+    void wheelStopped();
 //    void upgradeToFullSize();
 
 protected:
@@ -126,7 +127,8 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
-//    void enterEvent(QEvent *event) override;  // qt6.2
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
 //    void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -157,7 +159,8 @@ private:
     InfoString *infoString;
 
     QTimer *mouseMovementTimer;
-//    QElapsedTimer wheelEventElapse;
+    QTimer wheelTimer;
+    bool wheelSpinningOnEntry;
 
     struct intSize
     {

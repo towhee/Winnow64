@@ -607,7 +607,7 @@ void MetadataCache::run()
 
         // update allMetadataLoaded flag if metadata has been loaded for every row in dm
         if (!G::allMetadataLoaded) {
-            G::allMetadataLoaded = dm->isAllMetadataLoaded();
+            G::allMetadataLoaded = dm->isAllMetadataAttempted();
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions

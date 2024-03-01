@@ -98,6 +98,7 @@ public slots:
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
+    void wheelStopped();
 
 protected:
     void startDrag(Qt::DropActions) override;
@@ -110,6 +111,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent*) override;
+    void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
 
@@ -133,6 +135,8 @@ private:
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
+    bool wheelSpinningOnEntry;
+    QTimer wheelTimer;
 
     QRect cursorRect;
     QRect iconRect;

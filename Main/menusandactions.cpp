@@ -652,6 +652,12 @@ void MW::createGoActions()
     //    addAction(keyEndAction);
     //    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
 
+    jumpAction = new QAction(tr("Jump to Row"), this);
+    jumpAction->setObjectName("jump");
+    jumpAction->setShortcutVisibleInContextMenu(true);
+    addAction(jumpAction);
+    connect(jumpAction, &QAction::triggered, this, &MW::jump);
+
     keyScrollLeftAction = new QAction(tr("Scroll Left"), this);
     keyScrollLeftAction->setObjectName("scrollLeft");
     keyScrollLeftAction->setShortcutVisibleInContextMenu(true);
@@ -1717,6 +1723,8 @@ void MW::createGoMenu()
     goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
     */
+    goMenu->addAction(jumpAction);
+    goMenu->addSeparator();
     goMenu->addAction(keyScrollLeftAction);
     goMenu->addAction(keyScrollRightAction);
     goMenu->addAction(keyScrollUpAction);
@@ -2413,6 +2421,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        keyUpAction->setShortcut(QKeySequence("Up"));
 //        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
 //        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
+
+        jumpAction->setShortcut(QKeySequence("J"));
 
         keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
         keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));

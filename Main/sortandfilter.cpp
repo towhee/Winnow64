@@ -135,6 +135,7 @@ void MW::filterChange(QString source)
     updateStatus(true, "", "MW::filterChange");
 
     // if filter has eliminated all rows so nothing to show
+    qDebug() << "MW::filterChange dm->sf->rowCount() =" << dm->sf->rowCount();
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
@@ -681,15 +682,23 @@ void MW::setRating()
         }
     }
 
-    filterChange("MW::setRating");
-    //dm->sf->suspend(true);
+    /* must execute in order:
+       - suspend proxy updates
+       - update filter category
+       - if cat checked clear selection
+       - update proxy (filterChange) */
+
+    // update category list in filters
+    dm->sf->suspend(true);
     buildFilters->updateCategory(BuildFilters::RatingEdit);
-    //dm->sf->suspend(false);
+
+    // was this rating filtered
+    if (filters->isRatingChecked(rating)) sel->clear();
+
+    filterChange("MW::setRating");
 
     // update ImageView classification badge
     updateClassification();
-
-    // update filter list and counts
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -860,10 +869,20 @@ void MW::setColorClass()
         }
     }
 
-    filterChange("MW::setColorClass");
-    //dm->sf->suspend(true);
+    /* must execute in order:
+       - suspend proxy updates
+       - update filter category
+       - if cat checked clear selection
+       - update proxy (filterChange) */
+
+    // update category list in filters
+    dm->sf->suspend(true);
     buildFilters->updateCategory(BuildFilters::LabelEdit);
-    //dm->sf->suspend(false);
+
+    // was this rating filtered
+    if (filters->isLabelChecked(colorClass)) sel->clear();
+
+    filterChange("MW::setColorClass");
 
     // update ImageView classification badge
     updateClassification();

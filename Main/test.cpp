@@ -165,9 +165,24 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    reverseSortBtn->setEnabled(false);
-}
+    //QString path = "/Users/roryhill/Projects/Winnow64/Sounds/ingest.wav";
+    QString path = "/Users/roryhill/Downloads/ingest.wav";
+    QString path2 = "/Users/roryhill/Downloads/ingest2.wav";
+    QString path2a = "/Users/roryhill/Downloads/ingest2a.wav";
+    QString path2b = "/Users/roryhill/Downloads/ingest2b.wav";
+    QString path3 = "/Users/roryhill/Downloads/ingest3.wav";
+    QString path1 = "/Users/roryhill/Qt/6.6.0/Src/qtmultimedia/tests/auto/integration/qmediaplayerbackend/testdata/_test.wav";
+    QSoundEffect effect;
+    effect.setSource(QUrl::fromLocalFile(path2b));
+    effect.setLoopCount(2);
+    effect.setVolume(0.95f);
+    effect.play();
 
+//    pickClick->setSource(QUrl::fromLocalFile(path3));
+    pickClick->setLoopCount(0);
+//    pickClick->setVolume(0.95f);
+//    pickClick->play();
+}
 /*
    Performance
         Big max number of thumbnails

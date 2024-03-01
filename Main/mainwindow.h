@@ -74,6 +74,7 @@
 
 #include "Utilities/coloranalysis.h"
 #include "Image/stack.h"
+#include <QSoundEffect>
 
 #include "Utilities/performance.h"
 #include "ui_helpform.h"
@@ -508,6 +509,7 @@ private slots:
     void keyScrollPageDown();
     void keyScrollPageUp();
     void scrollToCurrentRow();
+    void jump();
     void zoomToggle();
     // status functions
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
@@ -776,6 +778,8 @@ private:
 //    QAction *keyEndAction;
 //    QAction *keyPageUpAction;
 //    QAction *keyPageDownAction;
+
+    QAction *jumpAction;
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;
@@ -1086,6 +1090,8 @@ private:
 //    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 //    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
+
+    QSoundEffect *pickClick;
 
     QHash<QString, bool> stopped;
 

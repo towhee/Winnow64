@@ -38,7 +38,7 @@ public:
     enum Status {
         Ready,
         Busy,
-        Done,
+        Success,
         Abort,
         Invalid,
         Failed,
