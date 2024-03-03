@@ -976,10 +976,11 @@ void ImageView::scrollContentsBy(int dx, int dy)
 void ImageView::enterEvent(QEnterEvent *event)
 {
     wheelSpinningOnEntry = G::wheelSpinning;
+    /*
     qDebug() << "ImageView::enterEvent" << objectName()
              << "G::wheelSpinning =" << G::wheelSpinning
              << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ;
+        ; //*/
 }
 
 void ImageView::leaveEvent(QEvent *event)
@@ -996,7 +997,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
         qDebug() << "ImageView::wheelEvent";
 
     if (wheelSpinningOnEntry && G::wheelSpinning) {
-        qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        //qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
         return;
     }
     wheelSpinningOnEntry = false;
@@ -1024,11 +1025,11 @@ void ImageView::wheelEvent(QWheelEvent *event)
     G::wheelSpinning = true;
     // singleshot to flag when wheel has stopped spinning
     wheelTimer.start(100);
-
+    /*
     qDebug() << "ImageView::wheelEvent"
              << "G::wheelSpinning =" << G::wheelSpinning
              << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ;
+        ; //*/
 }
 
 void ImageView::wheelStopped()

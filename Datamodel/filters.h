@@ -119,6 +119,7 @@ public slots:
     void startBuildFilters(bool isReset = false);
     void finishedBuildFilters();
     void loadingDataModel(bool isLoaded);
+    void loadingDataModelFailed();
     void setSoloMode(bool isSolo);
     bool otherHdrExpanded(QModelIndex thisIdx);
     void dataChanged(const QModelIndex &topLeft,

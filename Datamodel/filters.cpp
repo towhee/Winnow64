@@ -804,6 +804,14 @@ void Filters::loadingDataModel(bool isLoaded)
     }
 }
 
+void Filters::loadingDataModelFailed()
+{
+    msgFrame->setVisible(false);
+    filterLabel->setText("");
+    filterLabel->setVisible(false);
+    setEnabled(false);
+}
+
 void Filters::startBuildFilters(bool isReset)
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");

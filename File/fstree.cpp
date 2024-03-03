@@ -492,10 +492,11 @@ void FSTree::keyPressEvent(QKeyEvent *event){
 void FSTree::enterEvent(QEnterEvent *event)
 {
     wheelSpinningOnEntry = G::wheelSpinning;
+    /*
     qDebug() << "ImageView::enterEvent" << objectName()
              << "G::wheelSpinning =" << G::wheelSpinning
              << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ;
+        ; //*/
 }
 
 void FSTree::wheelEvent(QWheelEvent *event)
@@ -505,7 +506,7 @@ void FSTree::wheelEvent(QWheelEvent *event)
     Mouse wheel scrolling / trackpad swiping = next/previous image.
 */
     if (wheelSpinningOnEntry && G::wheelSpinning) {
-        qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        //qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
         return;
     }
     wheelSpinningOnEntry = false;
