@@ -247,6 +247,7 @@ bool ImageDecoder::load()
 
         // use Winnow decoder
         Tiff tiff;
+        qDebug() << "ImageDecoder::load" << fPath;
         if (!tiff.decode(fPath, n.offsetFull, image)) {
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "

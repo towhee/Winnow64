@@ -46,8 +46,8 @@ public:
     int width = 0;                          // width of raw image
     int height = 0;                         // height of raw image
     QString dimensions = "";
-    int widthPreview = 0;                      // width of preview (ImageView image width)
-    int heightPreview = 0;                     // height of preview (ImageView image height)
+    int widthPreview = 0;                   // width of preview (ImageView image width)
+    int heightPreview = 0;                  // height of preview (ImageView image height)
     float megapixels = 0;
     int loadMsecPerMp;
     float aspectRatio = 1;

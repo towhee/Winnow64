@@ -186,7 +186,8 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     bool getThumb = true;
     if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) return true;
 
-    // try load entire tif using Winnow decoder
+    // try load entire tif using Winnow
+    qDebug() << "Thumb::loadFromTiff" << fPath;
     if (!tiff.decode(fPath, m.offsetFull, image)) return true;
 
     // use Qt tiff library to decode

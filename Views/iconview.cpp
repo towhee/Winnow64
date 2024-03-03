@@ -1199,10 +1199,11 @@ void IconView::enterEvent(QEnterEvent *event)
 {
     if (isDebug) G::log("IconView::enterEvent", objectName());
     wheelSpinningOnEntry = G::wheelSpinning;
+    /*
     qDebug() << "IconView::enterEvent" << objectName()
              << "G::wheelSpinning =" << G::wheelSpinning
              << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ;
+        ; //*/
 }
 
 void IconView::leaveEvent(QEvent *event)
@@ -1222,7 +1223,7 @@ void IconView::wheelEvent(QWheelEvent *event)
         qDebug() << "IconView::wheelEvent" << objectName() << event;
 
     if (wheelSpinningOnEntry && G::wheelSpinning) {
-        qDebug() << "IconView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
+        //qDebug() << "IconView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
         return;
     }
     wheelSpinningOnEntry = false;

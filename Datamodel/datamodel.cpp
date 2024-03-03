@@ -475,11 +475,13 @@ bool DataModel::endLoad(bool success)
     if (success) {
         G::dmEmpty = false;
         checkChunkSize = iconChunkSize > rowCount();
+        filters->loadingDataModel(true);
         return true;
     }
     else {
         clear();
         G::dmEmpty = true;
+        filters->loadingDataModelFailed();
         return false;
     }
 }
@@ -1800,7 +1802,7 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
     G::allMetadataLoaded = isLoaded;
-    filters->loadingDataModel(isLoaded);
+    //filters->loadingDataModel(isLoaded);
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)

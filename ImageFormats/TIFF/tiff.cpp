@@ -747,6 +747,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     Decode using unmapped QFile.  Set p.file, p.offset and call main decode.
 */
     if (G::isLogger) G::log("Tiff::decode", " load file from fPath");
+    qDebug() << "Tiff::decode1" << fPath;
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
@@ -774,7 +775,9 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
 /*
     The version is used by decoders in image cache.
 */
-    if (G::isLogger) G::log("Tiff::decode", " load file from fPath");
+    if (G::isLogger) G::log("Tiff::decode1", " load file from fPath");
+    qDebug() << "Tiff::decode2" << fPath;
+
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
@@ -806,7 +809,9 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
     newSize is the resized long side in pixels.  If newSize = 0 then no resizing.
 
 */
-    if (G::isLogger) G::log("Tiff::decode", "Main decode with p.file assigned");
+    if (G::isLogger) G::log("Tiff::decode2", "Main decode with p.file assigned");
+    qDebug() << "Tiff::decode3" << p.fPath;
+
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, /*m, */ifd)) {
@@ -893,7 +898,7 @@ bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
     qDebug() << "Tiff::decodeLZW" << p.fPath;
     int strips = stripOffsets.count();
     TiffStrips tiffStrips;
-    QFuture<void> future;
+//    QFuture<void> future;
     // pass info to concurrent threads via TiffStrip for each strip
     TiffStrip tiffStrip;
     for (int strip = 0; strip < strips; ++strip) {
@@ -934,10 +939,13 @@ bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
         tiffStrip.fName = p.file.fileName();
         tiffStrip.rowsPerStrip = rowsPerStrip;
         */
+
         tiffStrips.append(tiffStrip);
+
+        lzwDecompress(tiffStrip);   // no future
     }
-    future = QtConcurrent::map(tiffStrips, lzwDecompress);
-    future.waitForFinished();
+//    future = QtConcurrent::map(tiffStrips, lzwDecompress);
+//    future.waitForFinished();
     return true;
 }
 
@@ -1043,6 +1051,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
     bool decoded;
+    qDebug() << "Tiff::encodeThumbnail" << p.fPath;
     if (compression == 1) decoded = decodeBase(/*m, */p, *im);
     if (compression == 5) decoded = decodeLZW(p, *im);
     if (!decoded) return false;
@@ -1265,7 +1274,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
 */
     TiffStrips tiffStrips;
     int alphaRowComponent = t.bytesPerRow / 3;
-    ///*
+    /*
     qDebug() << "Tiff::lzwDecompress"
              << "t.predictor =" << t.predictor
              << "t.bytesPerRow =" << t.bytesPerRow
@@ -1427,6 +1436,76 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
             case 7:
             case 8:
                 pDst = (uint32_t*)s[nextCode];
+/*
+The warning is due to the fact that char* has an alignment of 1 byte, while uint32_t*
+requires an alignment of 4 bytes. This means that a uint32_t* must point to an address
+that is a multiple of 4, but a char* can point to any address. When you cast a char* to a
+uint32_t*, you may end up with a pointer that does not respect the required alignment.
+
+To avoid this warning, you can use a type that has the correct alignment. If you want to
+keep an array of bytes, but sometimes treat it as an array of uint32_t, one approach is
+to use a union. Here’s an example:
+
+union AlignedData {
+    char c[4];
+    uint32_t i;
+};
+
+AlignedData s[4096];
+uint32_t nextCode = 258;
+uint32_t* pDst = &s[nextCode].i;
+
+In this code, s[nextCode].i will give you a uint32_t that has the correct alignment, and
+s[nextCode].c will give you a char[4] that allows you to manipulate individual bytes.
+This way, you avoid the alignment warning. Please note that this code assumes that
+sizeof(uint32_t) == 4. If this is not the case on your platform, you will need to adjust
+the size of the c array accordingly. Also, be aware of the endianness of your platform
+when using this method. The order of bytes in the uint32_t may not be the same as the
+order in the char[4].
+
+-----------------------
+
+Is there a better way to save an offset into athe buffer s?
+
+Yes, if you want to save an offset into the buffer s, you can simply use an integer to
+store the offset. Here’s an example:
+
+char s[4096];
+uint32_t nextCode = 258;
+uint32_t offset = nextCode * sizeof(uint32_t); // calculate offset
+
+In this code, offset is an integer that stores the offset into the buffer s. When you
+want to read or write a uint32_t at this offset, you can use memcpy:
+
+// Write a uint32_t to the buffer at the given offset
+uint32_t value = 123456;
+memcpy(s + offset, &value, sizeof(value));
+
+// Read a uint32_t from the buffer at the given offset
+uint32_t readValue;
+memcpy(&readValue, s + offset, sizeof(readValue));
+
+This code avoids the alignment warning because memcpy does not require the destination to
+be aligned. It also works correctly regardless of the endianness of your platform.
+However, it may be slower than the previous method because memcpy has to copy byte by
+byte. If performance is a concern and you know that your platform allows unaligned
+access, you can cast the pointer to uint32_t* after adding the offset:
+
+// Write a uint32_t to the buffer at the given offset
+uint32_t value = 123456;
+*(uint32_t*)(s + offset) = value;
+
+// Read a uint32_t from the buffer at the given offset
+uint32_t readValue = *(uint32_t*)(s + offset);
+
+This code may be faster, but it can cause undefined behavior on platforms that do not
+allow unaligned access. It also does not handle endianness automatically. You should only
+use this method if you are sure that it is safe on your platform and you handle
+endianness manually if necessary. Please note that this method will still cause the
+alignment warning. To suppress the warning, you can use a #pragma directive or a compiler
+flag, but this is generally not recommended because the warning is there for a reason.
+It’s better to write code that does not cause the warning in the first place.
+*/
                 pSrc = (uint32_t*)&ps;
                 *pDst = *pSrc;
                 *(pDst+1) = *(pSrc+1);
@@ -1446,7 +1525,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
         // strings[code][0] copy
         switch(sLen[code]) {
         case 1:
-            ps[0] = *s[code];
+            ps[0] = *s[code];   // crash
             break;
         case 2:
             ps[0] = *s[code];
@@ -1491,7 +1570,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
         }
 
     } // end while
-    qDebug() << "Tiff::lzwDecompress" << "finish thread" << QThread::currentThreadId();
+    //qDebug() << "Tiff::lzwDecompress" << "finish thread" << QThread::currentThreadId();
 
     return tiffStrips;
 }
