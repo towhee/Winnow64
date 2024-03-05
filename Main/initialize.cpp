@@ -68,24 +68,7 @@ void MW::initialize()
     slideCount = 0;
 
     pickClick = new QSoundEffect;
-    QString path = "/Users/roryhill/Projects/Winnow64/Sounds/ingest.wav";
-    //pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
-    pickClick->setSource(QUrl::fromLocalFile(path));
-    qDebug() << pickClick->source();
-
-    /*
-    // nothing
-    QString path1 = "/Users/roryhill/Qt/6.6.0/Src/qtmultimedia/tests/auto/integration/qmediaplayerbackend/testdata/_test.wav";
-    // long high beep
-    QString path = "/Users/roryhill/Downloads/ingest.wav";
-    // short, quiet click, fades when repeat quickly
-    QString path2 = "/Users/roryhill/Downloads/ingest2.wav";
-    QString path2a = "/Users/roryhill/Downloads/ingest2a.wav";
-    QString path2b = "/Users/roryhill/Downloads/ingest2b.wav";
-    // same as path2
-    QString path3 = "/Users/roryhill/Downloads/ingest3.wav";
-    pickClick->setSource(QUrl::fromLocalFile(path2b));
-    */
+    pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
     pickClick->setLoopCount(3);
     pickClick->setVolume(0.25);
 
