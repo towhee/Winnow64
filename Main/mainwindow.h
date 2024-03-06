@@ -35,7 +35,7 @@
 #include "Views/videoview.h"
 #include "Views/infoview.h"
 #include "Views/infostring.h"
-#include "Metadata/Metadata.h"
+#include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
 #include "Embellish/embelexport.h"
@@ -1091,6 +1091,8 @@ private:
     QStandardItemModel *imageModel;
 //    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
 
+//    QMediaPlayer *pickClick;
+//    QAudioOutput *audioOutput;
     QSoundEffect *pickClick;
 
     QHash<QString, bool> stopped;

@@ -165,24 +165,38 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    pickClick->play();
-    return;
-    QByteArray ba = "thequickbrownfoxjumpedoverthelazydogs";
-    int len = ba.size();
-    char* c1[37];
-    for (int i = 0; i < len; i++) {
-        c1[i] = &ba[i];
-    }
-    char* c = &ba[0];
-    uint offset = 3;
-    char ch = *(c + offset);
-    qDebug()
-            << " len =" << len
-        << "ba[3] =" << ba[3] << "\n"
-        << "*c1[3] =" << *c1[offset] << "\n"
-        << "ch =" << ch << "\n"
-        << "(uint8_t)ch =" << (uint8_t)ch << "\n"
-                ;
+
+
+
+//    QMediaPlayer *player = new QMediaPlayer;
+//    //QAudioOutput *audioOutput = new QAudioOutput;
+
+//    player->setAudioOutput(audioOutput);
+//    //player->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
+//    player->setSource(QUrl::fromLocalFile("/Users/roryhill/Downloads/ingest2b.wav"));
+//    //audioOutput->setVolume(50);
+//    player->play();
+//    return;
+
+//    pickClick->play();
+//    return;
+
+//    QByteArray ba = "thequickbrownfoxjumpedoverthelazydogs";
+//    int len = ba.size();
+//    char* c1[37];
+//    for (int i = 0; i < len; i++) {
+//        c1[i] = &ba[i];
+//    }
+//    char* c = &ba[0];
+//    uint offset = 3;
+//    char ch = *(c + offset);
+//    qDebug()
+//            << " len =" << len
+//        << "ba[3] =" << ba[3] << "\n"
+//        << "*c1[3] =" << *c1[offset] << "\n"
+//        << "ch =" << ch << "\n"
+//        << "(uint8_t)ch =" << (uint8_t)ch << "\n"
+//                ;
 }
 /*
    Performance

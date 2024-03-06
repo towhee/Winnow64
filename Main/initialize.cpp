@@ -72,6 +72,12 @@ void MW::initialize()
     pickClick->setLoopCount(3);
     pickClick->setVolume(0.25);
 
+//    pickClick = new QMediaPlayer;
+//    audioOutput = new QAudioOutput;
+//    pickClick->setAudioOutput(audioOutput);
+//    pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
+//    audioOutput->setVolume(50);
+
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";

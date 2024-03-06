@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 #include <QDialog>
-#include "main/global.h"
+#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
