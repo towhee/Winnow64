@@ -156,7 +156,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "pickAudioVolume") {
         int value = v.toInt();
-        mw->pickClick->setVolume(value * 1.0 / 100);
+        //mw->pickClick->setVolume(value * 1.0 / 100);
         mw->settings->setValue("pickAudioVolume", value);
     }
 

@@ -3,8 +3,8 @@
 
 #include <QObject>
 #include <QtWidgets>
-#include "main/global.h"
-#include "Metadata/Metadata.h"
+#include "Main/global.h"
+#include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/imagecache.h"
 #include "tokendlg.h"
