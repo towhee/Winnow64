@@ -511,7 +511,7 @@
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Not being used</string>
+                 <string>Not being used.</string>
                 </property>
                 <property name="text">
                  <string>Pixel compare</string>
