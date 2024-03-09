@@ -21,7 +21,7 @@ class Tiff : public QObject
     Q_OBJECT
 
 public:
-    explicit Tiff();
+    explicit Tiff(QString src = "");
     bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
@@ -30,13 +30,17 @@ public:
                Exif *exif,
                GPS *gps);
     bool parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd);
+
     // decode from cache decoder
     bool decode(QString fPath, quint32 offset, QImage &image);
+
     // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
+
     // decode using QFile mapped to memory
-    bool decode(/*ImageMetadata &m, */MetadataParameters &p, QImage &image, int newSize = 0);
+    bool decode(MetadataParameters &p, QImage &image, int newSize = 0);
+
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
@@ -83,7 +87,7 @@ private:
     struct TiffStrip {
         int strip;
         char* in;
-        int incoming;
+        quint32 incoming;
         uchar* out;
         int bitsPerSample;
         uint bytesPerRow;
@@ -100,6 +104,10 @@ private:
     QString err;
     bool isBigEndian(MetadataParameters &p);
 
+    QString source;
+    QString filePath;  // for debugging
+    bool isDebug;
+
     bool decodeBase(MetadataParameters &p, QImage &image);
     bool decodeLZW(MetadataParameters &p, QImage &image);
 
@@ -112,6 +120,7 @@ private:
 
     // LZW compression
     static TiffStrips lzwDecompress(TiffStrip t);
+    TiffStrips lzwDecompress2(TiffStrip &t, MetadataParameters &p);
     void lzwReset(QHash<quint32,QByteArray> &dictionary,
                   QByteArray &prevString,
                   quint32 &nextCode);
