@@ -158,7 +158,7 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
         return false;
     }
 
-    Tiff tiff;
+    Tiff tiff("AutonomousImage::load");
 
     // Attempt to decode tiff thumbnail by sampling tiff raw data
     bool getThumb = true;

@@ -20,7 +20,7 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     olympus = new Olympus;
     panasonic = new Panasonic;
     sony = new Sony;
-    tiff = new Tiff;
+    tiff = new Tiff("Metadata::Metadata");
 
     #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";

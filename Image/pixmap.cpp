@@ -191,7 +191,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
         // use Winnow decoder
         ImageMetadata m = dm->imMetadata(fPath);
-        Tiff tiff;
+        Tiff tiff("Pixmap::load");
 
         /*
         decodeTime.restart();

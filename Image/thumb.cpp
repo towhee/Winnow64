@@ -163,7 +163,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 
 bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 {
-    QString fun = "Thumb::loadFromTiffData";
+    QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -180,7 +180,7 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     }
 
     ImageMetadata m = dm->imMetadata(fPath);
-    Tiff tiff;
+    Tiff tiff("Thumb::loadFromTiff");
 
     // Attempt to decode tiff thumbnail by sampling tiff raw data
     bool getThumb = true;
