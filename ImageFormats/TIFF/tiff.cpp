@@ -832,7 +832,7 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
 
     bool decoded;
     if (compression == 1) decoded = decodeBase(p, image);
-    if (compression == 5) decoded = decodeLZW(p, image);
+    if (compression == 5 && predictor == 0) decoded = decodeLZW(p, image);
     p.file.close();
     if (!decoded) return false;
 
@@ -1715,7 +1715,7 @@ Tiff::TiffStrips Tiff::lzwDecompress2(TiffStrip &t, MetadataParameters &p)
 
     char strings[128000];
     // initialize first 256 code strings
-    for (int i = 0 ; i != 256 ; i++ ) {
+    for (int i = 0; i != 256 ; i++ ) {
         strings[i] = (char)i;
         s[i] = &strings[i];
     }
