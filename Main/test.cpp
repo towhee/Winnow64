@@ -184,19 +184,37 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //            ;
 //    }
 
-    qDebug() << "click";
-    QString path = "C:/Users/hillr/Downloads/click.wav";
+//    QString path1 = "/Users/roryhill/Documents/Sounds/click.wav";
+//    QString path2 = ":/Sounds/ingest.wav";
+//    QString path3 = "/Users/roryhill/Documents/Sounds/ingest.wav";
+//    QString path4 = "/Users/roryhill/Documents/Sounds/mixkit-interface-click-hover-1127.wav";
+//    QString path5 = "/Users/roryhill/Qt/6.6.0/Src/qtwebengine/src/3rdparty/chromium/third_party/webrtc/data/voice_engine/audio_tiny8.wav";
+//    QString path6 = "/Users/roryhill/Documents/Sounds/ingest2b.wav";
+//    QString pathToUse = path5;
+    qDebug() << "click" << se->source() << se->status();
 
-    QMediaPlayer *player = new QMediaPlayer;
-    QAudioOutput *audioOutput = new QAudioOutput;
-
-    player->setAudioOutput(audioOutput);
-    //player->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
-    player->setSource(QUrl::fromLocalFile(path));
-    //player->setSource(QUrl::fromLocalFile("/Users/roryhill/Downloads/ingest2b.wav"));
-    audioOutput->setVolume(50);
-    player->play();
+//    QSoundEffect se;
+//    se.setSource(QUrl::fromLocalFile(pathToUse));
+    se->setLoopCount(10);
+    se->setVolume(1.0);
+//    qDebug() << "status before while loop =" << se.status();
+//    while (se.status() == QSoundEffect::Loading){
+//        if (se.status() == QSoundEffect::Null) break;
+//        if (se.status() == QSoundEffect::Error) break;
+//        if (se.status() == QSoundEffect::Ready) break;
+//        qDebug() << "status in while loop =" << se.status();
+//    }
+//    qDebug() << "status after while loop =" << se.status();
+    se->play();
     return;
+
+//    QMediaPlayer *player = new QMediaPlayer;
+//    QAudioOutput *audioOutput = new QAudioOutput;
+//    player->setAudioOutput(audioOutput);
+//    player->setSource(QUrl::fromLocalFile(pathToUse));
+//    audioOutput->setVolume(50);
+//    player->play();
+//    return;
 
 //    pickClick->play();
 //    return;
