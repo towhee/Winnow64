@@ -396,11 +396,14 @@ void MW::deleteFolder()
     if (senderObject == "deleteActiveFolder") {
         dirToDelete = G::currRootFolder;
     }
-    else if (senderObject == "deleteBookmarkFolder") {
-        dirToDelete = bookmarks->rightMouseClickPath;
-    }
     else if (senderObject == "deleteFSTreeFolder") {
         dirToDelete = fsTree->rightMouseClickPath;
+    }
+
+    if (!QFile(dirToDelete).exists()) {
+        QString msg = dirToDelete + " does not exist";
+        G::popUp->showPopup(msg, 2000);
+        return;
     }
 
     if (deleteWarning) {

@@ -37,6 +37,8 @@ namespace G
 
     int dmInstance;
 
+    bool useMyTiff;
+
     // limit functionality for testing
     bool useApplicationStateChanged = false;
     bool useZoomWindow = false;;

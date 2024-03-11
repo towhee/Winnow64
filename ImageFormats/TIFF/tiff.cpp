@@ -1,5 +1,59 @@
 #include "tiff.h"
 
+/*
+
+The G::useMyTiff flag uses this TIFF class when true.  Creating missing thumbnails is
+also enabled.
+
+Some LZW compressed files crash in /Users/roryhill/Pictures/_test2.
+
+To do:
+
+    • debug crash issues
+    • add support for ZIP compression.
+    • or use libtiff library
+
+LibTiff
+
+    • https://libtiff.gitlab.io/libtiff/libtiff.html
+    • /Users/roryhill/Qt/6.6.0/Src/qtimageformats/src/3rdparty/libtiff/libtiff
+
+    Copilot: How embed jpg thumbnail in existing till file?
+
+    1. Open the Existing TIFF File: Begin by opening your existing TIFF file using the
+       TIFFOpen function in write mode.
+
+    2. Create the Thumbnail Data: Generate your JPEG thumbnail data. This thumbnail
+       should be a valid JPEG image extracted from the main image. You can resize the
+       main image or create a separate thumbnail image.
+
+    3. Set the TIFFTAG_JPEGTABLES Field: Use the TIFFSetField function to set the
+       TIFFTAG_JPEGTABLES field. Pass the JPEG thumbnail data as the value for this field.
+
+    4. Write the Main IFD: Finally, write your main IFD (Image File Directory)
+       using TIFFWriteDirectory. Here’s an updated example in C++:
+
+    Example:
+    // Assume you've opened an existing TIFF (TIFF* existing_TIFF) in write mode.
+    // Create a valid JPEG thumbnail (replace this with your actual thumbnail data).
+    const unsigned char jpeg_thumbnail_data[] = { Your JPEG data here };
+
+    // Set the TIFFTAG_JPEGTABLES field:
+    if (!TIFFSetField(existing_TIFF, TIFFTAG_JPEGTABLES, sizeof(jpeg_thumbnail_data), jpeg_thumbnail_data)) {
+        // Handle the error if setting the field fails.
+    }
+
+    // Write the main IFD:
+    TIFFWriteDirectory(existing_TIFF);
+
+    Remember to replace the placeholder jpeg_thumbnail_data with your actual JPEG thumbnail
+    data extracted from the main image. This approach will embed the thumbnail within your
+    existing TIFF file.
+
+    End Copilot answer
+
+*/
+
 bool showDebug = false;
 
 class parseInStream

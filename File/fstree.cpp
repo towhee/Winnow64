@@ -528,7 +528,7 @@ void FSTree::wheelStopped()
 {
     G::wheelSpinning = false;
     wheelSpinningOnEntry = false;
-    qDebug() << "ImageView::wheelStopped";
+    //qDebug() << "ImageView::wheelStopped";
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)
@@ -568,6 +568,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     emit renamePasteContextAction(folderName);
 
     if (event->button() == Qt::RightButton) {
+        rightMouseClickPath = path;
         return;
     }
 

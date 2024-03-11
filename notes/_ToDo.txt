@@ -8,8 +8,8 @@ WHAT'S NEW
 - Pick audio
 
 BUGS / TO DO
-- Error decoding Sounds/ingest.wav on MBA
-- FSTree folder not always highlighted ie select plus subfolders
+- Error decoding Sounds/ingest.wav on PC
+- FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - Select all 2022 √ and filter right away caused crash
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
