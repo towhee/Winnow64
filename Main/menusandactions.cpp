@@ -1700,7 +1700,7 @@ void MW::createEditMenu()
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(mediaReadSpeedAction);
     utilitiesMenu->addAction(visCmpImagesAction);
-    utilitiesMenu->addAction(embedThumbnailsAction);
+    if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
@@ -2105,8 +2105,10 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
-    thumbViewActions->append(separatorAction6);
-    thumbViewActions->append(embedThumbnailsAction);
+    if (G::useMyTiff) {
+        thumbViewActions->append(separatorAction6);
+        thumbViewActions->append(embedThumbnailsAction);
+    }
     thumbViewActions->append(separatorAction7);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);

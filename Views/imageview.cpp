@@ -1036,7 +1036,7 @@ void ImageView::wheelStopped()
 {
     G::wheelSpinning = false;
     wheelSpinningOnEntry = false;
-    qDebug() << "ImageView::wheelStopped";
+    //qDebug() << "ImageView::wheelStopped";
 }
 
 bool ImageView::event(QEvent *event) {

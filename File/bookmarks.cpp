@@ -326,6 +326,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::RightButton) {
         rightClickItem = itemAt(event->pos());
+        rightMouseClickPath = path;
         return;
     }
 

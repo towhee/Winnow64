@@ -165,6 +165,7 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 {
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
+
     QFile imFile(fPath);
     if (imFile.isOpen()) {
         qWarning() << "WARNING" << "Thumb::loadFromTiff" << fPath << "is already open - return";
@@ -182,16 +183,15 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff("Thumb::loadFromTiff");
 
-    // // Attempt to decode tiff thumbnail by sampling tiff raw data
-    // bool getThumb = true;
-    // if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) return true;
+     // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
+     bool getThumb = true;
+     if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) return true;
 
-    // // try load entire tif using Winnow
-    // qDebug() << "Thumb::loadFromTiff" << fPath;
-    // if (!tiff.decode(fPath, m.offsetFull, image)) return true;
+     // try load entire tif using Winnow
+     qDebug() << "Thumb::loadFromTiff" << fPath;
+     if (!tiff.decode(fPath, m.offsetFull, image)) return true;
 
-    // use Qt tiff library to decode
-    if (image.load(fPath)) return true;
+    // use Qt tiff library to decode embedded thumbnail (does not work)
 
     return false;
 }
@@ -281,7 +281,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             loaded = loadFromHeic(fPath, image);
         }
 
-        if (!loaded && ext == "tif") {
+        if (!loaded && ext == "tif" && G::useMyTiff) {
             loaded = loadFromTiff(fPath, image, dmRow);
         }
 

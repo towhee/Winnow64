@@ -3023,7 +3023,7 @@ void MW::loadLinearNewFolder()
     // set folder load flags
     G::isLinearLoadDone = true;
 
-    if (dm->isMissingEmbeddedThumb) {
+    if (dm->isMissingEmbeddedThumb && G::useMyTiff) {
         metadata->missingThumbnailWarning();
     }
 
