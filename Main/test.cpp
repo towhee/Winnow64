@@ -165,35 +165,38 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    char strings[128000];
-    char* s[4096];
-    int i = 0;
-    int x = (int)((char)i);
-    qDebug () << "x =" << x;
-    for (int i = 0 ; i != 10 ; i++ ) {
-        strings[i] = (char)i;
-        s[i] = &strings[i];
-        int x = (int)(*s[i]);
-        char c = *s[i];
-        qDebug() << "i =" << i
-                 << "x =" << x
-                 << "c =" << c
-//                 << "s[i] =" << s[i]
-//                 << "*s[i] =" << *s[i]
-//                 << "(int)(*s[i]) =" << (int)(*s[i])
-            ;
-    }
+//    char strings[128000];
+//    char* s[4096];
+//    int i = 0;
+//    int x = (int)((char)i);
+//    qDebug () << "x =" << x;
+//    for (int i = 0 ; i != 10 ; i++ ) {
+//        strings[i] = (char)i;
+//        s[i] = &strings[i];
+//        int x = (int)(*s[i]);
+//        char c = *s[i];
+//        qDebug() << "i =" << i
+//                 << "x =" << x
+//                 << "c =" << c
+////                 << "s[i] =" << s[i]
+////                 << "*s[i] =" << *s[i]
+////                 << "(int)(*s[i]) =" << (int)(*s[i])
+//            ;
+//    }
 
+    qDebug() << "click";
+    QString path = "C:/Users/hillr/Downloads/click.wav";
 
-//    QMediaPlayer *player = new QMediaPlayer;
-//    //QAudioOutput *audioOutput = new QAudioOutput;
+    QMediaPlayer *player = new QMediaPlayer;
+    QAudioOutput *audioOutput = new QAudioOutput;
 
-//    player->setAudioOutput(audioOutput);
-//    //player->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
-//    player->setSource(QUrl::fromLocalFile("/Users/roryhill/Downloads/ingest2b.wav"));
-//    //audioOutput->setVolume(50);
-//    player->play();
-//    return;
+    player->setAudioOutput(audioOutput);
+    //player->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
+    player->setSource(QUrl::fromLocalFile(path));
+    //player->setSource(QUrl::fromLocalFile("/Users/roryhill/Downloads/ingest2b.wav"));
+    audioOutput->setVolume(50);
+    player->play();
+    return;
 
 //    pickClick->play();
 //    return;

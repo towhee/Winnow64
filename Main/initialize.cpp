@@ -70,7 +70,9 @@ void MW::initialize()
     pickClick = new QSoundEffect;
     QString path = "/Users/roryhill/Qt/6.7.0/Src/qtmultimedia/tests/auto/integration/qmediaplayerbackend/testdata/_test.wav";
     //pickClick->setSource(QUrl::fromLocalFile(path));
-    pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
+    path = "C:/Users/hillr/Downloads/click.wav";
+    pickClick->setSource(QUrl::fromLocalFile(path));
+    //pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
     pickClick->setLoopCount(10);
     pickClick->setVolume(0.25);
 
