@@ -996,7 +996,7 @@ void Preferences::addItems()
     if (mw->settings->contains("playPickAudio"))
         i.value = mw->settings->value("playPickAudio").toBool();
     else
-        i.value = true;
+        i.value = false;
     i.key = "playPickAudio";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
