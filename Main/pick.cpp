@@ -86,7 +86,14 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    if (settings->value("playPickAudio").toBool()) pickClick->play();
+    if (settings->value("playPickAudio").toBool()) {
+        qDebug() << "MW::togglePickMouseOverItem pickClick"
+                 << pickClick->source() << pickClick->status()
+                 << "volume =" << pickClick->volume()
+                 << "loopCount =" << pickClick->loopCount()
+            ;
+        pickClick->play();
+    }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "", "MW::togglePickMouseOverItem");
@@ -137,7 +144,14 @@ void MW::togglePick()
     }
     foundFalse ? pickStatus = "Picked" : pickStatus = "Unpicked";
 
-    if (settings->value("playPickAudio").toBool()) pickClick->play();
+    if (settings->value("playPickAudio").toBool()) {
+        qDebug() << "MW::togglePick pickClick"
+                 << pickClick->source() << pickClick->status()
+                 << "volume =" << pickClick->volume()
+                 << "loopCount =" << pickClick->loopCount()
+            ;
+        pickClick->play();
+    }
 
     // add multiple selection flag to pick history
     if (n > 1) pushPick("Begin multiple select");
@@ -204,7 +218,14 @@ void MW::toggleReject()
     }
     foundFalse ? pickStatus = "Rejected" : pickStatus = "Unpicked";
 
-    if (settings->value("playPickAudio").toBool()) pickClick->play();
+    if (settings->value("playPickAudio").toBool()) {
+        qDebug() << "MW::toggleReject pickClick"
+                 << pickClick->source() << pickClick->status()
+                 << "volume =" << pickClick->volume()
+                 << "loopCount =" << pickClick->loopCount()
+            ;
+        pickClick->play();
+    }
 
     // set pick status for selection
     foreach (idx, idxList) {

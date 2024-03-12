@@ -165,6 +165,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << "settings->value(""playPickAudio"").toBool() ="
+             << settings->value("playPickAudio").toBool();
+    return;
+
 //    char strings[128000];
 //    char* s[4096];
 //    int i = 0;
@@ -191,22 +195,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    QString path5 = "/Users/roryhill/Qt/6.6.0/Src/qtwebengine/src/3rdparty/chromium/third_party/webrtc/data/voice_engine/audio_tiny8.wav";
 //    QString path6 = "/Users/roryhill/Documents/Sounds/ingest2b.wav";
 //    QString pathToUse = path5;
-    qDebug() << "click" << se->source() << se->status();
+//    qDebug() << "click" << se->source() << se->status();
 
-//    QSoundEffect se;
-//    se.setSource(QUrl::fromLocalFile(pathToUse));
-    se->setLoopCount(10);
-    se->setVolume(1.0);
-//    qDebug() << "status before while loop =" << se.status();
-//    while (se.status() == QSoundEffect::Loading){
-//        if (se.status() == QSoundEffect::Null) break;
-//        if (se.status() == QSoundEffect::Error) break;
-//        if (se.status() == QSoundEffect::Ready) break;
-//        qDebug() << "status in while loop =" << se.status();
-//    }
-//    qDebug() << "status after while loop =" << se.status();
-    se->play();
-    return;
+//    se->setLoopCount(10);
+//    se->setVolume(1.0);
+//    se->play();
+//    return;
 
 //    QMediaPlayer *player = new QMediaPlayer;
 //    QAudioOutput *audioOutput = new QAudioOutput;

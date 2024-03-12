@@ -67,33 +67,11 @@ void MW::initialize()
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
 
-    QString path;
-    //path = "/Users/roryhill/Qt/6.7.0/Src/qtmultimedia/tests/auto/integration/qmediaplayerbackend/testdata/_test.wav";
-    //path = "/Users/roryhill/Downloads/click.wav";
-    //path = ":/Sounds/ingest.wav";
-    path = "/Users/roryhill/Documents/Sounds/ingest2b.wav";
+    QString path = ":/Sounds/ingest.wav";
     pickClick = new QSoundEffect(this);
-    //pickClick->setSource(QUrl::fromLocalFile(path));
     pickClick->setSource(QUrl::fromLocalFile(path));
-    //pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
-    pickClick->setLoopCount(3);
-    pickClick->setVolume(0.25);
-
-    // test
-    QString path1 = "/Users/roryhill/Documents/Sounds/click.wav";   // Error decoding
-    QString path2 = ":/Sounds/ingest.wav";  // √
-    QString path3 = "/Users/roryhill/Documents/Sounds/ingest.wav";  // Error decoding
-    QString path4 = "/Users/roryhill/Documents/Sounds/mixkit-interface-click-hover-1127.wav"; // Error decoding
-    QString path5 = "/Users/roryhill/Qt/6.6.0/Src/qtwebengine/src/3rdparty/chromium/third_party/webrtc/data/voice_engine/audio_tiny8.wav"; // √
-    QString path6 = "/Users/roryhill/Documents/Sounds/ingest2b.wav";
-    QString pathToUse = path2;
-    se->setSource(QUrl::fromLocalFile(pathToUse));
-
-//    pickClick = new QMediaPlayer;
-//    audioOutput = new QAudioOutput;
-//    pickClick->setAudioOutput(audioOutput);
-//    pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
-//    audioOutput->setVolume(50);
+    pickClick->setLoopCount(10);
+    //pickClick->setVolume(0.25);
 
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
