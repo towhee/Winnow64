@@ -176,9 +176,9 @@ QString Mac::getDisplayProfileURL()
     // can crash after macos in sleep mode
     CFStringRef urlstr;
     if (data.url != nullptr) {
-      urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
+        urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
+        CFRelease(data.url);  // wakeup crash here - data.url == 0 null pointer argument
     }
-    CFRelease(data.url);
 //    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);
 }

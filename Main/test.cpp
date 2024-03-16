@@ -165,53 +165,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "settings->value(""playPickAudio"").toBool() ="
-             << settings->value("playPickAudio").toBool();
-    return;
 
-//    char strings[128000];
-//    char* s[4096];
-//    int i = 0;
-//    int x = (int)((char)i);
-//    qDebug () << "x =" << x;
-//    for (int i = 0 ; i != 10 ; i++ ) {
-//        strings[i] = (char)i;
-//        s[i] = &strings[i];
-//        int x = (int)(*s[i]);
-//        char c = *s[i];
-//        qDebug() << "i =" << i
-//                 << "x =" << x
-//                 << "c =" << c
-////                 << "s[i] =" << s[i]
-////                 << "*s[i] =" << *s[i]
-////                 << "(int)(*s[i]) =" << (int)(*s[i])
-//            ;
-//    }
 
-//    QString path1 = "/Users/roryhill/Documents/Sounds/click.wav";
-//    QString path2 = ":/Sounds/ingest.wav";
-//    QString path3 = "/Users/roryhill/Documents/Sounds/ingest.wav";
-//    QString path4 = "/Users/roryhill/Documents/Sounds/mixkit-interface-click-hover-1127.wav";
-//    QString path5 = "/Users/roryhill/Qt/6.6.0/Src/qtwebengine/src/3rdparty/chromium/third_party/webrtc/data/voice_engine/audio_tiny8.wav";
-//    QString path6 = "/Users/roryhill/Documents/Sounds/ingest2b.wav";
-//    QString pathToUse = path5;
-//    qDebug() << "click" << se->source() << se->status();
-
-//    se->setLoopCount(10);
-//    se->setVolume(1.0);
-//    se->play();
-//    return;
-
-//    QMediaPlayer *player = new QMediaPlayer;
-//    QAudioOutput *audioOutput = new QAudioOutput;
-//    player->setAudioOutput(audioOutput);
-//    player->setSource(QUrl::fromLocalFile(pathToUse));
-//    audioOutput->setVolume(50);
-//    player->play();
-//    return;
-
-//    pickClick->play();
-//    return;
 
 //    QByteArray ba = "thequickbrownfoxjumpedoverthelazydogs";
 //    int len = ba.size();

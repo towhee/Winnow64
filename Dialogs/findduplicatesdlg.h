@@ -49,6 +49,7 @@ protected:
     void resizeEvent(QResizeEvent*) override;
 
 private slots:
+    void on_samePixelsCB_clicked();
     void on_compareBtn_clicked();
     void on_prevToolBtn_clicked();
     void on_nextToolBtn_clicked();
@@ -60,6 +61,7 @@ private slots:
     void on_clrFoldersBtn_clicked();
     void on_toggleTvHideChecked_clicked();
     void buildBList();
+    void on_tv_doubleClicked(const QModelIndex &index);
 
 private:
     Ui::FindDuplicatesDlg *ui;
@@ -76,25 +78,38 @@ private:
         QString createdDate;
         QString aspect;
         QString duration;
-        double delta;
+        double deltaPixels;
     };
 
+    // replaced by QHash<int, QList<M>> matches
     struct R {
-        int bId;
-        QString fPath;
-        bool sameType;
-        bool sameCreationDate;
-        bool sameAspect;
-        bool sameDuration;
-        bool sameMeta;
-        double delta;
-        int sameMetaId;
-        int samePixelsId;
+        bool sameType;              //
+        bool sameCreationDate;      //
+        bool sameAspect;            //
+        bool sameDuration;          //
+        double deltaPixels;         //
+        bool match;                 // for reporting only
+    };
+
+    struct Matches {
+        QString path;
+        int deltaPixels;
     };
 
     QList<B> bItems;
+    QHash<int, QList<Matches>> matches;
     QVector<QVector<R>> results;
     int currentMatch;
+
+    // model columns
+    enum MC {
+        CheckBox,
+        Delta,
+        Thumbnail,
+        FileName
+//        bIndex,
+//        MatchPath
+    };
 
     int previewLongSide;
     QSize previewSize;
@@ -109,14 +124,16 @@ private:
     int compareRGB(QImage &imA, QImage &imB);
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
-    QString currentBString(int b);
+    QString currentMatchString(int a, int b);
     void clear();
+    void initializeResultsVector();
     void pixelCompare();
     void findMatches();
     void buildResults();
     int updateResults();
     void reportFindMatch(int a, int b);
     void reportbItems();
+    void reportMatches();
     void reportResults();
     void reportAspects();
     bool sameFileType(int a, int b);

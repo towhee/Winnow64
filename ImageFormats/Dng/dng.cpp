@@ -192,7 +192,6 @@ bool DNG::parse(MetadataParameters &p,
         }
     }
 
-
     // EXIF: *******************************************************************
 
     if (ifdEXIFOffset) {

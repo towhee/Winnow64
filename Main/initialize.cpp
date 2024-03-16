@@ -198,14 +198,14 @@ void MW::setupCentralWidget()
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
 
-    centralLayout->addWidget(imageView);
-    centralLayout->addWidget(videoView);
-    centralLayout->addWidget(compareImages);
-    centralLayout->addWidget(tableView);
-    centralLayout->addWidget(gridView);
-    centralLayout->addWidget(welcome);     // first time open program tips
-    centralLayout->addWidget(messageView);
-    centralLayout->addWidget(blankView);
+    centralLayout->addWidget(imageView);        // 0
+    centralLayout->addWidget(videoView);        // 1
+    centralLayout->addWidget(compareImages);    // 2
+    centralLayout->addWidget(tableView);        // 3
+    centralLayout->addWidget(gridView);         // 4
+    centralLayout->addWidget(welcome);          // 5 first time open program tips
+    centralLayout->addWidget(messageView);      // 6
+    centralLayout->addWidget(blankView);        // 7
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }

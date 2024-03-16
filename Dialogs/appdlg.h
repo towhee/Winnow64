@@ -9,7 +9,6 @@
 #endif
 
 namespace Ui {
-
 class Appdlg;
 }
 
