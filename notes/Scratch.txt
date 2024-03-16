@@ -7,3 +7,4 @@ uint32_t code;
 // snippet from inside loop processing incoming bytes from a tiff file
 // code == 0
 ps[0] = *s[code]; // occasional crash EXC_BAD_ACCESS (SIGSEGV) possible pointer authentication failure
+Left

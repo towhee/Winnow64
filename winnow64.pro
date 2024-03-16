@@ -49,8 +49,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    Utilities/showhelp.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -71,6 +70,7 @@ HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
 HEADERS += Dialogs/editlistdlg.h
 HEADERS += Dialogs/erasememcardimagesdlg.h
+HEADERS += Dialogs/findduplicatesdlg.h
 HEADERS += Dialogs/imagedlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/ingesterrors.h
@@ -86,8 +86,6 @@ HEADERS += Dialogs/selectionorpicksdlg.h
 HEADERS += Dialogs/testaligndlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
-HEADERS += \
-    Dialogs/findduplicatesdlg.h
 HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/zoomdlg.h
 HEADERS += Effects/effects.h
@@ -168,6 +166,7 @@ HEADERS += Utilities/performance.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/renamefile.h
+HEADERS += Utilities/showhelp.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
 HEADERS += Views/compareImages.h
@@ -181,9 +180,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Main/fileoperations.cpp \
-    Utilities/showhelp.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -216,8 +213,7 @@ SOURCES += Dialogs/selectionorpicksdlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
 SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
-SOURCES += \
-    Dialogs/findduplicatesdlg.cpp
+SOURCES += Dialogs/findduplicatesdlg.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
 SOURCES += Effects/effects.cpp
@@ -281,6 +277,7 @@ SOURCES += Main/mainwindow.cpp
 SOURCES += Main/diagnostics.cpp
 SOURCES += Main/draganddrop.cpp
 SOURCES += Main/externalapp.cpp
+SOURCES += Main/fileoperations.cpp
 SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
 SOURCES += Main/logger.cpp
@@ -334,6 +331,7 @@ SOURCES += Utilities/performance.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/renamefile.cpp
+SOURCES += Utilities/showhelp.cpp
 SOURCES += Utilities/usb.cpp
 SOURCES += Utilities/utilities.cpp
 win32:SOURCES += Utilities/win.cpp
@@ -348,19 +346,17 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/erasememcardimagesdlg.ui \
-    Dialogs/findduplicatesdlg.ui \
-    Help/helpfindduplicates.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui
 FORMS += Dialogs/editlistdlg.ui
+FORMS += Dialogs/erasememcardimagesdlg.ui
+FORMS += Dialogs/findduplicatesdlg.ui
 FORMS += Dialogs/imagedlg.ui
 FORMS += Dialogs/ingestdlg.ui
 FORMS += Dialogs/ingesterrors.ui
-#FORMS += Dialogs/ingestdlg_copy.ui
 FORMS += Dialogs/loadusbdlg.ui
 FORMS += Dialogs/managegraphicsdlg.ui
 FORMS += Dialogs/manageimagesdlg.ui
@@ -381,6 +377,7 @@ FORMS += Dialogs/zoomdlg.ui
 FORMS += Embellish/embelCoord.ui
 FORMS += Help/filtershelp.ui
 FORMS += Help/filtershelp_copy.ui
+FORMS += Help/helpfindduplicates.ui
 FORMS += Help/helpform.ui
 FORMS += Help/helpingest.ui
 FORMS += Help/ingestautopath.ui

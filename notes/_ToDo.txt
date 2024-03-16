@@ -8,6 +8,7 @@ WHAT'S NEW
 - Pick audio
 
 BUGS / TO DO
+- Right click main menu from central widget when blank
 - Error decoding Sounds/ingest.wav on PC
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - Select all 2022 √ and filter right away caused crash

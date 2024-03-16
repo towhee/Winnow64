@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1441</width>
+    <width>1291</width>
     <height>985</height>
    </rect>
   </property>
@@ -416,7 +416,7 @@
          <item>
           <widget class="QGroupBox" name="criteriaBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -446,6 +446,22 @@
              <number>0</number>
             </property>
             <item>
+             <spacer name="verticalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>12</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
              <layout class="QGridLayout" name="gridLayout">
               <property name="bottomMargin">
                <number>0</number>
@@ -456,20 +472,7 @@
               <property name="verticalSpacing">
                <number>10</number>
               </property>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="sameFileTypeCB">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Same file type</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
+              <item row="2" column="1">
                <widget class="QCheckBox" name="sameDurationCB">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -478,7 +481,20 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Same duration</string>
+                 <string>Same duration (video)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QCheckBox" name="sameAspectCB">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Same aspect</string>
                 </property>
                </widget>
               </item>
@@ -495,15 +511,21 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="VideoLbl">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="sameFileTypeCB">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Videos:</string>
+                 <string>Same file type</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
-               <widget class="QCheckBox" name="pixelCompare">
+              <item row="0" column="2">
+               <widget class="QCheckBox" name="samePixelsCB">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -514,36 +536,37 @@
                  <string>Not being used.</string>
                 </property>
                 <property name="text">
-                 <string>Pixel compare</string>
+                 <string>Same pixels</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="ImagesLbl">
-                <property name="text">
-                 <string>Images:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QCheckBox" name="sameAspectCB">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Same aspect</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="AllLbl">
-                <property name="text">
-                 <string>All:</string>
-                </property>
-               </widget>
+              <item row="2" column="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_14">
+                <item>
+                 <widget class="QLabel" name="deltaThresholdLbl">
+                  <property name="text">
+                   <string>Pixel delta threshold (0-99)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="deltaThreshold">
+                  <property name="maximumSize">
+                   <size>
+                    <width>50</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="deltaThresholdToolBtn">
+                  <property name="text">
+                   <string>?</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </item>
@@ -607,7 +630,7 @@
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>10</height>
+                   <height>15</height>
                   </size>
                  </property>
                 </spacer>
@@ -621,6 +644,9 @@
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_8">
+                 <property name="topMargin">
+                  <number>6</number>
+                 </property>
                  <item>
                   <widget class="QProgressBar" name="progressBar">
                    <property name="minimumSize">
@@ -680,7 +706,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Compare</string>
+                    <string>Find Duplicates</string>
                    </property>
                   </widget>
                  </item>
@@ -1093,6 +1119,9 @@
                     </property>
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_11">
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
                       <item>
                        <widget class="QLabel" name="deltaTxt">
                         <property name="sizePolicy">
@@ -1105,6 +1134,19 @@
                          <string>Delta</string>
                         </property>
                        </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_6">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>5</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
                       </item>
                       <item>
                        <widget class="QLabel" name="deltaLbl">
@@ -1122,20 +1164,10 @@
                      </layout>
                     </item>
                     <item>
-                     <spacer name="horizontalSpacer_8">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
-                      </property>
-                     </spacer>
-                    </item>
-                    <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_10">
+                      <property name="rightMargin">
+                       <number>15</number>
+                      </property>
                       <item>
                        <widget class="QToolButton" name="prevToolBtn">
                         <property name="text">
@@ -1153,20 +1185,7 @@
                      </layout>
                     </item>
                     <item>
-                     <spacer name="horizontalSpacer_2">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
-                      </property>
-                     </spacer>
-                    </item>
-                    <item>
-                     <spacer name="horizontalSpacer_7">
+                     <spacer name="horizontalSpacer_Right">
                       <property name="orientation">
                        <enum>Qt::Horizontal</enum>
                       </property>
@@ -1175,11 +1194,36 @@
                       </property>
                       <property name="sizeHint" stdset="0">
                        <size>
-                        <width>40</width>
+                        <width>20</width>
                         <height>20</height>
                        </size>
                       </property>
                      </spacer>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="currentLbl">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>0</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>16777215</height>
+                       </size>
+                      </property>
+                      <property name="text">
+                       <string>Current</string>
+                      </property>
+                     </widget>
                     </item>
                    </layout>
                   </widget>
@@ -1212,27 +1256,9 @@
                      <number>0</number>
                     </property>
                     <item>
-                     <widget class="QLabel" name="currentLbl">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="minimumSize">
-                       <size>
-                        <width>350</width>
-                        <height>0</height>
-                       </size>
-                      </property>
-                      <property name="maximumSize">
-                       <size>
-                        <width>16777215</width>
-                        <height>16777215</height>
-                       </size>
-                      </property>
+                     <widget class="QLabel" name="pathLbl">
                       <property name="text">
-                       <string>Current</string>
+                       <string>path</string>
                       </property>
                      </widget>
                     </item>
@@ -1254,13 +1280,13 @@
        <widget class="QFrame" name="rightFrame">
         <property name="minimumSize">
          <size>
-          <width>600</width>
+          <width>450</width>
           <height>0</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>400</width>
+          <width>450</width>
           <height>16777215</height>
          </size>
         </property>
@@ -1418,7 +1444,7 @@
          <string>How this works</string>
         </property>
         <property name="text">
-         <string>?</string>
+         <string>How this works</string>
         </property>
        </widget>
       </item>
