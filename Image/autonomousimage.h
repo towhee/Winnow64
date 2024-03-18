@@ -15,12 +15,13 @@ class AutonomousImage : public QObject
     Q_OBJECT
     QThread frameDecoderthread;
 public:
-    explicit AutonomousImage(Metadata *metadata);
-    bool thumbNail(QString &fPath, QImage &image, int longSide);
-    bool image(QString &fPath, QImage &image, int longSide, ImageMetadata m);
+    explicit AutonomousImage(Metadata *metadata, FrameDecoder *frameDecoder);
+    bool image(QString &fPath, QImage &image, int longSide, QString source);
+    //bool image(QString &fPath, QImage &image, int longSide, ImageMetadata m);
 
 signals:
-    void videoFrameDecode(QString fPath, QModelIndex dmIdx, int dmInstance);
+    void videoFrameDecode(QString fPath, int longSide, QString source,
+                          QModelIndex dmIdx, int dmInstance);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignCenter);
     void getFrame(QString fPath);
@@ -33,13 +34,15 @@ private:
     QString err;
     QSize thumbMax;
     int instance;
+    int longSide;
+    QString source;
     QFileDevice::Permissions oldPermissions;
 
     bool loadFromJpgData(QString &fPath, QImage &image);
     bool loadFromTiff(QString &fPath, QImage &image);
     bool loadFromHeic(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image);
-    void loadFromVideo(QString &fPath, int dmRow);
+    void loadFromVideo(QString &fPath);
     void checkOrientation(QString &fPath, QImage &image);
 
     // status flags

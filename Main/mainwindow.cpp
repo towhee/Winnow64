@@ -5734,7 +5734,7 @@ void MW::mediaReadSpeed()
 void MW::findDuplicates()
 {
     if (G::isLogger) G::log("MW::findDuplicates");
-    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
+    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata, frameDecoder);
     findDuplicatesDlg->setStyleSheet(G::css);
     // minimize dialog size fitting contents
     findDuplicatesDlg->resize(100, 100);

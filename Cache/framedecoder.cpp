@@ -60,17 +60,23 @@ void FrameDecoder::clear()
     return;
 }
 
-void FrameDecoder::addToQueue(QString path, QModelIndex dmIdx, int dmInstance)
+void FrameDecoder::addToQueue(QString path, int longSide, QString source,
+                              QModelIndex dmIdx, int dmInstance)
 {
     if (abort) return;
     Item item;
     item.fPath = path;
+    item.longSide = longSide;
+    item.source = source;
     item.dmIdx = dmIdx;
     item.dmInstance = dmInstance;
     queue.append(item);
-    if (isDebugging)
+    //if (isDebugging)
     {
         qDebug() << "FrameDecoder::addToQueue                 "
+                 //<< "ddmIdx =" << dmIdx
+                 << "source =" << source
+                 << "longSide =" << longSide
                  << "row =" << dmIdx.row()
                  << "queue size =" << queue.size()
                  << "status =" << status
@@ -126,8 +132,6 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     if (mediaPlayer->playbackState() == QMediaPlayer::PlaybackState::StoppedState) return;
 
     QImage im = frame.toImage();
-    QPixmap pm;
-    qint64 duration = 0;
 
     // wait for first valid frame
     if (im.isNull() || !frame.isValid() || queue.empty()) {
@@ -135,8 +139,6 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     }
     else {
         validFrame = true;
-        pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        duration = mediaPlayer->duration();
     }
 
     attempts++;
@@ -144,14 +146,32 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     {
         qDebug() << "FrameDecoder::frameChanged               "
                  << "row =" << queue.at(0).dmIdx.row()
+                 << "valid index =" << queue.at(0).dmIdx.isValid()
                  << "attempts =" << attempts
                  << "validFrame =" << validFrame
                  << "queue size =" << queue.size()
             ;
     }
 
-    if (validFrame) {
-        emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
+    if (!validFrame) return;
+
+    int ls = queue.at(0).longSide;
+    if (queue.at(0).source == "dmThumb") {
+        // set the icon in datamodel
+        if (queue.at(0).dmIdx.isValid()) {
+            QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
+            qint64 duration = mediaPlayer->duration();
+            emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
+        }
+    }
+    else {
+        // autonomous source
+        QString source = queue.at(0).source;
+        qDebug() << "FrameDecoder::frameChanged  ls =" << ls;
+        if (ls > 0)
+            emit frameImage(queue.at(0).fPath, im.scaled(ls, ls, Qt::KeepAspectRatio), source);
+        else
+            emit frameImage(queue.at(0).fPath, im, source);
     }
 
     if (validFrame || attempts > 10) {

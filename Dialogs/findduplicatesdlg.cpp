@@ -68,15 +68,21 @@ Comparison terms:
 
 */
 
-FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
+FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm,
+                                     Metadata *metadata, FrameDecoder *frameDecoder) :
     QDialog(parent),
     ui(new Ui::FindDuplicatesDlg),
     dm(dm),
-    metadata(metadata)
+    metadata(metadata),
+    frameDecoder(frameDecoder)
 {
-    autonomousImage = new AutonomousImage(metadata);
-    int id = 0; // dummy variable req'd by ImaeDecoder
+    autonomousImage = new AutonomousImage(metadata, frameDecoder);
+    connect(frameDecoder, &FrameDecoder::frameImage, this, &FindDuplicatesDlg::setImageFromVideoFrame);
+    // add disconnect in destructor...
+
+    int id = 0; // dummy variable req'd by ImageDecoder
     imageDecoder = new ImageDecoder(this, id, dm, metadata);
+
     ui->setupUi(this);
     setStyleSheet(G::css);
 
@@ -177,8 +183,12 @@ void FindDuplicatesDlg::setupModel()
     isDebug = false;
 }
 
-void FindDuplicatesDlg::preview(QString fPath, QImage &image)
+void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
 {
+/*
+    Get the preview image to display in the comparison view: either the candidate or
+    target.  If it is a video, then get the first video frame.
+*/
     QFileInfo fileInfo(fPath);
     ImageMetadata *m;
     if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview")) {
@@ -191,10 +201,67 @@ void FindDuplicatesDlg::preview(QString fPath, QImage &image)
         return;
     }
     if (m->video) {
-
+        int longSide = 0;
+        qDebug() << "FindDuplicatesDlg::getPreview"
+                 << "longSide =" << longSide
+                 << "source =" << source
+                 << "fPath =" << fPath
+            ;
+        autonomousImage->image(fPath, image, longSide, source);
     }
     else {
         imageDecoder->decode(image, metadata, *m);
+    }
+}
+
+void FindDuplicatesDlg::showPreview(QString path, QImage image, QString source)
+{
+    previewLongSide = ui->candidateLbl->width();
+    if (image.width() > previewLongSide)
+        previewSize = QSize(ui->candidateLbl->width(), ui->candidateLbl->height());
+    else
+        previewSize = QSize(image.width(), image.width());
+
+    if (source == "FindDupCandidate") {
+        pA = QPixmap::fromImage(image);
+        ui->candidateLbl->setPixmap(pA.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        ui->candidateLbl->setToolTip(path);
+    }
+    if (source == "FindDupMatch") {
+        pB = QPixmap::fromImage(image);
+        ui->matchLbl->setPixmap(pB.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        ui->matchLbl->setToolTip(path);
+    }
+}
+
+void FindDuplicatesDlg::setImageFromVideoFrame(QString path, QImage image, QString source)
+{
+/*
+    Thumbnails and previews for videos are obtained from FrameDecoder, which signals here
+    with the image.
+*/
+    int w = image.width();
+    int h = image.height();
+    qDebug() << path << "We did it!" << w << h << image << source;
+    if (source == "BItemThumbnail") {
+        bool foundItem = false;
+        int b;
+        for (b = 0; b < bItems.size(); b++) {
+            if (bItems.at(b).fPath == path) {
+                foundItem = true;
+                break;
+            }
+        }
+        if (foundItem) {
+            bItems[b].im = image;
+            qDebug() << path << "We found it!" << bItems[b].im;
+        }
+    }
+    if (source == "FindDupCandidate") {
+        showPreview(path, image, source);
+    }
+    if (source == "FindDupMatch") {
+        showPreview(path, image, source);
     }
 }
 
@@ -320,7 +387,7 @@ void FindDuplicatesDlg::pixelCompare()
     // iterate filtered datamodel
     int counter = 0;
     for (int a = 0; a < dm->sf->rowCount(); a++) {
-        QString aFPath = dm->sf->index(a,0).data(G::PathRole).toString();
+        QString aPath = dm->sf->index(a,0).data(G::PathRole).toString();
         QString aFName = dm->sf->index(a,G::NameColumn).data().toString();
         /*
         qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked"
@@ -342,6 +409,7 @@ void FindDuplicatesDlg::pixelCompare()
             }
             // getMetadataBItems has loaded thumbnails into bItems
             QImage imB = bItems.at(b).im;
+            QString bPath = bItems.at(b).fPath;
 
             // compare every pixel
             int deltaPixels = compareRGB(imA, imB);
@@ -353,7 +421,7 @@ void FindDuplicatesDlg::pixelCompare()
             item.deltaPixels = deltaPixels;
             results[a][b] = item;
 
-            //if (isDebug)
+            if (isDebug)
             {
             qDebug() << "FindDuplicatesDlg::pixelCompare"
                      << "a =" << a
@@ -363,6 +431,16 @@ void FindDuplicatesDlg::pixelCompare()
                      << bItems.at(b).fPath
                 ;
             }
+
+            // preview (for debugging)
+            // candidate image
+            /*
+            getPreview(aPath, imA, "FindDupCandidate");
+            showPreview(imA, aPath, "FindDupCandidate");
+            // best match image
+            getPreview(bPath, imB, "FindDupMatch");
+            showPreview(imB, bPath, "FindDupMatch");
+            */
 
             if (deltaPixels <= ui->deltaThreshold->value()) {
                 Matches mItem;
@@ -489,7 +567,7 @@ void FindDuplicatesDlg::buildBItemsList(QStringList &dPaths)
         // get the thumbnail (used to compare to A thumbnail in datamodel)
         QImage image;
         if (ui->samePixelsCB) {
-            autonomousImage->thumbNail(bItem.fPath, image, G::maxIconSize);
+            autonomousImage->image(bItem.fPath, image, G::maxIconSize, "BItemThumbnail");
             bItem.im = image;
         }
 
@@ -558,7 +636,7 @@ void FindDuplicatesDlg::getMetadataBItems()
     QString s = "Reading metadata for " + QString::number(totIterations) + " source files";
     ui->progressLbl->setText(s);
     int counter = 0;
-    for (int i = 0; i < bItems.count(); i++ ) {
+    for (int b = 0; b < bItems.count(); b++ ) {
         if (abort) {
             ui->progressLbl->setText("Search aborted");
             clear();
@@ -573,20 +651,24 @@ void FindDuplicatesDlg::getMetadataBItems()
         ui->progressBar->setValue(pctProgress);
         qApp->processEvents();
 
-        QString fPath = bItems.at(i).fPath;
+        QString fPath = bItems.at(b).fPath;
 
         // get the thumbnail (used to compare to A thumbnail in datamodel)
         QImage image;
         if (ui->samePixelsCB->isChecked()) {
             qDebug() << "FindDuplicatesDlg::getMetadataBItems autonomousImage->thumbNail"
-                     << fPath
-                ;
-            autonomousImage->thumbNail(fPath, image, G::maxIconSize);
-            bItems[i].im = image;
+                     << "G::maxIconSize =" << G::maxIconSize
+                     << fPath;
+            autonomousImage->image(fPath, image, G::maxIconSize, "BItemThumbnail");
+            bItems[b].im = image;
         }
 
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
+
+        if (b == 4) {
+            int x = 0; // pause for debug
+        }
 
         if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             // deal with failure
@@ -595,14 +677,18 @@ void FindDuplicatesDlg::getMetadataBItems()
         ImageMetadata *m = &metadata->m;
 
         // type
-        bItems[i].type = QFileInfo(fPath).suffix().toLower();
+        bItems[b].type = QFileInfo(fPath).suffix().toLower();
 
         // create date
-        bItems[i].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+        bItems[b].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        qDebug() << "FindDuplicatesDlg::buildBItemsList"
+                 << "b =" << b
+                 << "createdDate =" << bItems[b].createdDate;
 
         // duration
         if (ui->sameDurationCB->isChecked()) {
-            if (metadata->videoFormats.contains(bItems.at(i).type)) {
+            if (metadata->videoFormats.contains(bItems.at(b).type)) {
                 QString s = metadata->readExifToolTag(fPath, "duration#");
                 quint64 duration = static_cast<quint64>(s.toDouble());
                 //duration /= 1000;
@@ -610,7 +696,7 @@ void FindDuplicatesDlg::getMetadataBItems()
                                    duration % 60, (duration * 1000) % 1000);
                 QString format = "mm:ss";
                 if (duration > 3600) format = "hh:mm:ss";
-                bItems[i].duration = durationTime.toString(format);
+                bItems[b].duration = durationTime.toString(format);
                 /*
                 qDebug() << "FindDuplicatesDlg::buildBItemsList"
                          << "s =" << s
@@ -619,10 +705,10 @@ void FindDuplicatesDlg::getMetadataBItems()
                          << "bItem.duration =" << bItem.duration
                     ; //*/
             }
-            else bItems[i].duration = "00:00";
+            else bItems[b].duration = "00:00";
         }
 
-        if (ui->sameAspectCB->isChecked() && ui->samePixelsCB) {
+        if (ui->sameAspectCB->isChecked()) {
             double aspect;
             if (m->width && m->height) {
                 if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
@@ -632,7 +718,7 @@ void FindDuplicatesDlg::getMetadataBItems()
                 if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
                 else aspect = 0;
             }
-            bItems[i].aspect = QString::number(aspect,'f', 2);
+            bItems[b].aspect = QString::number(aspect,'f', 2);
         }
     }
 }
@@ -1088,12 +1174,14 @@ void::FindDuplicatesDlg::reportResults()
 {
     qDebug() << "\n" << "FindDuplicatesDlg::reportResults"
              << "  A count =" << dm->sf->rowCount() << "B count =" << bItems.count();
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
     QString s = " ";
-    QString rpt;
     int aDigits = QString::number(dm->sf->rowCount()).length() + 1;
     int bDigits = QString::number(bItems.count()).length() + 1;
     for (int a = 0; a < dm->sf->rowCount(); a++) {
-        QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
+        QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(40);
         QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
         QString typeA = QFileInfo(pathA).suffix().toLower();
         QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
@@ -1101,48 +1189,58 @@ void::FindDuplicatesDlg::reportResults()
         QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
         if (durationA.length() == 0) durationA = "00:00";
         for (int b = 0; b < bItems.count(); b++) {
-            rpt = "";
-            rpt += "  a " + QString::number(a).leftJustified(aDigits);
-            rpt += "b " + QString::number(b).leftJustified(bDigits);
-            QString match = results[a][b].match ? "true" : "false";
-            rpt += "  Match " + match.leftJustified(5);
-            if (ui->sameFileTypeCB->isChecked()) {
-                QString sameType = results[a][b].sameType ? "true" : "false";
-                QString typeB = bItems.at(b).type;
-                rpt += "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
-            }
-            if (ui->sameCreationDateCB->isChecked()) {
-                QString sameCreationDate = results[a][b].sameCreationDate ? "true" : "false";
-                QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
-                rpt += "    DATE " + sameCreationDate.leftJustified(6) + dateA + s + dateB;
-            }
-            if (ui->sameAspectCB->isChecked()) {
-                QString sameAspect = results[a][b].sameAspect ? "true" : "false";
-                QString aspectB = bItems.at(b).aspect;
-                rpt += "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
-            }
-            if (ui->sameDurationCB->isChecked()) {
-                QString sameDuration = results[a][b].sameDuration ? "true" : "false";
-                QString durationB = bItems.at(b).duration;
-                rpt += "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
-            }
-            rpt += "    A: " + fileNameA;
-            rpt += "B: " + bItems.at(b).fPath;
+            if (ui->samePixelsCB->isChecked()) {
 
-            qDebug().noquote() << rpt;
-            /*
-            qDebug().noquote()
-                << "  " << "a =" << QString::number(a).rightJustified(4)
-                << "b =" << QString::number(b).rightJustified(4)
-                << "  SAME" << match.leftJustified(5)
-                << "    TYPE" << (typeA + s + typeB).leftJustified(9) + s + sameType.leftJustified(5)
-                << "    DATE" << dateA + s + dateB + s + sameCreationDate.leftJustified(5)
-                << "    ASPECT" << (aspectA + s + aspectB).leftJustified(7) + s + sameAspect.leftJustified(5)
-                << " A:" << fileNameA
-                << "B:" << bItems.at(b).fPath
-                ;  //*/
+            }
+            else {
+                //rpt = "";
+                rpt << "  a " + QString::number(a).leftJustified(aDigits);
+                rpt << "b " + QString::number(b).leftJustified(bDigits);
+                QString match = results[a][b].match ? "true" : "false";
+                rpt << "  Match " + match.leftJustified(5);
+                if (ui->sameFileTypeCB->isChecked()) {
+                    QString sameType = results[a][b].sameType ? "true" : "false";
+                    QString typeB = bItems.at(b).type;
+                    rpt << "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
+                }
+                if (ui->sameCreationDateCB->isChecked()) {
+                    QString sameCreationDate = results[a][b].sameCreationDate ? "true" : "false";
+                    QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
+                    rpt << "  DATE " + sameCreationDate.leftJustified(6) + dateA + s + dateB;
+                }
+                if (ui->sameAspectCB->isChecked()) {
+                    QString sameAspect = results[a][b].sameAspect ? "true" : "false";
+                    QString aspectB = bItems.at(b).aspect;
+                    rpt << "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
+                }
+                if (ui->sameDurationCB->isChecked()) {
+                    QString sameDuration = results[a][b].sameDuration ? "true" : "false";
+                    QString durationB = bItems.at(b).duration;
+                    rpt << "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
+                }
+                rpt << "    A: " + fileNameA;
+                rpt << "B: " + bItems.at(b).fPath;
+                rpt << "\n";
+            }
         }
     }
+    QDialog *dlg = new QDialog;
+    dlg->setStyleSheet(G::css);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    dlg->resize(2500, dlg->height());
+    //dlg->setFixedWidth(1500);
+    md.textBrowser->setStyleSheet(G::css);
+    QFont courier("Courier", 12);
+    md.textBrowser->setFont(courier);
+    md.textBrowser->setText(reportString);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    QFontMetrics metrics(md.textBrowser->font());
+    md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+    dlg->exec();
 }
 
 void FindDuplicatesDlg::on_samePixelsCB_clicked()
@@ -1217,17 +1315,17 @@ void FindDuplicatesDlg::on_prevToolBtn_clicked()
         qDebug() << "FindDuplicatesDlg::on_prevToolBtn_clicked currentMatch =" << currentMatch << "a =" << a << "b =" << b;
         }
         QImage image;
-        preview(bPath, image);
-        ui->matchLbl->setPixmap(QPixmap::fromImage(image.scaled(previewSize, Qt::KeepAspectRatio)));
-        ui->matchLbl->setToolTip(bPath);
-        ui->deltaLbl->setText(QString::number(results[a][b].deltaPixels));
+        getPreview(bPath, image, "FindDupMatch");
+        showPreview(bPath, image, "FindDupMatch");
+        if (ui->samePixelsCB->isChecked()) {
+            ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
+        }
         ui->currentLbl->setText(currentMatchString(a, b));
     }
     else {
         G::popUp->showPopup("Start of match images");
     }
 }
-
 
 void FindDuplicatesDlg::on_nextToolBtn_clicked()
 {
@@ -1244,11 +1342,10 @@ void FindDuplicatesDlg::on_nextToolBtn_clicked()
                  << "bPath =" << bPath;
         }
         QImage image;
-        preview(bPath, image);
-        ui->matchLbl->setPixmap(QPixmap::fromImage(image.scaled(previewSize, Qt::KeepAspectRatio)));
-        ui->matchLbl->setToolTip(bPath);
+        getPreview(bPath, image, "FindDupMatch");
+        showPreview(bPath, image, "FindDupMatch");
         if (ui->samePixelsCB->isChecked()) {
-        ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
+            ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
         }
         ui->currentLbl->setText(currentMatchString(a, b));
     }
@@ -1295,17 +1392,12 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
 
     // show candidate and match images
     QImage image;
-    previewLongSide = ui->candidateLbl->width();
-    previewSize = QSize(ui->candidateLbl->width(), ui->candidateLbl->height());
     // candidate image
-    preview(aPath, image);
-    pA = QPixmap::fromImage(image);
-    ui->candidateLbl->setPixmap(pA.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    getPreview(aPath, image, "FindDupCandidate");
+    showPreview(aPath, image, "FindDupCandidate");
     // best match image
-    preview(bPath, image);
-    pB = QPixmap::fromImage(image);
-    ui->matchLbl->setPixmap(pB.scaled(previewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    ui->matchLbl->setToolTip(bPath);
+    getPreview(bPath, image, "FindDupMatch");
+    showPreview(bPath, image, "FindDupMatch");
 
     // best match delta
     if (ui->samePixelsCB->isChecked()) {
@@ -1332,8 +1424,20 @@ void FindDuplicatesDlg::on_abortBtn_clicked()
 
 void FindDuplicatesDlg::on_cancelBtn_clicked()
 {
-//    reportResults();
-//    return;
+    int a = 3;
+    int b = 4;
+    QIcon icon = dm->sf->index(a,0).data(Qt::DecorationRole).value<QIcon>();
+    QImage imA = icon.pixmap(icon.actualSize(QSize(256, 256))).toImage();
+    QString aPath = dm->sf->index(a,G::PathColumn).data().toString();
+    QImage imB = bItems.at(b).im;
+    qDebug() << "FindDuplicatesDlg::on_cancelBtn_clicked" << imB.size();
+    QString bPath = bItems.at(b).fPath;
+    //getPreview(aPath, imA, "FindDupCandidate");
+    showPreview(aPath, imA, "FindDupCandidate");
+    // best match image
+    //getPreview(bPath, imB, "FindDupMatch");
+    showPreview(bPath, imB, "FindDupMatch");
+    return;
     reject();
 }
 
@@ -1403,5 +1507,11 @@ void FindDuplicatesDlg::on_toggleTvHideChecked_clicked()
 void FindDuplicatesDlg::on_tv_doubleClicked(const QModelIndex &index)
 {
     reportMatches();
+}
+
+
+void FindDuplicatesDlg::on_reportBtn_clicked()
+{
+    reportResults();
 }
 
