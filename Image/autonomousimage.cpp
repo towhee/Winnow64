@@ -5,15 +5,13 @@
    not, then then entire image is read and scaled to thumbMax.
 */
 
-AutonomousImage::AutonomousImage(Metadata *metadata) : metadata(metadata)
+AutonomousImage::AutonomousImage(Metadata *metadata, FrameDecoder *frameDecoder)
+    : metadata(metadata), frameDecoder(frameDecoder)
 {
-    //this->metadata = metadata;
-    //this->frameDecoder = frameDecoder;
+    thumbMax.setWidth(G::maxIconSize);
+    thumbMax.setHeight(G::maxIconSize);
 
-    //thumbMax.setWidth(G::maxIconSize);
-    //thumbMax.setHeight(G::maxIconSize);
-
-    //connect(this, &AutonomousImage::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+    connect(this, &AutonomousImage::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
     isDebug = false;
 }
@@ -62,23 +60,23 @@ void AutonomousImage::checkOrientation(QString &fPath, QImage &image)
     }
 }
 
-void AutonomousImage::loadFromVideo(QString &fPath, int dmRow)
+void AutonomousImage::loadFromVideo(QString &fPath)
 {
-    /*
+/*
     see top of FrameDecoder.cpp for documentation
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
 
-    if (isDebug)
+    //if (isDebug)
     {
-        qDebug() << "Thumb::loadFromVideo                     "
-                 << "row =" << dmRow
+        qDebug() << "AutonomousImage::loadFromVideo                     "
+                 << "longSide =" << longSide
                  << fPath
             ;
     }
 
-    QModelIndex dmIdx = dm->index(dmRow, 0);
-    emit videoFrameDecode(fPath, dmIdx, dm->instance);
+    QModelIndex idx = QModelIndex();  // dummy currently req'd by FrameDecoder
+    emit videoFrameDecode(fPath, longSide, source, idx, G::dmInstance);
 }
 
 bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
@@ -194,13 +192,18 @@ bool AutonomousImage::loadFromHeic(QString &fPath, QImage &image)
     #endif
 }
 
-bool AutonomousImage::thumbNail(QString &fPath, QImage &image, int longSide)
+bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString source)
 {
 /*
-    Decode the image file into a QImage, resized to
+    Decode the image file into a QImage, resized to longSide.  If longSide == 0 then
+    do not resize.
 */
     if (G::isLogger) G::log("AutonomousImage::image", fPath);
-    if (isDebug) qDebug() << "AutonomousImage::image" << fPath;
+    if (isDebug)
+        qDebug() << "AutonomousImage::image" << fPath;
+
+    this->longSide = longSide;
+    this->source = source;
 
     // get status information
     QFileInfo fileInfo(fPath);
@@ -249,8 +252,8 @@ bool AutonomousImage::thumbNail(QString &fPath, QImage &image, int longSide)
 
     // if video file do we render image or ignore???
     if (isVideo) {
-        //loadFromVideo(fPath, dmRow);
-        success = false;
+        loadFromVideo(fPath);
+        success = true;
     }
 
     // raw image file or tiff with embedded jpg

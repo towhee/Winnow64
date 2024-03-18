@@ -42,11 +42,15 @@ class FindDuplicatesDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata);
+    explicit FindDuplicatesDlg(QWidget *parent, DataModel *dm,
+                               Metadata *metadata, FrameDecoder *frameDecoder);
     ~FindDuplicatesDlg();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
+
+public slots:
+    void setImageFromVideoFrame(QString path, QImage image, QString source);
 
 private slots:
     void on_samePixelsCB_clicked();
@@ -63,12 +67,15 @@ private slots:
     void buildBList();
     void on_tv_doubleClicked(const QModelIndex &index);
 
+    void on_reportBtn_clicked();
+
 private:
     Ui::FindDuplicatesDlg *ui;
     DataModel *dm;
     Metadata *metadata;
     AutonomousImage *autonomousImage;
     ImageDecoder *imageDecoder;
+    FrameDecoder *frameDecoder;
 
     struct B {
         int index;
@@ -117,7 +124,8 @@ private:
     QPixmap pB;
 
     QStandardItemModel model;
-    void preview(QString fPath, QImage &image);
+    void getPreview(QString fPath, QImage &image, QString source);
+    void showPreview(QString path, QImage image, QString source);
     void buildBItemsList(QStringList &dPaths);
     void getMetadataBItems();
     int reportRGB(QImage &im);

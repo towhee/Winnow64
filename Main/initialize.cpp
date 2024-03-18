@@ -301,8 +301,7 @@ void MW::createFrameDecoder()
     frameDecoder = new FrameDecoder(this);
     connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
     connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame/*,
-            Qt::BlockingQueuedConnection*/);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     thumb = new Thumb(dm, metadata, frameDecoder);
 }
 

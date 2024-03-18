@@ -20,12 +20,15 @@ signals:
     void stopped(QString src);
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
+    void frameImage(QString path, QImage image, QString source);
 
 public slots:
-    void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
-    void clear();
     void stop();
+    void clear();
+    void addToQueue(QString fPath, int longSide, QString source = "",
+                    QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void frameChanged(const QVideoFrame frame);
+    //void test();
     void errorOccurred(QMediaPlayer::Error, const QString &errorString);
 
 private:
@@ -33,8 +36,10 @@ private:
     enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
+        int longSide;
         QModelIndex dmIdx;
         int dmInstance;
+        QString source;
     };
     QList<Item> queue;
     FrameDecoder *thisFrameDecoder;
