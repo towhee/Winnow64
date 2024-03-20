@@ -416,7 +416,7 @@
          <item>
           <widget class="QGroupBox" name="criteriaBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -795,7 +795,7 @@
             </font>
            </property>
            <property name="title">
-            <string>Compare images (select from candidate images table)</string>
+            <string>Compare Images (select from candidate images table)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
             <property name="spacing">
@@ -1140,6 +1140,9 @@
                         <property name="orientation">
                          <enum>Qt::Horizontal</enum>
                         </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Fixed</enum>
+                        </property>
                         <property name="sizeHint" stdset="0">
                          <size>
                           <width>5</width>
@@ -1162,6 +1165,19 @@
                        </widget>
                       </item>
                      </layout>
+                    </item>
+                    <item>
+                     <spacer name="horizontalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
                     </item>
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_10">
@@ -1203,7 +1219,7 @@
                     <item>
                      <widget class="QLabel" name="currentLbl">
                       <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
                         <horstretch>0</horstretch>
                         <verstretch>0</verstretch>
                        </sizepolicy>
@@ -1463,6 +1479,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="reportBtn">
+        <property name="toolTip">
+         <string>List all matches.  alt/option to list non-matches as well.</string>
+        </property>
         <property name="text">
          <string>Report</string>
         </property>

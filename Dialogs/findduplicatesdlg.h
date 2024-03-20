@@ -78,14 +78,12 @@ private:
     FrameDecoder *frameDecoder;
 
     struct B {
-        int index;
         QString fPath;
-        QImage im;
         QString type;
         QString createdDate;
         QString aspect;
         QString duration;
-        double deltaPixels;
+        QImage im;
     };
 
     // replaced by QHash<int, QList<M>> matches
@@ -94,7 +92,7 @@ private:
         bool sameCreationDate;      //
         bool sameAspect;            //
         bool sameDuration;          //
-        double deltaPixels;         //
+        int deltaPixels;         //
         bool match;                 // for reporting only
     };
 
@@ -126,7 +124,7 @@ private:
     QStandardItemModel model;
     void getPreview(QString fPath, QImage &image, QString source);
     void showPreview(QString path, QImage image, QString source);
-    void buildBItemsList(QStringList &dPaths);
+    // void buildBItemsList(QStringList &dPaths);
     void getMetadataBItems();
     int reportRGB(QImage &im);
     int compareRGB(QImage &imA, QImage &imB);
@@ -138,7 +136,7 @@ private:
     void pixelCompare();
     void findMatches();
     void buildResults();
-    int updateResults();
+    //int updateResults();
     void reportFindMatch(int a, int b);
     void reportbItems();
     void reportMatches();
