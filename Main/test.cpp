@@ -165,8 +165,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << G::displayVirtualHorizontalPixels;
+    return;
+    // static bool onoff = true;
 
+    // qApp->setAttribute(Qt::AA_DontUseNativeMenuBar, onoff);
+    // qApp->setAttribute(Qt::AA_DisableWindowContextHelpButton, true);
 
+    // onoff = !onoff;
 
 //    QByteArray ba = "thequickbrownfoxjumpedoverthelazydogs";
 //    int len = ba.size();

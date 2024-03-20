@@ -58,13 +58,21 @@ void DragToList::dropEvent(QDropEvent *event)
 
 /*******************************************************************************************
 
+Purpose
+
+    For the images in the folder(s) currently selected in Winnow, look for matching images
+    in the target foldewr(s).  A typical use case is selecting the downloads folder in
+    Winnow, and then set all recent folders in the photo library as the target, and then
+    search for matches to see if you already have to download images in your library.
+
 Comparison terms:
 
-    A or a refers to the items in dm->sf datamodel
-    B or b refers to the items in ui->cmpToFolders
-    delta[a][b] is the difference between image A and image B
-    cmpToFolders is the list of all folders containing B images
-    bList is the list of all B images
+    - A or a refers to the items in dm->sf datamodel
+    - B or b refers to the items in ui->cmpToFolders
+    - cmpToFolders is the list of all folders containing B images
+    - bList is the list of all B images
+    - matches is a hash indexed on A with the matching images from B
+    - delta is the average difference in pixels A vs B
 
 */
 
@@ -142,8 +150,6 @@ void FindDuplicatesDlg::setupModel()
     model.setHorizontalHeaderItem(1, new QStandardItem("Delta"));
     model.setHorizontalHeaderItem(2, new QStandardItem(""));    // icon
     model.setHorizontalHeaderItem(3, new QStandardItem("File Name"));
-//    model.setHorizontalHeaderItem(4, new QStandardItem("TargetId"));
-//    model.setHorizontalHeaderItem(5, new QStandardItem("Match"));
 
     // populate model
     for (int a = 0; a < dm->sf->rowCount(); a++) {
@@ -164,18 +170,15 @@ void FindDuplicatesDlg::setupModel()
     // format tableview
     ui->tv->setModel(&model);
     QFontMetrics fm(ui->tv->fontMetrics());
-    int w0 = fm.boundingRect("=Duplica=").width();
-    int w1 = fm.boundingRect("=Delta=").width();
-    int w2 = fm.boundingRect("=Icon=").width();
-    //int w3 = fm.boundingRect("==========2022-09-27_0006.jpg==========").width();
-    //int w4 = 0;
-    //int w3 = ui->tv->width() - w0 - w1 - w2;
+    int w0 = 30;
+    int w1 = 30;
+    int w2 = 30;
+    // int w0 = fm.boundingRect("Duplica").width();
+    // int w1 = fm.boundingRect("Delta").width();
+    // int w2 = fm.boundingRect("Icon").width();
     ui->tv->setColumnWidth(0, w0);
     ui->tv->setColumnWidth(1, w1);
     ui->tv->setColumnWidth(2, w2);
-    //ui->tv->setColumnWidth(3, w3);
-    //ui->tv->setColumnWidth(4, w4);
-    //ui->tv->setColumnHidden(4, true);
     ui->tv->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 
     // format
@@ -186,8 +189,12 @@ void FindDuplicatesDlg::setupModel()
 void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
 {
 /*
-    Get the preview image to display in the comparison view: either the candidate or
+    Get the preview image for display in the comparison view: either the candidate or
     target.  If it is a video, then get the first video frame.
+
+    The getPreview and showPreview are separate functions because video previews are
+    obtained from FrameDecoder, which does not return the QImage, rather it siganls when
+    it has the first frame
 */
     QFileInfo fileInfo(fPath);
     ImageMetadata *m;
@@ -216,6 +223,14 @@ void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
 
 void FindDuplicatesDlg::showPreview(QString path, QImage image, QString source)
 {
+    /*
+    Show the preview image for display in the comparison view: either the candidate or
+    target.  If it is a video, then get the first video frame.
+
+    The getPreview and showPreview are separate functions because video previews are
+    obtained from FrameDecoder, which does not return the QImage, rather it siganls when
+    it has the first frame
+*/
     previewLongSide = ui->candidateLbl->width();
     if (image.width() > previewLongSide)
         previewSize = QSize(ui->candidateLbl->width(), ui->candidateLbl->height());
@@ -238,7 +253,7 @@ void FindDuplicatesDlg::setImageFromVideoFrame(QString path, QImage image, QStri
 {
 /*
     Thumbnails and previews for videos are obtained from FrameDecoder, which signals here
-    with the image.
+    with the first frame image.
 */
     int w = image.width();
     int h = image.height();
@@ -265,30 +280,11 @@ void FindDuplicatesDlg::setImageFromVideoFrame(QString path, QImage image, QStri
     }
 }
 
-int FindDuplicatesDlg::reportRGB(QImage &im)
-{
-    int w = im.width();
-    int h = im.height();
-    qDebug() << "FindDuplicatesDlg::reportRGB:"
-             << "w =" << w
-             << "h =" << h
-        ;
-    return 0;
-    for (int x = 0; x < w; x++) {
-        for (int y = 0; y < h; y++) {
-            QColor p = im.pixelColor(x,y);
-            if (x < 15 && y < 1)
-                qDebug() << "  " << x
-                         << "\t red:" << p.red()
-                         << "\t green:" << p.green()
-                         << "\t blue:" << p.blue()
-                    ;
-        }
-    }
-}
-
 double FindDuplicatesDlg::compareImagesHues(QImage &imA, QImage &imB)
 {
+/*
+    Not being used.  Alternative to comparing RGB pixels.
+*/
     Effects effect;
     QVector<int> huesA(360, 0);
     QVector<int> huesB(360, 0);
@@ -332,6 +328,13 @@ double FindDuplicatesDlg::compareImagesHues(QImage &imA, QImage &imB)
 
 int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
 {
+/*
+    Compare the RGB for each pixel in imA / imB.  The difference (deltaRGB) can be
+    0 - 255.  All the deltaRGBs are summed and then devided by the number of deltaRGBs
+    to arrive at an overall deltaRGB.
+
+    If deltaRGB = 0 then there is a perfect match between the images.
+*/
     int w, h;
     if (imA.width() < imB.width()) w = imA.width();
     else w = imB.width();
@@ -379,9 +382,13 @@ int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
 void FindDuplicatesDlg::pixelCompare()
 {
 /*
+    Iterate through all combinations of candidate images (imA) and target images (imB),
+    comparing RGB to get a deltaPixels for each combination.
 
+    If there is a match (dletaPixels < deltaThreshold) then add the imB to the
+    matches hash.
 */
-    //clear();
+    initializeResultsVector();
     quint64 totIterations = dm->sf->rowCount() * bItems.count();
     ui->progressLbl->setText("Searching for duplicates in " + QString::number(totIterations) + " combinations");
     // iterate filtered datamodel
@@ -389,18 +396,13 @@ void FindDuplicatesDlg::pixelCompare()
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         QString aPath = dm->sf->index(a,0).data(G::PathRole).toString();
         QString aFName = dm->sf->index(a,G::NameColumn).data().toString();
-        /*
-        qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked"
-                 << "a =" << a
-                 << "aFile =" << aFPath;
-        //*/
 
-        // aList thumbnail
+        // candidate thumbnail
         QVariant var = dm->sf->index(a,0).data(Qt::DecorationRole);
         QIcon icon = var.value<QIcon>();
         QImage imA = icon.pixmap(icon.actualSize(QSize(256, 256))).toImage();
 
-        // compare to each thumbnail in bList
+        // compare candidate to each thumbnail in bList
         for (int b = 0; b < bItems.size(); b++) {
             if (abort) {
                 ui->progressLbl->setText("Search aborted");
@@ -413,13 +415,10 @@ void FindDuplicatesDlg::pixelCompare()
 
             // compare every pixel
             int deltaPixels = compareRGB(imA, imB);
-            //double deltaHue = visCmpImagesHues(imA, imB);
 
-            R item;
-            //item.bId = b;
-            //item.bPath = bItems.at(b).fPath;
-            item.deltaPixels = deltaPixels;
-            results[a][b] = item;
+            // save for reporting / debugging
+            results[a][b].deltaPixels = deltaPixels;
+            results[a][b].match = false;    // default
 
             if (isDebug)
             {
@@ -432,9 +431,9 @@ void FindDuplicatesDlg::pixelCompare()
                 ;
             }
 
+            /*
             // preview (for debugging)
             // candidate image
-            /*
             getPreview(aPath, imA, "FindDupCandidate");
             showPreview(imA, aPath, "FindDupCandidate");
             // best match image
@@ -447,12 +446,12 @@ void FindDuplicatesDlg::pixelCompare()
                 mItem.deltaPixels = deltaPixels;
                 mItem.path = bItems.at(b).fPath;
                 matches[a] << mItem;
+                results[a][b].match = true;
             }
 
             counter++;
             ui->progressBar->setValue(1.0 * counter / totIterations * 100);
             qApp->processEvents();
-
         }
     }
 
@@ -466,12 +465,12 @@ void FindDuplicatesDlg::pixelCompare()
         std::sort(vec.begin(), vec.end(), lessDelta);
     }
 
-    // update A list source list
+    // update A list candidate list (tableview tv in dialog using model for indexes)
     for (int a = 0; a < model.rowCount(); a++) {
+        // are there any duplicates in target images
         if (matches[a].count() == 0) continue;
+        // update model
         QModelIndex idxDelta = model.index(a, MC::Delta);
-        //int delta = static_cast<int>(results[a][0].deltaPixels);
-
         int deltaPixels = matches[a].at(0).deltaPixels;
         if (deltaPixels <= ui->deltaThreshold->value()) {
             model.setData(idxDelta, deltaPixels);
@@ -484,10 +483,12 @@ void FindDuplicatesDlg::pixelCompare()
 
 QString FindDuplicatesDlg::currentMatchString(int a, int b)
 {
+/*
+    Reports ie "3 of 7 matches" under the target image preview.
+*/
     if (!matches.contains(a)) {
         return "No matches";
     }
-    //int count = matches[a].count();
     QString tot = QString::number(matches[a].count());
     return QString::number(b+1) + " of " + tot + " matches";
 }
@@ -508,6 +509,11 @@ void FindDuplicatesDlg::clear()
 
 void FindDuplicatesDlg::initializeResultsVector()
 {
+/*
+    The results vector is used to save all the comparisons between the A candidate
+    images and the B target images for reporting / debugging. It must be reset before
+    a search for matches is run.
+*/
     results.clear();
     results.resize(dm->sf->rowCount());
     for (auto& vec : results) {
@@ -517,119 +523,28 @@ void FindDuplicatesDlg::initializeResultsVector()
 
 void FindDuplicatesDlg::on_clrFoldersBtn_clicked()
 {
+/*
+    Removes any include and exclude folders from the target folder lists.
+*/
     ui->includeSubfolders->clear();
     ui->excludeSubfolders->clear();
 }
 
-void FindDuplicatesDlg::buildBItemsList(QStringList &dPaths)
-{
-    QDir *dir = new QDir;
-    QStringList *fileFilters = new QStringList;
-    foreach (const QString &str, metadata->supportedFormats) {
-        fileFilters->append("*." + str);
-    }
-    dir->setNameFilters(*fileFilters);
-    dir->setFilter(QDir::Files);
-
-    // build list of image files
-    ui->progressLbl->setText("Building list of image files");
-    QStringList bFiles;
-    foreach (QString dPath, dPaths) {
-        dir->setPath(dPath);
-        for (int i = 0; i < dir->entryInfoList().size(); i++) {
-            bFiles << dir->entryInfoList().at(i).filePath();
-        }
-    }
-    int totIterations = bFiles.count();
-
-    // populate bItems;
-    QString s = "Reading metadata for " + QString::number(totIterations) + " source files";
-    ui->progressLbl->setText(s);
-    int counter = 0;
-    foreach (QString fPath, bFiles) {
-        if (abort) {
-            ui->progressLbl->setText("Search aborted");
-            clear();
-            return;
-        }
-
-        counter++;
-        QString s = "Reading target images: " + QString::number(counter) + " of "
-                    + QString::number(totIterations);
-        int pctProgress = 1.0 * counter / totIterations * 100;
-        ui->progressLbl->setText(s);
-        ui->progressBar->setValue(pctProgress);
-        qApp->processEvents();
-
-        B bItem;
-        bItem.fPath = fPath;
-
-        // get the thumbnail (used to compare to A thumbnail in datamodel)
-        QImage image;
-        if (ui->samePixelsCB) {
-            autonomousImage->image(bItem.fPath, image, G::maxIconSize, "BItemThumbnail");
-            bItem.im = image;
-        }
-
-        // get metadata info for the B file to calc aspect
-        QFileInfo fInfo(fPath);
-
-        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
-            // deal with failure
-            //continue;
-        }
-        ImageMetadata *m = &metadata->m;
-
-        // type
-        bItem.type = QFileInfo(fPath).suffix().toLower();
-
-        // create date
-        bItem.createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
-
-        // duration
-        if (ui->sameDurationCB->isChecked()) {
-            if (metadata->videoFormats.contains(bItem.type)) {
-                QString s = metadata->readExifToolTag(fPath, "duration#");
-                quint64 duration = static_cast<quint64>(s.toDouble());
-                //duration /= 1000;
-                QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
-                                   duration % 60, (duration * 1000) % 1000);
-                QString format = "mm:ss";
-                if (duration > 3600) format = "hh:mm:ss";
-                bItem.duration = durationTime.toString(format);
-                /*
-                qDebug() << "FindDuplicatesDlg::buildBItemsList"
-                         << "s =" << s
-                         << "duration =" << duration
-                         << "durationTime =" << durationTime
-                         << "bItem.duration =" << bItem.duration
-                    ; //*/
-            }
-            else bItem.duration = "00:00";
-        }
-
-        if (ui->sameAspectCB->isChecked() && ui->samePixelsCB) {
-            double aspect;
-            if (m->width && m->height) {
-                if (m->orientation == 6 || m->orientation == 8) aspect = m->height * 1.0 / m->width;
-                else aspect = m->width * 1.0 / m->height;
-            }
-            else {
-                if (!image.isNull()) aspect = image.width() * 1.0 / image.height();
-                else aspect = 0;
-            }
-            bItem.aspect = QString::number(aspect,'f', 2);
-        }
-        bItems.append(bItem);
-        /*
-        qDebug() << "FindDuplicatesDlg::buildBItemsList" << i << bItem.fPath;
-        //reportRGB(image);
-        //*/
-    }
-}
-
 void FindDuplicatesDlg::getMetadataBItems()
 {
+/*
+    BThe B list bItems (target folder(s) images) of images is used to look for duplicates
+    of the candidate A list images in the datamodel. The list is built in buildBList().
+
+    The list bItems contains all the information required for comparison:
+        - type
+        - createdDate
+        - aspect
+        - duration
+        - im (QImage thumbnail for pixel comparison)
+
+    This function populates bItems.
+*/
     int totIterations = bItems.count();
 
     // populate bItems;
@@ -656,9 +571,6 @@ void FindDuplicatesDlg::getMetadataBItems()
         // get the thumbnail (used to compare to A thumbnail in datamodel)
         QImage image;
         if (ui->samePixelsCB->isChecked()) {
-            qDebug() << "FindDuplicatesDlg::getMetadataBItems autonomousImage->thumbNail"
-                     << "G::maxIconSize =" << G::maxIconSize
-                     << fPath;
             autonomousImage->image(fPath, image, G::maxIconSize, "BItemThumbnail");
             bItems[b].im = image;
         }
@@ -682,10 +594,6 @@ void FindDuplicatesDlg::getMetadataBItems()
         // create date
         bItems[b].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
 
-        qDebug() << "FindDuplicatesDlg::buildBItemsList"
-                 << "b =" << b
-                 << "createdDate =" << bItems[b].createdDate;
-
         // duration
         if (ui->sameDurationCB->isChecked()) {
             if (metadata->videoFormats.contains(bItems.at(b).type)) {
@@ -697,14 +605,7 @@ void FindDuplicatesDlg::getMetadataBItems()
                 QString format = "mm:ss";
                 if (duration > 3600) format = "hh:mm:ss";
                 bItems[b].duration = durationTime.toString(format);
-                /*
-                qDebug() << "FindDuplicatesDlg::buildBItemsList"
-                         << "s =" << s
-                         << "duration =" << duration
-                         << "durationTime =" << durationTime
-                         << "bItem.duration =" << bItem.duration
-                    ; //*/
-            }
+           }
             else bItems[b].duration = "00:00";
         }
 
@@ -726,8 +627,19 @@ void FindDuplicatesDlg::getMetadataBItems()
 void FindDuplicatesDlg::buildBList()
 {
 /*
-    Build a B list (collection or library) of images to look for duplicates of the candidate
-    A list images in the datamodel.
+    Build a B list bItems (target folder(s) images) of images to look for duplicates of
+    the candidate A list images in the datamodel.
+
+    The list bItems contains all the information required for comparison:
+        - type
+        - createdDate
+        - aspect
+        - duration
+        - im (QImage thumbnail for pixel comparison)
+
+    This function iterates through all the images defined by the include/exclude folders
+    and appends a bItem for each image.  The bItem fields are populated in
+    getMetadataBItems().
 */
     // build include folders list bFolderPaths
     ui->progressLbl->setText("Building list of image folders");
@@ -802,33 +714,29 @@ void FindDuplicatesDlg::buildBList()
             bItems << bItem;
         }
     }
-
-    // build bItems
-//    buildBItemsList(bFolderPaths);
-//    if (bItems.size() == 0) {
-//        G::popUp->showPopup("No compare to images...");
-//        return;
-//    }
-    /*
-    qDebug() << "FindDuplicatesDlg::on_compareBtn_clicked  bItems.size() =" << bItems.size();
-    //*/
 }
 
 bool FindDuplicatesDlg::sameFileType(int a, int b)
 {
+/*
+    Compare candidate / target image file type and return result
+*/
     QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
     QString extA = QFileInfo(pathA).suffix().toLower();
     QString pathB = bItems.at(b).fPath;
     QString extB = QFileInfo(pathB).suffix().toLower();
     bool isSame = (extA == extB);
     if (isDebug)
-    qDebug() << "FileType     a =" << a << extA << "b =" << b << extB<< "isSame" << isSame;
+        qDebug() << "FileType     a =" << a << extA << "b =" << b << extB<< "isSame" << isSame;
     results[a][b].sameType = isSame;
     return isSame;
 }
 
 bool FindDuplicatesDlg::sameCreationDate(int a, int b)
 {
+/*
+    Compare candidate / target image creation date and return result
+*/
     QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
     QString dateB = bItems.at(b).createdDate;
     //QString dateB = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
@@ -841,10 +749,13 @@ bool FindDuplicatesDlg::sameCreationDate(int a, int b)
 
 bool FindDuplicatesDlg::sameAspect(int a, int b)
 {
+/*
+    Compare candidate / target image aspect and return result
+*/
     // A datamodel
     double aspect = dm->sf->index(a, G::AspectRatioColumn).data().toDouble();
     QString aspectA = QString::number(aspect,'f', 2);
-    // B collection
+    // B target
     QString aspectB = bItems.at(b).aspect;
     bool isSame = (aspectA == aspectB);
     if (isDebug)
@@ -855,6 +766,10 @@ bool FindDuplicatesDlg::sameAspect(int a, int b)
 
 bool FindDuplicatesDlg::sameDuration(int a, int b)
 {
+/*
+    Compare candidate / target image duration and return result
+    Only relevent for videos.
+*/
     // A datamodel
     bool isSame;
     QString durationA;
@@ -880,7 +795,13 @@ bool FindDuplicatesDlg::sameDuration(int a, int b)
 
 void FindDuplicatesDlg::findMatches()
 {
-    //qDebug() << "\nFindDuplicatesDlg::findMatches\n";
+/*
+    Iterates all candidate/target combinations, comparing the criteria that is checked.  If
+    they all match then the model item is checked then:
+        - the item path is appended to the matches hash
+        - results match set to true
+    Note that pixel comparison is not done here.  See pixelCompare().
+*/
     initializeResultsVector();
     int aCount =  dm->sf->rowCount();
     int bCount =  bItems.count();
@@ -893,8 +814,7 @@ void FindDuplicatesDlg::findMatches()
             QString s = "a = " + QString::number(a+1) + " of " + QString::number(aCount) + "   " +
                         "b = " + QString::number(b+1) + " of " + QString::number(bCount);
             ui->progressLbl->setText(s);
-            //qDebug() << s;
-            //reportFindMatch(a, b);
+            results[a][b].match = false;
 
              // same file type
             if (ui->sameFileTypeCB->isChecked()) {
@@ -918,6 +838,7 @@ void FindDuplicatesDlg::findMatches()
             matches[a] << mItem;
             model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
             matchCount++;
+            results[a][b].match = true;
             if (isDebug) reportFindMatch(a, b);
             /*
             qDebug() //<< "FindDuplicatesDlg::findMatches"
@@ -933,25 +854,23 @@ void FindDuplicatesDlg::findMatches()
 void FindDuplicatesDlg::buildResults()
 {
 /*
+    Used for reporting / debugging
     The results vector matrix: results[a][b] is an R item.
         a = index for datamodel items (candidates)
         b = index for bItems (targets)
 
         R parameters:
-            int bId;
-            QString fPath;
             bool sameType;
             bool sameCreationDate;
             bool sameAspect;
             bool sameDuration;
             double deltaPixels;
             bool match;
-            int matchId;
 
     Examples:   Is datamodel item a type the same as bItems type
                     results[a][b].sameType
-                The best target deltaPixels match for image a
-                    results[a][0]   (results is sorted after comparing pixels)
+                The deltaPixels match for image a / b
+                    results[a][b].deltaPixels
 */
     // initialize result vector [A indexs][BItems]
     initializeResultsVector();
@@ -999,189 +918,32 @@ void FindDuplicatesDlg::buildResults()
     }
 }
 
-int FindDuplicatesDlg::updateResults()
-{
-    int matchCount = 0;
-    // update local model results table
-    bool cmpType = ui->sameFileTypeCB->isChecked();
-    bool cmpDate = ui->sameCreationDateCB->isChecked();
-    bool cmpAspect = ui->sameAspectCB->isChecked();
-    bool cmpDuration = ui->sameDurationCB->isChecked();
-    bool cmpPixels = ui->samePixelsCB->isChecked();
-    bool isType;
-    bool isDate;
-    bool isAspect;
-    bool isDuration;
-    for (int a = 0; a < dm->sf->rowCount(); a++) {
-        for (int b = 0; b < bItems.count(); b++) {
-            // metadata match?
-            if (cmpType) isType = results[a][b].sameType;
-            else isType = true;
-            if (cmpDate) isDate = results[a][b].sameCreationDate;
-            else isDate = true;
-            if (cmpAspect) isAspect = results[a][b].sameAspect;
-            else isAspect = true;
-            if (cmpDuration) isDuration = results[a][b].sameDuration;
-            else isDuration = true;
-            if (isDebug)
-            qDebug() << "a =" << a << "b =" << b
-                     << "sameType =" << results[a][b].sameType
-                     << "sameCreationDate =" << results[a][b].sameCreationDate
-                     << "sameAspect =" << results[a][b].sameAspect
-                ;
-
-            bool isMetaMatch = isType && isDate && isAspect && isDuration;
-            //if (isMetaMatch) results[a][b].match = true;
-            if (isMetaMatch) matchCount++;
-            //if (isMetaMatch) results[a][b].matchId = b;
-            if (isMetaMatch && !cmpPixels) {
-                model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
-                break;
-            }
-            // must be sorted by delta before this
-            if (cmpPixels && (results[a][0].deltaPixels < 1.1)) {
-                //results[a][0].matchId = b;
-                model.setData(model.index(a,1), results[a][0].deltaPixels);
-                model.itemFromIndex(model.index(a,0))->setCheckState(Qt::Checked);
-            }
-        }
-    }
-    return matchCount;
-}
-
-void FindDuplicatesDlg::reportbItems()
-{
-    qDebug() << "FindDuplicatesDlg::reportbItems";
-    int counter = 0;
-    foreach (B bItem, bItems) {
-        qDebug().noquote()
-                 << QString::number(counter).leftJustified(5)
-                 << "TYPE" << bItem.type.leftJustified(8)
-                 << "DATE" << bItem.createdDate.leftJustified(25)
-                 << "ASPECT" << bItem.aspect.leftJustified(6)
-                 << "DURATION" << bItem.duration.leftJustified(10)
-                 << bItem.fPath;
-        counter++;
-    }
-}
-
-void FindDuplicatesDlg::reportAspects()
-{
-    qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
-    for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
-        QFileInfo fInfo(bItems.at(b).fPath);
-        QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
-        metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true);
-        ImageMetadata *m = &metadata->m;
-        // QString::number().rightJustified(3)
-        qDebug().noquote()
-                 << QString::number(a).rightJustified(3)
-                 << QString::number(b).rightJustified(3)
-                 //<< dm->sf->index(a,G::NameColumn).data().toString()
-                 << "aspectA/B" << QString::number(dm->sf->index(a,G::AspectRatioColumn).data().toDouble(), 'f', 2)
-                 << bItems.at(b).aspect
-                 << "m >> w" << QString::number(m->width).rightJustified(5)
-                 << "h" << QString::number(m->height).rightJustified(5)
-                 << "orientation" << QString::number(m->orientation).rightJustified(1)
-                 << fInfo.fileName()
-            ;
-    }
-}
-
-void::FindDuplicatesDlg::reportFindMatch(int a, int b)
-{
-    QString s = " ";
-    QString rpt;
-    rpt = "a = " + QString::number(a).leftJustified(5) + " b = " + QString::number(b).leftJustified(5);
-
-    // A items
-    QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
-    QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
-    QString typeA = QFileInfo(pathA).suffix().toLower();
-    QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
-    QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
-    QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
-    if (durationA.length() == 0) durationA = "00:00";
-
-    QString same;
-    if (ui->sameFileTypeCB->isChecked()) {
-        QString typeB = bItems.at(b).type;
-        bool same = typeA == typeB;
-        QString sameType = same ? "true" : "false";
-        rpt += "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
-    }
-    if (ui->sameCreationDateCB->isChecked()) {
-        QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
-        bool same = dateA == dateB;
-        QString sameDate = same ? "true" : "false";
-        rpt += "    DATE " + sameDate.leftJustified(6) + dateA + s + dateB;
-    }
-    if (ui->sameAspectCB->isChecked()) {
-        QString aspectB = bItems.at(b).aspect;
-        bool same = aspectA == aspectB;
-        QString sameAspect = same ? "true" : "false";
-        rpt += "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
-    }
-    if (ui->sameDurationCB->isChecked()) {
-        QString durationB = bItems.at(b).duration;
-        bool same = durationA == durationB;
-        QString sameDuration = same ? "true" : "false";
-        rpt += "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
-    }
-    rpt += "    A: " + fileNameA.leftJustified(40);
-    rpt += "B: " + bItems.at(b).fPath;
-
-    qDebug().noquote() << rpt;
-}
-
-void::FindDuplicatesDlg::reportMatches()
-{
-    // titles
-    QString t0 = "Candidate";
-    QString t1 = "#";
-    QString t2 = "Delta";
-    QString t3 = "Duplicate";
-    t0 = t0.leftJustified(40);
-    t1 = t1.rightJustified(3);
-    qDebug().noquote() << t0 << t1 << t2 << t3;
-
-    bool isSamePixels = ui->samePixelsCB->isChecked();
-    QString matchCount;
-    QString delta;
-    QString mPath;
-    for (int a = 0; a < dm->sf->rowCount(); a++) {
-        QString candidate = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(40);
-        if (matches[a].count() == 0) {
-            matchCount = "  0";
-            delta = "  n/a";
-            QString nada = "No match found";
-            qDebug().noquote() << candidate << matchCount << delta << nada;
-            continue;
-        }
-        for (int b = 0; b < matches[a].count(); b++) {
-            matchCount = QString::number(matches[a].count()).rightJustified(3);
-            if (isSamePixels)
-                delta = QString::number(matches[a].at(b).deltaPixels).rightJustified(5);
-            else
-                delta = "  n/a";
-            mPath = matches[a].at(b).path;
-            qDebug().noquote() << candidate << matchCount << delta << mPath;
-        }
-    }
-}
-
 void::FindDuplicatesDlg::reportResults()
 {
-    qDebug() << "\n" << "FindDuplicatesDlg::reportResults"
-             << "  A count =" << dm->sf->rowCount() << "B count =" << bItems.count();
+    Qt::KeyboardModifiers modifiers = QGuiApplication::queryKeyboardModifiers();
+    bool isModifier = false;
+    if (modifiers & Qt::AltModifier) isModifier = true;
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
     QString s = " ";
     int aDigits = QString::number(dm->sf->rowCount()).length() + 1;
     int bDigits = QString::number(bItems.count()).length() + 1;
+    // longest A filename string length
+    int maxFileNameLenA = 0;
     for (int a = 0; a < dm->sf->rowCount(); a++) {
-        QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(40);
+        QString pathA = dm->sf->index(a, G::NameColumn).data().toString();
+        if (pathA.length() > maxFileNameLenA) maxFileNameLenA = pathA.length();
+    }
+    // longest B path string length
+    int pathLenB = 0;
+    for (int b = 0; b < bItems.count(); b++) {
+        QString pathB = bItems.at(b).fPath;
+        if (pathB.length() > pathLenB) pathLenB = pathB.length();
+    }
+    // report each combination
+    for (int a = 0; a < dm->sf->rowCount(); a++) {
+        QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(maxFileNameLenA);
         QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
         QString typeA = QFileInfo(pathA).suffix().toLower();
         QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
@@ -1189,15 +951,18 @@ void::FindDuplicatesDlg::reportResults()
         QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
         if (durationA.length() == 0) durationA = "00:00";
         for (int b = 0; b < bItems.count(); b++) {
+            // show only matches
+            if (!isModifier && !results[a][b].match) continue;
+            // show all
+            rpt << "  a " + QString::number(a).leftJustified(aDigits);
+            rpt << "b " + QString::number(b).leftJustified(bDigits);
+            QString match = results[a][b].match ? "true" : "false";
+            rpt << "  Match " + match.leftJustified(5);
             if (ui->samePixelsCB->isChecked()) {
-
+                QString delta = QString::number(results[a][b].deltaPixels).leftJustified(5);
+                rpt << "    SAME PIXELS   Delta " << delta;
             }
             else {
-                //rpt = "";
-                rpt << "  a " + QString::number(a).leftJustified(aDigits);
-                rpt << "b " + QString::number(b).leftJustified(bDigits);
-                QString match = results[a][b].match ? "true" : "false";
-                rpt << "  Match " + match.leftJustified(5);
                 if (ui->sameFileTypeCB->isChecked()) {
                     QString sameType = results[a][b].sameType ? "true" : "false";
                     QString typeB = bItems.at(b).type;
@@ -1218,10 +983,11 @@ void::FindDuplicatesDlg::reportResults()
                     QString durationB = bItems.at(b).duration;
                     rpt << "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
                 }
-                rpt << "    A: " + fileNameA;
-                rpt << "B: " + bItems.at(b).fPath;
-                rpt << "\n";
             }
+            rpt << "    A: " + fileNameA;
+            // rpt << "    A: " + fileNameA.leftJustified(10);
+            rpt << "   B: " + bItems.at(b).fPath;
+            rpt << "\n";
         }
     }
     QDialog *dlg = new QDialog;
@@ -1231,7 +997,7 @@ void::FindDuplicatesDlg::reportResults()
     #endif
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->resize(2500, dlg->height());
+    dlg->resize(G::displayVirtualHorizontalPixels, dlg->height());
     //dlg->setFixedWidth(1500);
     md.textBrowser->setStyleSheet(G::css);
     QFont courier("Courier", 12);
@@ -1245,6 +1011,11 @@ void::FindDuplicatesDlg::reportResults()
 
 void FindDuplicatesDlg::on_samePixelsCB_clicked()
 {
+/*
+    When selecting criteria for a match search, clicking on "Same Pixels" toggles
+    all the other criteria.  Comparisons can only be executed for pixel matches
+    or metadata matches.
+*/
     qDebug() << "FindDuplicatesDlg::on_samePixels_clicked";
     bool isPix = ui->samePixelsCB->isChecked();
     ui->sameFileTypeCB->setEnabled(!isPix);
@@ -1258,6 +1029,16 @@ void FindDuplicatesDlg::on_samePixelsCB_clicked()
 
 void FindDuplicatesDlg::on_compareBtn_clicked()
 {
+/*
+    Clicking on "Find Duplicates" searches for any matches between the candidate
+    images in the target images.
+
+    - the bItems, matches and results data is cleared
+    - the candidates table dup column is unchecked
+    - the bItems list is built and populated
+    - the checked criteria is used to compare candidates to targets
+    - the candidates table is updated
+*/
     // check target folder(s) assigned
     if (ui->includeSubfolders->count() == 0) {
         QString msg = "Comparison requires target folder(s)";
@@ -1278,18 +1059,10 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     }
     getMetadataBItems();
     if (ui->samePixelsCB->isChecked()) {
-        initializeResultsVector();
         pixelCompare();
     }
     else {
         findMatches();
-    }
-
-    if (isDebug) {
-        buildResults();  // populate results[a][b] for debugging
-        //if (ui->pixelCompare->isChecked()) pixelCompare();
-        matchCount = updateResults();
-        reportResults();
     }
 
     isRunning = false;
@@ -1298,12 +1071,16 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     ui->progressLbl->setText("Search completed.  " + x + " matches found.  See candidate images table.");
     ui->progressBar->setValue(0);
 
-    // show first best match
+    // enable candidate table
     ui->tv->setEnabled(true);
 }
 
 void FindDuplicatesDlg::on_prevToolBtn_clicked()
 {
+/*
+    If there are multiple matches, the previous matched target image is displayed in
+    the Compare Images section.
+*/
     int a = ui->tv->currentIndex().row();
     if (currentMatch > 0) {
         currentMatch--;
@@ -1329,6 +1106,10 @@ void FindDuplicatesDlg::on_prevToolBtn_clicked()
 
 void FindDuplicatesDlg::on_nextToolBtn_clicked()
 {
+/*
+    If there are multiple matches, the next matched target image is displayed in
+    the Compare Images section.
+*/
     int a = ui->tv->currentIndex().row();
     if (currentMatch + 1 < matches[a].count()) {
         currentMatch++;
@@ -1360,7 +1141,7 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
 /*
     tv = tableview of candidate images
 
-    Initiate the compare images, with the selected candidate image on the left,
+    Initiate the "Compare Images", with the selected candidate image on the left,
     and the first target image on the right.
 */
     // do nothing if click on checkbox column
@@ -1424,6 +1205,10 @@ void FindDuplicatesDlg::on_abortBtn_clicked()
 
 void FindDuplicatesDlg::on_cancelBtn_clicked()
 {
+    results[0][0].deltaPixels = 17;
+    qDebug() << G::displayVirtualHorizontalPixels;
+    return;
+
     int a = 3;
     int b = 4;
     QIcon icon = dm->sf->index(a,0).data(Qt::DecorationRole).value<QIcon>();
@@ -1432,10 +1217,8 @@ void FindDuplicatesDlg::on_cancelBtn_clicked()
     QImage imB = bItems.at(b).im;
     qDebug() << "FindDuplicatesDlg::on_cancelBtn_clicked" << imB.size();
     QString bPath = bItems.at(b).fPath;
-    //getPreview(aPath, imA, "FindDupCandidate");
     showPreview(aPath, imA, "FindDupCandidate");
     // best match image
-    //getPreview(bPath, imB, "FindDupMatch");
     showPreview(bPath, imB, "FindDupMatch");
     return;
     reject();
@@ -1513,5 +1296,155 @@ void FindDuplicatesDlg::on_tv_doubleClicked(const QModelIndex &index)
 void FindDuplicatesDlg::on_reportBtn_clicked()
 {
     reportResults();
+}
+
+// Debugging helpers
+
+void::FindDuplicatesDlg::reportMatches()
+{
+    // titles
+    QString t0 = "Candidate";
+    QString t1 = "#";
+    QString t2 = "Delta";
+    QString t3 = "Duplicate";
+    t0 = t0.leftJustified(40);
+    t1 = t1.rightJustified(3);
+    qDebug().noquote() << t0 << t1 << t2 << t3;
+
+    bool isSamePixels = ui->samePixelsCB->isChecked();
+    QString matchCount;
+    QString delta;
+    QString mPath;
+    for (int a = 0; a < dm->sf->rowCount(); a++) {
+        QString candidate = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(40);
+        if (matches[a].count() == 0) {
+            matchCount = "  0";
+            delta = "  n/a";
+            QString nada = "No match found";
+            qDebug().noquote() << candidate << matchCount << delta << nada;
+            continue;
+        }
+        for (int b = 0; b < matches[a].count(); b++) {
+            matchCount = QString::number(matches[a].count()).rightJustified(3);
+            if (isSamePixels)
+                delta = QString::number(matches[a].at(b).deltaPixels).rightJustified(5);
+            else
+                delta = "  n/a";
+            mPath = matches[a].at(b).path;
+            qDebug().noquote() << candidate << matchCount << delta << mPath;
+        }
+    }
+}
+
+void FindDuplicatesDlg::reportbItems()
+{
+    qDebug() << "FindDuplicatesDlg::reportbItems";
+    int counter = 0;
+    foreach (B bItem, bItems) {
+        qDebug().noquote()
+            << QString::number(counter).leftJustified(5)
+            << "TYPE" << bItem.type.leftJustified(8)
+            << "DATE" << bItem.createdDate.leftJustified(25)
+            << "ASPECT" << bItem.aspect.leftJustified(6)
+            << "DURATION" << bItem.duration.leftJustified(10)
+            << bItem.fPath;
+        counter++;
+    }
+}
+
+void FindDuplicatesDlg::reportAspects()
+{
+    qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
+    for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
+        QFileInfo fInfo(bItems.at(b).fPath);
+        QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
+        metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true);
+        ImageMetadata *m = &metadata->m;
+        // QString::number().rightJustified(3)
+        qDebug().noquote()
+            << QString::number(a).rightJustified(3)
+            << QString::number(b).rightJustified(3)
+            //<< dm->sf->index(a,G::NameColumn).data().toString()
+            << "aspectA/B" << QString::number(dm->sf->index(a,G::AspectRatioColumn).data().toDouble(), 'f', 2)
+            << bItems.at(b).aspect
+            << "m >> w" << QString::number(m->width).rightJustified(5)
+            << "h" << QString::number(m->height).rightJustified(5)
+            << "orientation" << QString::number(m->orientation).rightJustified(1)
+            << fInfo.fileName()
+            ;
+    }
+}
+
+void::FindDuplicatesDlg::reportFindMatch(int a, int b)
+{
+    QString s = " ";
+    QString rpt;
+    rpt = "a = " + QString::number(a).leftJustified(5) + " b = " + QString::number(b).leftJustified(5);
+
+    // A items
+    QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
+    QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
+    QString typeA = QFileInfo(pathA).suffix().toLower();
+    QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
+    QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
+    QString durationA = dm->sf->index(a, G::DurationColumn).data().toString();
+    if (durationA.length() == 0) durationA = "00:00";
+
+    QString same;
+    if (ui->sameFileTypeCB->isChecked()) {
+        QString typeB = bItems.at(b).type;
+        bool same = typeA == typeB;
+        QString sameType = same ? "true" : "false";
+        rpt += "    TYPE " + sameType.leftJustified(6) + (typeA + s + typeB).leftJustified(9);
+    }
+    if (ui->sameCreationDateCB->isChecked()) {
+        QString dateB = bItems.at(b).createdDate.leftJustified(23);     // might be blank date
+        bool same = dateA == dateB;
+        QString sameDate = same ? "true" : "false";
+        rpt += "    DATE " + sameDate.leftJustified(6) + dateA + s + dateB;
+    }
+    if (ui->sameAspectCB->isChecked()) {
+        QString aspectB = bItems.at(b).aspect;
+        bool same = aspectA == aspectB;
+        QString sameAspect = same ? "true" : "false";
+        rpt += "    ASPECT "  + sameAspect.leftJustified(6) + (aspectA + s + aspectB).leftJustified(7);
+    }
+    if (ui->sameDurationCB->isChecked()) {
+        QString durationB = bItems.at(b).duration;
+        bool same = durationA == durationB;
+        QString sameDuration = same ? "true" : "false";
+        rpt += "    DURATION "  + sameDuration.leftJustified(6) + (durationA + s + durationB).leftJustified(7);
+    }
+    rpt += "    A: " + fileNameA.leftJustified(40);
+    rpt += "B: " + bItems.at(b).fPath;
+
+    qDebug().noquote() << rpt;
+}
+
+int FindDuplicatesDlg::reportRGB(QImage &im)
+{
+    /*
+    For debugging
+*/
+    int xBound = 15;
+    int yBound = 1;
+
+    int w = im.width();
+    int h = im.height();
+    qDebug() << "FindDuplicatesDlg::reportRGB:"
+             << "w =" << w
+             << "h =" << h
+        ;
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
+            QColor p = im.pixelColor(x,y);
+            if (x < xBound && y < yBound)
+                qDebug() << "  " << x
+                         << "\t red:" << p.red()
+                         << "\t green:" << p.green()
+                         << "\t blue:" << p.blue()
+                    ;
+        }
+    }
 }
 
