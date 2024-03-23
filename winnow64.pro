@@ -49,7 +49,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Help/helppixeldelta.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -180,7 +181,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Help/helppixeldelta.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -346,7 +348,8 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Help/helppixeldelta.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
@@ -378,6 +381,7 @@ FORMS += Embellish/embelCoord.ui
 FORMS += Help/filtershelp.ui
 FORMS += Help/filtershelp_copy.ui
 FORMS += Help/helpfindduplicates.ui
+FORMS += Help/helppixeldelta.ui
 FORMS += Help/helpform.ui
 FORMS += Help/helpingest.ui
 FORMS += Help/ingestautopath.ui

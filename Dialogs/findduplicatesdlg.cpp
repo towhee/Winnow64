@@ -116,9 +116,15 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm,
     QImage nextIm(":/images/next.png");
     ui->prevToolBtn->setIcon(QIcon(QPixmap::fromImage(prevIm.scaled(16,16))));
     ui->nextToolBtn->setIcon(QIcon(QPixmap::fromImage(nextIm.scaled(16,16))));
+    ui->deltaTxt->setVisible(false);
     ui->deltaLbl->setText("");
     ui->currentLbl->setText("");
-    //ui->progressLbl->setText("");    //ui->currentLbl->setText("");
+    ui->currentLbl->setVisible(false);
+    ui->candidateFilenameLbl->setText("");
+    ui->candidateFilenameLbl->setVisible(false);
+    ui->targetPathLbl->setText("");
+    ui->targetPathLbl->setVisible(false);
+    ui->progressLbl->setText("");    //ui->currentLbl->setText("");
     ui->includeSubfoldersCB->setChecked(false);
     ui->sameFileTypeCB->setChecked(true);
     ui->sameCreationDateCB->setChecked(true);
@@ -170,7 +176,7 @@ void FindDuplicatesDlg::setupModel()
     // format tableview
     ui->tv->setModel(&model);
     QFontMetrics fm(ui->tv->fontMetrics());
-    int w0 = 30;
+    int w0 = 200;
     int w1 = 30;
     int w2 = 30;
     // int w0 = fm.boundingRect("Duplica").width();
@@ -505,6 +511,11 @@ void FindDuplicatesDlg::clear()
         model.setData(model.index(i, MC::CheckBox), 0);
         model.setData(model.index(i, MC::Delta), "");
     }
+    ui->deltaLbl->setVisible(false);
+    ui->deltaTxt->setVisible(false);
+    ui->currentLbl->setVisible(false);
+    ui->candidateFilenameLbl->setVisible(false);
+    ui->targetPathLbl->setVisible(false);
 }
 
 void FindDuplicatesDlg::initializeResultsVector()
@@ -920,9 +931,28 @@ void FindDuplicatesDlg::buildResults()
 
 void::FindDuplicatesDlg::reportResults()
 {
+/*
+    The dialog report button executes this function, listing all the candicate/target
+    matches, with the comparison results.  If alt/option pressed then all A/B
+    combinations are reported, up to 100,000.
+*/
     Qt::KeyboardModifiers modifiers = QGuiApplication::queryKeyboardModifiers();
     bool isModifier = false;
     if (modifiers & Qt::AltModifier) isModifier = true;
+    // check for too many combinations
+    if (isModifier) {
+        quint32 tot = dm->sf->rowCount() * bItems.count();
+        QLocale locale(QLocale::English, QLocale::UnitedStates);
+        // Format the number using the locale-specific rules
+        //QString formattedNumber = locale.toString(tot);
+        if (tot > 100000) {
+            QString msg = "The report length (candidates * targets) = " +
+                          locale.toString(tot) +
+                          ". This exceeds the maximum allowed (100,000).";
+            G::popUp->showPopup(msg, 4000);
+            return;
+        }
+    }
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1098,6 +1128,9 @@ void FindDuplicatesDlg::on_prevToolBtn_clicked()
             ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
         }
         ui->currentLbl->setText(currentMatchString(a, b));
+        ui->targetPathLbl->setVisible(true);
+        ui->targetPathLbl->setText(bPath);
+        ui->targetPathLbl->setToolTip(bPath);
     }
     else {
         G::popUp->showPopup("Start of match images");
@@ -1129,6 +1162,9 @@ void FindDuplicatesDlg::on_nextToolBtn_clicked()
             ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
         }
         ui->currentLbl->setText(currentMatchString(a, b));
+        ui->targetPathLbl->setVisible(true);
+        ui->targetPathLbl->setText(bPath);
+        ui->targetPathLbl->setToolTip(bPath);
     }
     else {
         G::popUp->showPopup("End of match images");
@@ -1144,12 +1180,17 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     Initiate the "Compare Images", with the selected candidate image on the left,
     and the first target image on the right.
 */
+    qDebug() << "FindDuplicatesDlg::on_tv_clicked" << index;
     // do nothing if click on checkbox column
-    if (index.column() == 0) return;
+    //if (index.column() == 0) return;
 
     currentMatch = 0;
     // larger A image (candidate)
     int a = index.row();
+    QString aName = dm->sf->index(a,G::NameColumn).data().toString();
+    qDebug() << "Candidate file name =" << aName;
+    ui->candidateFilenameLbl->setVisible(true);
+    ui->candidateFilenameLbl->setText(aName);
     // do nothing if no matches
     if (matches[a].count() == 0) {
         QPixmap pmNull;
@@ -1183,18 +1224,19 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     // best match delta
     if (ui->samePixelsCB->isChecked()) {
         ui->deltaLbl->setVisible(true);
-        ui->deltaTxt->setVisible(false);
-        //ui->currentLbl->setVisible(true);
+        ui->deltaTxt->setVisible(true);
         ui->deltaLbl->setText(QString::number(matches[a].at(0).deltaPixels));
     }
     else {
         ui->deltaLbl->setVisible(false);
         ui->deltaTxt->setVisible(false);
-        //ui->currentLbl->setVisible(false);
     }
     ui->currentLbl->setVisible(true);
     ui->currentLbl->setText(currentMatchString(a, 0));
-    ui->pathLbl->setText(bPath);
+    ui->currentLbl->setToolTip(currentMatchString(a, 0));
+    ui->targetPathLbl->setVisible(true);
+    ui->targetPathLbl->setText(bPath);
+    ui->targetPathLbl->setToolTip(bPath);
 }
 
 void FindDuplicatesDlg::on_abortBtn_clicked()
@@ -1205,22 +1247,6 @@ void FindDuplicatesDlg::on_abortBtn_clicked()
 
 void FindDuplicatesDlg::on_cancelBtn_clicked()
 {
-    results[0][0].deltaPixels = 17;
-    qDebug() << G::displayVirtualHorizontalPixels;
-    return;
-
-    int a = 3;
-    int b = 4;
-    QIcon icon = dm->sf->index(a,0).data(Qt::DecorationRole).value<QIcon>();
-    QImage imA = icon.pixmap(icon.actualSize(QSize(256, 256))).toImage();
-    QString aPath = dm->sf->index(a,G::PathColumn).data().toString();
-    QImage imB = bItems.at(b).im;
-    qDebug() << "FindDuplicatesDlg::on_cancelBtn_clicked" << imB.size();
-    QString bPath = bItems.at(b).fPath;
-    showPreview(aPath, imA, "FindDupCandidate");
-    // best match image
-    showPreview(bPath, imB, "FindDupMatch");
-    return;
     reject();
 }
 
@@ -1253,11 +1279,6 @@ void FindDuplicatesDlg::resizeEvent(QResizeEvent *event)
 
 void FindDuplicatesDlg::on_helpBtn_clicked()
 {
-//    reportbItems();
-//    return;
-//    reportAspects();
-//    reportResults();
-
     QDialog *dlg = new QDialog;
     Ui::HelpFindDuplicatesDlg *ui = new Ui::HelpFindDuplicatesDlg;
     ui->setupUi(dlg);
@@ -1265,7 +1286,20 @@ void FindDuplicatesDlg::on_helpBtn_clicked()
     dlg->setWindowTitle("Find Duplicates");
     dlg->setStyleSheet(G::css);
     dlg->exec();
+}
 
+void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
+{
+/*
+The delta or difference in pixels between two images is determined by taking the difference of the red, green and blue component values (RGB), and then averaging the sum of all the differences.  The values range of a red, green or blue component is 0 - 255, therefore the maximum pixel delta = 255 and two identical images would have a pixel delta = 0.
+*/
+    QDialog *dlg = new QDialog;
+    Ui::HelpPixelDelta *ui = new Ui::HelpPixelDelta;
+    ui->setupUi(dlg);
+    ui->textBrowser->setOpenExternalLinks(true);
+    dlg->setWindowTitle("Pixel Delta");
+    dlg->setStyleSheet(G::css);
+    dlg->exec();
 }
 
 void FindDuplicatesDlg::progressMsg(QString msg)

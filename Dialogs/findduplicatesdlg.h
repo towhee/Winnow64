@@ -10,6 +10,8 @@
 #include "Image/autonomousimage.h"
 #include "Cache/imagedecoder.h"
 #include "ui_helpfindduplicates.h"
+#include "ui_helppixeldelta.h"
+
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif
@@ -62,6 +64,7 @@ private slots:
     void on_cancelBtn_clicked();
     void on_abortBtn_clicked();
     void on_helpBtn_clicked();
+    void on_deltaThresholdToolBtn_clicked();
     void on_clrFoldersBtn_clicked();
     void on_toggleTvHideChecked_clicked();
     void buildBList();
