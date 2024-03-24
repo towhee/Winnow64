@@ -112,11 +112,10 @@ private:
     // model columns
     enum MC {
         CheckBox,
+        Count,
         Delta,
         Thumbnail,
         FileName
-//        bIndex,
-//        MatchPath
     };
 
     int previewLongSide;
@@ -127,6 +126,7 @@ private:
     QStandardItemModel model;
     void getPreview(QString fPath, QImage &image, QString source);
     void showPreview(QString path, QImage image, QString source);
+    void fit(QPixmap &pm, QLabel *label);
     // void buildBItemsList(QStringList &dPaths);
     void getMetadataBItems();
     int reportRGB(QImage &im);
@@ -135,6 +135,7 @@ private:
     void setupModel();
     QString currentMatchString(int a, int b);
     void clear();
+    void showImageComparisonStuff(int a, QString bPath);
     void initializeResultsVector();
     void pixelCompare();
     void findMatches();

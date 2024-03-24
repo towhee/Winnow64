@@ -704,8 +704,8 @@ void MetaRead2::dispatch(int id)
             }
             if (isDebug) // fileSelectionChange
             {
-                bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
                 /*
+                bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
                 qDebug().noquote()
                     << "\nMetaRead2::dispatch     fileSelectionChange "
                     << "id =" << QString::number(id).leftJustified(2, ' ')

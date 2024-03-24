@@ -547,8 +547,6 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         if (createdExif.length() > 0) {
             m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
         }
-//            if(!createdDate.isValid())
-//                createdDate = QDateTime::fromString("2017:10:10 17:26:08", "yyyy:MM:dd hh:mm:ss");
     }
 
     // EXIF: shutter speed

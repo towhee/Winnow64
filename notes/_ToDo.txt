@@ -8,6 +8,8 @@ WHAT'S NEW
 - Pick audio
 
 BUGS / TO DO
+- Find duplicate heic images not previewing
+- AutonomousImage fix tiff
 - Right click main menu from central widget when blank
 - Error decoding Sounds/ingest.wav on PC
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
@@ -115,6 +117,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- If view mode TableView and 1st file is video get "Gathering metadata and thumbnails for ..."
 - Added preview dimensions to InfoView
 - Fixed image verses preview image dimensions in dng where largest preview is smaller than raw
 - Kill mouse scroll between imageview, iconview and fstree

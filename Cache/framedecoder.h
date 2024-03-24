@@ -45,6 +45,8 @@ private:
     FrameDecoder *thisFrameDecoder;
     QMediaPlayer *mediaPlayer;
     QVideoSink *videoSink;
+    QString prevPath = "";
+    bool frameAlreadyDone;
 
     bool abort = false;
     bool isDebugging;
