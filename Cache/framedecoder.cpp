@@ -57,6 +57,8 @@ void FrameDecoder::stop()
 void FrameDecoder::clear()
 {
     queue.clear();
+    prevPath = "";
+    frameAlreadyDone = false;
     return;
 }
 
@@ -71,7 +73,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
     item.dmIdx = dmIdx;
     item.dmInstance = dmInstance;
     queue.append(item);
-    //if (isDebugging)
+    if (isDebugging)
     {
         qDebug() << "FrameDecoder::addToQueue                 "
                  //<< "ddmIdx =" << dmIdx
@@ -128,6 +130,8 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     bool validFrame = false;
 
     static int attempts = 0;
+    // static QString prevPath = "";
+    // static bool frameAlreadyDone = false;
 
     if (mediaPlayer->playbackState() == QMediaPlayer::PlaybackState::StoppedState) return;
 
@@ -155,28 +159,35 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
 
     if (!validFrame) return;
 
-    int ls = queue.at(0).longSide;
-    if (queue.at(0).source == "dmThumb") {
-        // set the icon in datamodel
-        if (queue.at(0).dmIdx.isValid()) {
-            QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
-            qint64 duration = mediaPlayer->duration();
-            emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
+    QString path = queue.at(0).fPath;
+    //qDebug() << "FrameDecoder::frameChanged" << path << prevPath << frameAlreadyDone;
+    // if (path != prevPath && !frameAlreadyDone)
+    // {
+        int ls = queue.at(0).longSide;
+        if (queue.at(0).source == "dmThumb") {
+            // set the icon in datamodel
+            if (queue.at(0).dmIdx.isValid()) {
+                QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
+                qint64 duration = mediaPlayer->duration();
+                emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
+            }
         }
-    }
-    else {
-        // autonomous source
-        QString source = queue.at(0).source;
-        qDebug() << "FrameDecoder::frameChanged  ls =" << ls;
-        if (ls > 0)
-            emit frameImage(queue.at(0).fPath, im.scaled(ls, ls, Qt::KeepAspectRatio), source);
-        else
-            emit frameImage(queue.at(0).fPath, im, source);
-    }
+        else {
+            // autonomous source
+            QString source = queue.at(0).source;
+            // qDebug() << "FrameDecoder::frameChanged  ls =" << ls;
+            if (ls > 0)
+                emit frameImage(queue.at(0).fPath, im.scaled(ls, ls, Qt::KeepAspectRatio), source);
+            else
+                emit frameImage(queue.at(0).fPath, im, source);
+        }
+    // }
 
     if (validFrame || attempts > 10) {
         mediaPlayer->stop();
         attempts = 0;
+        prevPath = path;
+        frameAlreadyDone = true;
         if (!queue.isEmpty()) queue.remove(0);
         // exhaust QVideoSink frameChanged signals after mediaPlayer is stopped
         if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);

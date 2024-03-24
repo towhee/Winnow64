@@ -204,7 +204,6 @@ void MW::tableDisplay()
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", "MW::tableDisplay");
-//    updateIconRange(-1, "MW::tableDisplay");
 
     // save selection as tableView is hidden and not synced
     sel->save();

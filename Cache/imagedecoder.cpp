@@ -212,7 +212,7 @@ bool ImageDecoder::load()
         if (!image.load(fPath)) {
             errMsg = "Could not read because decoder failed.";
             imFile.close();
-            if (G::isWarningLogger)
+            //if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
             status = Status::Invalid;
             return false;
@@ -429,5 +429,6 @@ bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
         img = image;
         return true;
     }
+    qDebug() << "ImageDecoder::decode failed" << fPath;
     return false;
 }

@@ -627,9 +627,6 @@ bool DataModel::addFileData()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
     if (isDebug)
         qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
-//    QString logmsg = QString::number(fileInfoList.count()) + " images";
-//    qDebug() << "DataModel::addFileDataForRow" << logmsg;
-//    if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addFileDataForRow" << logmsg;
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 

@@ -2097,6 +2097,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
     and delegate use of the current index must check the column.
 */
+    // if starting program, return
+    if (current.row() == -1) {
+        if (G::isLogger || G::isFlowLogger)
+            qDebug() << "MW::fileSelectionChange  Invalid row, select row 0 so exit";
+        return;
+    }
+
     G::t.restart();
     /*
     if (G::isLogger || G::isFlowLogger)
@@ -2155,12 +2162,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // if starting program, return
-    if (current.row() == -1) {
-        if (G::isLogger || G::isFlowLogger)
-            qDebug() << "MW::fileSelectionChange  Invalid row, select row 0 so exit";
-        return;
-    }
+    // if new folder and 1st file is a video and mode == "Table"
+    if (G::mode == "Table" && centralLayout->currentIndex() != TableTab)
+        tableDisplay();
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();

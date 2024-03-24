@@ -178,9 +178,10 @@ QString Mac::getDisplayProfileURL()
     if (data.url != nullptr) {
         urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
         CFRelease(data.url);  // wakeup crash here - data.url == 0 null pointer argument
+        return QString::fromCFString(urlstr);
     }
 //    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
-    return QString::fromCFString(urlstr);
+    return "";
 }
 
 float Mac::getMouseCursorMagnification()
