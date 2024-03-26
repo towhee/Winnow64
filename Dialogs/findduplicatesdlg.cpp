@@ -167,7 +167,7 @@ void FindDuplicatesDlg::setupModel()
     // populate model
     for (int a = 0; a < dm->sf->rowCount(); a++) {
         QVariant dupCount = 0;
-        model.setData(model.index(a,0), 0);
+        //model.setData(model.index(a,0), 0);
         // add checkbox
         model.itemFromIndex(model.index(a,0))->setCheckable(true);
         // add pixmap
@@ -636,7 +636,10 @@ void FindDuplicatesDlg::getMetadataBItems()
         }
 
         // create date
-        if (loadMeta) {
+        qDebug() << "FindDuplicatesDlg::getMetadataBItems"
+                 << "b =" << b
+                 << "m->createdDate =" << m->createdDate;
+        if (m->createdDate.isValid()) {
             bItems[b].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
         }
         else {
@@ -1341,6 +1344,9 @@ void FindDuplicatesDlg::on_helpBtn_clicked()
     ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Find Duplicates");
     dlg->setStyleSheet(G::css);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
     dlg->exec();
 }
 
@@ -1355,6 +1361,9 @@ The delta or difference in pixels between two images is determined by taking the
     ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Pixel Delta");
     dlg->setStyleSheet(G::css);
+    #ifdef Q_OS_WIN
+    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
+    #endif
     dlg->exec();
 }
 
@@ -1511,7 +1520,7 @@ void::FindDuplicatesDlg::reportFindMatch(int a, int b)
     qDebug().noquote() << rpt;
 }
 
-int FindDuplicatesDlg::reportRGB(QImage &im)
+void FindDuplicatesDlg::reportRGB(QImage &im)
 {
     /*
     For debugging

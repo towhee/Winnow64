@@ -1350,8 +1350,6 @@ private:
     QElapsedTimer testTime;
     bool testCrash = false;
 
-    //QSoundEffect *se = new QSoundEffect(this);
-
     void toggleRory();
     void rory();
 

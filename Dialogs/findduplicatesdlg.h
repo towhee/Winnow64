@@ -129,7 +129,7 @@ private:
     void fit(QPixmap &pm, QLabel *label);
     // void buildBItemsList(QStringList &dPaths);
     void getMetadataBItems();
-    int reportRGB(QImage &im);
+    void reportRGB(QImage &im);
     int compareRGB(QImage &imA, QImage &imB);
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
