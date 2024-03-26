@@ -68,7 +68,7 @@ void MW::initialize()
     slideCount = 0;
 
     QString path = ":/Sounds/ingest.wav";
-    pickClick = new QSoundEffect(this);
+    pickClick = new QSoundEffect();
     pickClick->setSource(QUrl::fromLocalFile(path));
     pickClick->setLoopCount(10);
     //pickClick->setVolume(0.25);
