@@ -84,7 +84,7 @@ void Metadata::initSupportedFiles()
                            ;
 
     hasHeic
-//                        << "cr3"
+                        // << "cr3"
                         << "heic"
                         << "hif"
                            ;
@@ -903,6 +903,12 @@ void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
+    m.fPath = "";
+    m.fName = "";
+    m.createdDate = QDateTime();
+    m.modifiedDate = QDateTime();
+    m.year = "";
+    m.day = "";
     m.metadataAttempted = false;
     m.metadataLoaded = false;
     m.offsetFull = 0;

@@ -636,9 +636,11 @@ void FindDuplicatesDlg::getMetadataBItems()
         }
 
         // create date
+        /*
         qDebug() << "FindDuplicatesDlg::getMetadataBItems"
                  << "b =" << b
                  << "m->createdDate =" << m->createdDate;
+        */
         if (m->createdDate.isValid()) {
             bItems[b].createdDate = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
         }
@@ -658,7 +660,7 @@ void FindDuplicatesDlg::getMetadataBItems()
                 if (duration > 3600) format = "hh:mm:ss";
                 bItems[b].duration = durationTime.toString(format);
            }
-            else bItems[b].duration = "00:00";
+           else bItems[b].duration = "00:00";
         }
 
         if (ui->sameAspectCB->isChecked()) {
@@ -1067,8 +1069,6 @@ void::FindDuplicatesDlg::reportResults()
     #endif
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->resize(G::displayVirtualHorizontalPixels, dlg->height());
-    //dlg->setFixedWidth(1500);
     md.textBrowser->setStyleSheet(G::css);
     QFont courier("Courier", 12);
     md.textBrowser->setFont(courier);
@@ -1076,6 +1076,20 @@ void::FindDuplicatesDlg::reportResults()
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+    // get width in pixels of the longest line of text in report
+    QString text = md.textBrowser->toPlainText();
+    QStringList lines = text.split("\n");
+    int longestLinePixelWidth = 0;
+    for (const QString& line : lines) {
+        int lineWidth = metrics.horizontalAdvance(line);
+        longestLinePixelWidth = qMax(longestLinePixelWidth, lineWidth);
+    }
+    longestLinePixelWidth += 20;
+    int widthToUse = longestLinePixelWidth > G::displayVirtualHorizontalPixels
+                         ? G::displayVirtualHorizontalPixels : longestLinePixelWidth;
+    qDebug() << "longestLinePixelWidth =" << longestLinePixelWidth
+             << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels;
+    dlg->resize(widthToUse, dlg->height());
     dlg->exec();
 }
 
