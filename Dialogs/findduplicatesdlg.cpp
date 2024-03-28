@@ -41,7 +41,7 @@ void DragToList::dragMoveEvent(QDragMoveEvent *event)
 
 void DragToList::dropEvent(QDropEvent *event)
 {
-    qDebug() << "DragToList::dropEvent" << event;
+    // qDebug() << "DragToList::dropEvent" << event;
     if (event->mimeData()->hasUrls()) {
         QList<QUrl> urls = event->mimeData()->urls();
         for (QList<QUrl>::Iterator i = urls.begin(); i != urls.end(); ++i) {
@@ -264,7 +264,7 @@ void FindDuplicatesDlg::setImageFromVideoFrame(QString path, QImage image, QStri
 */
     int w = image.width();
     int h = image.height();
-    qDebug() << path << "We did it!" << w << h << image << source;
+    // qDebug() << path << "We did it!" << w << h << image << source;
     if (source == "BItemThumbnail") {
         bool foundItem = false;
         int b;
@@ -276,7 +276,7 @@ void FindDuplicatesDlg::setImageFromVideoFrame(QString path, QImage image, QStri
         }
         if (foundItem) {
             bItems[b].im = image;
-            qDebug() << path << "We found it!" << bItems[b].im;
+            // qDebug() << path << "We found it!" << bItems[b].im;
         }
     }
     if (source == "FindDupCandidate") {
@@ -347,6 +347,11 @@ int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
     else w = imB.width();
     if (imA.height() < imB.height()) h = imA.height();
     else h = imB.height();
+
+    if (w == 0 || h == 0) {
+        qWarning() << "FindDuplicatesDlg::compareRGB WARNING ZERO IMAGE DIM";
+        return 255;
+    }
     /*
     qDebug() << "FindDuplicatesDlg::compareRGB:"
              << "w =" << w
@@ -376,14 +381,15 @@ int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
             //*/
         }
     }
+    int deltaAverage = 1.0 * deltaRGB / (w * h * 3 * 256) * 100;
     /*
     qDebug() << "w =" << w
              << "h =" << h
              << "tot delta =" << deltaRGB
+             << "ave delta =" << deltaAverage
         ;
     //*/
-    int delta = 1.0 * deltaRGB / (w * h * 3 * 256) * 100;
-    return delta;
+    return deltaAverage;
 }
 
 void FindDuplicatesDlg::pixelCompare()
@@ -419,9 +425,15 @@ void FindDuplicatesDlg::pixelCompare()
             // getMetadataBItems has loaded thumbnails into bItems
             QImage imB = bItems.at(b).im;
             QString bPath = bItems.at(b).fPath;
+            int deltaPixels;
 
             // compare every pixel
-            int deltaPixels = compareRGB(imA, imB);
+            if (imB.width() > 0 && imB.height() > 0) {
+                deltaPixels = compareRGB(imA, imB);
+            }
+            else {
+                deltaPixels = 255;  // worst delta possible;
+            }
 
             // save for reporting / debugging
             results[a][b].deltaPixels = deltaPixels;
@@ -449,6 +461,13 @@ void FindDuplicatesDlg::pixelCompare()
             */
 
             if (deltaPixels <= ui->deltaThreshold->value()) {
+                qDebug() << "FindDuplicatesDlg::pixelCompare"
+                         << "a =" << a
+                         << "b =" << b
+                         << "deltaPixels =" << deltaPixels
+                         << "ui->deltaThreshold->value() =" << ui->deltaThreshold->value()
+                         << bItems.at(b).fPath
+                    ;
                 Matches mItem;
                 mItem.deltaPixels = deltaPixels;
                 mItem.path = bItems.at(b).fPath;
@@ -521,13 +540,17 @@ void FindDuplicatesDlg::clear()
     ui->currentLbl->setVisible(false);
     ui->candidateFilenameLbl->setText("");
     ui->candidateFilenameLbl->setVisible(false);
+    ui->candidateLbl->setPixmap(QPixmap());
     ui->targetPathLbl->setText("");
     ui->targetPathLbl->setVisible(false);
+    ui->matchLbl->setPixmap(QPixmap());
     ui->progressLbl->setText("");    //ui->currentLbl->setText("");
+    ui->tv->setEnabled(false);
 }
 
 void FindDuplicatesDlg::showImageComparisonStuff(int a, QString bPath)
 {
+    if (!matches.contains(a)) return;
     if (ui->samePixelsCB->isChecked()) {
         ui->deltaLbl->setVisible(true);
         ui->deltaTxt->setVisible(true);
@@ -570,6 +593,7 @@ void FindDuplicatesDlg::on_clrFoldersBtn_clicked()
 */
     ui->includeSubfolders->clear();
     ui->excludeSubfolders->clear();
+    clear();
 }
 
 void FindDuplicatesDlg::getMetadataBItems()
@@ -614,6 +638,10 @@ void FindDuplicatesDlg::getMetadataBItems()
         QImage image;
         if (ui->samePixelsCB->isChecked()) {
             autonomousImage->image(fPath, image, G::maxIconSize, "BItemThumbnail");
+            qDebug() << "WARNING" << "FindDuplicatesDlg::getMetadataBItems"
+                     << "Zero width height"
+                     << "b =" << b
+                     << fPath;
             bItems[b].im = image;
         }
 
@@ -1084,13 +1112,18 @@ void::FindDuplicatesDlg::reportResults()
         int lineWidth = metrics.horizontalAdvance(line);
         longestLinePixelWidth = qMax(longestLinePixelWidth, lineWidth);
     }
-    longestLinePixelWidth += 20;
+    longestLinePixelWidth += 50;    // add dialog borders
     int widthToUse = longestLinePixelWidth > G::displayVirtualHorizontalPixels
                          ? G::displayVirtualHorizontalPixels : longestLinePixelWidth;
     qDebug() << "longestLinePixelWidth =" << longestLinePixelWidth
              << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels;
     dlg->resize(widthToUse, dlg->height());
     dlg->exec();
+}
+
+void FindDuplicatesDlg::on_includeSubfoldersCB_clicked()
+{
+    clear();
 }
 
 void FindDuplicatesDlg::on_samePixelsCB_clicked()
@@ -1109,6 +1142,7 @@ void FindDuplicatesDlg::on_samePixelsCB_clicked()
     ui->deltaThresholdLbl->setEnabled(isPix);
     ui->deltaThreshold->setEnabled(isPix);
     ui->deltaThresholdToolBtn->setEnabled(isPix);
+    clear();
 }
 
 void FindDuplicatesDlg::on_compareBtn_clicked()
@@ -1131,7 +1165,6 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     }
 
     isRunning = true;
-    ui->tv->setEnabled(false);
     clear();
     buildBList();
     if (bItems.size() == 0) {
@@ -1151,8 +1184,17 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
 
     isRunning = false;
 
-    QString x = QString::number(matchCount);
-    ui->progressLbl->setText("Search completed.  " + x + " matches found.  See candidate images table.");
+    // candidates with duplicates
+    int candidatesWithDups = 0;
+    for (int a = 0; a < model.rowCount(); a++) {
+        if (model.itemFromIndex(model.index(a, MC::CheckBox))->checkState() == Qt::Checked)
+            candidatesWithDups++;
+    }
+    QString x = QString::number(candidatesWithDups);
+    if (candidatesWithDups == 1)
+        ui->progressLbl->setText(x + " candidate is duplicated. See candidate images table.");
+    else
+        ui->progressLbl->setText(x + " candidates are duplicated. See candidate images table.");
     ui->progressBar->setValue(0);
 
     // enable candidate table
@@ -1268,8 +1310,11 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     // candidate image path
     QString aPath = dm->sf->index(a,0).data(G::PathRole).toString();
     QString bPath = "";
-    if (matches[a].count() > 0) bPath = matches[a].at(0).path;
-    showImageComparisonStuff(a, bPath);
+    bool isMatch = matches.contains(a);
+    if (isMatch) {
+        if (matches[a].count() > 0) bPath = matches[a].at(0).path;
+        showImageComparisonStuff(a, bPath);
+    }
     ui->candidateFilenameLbl->setVisible(true);
     ui->candidateFilenameLbl->setText(aName);
 
@@ -1279,22 +1324,25 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     getPreview(aPath, image, "FindDupCandidate");
     showPreview(aPath, image, "FindDupCandidate");
     // if no matches
-    if (matches[a].count() == 0) {
-        ui->matchLbl->setText("No match");
-        ui->currentLbl->setVisible(false);
-    }
-    // best match image
-    if (matches[a].count() < 2) {
-        ui->prevToolBtn->setVisible(false);
-        ui->nextToolBtn->setVisible(false);
+    // if (matches[a].count() == 0) {
+    if (isMatch) {
+        // best match image
+        if (matches[a].count() < 2) {
+            ui->prevToolBtn->setVisible(false);
+            ui->nextToolBtn->setVisible(false);
+        }
+        else {
+            ui->prevToolBtn->setVisible(true);
+            ui->nextToolBtn->setVisible(true);
+        }
+        if (matches[a].count() > 0) {
+            getPreview(bPath, image, "FindDupMatch");
+            showPreview(bPath, image, "FindDupMatch");
+        }
     }
     else {
-        ui->prevToolBtn->setVisible(true);
-        ui->nextToolBtn->setVisible(true);
-    }
-    if (matches[a].count() > 0) {
-        getPreview(bPath, image, "FindDupMatch");
-        showPreview(bPath, image, "FindDupMatch");
+        ui->matchLbl->setText("No match");
+        ui->currentLbl->setVisible(false);
     }
 }
 

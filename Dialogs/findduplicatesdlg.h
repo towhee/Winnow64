@@ -55,6 +55,7 @@ public slots:
     void setImageFromVideoFrame(QString path, QImage image, QString source);
 
 private slots:
+    void on_includeSubfoldersCB_clicked();
     void on_samePixelsCB_clicked();
     void on_compareBtn_clicked();
     void on_prevToolBtn_clicked();

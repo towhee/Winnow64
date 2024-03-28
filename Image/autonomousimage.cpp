@@ -18,7 +18,7 @@ AutonomousImage::AutonomousImage(Metadata *metadata, FrameDecoder *frameDecoder)
 
 void AutonomousImage::checkOrientation(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log("Thumb::checkOrientation", fPath);
+    if (G::isLogger) G::log("AutonomousImage::checkOrientation", fPath);
     // check orientation and rotate if portrait
     QTransform trans;
     int orientation = m->orientation;
@@ -65,9 +65,9 @@ void AutonomousImage::loadFromVideo(QString &fPath)
 /*
     see top of FrameDecoder.cpp for documentation
 */
-    if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
+    if (G::isLogger) G::log("AutonomousImage::loadFromVideo", fPath);
 
-    //if (isDebug)
+    if (isDebug)
     {
         qDebug() << "AutonomousImage::loadFromVideo                     "
                  << "longSide =" << longSide
@@ -81,7 +81,7 @@ void AutonomousImage::loadFromVideo(QString &fPath)
 
 bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
 {
-    QString fun = "Thumb::loadFromEntireFile";
+    QString fun = "AutonomousImage::loadFromEntireFile";
     if (G::isLogger) G::log(fun, fPath);
 
     if (!image.load(fPath)) {
@@ -141,7 +141,7 @@ bool AutonomousImage::loadFromJpgData(QString &fPath, QImage &image)
 
 bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
 {
-    QString fun = "Thumb::loadFromTiffData";
+    QString fun = "AutonomousImage::loadFromTiffData";
     if (G::isLogger) G::log(fun, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -173,7 +173,8 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
 
 bool AutonomousImage::loadFromHeic(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log("Thumb::loadFromHeic", fPath);
+    // if (G::isLogger)
+        G::log("AutonomousImage::loadFromHeic", fPath);
 
     #ifdef Q_OS_WIN
     Heic heic;
@@ -221,16 +222,18 @@ bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString
     QString ext = fileInfo.suffix().toLower();
 
     // get metadata for image at fPath
-    if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image")) {
-        m = &metadata->m;
-    }
-    else {
-        QString errMsg = "Failed to load metadata";
-        if (G::isWarningLogger)
-            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-        QFile(fPath).setPermissions(oldPermissions);
-        return false;
-    }
+    // if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image")) {
+    //     m = &metadata->m;
+    // }
+    // else {
+    //     QString errMsg = "Failed to load metadata";
+    //     if (G::isWarningLogger)
+    //         qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
+    //     QFile(fPath).setPermissions(oldPermissions);
+    //     return false;
+    // }
+    metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image");
+    m = &metadata->m;
 
     //int dmRow = dm->rowFromPath(fPath);
     isDimensions = m->width > 0;
