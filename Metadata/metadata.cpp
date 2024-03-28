@@ -789,11 +789,11 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
-    qDebug() << "Metadata::parseHEIF" << p.fPath;
+    // qDebug() << "Metadata::parseHEIF" << p.fPath;
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
         // if (G::isWarningLogger)
-        qDebug() << "Metadata::parseHEIF  is a jpg";
+        // qDebug() << "Metadata::parseHEIF  is a jpg";
         bool ok = parseJPG(0);
         return ok;
     }
@@ -808,7 +808,7 @@ bool Metadata::parseHEIF()
     heic = new Heic;
     bool ok = heic->parseHeic(p, m, ifd, exif, gps);
     delete heic;
-    qDebug() << "Metadata::parseHEIF heic->parseHeic" << ok << p.fPath;
+    // qDebug() << "Metadata::parseHEIF heic->parseHeic" << ok << p.fPath;
     if (ok && p.report) reportMetadata();
     return ok;
     #endif
@@ -1202,7 +1202,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     m.metadataAttempted = true;
     if (!m.metadataLoaded) {
-        //if (G::isWarningLogger)
+        if (G::isWarningLogger)
         qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
         if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
