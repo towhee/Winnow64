@@ -1690,10 +1690,21 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     // image not cached and not video
     bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;
+
+    // not in cache, maybe loading
     if (!icd->imCache.contains(fPath) && !isVideo) {
         emit centralMsg("Loading Image...");
     }
+    // or could not load
+    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (icd->cacheItemList.at(i).fPath == fPath) {
+            if (icd->cacheItemList.at(i).status == ImageDecoder::Status::Invalid) {
+                emit centralMsg("Unable to load " + fPath);
+            }
+        }
+    }
 
+    // cacheItemList.at(i).status
     if (isRunning()) {
         // reset target range
         qDebug() << "ImageCache::setCurrent Position before updateTargets";
@@ -1951,6 +1962,12 @@ void ImageCache::fillCache(int id)
     // add decoded QImage to imCache.
     if (cacheKey != -1 && decoder[id]->status == ImageDecoder::Status::Success) {
         cacheImage(id, cacheKey);
+    }
+    // failed to load current image
+    else {
+        if (decoder[id]->fPath == dm->currentFilePath) {
+            emit centralMsg("Unable to load " + dm->currentFilePath);
+        }
     }
 
     // get next image to cache (nextToCache() defines cache.toCacheKey)

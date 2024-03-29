@@ -5128,6 +5128,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
                 ;
     //*/
 
+    if (!G::useMissingThumbs) return;
     if (!dm->isMissingEmbeddedThumb) return;
 //    if (G::modifySourceFiles) return;
 

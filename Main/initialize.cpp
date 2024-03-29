@@ -81,6 +81,11 @@ void MW::initialize()
     scrollRow = 0;
     sortColumn = G::NameColumn;
     isReverseSort = false;
+
+    // Temp until resolve tiff decoding crash issues with some compression methods
+    #ifdef  Q_OS_WIN
+    G::useMyTiff = true;
+    #endif
 }
 
 void MW::setupPlatform()
