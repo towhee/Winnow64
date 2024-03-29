@@ -639,7 +639,8 @@ void Preferences::addItems()
     i.key = "autoAddMissingThumbnails";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    if (G::useMissingThumbs)
+        addItem(i);
     setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
 
     // Show missing thumbnails dialog
@@ -656,7 +657,8 @@ void Preferences::addItems()
     i.key = "ignoreAddThumbnailsDlg";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    if (G::useMissingThumbs)
+        addItem(i);
     //setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
 
     // Write metadata edits to sidecar XMP file

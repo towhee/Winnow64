@@ -172,6 +172,7 @@ namespace G
     extern int dmInstance;
 
     extern bool useMyTiff;
+    extern bool useMissingThumbs;
 
     // limit functionality for testing
     extern bool useApplicationStateChanged;

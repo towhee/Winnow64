@@ -80,8 +80,8 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
 
 bool ImageDecoder::load()
 {
-/*  Loads a full size preview into a QImage.  It is invoked from ImageCache::fillCache.
-
+/*
+    Loads a full size preview into a QImage.  It is invoked from ImageCache::fillCache.
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
     if (G::isLogger) G::log("ImageDecoder::load",
@@ -99,17 +99,15 @@ bool ImageDecoder::load()
     }
 
     /* get image type (extension)
-       can cuase crash: QFileInfo fileInfo(fPath);  or
+       can cause crash: QFileInfo fileInfo(fPath);  or
                         ext = fPath.section('.', -1).toLower(); */
     ext = n.ext;
 
-    // ignore video files
+    // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
         status = Status::Video;
         return false;
     }
-
-    //if (abort) quit();
 
     QFile imFile(fPath);
 
@@ -129,21 +127,21 @@ bool ImageDecoder::load()
     }
 
     // if no metadata may still be able to load image using Qt (except raw files)
-    if (!n.metadataLoaded && !metadata->hasJpg.contains(ext)) {
-        if (image.load(fPath)) {
-            imFile.close();
-            return true;
-        }
+//    if (!n.metadataLoaded && !metadata->hasJpg.contains(ext)) {
+//        if (image.load(fPath)) {
+//            imFile.close();
+//            return true;
+//        }
 
-        imFile.close();
-        if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
-                       << "threadId =" << threadId
-                       << fPath;
-        errMsg = "Could not read metadata.";
-        status = Status::NoMetadata;
-        return false;
-    }
+//        imFile.close();
+//        if (G::isWarningLogger)
+//            qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
+//                       << "threadId =" << threadId
+//                       << fPath;
+//        errMsg = "Could not read metadata.";
+//        status = Status::NoMetadata;
+//        return false;
+//    }
 
     // JPG format (including embedded in raw files)
     if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
@@ -233,51 +231,51 @@ bool ImageDecoder::load()
         #endif
     }
 
-     // TIFF format
-     else if (G::useMyTiff && ext == "tif") {
-         // check for sampling format we cannot read
-         if (n.samplesPerPixel > 3) {
+    // TIFF format
+    else if (G::useMyTiff && ext == "tif") {
+        // check for sampling format we cannot read
+        if (n.samplesPerPixel > 3) {
              imFile.close();
              errMsg = "tiff samplesPerPixel more than 3.";
              if (G::isWarningLogger)
              qWarning() << "WARNING" << "ImageDecoder::load " << errMsg << fPath;
              status = Status::Invalid;
              return false;
-         }
+        }
 
-         // use Winnow decoder
-         Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
-         //qDebug() << "ImageDecoder::load" << fPath;
-         if (!tiff.decode(fPath, n.offsetFull, image)) {
-             imFile.close();
-             QString err = "Could not decode using Winnow Tiff decoder.  "
-                           "Trying Qt tiff library to decode" + fPath + ". ";
-             if (G::isWarningLogger)
-             qWarning() << "WARNING" << "ImageDecoder::load "
-                      << "Could not decode using Winnow Tiff decoder.  "
-                         "Trying Qt tiff library to decode " + fPath + ". ";
-             //if (abort) quit();
+        // use Winnow decoder
+        Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
+        //qDebug() << "ImageDecoder::load" << fPath;
+        if (!tiff.decode(fPath, n.offsetFull, image)) {
+            imFile.close();
+            QString err = "Could not decode using Winnow Tiff decoder.  "
+                       "Trying Qt tiff library to decode" + fPath + ". ";
+            if (G::isWarningLogger)
+            qWarning() << "WARNING" << "ImageDecoder::load "
+                  << "Could not decode using Winnow Tiff decoder.  "
+                     "Trying Qt tiff library to decode " + fPath + ". ";
+            //if (abort) quit();
 
-             // use Qt tiff decoder
-             if (!image.load(fPath)) {
-                 imFile.close();
-                 errMsg = "Could not read because Qt tiff decoder failed.";
-                 if (G::isWarningLogger)
-                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-                 G::error(errMsg, fun, fPath);
-                 status = Status::Invalid;
-                 return false;
-             }
-         }
+            // use Qt tiff decoder
+            if (!image.load(fPath)) {
+                imFile.close();
+                errMsg = "Could not read because Qt tiff decoder failed.";
+                if (G::isWarningLogger)
+                qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
+                G::error(errMsg, fun, fPath);
+                status = Status::Invalid;
+                return false;
+            }
+        }
 
-         imFile.close();
-     }
+        imFile.close();
+    }
 
     // All other formats
     else {
         // try to decode
         ImageMetadata m;
-        /*
+        ///*
         qDebug() << "ImageDecoder::load"
                  << "USEQT: "
                  << "Id =" << threadId

@@ -37,7 +37,9 @@ namespace G
 
     int dmInstance;
 
+    // temp while resolving issues
     bool useMyTiff;
+    bool useMissingThumbs = false;
 
     // limit functionality for testing
     bool useApplicationStateChanged = false;
