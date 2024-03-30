@@ -206,10 +206,10 @@ private:
     bool instanceClash(QModelIndex idx, QString src);
     int imageCount;
     int countInterval = 0;
-    QString buildMsg = "Building filters.  This could take a while to complete.<p>"
-                       "Press \"Esc\" to stop<p>";
-    QString buildSteps = "3";
-    int step;
+    // QString buildMsg = "Building filters.  This could take a while to complete.<p>"
+    //                    "Press \"Esc\" to stop<p>";
+    // QString buildSteps = "3";
+    // int step;
 
     bool isDebug = false;
     QString lastFunction = "";

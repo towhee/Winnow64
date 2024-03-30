@@ -475,7 +475,6 @@ bool DataModel::endLoad(bool success)
     if (success) {
         G::dmEmpty = false;
         checkChunkSize = iconChunkSize > rowCount();
-        filters->loadingDataModel(true);
         return true;
     }
     else {
@@ -511,11 +510,9 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
 
     clearDataModel();
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
-    filters->filtersBuilt = false;
-    filters->loadingDataModel(false);
     loadingModel = true;
     subFolderImagesLoaded = false;
 
