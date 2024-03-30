@@ -250,6 +250,7 @@ void MetaRead2::initialize()
     quitAfterTimeoutInitiated = false;
     redoCount = 0;
     err.clear();
+
     /* // to be removed
     toRead.clear();
     for (int i = 0; i < dmRowCount; i++) {

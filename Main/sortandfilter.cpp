@@ -59,7 +59,7 @@ void MW::launchBuildFilters(bool force)
     }
     if (filters->filtersBuilt && !force) return;
 
-    //qDebug() << "MW::launchBuildFilters buildFilters->build()";
+    qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
 }
 
@@ -364,10 +364,9 @@ void MW::sortChangeFromAction()
 void MW::sortChange(QString source)
 {
 /*
-    Triggered by a menu sort item, a new folder or a new workspace. Core sort items (QFileInfo
-    items) are always loaded into the datamodel, so we can sort on them at any time. Non-core
-    items, read from the image file metadata, are only loaded on demand. All non-core items
-    must be loaded in order to sort on them.
+    Triggered by a menu sort item, a new folder or a new workspace.
+
+    The initial sort is always by file name.
 
     The sort order (ascending or descending) can be set by the menu, the button icon on the
     statusbar or a workspace change.
@@ -377,9 +376,6 @@ void MW::sortChange(QString source)
 
     if (G::isInitializing || !G::metaReadDone) return;
 
-    QList<G::dataModelColumns> coreSorts;
-    coreSorts << G::NameColumn << G::TypeColumn << G::SizeColumn << G::CreatedColumn << G::ModifiedColumn;
-
     /*
     qDebug() << "MW::sortChange" << "source =" << source
              << "G::isLinearLoadDone =" << G::isLinearLoadDone
@@ -388,15 +384,9 @@ void MW::sortChange(QString source)
              << "sortColumn =" << sortColumn
              << "isReverseSort =" << isReverseSort
              << "prevIsReverseSort =" << prevIsReverseSort
-             << "coreSorts =" << coreSorts
+             //<< "coreSorts =" << coreSorts
                 ;
 //                */
-
-    // reset sort to file name if was sorting on non-core metadata while folder still loading
-    if (!G::metaReadDone && !coreSorts.contains(sortColumn)) {
-        prevSortColumn = G::NameColumn;
-        updateSortColumn(G::NameColumn);
-    }
 
     // check if sorting has changed
     bool sortHasChanged = false;
@@ -406,17 +396,6 @@ void MW::sortChange(QString source)
         prevIsReverseSort = isReverseSort;
     }
 
-    // do not sort conditions
-    /*
-    qDebug() << "MW::sortChange"
-             << "sortMenuUpdateToMatchTable =" << sortMenuUpdateToMatchTable
-             << "G::metaReadDone =" << G::metaReadDone
-             << "G::allMetadataLoaded =" << G::allMetadataLoaded
-             << "sortColumn =" << sortColumn
-             << "G::NameColumn =" << G::NameColumn
-             << "sortHasChanged =" << sortHasChanged
-        ;
-//*/
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;

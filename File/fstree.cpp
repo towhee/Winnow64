@@ -516,6 +516,7 @@ void FSTree::wheelEvent(QWheelEvent *event)
     wheelTimer.start(100);
 
     // add code to scroll FSTree if desired
+    QTreeView::wheelEvent(event);
 }
 
 void FSTree::leaveEvent(QEvent *event)

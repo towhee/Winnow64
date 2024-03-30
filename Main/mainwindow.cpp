@@ -1913,6 +1913,10 @@ void MW::folderSelectionChange(QString dPath)
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 
+    // building filters msg
+    filters->filtersBuilt = false;
+    filters->loadingDataModel(false);
+
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
@@ -2911,10 +2915,12 @@ void MW::loadConcurrentDone()
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP
     It is also okay to filter.  */
 
+    filters->loadingDataModel(true);
     reverseSortBtn->setEnabled(true);
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
+    updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
     if (reset(src + QString::number(count++))) return;
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
