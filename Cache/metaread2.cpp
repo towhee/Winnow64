@@ -672,6 +672,11 @@ void MetaRead2::dispatch(int id)
         // it is not ok to select while the datamodel is being built.
         if (metaReadCount == 1) emit okToSelect(true);
 
+        // time to read item
+        qDebug() << "MetaRead2::dispatch     TimeToRead =" << r->msToRead;
+        QModelIndex tIdx = dm->index(dmRow, G::MSToReadColumn);
+        emit setMsToRead(tIdx, r->msToRead, r->instance);
+
         /* deplete toRead (to be removed)
         for (int i = 0; i < toRead.size(); i++) {
             if (toRead.at(i) == dmRow) {

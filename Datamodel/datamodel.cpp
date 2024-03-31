@@ -191,6 +191,7 @@ void DataModel::setModelProperties()
     // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Read ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
@@ -1430,9 +1431,13 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 {
     lastFunction = "";
     if (G::stop) return;
-    if (isDebug) qDebug() << "DataModel::setValue" << "instance =" << instance
-                          << "row =" << dmIdx.row()
-                          << currentFolderPath;
+    //if (isDebug)
+        qDebug() << "DataModel::setValue"
+             << "row =" << dmIdx.row()
+                 << "value =" << value
+             << "src =" << src
+             << "instance =" << instance
+                 << currentFolderPath;
     if (instance != this->instance) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::setValue" << dmIdx << "Instance conflict = "

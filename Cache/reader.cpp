@@ -28,6 +28,7 @@ void Reader::read(const QModelIndex dmIdx,
                   const bool isReadIcon)
 {
     if (isRunning()) stop();
+    t.restart();
     abort = false;
     this->dmIdx = dmIdx;
     this->fPath = fPath;
@@ -200,6 +201,7 @@ void Reader::run()
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
             ;
     }
+    msToRead = t.elapsed();
     if (!abort && instanceOk()) emit done(threadId);
     //if (abort) qDebug() << "Reader::run aborted";
 }

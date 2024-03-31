@@ -8,8 +8,6 @@ WHAT'S NEW
 - Pick audio
 
 BUGS / TO DO
-- Sort option not sticky when change folders but also not reset to filename in menu
-- Right click main menu from central widget when blank
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
@@ -114,6 +112,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Sort option not sticky when change folders but also not reset to filename in menu
 - Not showing Building filters message when filters panel is visible.
 - If view mode TableView and 1st file is video get "Gathering metadata and thumbnails for ..."
 - Added preview dimensions to InfoView

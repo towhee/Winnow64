@@ -458,7 +458,8 @@ void MW::createMDCache()
     // update loading metadata in statusbar
     connect(metaReadThread, &MetaRead2::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
-
+    // save time to read image metadata and icon to the datamodel
+    connect(metaReadThread, &MetaRead2::setMsToRead, dm, &DataModel::setValue);
     // not being used:
     // read metadata
     //connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);

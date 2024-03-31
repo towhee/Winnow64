@@ -48,6 +48,8 @@ signals:
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 
+    void setMsToRead(QModelIndex dmIdx, QVariant value, int instance, QString src = "MetaRead2::dispatch",
+                     int role = Qt::EditRole, int align = Qt::AlignRight);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
 
     void fileSelectionChange(QModelIndex sfIdx,

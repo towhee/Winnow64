@@ -53,6 +53,7 @@ namespace G
         // items read when new folder (core fields)
         PathColumn,
         NameColumn,
+        MSToReadColumn,
         PickColumn,
         IngestedColumn,
         LabelColumn,

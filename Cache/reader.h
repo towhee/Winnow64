@@ -31,6 +31,7 @@ public:
     int threadId = -1;
     int instance = 0;
     bool isReadIcon = true;
+    qint64 msToRead;
     QString fPath = "";
     QModelIndex dmIdx = QModelIndex();
     Metadata *metadata;
@@ -78,6 +79,7 @@ private:
     int metaReadCount;
     bool isVideo;
     bool isDebug;
+    QElapsedTimer t;
 };
 
 #endif // READER_H
