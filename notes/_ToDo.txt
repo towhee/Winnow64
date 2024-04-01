@@ -58,7 +58,7 @@ BUGS / TO DO
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
-- Figure out G::error and G::errlog
+- Figure out // G::error and G::errlog
 - Include subfolders is wonky
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
   caused by Winnow adding thumbnail
