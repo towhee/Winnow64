@@ -100,7 +100,7 @@ bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
     aspectRatio = w * 1.0 / h;
 
     if (image.isNull()) {
-        G::error("Could not read thumb using thumbReader", fun, fPath);
+        // if (G::isErrorLogger) G::error("Could not read thumb using thumbReader", fun, fPath);
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
@@ -152,7 +152,7 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
     if (m->samplesPerPixel > 3) {
         QString err = "Could not read tiff because " + QString::number(m->samplesPerPixel)
                       + " samplesPerPixel > 3.";
-        G::error(err, fun, fPath);
+        // if (G::isErrorLogger) G::error(err, fun, fPath);
         return false;
     }
 
@@ -299,7 +299,7 @@ bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString
             // show bad image png
             QString path = ":/images/badImage1.png";
             loadFromEntireFile(path, image);
-            G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
+            // if (G::isErrorLogger) G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
             qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
         }
     }

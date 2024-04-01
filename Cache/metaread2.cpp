@@ -673,7 +673,6 @@ void MetaRead2::dispatch(int id)
         if (metaReadCount == 1) emit okToSelect(true);
 
         // time to read item
-        qDebug() << "MetaRead2::dispatch     TimeToRead =" << r->msToRead;
         QModelIndex tIdx = dm->index(dmRow, G::MSToReadColumn);
         emit setMsToRead(tIdx, r->msToRead, r->instance);
 

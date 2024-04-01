@@ -92,7 +92,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     {
         if (!dm->readMetadataForItem(dmRow, dm->instance)) {
             QString err = "Could not load metadata";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
     }
@@ -100,7 +100,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // is file already open by another process
     if (imFile.isOpen()) {
         QString err = "File already open.";
-        G::error(err, fun, fPath);
+        // if (G::isErrorLogger) G::error(err, fun, fPath);
         return false;
     }
 
@@ -108,7 +108,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
         QString err = "Could not open file for image";
-        G::error(err, fun, fPath);
+        // if (G::isErrorLogger) G::error(err, fun, fPath);
         return false;
     }
 
@@ -122,7 +122,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (lengthFullJpg == 0) {
             imFile.close();
             QString err = "Jpg length = zero";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
 
@@ -130,7 +130,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!imFile.seek(offsetFullJpg)) {
             imFile.close();
             QString err = "Illegal offset to image";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
 
@@ -147,7 +147,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!image.loadFromData(buf, "JPEG")) {
             imFile.close();
             QString err = "Could not read image from buffer";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
 //        tDecode = decodeTime.elapsed() ;
@@ -167,7 +167,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!heic.decodePrimaryImage(fPath, image)) {
             if (imFile.isOpen()) imFile.close();
             QString err = "Unable to decode";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
         if (imFile.isOpen()) imFile.close();
@@ -185,7 +185,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             imFile.close();
             QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
                     + " samplesPerPixel > 3. " + fPath + ". ";
-            G::error(err, fun, fPath);
+            if (G::isErrorLogger) // G::error(err, fun, fPath);
             return false;
         }
 
@@ -233,7 +233,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             if (!image.load(fPath)) {
                 imFile.close();
                 QString err = "Could not decode.";
-                G::error(err, fun, fPath);
+                // if (G::isErrorLogger) G::error(err, fun, fPath);
                 return false;
             }
         }
@@ -249,7 +249,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!image.load(fPath)) {
             imFile.close();
             QString err = "Could not decode.";
-            G::error(err, fun, fPath);
+            // if (G::isErrorLogger) G::error(err, fun, fPath);
             return false;
         }
         imFile.close();
