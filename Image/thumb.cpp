@@ -122,7 +122,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 //    image = image.scaled(thumbMax, Qt::KeepAspectRatio);
 
     if (image.isNull()) {
-        G::error("Could not read thumb using thumbReader", fun, fPath);
+        // G::error("Could not read thumb using thumbReader", fun, fPath);
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
@@ -176,7 +176,7 @@ bool Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     if (samplesPerPixel > 3) {
         QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
               + " samplesPerPixel > 3.";
-        G::error(err, fun, fPath);
+        // G::error(err, fun, fPath);
         return false;
     }
 
@@ -304,7 +304,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             // show bad image png
             QString path = ":/images/badImage1.png";
             loadFromEntireFile(path, image, dmRow);
-            G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
+            // G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
             qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
         }
         */
