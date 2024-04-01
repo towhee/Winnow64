@@ -1073,7 +1073,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
                 errMsg = "Failed to load metadata";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-                // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
+                G::error(errMsg, fun, fPath);
 //                mutex.unlock();
                 return false;
             }
@@ -1082,7 +1082,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
         else {
             errMsg = "Cannot read file type";
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-            // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
+            G::error(errMsg, fun, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
             metadata->m.compare = false;
@@ -1141,7 +1141,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
             errMsg = "Failed to load metadata";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-            // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
+            G::error(errMsg, fun, fPath);
             mutex.unlock();
             return false;
         }
@@ -1151,7 +1151,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
         errMsg = "Cannot read file type";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::refreshMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-        // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
+        G::error(errMsg, fun, fPath);
         metadata->clearMetadata();
         metadata->m.row = row;
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
@@ -1431,7 +1431,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 {
     lastFunction = "";
     if (G::stop) return;
-    if (isDebug)
+    //if (isDebug)
         qDebug() << "DataModel::setValue"
              << "row =" << dmIdx.row()
                  << "value =" << value
