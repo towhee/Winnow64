@@ -28,7 +28,7 @@ void Reader::read(const QModelIndex dmIdx,
                   const bool isReadIcon)
 {
     if (isRunning()) stop();
-    t.start();
+    t.restart();
     abort = false;
     this->dmIdx = dmIdx;
     this->fPath = fPath;
@@ -191,8 +191,7 @@ void Reader::readIcon()
 
 void Reader::run()
 {
-    if (!abort && !G::allMetadataAttempted && instanceOk()) readMetadata();
-    // if (!abort && !G::allMetadataLoaded && instanceOk()) readMetadata();
+    if (!abort && !G::allMetadataLoaded && instanceOk()) readMetadata();
     if (!abort && isReadIcon && instanceOk()) readIcon();
     if (isDebug)
     {
@@ -202,7 +201,6 @@ void Reader::run()
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
             ;
     }
-    // if (!abort) emit addToImageCache(metadata->m, instance);
     msToRead = t.elapsed();
     if (!abort && instanceOk()) emit done(threadId);
     //if (abort) qDebug() << "Reader::run aborted";

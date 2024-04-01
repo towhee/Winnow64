@@ -725,7 +725,7 @@ bool Nikon::parse(MetadataParameters &p,
     }
     else {
         // err, should have been endian order
-        // if (G::isErrorLogger) G::error("Endian order not found.", "Nikon::parse", m.fPath);
+        G::error("Endian order not found.", "Nikon::parse", m.fPath);
         return false;
     }
     p.file.read(2);       // skip over 0x2A
@@ -919,7 +919,7 @@ bool Nikon::parse(MetadataParameters &p,
             step++;
             if (step > 100) {
                 // err endian order not found
-                // if (G::isErrorLogger) G::error("Endian order not found.", "Nikon::parse", m.fPath);
+                G::error("Endian order not found.", "Nikon::parse", m.fPath);
                break;
             }
         }
