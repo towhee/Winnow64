@@ -195,7 +195,7 @@ bool ImageDecoder::load()
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
             QString errMsg = "heic.decodePrimaryImage failed";
-            G::error(errMsg, fun, fPath);
+            // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
             imFile.close();
             status = Status::Invalid;
             return false;
@@ -262,7 +262,7 @@ bool ImageDecoder::load()
                 errMsg = "Could not read because Qt tiff decoder failed.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-                G::error(errMsg, fun, fPath);
+                // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
                 status = Status::Invalid;
                 return false;
             }
@@ -287,7 +287,7 @@ bool ImageDecoder::load()
             errMsg = "Could not read because decoder failed.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-            G::error(errMsg, fun, fPath);
+            // if (G::isErrorLogger) G::error(errMsg, fun, fPath);
             status = Status::Invalid;
             return false;
         }
