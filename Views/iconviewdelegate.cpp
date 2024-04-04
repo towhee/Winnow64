@@ -398,6 +398,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
+
     // Cell structure (see IconViewDelegate Anatomy at top of file).
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
@@ -496,14 +497,11 @@ void IconViewDelegate::paint(QPainter *painter,
     qDebug() << "IconViewDelegate::paint"
              << "row =" << row
              << "currentRow =" << currentRow
-             << "selected item =" << option.state.testFlag(QStyle::State_Selected);
-
-    qDebug() << "IconViewDelegate::paint"
-             << "row =" << row
-             << "dm->currentSfIdx.row() =" << dm->currentSfIdx.row()
-             << "isCurrentIndex" << isCurrentIndex
+             << "selected item =" << option.state.testFlag(QStyle::State_Selected)
+             << "isVideo =" << isVideo
+             << "labeltext =" << labelText
         ;
-//             */
+            // */
 
     int videoDurationHt = 0;
     if (isVideo) {
@@ -516,22 +514,19 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setBrush(G::backgroundColor);
         painter->drawRect(bRect);
         painter->setPen(videoTextColor);
-        QString vText;
-        G::renderVideoThumb ? vText = duration : vText = "Video";
-        painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, vText);
+        if (G::renderVideoThumb)
+            painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
         videoDurationHt = bRect.height();
     }
 
     // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
         // label/rating rect located top-right as containment for circle
-//        QColor labelColorToUse;
         QColor textColor(Qt::white);
         if (G::ratings.contains(rating)) {
             // font
             QFont font = painter->font();
             int pxSize = 1.0 * G::fontSize * thumbRect.width() * 0.02;
-//            int pxSize = 1.0 * G::fontSize * badgeSize / 5;
             if (pxSize < 6) pxSize = 6;
             font.setPixelSize(pxSize-1);
             painter->setFont(font);

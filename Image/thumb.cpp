@@ -268,8 +268,13 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     if (isVideo) {
         if (G::renderVideoThumb) {
             loadFromVideo(fPath, dmRow);
+            loaded = true;
         }
-        loaded = true;
+        else {
+            QString path = ":/images/video.png";
+            loaded = loadFromEntireFile(path, image, dmRow);
+        }
+        // loaded = true;
     }
     else {
         // raw image file or tiff with embedded jpg thumbnail
@@ -299,15 +304,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             // rotate if there is orientation metadata
             if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
         }
-        /*
-        else {
-            // show bad image png
-            QString path = ":/images/badImage1.png";
-            loadFromEntireFile(path, image, dmRow);
-            // G::error("Could not load video thumbnail.", "Thumb::loadThumb", fPath);
-            qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
-        }
-        */
     }
 
     QFile(fPath).setPermissions(oldPermissions);
