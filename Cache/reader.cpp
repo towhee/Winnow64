@@ -152,12 +152,14 @@ void Reader::readIcon()
 
     int dmRow = dmIdx.row();
     QImage image;
-    // get thumbnail or err.png
+    // get thumbnail or err.png or generic video
     bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
-    if (abort) return;
-    if (isVideo) return;
 
-    //pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+    if (abort) return;
+
+    // videos set the datamodel icon separately from FrameDecoder
+    // if !G::renderVideoThumb then generic Video image returned from Thumb
+    if (isVideo && G::renderVideoThumb) return;
 
     if (thumbLoaded) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

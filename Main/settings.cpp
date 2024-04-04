@@ -456,7 +456,7 @@ bool MW::loadSettings()
 
     if (settings->contains("pickAudioVolume")) {
         double volume = settings->value("pickAudioVolume").toInt() * 1.0 / 100;
-        qDebug() << "pickAudioVolume =" << volume;
+        // qDebug() << "pickAudioVolume =" << volume;
         pickClick->setVolume(volume);
     }
 

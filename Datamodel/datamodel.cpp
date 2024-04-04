@@ -1431,7 +1431,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 {
     lastFunction = "";
     if (G::stop) return;
-    //if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::setValue"
              << "row =" << dmIdx.row()
                  << "value =" << value
