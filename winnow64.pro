@@ -181,8 +181,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Help/helppixeldelta.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -227,6 +226,7 @@ SOURCES += Embellish/embelexport.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/ingest.cpp
+SOURCES += Help/helppixeldelta.cpp
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
