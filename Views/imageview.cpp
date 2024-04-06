@@ -308,6 +308,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 void ImageView::clear()
 {
     if (G::isLogger) G::log("ImageView::clear");
+
     shootingInfo = "";
     infoOverlay->setText("");
     QPixmap nullPm;
@@ -863,6 +864,11 @@ void ImageView::focus()
              << "w =" << w
              << "g =" << h
         ;
+}
+
+bool ImageView::isNullImage()
+{
+    return pmItem->pixmap().isNull();
 }
 
 void ImageView::updateShootingInfo()
