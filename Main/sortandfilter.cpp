@@ -81,7 +81,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::metaReadDone) {
@@ -135,12 +135,14 @@ void MW::filterChange(QString source)
     updateStatus(true, "", "MW::filterChange");
 
     // if filter has eliminated all rows so nothing to show
-    qDebug() << "MW::filterChange dm->sf->rowCount() =" << dm->sf->rowCount();
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
         G::popUp->reset();
         return;
+    }
+    else {
+        setCentralMessage("");
     }
 
     thumbView->refreshThumbs();
@@ -155,6 +157,9 @@ void MW::filterChange(QString source)
         newSelectReqd = true;
         if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
         else newSfIdx = dm->sf->index(sfRows-1, 0);
+    }
+    else if (imageView->isNullImage()) {
+        newSelectReqd = true;
     }
 
     // rebuild imageCacheList and update priorities in image cache

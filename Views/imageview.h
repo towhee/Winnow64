@@ -61,6 +61,7 @@ public:
     void setCursorHiding(bool hide);
     bool isBusy;
     void setBackgroundColor(QColor bg);
+    bool isNullImage();
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotateImage(int degrees);
