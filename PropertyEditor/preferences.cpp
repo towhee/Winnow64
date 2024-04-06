@@ -188,19 +188,9 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
-    if (source == "metadataCacheStrategy") {
-        if (v.toString() == "All") mw->metadataCacheThread->cacheAllMetadata = true;
-        else mw->metadataCacheThread->cacheAllMetadata = false;
-    }
-
-    if (source == "thumbnailCacheStrategy") {
-        if (v.toString() == "All") mw->metadataCacheThread->cacheAllIcons = true;
-        else mw->metadataCacheThread->cacheAllIcons = false;
-    }
-
-    if (source == "cacheMethod") {
-        mw->setCacheMethod(v.toString());
-    }
+    // if (source == "cacheMethod") {
+    //     mw->setCacheMethod(v.toString());
+    // }
 
     if (source == "imageCacheStrategy") {
         // get available memory
@@ -1097,22 +1087,22 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
 
-    // Cache method
-    i.name = "cacheMethod";
-    i.parentName = "CacheHeader";
-    i.captionText = "Caching method";
-    i.tooltip = "Linear: slower - loads all metadata, then loads all icons and \n"
-                "finally loads full size images.\n\n"
-                "Concurrent: faster. Loads everything together\n";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->cacheMethod;
-    i.key = "cacheMethod";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Linear"
-               << "Concurrent";
-    addItem(i);
+    // // Cache method
+    // i.name = "cacheMethod";
+    // i.parentName = "CacheHeader";
+    // i.captionText = "Caching method";
+    // i.tooltip = "Linear: slower - loads all metadata, then loads all icons and \n"
+    //             "finally loads full size images.\n\n"
+    //             "Concurrent: faster. Loads everything together\n";
+    // i.hasValue = true;
+    // i.captionIsEditable = false;
+    // i.value = mw->cacheMethod;
+    // i.key = "cacheMethod";
+    // i.delegateType = DT_Combo;
+    // i.type = "QString";
+    // i.dropList << "Linear"
+    //            << "Concurrent";
+    // addItem(i);
 
     // Image cache size strategy
     i.name = "imageCacheStrategy";

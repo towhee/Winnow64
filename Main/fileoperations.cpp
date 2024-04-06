@@ -357,7 +357,7 @@ void MW::deleteFiles(QStringList paths)
     qDebug() << "MW::deleteFiles remove from datamodel      ms =" << t.elapsed(); t.restart();
 
     // cleanup G::rowsWithIcon
-    if (G::isLoadConcurrent) metaReadThread->cleanupIcons();
+    metaReadThread->cleanupIcons();
 
     qDebug() << "MW::deleteFiles clean up icons             ms =" << t.elapsed(); t.restart();
 

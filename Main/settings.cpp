@@ -66,17 +66,12 @@ void MW::writeSettings()
     settings->setValue("showThumbLabelsGrid", gridView->showIconLabels);
     settings->setValue("labelChoice", gridView->labelChoice);
 
-    settings->setValue("thumbsPerPage", metadataCacheThread->visibleIcons);
+    // settings->setValue("thumbsPerPage", metadataCacheThread->visibleIcons);
 
     // slideshow
     settings->setValue("slideShowDelay", slideShowDelay);
     settings->setValue("isSlideShowRandom", isSlideShowRandom);
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
-
-    // metadata and icon cache
-    settings->setValue("cacheAllMetadata", metadataCacheThread->cacheAllMetadata);
-    settings->setValue("cacheAllIcons", metadataCacheThread->cacheAllIcons);
-//    setting->setValue("iconChunkSize", dm->iconChunkSize);
 
     // image cache
     settings->setValue("cacheMethod", cacheMethod);
@@ -372,8 +367,6 @@ bool MW::loadSettings()
         // filters
 
         // cache
-        G::isLoadLinear = false;
-        G::isLoadConcurrent = true;
         cacheMethod = "Concurrent";
         cacheSizeStrategy = "Moderate";
         cacheMinMB = 2000;
@@ -526,13 +519,9 @@ bool MW::loadSettings()
     if (settings->contains("isSlideShowRandom")) isSlideShowRandom = settings->value("isSlideShowRandom").toBool();
     if (settings->contains("isSlideShowWrap")) isSlideShowWrap = settings->value("isSlideShowWrap").toBool();
 
-    // metadata and icon cache loaded when metadataCacheThread created in MW::createCaching
-
     // image cache
     if (settings->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = settings->value("cacheSizePercentOfAvailable").toInt();
     if (settings->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = settings->value("cacheSizePercentOfAvailable").toInt();
-    if (settings->contains("cacheMethod")) setCacheMethod(settings->value("cacheMethod").toString());
-    else setCacheMethod("Concurrent");
     if (settings->contains("cacheSizeMethod")) setImageCacheSize(settings->value("cacheSizeMethod").toString());
     else setImageCacheSize("Moderate");
     if (settings->contains("cacheMinSize")) setImageCacheMinSize(settings->value("cacheMinSize").toString());

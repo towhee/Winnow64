@@ -122,7 +122,7 @@ bool Reader::readMetadata()
         if (!dm->isMetadataLoaded(dmRow)) {
             status = Status::MetaFailed;
             if (G::isWarningLogger)
-            qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
+            qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
         }
 
         if (!abort) emit addToImageCache(metadata->m, instance);
@@ -132,7 +132,7 @@ bool Reader::readMetadata()
 //    else {
 //        status = Status::MetaFailed;
 //        if (G::isWarningLogger)
-//        qWarning() << "WARNING" << "MetadataCache::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
+//        qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
 //    }
     return isMetaLoaded;
 }
@@ -168,12 +168,12 @@ void Reader::readIcon()
         pm = QPixmap(":/images/error_image256.png");
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
-        qWarning() << "WARNING" << "MetadataCache::loadIcon  row =" << dmRow << "Failed to load thumbnail." << fPath;
+        qWarning() << "WARNING" << "Reader::loadIcon  row =" << dmRow << "Failed to load thumbnail." << fPath;
     }
     if (pm.isNull()) {
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
-        qWarning() << "WARNING" << "MetadataCache::loadIcon  row =" << dmRow << "Failed - null icon." << fPath;
+        qWarning() << "WARNING" << "Reader::loadIcon  row =" << dmRow << "Failed - null icon." << fPath;
         return;
     }
 
@@ -184,7 +184,7 @@ void Reader::readIcon()
     if (!dm->iconLoaded(dmRow, instance)) {
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
-        qWarning() << "WARNING" << "MetadataCache::loadIcon  row =" << dmRow << "Failed - emit setIcon." << fPath;
+        qWarning() << "WARNING" << "Reader::loadIcon  row =" << dmRow << "Failed - emit setIcon." << fPath;
     }
     else {
         loadedIcon = true;

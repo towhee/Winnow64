@@ -53,8 +53,6 @@ namespace G
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
     bool useProcessEvents = true;
-    // metadata/icon read method
-    QString metaReadInUse;              // used in tooltip
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -136,8 +134,6 @@ namespace G
     bool autoAddMissingThumbnails;
     bool useSidecar;
 //    bool embedTifJpgThumb;
-    bool isLoadLinear;
-    bool isLoadConcurrent;
     bool renderVideoThumb;
     bool includeSubfolders;
     bool isFilter;
@@ -221,12 +217,12 @@ namespace G
         t.restart();
     }
 
-    QStringList doNotLog =
-    {
-        "ImageCache",
-        "ImageDecoder",
-        "MetadataCache"
-    };
+    // QStringList doNotLog =
+    // {
+    //     "ImageCache",
+    //     "ImageDecoder",
+    //     "MetadataCache"
+    // };
 
     void log(QString functionName, QString comment, bool zeroElapsedTime)
     {

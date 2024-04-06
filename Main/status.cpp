@@ -239,18 +239,10 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
                 ;
              //*/
     if (isRunning) {
-        if (G::isLoadLinear) {
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;}");
-            #ifdef Q_OS_WIN
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:yellow;font-size: 24px;}");
-            #endif
-        }
-        else {
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;}");
-            #ifdef Q_OS_WIN
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;font-size: 24px;}");
-            #endif
-        }
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;}");
+        #ifdef Q_OS_WIN
+        metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;font-size: 24px;}");
+        #endif
     }
     else {
         if (calledBy == "MetaRead2::quitAnyway") {

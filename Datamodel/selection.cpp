@@ -88,16 +88,12 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     }
 
     bool isFileSelectionChange = true;
-
-    if (G::isLoadLinear) emit fileSelectionChange(sfIdx);
-    else {
-        /*
-        qDebug() << "Selection::setCurrentIndex about to emit loadConcurrent"
-                 << sfIdx.row()
-                 << isFileSelectionChange;
+    /*
+    qDebug() << "Selection::setCurrentIndex about to emit loadConcurrent"
+             << sfIdx.row()
+             << isFileSelectionChange;
         //*/
-        emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
-    }
+    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
 }
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)
@@ -130,15 +126,24 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
 
-    #ifdef METAREAD2
-    if (ok) {
-        G::popUp->reset();
+    if (!sfIdx.isValid()) {
+        G::popUp->showPopup("Selection is invalid");
+        qApp->beep();
+        return;
     }
     else {
-        G::popUp->showPopup("Selection is disabled");
-        qApp->beep();
+        G::popUp->reset();
     }
-    #endif
+
+    // #ifdef METAREAD2
+    // if (ok) {
+    //     G::popUp->reset();
+    // }
+    // else {
+    //     G::popUp->showPopup("Selection is disabled");
+    //     qApp->beep();
+    // }
+    // #endif
 
     //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
     ///*

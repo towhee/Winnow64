@@ -501,7 +501,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
       name, path, file size, creation date
     - also determine if there are duplicate raw+jpg files, and if so, populate all
       the Dup...Role values to manage the raw+jpg files
-    - after the metadataCacheThread has read all the metadata and thumbnails add
+    - after the metadataReadThread has read all the metadata and thumbnails add
       the rest of the metadata to the datamodel.
 
     - Note: building QMaps of unique field values for the filters is not done here,
@@ -516,11 +516,6 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     currentFolderPath = folderPath;
     loadingModel = true;
     subFolderImagesLoaded = false;
-
-    if (G::isLoadLinear) {
-        emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
-        if (G::useProcessEvents) qApp->processEvents();
-    }
 
     // do some initializing
     fileFilters->clear();
@@ -586,15 +581,6 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                 if (abortLoadingModel) break;
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
-                // report file progress within folder
-                if (G::isLoadLinear && imageCount % countInterval == 0 && imageCount > 0) {
-                    QString s = step +
-                                QString::number(imageCount) + " found so far in " +
-                                QString::number(folderCount) + " folders" +
-                                escapeClause;
-                    emit centralMsg(s);    // rghmsg
-                    if (G::useProcessEvents) qApp->processEvents();
-                }
             }
         }
     }
@@ -685,28 +671,18 @@ bool DataModel::addFileData()
             else
                 setData(index(row, G::TypeColumn), "JPG");
         }
-
-        // Load folder progress
-        if (G::isLoadLinear) {
-            if (row % 100 == 0) {
-                QString s = QString::number(row) + " of " + QString::number(rowCount()) +
-                            " system file info loaded.";
-                emit centralMsg(s);    // rghmsg
-                if (G::useProcessEvents) qApp->processEvents();
-            }
-        }
     }
     if (rowCount() > 0) {
         QModelIndex par = index(0,0).parent();
-//        qDebug() << "INSTANCE =" << instance
-//                 << "index(0,0) =" << index(0,0)
-//                 << "p =" << &par
-//                    ;
+        // qDebug() << "INSTANCE =" << instance
+        //          << "index(0,0) =" << index(0,0)
+        //          << "p =" << &par
+        //             ;
         par = index(0,1).parent();
-//        qDebug() << "INSTANCE =" << instance
-//                 << "index(0,0) =" << index(0,1)
-//                 << "p =" << &par
-//                    ;
+        // qDebug() << "INSTANCE =" << instance
+        //         << "index(0,0) =" << index(0,1)
+        //         << "p =" << &par
+        //            ;
     }
 
    return true;
