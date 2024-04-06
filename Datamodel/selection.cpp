@@ -139,15 +139,6 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         qApp->beep();
     }
     #endif
-#ifdef METAREAD3
-    if (ok) {
-        G::popUp->reset();
-    }
-    else {
-        G::popUp->showPopup("Selection is disabled");
-        qApp->beep();
-    }
-#endif
 
     //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
     ///*

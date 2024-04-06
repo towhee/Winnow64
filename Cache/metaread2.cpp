@@ -652,18 +652,20 @@ void MetaRead2::dispatch(int id)
         G::log("MetaRead2::dispatch: " + from, s);
     }
 
-    /* RETURNING READER
-       - track metadata rows read by depleting toRead
-       - report read failures
-       - trigger fileSelectionChange if reader row = startRow
-       - update progress
-       - if readers have been dispatched for all rows
-         - check if still pending
-         - check if all metadata and necessary icons loaded
-         - if all checks out signal done
-    */
-
+    // RETURNING READER
     if (r->fPath != "" && r->instance == dm->instance) {
+
+        /*
+        - track metadata rows read by depleting toRead (to be removed)
+        - report read failures
+        - trigger fileSelectionChange if reader row = startRow
+        - update progress
+        - if readers have been dispatched for all rows
+             - check if still pending
+             - check if all metadata and necessary icons loaded
+             - if all checks out signal done
+        */
+
         int dmRow = r->dmIdx.row();
 
         // progress counter
