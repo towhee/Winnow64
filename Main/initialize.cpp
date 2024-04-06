@@ -313,59 +313,53 @@ void MW::createFrameDecoder()
 void MW::createMDCache()
 {
 /*
-    When a new folder is selected the metadataCacheThread is started to load all the
+    When a new folder is selected the metadataReadThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then
-    the metadataCacheThread is restarted at the first visible thumb to speed up the
-    display of the thumbs for the user. However, if every scroll event triggered a
-    restart it would be inefficient, so this timer is used to wait for a pause in the
-    scrolling before triggering a restart at the new place.
+    the metadataReadThread is restarted at the first visible thumb to speed up the
+    display of the thumbs for the user.
+
+    There are two versions of metadataReadThread: MetaRead and MetaRead2.
 */
     if (G::isLogger) G::log("MW::createMDCache");
-    metadataCacheThread = new MetadataCache(this, dm, metadata, frameDecoder);
 
-    if (isSettings) {
-        if (settings->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = settings->value("cacheAllMetadata").toBool();
-        if (settings->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = settings->value("cacheAllIcons").toBool();
-    }
-    else {
-        metadataCacheThread->cacheAllMetadata = true;
-        metadataCacheThread->cacheAllIcons = false;
-    }
+    // metadataCacheThread = new MetadataCache(this, dm, metadata, frameDecoder);
 
-    // not being used
-    metadataCacheScrollTimer = new QTimer(this);
-    metadataCacheScrollTimer->setSingleShot(true);
-    // next connect to update
-    connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
+    // if (isSettings) {
+    //     if (settings->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = settings->value("cacheAllMetadata").toBool();
+    //     if (settings->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = settings->value("cacheAllIcons").toBool();
+    // }
+    // else {
+    //     metadataCacheThread->cacheAllMetadata = true;
+    //     metadataCacheThread->cacheAllIcons = false;
+    // }
 
-    // signal to stop MetaCache
-    connect(this, &MW::abortMDCache, metadataCacheThread, &MetadataCache::stop);
+    // // not being used
+    // metadataCacheScrollTimer = new QTimer(this);
+    // metadataCacheScrollTimer->setSingleShot(true);
+    // // next connect to update
+    // // connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
 
-    // signal stopped when abort completed
-    connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
+    // // signal to stop MetaCache
+    // connect(this, &MW::abortMDCache, metadataCacheThread, &MetadataCache::stop);
 
-    // add metadata to datamodel
-    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
+    // // signal stopped when abort completed
+    // connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
 
-    // update icon in datamodel
-    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon,
-            Qt::DirectConnection);
+    // // add metadata to datamodel
+    // connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem,
+    //         Qt::BlockingQueuedConnection);
 
-    connect(metadataCacheThread, &MetadataCache::updateIsRunning,
-            this, &MW::updateMetadataThreadRunStatus);
+    // // update icon in datamodel
+    // connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon,
+    //         Qt::DirectConnection);
 
-    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-            this, &MW::setCentralMessage);
+    // connect(metadataCacheThread, &MetadataCache::updateIsRunning,
+    //         this, &MW::updateMetadataThreadRunStatus);
+
+    // connect(metadataCacheThread, &MetadataCache::showCacheStatus,
+    //         this, &MW::setCentralMessage);
 
 
-//    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-//            this, &MW::setCentralMessage, Qt::DirectConnection);
-
-//    connect(metadataCacheThread, &MetadataCache::selectFirst,
-//            thumbView, &IconView::selectFirst);
-//    connect(metadataCacheThread, &MetadataCache::selectFirst,
-//            sel, &Selection::first);
 
     // MetaRead and MetaRead2
 //    if (isSettings) {
@@ -389,10 +383,9 @@ void MW::createMDCache()
 #ifdef METAREAD
     // MetaRead
     // Runs a single thread to load metadata and thumbnails
-    G::metaReadInUse = "Concurrent metadata and thumbnail loading";
     metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
     //metaReadThread->iconChunkSize = dm->iconChunkSize;
-    metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
+    // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
@@ -429,10 +422,9 @@ void MW::createMDCache()
 #ifdef METAREAD2
     // MetaRead2
     // Runs multiple reader threads to load metadata and thumbnails
-    G::metaReadInUse = "Concurrent multi-threaded metadata and thumbnail loading";
     metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCacheThread);
     // metaReadThread->iconChunkSize = dm->iconChunkSize;
-    metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
+    // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead2
     connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead2::stop);
@@ -473,9 +465,9 @@ void MW::createImageCache()
 {
     if (G::isLogger) G::log("MW::createImageCache");
 
-    /* When a new folder is selected the metadataCacheThread is started to load all the
+    /* When a new folder is selected the metadataReadThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
-    metadataCacheThread is restarted at the first visible thumb to speed up the display of the
+    metadataReadThread is restarted at the first visible thumb to speed up the display of the
     thumbs for the user. However, if every scroll event triggered a restart it would be
     inefficient, so this timer is used to wait for a pause in the scrolling before triggering
     a restart at the new place.
@@ -484,7 +476,7 @@ void MW::createImageCache()
 //    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
 
-    /* Image caching is triggered from the metadataCacheThread to avoid the two threads
+    /* Image caching is triggered from the metadataReadThread to avoid the two threads
        running simultaneously and colliding */
 
     // LINEAR LOAD PROCESS CONNECTIONS
@@ -495,14 +487,14 @@ void MW::createImageCache()
 //    connect(metadataCacheThread, &MetadataCache::loadImageCache,
 //            this, &MW::loadImageCacheForNewFolder);
 
-    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
-            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
+    // connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+    //         this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // signal to stop the ImageCache
     connect(this, &MW::abortImageCache, imageCacheThread, &ImageCache::stop);
 
-    // signal stopped when abort completed
-    connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
+    // // signal stopped when abort completed
+    // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
 
     // Update the cache status progress bar when changed in ImageCache
     connect(imageCacheThread, &ImageCache::showCacheStatus,
@@ -1085,8 +1077,6 @@ void MW::createStatusBar()
     // label to show metadataThreadRunning status
     int runLabelWidth = 13;
     //metadataThreadRunningLabel = new QLabel;
-    // sets tooltip
-    setCacheMethod(cacheMethod);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);

@@ -187,7 +187,6 @@ namespace G
     extern bool useReadIcons;
     extern bool useReadMetadata;
     extern bool useProcessEvents;
-    extern QString metaReadInUse;;
 
     extern QSettings *settings;
 
@@ -280,8 +279,6 @@ namespace G
     extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
 //    extern bool embedTifJpgThumb;
-    extern bool isLoadLinear;
-    extern bool isLoadConcurrent;
     extern bool renderVideoThumb;
     extern bool includeSubfolders;
     extern bool isFilter;
@@ -315,7 +312,7 @@ namespace G
 //    extern bool empty();
     extern Logger logger;
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
-    extern QStringList doNotLog;
+    // extern QStringList doNotLog;
     extern void log(QString functionName = "",
                     QString comment = "",
                     bool zeroElapsedTime = false);

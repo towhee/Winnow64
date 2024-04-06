@@ -1,12 +1,3 @@
-MW::handleStartUpArgs fDir "/Users/roryhill/Pictures/Zen2048/Test1" G::currRootFolder "/Users/roryhill/Pictures/Zen2048/Test1" first path = "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
-MW::insertFile
-
-MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = false isDone = false instance = 13 / 23
-MetaRead2::run                              startRow = 1 a = 1 b = 0 sfRowCount = 5
-MetaRead2::dispatchReaders readerCount = 20
-Selection::select QString "/Users/roryhill/Pictures/Zen2048/Test1/2024-01-16_0033_Test1.JPG"
-Selection::select QModelIndex sfIdx = QModelIndex(1,0,0x6000079f99e0,SortFilter(0x600000509050))
-
-MetaRead2::setStartRow  startRow = 1 firstIconRow = 0 lastIconRow = 4 iconChunkSize = 20000 fileSelectionChanged = true G::allMetadataLoaded = false G::allIconsLoaded = false folder = "/Users/roryhill/Pictures/Zen2048/Test1" isRunning = false isDispatching = false isDone = false instance = 13 / 23
-MetaRead2::run                              startRow = 1 a = 1 b = 0 sfRowCount = 5
-MetaRead2::dispatchReaders readerCount = 20
+MetadataCache metadataCacheThread
+G::isLoadLinear G::isLoadConcurrent G::metaReadInUse
+mdcache

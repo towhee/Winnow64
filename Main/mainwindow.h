@@ -44,7 +44,6 @@
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
 #include "Cache/metaread2.h"
-#include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
@@ -528,21 +527,15 @@ private slots:
 
     void loadConcurrentDone();
 
-    void loadLinearNewFolder();
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);
     bool updateIconRange(QString src = "");
-    void loadMetadataChunk();
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
-    void loadMetadataCacheAfterDelay();
-//    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache(QString source);
-    void loadImageCacheForNewFolder();
     void updateAllFilters();
     void launchBuildFilters(bool force = false);
-//    void loadFilteredImageCache();
     void addNewBookmarkFromMenu();
     void addNewBookmarkFromContextMenu();
     void reportMetadata();
@@ -581,8 +574,6 @@ private slots:
     void setCombineRawJpg();
     void nextSlide();
     void prevRandomSlide();
-//    void updateImageCacheSize(int mb);
-    void setCacheMethod(QString method);
     void setImageCacheParameters();
     void setImageCacheMinSize(QString size);
     void setImageCacheSize(QString method);
@@ -1049,7 +1040,6 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
 
-    MetadataCache *metadataCacheThread;
     #ifdef METAREAD
     MetaRead *metaReadThread;
     #endif

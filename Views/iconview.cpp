@@ -152,7 +152,7 @@ Loading icons
     of 256px and can have various aspect ratios. The IconView thumbView, when anchored to
     the top or bottom of the centralWidget, sets its height based on the tallest aspect.
     To dewtermine this, the widest and highest amounts are determined by calling
-    MetadataCache::iconMax for each icon as it is loaded as G::iconWMax and G::iconHMax.
+    (fix) MetadataCache::iconMax for each icon as it is loaded as G::iconWMax and G::iconHMax.
 
     The best fit is a function of the aspect ratios of the icon population. The IconView
     cell size is defined by the smallest cell that will fit all the icons. For example,
@@ -196,8 +196,8 @@ Justification
 
 Scrolling
 
-    When scrolling occurs the visible icons (cells) change.  The caching processes: ImageCache,
-    MetaRead and MetadataCache use this to manage their respective caches.
+    When scrolling occurs the visible icons (cells) change.  The caching processes: ImageCache
+    and MetaRead use this to manage their respective caches.
 
     MW::createThumbView and MW::createGridView connect scrollbar changes to MW::thumbHasScrolled
     and MW::gridHasScrolled respectively.
@@ -985,10 +985,10 @@ void IconView::resizeEvent(QResizeEvent *)
                 //    */
 
     // must come after width parameters
-    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone) /*|| m2->gridDisplayFirstOpen*/) {
-        prevWidth = width();
-        return;
-    }
+    // if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone) /*|| m2->gridDisplayFirstOpen*/) {
+    //     prevWidth = width();
+    //     return;
+    // }
 
     if (thumbSplitDrag) return;
 
@@ -1503,7 +1503,6 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     if (G::isEmbellish) failReason = "G::isEmbellish";
     if (G::isInitializing) failReason = "G::isInitializing";
     if (G::stop) failReason = "G::stop";
-    if (G::isLoadLinear && !G::isLinearLoadDone) failReason = "!G::isLinearLoadDone";
     bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) failReason = "isVideo";
 

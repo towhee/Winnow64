@@ -90,17 +90,8 @@ void MW::keyHome()
 */
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
-    if (G::isLoadLinear) {
-        if (G::isLinearLoadDone) {
-            metadataCacheThread->stop();
-            if (G::mode == "Compare") compareImages->go("Home");
-            else sel->first();
-        }
-    }
-    else {
-        if (G::mode == "Compare") compareImages->go("Home");
-        sel->first();
-    }
+    if (G::mode == "Compare") compareImages->go("Home");
+    sel->first();
 }
 
 void MW::keyEnd()
@@ -110,17 +101,8 @@ void MW::keyEnd()
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
-    if (G::isLoadLinear) {
-        if (G::isLinearLoadDone) {
-            metadataCacheThread->stop();
-            if (G::mode == "Compare") compareImages->go("End");
-            else sel->last();
-        }
-    }
-    else {
-        if (G::mode == "Compare") compareImages->go("End");
-        else sel->last();
-    }
+    if (G::mode == "Compare") compareImages->go("End");
+    else sel->last();
 }
 
 void MW::keyScrollDown()
@@ -171,7 +153,6 @@ void MW::scrollToCurrentRow()
     G::ignoreScrollSignal = false;
 
     updateIconRange("MW::scrollToCurrentRow");
-    metadataCacheThread->scrollChange("MW::scrollToCurrentRow");
 }
 
 void MW::jump()

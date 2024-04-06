@@ -46,8 +46,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     QImage.
 
     This function is dependent on metadata being updated first.  Metadata is
-    updated by the mdCache metadataCacheThread that runs every time a new folder is
-    selected. This function is used in the imageCache thread that stores
+    updated by the metadataReadThread that runs every time a new folder is
+    selected. This function is signalled by the imageCache thread that stores
     pixmaps on the heap.
 
     Most of the time the image will be obtained from the imageCache, but when
