@@ -112,6 +112,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- No image showing when refilter after null filter.
 - Sort option not sticky when change folders but also not reset to filename in menu
 - Not showing Building filters message when filters panel is visible.
 - If view mode TableView and 1st file is video get "Gathering metadata and thumbnails for ..."

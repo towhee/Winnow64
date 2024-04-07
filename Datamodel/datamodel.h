@@ -47,12 +47,6 @@ public:
               Filters *filters,
               bool &combineRawJpg);
 
-//    enum Status {
-//        MetaAttempted = 1,
-//        MetaRead = 2,
-//        IconRead = 4,
-//        ImageDecodable = 8
-//    };
 //    inline Status operator| (Status a, Status b) {
 //        return static_cast<Status> (static_cast<int> (a) | static_cast<int> (b));
 //    }

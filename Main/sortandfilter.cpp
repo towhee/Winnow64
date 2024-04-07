@@ -80,7 +80,7 @@ void MW::filterChange(QString source)
     Save and recover selection is not required for filter operations.  It is
     required for sorting operations.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::filterChange  Src: " << source;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
@@ -111,10 +111,15 @@ void MW::filterChange(QString source)
             return;
         }
     } //*/
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
      // prevent unwanted fileSelectionChange()
     isFilterChange = true;
+
+    // record scroll position before change
+    int oldThumbScrollPos = thumbView->scrollPosition();
+    int oldGridScrollPos = gridView->scrollPosition();
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
@@ -125,7 +130,7 @@ void MW::filterChange(QString source)
     buildFilters->update();
 
     // recover sort after filtration
-    //sortChange("filterChange");
+    // sortChange("filterChange");
 
     // allow fileSelectionChange()
     isFilterChange = false;
@@ -141,12 +146,13 @@ void MW::filterChange(QString source)
         G::popUp->reset();
         return;
     }
-    else {
-        setCentralMessage("");
-    }
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
+
+    int newThumbScrollPos = thumbView->scrollPosition();
+    int newGridScrollPos = gridView->scrollPosition();
+    bool scrollChange = oldThumbScrollPos != newThumbScrollPos || oldGridScrollPos != newGridScrollPos;
 
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
@@ -173,7 +179,9 @@ void MW::filterChange(QString source)
     else {
         sel->updateCurrentIndex(newSfIdx);
     }
-    thumbView->scrollToCurrent("MW::filterChange");
+
+    // only scroll if filtration has changed visible cells in thumbView
+    if (scrollChange) thumbView->scrollToCurrent("MW::filterChange");
 
     QApplication::restoreOverrideCursor();
     G::popUp->reset();
@@ -572,7 +580,6 @@ void MW::setRating()
     for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
-    qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -863,7 +870,7 @@ void MW::setColorClass()
     dm->sf->suspend(true);
     buildFilters->updateCategory(BuildFilters::LabelEdit);
 
-    // was this rating filtered
+    // // was this rating filtered
     if (filters->isLabelChecked(colorClass)) sel->clear();
 
     filterChange("MW::setColorClass");
