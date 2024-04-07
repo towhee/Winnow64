@@ -2546,6 +2546,9 @@ bool MW::reset(QString src)
 
 void MW::nullFiltration()
 {
+/*
+    The datamodel sortfilter proxy has 0 rows. Report and clear.
+*/
     if (G::isLogger) G::log("MW::nullFiltration");
     updateStatus(false, "No images match the filtration", "MW::nullFiltration");
     setCentralMessage("No images match the filtration");

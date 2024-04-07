@@ -68,6 +68,7 @@ public:
 public slots:
     void updateView();
     void repaintView();
+    int scrollPosition();
     void scrollDown(int);
     void scrollUp(int);
     void scrollPageDown(int);

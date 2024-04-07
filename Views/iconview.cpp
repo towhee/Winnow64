@@ -1108,6 +1108,18 @@ void IconView::updateView()
     //*/
 }
 
+int IconView::scrollPosition()
+{
+/*
+    Return the position of the scrollbar.  This will be the vertical scrollbar if
+    isWrapping and the horizontal scrollbar otherwise.  This is used in the determine
+    if there is a need to scroll to render the current index visible in a filter
+    change.
+*/
+    if (isWrapping()) return verticalScrollBar()->sliderPosition();
+    else return horizontalScrollBar()->sliderPosition();
+}
+
 void IconView::scrollDown(int /*step*/)
 {
     if (isDebug) G::log("IconView::scrollDown", objectName());
