@@ -165,6 +165,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << "MW::test pickClick->volume() =" << pickClick->volume();
+    return;
     qDebug() << G::displayVirtualHorizontalPixels;
     return;
     // static bool onoff = true;

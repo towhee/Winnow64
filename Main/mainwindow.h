@@ -1071,15 +1071,10 @@ private:
     QVBoxLayout *imageViewContainer;
     Stack *meanStack;
 
-//    QModelIndexList selectedImages;
-//    QModelIndexList selectedRows;
-//    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
-//    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
 
-//    QMediaPlayer *pickClick;
-//    QAudioOutput *audioOutput;
-    QSoundEffect *pickClick;
+    QSoundEffect *pickClick = new QSoundEffect();
+    float pickClickvolume = 0.25;
 
     QHash<QString, bool> stopped;
 

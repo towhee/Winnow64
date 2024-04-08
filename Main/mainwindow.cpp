@@ -516,7 +516,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer
 
-    // Initialize some variables
+    // Initialize some variables (must precede loadSettings)
     initialize();
 
     // persistant settings between sessions
@@ -528,9 +528,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     settings->setValue("appPath", qApp->applicationDirPath());
-
-    // Initialize some variables
-    initialize();
 
     // Loggers
     /*

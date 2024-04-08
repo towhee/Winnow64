@@ -8,6 +8,7 @@ WHAT'S NEW
 - Pick audio
 
 BUGS / TO DO
+- Ingest beep not resetting on start
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
@@ -112,6 +113,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Scrolling when a filter change does not change the IconViews
 - No image showing when refilter after null filter.
 - Sort option not sticky when change folders but also not reset to filename in menu
 - Not showing Building filters message when filters panel is visible.
