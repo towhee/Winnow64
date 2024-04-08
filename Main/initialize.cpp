@@ -3,7 +3,6 @@
 void MW::initialize()
 {    
     if (G::isLogger) G::log("MW::initialize");
-    //connect(windowHandle(), &QWindow::screenChanged, this, &MW::restoreLastSessionGeometryState);
     setWindowTitle(winnowWithVersion);
     G::stop = false;
     G::dmEmpty = true;
@@ -68,10 +67,10 @@ void MW::initialize()
     slideCount = 0;
 
     QString path = ":/Sounds/ingest.wav";
-    pickClick = new QSoundEffect();
+    // pickClick = new QSoundEffect();
     pickClick->setSource(QUrl::fromLocalFile(path));
     pickClick->setLoopCount(10);
-    //pickClick->setVolume(0.25);
+    pickClick->setVolume(pickClickvolume);   // default value overridden in loadSettings
 
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";

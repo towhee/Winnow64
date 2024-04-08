@@ -151,7 +151,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-    qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
+    //qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
     if (G::isLogger || G::isFlowLogger) G::log("ImageView::loadImage", "Src:" + src + " " + fPath);
 
     // ignore if result of remote operation
@@ -308,7 +308,6 @@ bool ImageView::loadImage(QString fPath, QString src)
 void ImageView::clear()
 {
     if (G::isLogger) G::log("ImageView::clear");
-    qDebug() << "ImageView::clear";
     shootingInfo = "";
     infoOverlay->setText("");
     QPixmap nullPm;

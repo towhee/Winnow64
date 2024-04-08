@@ -158,6 +158,7 @@ void Preferences::itemChange(QModelIndex idx)
         int value = v.toInt();
         mw->pickClick->setVolume(value * 1.0 / 100);
         mw->settings->setValue("pickAudioVolume", value);
+        qDebug() << "Preferences::itemChange pickClick->volume() =" << mw->pickClick->volume();
     }
 
     if (source == "showCacheProgressBar") {

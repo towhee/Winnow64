@@ -448,9 +448,8 @@ bool MW::loadSettings()
         G::wheelSensitivity = 40;
 
     if (settings->contains("pickAudioVolume")) {
-        double volume = settings->value("pickAudioVolume").toInt() * 1.0 / 100;
-        // qDebug() << "pickAudioVolume =" << volume;
-        pickClick->setVolume(volume);
+        pickClickvolume = settings->value("pickAudioVolume").toFloat() / 100;
+        pickClick->setVolume(pickClickvolume);
     }
 
     lastFileIfCrash = settings->value("lastFileSelection").toString();
