@@ -245,7 +245,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
         #endif
     }
     else {
-        if (calledBy == "MetaRead2::quitAnyway") {
+        if (calledBy == "QuitAfterTimeout") {
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;}");
             #ifdef Q_OS_WIN
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;font-size: 24px;}");

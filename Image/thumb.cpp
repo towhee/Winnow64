@@ -296,7 +296,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
             loaded = loadFromEntireFile(fPath, image, dmRow);
         }
 
-        if (loaded) {
+        if (loaded && !image.isNull()) {
             // scale to max icon size
             image = image.scaled(thumbMax, Qt::KeepAspectRatio);
             image.convertTo(QImage::Format_RGB32);

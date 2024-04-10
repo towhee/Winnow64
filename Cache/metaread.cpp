@@ -421,7 +421,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     }
 
     QPixmap pm;
-    if (thumbLoaded && !abort) {
+    if (thumbLoaded && !image.isNull() && !abort) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     }
     else {

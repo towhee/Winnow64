@@ -769,7 +769,8 @@ private:
 //    QAction *keyPageUpAction;
 //    QAction *keyPageDownAction;
 
-    QAction *jumpAction;
+    QAction *jumpAction;                    // shortcut "J"
+    QAction *jumpAction1;                   // shortcut "="
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;

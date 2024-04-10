@@ -24,16 +24,18 @@ namespace G
     QMap<QString,QStringList> err;
 
     // flow
-    bool isInitializing;                // flag program starting / initializing
-    bool stop = false;                  // flag to stop everything involving DM loading
-                                        // new dataset
-    bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
-                                        // all new folder processes.
-    bool isLinearLoadDone;
-    bool metaReadDone;
-    bool allMetadataLoaded;
-    bool allMetadataAttempted;
-    bool allIconsLoaded;
+    bool isInitializing;            // flag program starting / initializing
+    bool stop = false;              // flag to stop everything involving DM loading
+                                    // new dataset
+    bool dmEmpty;                   // DM is stopped and/or empty.  Flag to abort
+                                    // all new folder processes.
+    // datamodel status
+    bool dmLoaded;                  // datamodel all metadata and all icons loaded
+    bool metaReadDone;              // metaRead completed
+    bool allMetadataLoaded;         // all metadata attempted
+    bool allMetadataAttempted;      // all metadata attempted
+    bool allIconsLoaded;            // all icon loading attempted
+    bool iconChunkLoaded;           // all icon chunk loaded
 
     int dmInstance;
 

@@ -411,12 +411,14 @@ void IconViewDelegate::paint(QPainter *painter,
     QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
     // convert to a QPixmap
     QPixmap pm = icon.pixmap(maxSize);
-    // if the pm is nearly square scale slightly smaller so border large enough to show color class
-    int pmMargin = 8;
-    bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
-    // scale the pixmap to fit in the thumbRect
-    if (isSquare) pm = pm.scaled(thumbSize - QSize(pmMargin,pmMargin), Qt::KeepAspectRatio);
-    else pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
+    if (!pm.isNull()) {
+        // if the pm is nearly square scale slightly smaller so border large enough to show color class
+        int pmMargin = 8;
+        bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
+        // scale the pixmap to fit in the thumbRect
+        if (isSquare) pm = pm.scaled(thumbSize - QSize(pmMargin,pmMargin), Qt::KeepAspectRatio);
+        else pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
+    }
     // define iconSize for reporting
     QSize iconSize = QSize(pm.width(), pm.height());
     // center the iconRect in the thumbRect

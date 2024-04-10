@@ -59,7 +59,7 @@ void MW::launchBuildFilters(bool force)
     }
     if (filters->filtersBuilt && !force) return;
 
-    qDebug() << "MW::launchBuildFilters buildFilters->build()";
+    // qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
 }
 

@@ -72,6 +72,7 @@ private:
     void read(int startRow = 0, QString src = "");// decoder
 
     void dispatchReaders();
+    void dispatchFinished(QString src);
     void redo();
     int pending();
     inline bool needToRead(int row);
@@ -92,7 +93,6 @@ private:
     FrameDecoder *frameDecoder;     // decoder requires this
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
-    QIcon nullIcon;
     bool fileSelectionChanged;
     int instance;                   // new instance for each folder to detect conflict
     Reader *r;                      // terse ptr for current decoder
