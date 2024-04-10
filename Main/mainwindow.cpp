@@ -944,6 +944,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         if (event->key() == Qt::Key_Space) {
             if (G::useMultimedia) videoView->playOrPause();
         }
+        if (event->key() == Qt::Key_Escape) {
+            if (G::useMultimedia) videoView->pause();
+        }
     }
 
     if (event->key() == Qt::Key_Space) {
@@ -2501,7 +2504,7 @@ bool MW::reset(QString src)
     G::metaReadDone = false;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
-    G::isLinearLoadDone = false;
+    G::iconChunkLoaded = false;
     G::currRootFolder = "";
     //qDebug() << "MW::reset" << "G::currRootFolder = Blank";
 
@@ -2587,19 +2590,20 @@ bool MW::updateIconRange(QString src)
     if (G::isLogger)
         qDebug() << "   MW::updateIconRange  src =" << src;
 
-//    qDebug() << "   MW::updateIconRange  src =" << src
-//             << "G::allIconsLoaded =" << G::allIconsLoaded
-//             << "dm->currentSfRow =" << dm->currentSfRow
-//             << "G::isInitializing =" << G::isInitializing
-//                ;
+    /*
+    qDebug() << "   MW::updateIconRange  src =" << src
+            << "G::allIconsLoaded =" << G::allIconsLoaded
+            << "dm->currentSfRow =" << dm->currentSfRow
+            << "G::isInitializing =" << G::isInitializing
+               ; //*/
 
-//    // if chunk size is greater than DataModel rows
-//    if (dm->iconChunkSize > dm->rowCount()) {
-//        // if all icons in DataModel are loaded then nothing to do
-//        if (G::allIconsLoaded) return false;
-//        // continue loading icons from the current row
-//        else loadConcurrent(dm->currentSfRow, true);
-//    }
+    // // if chunk size is greater than DataModel rows
+    // if (dm->iconChunkSize > dm->rowCount()) {
+    //     // if all icons in DataModel are loaded then nothing to do
+    //     if (G::allIconsLoaded) return false;
+    //     // continue loading icons from the current row
+    //     else loadConcurrent(dm->currentSfRow, true);
+    // }
 
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
@@ -2775,11 +2779,12 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
                  << "src =" << src
+                 << "G::dmLoaded =" << G::dmLoaded
                  << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
@@ -2798,8 +2803,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     }
 
     // Change selection while MetaRead not finished
-    //if (!G::metaReadDone || !G::allIconsLoaded) {
-    if (!G::metaReadDone) {
+    if (!G::dmLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
@@ -2860,12 +2864,14 @@ void MW::loadConcurrentDone()
         if (reset(src + QString::number(count++))) return;
     }
 
+    // datamodel status
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     if (G::showProgress == G::ShowProgress::MetaCache) {
         isShowCacheProgressBar = false;
         progressLabel->setVisible(false);
     }
     G::allIconsLoaded = dm->allIconsLoaded();
+    G::dmLoaded = G::allMetadataLoaded && G::allIconsLoaded;
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
@@ -2887,6 +2893,7 @@ void MW::loadConcurrentDone()
 
 //    if (reset(src + QString::number(count++))) return;
 //    updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
+
     // resize table columns with all data loaded
     if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();

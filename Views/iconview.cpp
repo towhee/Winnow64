@@ -417,7 +417,7 @@ QSize IconView::getCellSize()
 
 void IconView::updateVisibleCellCount(QString src)
 /*
-    Calculate parameters that are based on the sell and viewport size.  Invoked
+    Calculate parameters that are based on the cell and viewport size.  Invoked
     when these change.  MW::updateIconRange is called, where the largest visible
     icon range is compared to the iconChunkSize, which is updated if necessary.
 */

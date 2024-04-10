@@ -163,12 +163,15 @@ namespace G
     // flow
     extern bool stop;
     extern bool dmEmpty;
-    extern bool isLinearLoadDone;
     extern bool isInitializing;
+
+    // datamodel
+    extern bool dmLoaded;
     extern bool metaReadDone;
     extern bool allMetadataAttempted;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
+    extern bool iconChunkLoaded;
 
     extern int dmInstance;
 

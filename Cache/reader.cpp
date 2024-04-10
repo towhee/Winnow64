@@ -161,7 +161,7 @@ void Reader::readIcon()
     // if !G::renderVideoThumb then generic Video image returned from Thumb
     if (isVideo && G::renderVideoThumb) return;
 
-    if (thumbLoaded) {
+    if (thumbLoaded && !image.isNull()) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     }
     else {

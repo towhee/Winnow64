@@ -1777,7 +1777,6 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
     G::allMetadataLoaded = isLoaded;
-    //filters->loadingDataModel(isLoaded);
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)

@@ -9,7 +9,6 @@ void MW::reportState(QString title)
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
-        << "\nG::isLinearLoadDone                    " << G::isLinearLoadDone
         << "\nG::metaReadDone                        " << G::metaReadDone
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
@@ -162,7 +161,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::isLinearLoadDone = " << G::s(G::isLinearLoadDone);
     rpt << "\n" << "G::metaReadDone = " << G::s(G::metaReadDone);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);

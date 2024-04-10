@@ -783,7 +783,7 @@ void Filters::invertFilters()
 void Filters::loadingDataModel(bool isLoaded)
 {
     if (G::isLogger) G::log("Filters::loadingDataModel");
-    // if (debugFilters)
+    if (debugFilters)
         qDebug() << "Filters::loadingDataModel  isLoaded =" << isLoaded
                     ;
     if (isLoaded) {
@@ -815,7 +815,7 @@ void Filters::loadingDataModelFailed()
 void Filters::startBuildFilters(bool isReset)
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    //if (debugFilters)
+    if (debugFilters)
         qDebug() << "Filters::startBuildFilters"
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
