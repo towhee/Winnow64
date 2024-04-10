@@ -609,6 +609,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             // process the persistant folder if available
             if (rememberLastDir && !isShiftOnOpen) {
                 if (isFolderValid(lastDir, true, true)) {
+                    centralLayout->setCurrentIndex(LoupeTab);
                     fsTree->select(lastDir);
                     folderSelectionChange();
                 }
@@ -2206,9 +2207,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::mode == "Loupe") {
         if (isVideo) {
             if (G::useMultimedia) {
-                if (G::mode == "Loupe") {
-                    centralLayout->setCurrentIndex(VideoTab);
-                }
+                // bool autoplay = true;
+                // if (G::mode == "Loupe") {
+                //     // must be startup, do not auto play video
+                //     autoplay = false;
+                // }
+                centralLayout->setCurrentIndex(VideoTab);
                 videoView->load(fPath);
                 videoView->play();
             }
