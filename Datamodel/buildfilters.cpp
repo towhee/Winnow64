@@ -157,25 +157,33 @@ void BuildFilters::build(AfterAction newAction)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::build"
             << "afterAction =" << newAction
             << "filters visible =" << filters->isVisible()
+            << "filters->filtersBuilt =" << filters->filtersBuilt
+            << "G::allMetadataAttempted =" << G::allMetadataAttempted
                ;
+    }
+
+    // ignore if filters are up-to-date
+    if (filters->filtersBuilt) return;
+
+    if (!G::allMetadataAttempted) {
+        G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
+        return;
     }
 
     // Update action to take after build filters. If build has been previously called
     // while the DataModel metadata was being loaded then the previous afterAction will
     // still be defined and should be honoured unless the new call to build has a defined
     // newAction.
+
     if (newAction != AfterAction::NoAfterAction) {
         afterAction = newAction;
     }
-
-    // ignore if filters are up-to-date
-    if (filters->filtersBuilt) return;
 
     // define action for BuildFilters::run
     action = Action::Reset;
@@ -184,7 +192,7 @@ void BuildFilters::build(AfterAction newAction)
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
-    if (G::metaReadDone) start(NormalPriority);
+    /*if (G::allMetadataAttempted)*/ start(NormalPriority);
 }
 
 void BuildFilters::update()
@@ -201,7 +209,7 @@ void BuildFilters::update()
     abortIfRunning();
     if (filters->filtersBuilt) {
         action = Action::Update;
-        if (G::metaReadDone) start(NormalPriority);
+        if (G::allMetadataAttempted) start(NormalPriority);
     }
     else build();
 }
@@ -245,7 +253,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     this->category = category;
     if (filters->filtersBuilt) {
         action = Action::UpdateCategory;
-        if (G::metaReadDone) start(NormalPriority);
+        if (G::allMetadataAttempted) start(NormalPriority);
     }
     else build();
 }
@@ -254,7 +262,7 @@ void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::done", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::done"
@@ -806,7 +814,7 @@ void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::run", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::run"

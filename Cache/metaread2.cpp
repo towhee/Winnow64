@@ -502,7 +502,7 @@ bool MetaRead2::nextRowToRead()
 {
     // ahead
     if (isAhead) {
-        if (isAhead) {
+        /*
         qDebug().noquote()
             << "MetaRead2::dispatch     nextRowToRead       "
             << "id =   "
@@ -516,7 +516,7 @@ bool MetaRead2::nextRowToRead()
             << "startRow =" << startRow
             << "firstIconRow =" << firstIconRow
             << "lastIconRow =" << lastIconRow
-                ;}
+                ; //*/
         if (nextA()) return true;
         else if (nextB()) return true;
         else return false;

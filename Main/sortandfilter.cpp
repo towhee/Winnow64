@@ -52,14 +52,15 @@ void MW::launchBuildFilters(bool force)
     If images have been deleted then force a rebuild
 */
     if (G::isLogger) G::log("MW::launchBuildFilters");
+    qDebug() << "MW::launchBuildFilters G::isInitializing =" << G::isInitializing;
     if (G::isInitializing) return;
     if (!G::metaReadDone) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
-    if (filters->filtersBuilt && !force) return;
+    // if (filters->filtersBuilt && !force) return;
 
-    // qDebug() << "MW::launchBuildFilters buildFilters->build()";
+    qDebug() << "MW::launchBuildFilters buildFilters->build()";
     buildFilters->build();
 }
 
