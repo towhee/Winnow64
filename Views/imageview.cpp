@@ -713,7 +713,6 @@ void ImageView::zoomToggle()
 
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
-    zoomToggleOnRelease = false;
     scale();
 }
 
@@ -1001,6 +1000,9 @@ void ImageView::wheelEvent(QWheelEvent *event)
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
 
+    static int accumDelta = 0;
+    int triggerDelta = 5;
+
     if (wheelSpinningOnEntry && G::wheelSpinning) {
         //qDebug() << "ImageView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
         return;
@@ -1019,10 +1021,16 @@ void ImageView::wheelEvent(QWheelEvent *event)
     // positive delta = previous direction
     int delta = event->angleDelta().y();
 
-    if (t.elapsed() > G::wheelSensitivity) {
+    // accumulated delta
+    if (accumDelta >= 0 && delta > 0) accumDelta += delta;
+    else accumDelta -= delta;
+
+    if (t.elapsed() > G::wheelSensitivity && qAbs(accumDelta) > 20) {
         if (qAbs(delta) == 0) return;
         if (delta > 0) sel->prev();
         else sel->next();
+        qDebug() << "ImageView::wheelEvent accumDelta =" << accumDelta;
+        accumDelta = 0;
         t.restart();
     }
 
@@ -1249,7 +1257,6 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         zoomToggle();
     }
 
-    zoomToggleOnRelease = true;
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -1288,7 +1295,6 @@ QString ImageView::diagnostics()
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);
-    rpt << "\n" << "ignoreMousePress = " << G::s(zoomToggleOnRelease);
     rpt << "\n" << "isZoom = " << G::s(isScrollable);
     rpt << "\n" << "isFit = " << G::s(isFit);
     rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
