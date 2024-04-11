@@ -210,7 +210,6 @@ private:
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
-    bool zoomToggleOnRelease;
     bool isScrollable;
     bool isMouseDrag;
     bool isTrackpadScroll;

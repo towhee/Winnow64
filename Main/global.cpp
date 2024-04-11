@@ -105,7 +105,7 @@ namespace G
     double iconOpacity = 0.4;
 
     // ui
-    int wheelSensitivity = 40;
+    int wheelSensitivity = 150;
     bool wheelSpinning = false;
 
     // caching
