@@ -535,7 +535,6 @@ private slots:
     void tableHasScrolled();
     void loadEntireMetadataCache(QString source);
     void updateAllFilters();
-    void launchBuildFilters(bool force = false);
     void addNewBookmarkFromMenu();
     void addNewBookmarkFromContextMenu();
     void reportMetadata();
