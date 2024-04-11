@@ -6,6 +6,7 @@ WHAT'S NEW
 - Copy / paste
 - Jump to row
 - Pick audio
+- Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
 - ImageView zoom when click not always work (double click issue)
