@@ -371,6 +371,7 @@ void MW::createEditActions()
     connect(pickAction, &QAction::triggered, this, &MW::togglePick);
 
     pick1Action = new QAction(tr("Pick"), this);  // added for shortcut "P"
+    pick1Action->setShortcutVisibleInContextMenu(true);
     addAction(pick1Action);
     connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
 
@@ -1677,6 +1678,7 @@ void MW::createEditMenu()
     editMenu->addAction(deleteActiveFolderAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
+    editMenu->addAction(pick1Action);
     editMenu->addAction(rejectAction);
     editMenu->addAction(pickUnlessRejectedAction);
     //    editMenu->addAction(filterPickAction);
@@ -1730,6 +1732,7 @@ void MW::createGoMenu()
     goMenu->addSeparator();
     */
     goMenu->addAction(jumpAction);
+    goMenu->addAction(jumpAction1);
     goMenu->addSeparator();
     goMenu->addAction(keyScrollLeftAction);
     goMenu->addAction(keyScrollRightAction);
@@ -2283,6 +2286,9 @@ void MW::enableSelectionDependentMenus()
 void MW::loadShortcuts(bool defaultShortcuts)
 {
     if (G::isLogger) G::log("MW::loadShortcuts");
+
+    QList<QKeySequence> shortcuts;
+
     // Add customizable key shortcut actions
     actionKeys[fullScreenAction->objectName()] = fullScreenAction;
     actionKeys[escapeFullScreenAction->objectName()] = escapeFullScreenAction;
@@ -2430,6 +2436,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
 //        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
 
+        // shortcuts.clear();
+        // shortcuts << QKeySequence("J") << QKeySequence("=");
+        // jumpAction->setShortcuts(shortcuts);
         jumpAction->setShortcut(QKeySequence("J"));
         jumpAction1->setShortcut(QKeySequence("="));
 

@@ -192,7 +192,7 @@ void BuildFilters::build(AfterAction newAction)
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
-    /*if (G::allMetadataAttempted)*/ start(NormalPriority);
+    start(NormalPriority);
 }
 
 void BuildFilters::update()

@@ -1074,8 +1074,17 @@ bool ImageView::event(QEvent *event) {
 // not used
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("ImageView::mouseDoubleClickEvent");
-    return;
+    // if (G::isLogger)
+    G::log("ImageView::mouseDoubleClickEvent", "isScrollable =" + QVariant(isScrollable).toString());
+    if (event->button() == Qt::LeftButton) {
+        isLeftMouseBtnPressed = true;
+        mousePressPt.setX(event->x());
+        mousePressPt.setY(event->y());
+        QGraphicsView::mousePressEvent(event);
+        return;
+    }
+    // isMouseDoubleClick = true;
+    // return;
 }
 
 void ImageView::keyPressEvent(QKeyEvent *event){
@@ -1084,16 +1093,25 @@ void ImageView::keyPressEvent(QKeyEvent *event){
 
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("ImageView::mousePressEvent");
-    /*
+    if (G::isLogger)
+        G::log("ImageView::mousePressEvent", "isScrollable =" + QVariant(isScrollable).toString());
+    // /*
     qDebug() << "ImageView::mousePressEvent"
              << "Button =" << event->button()
         ;
     //*/
-    QGraphicsView::mousePressEvent(event);
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) {
+        return;
+    }
+
+    // isLeftMouseBtnPressed = true;
+    if (event->button() == Qt::LeftButton) {
+        isLeftMouseBtnPressed = true;
+        mousePressPt.setX(event->x());
+        mousePressPt.setY(event->y());
+        QGraphicsView::mousePressEvent(event);
         return;
     }
 
@@ -1104,59 +1122,14 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton) {
-//        thumbView->selectPrev();
+        // thumbView->selectPrev();
         emit togglePick();
         return;
     }
     if (event->button() == Qt::ForwardButton) {
-//        thumbView->selectNext();
+        // thumbView->selectNext();
         emit togglePick();
         return;
-    }
-
-    if (isMouseDoubleClick) {
-        return;
-    }
-
-    isMouseDoubleClick = false;
-    isMouseDrag = false;
-    zoomToggleOnRelease = true;
-
-    if (event->button() == Qt::LeftButton) {
-        /*if (isRubberBand) {
-            setCursor(Qt::CrossCursor);
-            origin = event->pos();
-            rubberBand->setGeometry(QRect(origin, QSize()));
-            rubberBand->show();
-            return;
-        }
-        //*/
-        isLeftMouseBtnPressed = true;
-        scrollCount = 0;                // still used?
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
-
-        /*
-        qDebug() << "ImageView::mousePressEvent 1"
-                 << "isFit =" << isFit
-                 << "zoomToggleOnRelease =" << zoomToggleOnRelease
-                 << "zoom =" << zoom
-                 << "zoomFit =" << zoomFit
-                 << "isScrollable =" << isScrollable
-                    ;
-                    //*/
-
-        if (!isScrollable) zoomToggle();
-
-        /*
-        qDebug() << "ImageView::mousePressEvent 2"
-                 << "isFit =" << isFit
-                 << "zoomToggleOnRelease =" << zoomToggleOnRelease
-                 << "zoom =" << zoom
-                 << "zoomFit =" << zoomFit
-                 << "isScrollable =" << isScrollable
-                    ;
-                    //*/
     }
 }
 
@@ -1174,20 +1147,37 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     static QPoint prevPos = event->pos();
 
-    if (isLeftMouseBtnPressed && event->pos() != prevPos) {
+    /*
+    if (isLeftMouseBtnPressed)
+    qDebug() << "ImageView::mouseMoveEvent"
+             << "isFit =" << isFit
+             << "zoom =" << zoom
+             << "zoomFit =" << zoomFit
+             << "isScrollable =" << isScrollable
+             << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+             << "event->button() =" << event->button()
+             << "zoomToggleOnRelease =" << zoomToggleOnRelease
+             << "isMouseDrag =" << isMouseDrag
+             //<< "prevPos =" << prevPos
+             << "event->pos() =" << event->pos()
+        ; //*/
+
+    if (isLeftMouseBtnPressed) {
         if (G::isSlideShow) emit killSlideshow();
         isMouseDrag = true;
-        setCursor(Qt::ClosedHandCursor);
-        horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
-                                       (event->x() - mousePressPt.x()));
-        verticalScrollBar()->setValue(verticalScrollBar()->value() -
-                                      (event->y() - mousePressPt.y()));
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
+        if (isScrollable) {
+            setCursor(Qt::ClosedHandCursor);
+            horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
+                                           (event->x() - mousePressPt.x()));
+            verticalScrollBar()->setValue(verticalScrollBar()->value() -
+                                          (event->y() - mousePressPt.y()));
+            mousePressPt.setX(event->x());
+            mousePressPt.setY(event->y());
+        }
     }
-    else{
+    else {
         if (G::isSlideShow) {
-            if(event->pos() != prevPos) {
+            if (event->pos() != prevPos) {
                 setCursor(Qt::ArrowCursor);
                 QTimer::singleShot(500, this, SLOT(hideCursor()));
             }
@@ -1202,7 +1192,8 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
 void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("ImageView::mouseReleaseEvent");
+    if (G::isLogger)
+        G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
     /* rubberband
     if (isRubberBand) {
         setCursor(Qt::ArrowCursor);
@@ -1235,43 +1226,30 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     isLeftMouseBtnPressed = false;
 
-    // if mouse dragging then do not toggle zoom
-    if (isMouseDrag /*|| isMouseDoubleClick*/) {
-        isMouseDrag = false;
-        if (isScrollable) setCursor(Qt::OpenHandCursor);
-        else setCursor(Qt::ArrowCursor);
-        return;
-    }
-
     /*
-    qDebug() << "ImageView::mouseReleaseEvent 1"
+    qDebug() << "ImageView::mouseReleaseEvent"
              << "isFit =" << isFit
-             << "zoomToggleOnRelease =" << zoomToggleOnRelease
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
              << "isScrollable =" << isScrollable
-                ;
-                //*/
+             << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+             << "zoomToggleOnRelease =" << zoomToggleOnRelease
+             << "isMouseDrag =" << isMouseDrag
+        ; //*/
 
-    if (isScrollable && zoomToggleOnRelease && !isMouseDoubleClick) zoomToggle();
     if (isScrollable) setCursor(Qt::OpenHandCursor);
-    else {
-        if (isFit) setCursor(Qt::ArrowCursor);
-        else setCursor(Qt::OpenHandCursor);
+    else setCursor(Qt::ArrowCursor);
+
+    // if mouse was dragging then do not toggle zoom
+    if (isMouseDrag) {
+        isMouseDrag = false;
+        // return;
     }
+    else {
+        zoomToggle();
+    }
+
     zoomToggleOnRelease = true;
-    isMouseDoubleClick = false;
-
-    /*
-    qDebug() << "ImageView::mouseReleaseEvent 2"
-             << "isFit =" << isFit
-             << "zoomToggleOnRelease =" << zoomToggleOnRelease
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "isScrollable =" << isScrollable
-                ;
-                //*/
-
     QGraphicsView::mouseReleaseEvent(event);
 }
 

@@ -44,26 +44,6 @@ void MW::updateAllFilters()
 //    buildFilters->build(BuildFilters::Update);
 }
 
-void MW::launchBuildFilters(bool force)
-{
-/*
-    Filters cannot be updated if hidden.
-    Check if can build: filterDock->visibleRegion().isNull()
-    If images have been deleted then force a rebuild
-*/
-    if (G::isLogger) G::log("MW::launchBuildFilters");
-    qDebug() << "MW::launchBuildFilters G::isInitializing =" << G::isInitializing;
-    if (G::isInitializing) return;
-    if (!G::metaReadDone) {
-        G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
-        return;
-    }
-    // if (filters->filtersBuilt && !force) return;
-
-    qDebug() << "MW::launchBuildFilters buildFilters->build()";
-    buildFilters->build();
-}
-
 void MW::filterChange(QString source)
 {
 /*
