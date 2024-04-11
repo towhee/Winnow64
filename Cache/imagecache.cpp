@@ -1420,7 +1420,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
         icd->cacheItem.metadataLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
-        if ((G::metaReadDone)) {
+        if ((G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.isVideo = m.video;
@@ -1461,7 +1461,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItemList.append(icd->cacheItem);
     } // next row
 
-    if (G::metaReadDone) icd->cache.folderMB = folderMB;
+    if (G::allMetadataLoaded) icd->cache.folderMB = folderMB;
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,

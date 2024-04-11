@@ -375,8 +375,8 @@ int DataModel::insert(QString fPath)
     addFileDataForRow(dmRow, insertFile);
 
     // reset loaded flags so MetaRead knows to load
-    G::metaReadDone = false;
     G::allMetadataLoaded = false;
+    G::allMetadataAttempted = false;
     G::allIconsLoaded = false;
 
     /*
@@ -511,7 +511,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
 
     clearDataModel();
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;
     loadingModel = true;
@@ -2569,7 +2569,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     if (suspendFiltering) return true;
 
     // still loading metadata
-    if (!G::metaReadDone) return true;
+    if (!G::allMetadataAttempted) return true;
 
     // Check Raw + Jpg
     if (combineRawJpg) {

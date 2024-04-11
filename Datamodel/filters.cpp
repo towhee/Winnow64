@@ -837,7 +837,7 @@ void Filters::startBuildFilters(bool isReset)
 void Filters::finishedBuildFilters()
 {
     if (G::isLogger) G::log("Filters::finishedBuildFilters");
-    if (debugFilters)
+    // if (debugFilters)
     {
         qDebug() << "Filters::finishedBuildFilters";
         qDebug() << "\n";
@@ -1486,14 +1486,14 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "item =" << item->text(0)
                  << "parent =" << item->parent()->text(0)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
-                 << "G::metaReadDone =" << G::metaReadDone
+                 // << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::metaReadDone ||
+        !G::allMetadataAttempted ||
         buildingFilters)
     {
         /*

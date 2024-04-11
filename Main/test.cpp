@@ -165,6 +165,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    filters->finishedBuildFilters();
+    return;
     qDebug() << "dm->sf->index(0, 0).data(Qt::DecorationRole).isNull() ="
              << dm->sf->index(0, 0).data(Qt::DecorationRole).isNull();
     return;

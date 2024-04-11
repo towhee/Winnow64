@@ -2783,7 +2783,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::loadConcurrent  Row =" << sfRow
                  << "isFileSelectionChange = " << isFileSelectionChange
@@ -2826,6 +2826,7 @@ void MW::loadConcurrentDone()
 */
     if (G::metaReadDone) return;
     G::metaReadDone = true;
+    G::allMetadataAttempted = true;
 
     QSignalBlocker blocker(bookmarks);
 
@@ -2890,13 +2891,15 @@ void MW::loadConcurrentDone()
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
     if (reset(src + QString::number(count++))) return;
+
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-        //qDebug() << "MW::loadConcurrentMetaDone launchBuildFilters())";
-        launchBuildFilters();   // new folder = true
+        qDebug() << "MW::loadConcurrentDone buildFilters->build()";
+        // launchBuildFilters();   // new folder = true
+        buildFilters->build();
     }
 
-//    if (reset(src + QString::number(count++))) return;
-//    updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
+    // if (reset(src + QString::number(count++))) return;
+    // updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
 
     // resize table columns with all data loaded
     if (reset(src + QString::number(count++))) return;
