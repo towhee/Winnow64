@@ -3711,7 +3711,7 @@ void MW::setBackgroundShade(int shade)
     widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
     css = widgetCSS.css();
     G::css = css;
-    this->setStyleSheet(css);
+    // this->setStyleSheet(css);
 
     if (G::useInfoView) {
         infoView->updateInfo(dm->currentSfRow);                           // triggers sizehint!
@@ -3792,7 +3792,7 @@ void MW::setPrefPage(int page)
 void MW::updateDisplayResolution()
 {
     if (G::isLogger) G::log("MW::updateDisplayResolution");
-    //return;
+    // return;
     QString monitorScale = QString::number(G::actDevicePixelRatio * 100) + "%";
     QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
             + QString::number(G::displayPhysicalVerticalPixels)
