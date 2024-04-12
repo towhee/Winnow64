@@ -623,12 +623,21 @@ void PropertyEditor::resizeColumns()
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
     width = captionColumnWidth + valueColumnWidth + 3;
+    /*
+    qDebug() << "PropertyEditor::resizeColumns"
+             << "captionColumnWidth =" << captionColumnWidth
+             << "valueColumnWidth =" << valueColumnWidth
+             << "width =" << width
+             << "px =" << px
+        ; //*/
+
     setColumnWidth(CapColumn, captionColumnWidth);
     hideColumn(OrdColumn);
 }
 
 void PropertyEditor::fontSizeChanged(int fontSize)
 {
+    // qDebug() << "PropertyEditor::fontSizeChanged =" << fontSize;
     if (!ignoreFontSizeChangeSignals) {
         emit propertyDelegate->fontSizeChange(fontSize);
     }

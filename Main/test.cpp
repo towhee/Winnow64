@@ -165,36 +165,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->finishedBuildFilters();
+    setStyleSheet(css);
     return;
-    qDebug() << "dm->sf->index(0, 0).data(Qt::DecorationRole).isNull() ="
-             << dm->sf->index(0, 0).data(Qt::DecorationRole).isNull();
-    return;
-    qDebug() << G::displayVirtualHorizontalPixels;
-    return;
-    // static bool onoff = true;
 
-    // qApp->setAttribute(Qt::AA_DontUseNativeMenuBar, onoff);
-    // qApp->setAttribute(Qt::AA_DisableWindowContextHelpButton, true);
-
-    // onoff = !onoff;
-
-//    QByteArray ba = "thequickbrownfoxjumpedoverthelazydogs";
-//    int len = ba.size();
-//    char* c1[37];
-//    for (int i = 0; i < len; i++) {
-//        c1[i] = &ba[i];
-//    }
-//    char* c = &ba[0];
-//    uint offset = 3;
-//    char ch = *(c + offset);
-//    qDebug()
-//            << " len =" << len
-//        << "ba[3] =" << ba[3] << "\n"
-//        << "*c1[3] =" << *c1[offset] << "\n"
-//        << "ch =" << ch << "\n"
-//        << "(uint8_t)ch =" << (uint8_t)ch << "\n"
-//                ;
 }
 /*
    Performance
