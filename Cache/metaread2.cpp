@@ -99,7 +99,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     if (fileSelectionChanged) {
         if (dm->isMetadataAttempted(sfRow)) {
             emit fileSelectionChange(dm->sf->index(sfRow, 0));
-            if (G::dmLoaded) return;
+            if (G::allMetadataLoaded && G::iconChunkLoaded) return;
         }
     }
 
@@ -110,6 +110,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                  << "fileSelectionChanged =" << fileSelectionChanged
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
+                 << "G::iconChunkLoaded =" << G::iconChunkLoaded
                  << "src =" << src
             ;
     }
@@ -124,7 +125,11 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
-    setIconRange();
+    // set icon range and G::iconChunkLoaded
+    // dm->setIconRange(startRow);
+    firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
+    lastIconRow = dm->endIconRange;
+    // G::iconChunkLoaded = (firstIconRow >= dm->startIconRange && lastIconRow <= dm->endIconRange);
     abortCleanup = isRunning();     // check how this works - prob wrong
     isDone = false;
     mutex.unlock();
@@ -139,6 +144,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "fileSelectionChanged =" << fileSelectionChanged
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
              << "G::allIconsLoaded =" << G::allIconsLoaded
+             << "G::iconChunkLoaded =" << G::iconChunkLoaded
              << "folder =" << dm->currentFolderPath
              << "isRunning =" << isRunning()
              << "isDispatching =" << isDispatching
@@ -189,7 +195,7 @@ bool MetaRead2::stop()
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
     if (isDebug)
     {
-        qDebug() << "MetaRead2::stop  instance =" << instance << "/" << dm->instance;
+        qDebug() << "MetaRead2::stop  instance / dm->instance =" << instance << "/" << dm->instance;
     }
 
     // stop MetaRead2 first so not calling readers
@@ -323,6 +329,7 @@ QString MetaRead2::diagnostics()
     if (s.size()) rpt << "  " << s.join(",");
     rpt << "\n" << "G::allMetadataLoaded:     " << QVariant(G::allMetadataLoaded).toString();
     rpt << "\n" << "G::allIconsLoaded:        " << QVariant(G::allIconsLoaded).toString();
+    rpt << "\n" << "G::iconChunkLoaded:       " << QVariant(G::iconChunkLoaded).toString();
     rpt << "\n";
     rpt << "\n" << "isDone:                   " << QVariant(isDone).toString();
     rpt << "\n" << "aIsDone && bIsDone:       " << QVariant(aIsDone && bIsDone).toString();
@@ -706,13 +713,14 @@ void MetaRead2::dispatch(int id)
         //*/
 
         // report read failure
-        if (!(r->status == r->Status::Success)) {
+        if (!(r->status == r->Status::Success /*|| r->status == r->Status::Ready*/)) {
             QString error = "row " + QString::number(dmRow).rightJustified(5)
-                            + r->statusText.at(r->status) + " " + r->fPath;
+                            + r->statusText.at(r->status).leftJustified(10) + " " + r->fPath;
             err.append(error);
             if (isDebug)
             {
-            qDebug() << "MetaRead2::dispatch     Failure             "
+            qDebug().noquote()
+                     << "MetaRead2::dispatch     Failure             "
                      << "id =" << QString::number(id).leftJustified(2, ' ')
                      << "row =" << dmRow
                      << "status =" << r->statusText.at(r->status)
@@ -745,6 +753,7 @@ void MetaRead2::dispatch(int id)
         if (isDebug)  // returning reader, row has been processed by reader
         //if (toRead.size() < 10) // only last 10 rows in datamodel
         {
+            // bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
             bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconsLoaded());
             qDebug().noquote()
                 << "MetaRead2::dispatch     processed           "
@@ -753,6 +762,7 @@ void MetaRead2::dispatch(int id)
                 << "row =" << QString::number(dmRow).leftJustified(4, ' ')
                 << "isRunning =" << QVariant(r->isRunning()).toString().leftJustified(5)
                 << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
+                << "iconChunkLoaded =" << QVariant(dm->allIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
                 //<< "toRead =" << toRead.size()
                 << "rowCount =" << dm->rowCount()
                 << "a =" << QString::number(a).leftJustified(4, ' ')
@@ -775,8 +785,10 @@ void MetaRead2::dispatch(int id)
         if (aIsDone && bIsDone) {
 
             // all metadata and icons been loaded into datamodel?
-            G::allMetadataAttempted = dm->isAllMetadataAttempted();
-            bool allAttempted = G::allMetadataAttempted;
+            G::allMetadataLoaded = dm->isAllMetadataAttempted();
+            G::iconChunkLoaded = dm->allIconChunkLoaded(dm->startIconRange, dm->endIconRange);
+            // bool allAttempted = G::allMetadataAttempted;
+            bool allAttempted = G::allMetadataLoaded && G::iconChunkLoaded;
             /* problem with video files, where the FrameDecoder is still running when the icons
                loaded check is being made here.  Try skipping this check and see if works...
             if (dm->iconChunkSize >= sfRowCount) {
@@ -829,10 +841,8 @@ void MetaRead2::dispatch(int id)
 
             // Now we are done
             if (!isDone) {
-                if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead2::dispatch");
-                // if (!abort) cleanupIcons();
-                if (G::isLogger || G::isFlowLogger)  G::log("MW::dispatch", "Done");
                 if (isDebug)
+                {
                 qDebug().noquote()
                     << "MetaRead2::dispatch     We Are Done.     "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
@@ -840,6 +850,7 @@ void MetaRead2::dispatch(int id)
                     //<< "toRead =" << toRead
                     << "pending =" << pending()
                     ;
+                }
                 dispatchFinished("WeAreDone");
             }
 
@@ -921,7 +932,7 @@ void MetaRead2::dispatch(int id)
                 << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
         }
-        dispatchFinished("NoNextRow");
+        // dispatchFinished("NoNextRow");
     }
 
     // if done in both directions fire delay to quit in case isDone fails
@@ -949,7 +960,6 @@ void MetaRead2::dispatch(int id)
     }
 
     isDispatching = true;
-    r->status = Reader::Status::Ready;
 }
 
 void MetaRead2::dispatchReaders()
@@ -1018,11 +1028,18 @@ void::MetaRead2::quitAfterTimeout()
 
 void MetaRead2::dispatchFinished(QString src)
 {
+    if (G::isLogger || G::isFlowLogger)  G::log("MetaRead2::dispatchFinished", src);
     if (G::useUpdateStatus) emit runStatus(false, true, src);
     cleanupIcons();
-    emit done();
     isDone = true;
     isDispatching = false;
+    // G::allMetadataAttempted = true;
+    // do not emit done if only updated icon loading
+    if (!G::allMetadataLoaded) emit done();
+    G::allMetadataLoaded = true;
+    G::allIconsLoaded = dm->iconChunkSize >= dm->sf->rowCount();
+    // G::allIconsLoaded = dm->allIconsLoaded();
+    G::iconChunkLoaded = true;      // RGH change to = dm->allIconChunkLoaded(first, last) ??
 }
 
 void MetaRead2::run()

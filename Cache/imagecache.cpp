@@ -636,8 +636,8 @@ bool ImageCache::nextToCache(int id)
         }
 
         // max attempts exceeded
-        if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage && !G::metaReadDone) {
-            if (debugCaching)
+        if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage && !G::allMetadataLoaded) {
+            // if (debugCaching)
             {
                 qDebug() << "ImageCache::nextToCache                           "
                          << "row =" << i
@@ -1657,7 +1657,9 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
     if (debugCaching)
     {
-        qDebug().noquote() << "ImageCache::setCurrentPosition" << fPath
+        qDebug().noquote() << "ImageCache::setCurrentPosition"
+                           << dm->rowFromPath(fPath)
+                           << fPath
                            << "src =" << src
                            << "isRunning =" << isRunning();
     }

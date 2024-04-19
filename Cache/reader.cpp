@@ -44,6 +44,7 @@ void Reader::read(const QModelIndex dmIdx,
             << "Reader::read            start               "
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "status =" << statusText.at(status)
             << "isRunning =" << isRunning()
             ;
     }
@@ -83,6 +84,7 @@ void Reader::stop()
     {
         qDebug() << "Reader::stop done"
                  << threadId
+                 << "status =" << statusText.at(status)
                  << "isRunning =" << isRunning()
             ;
     }
@@ -193,14 +195,17 @@ void Reader::readIcon()
 
 void Reader::run()
 {
-    if (!abort && !G::allMetadataLoaded && instanceOk()) readMetadata();
-    if (!abort && isReadIcon && instanceOk()) readIcon();
+    if (!abort && !G::allMetadataLoaded && !dm->isMetadataLoaded(dmIdx.row()) && instanceOk())
+        readMetadata();
+    if (!abort && isReadIcon && instanceOk())
+        readIcon();
     if (isDebug)
     {
     qDebug().noquote()
              << "Reader::run             emiting done        "
              << "id =" << QString::number(threadId).leftJustified(2, ' ')
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "status =" << statusText.at(status)
             ;
     }
     msToRead = t.elapsed();

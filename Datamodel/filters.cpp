@@ -1486,7 +1486,6 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "item =" << item->text(0)
                  << "parent =" << item->parent()->text(0)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
-                 // << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
     // Only interested in clicks on column 0 (checkbox + text)
@@ -1498,8 +1497,9 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     {
         /*
         qDebug() << "Filters::itemClickedSignal failed"
-                 << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allIconsLoaded =" << G::allIconsLoaded
+                 << "G::iconChunkLoaded =" << G::iconChunkLoaded
                  << "buildingFilters =" << buildingFilters
             ; //*/
         return;

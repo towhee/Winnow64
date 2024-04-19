@@ -1,10 +1,16 @@
-/Users/roryhill/Photos/2020-2029/2022 √/202205 √/2022-05-13_Planta Park √/2022-05-13_0158.tif
-
-char ps[256];
-char* s[4096];
-uint32_t code;
-
-// snippet from inside loop processing incoming bytes from a tiff file
-// code == 0
-ps[0] = *s[code]; // occasional crash EXC_BAD_ACCESS (SIGSEGV) possible pointer authentication failure
-Left
+MW::loadConcurrent  Row = 30    isFileSelectionChange =  true  src = Selection::currentIndex G::allMetadataLoaded = true  G::allIconsLoaded = false G::iconChunkLoaded = true
+          5 MW::loadConcurrent                                 row = 30 G::iconChunkLoaded = true
+        997 MW::fileSelectionChange                            Source: MW::loadConcurrent /Users/roryhill/Pictures/2021-09-25/2021-09-25_0032.arw
+        427 ImageView::loadImage                               Src:MW::fileSelectionChange /Users/roryhill/Pictures/2021-09-25/2021-09-25_0032.arw
+        986 ImageCache::setCurrentPosition                     row = 30
+         28 ImageCache::memChk
+          0 ImageCache::updateTargets
+         14 ImageCache::cacheItemListComplete
+          1 ImageCache::setDirection
+          8 ImageCache::getImCacheSize
+          8 ImageCache::setPriorities                          key = 30
+        118 ImageCache::setTargetRange
+     28,032 ImageCache::resetAbortedCaching
+        627 MW::eventFilter                                    Key = 16777236
+        241 Selection::setCurrentIndex                         row = 31 clearSelection = true
+MW::loadConcurrent  Row = 31    isFileSelectionChange =  true  src = Selection::currentIndex G::allMetadataLoaded = true  G::allIconsLoaded = false G::iconChunkLoaded = true

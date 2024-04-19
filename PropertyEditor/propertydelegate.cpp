@@ -24,6 +24,7 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
 
 PropertyDelegate::PropertyDelegate(QWidget *parent): QStyledItemDelegate(parent)
 {
+    isDebug = false;
 }
 
 QWidget *PropertyDelegate::createEditor(QWidget *parent,
@@ -31,6 +32,8 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                         const QModelIndex &index ) const
 {
     if (G::isLogger) G::log("PropertyDelegate::createEditor");
+    if (isDebug)
+        qDebug() << "PropertyDelegate::createEditor" << option << index;
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
@@ -130,6 +133,12 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &/*index*/) const
 {
     // row height = 1.7 * text height
+    if (isDebug)
+        qDebug() << "PropertyDelegate::sizeHint"
+                 << "option.rect.width =" << option.rect.width()
+                 << "option.rect.height =" << option.rect.height()
+            ;
+
     int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
     return QSize(option.rect.width(), height);
 }
@@ -190,13 +199,18 @@ void PropertyDelegate::setEditorData(QWidget *editor,
 
 void PropertyDelegate::fontSizeChanged(int fontSize)
 {
+    if (G::isLogger) G::log("PropertyDelegate::fontSizeChanged");
+    if (isDebug)
+        qDebug() << "PropertyDelegate::fontSizeChanged";
     emit fontSizeChange(fontSize);
 }
 
 void PropertyDelegate::commit(QWidget *editor)
 {
     if (G::isLogger) G::log("PropertyDelegate::commit");
-//    qDebug() << "PropertyDelegate::commit" << submitted;
+    if (isDebug)
+        qDebug() << "PropertyDelegate::commit";
+    //    qDebug() << "PropertyDelegate::commit" << submitted;
     emit commitData(editor);
     emit closeEditor(editor);
 }
@@ -204,7 +218,8 @@ void PropertyDelegate::commit(QWidget *editor)
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
-//    qDebug() << "PropertyDelegate::setModelData" << index;
+    if (isDebug)
+        qDebug() << "PropertyDelegate::setModelData" << index;
     if (G::isLogger) G::log("PropertyDelegate::setModelData");
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
@@ -255,6 +270,7 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
             SliderEditor *sliderEditor = static_cast<SliderEditor*>(editor);
             double value = sliderEditor->value();
             model->setData(index, value, Qt::EditRole);
+            // qDebug() << "PropertyDelegate::setModelData (slider)" << index << value;
             emit itemChanged(index);
             break;
         }
@@ -293,6 +309,10 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
 void PropertyDelegate::updateEditorGeometry(QWidget *editor,
     const QStyleOptionViewItem &option, const QModelIndex &/*index*/ ) const
 {
+    if (isDebug)
+        qDebug() << "PropertyDelegate::updateEditorGeometry"
+                 << "option.rect =" << option.rect
+            ;
     editor->setGeometry(option.rect);
 }
 

@@ -65,7 +65,7 @@ void MW::filterChange(QString source)
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
-    if (!G::metaReadDone) {
+    if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
@@ -84,10 +84,10 @@ void MW::filterChange(QString source)
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
         dm->forceBuildFilters = true;
-        if (!G::metaReadDone) dm->addAllMetadata();
+        if (!G::allMetadataLoaded) dm->addAllMetadata();
         // failed to load all metadata - maybe terminated by user pressing ESC
 
-        if (!G::metaReadDone) {
+        if (!G::allMetadataLoaded) {
             G::popUp->showPopup("Failed to load all metadata...");
             return;
         }
@@ -226,7 +226,7 @@ void MW::invertFilters()
 
 */
     if (G::isLogger) G::log("MW::invertFilters");
-    if (!G::metaReadDone) loadEntireMetadataCache("FilterChange");
+    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
         G::popUp->showPopup("No images available to invert filtration", 2000);
@@ -266,7 +266,7 @@ void MW::uncheckAllFilters()
 void MW::clearAllFilters()
 {
     if (G::isLogger) G::log("MW::clearAllFilters");
-    if (!G::metaReadDone) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
+    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
@@ -368,7 +368,7 @@ void MW::sortChange(QString source)
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::sortChange  Src:" << source;
     //qDebug() << "MW::sortChange  Src:" << source;
 
-    if (G::isInitializing || !G::metaReadDone) return;
+    if (G::isInitializing || !G::allMetadataLoaded) return;
 
     /*
     qDebug() << "MW::sortChange" << "source =" << source
@@ -393,21 +393,21 @@ void MW::sortChange(QString source)
     bool doNotSort = false;
     if (sortMenuUpdateToMatchTable)
         doNotSort = true;
-    if (!G::metaReadDone && sortColumn > G::CreatedColumn)
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
         doNotSort = true;
-    if (!G::metaReadDone && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
+    if (!G::allMetadataLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
         doNotSort = true;
-    if (G::metaReadDone && !sortHasChanged)
+    if (G::allMetadataLoaded && !sortHasChanged)
         doNotSort = true;
     if (doNotSort) return;
 
     // Need all metadata loaded before sorting non-fileSystem metadata
     // rgh all metadata always loaded now - change this?
-    if (!G::metaReadDone && sortColumn > G::CreatedColumn)
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
         loadEntireMetadataCache("SortChange");
 
     // failed to load all metadata, restore prior sort in menu and return
-    if (!G::metaReadDone && sortColumn > G::CreatedColumn) {
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
         /*
         qDebug() << "MW::sortChange" << "failed"
                  << "sortColumn =" << sortColumn
@@ -427,7 +427,7 @@ void MW::sortChange(QString source)
              ;
 //             */
 
-    if (G::metaReadDone) {
+    if (G::allMetadataLoaded) {
         G::popUp->showPopup("Sorting...", 0);
     }
     else {
@@ -439,10 +439,8 @@ void MW::sortChange(QString source)
     thumbView->sortThumbs(sortColumn, isReverseSort);
     sel->recover();
 
-//    if (!G::metaReadDone) return;
-
     // get the current selected item
-    if (G::metaReadDone) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
@@ -479,10 +477,8 @@ void MW::sortReverse()
 {
     thumbView->sortThumbs(G::NameColumn, isReverseSort);
 
-    //    if (!G::metaReadDone) return;
-
     // get the current selected item
-    if (G::metaReadDone) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;

@@ -30,8 +30,6 @@ namespace G
     bool dmEmpty;                   // DM is stopped and/or empty.  Flag to abort
                                     // all new folder processes.
     // datamodel status
-    bool dmLoaded;                  // datamodel all metadata and all icons loaded
-    bool metaReadDone;              // metaRead completed
     bool allMetadataLoaded;         // all metadata attempted
     bool allMetadataAttempted;      // all metadata attempted
     bool allIconsLoaded;            // all icon loading attempted

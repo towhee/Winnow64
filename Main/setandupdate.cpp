@@ -430,7 +430,7 @@ void MW::setIngested()
 void MW::setCombineRawJpg()
 {
     if (G::isLogger) G::log("MW::setCombineRawJpg");
-    if (!G::metaReadDone) {
+    if (!G::allMetadataLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popUp->showPopup(msg, 2000);
         return;

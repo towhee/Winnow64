@@ -9,9 +9,9 @@ void MW::reportState(QString title)
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
-        << "\nG::metaReadDone                        " << G::metaReadDone
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
+        << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
         << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
@@ -161,9 +161,9 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::metaReadDone = " << G::s(G::metaReadDone);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);
+    rpt << "\n" << "G::iconChunkLoaded = " << G::s(G::iconChunkLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);

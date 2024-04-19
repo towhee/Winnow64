@@ -47,6 +47,7 @@ protected:
 //    bool eventFilter(QObject *editor, QEvent *event) override;
 
 private:
+    bool isDebug = false;
 };
 
 

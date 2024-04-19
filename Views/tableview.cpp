@@ -91,8 +91,9 @@ void TableView::updateVisible(QString src)
     //qDebug() << "TableView::updateVisible src =" << src;
     //*/
     firstVisibleRow = rowAt(0);
-    midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
+    if (lastVisibleRow < 0) lastVisibleRow = 0;
+    midVisibleRow = lastVisibleRow / 2;
     if (rowHeight(0)) visibleRowCount = height() / rowHeight(0);
     /*
     qDebug() << "TableView::updateVisible"

@@ -165,7 +165,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    setStyleSheet(css);
+    QElapsedTimer t;
+    t.restart();
+    G::iconChunkLoaded = dm->allIconChunkLoaded(0, dm->rowCount() - 1);
+    // G::iconChunkLoaded = dm->allIconChunkLoaded(dm->startIconRange, dm->endIconRange);
+    QVariant ns = t.nsecsElapsed();
+    qDebug() << dm->startIconRange << dm->endIconRange << ns << "ns";
     return;
 
 }
