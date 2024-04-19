@@ -80,14 +80,14 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
                  << "fileSelectionChanged =" << fileSelectionChanged
                  << "isRunning =" << isRunning()
                  << "src =" << src
-                 // << "G::metaReadDone =" << G::metaReadDone
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::allIconsLoaded =" << G::allIconsLoaded
+                 << "G::iconChunkLoaded =" << G::iconChunkLoaded
                     ;
     }
 
     // Nothing to read
-    if (G::allMetadataLoaded && G::allIconsLoaded) {
+    if (G::allMetadataLoaded && G::iconChunkLoaded) {
         if (fileSelectionChanged) {
             targetRow = row;
             triggerFileSelectionChange();

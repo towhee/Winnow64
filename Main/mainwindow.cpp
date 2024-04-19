@@ -213,9 +213,9 @@ Flow Flags:
     G::isInitializing
     G::stop
     G::dmEmpty
-    G::metaReadDone
     G::allMetadataLoaded
     G::allIconsLoaded
+    G::iconChunkLoaded
     G::isLinearLoadDone
     dm->loadingModel
     dm->basicFileInfoLoaded  // not used
@@ -857,7 +857,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // end stress test
         if (isStressTest) isStressTest = false;
         // stop loading a new folder
-        else if (!G::allMetadataLoaded || !G::metaReadDone) stop("Escape key");
+        else if (!G::allMetadataLoaded || !G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
         else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -1892,6 +1892,7 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
+    qDebug() << "\n\n\nMW::folderSelectionChange" << dPath;
     if (!stop("MW::folderSelectionChange()")) return;
 
     G::t.restart();
@@ -1983,7 +1984,7 @@ void MW::folderSelectionChange(QString dPath)
     // load datamodel
     if (!dm->load(G::currRootFolder, G::includeSubfolders)) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
-        if (G::isWarningLogger)
+        // if (G::isWarningLogger)
         qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
         enableSelectionDependentMenus();
         enableStatusBarBtns();
@@ -2398,8 +2399,6 @@ bool MW::stop(QString src)
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
     dm->newInstance();
-//    dm->instance++;
-//    G::dmInstance = dm->instance;
     QString oldFolder = G::currRootFolder;
 
     bool isDebugStopping = false;
@@ -2427,7 +2426,7 @@ bool MW::stop(QString src)
     G::t.restart();
     }
 
-    bool metaReadThreadStopped = metaReadThread->stop();
+    metaReadThread->stop();
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop metaReadThread", QString::number(G::t.elapsed()) + " ms");
@@ -2505,7 +2504,6 @@ bool MW::reset(QString src)
     //qDebug() << "MW::reset src =" << src;
 
     G::dmEmpty = true;
-    G::metaReadDone = false;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::iconChunkLoaded = false;
@@ -2581,8 +2579,8 @@ bool MW::updateIconRange(QString src)
 {
 /*
     Polls thumbView, gridView and tableView to determine the first and last thumbnail
-    visible. This is used in the metadataCacheThread or metaReadThread to determine the
-    range of thumbnails to cache.
+    visible. This is used in the metaReadThread to determine the range of thumbnails to
+    cache.
 
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
@@ -2596,18 +2594,10 @@ bool MW::updateIconRange(QString src)
 
     /*
     qDebug() << "   MW::updateIconRange  src =" << src
-            << "G::allIconsLoaded =" << G::allIconsLoaded
+            << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "dm->currentSfRow =" << dm->currentSfRow
             << "G::isInitializing =" << G::isInitializing
                ; //*/
-
-    // // if chunk size is greater than DataModel rows
-    // if (dm->iconChunkSize > dm->rowCount()) {
-    //     // if all icons in DataModel are loaded then nothing to do
-    //     if (G::allIconsLoaded) return false;
-    //     // continue loading icons from the current row
-    //     else loadConcurrent(dm->currentSfRow, true);
-    // }
 
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
@@ -2645,35 +2635,40 @@ bool MW::updateIconRange(QString src)
         chunkSizeChanged = true;
     }
 
-    // DataModel (Concurrent metadata loading) icon range
-    int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
-    if (firstChunkRow < 0) firstChunkRow = 0;
-    int lastChunkRow = firstChunkRow + dm->iconChunkSize;
-    if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
-    int midChunkRow = firstChunkRow + (lastChunkRow - firstChunkRow) / 2;
-    dm->startIconRange = firstChunkRow;
-    dm->endIconRange = lastChunkRow;
-    dm->midIconRange = midChunkRow;
+    // Set icon range and G::iconChunkLoaded
+    dm->setIconRange(dm->currentSfRow);
+    // int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
+    // if (firstChunkRow < 0) firstChunkRow = 0;
+    // int lastChunkRow = firstChunkRow + dm->iconChunkSize;
+    // if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
+    // G::iconChunkLoaded = (firstChunkRow >= dm->startIconRange && lastChunkRow <= dm->endIconRange);
+    // dm->startIconRange = firstChunkRow;
+    // dm->endIconRange = lastChunkRow;
 
-    if (!dm->checkChunkSize) return false;
+    // G::iconChunkLoaded = dm->allIconChunkLoaded(firstChunkRow, lastChunkRow);
 
-    // update icons cached if chunkSizeChanged
-    if (chunkSizeChanged) {
+    // if (!dm->checkChunkSize) {
+    //     // qDebug() << "MW::updateIconRange dm->checkChunkSize = false >> return without loadConcurrent";
+    //     // return false;
+    // }
+
+    // update icons cached
+    if (!G::iconChunkLoaded) {
         //qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
         loadConcurrent(midVisible, false, "MW::updateIconRange");
     }
 
     /* debug
     qDebug()
-         << "MW::updateIconRange" << "row =" << row << "src =" << src
+         << "MW::updateIconRange" << "row =" << dm->currentSfRow << "src =" << src
          << "dm->iconChunkSize =" << dm->iconChunkSize
          << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
          << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
+         << "thumbView->lastVisibleCell  =" << thumbView->lastVisibleCell
          << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
-         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
+         << "gridView->lastVisibleCell  =" << gridView->lastVisibleCell
          << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
-         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
+         << "tableView->lastVisibleCell  =" << tableView->lastVisibleRow
          << "\n\tfirstVisible =" << firstVisible
          << "lastVisible =" << lastVisible
          << "\n\tdm->startIconRange =" << dm->startIconRange
@@ -2781,42 +2776,45 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 */
 {
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
-          + " G::allIconsLoaded = " + QVariant(G::allIconsLoaded).toString());
+          + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
-        qDebug() << "MW::loadConcurrent  Row =" << sfRow
-                 << "isFileSelectionChange = " << isFileSelectionChange
+        qDebug().noquote()
+                 << "MW::loadConcurrent  Row =" << QVariant(sfRow).toString().leftJustified(5)
+                 << "isFileSelectionChange = " << QVariant(isFileSelectionChange).toString().leftJustified(5)
                  << "src =" << src
-                 << "G::dmLoaded =" << G::dmLoaded
-                 << "G::metaReadDone =" << G::metaReadDone
-                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                 << "G::allIconsLoaded =" << G::allIconsLoaded
-                 << "dm->abortLoadingModel =" << dm->abortLoadingModel
+                 << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
+                 << "G::allIconsLoaded =" << QVariant(G::allIconsLoaded).toString().leftJustified(5)
+                 << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
+                 // << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
     }
 
     if (G::stop || dm->abortLoadingModel) return;
 
     // Scroll
-    if (!isFileSelectionChange && !G::allIconsLoaded) {
-        frameDecoder->clear();
-        updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-        metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
+    if (!isFileSelectionChange) {
+        if (!G::iconChunkLoaded) {
+            frameDecoder->clear();
+            updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
+            metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
+        }
         return;
     }
 
-    // Change selection while MetaRead not finished
-    if (!G::dmLoaded) {
+    // File selection change
+    dm->setIconRange(sfRow);
+    if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
+        // Change selection while MetaRead not finished
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
     }
-    // Change selection
-    else if (isFileSelectionChange) {
+    else {
+        // Change selection
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
     }
-
 }
 
 void MW::loadConcurrentDone()
@@ -2824,10 +2822,6 @@ void MW::loadConcurrentDone()
 /*
     Signalled from MetaRead::run when finished
 */
-    if (G::metaReadDone) return;
-    G::metaReadDone = true;
-    G::allMetadataAttempted = true;
-
     QSignalBlocker blocker(bookmarks);
 
     // time series to load new folder
@@ -2845,7 +2839,6 @@ void MW::loadConcurrentDone()
              << dm->currentFolderPath
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
-             << "G::metaReadDone =" << G::metaReadDone
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
@@ -2860,6 +2853,7 @@ void MW::loadConcurrentDone()
 
     if (reset(src + QString::number(count++))) return;
 
+    // missing thumbnails
     if (!ignoreAddThumbnailsDlg
         && warnMissingEmbeddedThumbs
         && !G::autoAddMissingThumbnails)
@@ -2869,14 +2863,11 @@ void MW::loadConcurrentDone()
         if (reset(src + QString::number(count++))) return;
     }
 
-    // datamodel status
-    dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
+    // hide metadata read progress
     if (G::showProgress == G::ShowProgress::MetaCache) {
         isShowCacheProgressBar = false;
         progressLabel->setVisible(false);
     }
-    G::allIconsLoaded = dm->allIconsLoaded();
-    G::dmLoaded = G::allMetadataLoaded && G::allIconsLoaded;
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
@@ -3054,7 +3045,7 @@ void MW::loadEntireMetadataCache(QString source)
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     /* adding all metadata in dm slightly slower than using metadataReadThread but progress
-       bar does not update from separate thread
+       bar does not update from separate thread.  RGH check if still true.
     */
     dm->addAllMetadata();
 

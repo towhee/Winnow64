@@ -89,6 +89,7 @@ public:
     bool allIconsLoaded();
     bool allIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
+    void setIconRange(int sfRow);
     void setChunkSize(int chunkSize);
     bool isPath(QString fPath);
     int rowFromPath(QString fPath);
@@ -124,7 +125,6 @@ public:
 
     int startIconRange;                 // used in allIconsLoaded()
     int endIconRange;                   // used in allIconsLoaded()
-    int midIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
     bool checkChunkSize;                // true if iconChunkSize < rowCount()

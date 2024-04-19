@@ -320,7 +320,7 @@ void MW::resortImageCache()
 void MW::enableStatusBarBtns()
 {
     if (G::isLogger) G::log("MW::enableStatusBarBtns");
-    bool enable = dm->rowCount() > 0 && G::metaReadDone;
+    bool enable = dm->rowCount() > 0 && G::allMetadataLoaded;
     colorManageToggleBtn->setEnabled(enable);
     reverseSortBtn->setEnabled(enable);
 }
@@ -338,7 +338,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     if (G::isLogger) G::log("MW::sortIndicatorChanged");
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
 //    qDebug() << "MW::sortIndicatorChanged" << column << columnName << sortOrder << sortColumn;
-    if (!G::metaReadDone && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
+    if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {

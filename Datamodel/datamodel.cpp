@@ -1751,6 +1751,22 @@ bool DataModel::allIconChunkLoaded(int first, int last)
 
 }
 
+void DataModel::setIconRange(int sfRow)
+{
+    // row count less than icon range
+    int rows = sf->rowCount();
+    int start;
+    int end;
+    start = sfRow - iconChunkSize / 2;
+    if (start< 0) start = 0;
+    end = start + iconChunkSize;
+    if (end >= rows) end = rows - 1;
+    G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
+    startIconRange = start;
+    endIconRange = end;
+    // G::iconChunkLoaded = allIconChunkLoaded(startIconRange, endIconRange);
+}
+
 void DataModel::setChunkSize(int chunkSize)
 {
     iconChunkSize = chunkSize;

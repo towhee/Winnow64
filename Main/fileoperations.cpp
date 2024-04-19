@@ -186,9 +186,9 @@ void MW::insertFile(QString fPath)
         dm->setData(dmIdx, false);
         dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
         imageCacheThread->removeCachedImage(fPath);
-        G::metaReadDone = false;
         G::allMetadataLoaded = false;
         G::allIconsLoaded = false;
+        G::iconChunkLoaded = false;
     }
     // insert a new image
     else {
@@ -205,7 +205,7 @@ void MW::deleteSelectedFiles()
 */
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
     // make sure datamodel is loaded
-    if (!G::metaReadDone) {
+    if (!G::allMetadataLoaded) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
@@ -275,7 +275,7 @@ void MW::deleteFiles(QStringList paths)
     t.restart();
 
     // if still loading metadata then do not delete
-    if (!G::metaReadDone) {
+    if (!G::allMetadataLoaded) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"

@@ -99,15 +99,18 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     styleOptionViewItem = new QStyleOptionViewItem;
     propertyDelegate->isAlternatingRows = true;
 
-    connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
+    connect(propertyDelegate, &PropertyDelegate::itemChanged,
             this, &PropertyEditor::itemChange);
 
     connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
             this, &PropertyEditor::editorWidgetToDisplay);
 
-    connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
+    connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain,
+            this, &PropertyEditor::drawBranches);
 
-    connect(this, &PropertyEditor::fontSizeChange, propertyDelegate, &PropertyDelegate::fontSizeChanged);
+    connect(this, &PropertyEditor::fontSizeChange,
+            propertyDelegate, &PropertyDelegate::fontSizeChanged);
+
 }
 
 PropertyEditor::~PropertyEditor()
@@ -129,10 +132,11 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
     emit propertyDelegate->closeEditor(editor);
 }
 
-void PropertyEditor::itemChange(QModelIndex)
+void PropertyEditor::itemChange(QModelIndex index)
 // virtual function to be subclassed
 {
-
+    qDebug() << "PropertyEditor::itemChange" << index;
+    resizeColumns();
 }
 
 void PropertyEditor::getIndexFromNameAndParent(QString name, QString parName, QModelIndex parent)
@@ -629,6 +633,8 @@ void PropertyEditor::resizeColumns()
              << "valueColumnWidth =" << valueColumnWidth
              << "width =" << width
              << "px =" << px
+             << "G::strFontSize =" << G::strFontSize
+             << "G::ptToPx =" << G::ptToPx
         ; //*/
 
     setColumnWidth(CapColumn, captionColumnWidth);

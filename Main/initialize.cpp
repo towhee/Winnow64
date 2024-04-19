@@ -487,8 +487,8 @@ void MW::createImageCache()
 //    connect(metadataCacheThread, &MetadataCache::loadImageCache,
 //            this, &MW::loadImageCacheForNewFolder);
 
-    // connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
-    //         this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
+    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // signal to stop the ImageCache
     connect(this, &MW::abortImageCache, imageCacheThread, &ImageCache::stop);

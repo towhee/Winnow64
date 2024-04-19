@@ -33,7 +33,6 @@ public:
     void setSolo(bool isSolo);
     void setExpandRecursively(bool isExpandRecursively);
     void expandBranch(QString text);
-    void resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/);
     int indentation;
     QString stringToFitCaptions;
     QString stringToFitValues;
@@ -110,6 +109,7 @@ public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
     virtual void itemChange(QModelIndex);
     void fontSizeChanged(int fontSize);
+    void resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/);
 //    /*virtual*/ void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 private:
