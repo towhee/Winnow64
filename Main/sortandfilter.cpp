@@ -135,6 +135,9 @@ void MW::filterChange(QString source)
     int newGridScrollPos = gridView->scrollPosition();
     bool scrollChange = oldThumbScrollPos != newThumbScrollPos || oldGridScrollPos != newGridScrollPos;
 
+    // sync the datamodel instance
+    metaReadThread->initialize();
+
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
     bool newSelectReqd = false;

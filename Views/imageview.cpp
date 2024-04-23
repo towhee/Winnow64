@@ -1103,7 +1103,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mousePressEvent", "isScrollable =" + QVariant(isScrollable).toString());
-    // /*
+    /*
     qDebug() << "ImageView::mousePressEvent"
              << "Button =" << event->button()
         ;

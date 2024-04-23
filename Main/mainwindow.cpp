@@ -214,7 +214,6 @@ Flow Flags:
     G::stop
     G::dmEmpty
     G::allMetadataLoaded
-    G::allIconsLoaded
     G::iconChunkLoaded
     G::isLinearLoadDone
     dm->loadingModel
@@ -2505,7 +2504,6 @@ bool MW::reset(QString src)
 
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
-    G::allIconsLoaded = false;
     G::iconChunkLoaded = false;
     G::currRootFolder = "";
     //qDebug() << "MW::reset" << "G::currRootFolder = Blank";
@@ -2575,7 +2573,7 @@ void MW::updateDefaultIconChunkSize(int size)
     }
 }
 
-bool MW::updateIconRange(QString src)
+bool MW::updateIconRange(bool sizeChange, QString src)
 {
 /*
     Polls thumbView, gridView and tableView to determine the first and last thumbnail
@@ -2602,8 +2600,14 @@ bool MW::updateIconRange(QString src)
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
+    static int prevVisibleIcons = 0;
+    bool visibleIconsChanged = false;
     static int chunkSize = dm->defaultIconChunkSize;
     bool chunkSizeChanged = false;
+    static QSize prevCellSize = QSize();
+    bool cellSizeChanged;
+    static QSize prevViewportSize = QSize();
+    bool viewportSizeChanged;
 
     // Grid might not be selected in CentralWidget
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
@@ -2626,9 +2630,13 @@ bool MW::updateIconRange(QString src)
         if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
     }
 
-    // chunk size
-    int visibleIcons = lastVisible - firstVisible;
+    // visible icons
     int midVisible = firstVisible + (firstVisible + lastVisible) / 2;
+    int visibleIcons = lastVisible - firstVisible + 1;
+    visibleIconsChanged = visibleIcons != prevVisibleIcons;
+    prevVisibleIcons = visibleIcons;
+
+    // chunk size
     if (dm->iconChunkSize < visibleIcons) dm->setChunkSize(visibleIcons);
     if (dm->iconChunkSize > chunkSize) {
         chunkSize = dm->iconChunkSize;
@@ -2637,44 +2645,33 @@ bool MW::updateIconRange(QString src)
 
     // Set icon range and G::iconChunkLoaded
     dm->setIconRange(dm->currentSfRow);
-    // int firstChunkRow = dm->currentSfRow - dm->iconChunkSize / 2;
-    // if (firstChunkRow < 0) firstChunkRow = 0;
-    // int lastChunkRow = firstChunkRow + dm->iconChunkSize;
-    // if (lastChunkRow >= dm->sf->rowCount()) lastChunkRow = dm->sf->rowCount() - 1;
-    // G::iconChunkLoaded = (firstChunkRow >= dm->startIconRange && lastChunkRow <= dm->endIconRange);
-    // dm->startIconRange = firstChunkRow;
-    // dm->endIconRange = lastChunkRow;
 
-    // G::iconChunkLoaded = dm->allIconChunkLoaded(firstChunkRow, lastChunkRow);
-
-    // if (!dm->checkChunkSize) {
-    //     // qDebug() << "MW::updateIconRange dm->checkChunkSize = false >> return without loadConcurrent";
-    //     // return false;
-    // }
-
-    // update icons cached
-    if (!G::iconChunkLoaded) {
-        //qDebug() << "MW::updateIconRange LOADCURRENT TRUE  ROW +" << dm->currentSfRow;
-        loadConcurrent(midVisible, false, "MW::updateIconRange");
-    }
-
-    /* debug
+    // /* debug
     qDebug()
          << "MW::updateIconRange" << "row =" << dm->currentSfRow << "src =" << src
          << "dm->iconChunkSize =" << dm->iconChunkSize
-         << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
-         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-         << "thumbView->lastVisibleCell  =" << thumbView->lastVisibleCell
-         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
-         << "gridView->lastVisibleCell  =" << gridView->lastVisibleCell
-         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
-         << "tableView->lastVisibleCell  =" << tableView->lastVisibleRow
-         << "\n\tfirstVisible =" << firstVisible
-         << "lastVisible =" << lastVisible
-         << "\n\tdm->startIconRange =" << dm->startIconRange
-         << "dm->endIconRange =" << dm->endIconRange
+         << "chunkSizeChanged =" << chunkSizeChanged
+         // << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
+         // << "G::isInitializing =" << G::isInitializing
+         // << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+         // << "thumbView->lastVisibleCell  =" << thumbView->lastVisibleCell
+         // << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
+         // << "gridView->lastVisibleCell  =" << gridView->lastVisibleCell
+         // << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
+         // << "tableView->lastVisibleCell  =" << tableView->lastVisibleRow
+         // << "\n\tfirstVisible =" << firstVisible
+         // << "lastVisible =" << lastVisible
+         // << "\n\tdm->startIconRange =" << dm->startIconRange
+         // << "dm->endIconRange =" << dm->endIconRange
             ;
 //        */
+
+    // update icons cached only when the icon or viewport size changes
+    if (chunkSizeChanged /*|| visibleIconsChanged*/) {
+    // if (!dm->isIconRangeLoaded() && !metaReadThread->isDispatching) {
+        bool fileSelectionChange = false;
+        loadConcurrent(midVisible, fileSelectionChange, "MW::updateIconRange");
+    }
 
     return chunkSizeChanged;
 }
@@ -2726,7 +2723,7 @@ void MW::loadConcurrentNewFolder()
         dm->currentSfRow = 0;
     }
     if (reset(src + QString::number(count++))) return;
-    updateIconRange(fun);
+    // updateIconRange(false, fun);
     if (reset(src + QString::number(count++))) return;
 
     // reset metadata progress
@@ -2758,7 +2755,7 @@ void MW::loadConcurrentNewFolder()
     // reset warning missing embedded thumbs
     warnMissingEmbeddedThumbs = true;
 
-    // set selection and current index
+    // set selection and current index, start metaReadThread
     //testTime.restart();
     sel->setCurrentRow(targetRow);
 }
@@ -2775,6 +2772,10 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
+    if (G::stop || dm->abortLoadingModel) return;
+
+    dm->setIconRange(sfRow);        // sets G::iconChunkLoaded
+
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
 
@@ -2785,36 +2786,21 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "isFileSelectionChange = " << QVariant(isFileSelectionChange).toString().leftJustified(5)
                  << "src =" << src
                  << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
-                 << "G::allIconsLoaded =" << QVariant(G::allIconsLoaded).toString().leftJustified(5)
                  << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
+                 << "dm->startIconRange =" << dm->startIconRange
+                 << "dm->endIconRange =" << dm->endIconRange
+                 << "dm->iconCount =" << dm->iconCount()
                  // << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
     }
 
-    if (G::stop || dm->abortLoadingModel) return;
-
-    // Scroll
-    if (!isFileSelectionChange) {
-        if (!G::iconChunkLoaded) {
-            frameDecoder->clear();
-            updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
-            metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
-        }
-        return;
-    }
-
-    // File selection change
-    dm->setIconRange(sfRow);
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
-        // Change selection while MetaRead not finished
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
     }
-    else {
-        // Change selection
+    else if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
-    }
 }
 
 void MW::loadConcurrentDone()
@@ -2928,7 +2914,7 @@ void MW::thumbHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange("MW::thumbHasScrolled");
+        updateIconRange(false, "MW::thumbHasScrolled");
         if (gridView->isVisible()) {
             gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
@@ -2975,7 +2961,7 @@ void MW::gridHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange("MW::gridHasScrolled");
+        updateIconRange(false, "MW::gridHasScrolled");
         int midVisibleCell = gridView->midVisibleCell;
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(midVisibleCell, "MW::gridHasScrolled");
@@ -3014,7 +3000,7 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange("MW::tableHasScrolled");
+        updateIconRange(false, "MW::tableHasScrolled");
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         }
@@ -3040,7 +3026,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (dm->isAllMetadataAttempted()) return;
 
-    updateIconRange("MW::loadEntireMetadataCache");
+    updateIconRange(false, "MW::loadEntireMetadataCache");
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 

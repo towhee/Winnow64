@@ -31,8 +31,6 @@ namespace G
                                     // all new folder processes.
     // datamodel status
     bool allMetadataLoaded;         // all metadata attempted
-    bool allMetadataAttempted;      // all metadata attempted
-    bool allIconsLoaded;            // all icon loading attempted
     bool iconChunkLoaded;           // all icon chunk loaded
 
     int dmInstance;

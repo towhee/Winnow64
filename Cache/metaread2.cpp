@@ -109,7 +109,6 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                  << "startRow =" << startRow
                  << "fileSelectionChanged =" << fileSelectionChanged
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                 << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "G::iconChunkLoaded =" << G::iconChunkLoaded
                  << "src =" << src
             ;
@@ -143,7 +142,6 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "iconChunkSize =" << dm->iconChunkSize
              << "fileSelectionChanged =" << fileSelectionChanged
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
-             << "G::allIconsLoaded =" << G::allIconsLoaded
              << "G::iconChunkLoaded =" << G::iconChunkLoaded
              << "folder =" << dm->currentFolderPath
              << "isRunning =" << isRunning()
@@ -321,6 +319,8 @@ QString MetaRead2::diagnostics()
     rpt << "\n" << "iconLimit:                " << iconLimit;
     rpt << "\n" << "firstIconRow:             " << firstIconRow;
     rpt << "\n" << "lastIconRow:              " << lastIconRow;
+    rpt << "\n" << "dm->startIconRange:       " << dm->startIconRange;
+    rpt << "\n" << "dm->endIconRange:         " << dm->endIconRange;
     rpt << "\n" << "dm->iconCount:            " << dm->iconCount();
     rpt << "\n";
     QStringList s;
@@ -328,7 +328,6 @@ QString MetaRead2::diagnostics()
     rpt << "\n" << "dm->isAllMetadataLoaded:  " << QVariant(dm->isAllMetadataAttempted()).toString();
     if (s.size()) rpt << "  " << s.join(",");
     rpt << "\n" << "G::allMetadataLoaded:     " << QVariant(G::allMetadataLoaded).toString();
-    rpt << "\n" << "G::allIconsLoaded:        " << QVariant(G::allIconsLoaded).toString();
     rpt << "\n" << "G::iconChunkLoaded:       " << QVariant(G::iconChunkLoaded).toString();
     rpt << "\n";
     rpt << "\n" << "isDone:                   " << QVariant(isDone).toString();
@@ -451,10 +450,8 @@ inline bool MetaRead2::needToRead(int row)
     if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
         return true;
     }
-    if (row >= firstIconRow && row <= lastIconRow) {
-        if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) {
-            return true;
-        }
+    if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) {
+        return true;
     }
 
     /* Check if setStartRow called while still reading metadata, and the metadata has been read
@@ -737,7 +734,6 @@ void MetaRead2::dispatch(int id)
             }
             if (isDebug) // fileSelectionChange
             {
-                /*
                 bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
                 qDebug().noquote()
                     << "\nMetaRead2::dispatch     fileSelectionChange "
@@ -745,7 +741,6 @@ void MetaRead2::dispatch(int id)
                     << "row =" << QString::number(dmRow).leftJustified(4, ' ')
                     << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
                     << r->fPath;
-                    //*/
             }
             if (!abort) emit fileSelectionChange(sfIdx);
         }
@@ -754,7 +749,7 @@ void MetaRead2::dispatch(int id)
         //if (toRead.size() < 10) // only last 10 rows in datamodel
         {
             // bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
-            bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconsLoaded());
+            bool allLoaded = (dm->isAllMetadataAttempted() && dm->isAllIconsLoaded());
             qDebug().noquote()
                 << "MetaRead2::dispatch     processed           "
                 << "id =" << QString::number(id).leftJustified(2, ' ')
@@ -762,7 +757,7 @@ void MetaRead2::dispatch(int id)
                 << "row =" << QString::number(dmRow).leftJustified(4, ' ')
                 << "isRunning =" << QVariant(r->isRunning()).toString().leftJustified(5)
                 << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
-                << "iconChunkLoaded =" << QVariant(dm->allIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
+                << "iconChunkLoaded =" << QVariant(dm->isAllIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
                 //<< "toRead =" << toRead.size()
                 << "rowCount =" << dm->rowCount()
                 << "a =" << QString::number(a).leftJustified(4, ' ')
@@ -785,27 +780,17 @@ void MetaRead2::dispatch(int id)
         if (aIsDone && bIsDone) {
 
             // all metadata and icons been loaded into datamodel?
-            G::allMetadataLoaded = dm->isAllMetadataAttempted();
-            G::iconChunkLoaded = dm->allIconChunkLoaded(dm->startIconRange, dm->endIconRange);
-            // bool allAttempted = G::allMetadataAttempted;
-            bool allAttempted = G::allMetadataLoaded && G::iconChunkLoaded;
-            /* problem with video files, where the FrameDecoder is still running when the icons
-               loaded check is being made here.  Try skipping this check and see if works...
-            if (dm->iconChunkSize >= sfRowCount) {
-                G::allIconsLoaded = dm->allIconsLoaded();
-                allAttempted = (G::allMetadataAttempted && G::allIconsLoaded);
-            }
-            else {
-                allAttempted = (G::allMetadataAttempted && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
-            }
-            */
+             bool allAttempted = dm->isAllMetadataAttempted() &&
+                                dm->isAllIconChunkLoaded(dm->startIconRange, dm->endIconRange);
+
             if (isDebug)  // dispatch for all rows completed
             {
                 qDebug().noquote()
                     << "MetaRead2::dispatch     all dispatch done   "
                     << "id =" << QString::number(id).leftJustified(2, ' ')
                     << "row =" << QString::number(reader[id]->dmIdx.row()).leftJustified(4, ' ')
-                    << "allLoaded =" << QVariant(allAttempted).toString().leftJustified(5)
+                    << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                    << "allAttempted =" << QVariant(allAttempted).toString().leftJustified(5)
                     //<< "toRead =" << toRead.size()
                     << "pending =" << pending()
                     << "isDone =" << isDone
@@ -846,6 +831,7 @@ void MetaRead2::dispatch(int id)
                 qDebug().noquote()
                     << "MetaRead2::dispatch     We Are Done.     "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
+                    << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     << dm->currentFolderPath
                     //<< "toRead =" << toRead
                     << "pending =" << pending()
@@ -974,7 +960,8 @@ void MetaRead2::dispatchReaders()
     }
 
     for (int id = 0; id < readerCount; id++) {
-        if (isDebug) {
+        if (isDebug)
+        {
             qDebug().noquote()
                 << "MetaRead2::dispatchReaders                  "
                 << "reader =" << id << "dispatched"
@@ -1029,16 +1016,19 @@ void::MetaRead2::quitAfterTimeout()
 void MetaRead2::dispatchFinished(QString src)
 {
     if (G::isLogger || G::isFlowLogger)  G::log("MetaRead2::dispatchFinished", src);
+    if (isDebug)
+        qDebug() << "MetaRead2::dispatchFinished" << src
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded
+            ;
     if (G::useUpdateStatus) emit runStatus(false, true, src);
     cleanupIcons();
     isDone = true;
     isDispatching = false;
-    // G::allMetadataAttempted = true;
     // do not emit done if only updated icon loading
-    if (!G::allMetadataLoaded) emit done();
-    G::allMetadataLoaded = true;
-    G::allIconsLoaded = dm->iconChunkSize >= dm->sf->rowCount();
-    // G::allIconsLoaded = dm->allIconsLoaded();
+    if (!G::allMetadataLoaded) {
+        G::allMetadataLoaded = true;
+        emit done();
+    }
     G::iconChunkLoaded = true;      // RGH change to = dm->allIconChunkLoaded(first, last) ??
 }
 
