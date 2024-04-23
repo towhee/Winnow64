@@ -166,9 +166,7 @@ namespace G
     extern bool isInitializing;
 
     // datamodel
-    extern bool allMetadataAttempted;
     extern bool allMetadataLoaded;
-    extern bool allIconsLoaded;
     extern bool iconChunkLoaded;
 
     extern int dmInstance;

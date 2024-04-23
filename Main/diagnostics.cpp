@@ -10,7 +10,6 @@ void MW::reportState(QString title)
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
-        << "\nG::allIconsLoaded                      " << G::allIconsLoaded
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
@@ -162,7 +161,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::stop = " << G::s(G::stop);
     rpt << "\n";
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
-    rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);
     rpt << "\n" << "G::iconChunkLoaded = " << G::s(G::iconChunkLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);

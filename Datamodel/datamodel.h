@@ -86,9 +86,10 @@ public:
     QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
-    bool allIconsLoaded();
-    bool allIconChunkLoaded(int first, int last);
+    bool isAllIconsLoaded();
+    bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
+    bool isIconRangeLoaded();
     void setIconRange(int sfRow);
     void setChunkSize(int chunkSize);
     bool isPath(QString fPath);
@@ -123,8 +124,8 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
-    int startIconRange;                 // used in allIconsLoaded()
-    int endIconRange;                   // used in allIconsLoaded()
+    int startIconRange;
+    int endIconRange;
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
     bool checkChunkSize;                // true if iconChunkSize < rowCount()

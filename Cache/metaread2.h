@@ -33,6 +33,8 @@ public:
     QString reportMetaCache();
     void cleanupIcons();
 
+    bool isDispatching;
+
     int firstIconRow;
     int lastIconRow;
 
@@ -105,7 +107,7 @@ private:
     int redoCount = 0;
     int redoMax = 5;
     
-    bool isDispatching;
+    // bool isDispatching;
     bool isDone;
     bool aIsDone;
     bool bIsDone;

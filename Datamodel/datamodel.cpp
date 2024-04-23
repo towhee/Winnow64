@@ -376,8 +376,7 @@ int DataModel::insert(QString fPath)
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataLoaded = false;
-    G::allMetadataAttempted = false;
-    G::allIconsLoaded = false;
+    G::iconChunkLoaded = false;
 
     /*
     After insertion, in the call function add
@@ -1721,7 +1720,7 @@ int DataModel::iconCount()
     return count;
 }
 
-bool DataModel::allIconsLoaded()
+bool DataModel::isAllIconsLoaded()
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentFolderPath;
@@ -1735,36 +1734,61 @@ bool DataModel::allIconsLoaded()
 
 }
 
-bool DataModel::allIconChunkLoaded(int first, int last)
+bool DataModel::isAllIconChunkLoaded(int first, int last)
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentFolderPath;
 
     if (first < 0 || last > sf->rowCount()) return false;
     for (int row = first; row <= last; ++row) {
-        if (itemFromIndex(index(row, 0))->icon().isNull()) {
+        QModelIndex sfIdx = sf->index(row, 0);
+        if (!sfIdx.isValid()) {
+            qDebug() << "DataModel::isAllIconChunkLoaded invalic index!"
+                     << "row =" << row
+                     << "first =" << first
+                     << "last =" << last
+                ;
+            return false;
+        }
+        if (sfIdx.data(Qt::DecorationRole).isNull()) {
             //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
             return false;
         }
+        // if (itemFromIndex(sf->index(row, 0))->icon().isNull()) {
+        //     //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
+        //     return false;
+        // }
     }
     return true;
 
 }
 
+bool DataModel::isIconRangeLoaded()
+{
+    for (int row = startIconRange; row <= endIconRange; row++) {
+        if (sf->index(row,0).data(Qt::DecorationRole).isNull()) return false;
+    }
+    return true;
+}
+
 void DataModel::setIconRange(int sfRow)
 {
+    // if (iconChunkSize >= rowCount()) {
+    //     G::iconChunkLoaded = true;
+    //     return;
+    // }
     // row count less than icon range
     int rows = sf->rowCount();
     int start;
     int end;
     start = sfRow - iconChunkSize / 2;
-    if (start< 0) start = 0;
+    if (start < 0) start = 0;
     end = start + iconChunkSize;
     if (end >= rows) end = rows - 1;
-    G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
+    // G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
     startIconRange = start;
     endIconRange = end;
-    // G::iconChunkLoaded = allIconChunkLoaded(startIconRange, endIconRange);
+    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 
 void DataModel::setChunkSize(int chunkSize)
@@ -1773,25 +1797,21 @@ void DataModel::setChunkSize(int chunkSize)
     checkChunkSize = chunkSize > rowCount();
 }
 
-void DataModel::clearAllIcons()
+void DataModel::clearAllIcons() // not being used
 {
     lastFunction = "";
     if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance << currentFolderPath;
     QMutexLocker locker(&mutex);
-    QStandardItem *item;
     for (int row = 0; row < rowCount(); ++row) {
-//        qDebug() << "DataModel::clearAllIcons  itemFromIndex  row =" << row;
-        item = itemFromIndex(index(row, 0));
-        if (!item->icon().isNull()) {
-            item->setIcon(QIcon());
-        }
+        setData(index(row, 0), QVariant(), Qt::DecorationRole);
     }
 }
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
     lastFunction = "";
-    if (isDebug) qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    // if (isDebug)
+        qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
     G::allMetadataLoaded = isLoaded;
 }
 
@@ -2585,7 +2605,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     if (suspendFiltering) return true;
 
     // still loading metadata
-    if (!G::allMetadataAttempted) return true;
+    if (!G::allMetadataLoaded) return true;
 
     // Check Raw + Jpg
     if (combineRawJpg) {

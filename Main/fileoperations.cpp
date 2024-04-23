@@ -187,7 +187,6 @@ void MW::insertFile(QString fPath)
         dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
         imageCacheThread->removeCachedImage(fPath);
         G::allMetadataLoaded = false;
-        G::allIconsLoaded = false;
         G::iconChunkLoaded = false;
     }
     // insert a new image

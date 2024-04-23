@@ -81,7 +81,6 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
                  << "isRunning =" << isRunning()
                  << "src =" << src
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                 << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "G::iconChunkLoaded =" << G::iconChunkLoaded
                     ;
     }
@@ -108,13 +107,13 @@ void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
     lastRow = sfRowCount - 1;
     // icon range size in case changes ie thumb size change
     //iconChunkSize = dm->iconChunkSize;
-    iconLimit = static_cast<int>(dm->iconChunkSize * 1.2);
+    iconLimit = static_cast<int>(dm->iconChunkSize * 1.2);  // RGH not req'd
     // adjust icon range to startRow
     firstIconRow = startRow - dm->iconChunkSize / 2;
     if (firstIconRow < 0) firstIconRow = 0;
     lastIconRow = firstIconRow + dm->iconChunkSize - 1;
     if (lastIconRow > lastRow) lastIconRow = lastRow;
-    ///*
+    /*
             qDebug() << "MetaRead::start"
                      << "startRow =" << startRow
                      << "firstIconRow =" << firstIconRow

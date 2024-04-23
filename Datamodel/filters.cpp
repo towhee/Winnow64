@@ -1492,13 +1492,12 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::allMetadataAttempted ||
+        !G::allMetadataLoaded ||
         buildingFilters)
     {
         /*
         qDebug() << "Filters::itemClickedSignal failed"
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                 << "G::allIconsLoaded =" << G::allIconsLoaded
                  << "G::iconChunkLoaded =" << G::iconChunkLoaded
                  << "buildingFilters =" << buildingFilters
             ; //*/
