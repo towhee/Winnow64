@@ -69,7 +69,8 @@ void MW::keyDown()
 
 void MW::keyPageUp()
 {
-    if (G::isLogger) G::log("MW::keyPageUp");
+    if (G::isLogger)
+        G::log("MW::keyPageUp");
     if (G::mode == "Loupe") sel->nextPage();
     if (G::mode == "Table") sel->nextPage();
     if (G::mode == "Grid") sel->nextPage();
@@ -77,7 +78,8 @@ void MW::keyPageUp()
 
 void MW::keyPageDown()
 {
-    if (G::isLogger) G::log("MW::keyPageDown");
+    if (G::isLogger)
+        G::log("MW::keyPageDown");
     if (G::mode == "Loupe") sel->prevPage();
     if (G::mode == "Table") sel->prevPage();
     if (G::mode == "Grid") sel->prevPage();
