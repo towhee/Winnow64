@@ -38,6 +38,9 @@ public:
     int cellsPerVP;                     // includes partly visible cells
     int cellsPerPage;                   // whole cells only
 
+    bool isFirstCellPartial;
+    bool isLastCellPartial;
+
     bool thumbSplitDrag = false;
 
     bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
@@ -52,7 +55,6 @@ public:
     };
 
     void updateVisible(QString src);
-    void updateVisibleCellCount(QString src);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,

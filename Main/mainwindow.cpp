@@ -260,7 +260,7 @@ Tracking the icon parameters:
 
     When this happens:
 
-        • IconView::updateVisibleCellCount is called.
+        //• IconView::updateVisibleCellCount is called.
         • IconView::updateVisible is called.  A number of IconView operations use
           the parameters defined in IconView::updateVisible.
         • MW::updateIconRange updates the DataModel iconChunkSize based on which
@@ -2600,14 +2600,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
-    static int prevVisibleIcons = 0;
-    bool visibleIconsChanged = false;
     static int chunkSize = dm->defaultIconChunkSize;
     bool chunkSizeChanged = false;
-    static QSize prevCellSize = QSize();
-    bool cellSizeChanged;
-    static QSize prevViewportSize = QSize();
-    bool viewportSizeChanged;
 
     // Grid might not be selected in CentralWidget
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
@@ -2633,8 +2627,6 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // visible icons
     int midVisible = firstVisible + (firstVisible + lastVisible) / 2;
     int visibleIcons = lastVisible - firstVisible + 1;
-    visibleIconsChanged = visibleIcons != prevVisibleIcons;
-    prevVisibleIcons = visibleIcons;
 
     // chunk size
     if (dm->iconChunkSize < visibleIcons) dm->setChunkSize(visibleIcons);
@@ -2646,7 +2638,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // Set icon range and G::iconChunkLoaded
     dm->setIconRange(dm->currentSfRow);
 
-    // /* debug
+    /* debug
     qDebug()
          << "MW::updateIconRange" << "row =" << dm->currentSfRow << "src =" << src
          << "dm->iconChunkSize =" << dm->iconChunkSize
@@ -2667,8 +2659,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
 //        */
 
     // update icons cached only when the icon or viewport size changes
-    if (chunkSizeChanged /*|| visibleIconsChanged*/) {
-    // if (!dm->isIconRangeLoaded() && !metaReadThread->isDispatching) {
+    if (chunkSizeChanged) {
         bool fileSelectionChange = false;
         loadConcurrent(midVisible, fileSelectionChange, "MW::updateIconRange");
     }
