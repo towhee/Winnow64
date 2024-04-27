@@ -51,7 +51,7 @@ Icons
     An icon is a QPixmap reduction of an eligible image in the folder.  The icons are
     stored as QIcons in the datamodel in the first column using the DecorationRole.
 
-    ie dm->sf->index(row, 0).data(Qt::DecorationRole)
+    ie  dm->sf->index(row, 0).data(Qt::DecorationRole)
     and dm->sf->index(row, 0).data(Qt::DecorationRole).isNull
 
 Cells
@@ -147,30 +147,9 @@ Loading icons
 
     The best aspect fit has been eliminated:
 
-    Icons are loaded each time a new folder is selected. MetadataCache::loadIcon reads
-    the thumbnail pixmap into the DataModel as an icon. Thumbnails or icons are a maximum
-    of 256px and can have various aspect ratios. The IconView thumbView, when anchored to
-    the top or bottom of the centralWidget, sets its height based on the tallest aspect.
-    To dewtermine this, the widest and highest amounts are determined by calling
-    (fix) MetadataCache::iconMax for each icon as it is loaded as G::iconWMax and G::iconHMax.
-
-    The best fit is a function of the aspect ratios of the icon population. The IconView
-    cell size is defined by the smallest cell that will fit all the icons. For example,
-    if all the icons are 16x9 landscape then the cell size will be shorter than if the
-    icons were portrait 9x16 aspect. Usually there is a mix, and the thumb size (from
-    which the cell size is calc) is the rectangle that all the icons will fit.
-
-    ie |------------|  and  |------|  fit into  |------------|
-       |            |       |      |            |            |
-       |            |       |      |            |            |
-       |------------|       |      |            |            |
-                            |      |            |            |
-                            |      |            |            |
-                            |------|            |------------|
-
-    After all the icons have been loaded IconView::bestAspect is called to define iconWidth
-    and iconHeight, the dimensions of the rectangle that will just fit all the icons.  This
-    is sent to IconViewDelegate::setThumbDimensions.  The IconViewDelegate is where the icons
+    Icons are loaded each time a new folder is selected. Thumb->loadThumb reads the
+    thumbnail pixmap into the DataModel as an icon. Thumbnails or icons are a maximum of
+    256px and can have various aspect ratios.  The IconViewDelegate is where the icons
     are drawn in IconViewDelegate::paint.
 
 Making icons bigger or smaller
@@ -212,10 +191,9 @@ Scrolling
 
     MW::updateIconRange finds the greatest range of visible images in thumbView, gridView and
     tableView; held in MW::firstVisible, MW::midVisible, MW::lastVisible.
-
-    DataModel::setIconRange IS THIS BEING USED
 */
 
+// callback to friend class mw as m2
 extern MW *m2;
 MW *m2;
 
@@ -226,8 +204,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setObjectName(objName);
     //if (isDebug) G::log("IconView::IconView", objectName());
 
-    // this works because ThumbView is a friend class of MW.  It is used in the
-    // event filter to access the thumbDock
+    /* this works because ThumbView is a friend class of MW.  It is used in the
+       event filter to access the thumbDock and to access MW::updateIconRange. */
     m2 = qobject_cast<MW*>(parent);
     this->viewport()->setObjectName(objName + "ViewPort");
 
@@ -456,6 +434,7 @@ void IconView::updateVisible(QString src)
     visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     isFirstCellPartial = !viewport()->rect().contains(visualRect(tlIdx));
     isLastCellPartial = !viewport()->rect().contains(visualRect(brIdx));
+    if (isDebug)
     qDebug() << "IconView::updateVisible"
              << objectName()
              << "cellsPerRow" << cellsPerRow
@@ -471,177 +450,7 @@ void IconView::updateVisible(QString src)
              << "isFirstCellPartial =" << isFirstCellPartial
              << "isLastCellPartial =" << isLastCellPartial
         ;
-    // qDebug() << "IconView::updateVisible first =" << firstVisibleCell << "last =" << lastVisibleCell;
     return;
-
-    /*
-    // get current position from scroll bars
-    int n = dm->sf->rowCount() - 1;
-    double rCells = cellsPerPageRow;
-    double x;                               // scrollBar current value (position)
-    double max;                             // scrollBar maximum value
-    int rMax = ceil((double)n / rCells) - rowsPerPage;
-    double p;
-    double r;
-    double f;
-    if (isWrapping()) {
-        x = verticalScrollBar()->value();
-        max = verticalScrollBar()->maximum();
-        p = x / max;                                        // scrollBar percentage in range
-        r = p * rMax;                                       // first visible row
-        double r1 = r - (int)r;                             // portion first row ht visible
-        firstVisibleCell = (int)r * cellsPerPageRow;
-        int visibleRows = ceil(rowsPerVP - r1) + ceil(r1);
-        int visibleCells = visibleRows * cellsPerPageRow;
-
-        qDebug() << "vpHt =" << viewport()->height()
-                 << "cellHt =" << getCellSize().height()
-                 << "r =" << r
-                 << "r - (int)r =" << r - (int)r
-                 << "rowsPerVP =" << rowsPerVP
-                 << "visibleRows =" << visibleRows
-                 << "visibleCells =" << visibleCells
-                    ;
-
-        lastVisibleCell = firstVisibleCell + visibleCells - 1;
-    }
-    else {
-        x = horizontalScrollBar()->value();
-        max = horizontalScrollBar()->maximum();
-        p = (double)x / max;                     // scrollBar percentage in range
-        f = p * (n - cellsPerRow) + p;
-        firstVisibleCell = p * (n - cellsPerRow) + p;
-        lastVisibleCell = firstVisibleCell + cellsPerVP;
-    }
-    if (lastVisibleCell > n) lastVisibleCell = n;
-    midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
-    // /*
-    qDebug() << "\nIconView::updateVisible"
-             << objectName()
-             << "cellsPerRow" << cellsPerRow
-             << "cellsPerPageRow" << cellsPerPageRow
-             << "rowsPerVP" << rowsPerVP
-             << "rowsPerPage" << rowsPerPage
-             << "cellsPerVP" << cellsPerVP
-             << "cellsPerPage" << cellsPerPage
-             << "n =" << n
-             << "x =" << x
-             << "max =" << max
-             << "p =" << p
-             << "r =" << r
-             << "rMax =" << rMax
-             << "rCells =" << rCells
-             << "f =" << f
-             << "visibleCellCount =" << cellsPerPage
-             << "firstVisibleCell =" << firstVisibleCell
-             << "lastVisibleCell =" << lastVisibleCell
-             << "midVisibleCell =" << midVisibleCell
-        ;
-    return;
-    */
-
-    /* Alternatives
-    // get from iconViewDelegate (only works if the icon/image is visible in cell))
-    firstVisibleCell = iconViewDelegate->firstVisible;
-    lastVisibleCell = iconViewDelegate->lastVisible;
-    midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
-    visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-    return;
-
-    int n = dm->sf->rowCount() - 1;
-    bool isGrid = objectName() == "Grid";
-
-    qDebug() << "IconView::updateVisibleCells  row" << sfRow
-             << "n =" << n
-             << "G::dmEmpty =" << G::dmEmpty
-                ;
-
-    if (sfRow >= 0) {
-        QSize cell = getCellSize();
-        QSize vp = viewport()->size();
-        int cellsPerRow = vp.width() / cell.width() + 1;
-        int rowsPerVP = 1;
-        if (isGrid) rowsPerVP = vp.height() / cell.height() + 1;
-        int cellsPerVP = cellsPerRow * rowsPerVP;
-        int half = static_cast<int>(cellsPerVP * 0.5);
-
-        qDebug() << "IconView::updateVisibleCells"
-                 << objectName()
-                 << "row =" << sfRow
-                 << "cellsPerRow =" << cellsPerRow
-                 << "cellsPerVP =" << cellsPerVP
-                 << "half =" << half
-            ;
-
-        if (cellsPerVP < n) {
-            midVisibleCell = sfRow;
-            firstVisibleCell = midVisibleCell - half;
-            if (firstVisibleCell < 0) firstVisibleCell = 0;
-            lastVisibleCell = firstVisibleCell + cellsPerVP;
-            if (lastVisibleCell > n ) {
-                lastVisibleCell = n;
-                firstVisibleCell = lastVisibleCell - cellsPerVP;
-            }
-        }
-        else {
-            firstVisibleCell = 0;
-            lastVisibleCell = n;
-            midVisibleCell = n / 2;
-        }
-        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-    }
-
-    else {
-        int first;
-        QRect vpRect = viewport()->rect();
-
-        // estimate first icon from scrollbar position/value
-        if (isWrapping()) {
-            first = verticalScrollBar()->value() * 1.0 / verticalScrollBar()->maximum() * n;
-        }
-        else {
-            first = horizontalScrollBar()->value() * 1.0 / horizontalScrollBar()->maximum() * n;
-        }
-
-        // iterate visual rects to find actual first visible
-        if (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
-            while (visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
-                first--;
-                if (first < 0) break;
-            }
-            firstVisibleCell = first + 1;
-        }
-        else {
-            while (!visualRect(dm->sf->index(first, 0)).intersects(vpRect)) {
-                first++;
-                if (first > n) break;
-            }
-            firstVisibleCell = first;
-        }
-
-        // iterate visual rects to find actual mid and last visible
-        for (int row = firstVisibleCell; row < dm->sf->rowCount(); ++row) {
-            if (visualRect(dm->sf->index(row, 0)).contains(vpRect.center())) {
-                midVisibleCell = row;
-            }
-            if (!visualRect(dm->sf->index(row, 0)).intersects(vpRect)) {
-                lastVisibleCell = row - 1;
-                break;
-            }
-            lastVisibleCell = dm->sf->rowCount() - 1;
-        }
-
-        visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
-    }
-
-    qDebug() << "IconView::updateVisibleCells"
-             << objectName()
-             << "row =" << sfRow
-             << "firstVisibleCell =" << firstVisibleCell
-             << "lastVisibleCell =" << lastVisibleCell
-             << "midVisibleCell =" << midVisibleCell
-                ;
-                //*/
 }
 
 bool IconView::isCellVisible(int row)

@@ -48,7 +48,7 @@ FrameDecoder::FrameDecoder(QObject *parent)
 void FrameDecoder::stop()
 {
     if (status == Status::Idle) {
-        emit stopped("FrameDecoder");
+        // emit stopped("FrameDecoder");
         return;
     }
     abort = true;
@@ -93,7 +93,7 @@ void FrameDecoder::getNextThumbNail(QString src)
     if (G::isLogger) G::log("FrameDecoder::getFrame");
     if (abort) {
         abort = false;
-        emit stopped("FrameDecoder");
+        // emit stopped("FrameDecoder");
     }
 
     if (queue.isEmpty()) {

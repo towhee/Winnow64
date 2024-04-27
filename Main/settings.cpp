@@ -341,7 +341,7 @@ bool MW::loadSettings()
         G::modifySourceFiles = false;
         G::modifySourceFiles = false;
         G::useSidecar = false;
-//        G::embedTifJpgThumb = false;
+        // G::embedTifJpgThumb = false;
 
         // ingest
         autoIngestFolderPath = false;
@@ -388,9 +388,9 @@ bool MW::loadSettings()
     // Get settings saved from last session
 
     // general
-//    sortColumn = setting->value("sortColumn").toInt();
-//    prevSortColumn = sortColumn;
-//    isReverseSort = setting->value("sortReverse").toBool();
+    // sortColumn = setting->value("sortColumn").toInt();
+    // prevSortColumn = sortColumn;
+    // isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = settings->value("autoAdvance").toBool();
     turnOffEmbellish = settings->value("turnOffEmbellish").toBool();
     /*

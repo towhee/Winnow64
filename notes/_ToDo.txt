@@ -9,12 +9,12 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
+- ImageView::load not always work when jumping around folders
 - ImageView zoom when click not always work (double click issue)
-- Esc to abort metaRead
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
-- FS and Bookmarks show not selected row highlighted sometimes
+- FS and Bookmarks show unselected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads
@@ -118,6 +118,7 @@ DONE/FIXED
 - Scrolling when a filter change does not change the IconViews
 - No image showing when refilter after null filter.
 - Sort option not sticky when change folders but also not reset to filename in menu
+- Esc to abort metaRead
 - Not showing Building filters message when filters panel is visible.
 - If view mode TableView and 1st file is video get "Gathering metadata and thumbnails for ..."
 - Added preview dimensions to InfoView

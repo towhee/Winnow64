@@ -1,8 +1,8 @@
-prefix=C:/Program Files (x86)/zlib
-exec_prefix=C:/Program Files (x86)/zlib
-libdir=C:/Program Files (x86)/zlib/lib
-sharedlibdir=C:/Program Files (x86)/zlib/lib
-includedir=C:/Program Files (x86)/zlib/include
+prefix=/Users/roryhill/Projects/Winnow64/Lib/zlib/Arm64-Release
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+sharedlibdir=${libdir}
+includedir=${prefix}/include
 
 Name: zlib
 Description: zlib compression library

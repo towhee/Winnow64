@@ -102,6 +102,8 @@ BuildFilters::BuildFilters(QObject *parent,
 
 void BuildFilters::stop()
 {
+    if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::stop");
     /*
     if (debugBuildFilters)
         qDebug()
@@ -117,7 +119,6 @@ void BuildFilters::stop()
         abort = false;
     }
     if (!isReset) reset();
-    //if (G::stop) emit stopped("BuildFilters");
 }
 
 void BuildFilters::abortIfRunning()

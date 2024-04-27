@@ -1029,7 +1029,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
         if (qAbs(delta) == 0) return;
         if (delta > 0) sel->prev();
         else sel->next();
-        qDebug() << "ImageView::wheelEvent accumDelta =" << accumDelta;
+        // qDebug() << "ImageView::wheelEvent accumDelta =" << accumDelta;
         accumDelta = 0;
         t.restart();
     }

@@ -516,7 +516,8 @@ private slots:
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
 //    void updateImageCachePosition();  rgh trigger imageCache
-    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
+    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
+                                       bool success, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,

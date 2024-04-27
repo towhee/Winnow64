@@ -34,9 +34,9 @@ void Preferences::rory()
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
 
-    capIdx = findCaptionIndex("iconChunkSize");
-    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
-    else setRowHidden(capIdx.row(), capIdx.parent(), true);
+    // capIdx = findCaptionIndex("iconChunkSize");
+    // if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
+    // else setRowHidden(capIdx.row(), capIdx.parent(), true);
 
     capIdx = findCaptionIndex("cacheMethod");
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
@@ -1062,11 +1062,11 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
     // hide/show progressWidthSlider in preferences
-//    QModelIndex idx = findCaptionIndex("showCacheProgressBar");
-//    if (model->index(idx.row(), 1, idx.parent()).data().toBool())
-//        setRowHidden(capIdx.row(), capIdx.parent(), false);
-//    else
-//        setRowHidden(capIdx.row(), capIdx.parent(), true);
+    // QModelIndex idx = findCaptionIndex("showCacheProgressBar");
+    // if (model->index(idx.row(), 1, idx.parent()).data().toBool())
+    //     setRowHidden(capIdx.row(), capIdx.parent(), false);
+    // else
+    //     setRowHidden(capIdx.row(), capIdx.parent(), true);
 
     // Metadata chunk size (number of thumbnails)
     i.name = "iconChunkSize";

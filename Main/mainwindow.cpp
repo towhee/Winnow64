@@ -17,7 +17,7 @@ front and the rest are assigned as needed.
 
 • Load QSettings
 • Set default values if no settings available (first time run)
-• Set preference settings including
+• Set preference settings including:
     • General (previous folder etc)
     • Slideshow
     • Cache
@@ -39,64 +39,6 @@ front and the rest are assigned as needed.
   • Update the image cache
 
 ***********************************************************************************************
-
-PROGRAM FLOW - LINEAR - NEW FOLDER SELECTED
-
-    • A new folder is selected which triggers MW::selectionChange:
-
-    • Housekeeping:
-      - the DataModel instance is incremented.
-      - if DataModel is loading it is aborted.
-      - all threads that may be running are stopped.
-      - set flags, progress and views to start condition.
-      - folders and bookmarks synced.
-      - filters are cleared (uncheckAllFilters).
-
-    • All eligible image files (and associated QFileInfo: path, name, type, size, created
-      date and last modified date) in the folder are added to the DataModel (dm).
-
-    • // Currently resetting sort to file name in forward order
-      Sort to current sort item and forward/reverse, as the datamodel always loads in the
-      order from QFileInfo (file name in forward order).
-
-    • Current row indexes set to -1 (invalid).
-
-    • The first image thumbnail is selected in thumbView.
-
-Following is out of date:
-
-    • metadataCacheThread->loadNewFolder reads all the metadata for the first chunk of
-      images. The signal loadMetadataCache2ndPass is emitted.
-
-    • Based on the data collected in the first metadataCacheThread pass the icon
-      dimension best fit is determined, which is required to calculate the number of icons
-      visible in the thumbView and gridview.
-
-    • metadataCacheThread->loadNewFolder2ndPass reads the requisite number of icons and
-      emits loadImageCache.
-
-    • The imageCacheThread is initialized. fileSelectionChange is called for the current
-      image (the user may have already advanced).
-
-    • fileSelectionChange synchronizes the views and starts three processes:
-      1. ImageView::loadImage loads the full size image into the graphicsview scene.
-      2. The metadataCacheThread is started to read the rest of the metadata and icons.
-         If the number of images in the folder(s) is greater than the threshold only a
-         chunck of metadata is collected.
-      3. The imageCacheThread is started to cache as many full size images as assigned
-         memory permits.
-
-    • The first image is loaded. The metadata and thumbnail generation threads will still
-      be running, but things should appear to be speedy for the user.
-
-    • The metadata caching thread collects information required by the image cache
-      thread. If the number of images in the folder(s) is greater than the threshold only
-      a chunck of metadata is collected.
-
-    • The image caching thread requires the offset and length for the full size embedded
-      jpg, the image width and height in order to calculate memory requirements, update
-      the image priority queues, the target range and limit the cache to the assigned
-      maximum size.
 
 PROGRAM FLOW - CONCURRENT
 
@@ -183,30 +125,55 @@ A new image is selected which triggers a scroll event
 
     • Update the icon range (firstVisible/lastVisible)
 
-Flow by function call: (redo based on MetaRead2)
+Flow by function call: (MetaRead2)
 
     MW::folderSelectionChange
-    MW::stopAndClearAll
+    MW::stop                                Stop all activities before loading a new folder of images
+    DataModel::newInstance                  Increment datamodel instance
+    VideoView::stop
+    BuildFilters::stop
+    MetaRead2::stop
+    ImageCache::stop
+    FrameDecoder::stop
+    MW::reset
     DataModel::clearDataModel
+    Filters::removeChildrenDynamicFilters
+    Filters::clearAll
     DataModel::load
     DataModel::addFileData
-    MW::loadLinearNewFolder
-    DataModel::addAllMetadata
-    MW::updateIconsVisible
-    IconView::calcViewportRange
-    MetadataCache::readIconChunk
-    MW::loadImageCacheForNewFolder
+    MW::loadConcurrentNewFolder
     ImageCache::initImageCache
+    ImageCache::ClearImageCache
     ImageCache::buildImageCacheList
-    IconView::selectionChanged              Call MW::fileSelectionChange ~ flags
-    MW::fileSelectionChange
-    ImageView::loadImage                    If image is cached
-    MetadataCache::fileSelectionChange
-    ImageCache::setCurrentPosition
-    MetadataCache::readIconChunk
-    MW::updateCachedStatus                  Calls ImageView::LoadImage if current just cached
+    MetaRead2::initialize
+    Selection::setCurrentRow                           row = 0
+    Selection::setCurrentIndex                         row = 0 clearSelection = true
+    MW::loadConcurrent                                 row = 0 G::iconChunkLoaded = false
+    MetaRead2::setCurrentRow                           row = 0
+    MetaRead2::run
+    MetaRead2::dispatchReaders
+    MetaRead2::dispatch (for every image in folder)    emits to ImageCache::addCacheItemImageMetadata
+    Reader::read (for every image file in folder)      Reads metadata and icon (thumbnail)
+    ImageCache::addCacheItemImageMetadata
+    MW::fileSelectionChange                            emit from MetaRead2::dispatch for row = currentRow
+    ImageView::loadImage                               May not be cached yet
+    ImageCache::setCurrentPosition                     row = 0
+    ImageCache::memChk
+    ImageCache::updateTargets
+    ImageCache::cacheItemListComplete
+    ImageCache::setDirection
+    ImageCache::getImCacheSize
+    ImageCache::setPriorities                          key = 0
+    ImageCache::setTargetRange
+    ImageCache::resetAbortedCaching
+    MetaRead2::dispatchFinished
+    MW::loadConcurrentDone
+    Iterate to load the image cache
+    ImageCache::cacheImage                             Signal ImageView::loadImage if current image
     ImageView::loadImage
 
+    Changes:
+        // emit stopped("FrameDecoder");
 
 Flow Flags:
 
@@ -218,9 +185,9 @@ Flow Flags:
     G::isLinearLoadDone
     dm->loadingModel
     dm->basicFileInfoLoaded  // not used
-    G::isLinearLoading
+    G::isLinearLoading       // not used
     G::ignoreScrollSignal
-    isCurrentFolderOkay
+    isCurrentFolderOkay      // folder must exist and have eligible images
     isFilterChange
 
 Current model row:
@@ -1891,7 +1858,10 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
-    qDebug() << "\n\n\nMW::folderSelectionChange" << dPath;
+    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
+    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
+    // qDebug() << "\n\n\nMW::folderSelectionChange" << dPath;
+
     if (!stop("MW::folderSelectionChange()")) return;
 
     G::t.restart();
@@ -1906,9 +1876,6 @@ void MW::folderSelectionChange(QString dPath)
     if (dPath.length()) G::currRootFolder = dPath;
     else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
-
-    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
-    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 
@@ -2394,17 +2361,23 @@ bool MW::stop(QString src)
     if (G::stop) return false;
 
     if (G::useProcessEvents) qApp->processEvents();
+
+    // stop flags
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
     dm->newInstance();
     QString oldFolder = G::currRootFolder;
 
+    // show qDebug info
     bool isDebugStopping = false;
+
+    // measure performance
     QElapsedTimer tStop;
     tStop.restart();
     G::t.restart();
 
+    // stop other threads
     videoView->stop();
     {
     if (isDebugStopping && G::isFlowLogger)
@@ -2414,6 +2387,7 @@ bool MW::stop(QString src)
                  << G::t.elapsed() << "ms";
     G::t.restart();
     }
+
     buildFilters->stop();
     {
     if (isDebugStopping && G::isFlowLogger)
@@ -2456,6 +2430,7 @@ bool MW::stop(QString src)
         qDebug() << "MW::stop" << "Stop frameDecoder:        "
                  << "                 "
                  << G::t.elapsed() << "ms";
+
     // total stop time
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop total", QString::number(tStop.elapsed()) + " ms");
@@ -2490,11 +2465,13 @@ bool MW::reset(QString src)
 /*
     Resets everything prior to a folder change.
 */
-    if (G::isLogger) G::log("MW::reset", "Source: " + src);
 
     if (!G::stop) {
         return false;
     }
+
+    if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
+
 //    if (!G::dmEmpty /*|| !G::stop*/) {
 //        //qDebug() << "MW::reset G::dmEmpty == false";
 //        return false;
@@ -2770,7 +2747,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
           + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
 
-    // if (G::isLogger || G::isFlowLogger)
+    /*
     {
         qDebug().noquote()
                  << "MW::loadConcurrent  Row =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2783,7 +2760,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
                  << "dm->iconCount =" << dm->iconCount()
                  // << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
-    }
+    } //*/
 
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
         frameDecoder->clear();

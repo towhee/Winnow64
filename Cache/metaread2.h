@@ -44,7 +44,7 @@ public:
 signals:
     void stopped(QString src);
     void updateScroll();
-    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, bool /*success*/, QString/*calledBy*/);
     void centralMsg(QString message);
     void okToSelect(bool ok);
     void updateProgressInFilter(int progress);
@@ -75,6 +75,7 @@ private:
 
     void dispatchReaders();
     void dispatchFinished(QString src);
+    bool allMetaIconLoaded();
     void redo();
     int pending();
     inline bool needToRead(int row);
@@ -108,6 +109,7 @@ private:
     int redoMax = 5;
     
     // bool isDispatching;
+    bool success;
     bool isDone;
     bool aIsDone;
     bool bIsDone;

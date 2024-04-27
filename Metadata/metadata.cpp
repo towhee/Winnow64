@@ -1178,7 +1178,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         // get exif image created for image formats not included in Winnow
         QString createdDate = readExifToolTag(m.fPath, "createdate");
         m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
-        //m.metadataLoaded = true;
+        m.metadataLoaded = true;
         if (G::useSidecar) {
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadOnly)) {
