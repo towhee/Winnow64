@@ -1754,7 +1754,7 @@ void MW::createFilterMenu()
     filterMenu = new QMenu(this);
     filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
-    filterMenu->addAction(filterUpdateAction);
+    // filterMenu->addAction(filterUpdateAction);
     filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();
@@ -2012,7 +2012,7 @@ void MW::createFiltersContextMenu()
     separatorAction2->setSeparator(true);
     filterActions = new QList<QAction *>;
     //    QList<QAction *> *filterActions = new QList<QAction *>;
-    filterActions->append(filterUpdateAction);
+    // filterActions->append(filterUpdateAction);
     filterActions->append(clearAllFiltersAction);
     filterActions->append(filterInvertAction);
     filterActions->append(searchTextEditAction);
@@ -2457,7 +2457,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Filters
-        filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
+        // filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
         clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 

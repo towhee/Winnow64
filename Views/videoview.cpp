@@ -93,8 +93,8 @@ void VideoView::pause()
 
 void VideoView::stop()
 {
-    if (G::isLogger || isDebug)
-        qDebug() << "VideoView::stop";
+    if (G::isLogger || G::isFlowLogger || isDebug)
+        G::log("VideoView::stop");
     emit showMouseCursor();
     video->stop();
     QGuiApplication::restoreOverrideCursor();

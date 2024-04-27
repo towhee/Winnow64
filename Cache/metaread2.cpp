@@ -131,6 +131,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // G::iconChunkLoaded = (firstIconRow >= dm->startIconRange && lastIconRow <= dm->endIconRange);
     abortCleanup = isRunning();     // check how this works - prob wrong
     isDone = false;
+    success = false;
     mutex.unlock();
 
     if (isDebug)
@@ -151,7 +152,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             ;
     }
 
-    if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead2::run");
+    if (G::useUpdateStatus) emit runStatus(true, true, false, "MetaRead2::run");
 
     if (isDispatching) {
         if (isDebug)
@@ -254,6 +255,7 @@ void MetaRead2::initialize()
     aIsDone = false;
     bIsDone = false;
     isDone = false;
+    success = false;
     quitAfterTimeoutInitiated = false;
     redoCount = 0;
     err.clear();
@@ -444,10 +446,10 @@ void MetaRead2::cleanupIcons()
 
 inline bool MetaRead2::needToRead(int row)
 /*
-    Returns true if either the metadata or icon (thumbnail) has not been read.
+    Returns true if either the metadata or icon (thumbnail) has not been loaded.
 */
 {
-    if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
+    if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
         return true;
     }
     if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) {
@@ -556,6 +558,11 @@ int MetaRead2::pending()
     return pendingCount;
 }
 
+bool MetaRead2::allMetaIconLoaded()
+{
+    return dm->isAllMetadataLoaded() && dm->isIconRangeLoaded();
+}
+
 void MetaRead2::redo()
 /*
     If not all metadata or icons were successfully read then try again.
@@ -575,6 +582,10 @@ void MetaRead2::redo()
     bIsDone = false;
     a = startRow;
     b = startRow;
+    // stop all readers
+    for (int id = 0; id < readerCount; ++id) {
+        reader[id]->stop();
+    }
     dispatchReaders();
 }
 
@@ -950,7 +961,7 @@ void MetaRead2::dispatch(int id)
 
 void MetaRead2::dispatchReaders()
 {
-    if (G::isLogger) G::log("MetaRead2::dispatchReaders");
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::dispatchReaders");
     if (isDebug)
     {
     qDebug().noquote()
@@ -979,38 +990,40 @@ void MetaRead2::dispatchReaders()
 
 void::MetaRead2::quitAfterTimeout()
 {
-    if (!isDone) {
-        if ((pending()) && (redoCount < redoMax)) {
-            if (isDebug) {
-                qDebug()
-                    << "MetaRead2::dispatch     Redo                "
-                    << "redoCount =" << redoCount
-                    << "redoMax =" << redoMax
-                    ;
-            }
-            // try to read again
-            if (!abort) {
-                redo();
-            }
+    if (redoCount < redoMax) {
+        if (!abort && !allMetaIconLoaded()) {
+            redo();
         }
-
-        if (G::isLogger || G::isFlowLogger)  G::log("MW::quitAfterTimeout", "Done");
-        if (isDebug)
-        {
-            qDebug().noquote()
-                 << "MetaRead2::quitAfterTimeout  We Are Done."
-                 << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
-                 ;
-                 //<< dm->currentFolderPath << "toRead =" << toRead;
-        }
-
-        // if (!abort) cleanupIcons();
-        // if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead2::quitAnyway");
-
-        // emit done();
-        // isDispatching = false;
-        dispatchFinished("QuitAfterTimeout");
     }
+    dispatchFinished("QuitAfterTimeout");
+
+    // if (!isDone) {
+    //     if ((pending()) && (redoCount < redoMax)) {
+    //         if (isDebug) {
+    //             qDebug()
+    //                 << "MetaRead2::dispatch     Redo                "
+    //                 << "redoCount =" << redoCount
+    //                 << "redoMax =" << redoMax
+    //                 ;
+    //         }
+    //         // try to read again
+    //         if (!abort) {
+    //             redo();
+    //         }
+    //     }
+
+    //     if (G::isLogger || G::isFlowLogger)  G::log("MW::quitAfterTimeout", "Done");
+    //     if (isDebug)
+    //     {
+    //         qDebug().noquote()
+    //              << "MetaRead2::quitAfterTimeout  We Are Done."
+    //              << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
+    //              ;
+    //              //<< dm->currentFolderPath << "toRead =" << toRead;
+    //     }
+
+    //     dispatchFinished("QuitAfterTimeout");
+    // }
 }
 
 void MetaRead2::dispatchFinished(QString src)
@@ -1020,7 +1033,10 @@ void MetaRead2::dispatchFinished(QString src)
         qDebug() << "MetaRead2::dispatchFinished" << src
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
             ;
-    if (G::useUpdateStatus) emit runStatus(false, true, src);
+    bool running = false;
+    bool show = true;
+    success = allMetaIconLoaded();
+    if (G::useUpdateStatus) emit runStatus(running, show, success, src);
     cleanupIcons();
     isDone = true;
     isDispatching = false;

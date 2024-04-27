@@ -229,7 +229,8 @@ void MW::updateProgressBarWidth()
     }
 }
 
-void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QString calledBy)
+void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
+                                       bool success, QString calledBy)
 {
     if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
     /*
@@ -245,16 +246,16 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
         #endif
     }
     else {
-        if (calledBy == "QuitAfterTimeout") {
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;}");
-            #ifdef Q_OS_WIN
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;font-size: 24px;}");
-            #endif
-        }
-        else {
+        if (success) {
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;}");
             #ifdef Q_OS_WIN
             metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;font-size: 24px;}");
+            #endif
+        }
+        else {
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;}");
+            #ifdef Q_OS_WIN
+            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;font-size: 24px;}");
             #endif
         }
     }

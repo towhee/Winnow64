@@ -509,7 +509,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     lastFunction = "";
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
 
-    clearDataModel();
+    // clearDataModel();        // already called by MW::reset
     if (isDebug)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
     currentFolderPath = folderPath;

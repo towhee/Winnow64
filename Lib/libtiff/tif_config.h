@@ -57,6 +57,7 @@
 /* #undef HAVE_FSEEKO */
 
 /* Define to 1 if you have the `getopt' function. */
+#define HAVE_GETOPT 0
 /* #undef HAVE_GETOPT */
 
 /* Define to 1 if you have the <GLUT/glut.h> header file. */

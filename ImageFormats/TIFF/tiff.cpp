@@ -2060,3 +2060,51 @@ It’s better to write code that does not cause the warning in the first place.
 
     return tiffStrips;
 }
+
+/*
+
+Yes, LibTIFF supports adding a thumbnail preview in JPEG format to a TIFF file. Here's
+how you can do it: Open or create the TIFF file using TIFFOpen or TIFFOpenOldStyle.
+Create a new directory for the thumbnail using TIFFCreateDirectory. Set the fields for
+the thumbnail directory, such as image width, height, bits per sample, photometric
+interpretation, compression (set to COMPRESSION_JPEG), etc., using TIFFSetField. Write
+the JPEG compressed thumbnail data to the thumbnail directory using TIFFWriteEncodedStrip
+or TIFFWriteEncodedTile. Set the thumbnail fields in the main image directory, such as
+TIFFTAG_SUBFILETYPE to FILETYPE_REDUCEDIMAGE, and TIFFTAG_SUBIFD to the offset of the
+thumbnail directory. Close the TIFF file using TIFFClose. Here's an example code snippet
+that demonstrates adding a JPEG thumbnail to a TIFF file using LibTIFF: c #include
+<tiffio.h>
+
+int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size) {
+    uint16 thumb_photometric = PHOTOMETRIC_RGB;
+    uint16 thumb_bps = 8;
+    uint16 thumb_spp = 3;
+    uint32 thumb_rowsperstrip = TIFFDefaultStripSize(tif, 0);
+
+    uint32 new_dir_offset = TIFFCreateDirectory(tif);
+    TIFFSetDirectory(tif, new_dir_offset);
+
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, thumb_bps);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, thumb_spp);
+    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, thumb_rowsperstrip);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, thumb_photometric);
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_JPEG);
+    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+
+    TIFFWriteEncodedStrip(tif, 0, thumb_data, thumb_size);
+
+    TIFFSetDirectory(tif, 0);
+    TIFFSetField(tif, TIFFTAG_SUBFILETYPE, FILETYPE_REDUCEDIMAGE);
+    TIFFSetField(tif, TIFFTAG_SUBIFD, new_dir_offset);
+
+    return 1;
+}
+
+This code creates a new directory for the thumbnail, sets the appropriate fields, writes
+the JPEG compressed thumbnail data, and then sets the TIFFTAG_SUBFILETYPE and
+TIFFTAG_SUBIFD fields in the main image directory to link to the thumbnail.
+
+
+*/
