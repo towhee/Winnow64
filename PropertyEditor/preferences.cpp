@@ -359,7 +359,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
-        // setStyleSheet(mw->css);
+        setStyleSheet(mw->css);
         #ifdef Q_OS_WIN
             Win::setTitleBarColor(mw->preferencesDlg->winId(), G::backgroundColor);
         #endif
