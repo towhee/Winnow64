@@ -87,16 +87,15 @@ PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
     • MW::loadConcurrentNewFolder sets the current file path, initializes the imageCacheThread
       and metaReadThread, and calls Selection::currentIndex(0).
 
-        metaReadThread->setCurrentRow.  This starts the
-      metaReadThread, which iterates through the DataModel, adding all the image metadata and
-      thumbnail icons.  For each item, the metadata is also signalled to the imageCacheThread
+    • metaReadThread->setCurrentRow. This starts the metaReadThread, which iterates
+      through the DataModel, adding all the image metadata and thumbnail icons. For each
+      item, the metadata is also signalled to the imageCacheThread
       ImageCache::addCacheItemImageMetadata.
 
     • As the metaReadThread iterates, when it reaches a imageCacheTriggerCount, it signals
       the imageCacheThread to start loading the cache.
 
 PROGRAM FLOW - CONCURRENT - NEW IMAGE SELECTED
-PROGRAM FLOW - FOLDER AND FILE SELECTED
 
     A new image is selected which triggers fileSelectionChange:
 

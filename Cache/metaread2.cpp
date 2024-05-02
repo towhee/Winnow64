@@ -4,8 +4,8 @@
 /*
     MetaRead2, running in a separate thread, dispatches readers to load the metadata and
     icons into the datamodel (dm), which will already include the file information,
-    loaded by DataModel::addFileData. Icons will be loaded up to iconChunkSize, which is
-    set to 20000.
+    loaded by DataModel::addFileData. Icons will be loaded up to iconChunkSize, which
+    defaults to 3000, and can be customized in settings.
 
     The idealThreadCount number of reader are created.  Readers read the metadata and icon
     and update the DataModel and ImageCache.
@@ -17,11 +17,11 @@
         • Dispatch is called for each reader.  Each time dispatch is called it iterates
           through the datamodel in a ahead/behind order.
 
-        • Start the ImageCache.
+        • Start the ImageCache when startRow has been read.
 
         • When each reader is finished it signals dispatch to be assigned a new file.
 
-        • When all files read clean up excess icons.
+        • When all files read clean up excess icons and signal MW::loadCurrentDone.
 
         • Abort and restart when a new setCurrentRow is called.
 
@@ -39,6 +39,20 @@
           from MW::loadCurrent.
         • if the new start row has not been read, fileSelectionChange is emitted
           from dispatch when a reader returns after reading the start row.
+
+    Are we done?
+
+        Determining if all the metadata and iconChungeRange have been loaded needs to
+        consider if a read operation has failed or if the file has been read but the
+        reader done signal has not been processed yet.
+
+        • dm->isAllMetadataAttempted and dm->isAllIconChunkLoaded check if datamodel is
+          complete.  If not, calling redo will redispatch readers to try again, up to
+          5 times.
+        • quitAfterTimeout runs if dispatchFinished has not run after a delay of 1000 ms.
+          redo is called and then dispatchFinished.
+        • dispatchFinished cleans up icons, resets flags, updates the statusbar and emits
+          done, which signals MW::loadCurrentDone.
 
     Note: All data in the DataModel must be set using a queued connection.  When subsequent
     actions are dependent on the data being set use Qt::BlockingQueuedConnection.
@@ -124,14 +138,12 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
-    // set icon range and G::iconChunkLoaded
-    // dm->setIconRange(startRow);
+    // set icon range and G::iconChunkLoaded is done in MW::loadCurrent
     firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
     lastIconRow = dm->endIconRange;
-    // G::iconChunkLoaded = (firstIconRow >= dm->startIconRange && lastIconRow <= dm->endIconRange);
     abortCleanup = isRunning();     // check how this works - prob wrong
     isDone = false;
-    success = false;
+    success = false;                // used to update statusbar
     mutex.unlock();
 
     if (isDebug)
@@ -153,6 +165,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     }
 
     if (G::useUpdateStatus) emit runStatus(true, true, false, "MetaRead2::run");
+                                        // isRunning, show, success, source
 
     if (isDispatching) {
         if (isDebug)
@@ -173,14 +186,14 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         a = startRow;
         b = startRow - 1;
         if (isDebug)
-        qDebug().noquote()
-            << "MetaRead2::setStartRow  Not dispatching so start()"
-            << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
-            << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
-            << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-            << "a =" << QString::number(a).leftJustified(4, ' ')
-            << "b =" << QString::number(b).leftJustified(4, ' ')
-            ;
+            qDebug().noquote()
+                << "MetaRead2::setStartRow  Not dispatching so start()"
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                ;
         if (!isRunning()) start();
     }
 }
@@ -198,16 +211,6 @@ bool MetaRead2::stop()
     }
 
     // stop MetaRead2 first so not calling readers
-    /*
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        //wait();
-    }
-    */
-
     if (isDispatching && !abort) {
         mutex.lock();
         abort = true;
@@ -272,32 +275,6 @@ void MetaRead2::syncInstance()
 {
     if (G::isLogger) G::log("MetaRead2::syncInstance");
     instance = dm->instance;
-}
-
-void MetaRead2::setIconRange()
-{
-    // row count less than icon range
-    if (dm->iconChunkSize > sfRowCount) {
-        firstIconRow = 0;
-        lastIconRow = sfRowCount - 1;
-        return;
-    }
-    // adjust icon range to startRow
-    int half = dm->iconChunkSize / 2;
-    bool closeToStart = startRow < half;
-    bool closeToEnd = startRow > sfRowCount - half;
-    if (closeToStart) {
-        firstIconRow = 0;
-        lastIconRow = firstIconRow + dm->iconChunkSize - 1;
-        return;
-    }
-    if (closeToEnd) {
-        lastIconRow = lastRow;
-        firstIconRow = lastIconRow - dm->iconChunkSize + 1;
-        return;
-    }
-    firstIconRow = startRow - half;
-    lastIconRow = firstIconRow + dm->iconChunkSize - 1;
 }
 
 QString MetaRead2::diagnostics()
@@ -455,12 +432,6 @@ inline bool MetaRead2::needToRead(int row)
     if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) {
         return true;
     }
-
-    /* Check if setStartRow called while still reading metadata, and the metadata has been read
-       for the new start row.  This enables viewing images while MetaRead2 is still reading
-       the metadata and icons.  */
-    //if (fileSelectionChanged && row == startRow) emit fileSelectionChange(dm->sf->index(row, 0));
-
     return false;
 }
 
@@ -560,12 +531,15 @@ int MetaRead2::pending()
 
 bool MetaRead2::allMetaIconLoaded()
 {
+/*
+    Has the datamodel been fully loaded?
+*/
     return dm->isAllMetadataLoaded() && dm->isIconRangeLoaded();
 }
 
 void MetaRead2::redo()
 /*
-    If not all metadata or icons were successfully read then try again.
+    If not all metadata or icons were successfully read so try again.
 */
 {
     if (G::isLogger || G::isFlowLogger)
@@ -651,7 +625,7 @@ void MetaRead2::dispatch(int id)
         return;
     }
 
-    // New reader and less rows than readers, end reader
+    // New reader and less rows (images to read) than readers, end reader
     if (r->fPath == "" && id >= dmRowCount) return;
 
     if (isDebug)
@@ -757,7 +731,6 @@ void MetaRead2::dispatch(int id)
         }
 
         if (isDebug)  // returning reader, row has been processed by reader
-        //if (toRead.size() < 10) // only last 10 rows in datamodel
         {
             // bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
             bool allLoaded = (dm->isAllMetadataAttempted() && dm->isAllIconsLoaded());
@@ -791,6 +764,7 @@ void MetaRead2::dispatch(int id)
         if (aIsDone && bIsDone) {
 
             // all metadata and icons been loaded into datamodel?
+            // should it be dm->isAllMetadataLoaded()
              bool allAttempted = dm->isAllMetadataAttempted() &&
                                 dm->isAllIconChunkLoaded(dm->startIconRange, dm->endIconRange);
 

@@ -359,7 +359,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
-        setStyleSheet(mw->css);
+        // setStyleSheet(mw->css);
         #ifdef Q_OS_WIN
             Win::setTitleBarColor(mw->preferencesDlg->winId(), G::backgroundColor);
         #endif
@@ -788,7 +788,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Application font size
+    // Info overlay font size
     i.name = "infoOverlayFontSize";
     i.parentName = "FontSizeHeader";
     i.tooltip = "Change the font size for the info overlay (usually showing the shooting"
