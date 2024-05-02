@@ -627,7 +627,7 @@ void PropertyEditor::resizeColumns()
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
     width = captionColumnWidth + valueColumnWidth + 3;
-    /*
+    // /*
     qDebug() << "PropertyEditor::resizeColumns"
              << "captionColumnWidth =" << captionColumnWidth
              << "valueColumnWidth =" << valueColumnWidth

@@ -82,7 +82,6 @@ private:
     bool nextA();
     bool nextB();
     bool nextRowToRead();
-    void setIconRange();
 
     QMutex mutex;
     QWaitCondition condition;

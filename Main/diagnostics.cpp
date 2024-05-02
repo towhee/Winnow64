@@ -257,6 +257,8 @@ QString MW::diagnostics()
     rpt << "\n" << "isPick = " << G::s(isPick);
 
     rpt << "\n\n" ;
+    rpt << "\n" << "STYLESHEET css:";
+    rpt << "\n" << css;
     return reportString;
 }
 
