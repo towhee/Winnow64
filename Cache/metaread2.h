@@ -86,7 +86,6 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
-    bool abortCleanup;
 
     QEventLoop runloop;
 

@@ -100,6 +100,9 @@ MetaRead2::~MetaRead2()
 
 void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 {
+/*
+
+*/
     if (G::isLogger || G::isFlowLogger) {
         QString running;
         isRunning() ? running = "true" : running = "false";
@@ -138,12 +141,11 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
-    // set icon range and G::iconChunkLoaded is done in MW::loadCurrent
+    isDone = false;
+    success = false;                        // used to update statusbar
+    // set icon range. G::iconChunkLoaded is set in MW::loadCurrent
     firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
     lastIconRow = dm->endIconRange;
-    abortCleanup = isRunning();     // check how this works - prob wrong
-    isDone = false;
-    success = false;                // used to update statusbar
     mutex.unlock();
 
     if (isDebug)
@@ -167,12 +169,23 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     if (G::useUpdateStatus) emit runStatus(true, true, false, "MetaRead2::run");
                                         // isRunning, show, success, source
 
+    /*
+    Readers are dispatched and this run() finishes. The readers load the data into the
+    DataModel and ImageCache, and then signal MW::dispatch, where they are iterated to
+    read the next DataModel item.
+
+    This means that isRunning() == false while the dispatching is still running. Another
+    flag, isDispatching, is used to track this.
+    */
     if (isDispatching) {
         if (isDebug)
-        qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
+        {
+            qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
+        }
         mutex.lock();
         isNewStartRowWhileStillReading = true;
         mutex.unlock();
+        // dispatch any inactive readers
         for (int id = 0; id < readerCount; id++) {
             if (!reader[id]->isRunning()) {
                 reader[id]->status = Reader::Status::Ready;
@@ -181,11 +194,15 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             }
         }
     }
+    //
     else {
+        mutex.lock();
         isNewStartRowWhileStillReading = false;
         a = startRow;
         b = startRow - 1;
+        mutex.unlock();
         if (isDebug)
+        {
             qDebug().noquote()
                 << "MetaRead2::setStartRow  Not dispatching so start()"
                 << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
@@ -194,6 +211,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                 << "a =" << QString::number(a).leftJustified(4, ' ')
                 << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
+        }
         if (!isRunning()) start();
     }
 }
@@ -578,11 +596,11 @@ void MetaRead2::dispatch(int id)
     Initial conditions: a = startRow, b = a - 1, isAhead = true
     a = row in ahead position
     b = row in behind position
-    readers signal back to dispatch
+    readers signal back to dispatch when done
 
     - if reader returning
         - status update
-        - deplete toRead list
+        - deplete toRead list (decremented)
         - quit if all read (return)
     - if a is done and b is done then return
     - if ahead then reader a, else reader b
@@ -607,6 +625,7 @@ void MetaRead2::dispatch(int id)
     r = reader[id];
     r->pending = false;
 
+    // abort
     if (abort || instance != dm->instance) {
         if (isDebug)
         {
@@ -625,7 +644,7 @@ void MetaRead2::dispatch(int id)
         return;
     }
 
-    // New reader and less rows (images to read) than readers, end reader
+    // New reader and less rows (images to read) than readers - do not dispatch
     if (r->fPath == "" && id >= dmRowCount) return;
 
     if (isDebug)
@@ -903,7 +922,6 @@ void MetaRead2::dispatch(int id)
                 << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
         }
-        // dispatchFinished("NoNextRow");
     }
 
     // if done in both directions fire delay to quit in case isDone fails
@@ -915,7 +933,7 @@ void MetaRead2::dispatch(int id)
                     << "MetaRead2::dispatch     aIsDone && bIsDone "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
             quitAfterTimeoutInitiated = true;
-            isDispatching = false;
+            // isDispatching = false;
             // if pending readers not all processed in delay ms then quit anyway
             int delay = 1000;
             if (isDebug)
@@ -930,7 +948,7 @@ void MetaRead2::dispatch(int id)
         return;
     }
 
-    isDispatching = true;
+    // isDispatching = true;
 }
 
 void MetaRead2::dispatchReaders()
@@ -943,6 +961,8 @@ void MetaRead2::dispatchReaders()
              << "readerCount =" << readerCount
                 ;
     }
+
+    isDispatching = true;
 
     for (int id = 0; id < readerCount; id++) {
         if (isDebug)
@@ -1046,7 +1066,6 @@ void MetaRead2::run()
                               ;
     }
 
-    isDone = false;
     dispatchReaders();
 
     if (isDebug)

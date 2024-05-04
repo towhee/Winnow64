@@ -179,6 +179,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "iconChunkSize") {
         mw->updateDefaultIconChunkSize(v.toInt());
+        mw->settings->setValue("iconChunkSize", v.toInt());
     }
 
     if (source == "loadOnlyVisibleIcons") {

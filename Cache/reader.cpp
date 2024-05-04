@@ -48,7 +48,7 @@ void Reader::read(const QModelIndex dmIdx,
             << "isRunning =" << isRunning()
             ;
     }
-    start();
+    if (instanceOk()) start();
 }
 
 void Reader::stop()
@@ -163,7 +163,7 @@ void Reader::readIcon()
     // if !G::renderVideoThumb then generic Video image returned from Thumb
     if (isVideo && G::renderVideoThumb) return;
 
-    if (thumbLoaded && !image.isNull()) {
+    if (thumbLoaded) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     }
     else {

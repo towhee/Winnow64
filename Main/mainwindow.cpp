@@ -2542,11 +2542,13 @@ void MW::updateDefaultIconChunkSize(int size)
 */
     if (G::isLogger) G::log("MW::updateDefaultIconChunkSize");
     // update settings
-    settings->setValue("iconChunkSize", size);
+    // settings->setValue("iconChunkSize", size);
     dm->defaultIconChunkSize = size;
     if (size > dm->iconChunkSize) {
         dm->iconChunkSize = size;
     }
+    bool isFileSelectionChange = false;
+    loadConcurrent(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
 }
 
 bool MW::updateIconRange(bool sizeChange, QString src)
@@ -2743,8 +2745,10 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
     dm->setIconRange(sfRow);        // sets G::iconChunkLoaded
 
-    if (G::isFlowLogger) G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
-          + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
+    if (G::isLogger || G::isFlowLogger) {
+        G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
+        + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
+    }
 
     /*
     {
@@ -3462,7 +3466,7 @@ void MW::thumbsShrink()
 void MW::addRecentFolder(QString fPath)
 {
     if (G::isLogger) G::log("MW::addRecentFolder");
-    if (recentFolders->contains(fPath) || fPath == "") return;
+    if (recentFolders->contains(fPath) || fPath == "") return; // EXC_BAD_ACCESS (SIGSEGV)
     recentFolders->prepend(fPath);
     int n = recentFolders->count();
     for (int i = 0; i < maxRecentFolders; i++) {
