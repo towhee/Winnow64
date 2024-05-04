@@ -23,6 +23,13 @@ public:
     bool insertingThumbnails = false;
     bool abort = false;
 
+    enum Status {
+        None,
+        Success,
+        Fail,
+        Open
+    };
+
 signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           QModelIndex dmIdx, int dmInstance);
@@ -39,10 +46,10 @@ private:
     int instance;
     QFileDevice::Permissions oldPermissions;
 
-    bool loadFromJpgData(QString &fPath, QImage &image);
-    bool loadFromTiff(QString &fPath, QImage &image, int row);
-    bool loadFromHeic(QString &fPath, QImage &image);
-    bool loadFromEntireFile(QString &fPath, QImage &image, int row);
+    Status loadFromJpgData(QString &fPath, QImage &image);
+    Status loadFromTiff(QString &fPath, QImage &image, int row);
+    Status loadFromHeic(QString &fPath, QImage &image);
+    Status loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QString &fPath, QImage &image);
 

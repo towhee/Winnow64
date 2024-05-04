@@ -11,6 +11,7 @@ WHAT'S NEW
 BUGS / TO DO
 - ImageView::load not always work when jumping around folders
 - ImageView zoom when click not always work (double click issue)
+- Missing thumbs deacivated for now
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons

@@ -724,8 +724,8 @@ bool ImageCache::cacheUpToDate()
     bool debugThis = false;
     isCacheUpToDate = true;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
-        if (icd->cacheItemList.at(i).isVideo) continue;
         if (i >= icd->cacheItemList.count()) break;
+        if (icd->cacheItemList.at(i).isVideo) continue;
         // check if image was passed over while rapidly traversing the folder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).decoderId == -1) {
             /*

@@ -1817,7 +1817,6 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
 
 bool DataModel::isMetadataAttempted(int sfRow)
 {
-    lastFunction = "";
     if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << currentFolderPath;
     return index(sfRow, G::MetadataAttemptedColumn).data().toBool();
 }
