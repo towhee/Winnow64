@@ -56,17 +56,18 @@ void Slider::mousePressEvent(QMouseEvent *event)
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
 /*
-The SliderEditor works within a range of integer values defined by min and max.  The
-lineEdit control shows the slider value, but it can be edited to enter a number outside
-the slider range.
+    The SliderEditor works within a range of integer values defined by min and max. The
+    lineEdit control shows the slider value, but it can be edited to enter a number
+    outside the slider range.
 
-When a real value is required, the range is increased by factor "div" and the lineEdit
-shows the slider value divided by "div".  The value in the lineEdit is returned as the
-sliderEditor value.
+    When a real value is required, the range is increased by factor "div" and the
+    lineEdit shows the slider value divided by "div". The value in the lineEdit is
+    returned as the sliderEditor value.
 
-Integer mode: div == 0
-Double mode : div != 0
+    Integer mode: div == 0
+    Double mode : div != 0
 */
+    qDebug() << "SliderEditor::SliderEditor";
     if (G::isLogger) G::log("SliderEditor::SliderEditor");
     this->idx = idx;
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
@@ -145,19 +146,21 @@ Double mode : div != 0
 
 double SliderEditor::value()
 {
+    qDebug() << "SliderEditor::value" << lineEdit->text().toDouble();
     if (G::isLogger) G::log("SliderEditor::value");
     return lineEdit->text().toDouble();
-//    return slider->value();
 }
 
 void SliderEditor::setValue(QVariant value)
 {
+    qDebug() << "SliderEditor::setValue" << value;
     if (G::isLogger) G::log("SliderEditor::setValue");
     slider->setValue(value.toInt());
 }
 
 void SliderEditor::sliderMoved()
 {
+    qDebug() << "SliderEditor::sliderMoved";
     if (G::isLogger) G::log("SliderEditor::sliderMoved");
     outOfRange = false;
 }
@@ -167,13 +170,19 @@ void SliderEditor::change(double value)
     if (G::isLogger) G::log("SliderEditor::change");
     if (outOfRange) return;
     double v = static_cast<double>(value) / div;
-    if (isInt) lineEdit->setText(QString::number(v));
-    else lineEdit->setText(QString::number(v, 'f', 2));
+    if (isInt) {
+        lineEdit->setText(QString::number(v));
+    }
+    else {
+        lineEdit->setText(QString::number(v, 'f', 2));
+    }
+    qDebug() << "SliderEditor::change, emit editorValueChanged" << value;
     emit editorValueChanged(this);
 }
 
 void SliderEditor::updateSliderWhenLineEdited()
 {
+    qDebug() << "SliderEditor::updateSliderWhenLineEdited";
     if (G::isLogger) G::log("SliderEditor::updateSliderWhenLineEdited");
     int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
     if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
@@ -195,14 +204,17 @@ void SliderEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void SliderEditor::paintEvent(QPaintEvent */*event*/)
+void SliderEditor::paintEvent(QPaintEvent *event)
 {
+    QWidget::paintEvent(event);
+    return;
+    // using setStyleSheet causing width issues in slider???
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     if (outOfRange)
         setStyleSheet("QLineEdit {color:red;}");
     else
         setStyleSheet("QLineEdit {color:" + textColor.name() + ";}");
-//    QWidget::paintEvent(event);
+   // QWidget::paintEvent(event);
 }
 
 /* LABEL EDITOR ******************************************************************************/

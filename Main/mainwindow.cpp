@@ -3573,9 +3573,9 @@ void MW::preferences(QString text)
     if (G::isLogger) G::log("MW::preferences");
     if (preferencesDlg == nullptr) {
         pref = new Preferences(this);
-        //pref->resizeColumns();
         if (text != "") pref->expandBranch(text);
-        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+        preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
+        // preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     }
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
@@ -3659,7 +3659,7 @@ void MW::setBackgroundShade(int shade)
     widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
     css = widgetCSS.css();
     G::css = css;
-    // this->setStyleSheet(css);
+    setStyleSheet(css);
 
     if (G::useInfoView) {
         infoView->updateInfo(dm->currentSfRow);                           // triggers sizehint!

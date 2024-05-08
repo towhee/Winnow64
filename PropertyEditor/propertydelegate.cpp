@@ -324,18 +324,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     bool isExpanded = (option.state & QStyle::State_Open) > 0;
     bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
-    /*
-    static int i = 0;
-    qDebug() << "PropertyDelegate::paint" << i++
-             << index.row()
-             << index.column()
-             << "Value =" << index.data().toString().leftJustified(25)
-             << index.data(UR_Name).toString().leftJustified(25)
-             << "decorateGradient =" << index.data(UR_DecorateGradient).toInt()
-             << "Delegate =" << index.data(UR_DelegateType).toInt()
-             << "isSelected =" << isSelected
-                ;
-//                */
+//     // /*
+//     static int i = 0;
+//     qDebug().noquote()
+//         << "PropertyDelegate::paint" << i++
+//         << QString::number(i).rightJustified(2)
+//         << QString::number(index.row()).rightJustified(2)
+//         << index.column()
+//         << option.rect
+//         << "Value =" << index.data().toString().leftJustified(25)
+//         << index.data(UR_Name).toString().leftJustified(25)
+//         << "Delegate =" << index.data(UR_DelegateType).toInt()
+//         << "isSelected =" << isSelected
+//                 ;
+// //                */
 
     /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
     up, and is repainted */
@@ -356,6 +358,23 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QRect r4 = QRect(r.x(), r.y(), w0 + w1, r.height()-3);
     // r5 = entire col width less 50px for barbtns
     QRect r5 = QRect(r.x() + w1 - 50, r.y(), 50, r.height()-3);
+
+    // /*
+    // static int i = 0;
+    if (index.row() == 0 && index.parent().isValid())   // only row 1 excluding headers
+    qDebug().noquote()
+        << "PropertyDelegate::paint"
+        // << QString::number(i).rightJustified(2)
+        << QString::number(index.row()).rightJustified(2)
+        << index.column()
+        << "w0 =" << QString::number(w0).rightJustified(3)
+        << "w1 =" << QString::number(w1).rightJustified(3)
+        << "Value =" << index.data().toString().leftJustified(25)
+        << index.data(UR_Name).toString().leftJustified(25)
+        << "Delegate =" << index.data(UR_DelegateType).toInt()
+        // << "isSelected =" << isSelected
+        ;
+    //                */
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -413,8 +432,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 }
             }
             // caption text and no borders for root item
-//            if (isSelected) painter->setPen(selPen);
-//            else painter->setPen(catPen);
             painter->setPen(catPen);
             if (index.data(UR_isDecoration).toBool()) {
                 painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);

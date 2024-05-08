@@ -136,7 +136,7 @@ void PropertyEditor::itemChange(QModelIndex index)
 // virtual function to be subclassed
 {
     qDebug() << "PropertyEditor::itemChange" << index;
-    resizeColumns();
+    // resizeColumns();
 }
 
 void PropertyEditor::getIndexFromNameAndParent(QString name, QString parName, QModelIndex parent)
@@ -643,7 +643,7 @@ void PropertyEditor::resizeColumns()
 
 void PropertyEditor::fontSizeChanged(int fontSize)
 {
-    // qDebug() << "PropertyEditor::fontSizeChanged =" << fontSize;
+    qDebug() << "PropertyEditor::fontSizeChanged =" << fontSize;
     if (!ignoreFontSizeChangeSignals) {
         emit propertyDelegate->fontSizeChange(fontSize);
     }
