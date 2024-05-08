@@ -165,7 +165,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->refreshThumbs();
+    if (pref != nullptr)
+        qDebug() << "captionColumnWidth =" << pref->captionColumnWidth;
     return;
 
     QElapsedTimer t;

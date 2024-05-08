@@ -50,6 +50,8 @@ QString WidgetCSS::css()
 
     halfFontSize = fontSize / 2;
 
+    QString blank = "";
+
     // do not include frame(), it is inconsistent and screws up stuff, depending on order
     return
             widget() +
@@ -59,7 +61,6 @@ QString WidgetCSS::css()
             checkBox() +
             comboBox() +
             dialog() +
-//            dockTitleBar() +
             dockWidget() +
             doubleSpinBox() +
             graphicsView() +
@@ -81,8 +82,12 @@ QString WidgetCSS::css()
             textEdit() +
             toolButton() +
             toolTip() +
-//            treeWidget() +
-            treeView()
+            treeView() +
+
+           // dockTitleBar() +      // not working
+           // treeWidget() +        // not working
+
+            blank                   // allows comment out any above
             ;
 }
 
@@ -293,19 +298,20 @@ QString WidgetCSS::dockWidget()
      ;
 }
 
-// Not working
-//QString WidgetCSS::dockTitleBar()
-//{
-//    return
-//    "QWidget#DockTitleBar {"
-//        "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-//        "stop: 0 " + QColor(bg,bg,bg).name() + ", "
-//        "stop: 1 " + QColor(g0,g0,g0).name() + ");"
-//        "padding-left: 2px;"
-//        "padding-bottom: 2px;"
-//        "font-size:" + G::fontSize + "pt;"
-//    "}";
-//}
+/* Not working
+QString WidgetCSS::dockTitleBar()
+{
+   return
+   "QWidget#DockTitleBar {"
+       "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+       "stop: 0 " + QColor(bg,bg,bg).name() + ", "
+       "stop: 1 " + QColor(g0,g0,g0).name() + ");"
+       "padding-left: 2px;"
+       "padding-bottom: 2px;"
+       "font-size:" + G::fontSize + "pt;"
+   "}";
+}
+*/
 
 QString WidgetCSS::tabWidget()
 {

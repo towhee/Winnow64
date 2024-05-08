@@ -355,12 +355,14 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());
         G::fontSize = v.toInt();
-        setStyleSheet(mw->css);
+        // setStyleSheet(mw->css);
     }
 
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
         setStyleSheet(mw->css);
+        // setStyleSheet(mw->widgetCSS.treeView());
+        resizeColumns();
         #ifdef Q_OS_WIN
             Win::setTitleBarColor(mw->preferencesDlg->winId(), G::backgroundColor);
         #endif
