@@ -324,20 +324,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     bool isExpanded = (option.state & QStyle::State_Open) > 0;
     bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
-//     // /*
-//     static int i = 0;
-//     qDebug().noquote()
-//         << "PropertyDelegate::paint" << i++
-//         << QString::number(i).rightJustified(2)
-//         << QString::number(index.row()).rightJustified(2)
-//         << index.column()
-//         << option.rect
-//         << "Value =" << index.data().toString().leftJustified(25)
-//         << index.data(UR_Name).toString().leftJustified(25)
-//         << "Delegate =" << index.data(UR_DelegateType).toInt()
-//         << "isSelected =" << isSelected
-//                 ;
-// //                */
+    /*
+    static int i = 0;
+    qDebug().noquote()
+        << "PropertyDelegate::paint" << i++
+        << QString::number(i).rightJustified(2)
+        << QString::number(index.row()).rightJustified(2)
+        << index.column()
+        << option.rect
+        << "Value =" << index.data().toString().leftJustified(25)
+        << index.data(UR_Name).toString().leftJustified(25)
+        << "Delegate =" << index.data(UR_DelegateType).toInt()
+        << "isSelected =" << isSelected
+           ;
+           // */
 
     /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
     up, and is repainted */
@@ -359,7 +359,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     // r5 = entire col width less 50px for barbtns
     QRect r5 = QRect(r.x() + w1 - 50, r.y(), 50, r.height()-3);
 
-    // /*
+    /*
     // static int i = 0;
     if (index.row() == 0 && index.parent().isValid())   // only row 1 excluding headers
     qDebug().noquote()
@@ -374,7 +374,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         << "Delegate =" << index.data(UR_DelegateType).toInt()
         // << "isSelected =" << isSelected
         ;
-    //                */
+        // */
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;

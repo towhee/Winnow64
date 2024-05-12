@@ -3574,8 +3574,8 @@ void MW::preferences(QString text)
     if (preferencesDlg == nullptr) {
         pref = new Preferences(this);
         if (text != "") pref->expandBranch(text);
-        preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
-        // preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+        // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
+        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     }
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);

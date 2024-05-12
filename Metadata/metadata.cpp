@@ -515,8 +515,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     qDebug() << "Metadata::writeXMP" << "m.email =" << m.email << "m._email = " << m._email;
     qDebug() << "Metadata::writeXMP" << "m.url =" << m.url << "m._url = " << m._url;
 
-//    qDebug() << "Metadata::writeXMP" << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
-//    qDebug() << "Metadata::writeXMP" << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
+    // qDebug() << "Metadata::writeXMP" << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
+    // qDebug() << "Metadata::writeXMP" << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
     qDebug();
     //*/
 
@@ -528,8 +528,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     bool copyrightChanged = m.copyright != m._copyright;
     bool emailChanged = m.email != m._email;
     bool urlChanged = m.url != m._url;
-//    bool orientationChanged = m.orientation != m._orientation;
-//    bool rotationChanged = m.rotationDegrees != m._rotationDegrees;
+    // bool orientationChanged = m.orientation != m._orientation;
+    // bool rotationChanged = m.rotationDegrees != m._rotationDegrees;
     if (   !ratingChanged
         && !labelChanged
         && !titleChanged
@@ -537,25 +537,22 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         && !copyrightChanged
         && !emailChanged
         && !urlChanged
-//        && !orientationChanged
-//        && !rotationChanged
-       ) {
+        // && !orientationChanged
+        // && !rotationChanged
+       )
+    {
         qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
                  << "src =" << src;
         return false;
     }
 
     // make sure file is available ie usb drive may have been ejected
-//    QFileInfo fileInfo(fPath);
-//    if (!fileInfo.exists()) return false;
+    QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) return false;
 
     // data edited, open image file
     p.file.setFileName(fPath);
     if (p.file.isOpen()) return false;
-    // rgh error trap file operation
-    if (p.file.isOpen()) {
-        p.file.close();
-    }
     if (!p.file.open(QIODevice::ReadWrite)) return false;
 
     // if current xmp is invalid then fix
@@ -590,9 +587,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         QByteArray buffer;
         p.file.seek(0);
         buffer = p.file.readAll();
-//        Update orientation first, as orientation is written to EXIF, not
-//        XMP, for known formats. Writing subsequent xmp could change file length
-//        and make the orientationOffset incorrect.
+        // Update orientation first, as orientation is written to EXIF, not
+        // XMP, for known formats. Writing subsequent xmp could change file length
+        // and make the orientationOffset incorrect.
 
         if (orientationChanged && m.orientationOffset > 0) {
             QChar c = newOrientation & 0xFF;
@@ -604,7 +601,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-//    if (G::useSidecar) xmp.writeSidecar();
+    // if (G::useSidecar) xmp.writeSidecar();
     xmp.writeSidecar(p.file);
 
     p.file.close();

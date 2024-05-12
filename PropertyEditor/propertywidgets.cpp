@@ -206,15 +206,12 @@ void SliderEditor::fontSizeChanged(int fontSize)
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
-    QWidget::paintEvent(event);
-    return;
-    // using setStyleSheet causing width issues in slider???
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     if (outOfRange)
         setStyleSheet("QLineEdit {color:red;}");
     else
         setStyleSheet("QLineEdit {color:" + textColor.name() + ";}");
-   // QWidget::paintEvent(event);
+    QWidget::paintEvent(event);
 }
 
 /* LABEL EDITOR ******************************************************************************/
@@ -473,15 +470,15 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     btn->setText("...");
     btn->setVisible(false);
 
-//    connect(doubleSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [=](double i){change(i);});
+   // connect(doubleSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [=](double i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addSpacing(3);
     layout->addWidget(doubleSpinBox/*, Qt::AlignLeft*/);
-//    layout->addSpacing(20);
-//    layout->addStretch();
+    // layout->addSpacing(20);
+    // layout->addStretch();
     layout->addWidget(label/*, Qt::AlignRight*/);
-//    layout->addWidget(btn);
+    // layout->addWidget(btn);
     layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 
