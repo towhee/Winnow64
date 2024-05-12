@@ -245,14 +245,9 @@ bool ImageView::loadImage(QString fPath, QString src)
             pmItem->setPixmap(QPixmap::fromImage(image));
             isLoaded = true;
         }
-//        else { // not available
-//            // MacOS: if showPopup thumbs do not scroll when hold arrow key down
-//            #ifdef Q_OS_WIN
-//                if (G::isLinearLoadDone) {
-//                    G::popUp->showPopup("Buffering image");
-//                }
-//            #endif
-//        }
+       else { // not available
+            // review logic here
+       }
     }
     else {
         // report why no image cached (chk range in case filtering has just occurred)

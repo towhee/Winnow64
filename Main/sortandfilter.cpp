@@ -622,24 +622,25 @@ void MW::setRating()
     QString src = "MW::setRating";
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
-        QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
-        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // update rating crash log
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateRatingLog(fPath, rating);
+        // update datamodel
+        QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
+        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
-                // set rating for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 int rowDup = rawIdx.row();
-                ratingIdx = dm->index(rowDup, G::RatingColumn);
-                emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
                 // update rating crash log
                 QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
+                // set rating for raw file row as well
+                ratingIdx = dm->index(rowDup, G::RatingColumn);
+                emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
             }
         }
         // write to sidecar
@@ -796,8 +797,8 @@ void MW::setColorClass()
     }
     //*/
 
-    // copy selection to list of dm rows (proxy filter changes during iteration when
-    // change datamodel)
+    /* copy selection to list of dm rows (proxy filter changes during iteration when
+       change datamodel)  */
     QList<int> rows;
     for (int i = 0; i < n; ++i) {
         int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
@@ -808,25 +809,26 @@ void MW::setColorClass()
     QString src = "MW::setColorClass";
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
-        QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
-        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // update color class crash log
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
         updateColorClassLog(fPath, colorClass);
+        // update datamodel
+        QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
+        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
             if (idx.data(G::DupIsJpgRole).toBool()) {
-                // set color class (label) for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 int rowDup = rawIdx.row();
-                labelIdx = dm->index(rowDup, G::LabelColumn);
-                QString src = "MW::setColorClass";
-                emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
                 // update color class crash log
                 QString jpgPath = dm->sf->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
+                // set color class (label) for raw file row as well
+                labelIdx = dm->index(rowDup, G::LabelColumn);
+                QString src = "MW::setColorClass";
+                emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             }
         }
         // write to sidecar

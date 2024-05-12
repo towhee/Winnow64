@@ -133,8 +133,8 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 }
 
 void PropertyEditor::itemChange(QModelIndex index)
-// virtual function to be subclassed
 {
+    // virtual function to be subclassed
     qDebug() << "PropertyEditor::itemChange" << index;
     // resizeColumns();
 }

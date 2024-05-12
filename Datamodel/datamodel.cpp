@@ -1406,13 +1406,14 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 {
     lastFunction = "";
     if (G::stop) return;
-    if (isDebug)
+    if (isDebug) {
         qDebug() << "DataModel::setValue"
-             << "row =" << dmIdx.row()
-                 << "value =" << value
-             << "src =" << src
-             << "instance =" << instance
+                 << "row =" << dmIdx.row()
+                     << "value =" << value
+                 << "src =" << src
+                 << "instance =" << instance
                  << currentFolderPath;
+    }
     if (instance != this->instance) {
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::setValue" << dmIdx << "Instance conflict = "
