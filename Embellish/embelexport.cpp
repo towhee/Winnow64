@@ -160,14 +160,14 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
-    MW::handleStartupArgs.  The current embellish template is saved, the assigned
-    template is set, the images are embellished and exported, and the original
-    template is re-established or the exported folder is opened, with the sort order
-    set to last modified in reverse.
+    MW::handleStartupArgs. The current embellish template is saved, the assigned template
+    is set, the images are embellished and exported, and the original template is
+    re-established or the exported folder is opened, with the sort order set to last
+    modified in reverse.
 
-    In Embel it is important to call setRemote(true).  If Embel::isRemote == false then the
-    datamodel is expected to be loaded and up-to-date.  For remote situations, the data model
-    may not be loaded, and Embel will call Metadata to load the image data.
+    In Embel it is important to call setRemote(true). If Embel::isRemote == false then
+    the datamodel is expected to be loaded and up-to-date. For remote situations, the
+    data model may not be loaded, and Embel will call Metadata to load the image data.
 */
     if (G::isLogger) G::log("EmbelExport::exportRemoteFiles");
 

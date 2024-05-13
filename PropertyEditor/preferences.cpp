@@ -1086,9 +1086,9 @@ void Preferences::addItems()
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 10;
-    i.max = 10000;
+    i.max = 20000;
     i.fixedWidth = 50;
-    addItem(i);   // set to 3000
+    addItem(i);
 
     // // Cache method
     // i.name = "cacheMethod";
