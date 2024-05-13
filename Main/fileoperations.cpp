@@ -176,6 +176,9 @@ void MW::saveAsFile()
 
 void MW::insertFile(QString fPath)
 {
+/*
+    Replace or insert a new image file into the datamodel.
+*/
     if (G::isLogger) G::log("MW::insertFile");
     qDebug() << "MW::insertFile";
     int dmRow;

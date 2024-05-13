@@ -361,16 +361,16 @@ void MW::createMDCache()
 
 
     // MetaRead and MetaRead2
-//    if (isSettings) {
-//        if (settings->contains("iconChunkSize")) {
-//            dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
-//        }
-//    }
-//    else {
-//        settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
-//    }
+   if (isSettings) {
+       if (settings->contains("iconChunkSize")) {
+           dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
+       }
+   }
+   else {
+       settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
+   }
 
-    dm->defaultIconChunkSize = 200;
+    // dm->defaultIconChunkSize = 200;
     // dm->defaultIconChunkSize = 20000;
 
     dm->setChunkSize(dm->defaultIconChunkSize);

@@ -670,6 +670,7 @@ void MW::showEvent(QShowEvent *event)
     if (isSettings) {
         restoreGeometry(settings->value("Geometry").toByteArray());
         restoreState(settings->value("WindowState").toByteArray());
+        qDebug() << "MW::showEvent restoreGeometry" << geometry();
     }
     else {
         defaultWorkspace();
@@ -743,7 +744,10 @@ void MW::closeEvent(QCloseEvent *event)
         delete pref;
         delete preferencesDlg;
     }
-    if (!simulateJustInstalled) writeSettings();
+    if (!simulateJustInstalled) {
+        qDebug() << "MW::closeEvent writeSettings";
+        writeSettings();
+    }
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -1662,18 +1666,10 @@ void MW::handleStartupArgs(const QString &args)
 
     if (args.length() < 2) return;
 
-    //if (!G::allMetadataLoaded)
-    //stop("MW::handleStartupArgs");
-
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
     //qDebug() << "MW::handleStartupArgs" << argList;
-    /*
-    QString a = "";
-    for (QString s : argList) a += s + "\n";
-    QMessageBox::information(this, "MW::handleStartupArgs", a);
-    //*/
     if (argList.length() > 1) {
         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", argList.join(" | "));
@@ -1683,8 +1679,8 @@ void MW::handleStartupArgs(const QString &args)
     QString templateName;
     if (argList.at(1) == "Embellish") {
         /* This means a remote embellish has been invoked.
-                arg 1 = Embellish
-                arg 2 = Embellish template name
+                arg 1 = "Embellish"
+                arg 2 = Embellish template name ie "Zen2048"
                 arg 3 = Folder holding temp image files sent to embellish
 
         The information is gathered and sent to EmbelExport::exportRemoteFiles, where the
@@ -1718,7 +1714,7 @@ void MW::handleStartupArgs(const QString &args)
         QDir dir;
         dir.setNameFilters(fileFilters);
         dir.setFilter(QDir::Files);
-        dir.setSorting(QDir::Time /*| QDir::Reversed*/);
+        dir.setSorting(QDir::Time );
         dir.setPath(folderPath);
 
         /* Get earliest lastModified time (t) for incoming files, then choose all files in the
@@ -2769,7 +2765,9 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
+        //return;
     }
+
     else if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
 }

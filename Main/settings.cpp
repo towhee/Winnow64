@@ -94,6 +94,7 @@ void MW::writeSettings()
     settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
 
     // state
+    qDebug() << "MW::writeSettings state";
     settings->setValue("Geometry", saveGeometry());
     settings->setValue("WindowState", saveState());
     settings->setValue("WindowLocation", geometry());
