@@ -485,7 +485,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     initialize();
 
     // persistant settings between sessions
+    // regular settings to use
     settings = new QSettings("Winnow", "winnow_100");
+    // use to test new user
+    // settings = new QSettings("Winnow", "winnow_101");
     G::settings = settings;
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
@@ -664,13 +667,16 @@ void MW::showEvent(QShowEvent *event)
         return;
     }
 
+    // QMainWindow::showEvent(event);
+
     // Finish initializing
 
     // restore prior geometry and state
     if (isSettings) {
         restoreGeometry(settings->value("Geometry").toByteArray());
         restoreState(settings->value("WindowState").toByteArray());
-        qDebug() << "MW::showEvent restoreGeometry" << geometry();
+        restoreGeometry(settings->value("Geometry").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray());
     }
     else {
         defaultWorkspace();
@@ -745,7 +751,6 @@ void MW::closeEvent(QCloseEvent *event)
         delete preferencesDlg;
     }
     if (!simulateJustInstalled) {
-        qDebug() << "MW::closeEvent writeSettings";
         writeSettings();
     }
     delete workspaces;

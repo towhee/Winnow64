@@ -94,10 +94,9 @@ void MW::writeSettings()
     settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
 
     // state
-    qDebug() << "MW::writeSettings state";
+    qDebug() << "MW::writeSettings state" << geometry();
     settings->setValue("Geometry", saveGeometry());
     settings->setValue("WindowState", saveState());
-    settings->setValue("WindowLocation", geometry());
     settings->setValue("isFullScreen", isFullScreen());
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
@@ -139,14 +138,12 @@ void MW::writeSettings()
     settings->endGroup();
 
     /* MetadataDock floating info */
-//    if (G::useInfoView) {
     settings->beginGroup(("MetadataDock"));
     settings->setValue("screen", metadataDock->dw.screen);
     settings->setValue("pos", metadataDock->dw.pos);
     settings->setValue("size", metadataDock->dw.size);
     settings->setValue("devicePixelRatio", metadataDock->dw.devicePixelRatio);
     settings->endGroup();
-//    }
 
     /* EmbelDock floating info */
     settings->beginGroup(("EmbelDock"));
