@@ -48,7 +48,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Log/log.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -138,9 +139,11 @@ HEADERS += Lcms2/lcms2_plugin.h
 # HEADERS += Lib/libtiff/tiffiop.h
 # HEADERS += Lib/libtiff/tiffvers.h
 # HEADERS += Lib/libtiff/uvcode.h
+
+# HEADERS += Log/log.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
-HEADERS += Main/logger.h
+# HEADERS += Main/logger.h
 HEADERS += Main/mainwindow.h
 HEADERS += Main/qtlocalpeer.h
 HEADERS += Main/qtlockedfile.h
@@ -194,7 +197,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Log/log.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -327,6 +331,7 @@ SOURCES += Lcms2/cmsxform.c
 # SOURCES += Lib/libtiff/tif_write.c
 # SOURCES += Lib/libtiff/tif_zip.c
 
+# SOURCES += Log/log.cpp
 SOURCES += Main/main.cpp
 # all part of MW (mainwindow)
 SOURCES += Main/mainwindow.cpp
@@ -335,8 +340,8 @@ SOURCES += Main/draganddrop.cpp
 SOURCES += Main/externalapp.cpp
 SOURCES += Main/fileoperations.cpp
 SOURCES += Main/initialize.cpp
-SOURCES += Main/log.cpp
-SOURCES += Main/logger.cpp
+# SOURCES += Main/log.cpp
+# SOURCES += Main/logger.cpp
 SOURCES += Main/menusandactions.cpp
 SOURCES += Main/navigate.cpp
 SOURCES += Main/pick.cpp

@@ -201,7 +201,7 @@ namespace G
         return duration;
     }
 
-    Logger logger;
+    // Logger logger;
 
     void track(QString functionName, QString comment, bool hideTime)
     {
@@ -224,35 +224,35 @@ namespace G
 
     void log(QString functionName, QString comment, bool zeroElapsedTime)
     {
-        logger.log(functionName, comment);
-        return;
-        static QMutex mutex;
-        QMutexLocker locker(&mutex);
-        static QString prevFunctionName = "";
-        static QString prevComment = "";
-        QString stop = "";
-        if (zeroElapsedTime) {
-            t.restart();
-        }
-        if (functionName != "skipline") {
-            QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
-            QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
-            QString e = microSec.rightJustified(11, ' ') + " ";
-            QString f = prevFunctionName.leftJustified(50, ' ') + " ";
-            QString c = prevComment;
-            if (sendLogToConsole) {
-                QString msg = stop + e + f + c;
-                if (prevFunctionName == "skipline") qDebug().noquote() << " ";
-                else qDebug().noquote() << msg;
-            }
-            else {
-                QString msg = stop + d + e + f + c + "\n";
-                if (logFile.isOpen()) logFile.write(msg.toUtf8());
-            }
-        }
-        prevFunctionName = functionName;
-        prevComment = comment;
-        t.restart();
+        // logger.log(functionName, comment);
+        // return;
+        // static QMutex mutex;
+        // QMutexLocker locker(&mutex);
+        // static QString prevFunctionName = "";
+        // static QString prevComment = "";
+        // QString stop = "";
+        // if (zeroElapsedTime) {
+        //     t.restart();
+        // }
+        // if (functionName != "skipline") {
+        //     QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
+        //     QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+        //     QString e = microSec.rightJustified(11, ' ') + " ";
+        //     QString f = prevFunctionName.leftJustified(50, ' ') + " ";
+        //     QString c = prevComment;
+        //     if (sendLogToConsole) {
+        //         QString msg = stop + e + f + c;
+        //         if (prevFunctionName == "skipline") qDebug().noquote() << " ";
+        //         else qDebug().noquote() << msg;
+        //     }
+        //     else {
+        //         QString msg = stop + d + e + f + c + "\n";
+        //         if (logFile.isOpen()) logFile.write(msg.toUtf8());
+        //     }
+        // }
+        // prevFunctionName = functionName;
+        // prevComment = comment;
+        // t.restart();
     }
 
     void errlog(QString err, QString functionName, QString fPath)
