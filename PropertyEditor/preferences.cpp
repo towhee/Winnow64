@@ -326,13 +326,13 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "isLogger") {
         G::isLogger = v.toBool();
-        if (G::isLogger) mw->startLog();
+        // if (G::isLogger) mw->startLog();
     }
 
     if (source == "isErrorLogger") {
         G::isErrorLogger = v.toBool();
         G::isWarningLogger = v.toBool();
-        if (G::isErrorLogger) mw->startLog();
+        // if (G::isErrorLogger) mw->startLog();
     }
 
     if (source == "rememberLastDir") {

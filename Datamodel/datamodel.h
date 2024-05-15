@@ -207,7 +207,6 @@ private:
     // int step;
 
     bool isDebug = false;
-    QString lastFunction = "";
     ImageMetadata mCopy;
     int line;
     int rowCountChk;

@@ -492,7 +492,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::settings = settings;
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
-    loadSettings();             // except settings with dependencies ie for actions not created yet
+    loadSettings();     // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     settings->setValue("appPath", qApp->applicationDirPath());
@@ -560,12 +560,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
 
-//    G::isInitializing = false;
-
     if (isStartupArgs) {
         qApp->processEvents();
         handleStartupArgs(args);
-        //this->args = args;   // not req'd for embellish
         return;
     }
     else {
@@ -638,15 +635,17 @@ void MW::whenActivated(Qt::ApplicationState state)
     in Main()).
 
     Update FSTree after it has been opened.
+    Update display resolution and resize main window
 */
-#ifdef Q_OS_MAC
+    #ifdef Q_OS_MAC
     fsTree->setRootIndex(fsTree->model()->index(0,0));
-#endif
-#ifdef Q_OS_WIN
-    // sometimes windows has not shown all drives yet
+    #endif
+    #ifdef Q_OS_WIN
+    // sometimes windows not shown all drives yet
     fsTree->refreshModel();
-#endif
+    #endif
 
+    // display resolution
     setDisplayResolution();
     updateDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
@@ -728,8 +727,8 @@ void MW::closeEvent(QCloseEvent *event)
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
     }
-    closeLog();
-    closeErrLog();
+    // closeLog();
+    // closeErrLog();
     clearPickLog();
     clearRatingLog();
     clearColorClassLog();
@@ -1026,7 +1025,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                              << "modifier =" << e->modifiers()
                              << "obj->objectName:" << obj->objectName()
                         ;}
-                if (G::isFlowLogger) G::logger.skipLine();
+                // if (G::isFlowLogger) G::logger.skipLine();
                 if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
 
                 // ignore if modifier pressed
@@ -1858,7 +1857,7 @@ void MW::folderSelectionChange(QString dPath)
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
-    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
+    // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
     // qDebug() << "\n\n\nMW::folderSelectionChange" << dPath;
 
@@ -2348,7 +2347,7 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
+    // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
     /*
     if (G::isLogger || G::isFlowLogger)
@@ -2744,7 +2743,8 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 {
     if (G::stop || dm->abortLoadingModel) return;
 
-    dm->setIconRange(sfRow);        // sets G::iconChunkLoaded
+    // set icon range and G::iconChunkLoaded
+    dm->setIconRange(sfRow);
 
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
@@ -2773,7 +2773,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         //return;
     }
 
-    else if (isFileSelectionChange)
+    /*else */if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
 }
 

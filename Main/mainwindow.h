@@ -85,6 +85,8 @@
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
+// #include "Log/log.h"
+
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #include "Main/winnativeeventfilter.h"

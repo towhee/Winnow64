@@ -165,6 +165,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
     restoreGeometry(settings->value("Geometry").toByteArray());
     restoreState(settings->value("WindowState").toByteArray());
     qDebug() << "MW::test restoreGeometry" << geometry();
