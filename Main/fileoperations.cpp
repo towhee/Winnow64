@@ -180,7 +180,7 @@ void MW::insertFile(QString fPath)
     Replace or insert a new image file into the datamodel.
 */
     if (G::isLogger) G::log("MW::insertFile");
-    qDebug() << "MW::insertFile";
+    qDebug() << "MW::insertFile" << fPath;
     int dmRow;
     // replace existing image with the same name
     if (dm->isPath(fPath)) {

@@ -727,8 +727,9 @@ void MW::closeEvent(QCloseEvent *event)
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
     }
-    // closeLog();
-    // closeErrLog();
+
+    G::errorLog.stop();
+
     clearPickLog();
     clearRatingLog();
     clearColorClassLog();

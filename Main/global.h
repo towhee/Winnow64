@@ -14,7 +14,7 @@
 #include "popup.h"
 #include "Utilities/utilities.h"
 // #include "Main/logger.h"
-// #include "Log/log.h"
+#include "Log/log.h"
 
 // METAREAD or METAREAD2: one or the other:
 #ifdef Q_OS_WIN
@@ -310,14 +310,16 @@ namespace G
 //    extern QList<int>rowsWithIcon;
 
 //    extern bool empty();
-    // extern Logger logger;
+    extern Logger logger;
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     // extern QStringList doNotLog;
     extern void log(QString functionName = "",
                     QString comment = "",
                     bool zeroElapsedTime = false);
+    extern ErrorLog errorLog;
     extern void errlog(QString err, QString functionName, QString fPath = "");
     extern void error(QString err, QString functionName, QString fPath = "");
+
     extern int wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);

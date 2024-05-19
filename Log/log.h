@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QObject>
+#include <iostream>
 
 #include <QThread>
 #include <QFile>
@@ -10,7 +11,6 @@
 #include <QString>
 #include <QMutex>
 #include <queue>
-#include <iostream>
 
 // Logger temp until integrate
 
@@ -49,14 +49,14 @@ private:
 };
 
 // Error logging thread
-class ErrorLoggerThread : public QThread
+class ErrorLog : public QThread
 {
     Q_OBJECT
 public:
-    ErrorLoggerThread(QObject* parent = nullptr);
-    ~ErrorLoggerThread();
+    ErrorLog(QObject* parent = nullptr);
+    ~ErrorLog() override;
 
-    void addError(const QString& error);
+    void log(const QString& msg);
     void stop();
 
 protected:

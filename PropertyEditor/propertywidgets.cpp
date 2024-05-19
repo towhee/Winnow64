@@ -67,7 +67,6 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     Integer mode: div == 0
     Double mode : div != 0
 */
-    qDebug() << "SliderEditor::SliderEditor";
     if (G::isLogger) G::log("SliderEditor::SliderEditor");
     this->idx = idx;
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
@@ -146,21 +145,18 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
 
 double SliderEditor::value()
 {
-    qDebug() << "SliderEditor::value" << lineEdit->text().toDouble();
     if (G::isLogger) G::log("SliderEditor::value");
     return lineEdit->text().toDouble();
 }
 
 void SliderEditor::setValue(QVariant value)
 {
-    qDebug() << "SliderEditor::setValue" << value;
     if (G::isLogger) G::log("SliderEditor::setValue");
     slider->setValue(value.toInt());
 }
 
 void SliderEditor::sliderMoved()
 {
-    qDebug() << "SliderEditor::sliderMoved";
     if (G::isLogger) G::log("SliderEditor::sliderMoved");
     outOfRange = false;
 }
@@ -176,13 +172,11 @@ void SliderEditor::change(double value)
     else {
         lineEdit->setText(QString::number(v, 'f', 2));
     }
-    qDebug() << "SliderEditor::change, emit editorValueChanged" << value;
     emit editorValueChanged(this);
 }
 
 void SliderEditor::updateSliderWhenLineEdited()
 {
-    qDebug() << "SliderEditor::updateSliderWhenLineEdited";
     if (G::isLogger) G::log("SliderEditor::updateSliderWhenLineEdited");
     int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
     if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
@@ -200,7 +194,6 @@ void SliderEditor::updateSliderWhenLineEdited()
 
 void SliderEditor::fontSizeChanged(int fontSize)
 {
-    qDebug() << "SliderEditor::fontSizeChanged" << fontSize;
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
