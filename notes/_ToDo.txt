@@ -9,6 +9,7 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
+- Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
 - ImageView::load not always work when jumping around folders
 - ImageView zoom when click not always work (double click issue)
 - Missing thumbs deacivated for now

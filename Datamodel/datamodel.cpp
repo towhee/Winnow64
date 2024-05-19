@@ -330,7 +330,7 @@ int DataModel::insert(QString fPath)
     The datamodel must already contain the fPath folder.
 */
     if (G::isLogger) G::log("DataModel::insert");
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "DataModel::insert"
                  << "instance =" << instance
                  << "fPath =" << fPath;
@@ -1024,24 +1024,22 @@ bool DataModel::readMetadataForItem(int row, int instance)
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             }
             else {
-                errMsg = "Failed to load metadata";
+                errMsg = "Failed to load metadata.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-                // G::error(errMsg, fun, fPath);
-//                mutex.unlock();
+                G::error(errMsg, fun, fPath);
                 return false;
             }
         }
         // cannot read this file type, load empty metadata
         else {
-            errMsg = "Cannot read file type";
+            errMsg = "Cannot read matadata for this file type.";
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-            // G::error(errMsg, fun, fPath);
+            G::error(errMsg, fun, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
             metadata->m.compare = false;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
-//            mutex.unlock();
             return false;
         }
     }
@@ -1091,20 +1089,20 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
         }
         else {
-            errMsg = "Failed to load metadata";
+            errMsg = "Failed to load metadata.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-            // G::error(errMsg, fun, fPath);
+            G::error(errMsg, fun, fPath);
             mutex.unlock();
             return false;
         }
     }
     // cannot read this file type, load empty metadata
     else {
-        errMsg = "Cannot read file type";
+        errMsg = "Cannot read metadata for this file type.";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::refreshMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-        // G::error(errMsg, fun, fPath);
+        G::error(errMsg, fun, fPath);
         metadata->clearMetadata();
         metadata->m.row = row;
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");

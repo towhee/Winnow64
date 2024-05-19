@@ -13,17 +13,19 @@ namespace G
     bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
     bool isErrorLogger = false;         // Writes error log messages to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
+
+    // still req'd?
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
+    // Errors
+    QMap<QString,QStringList> err;
+
 
     // Rory version (expanded cache pref)
     bool isRory = false;
     ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
 
-    // Errors
-    QMap<QString,QStringList> err;
-
-    // flow
+   // flow
     bool isInitializing;            // flag program starting / initializing
     bool stop = false;              // flag to stop everything involving DM loading
                                     // new dataset
@@ -201,7 +203,7 @@ namespace G
         return duration;
     }
 
-    // Logger logger;
+    Logger logger;
 
     void track(QString functionName, QString comment, bool hideTime)
     {
@@ -224,66 +226,86 @@ namespace G
 
     void log(QString functionName, QString comment, bool zeroElapsedTime)
     {
-        // logger.log(functionName, comment);
-        // return;
-        // static QMutex mutex;
-        // QMutexLocker locker(&mutex);
-        // static QString prevFunctionName = "";
-        // static QString prevComment = "";
-        // QString stop = "";
-        // if (zeroElapsedTime) {
-        //     t.restart();
-        // }
-        // if (functionName != "skipline") {
-        //     QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
-        //     QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
-        //     QString e = microSec.rightJustified(11, ' ') + " ";
-        //     QString f = prevFunctionName.leftJustified(50, ' ') + " ";
-        //     QString c = prevComment;
-        //     if (sendLogToConsole) {
-        //         QString msg = stop + e + f + c;
-        //         if (prevFunctionName == "skipline") qDebug().noquote() << " ";
-        //         else qDebug().noquote() << msg;
-        //     }
-        //     else {
-        //         QString msg = stop + d + e + f + c + "\n";
-        //         if (logFile.isOpen()) logFile.write(msg.toUtf8());
-        //     }
-        // }
-        // prevFunctionName = functionName;
-        // prevComment = comment;
-        // t.restart();
+        logger.log(functionName, comment);
+        return;
+        static QMutex mutex;
+        QMutexLocker locker(&mutex);
+        static QString prevFunctionName = "";
+        static QString prevComment = "";
+        QString stop = "";
+        if (zeroElapsedTime) {
+            t.restart();
+        }
+        if (functionName != "skipline") {
+            QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
+            QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+            QString e = microSec.rightJustified(11, ' ') + " ";
+            QString f = prevFunctionName.leftJustified(50, ' ') + " ";
+            QString c = prevComment;
+            if (sendLogToConsole) {
+                QString msg = stop + e + f + c;
+                if (prevFunctionName == "skipline") qDebug().noquote() << " ";
+                else qDebug().noquote() << msg;
+            }
+            else {
+                QString msg = stop + d + e + f + c + "\n";
+                if (logFile.isOpen()) logFile.write(msg.toUtf8());
+            }
+        }
+        prevFunctionName = functionName;
+        prevComment = comment;
+        t.restart();
     }
+
+    ErrorLog errorLog;
 
     void errlog(QString err, QString functionName, QString fPath)
     {
-        if (!isErrorLogger) return;
-        if (G::errlogFile.open(QIODevice::WriteOnly  | QIODevice::Append)) {
+        // if (!isErrorLogger) return;
+        // if (G::errlogFile.open(QIODevice::WriteOnly  | QIODevice::Append)) {
             QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
-            QString f = functionName.leftJustified(40, '.') + " ";
+            QString s = "Src: " + functionName + " ";
+            // QString f = functionName.leftJustified(40, '.') + " ";
             QString p = fPath;
-            QString e = err.leftJustified(75, '.') + " ";
-            QString msg = d + e + f + p + "\n";
+            QString e = err + " ";
+            // QString e = err.leftJustified(75, '.') + " ";
+            QString msg = d + s + e; // + "\n";
 //            if (errlogFile.isOpen()) {
 //                quint32 eof = errlogFile.size();
 //                errlogFile.seek(eof);
 //                errlogFile.write(msg.toUtf8());
 //                errlogFile.flush();
 //            }
-            QTextStream stream(&G::errlogFile);
-            stream << msg;
-            G::errlogFile.close();
-        }
+            // old version
+            // QTextStream stream(&G::errlogFile);
+            // stream << msg;
+            // G::errlogFile.close();
+
+            // new version
+            qDebug() << "G::errLog" << msg;
+            // errorLog.log(msg);
+        // }
     }
 
     void error(QString err, QString functionName, QString fPath)
     {
-        QString errMsg = functionName + " Error: " + err;
-        if (fPath.length()) G::err[fPath].append(errMsg);
+        // crashing
+        return;
+        // QString errMsg = functionName + " Error: " + err;
+        // // if (fPath.length()) G::err[fPath].append(errMsg);
+        // qDebug() << "" << errMsg;
 
-        // add to errorLog ...
-        errlog(err, functionName, fPath);
+        // // add to errorLog ...
+        // // errlog(err, functionName, fPath);
+
+        QString msg = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+        msg += functionName + " ";
+        msg += err + " ";
+        msg += fPath;
+        errorLog.log(msg);
     }
+
+
 
     bool instanceClash(int instance, QString src)
     {

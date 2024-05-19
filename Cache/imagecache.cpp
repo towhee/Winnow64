@@ -546,7 +546,7 @@ bool ImageCache::nextToCache(int id)
     bool debugThis = false;
     if (debugCaching)
     {
-        qDebug() << "ImageCache::nextToCache";
+        // qDebug() << "ImageCache::nextToCache";
     }
 
     if (G::instanceClash(instance, "ImageCache::nextToCache")) {
@@ -598,26 +598,26 @@ bool ImageCache::nextToCache(int id)
         if (!icd->cacheItemList.at(i).isUpdated) {
             if (debugCaching)
             {
-                qDebug() << "ImageCache::nextToCache metadata not updated"
-                         << "row =" << i
-                         << "p =" << p
-                         << priorityList
-                    ;
+                // qDebug() << "ImageCache::nextToCache metadata not updated"
+                //          << "row =" << i
+                //          << "p =" << p
+                //          // << priorityList
+                //     ;
             }
             continue;
         }
 
         if (debugCaching || debugThis)
         {
-            qDebug() << "ImageCache::nextToCache                           "
-                     << "decoder" << id
-                     << "row =" << i
-                     << "row decoder =" << icd->cacheItemList.at(i).decoderId
-                     << "isCached =" << icd->cacheItemList.at(i).isCached
-                     << "isCaching =" << icd->cacheItemList.at(i).isCaching
-                     << "attempt =" << icd->cacheItemList.at(i).attempts
-                     << "decoder status =" << icd->cacheItemList.at(i).status
-                ;
+            // qDebug() << "ImageCache::nextToCache                           "
+            //          << "decoder" << id
+            //          << "row =" << i
+            //          << "row decoder =" << icd->cacheItemList.at(i).decoderId
+            //          << "isCached =" << icd->cacheItemList.at(i).isCached
+            //          << "isCaching =" << icd->cacheItemList.at(i).isCaching
+            //          << "attempt =" << icd->cacheItemList.at(i).attempts
+            //          << "decoder status =" << icd->cacheItemList.at(i).status
+            //     ;
         }
 
         // already cached
@@ -650,13 +650,13 @@ bool ImageCache::nextToCache(int id)
         // isCaching and not the same decoder
         if (icd->cacheItemList.at(i).isCaching && (id != icd->cacheItemList.at(i).decoderId)) {
             if (debugCaching) {
-                qDebug() << "ImageCache::nextToCache                           "
-                         << "row =" << i
-                         << "1st id =" << id
-                         << "2st id =" << icd->cacheItemList.at(i).decoderId
-                         << "(isCaching = true and not same decoder id)"
-                         << "decoder status =" << icd->cacheItemList.at(i).status
-                    ;
+                // qDebug() << "ImageCache::nextToCache                           "
+                //          << "row =" << i
+                //          << "1st id =" << id
+                //          << "2st id =" << icd->cacheItemList.at(i).decoderId
+                //          << "(isCaching = true and not same decoder id)"
+                //          << "decoder status =" << icd->cacheItemList.at(i).status
+                //     ;
             }
             continue;
         }
@@ -677,12 +677,12 @@ bool ImageCache::nextToCache(int id)
         icd->cache.toCacheKey = i;
         if (debugCaching || debugThis)
         {
-            qDebug() << "ImageCache::nextToCache = true                    "
-                     << "decoder" << id
-                     << "row =" << i
-                     << "attempt =" << icd->cacheItemList.at(i).attempts
-                     << "decoder status =" << icd->cacheItemList.at(i).status
-                ;
+            // qDebug() << "ImageCache::nextToCache = true                    "
+            //          << "decoder" << id
+            //          << "row =" << i
+            //          << "attempt =" << icd->cacheItemList.at(i).attempts
+            //          << "decoder status =" << icd->cacheItemList.at(i).status
+            //     ;
         }
         /*
         log("nextToCache result",
@@ -1797,6 +1797,12 @@ void ImageCache::cacheImage(int id, int cacheKey)
                                << "NULL IMAGE"
                 ;
         }
+        QString k = QString::number(cacheKey).leftJustified((4));
+        qDebug().noquote() << "ImageCache::cacheImage                       "
+                           << "     decoder" << id
+                           << "row =" << k
+                           << "decoder[id]->fPath =" << decoder[id]->fPath
+            ;
         icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     }
 
