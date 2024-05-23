@@ -63,7 +63,7 @@ void MW::pasteFiles()
     int sidecarCount = 0;
     foreach (QString path, newPaths) {
         if (metadata->supportedFormats.contains(Utilities::getSuffix(path))) {
-            insertFile(path);
+            // insertFile(path);   // rgh_insert
             imageCount++;
         }
         else sidecarCount++;
@@ -174,30 +174,53 @@ void MW::saveAsFile()
     saveAsDlg->exec();
 }
 
-void MW::insertFile(QString fPath)
+void MW::insertFiles(QStringList fPaths)
 {
 /*
     Replace or insert a new image file into the datamodel.
 */
     if (G::isLogger) G::log("MW::insertFile");
-    qDebug() << "MW::insertFile" << fPath;
+    qDebug() << "MW::insertFiles  dm->instance =" << dm->instance;
+
+    if (fPaths.isEmpty()) {
+        qWarning() << "WARNING MW::insertFiles fPaths is empty.";
+        return;
+    }
+
+    QString fPath;
+    QList<int> insertedRows;
     int dmRow;
-    // replace existing image with the same name
-    if (dm->isPath(fPath)) {
-        dmRow = dm->rowFromPath(fPath);
-        QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
-        dm->setData(dmIdx, false);
-        dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
-        imageCacheThread->removeCachedImage(fPath);
-        G::allMetadataLoaded = false;
-        G::iconChunkLoaded = false;
+
+    // must sort fPaths before insertion in case multiple items are appended to end of datamodel
+    // fPaths.sort(Qt::CaseInsensitive);
+
+    foreach(fPath, fPaths) {
+        // replace existing image with the same name
+        if (dm->isPath(fPath)) {
+            dmRow = dm->rowFromPath(fPath);
+            insertedRows << dmRow;
+            QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
+            dm->setData(dmIdx, false);
+            dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
+            imageCacheThread->removeCachedImage(fPath);
+            G::allMetadataLoaded = false;
+            G::iconChunkLoaded = false;
+        }
+        // insert a new image
+        else {
+            insertedRows << dm->insert(fPath);
+            ImageMetadata m = dm->imMetadata(fPath, false);
+            // update ImageCache
+            imageCacheThread->addCacheItemImageMetadata(m, dm->instance);
+        }
     }
-    // insert a new image
-    else {
-        dmRow = dm->insert(fPath);
-    }
-    metaReadThread->syncInstance();
-    metaReadThread->setStartRow(dmRow, true, "MW::insertFile");
+
+    // thumbView->refreshThumbs();
+
+    // int startRow = *std::min_element(insertedRows.begin(), insertedRows.end());
+    // imageView->isFirstImageNewFolder = true;
+    // metaReadThread->syncInstance();
+    // metaReadThread->setStartRow(startRow, true, "MW::insertFile");
 }
 
 void MW::deleteSelectedFiles()
@@ -268,10 +291,10 @@ void MW::deleteSelectedFiles()
 
 void MW::deleteFiles(QStringList paths)
 {
-    /*
+/*
     Delete from disk, remove from datamodel, remove from ImageCache and update the
     image cache status bar.
-    */
+*/
     if (G::isLogger) G::log("MW::deleteFiles");
     QElapsedTimer t;
     t.restart();

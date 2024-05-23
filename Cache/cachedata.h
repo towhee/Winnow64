@@ -27,7 +27,6 @@ public:
         int sumStep;                // sum of step until threshold
         int directionChangeThreshold;//number of steps before change direction of cache
         int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
-        int totFiles;               // number of images available
         float currMB;               // the current MB consumed by the cache
         int maxMB;                  // maximum MB available to cache
         int minMB;                  // minimum MB available to cache

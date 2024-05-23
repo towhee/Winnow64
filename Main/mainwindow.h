@@ -7,6 +7,7 @@
 #include "sstream"
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 #if defined(Q_OS_MAC)
 #include <ApplicationServices/ApplicationServices.h>
@@ -1261,7 +1262,7 @@ private:
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
     void renameSelectedFiles();
-    void insertFile(QString fPath);
+    void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();

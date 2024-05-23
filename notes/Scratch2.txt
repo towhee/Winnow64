@@ -1,440 +1,105 @@
-{
-    "appPath": "/Users/roryhill/Projects/build-winnow64-Qt_6_7_0_for_macOS-Release/Winnow.app/Contents/MacOS",
-    "autoAddMissingThumbnails": false,
-    "autoAdvance": false,
-    "autoEjectUSB": false,
-    "autoIngestFolderPath": true,
-    "backgroundShade": 95,
-    "backupBeforeModifying": false,
-    "backupIngest": false,
-    "Bookmarks.path1": "/Users/roryhill/Pictures/_test",
-    "Bookmarks.path2": "/Users/roryhill/Pictures/_test1",
-    "Bookmarks.path3": "/Users/roryhill/Pictures/_videos copy",
-    "Bookmarks.path4": "/Users/roryhill/Pictures/FromIcloud",
-    "Bookmarks.path5": "/Users/roryhill/Pictures/_videos",
-    "Bookmarks.path6": "/Users/roryhill/Pictures/2004-09-24",
-    "Bookmarks.path7": "/Users/roryhill/Pictures/2021-09-25",
-    "Bookmarks.path8": "/Users/roryhill/Pictures/Test",
-    "Bookmarks.path9": "/Users/roryhill/Pictures/2023/202305/2023-05-28_Vancouver",
-    "Bookmarks.path10": "/Users/roryhill/Pictures/Tiff",
-    "Bookmarks.path11": "/Users/roryhill/Pictures/WildFlowers",
-    "Bookmarks.path12": "/Users/roryhill/Pictures/2021-09-25_test",
-    "Bookmarks.path13": "/Users/roryhill/Downloads",
-    "Bookmarks.path14": "/Users/roryhill/Pictures/Archive",
-    "Bookmarks.path15": "/Users/roryhill/Pictures/_test2",
-    "Bookmarks.path16": "/Users/roryhill/Pictures/Slideshow",
-    "Bookmarks.path17": "/Users/roryhill/Pictures/FocusStack",
-    "Bookmarks.path18": "/Users/roryhill",
-    "Bookmarks.path19": "/Users/roryhill/Pictures/Zen2048",
-    "Bookmarks.path20": "/Users/roryhill/Pictures/Family",
-    "Bookmarks.path21": "/Users/roryhill/Pictures/3840x2160",
-    "Bookmarks.path22": "/Users/roryhill/Documents",
-    "Bookmarks.path23": "/Users/roryhill/Pictures/Zwift",
-    "Bookmarks.path24": "/Users/roryhill/Pictures/TheFrame",
-    "cacheAllIcons": false,
-    "cacheAllMetadata": true,
-    "cacheDelay": 100,
-    "cacheMethod": "",
-    "cacheMinSize": "",
-    "cachePreviewHeight": 1600,
-    "cachePreviewWidth": 2560,
-    "cacheSizeMethod": "Thrifty",
-    "cacheStatusWidth": 100,
-    "cacheWtAhead": 2,
-    "checkIfUpdate": true,
-    "classificationBadgeInImageDiameter": 1,
-    "classificationBadgeInThumbDiameter": 0,
-    "classificationBadgeSizeFactor": 82691984,
-    "colorManage": false,
-    "combineRawJpg": false,
-    "deleteWarning": true,
-    "embedTifThumb": false,
-    "Embel.expandRecursively": false,
-    "Embel.isSolo": false,
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.bottomMargin": "4",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.color": "#f9ffc4",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.leftMargin": "3",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.opacity": 100,
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.rightMargin": "3",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.sortOrder": 1,
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.style": "No style",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.tile": "Do not tile",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border1.topMargin": "3",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.bottomMargin": "1",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.color": "#664f2a",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.leftMargin": "1",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.opacity": 100,
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.rightMargin": "1",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.sortOrder": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.style": "Embossed Border 2",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.tile": "Do not tile",
-    "Embel.Templates.Andreasb 4k version 1_1.Borders.Border2.topMargin": "1",
-    "Embel.Templates.Andreasb 4k version 1_1.Export.copyMetadata": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Export.overwriteFiles": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Export.saveMethod": "Subfolder",
-    "Embel.Templates.Andreasb 4k version 1_1.General.horizontalFit": 3840,
-    "Embel.Templates.Andreasb 4k version 1_1.General.imageStyle": "Image",
-    "Embel.Templates.Andreasb 4k version 1_1.General.lightDirection": 315,
-    "Embel.Templates.Andreasb 4k version 1_1.General.verticalFit": 3840,
-    "Embel.Templates.Andreasb 4k version 1_1.isCurrent": false,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.blendMode": "Above",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.contrast": 1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.end": "-1.25",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.exposure": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.inflection": "0.5",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.isUmbraGradient": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.mid": 1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.size": 3,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.sortOrder": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.start": -1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Border 1.Emboss.umbra": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.blendMode": "Above",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.contrast": 1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.end": "-1.25",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.exposure": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.inflection": "0.5",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.isUmbraGradient": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.mid": 1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.size": "1",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.sortOrder": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.start": -1,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Embossed Border 2.Emboss.umbra": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.blendMode": "Below",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.blur": 6,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.color": "#3d3d3d",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.length": "7",
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.opacity": 100,
-    "Embel.Templates.Andreasb 4k version 1_1.Styles.Image.Shadow.sortOrder": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.align": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.anchorContainer": "Bottom",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.anchorObject": "Image",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.anchorPoint": "Bottom Left",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.bold": "false",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.color": "#000000",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.font": "Adobe Devanagari",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.italic": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.metadataTemplate": "Default info",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.opacity": 50,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.rotation": "-90",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.size": "1.17",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.source": "Metadata template",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.style": "text 1",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.text": "Text #1",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.x": "100",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text1.y": "100",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.align": "false",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.anchorContainer": "Bottom",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.anchorObject": "Border1",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.anchorPoint": "Bottom Center",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.bold": "false",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.color": "#414141",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.font": "Calibri",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.italic": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.metadataTemplate": "Title",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.opacity": 50,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.rotation": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.size": "1.58",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.source": "Metadata template",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.style": "text 1",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.text": "Text #2",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.x": "47.16",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text2.y": "75",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.align": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.anchorContainer": "Bottom",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.anchorObject": "Border1",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.anchorPoint": "Bottom Right",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.bold": "false",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.color": "#000000",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.font": "Calibri",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.italic": "true",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.metadataTemplate": "Default info",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.opacity": 50,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.rotation": 0,
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.size": "1.17",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.source": "Text",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.style": "No style",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.text": "Andreasb (c) 2022",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.x": "92.26",
-    "Embel.Templates.Andreasb 4k version 1_1.Texts.Text3.y": "75",
-    "Embel.Templates.Do not Embellish.isCurrent": true,
-    "EmbelDock.devicePixelRatio": 0,
-    "EmbelDock.pos": "@Point(0 0)",
-    "EmbelDock.screen": 0,
-    "EmbelDock.size": "@Size(-1 -1)",
-    "ExternalAppArgs.1Adobe Photoshop 2023": "",
-    "ExternalAppArgs.2Hex Fiend": "",
-    "ExternalApps.1Adobe Photoshop 2023": "/Applications/Adobe Photoshop 2023/Adobe Photoshop 2023.app",
-    "ExternalApps.2Hex Fiend": "/Applications/Hex Fiend.app",
-    "FavDock.devicePixelRatio": 0,
-    "FavDock.pos": "@Point(0 0)",
-    "FavDock.screen": 0,
-    "FavDock.size": "@Size(-1 -1)",
-    "filenameTemplateSelected": 1,
-    "FilterDock.devicePixelRatio": 2,
-    "FilterDock.pos": "@Point(395 71)",
-    "FilterDock.screen": 0,
-    "FilterDock.size": "@Size(360 454)",
-    "FolderDock.devicePixelRatio": 0,
-    "FolderDock.pos": "@Point(0 0)",
-    "FolderDock.screen": 0,
-    "FolderDock.size": "@Size(-1 -1)",
-    "fontSize": "12",
-    "Geometry": "<01D9D0CB 00030000 000002AD 00000019 00000674 0000026A 000002AD 00000035 00000674 0000026A 00000000 00000000 06900000 02AD0000 00350000 06740000 026A>",
-    "gotoIngestFolder": true,
-    "hasCrashed": false,
-    "iconChunkSize": 3000,
-    "iconNumberSize": 1,
-    "ignoreAddThumbnailsDlg": false,
-    "includeSubfolders": false,
-    "InfoFields.Aperture": true,
-    "InfoFields.Cache": true,
-    "InfoFields.Camera:": true,
-    "InfoFields.Copyright*": true,
-    "InfoFields.Created": true,
-    "InfoFields.Creator*": true,
-    "InfoFields.Dimensions": true,
-    "InfoFields.EC": true,
-    "InfoFields.Email*": true,
-    "InfoFields.File name": true,
-    "InfoFields.File:": true,
-    "InfoFields.Focal length": true,
-    "InfoFields.Folder": true,
-    "InfoFields.GPS": true,
-    "InfoFields.ISO": true,
-    "InfoFields.Keywords": true,
-    "InfoFields.Lens": true,
-    "InfoFields.Megapixels": true,
-    "InfoFields.Model": true,
-    "InfoFields.Modified": true,
-    "InfoFields.Monitor": true,
-    "InfoFields.Path": true,
-    "InfoFields.Picked": true,
-    "InfoFields.Position": true,
-    "InfoFields.Preview dim": true,
-    "InfoFields.Selected": true,
-    "InfoFields.Shutter speed": true,
-    "InfoFields.Size": true,
-    "InfoFields.Status:": true,
-    "InfoFields.Tags: *editable": true,
-    "InfoFields.Title*": true,
-    "InfoFields.Url*": true,
-    "InfoFields.Zoom": true,
-    "infoOverlayFontSize": 26,
-    "InfoTemplates.Default info": "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}",
-    "InfoTemplates.Title": "{Title}",
-    "ingestCount": 0,
-    "IngestHistoryFolders.ingestHistoryFolder1": "/Users/roryhill/Pictures/2004/200409/2004-09-24",
-    "IngestHistoryFolders.ingestHistoryFolder2": "/Users/roryhill/Pictures/2006/200604/2006-04-17",
-    "ingestIncludeXmpSidecar": false,
-    "ingestLastSeqDate": "<40566172 69616E74 28000000 0E000000 0029>",
-    "ingestRootFolder": "/Users/roryhill/Pictures/",
-    "ingestRootFolder2": "",
-    "integrityCheck": true,
-    "isBackgroundIngest": true,
-    "isBackgroundIngestBeep": false,
-    "isCachePreview": true,
-    "isCompareDisplay": false,
-    "isEmbelDockVisible": true,
-    "isErrorLogger": false,
-    "isFavDockVisible": true,
-    "isFilterDockVisible": true,
-    "isFolderDockVisible": true,
-    "isFullScreen": false,
-    "isFullScreenFavs": false,
-    "isFullScreenFilters": false,
-    "isFullScreenFolders": false,
-    "isFullScreenMetadata": false,
-    "isFullScreenStatusBar": false,
-    "isFullScreenThumbs": false,
-    "isGridDisplay": false,
-    "isIconNumberVisible": false,
-    "isImageInfoVisible": false,
-    "isLogger": false,
-    "isLoupeDisplay": true,
-    "isMenuBarVisible": true,
-    "isMetadataDockVisible": true,
-    "isRatingBadgeVisible": true,
-    "isShowCacheStatus": false,
-    "isSlideShowRandom": true,
-    "isSlideShowWrap": true,
-    "isSoloFilters": true,
-    "isSoloPrefDlg": false,
-    "isStatusBarVisible": false,
-    "isTableDisplay": false,
-    "isThumbDockVisible": false,
-    "labelChoice": "",
-    "labelFontSize": 12,
-    "labelFontSizeGrid": 10,
-    "lastDir": "/Volumes/Untitled/DCIM/100MSDCF",
-    "lastFileSelection": "/Volumes/Untitled/DCIM/100MSDCF/A1_07314.ARW",
-    "lastPrefPage": 1,
-    "limitFit100Pct": true,
-    "loupeInfoTemplate": "Title",
-    "manualFolderPath": "",
-    "manualFolderPath2": "",
-    "maxIconSize": 256,
-    "metadataChunkSize": 3000,
-    "MetadataDock.devicePixelRatio": 0,
-    "MetadataDock.pos": "@Point(0 0)",
-    "MetadataDock.screen": 0,
-    "MetadataDock.size": "@Size(-1 -1)",
-    "modifySourceFiles": false,
-    "pathTemplateSelected": 1,
-    "pathTemplateSelected2": 2,
-    "pickAudioVolume": 8,
-    "playPickAudio": true,
-    "RecentFolders.recentFolder01": "/Volumes/Untitled/DCIM/100MSDCF",
-    "RecentFolders.recentFolder02": "/Volumes/Untitled",
-    "RecentFolders.recentFolder03": "/Users/roryhill/Pictures",
-    "RecentFolders.recentFolder04": "/Users/roryhill/Pictures/Easter",
-    "RecentFolders.recentFolder05": "/Users/roryhill/Pictures/_test",
-    "RecentFolders.recentFolder06": "/Users/roryhill/Pictures/WildFlowers",
-    "RecentFolders.recentFolder07": "/Users/roryhill/Pictures/FromIcloud",
-    "RecentFolders.recentFolder08": "/Users/roryhill",
-    "RecentFolders.recentFolder09": "/Users/roryhill/Pictures/TheFrame",
-    "RecentFolders.recentFolder10": "/Users/roryhill/Pictures/Tiff",
-    "RecentFolders.recentFolder11": "/Users/roryhill/Pictures/Zwift",
-    "RecentFolders.recentFolder12": "/Users/roryhill/Pictures/Slideshow",
-    "RecentFolders.recentFolder13": "/Users/roryhill/Pictures/FocusStack",
-    "RecentFolders.recentFolder14": "/Users/roryhill/Downloads",
-    "RecentFolders.recentFolder15": "/Users/roryhill/Pictures/Archive",
-    "RecentFolders.recentFolder16": "/Users/roryhill/Pictures/2004-09-24",
-    "RecentFolders.recentFolder17": "/Users/roryhill/Pictures/2021-09-25",
-    "RecentFolders.recentFolder18": "/Users/roryhill/Pictures/2023/202305/2023-05-28_Vancouver",
-    "RecentFolders.recentFolder19": "/Users/roryhill/Pictures/Family",
-    "RecentFolders.recentFolder20": "/Users/roryhill/Pictures/Test",
-    "rememberLastDir": true,
-    "renderVideoThumb": false,
-    "showThumbLabels": false,
-    "showThumbLabelsGrid": true,
-    "showThumbNailSymbolHelp": false,
-    "showZoomFrame": true,
-    "slideShowDelay": 2,
-    "sortColumn": 0,
-    "sortReverse": false,
-    "TableFields.  EC  ": true,
-    "TableFields._Copyright": false,
-    "TableFields._Creator": false,
-    "TableFields._Email": false,
-    "TableFields._Label": false,
-    "TableFields._Rating": false,
-    "TableFields._Title": false,
-    "TableFields._Url": false,
-    "TableFields.Aperture": true,
-    "TableFields.Aspect Ratio": true,
-    "TableFields.Colour": true,
-    "TableFields.Compare": false,
-    "TableFields.Copyright": true,
-    "TableFields.Created": true,
-    "TableFields.Creator": true,
-    "TableFields.Day": true,
-    "TableFields.Dimensions": true,
-    "TableFields.Duration": true,
-    "TableFields.Email": true,
-    "TableFields.File Name": true,
-    "TableFields.Focal length": true,
-    "TableFields.FocusX": true,
-    "TableFields.FocusY": true,
-    "TableFields.GPS Coord": true,
-    "TableFields.Height": true,
-    "TableFields.HeightPreview": false,
-    "TableFields.ICCBuf": false,
-    "TableFields.ICCSegmentLengthColumn": false,
-    "TableFields.ICCSegmentOffsetColumn": false,
-    "TableFields.ICCSpace": false,
-    "TableFields.ifd0Offset": false,
-    "TableFields.Ingested": true,
-    "TableFields.isBigEndian": false,
-    "TableFields.ISO": true,
-    "TableFields.IsXMP": false,
-    "TableFields.Keywords": true,
-    "TableFields.Last Modified": true,
-    "TableFields.LengthFull": false,
-    "TableFields.LengthThumb": false,
-    "TableFields.Lens": true,
-    "TableFields.Make": true,
-    "TableFields.Meta Attempted": false,
-    "TableFields.Meta Loaded": false,
-    "TableFields.Missing Thumb": false,
-    "TableFields.Model": true,
-    "TableFields.MPix": true,
-    "TableFields.Msec.Mp": true,
-    "TableFields.OffsetFull": false,
-    "TableFields.OffsetThumb": false,
-    "TableFields.Orientation": false,
-    "TableFields.OrientationOffset": false,
-    "TableFields.Permissions": false,
-    "TableFields.Pick": true,
-    "TableFields.R.W": false,
-    "TableFields.Rating": true,
-    "TableFields.Read ms": true,
-    "TableFields.Rot": true,
-    "TableFields.RotationDegrees": false,
-    "TableFields.samplesPerPixelFull": false,
-    "TableFields.Search": false,
-    "TableFields.ShootingInfo": false,
-    "TableFields.Shutter": true,
-    "TableFields.Size": true,
-    "TableFields.Title": true,
-    "TableFields.Type": true,
-    "TableFields.Url": true,
-    "TableFields.Video": true,
-    "TableFields.Width": true,
-    "TableFields.WidthPreview": false,
-    "TableFields.XmpSegmentLengthColumn": false,
-    "TableFields.XmpSegmentOffset": false,
-    "TableFields.Year": true,
-    "TableFields.🔎": true,
-    "ThumbDockFloat.devicePixelRatio": 2,
-    "ThumbDockFloat.pos": "@Point(27 478)",
-    "ThumbDockFloat.screen": 0,
-    "ThumbDockFloat.size": "@Size(1618 192)",
-    "thumbHeight": 202,
-    "thumbHeightGrid": 156,
-    "thumbsPerPage": 1,
-    "thumbWidth": 202,
-    "thumbWidthGrid": 156,
-    "toggleZoomValue": 1,
-    "tryConcurrentLoading": false,
-    "turnOffEmbellish": true,
-    "useSidecar": false,
-    "wasThumbDockVisible": false,
-    "wheelSensitivity": 129,
-    "WindowLocation": "@Rect(685 53 968 566)",
-    "WindowState": "<000000FF 00000000 FD000000 02000000 00000001 16000002 18FC0200 000001FC 00000000 00000218 0000007A 01000015 FA000000 00020000 0007FB00 00001600 46006F00 6C006400 65007200 73004400 6F006300 6B010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 42006F00 6F006B00 6D006100 72006B00 73010000 0000FFFF FFFF0000 006400FF FFFFFB00 00000E00 46006900 6C007400 65007200 73010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 49006D00 61006700 65004900 6E006600 6F010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 45006D00 62006500 6C004400 6F006300 6B010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001400 49006D00 61006700 65002000 49006E00 66006F01 00000000 FFFFFFFF 00000000 00000000 FB000000 12006500 6D006200 65006C00 44006F00 63006B01 00000000 FFFFFFFF 00000000 00000000 00000003 00000690 000000EA FC010000 0001FB00 00001200 74006800 75006D00 62004400 6F006300 6B000000 00000000 06900000 005C00FF FFFF0000 02AE0000 02180000 00040000 00040000 00080000 0008FC00 000000>",
-    "Workspaces.1.cacheSizeMethod": "Thrifty",
-    "Workspaces.1.geometry": "<01D9D0CB 00030000 00000000 00000019 0000068F 00000419 000001CB 00000035 00000683 000002AF 00000000 02000000 06900000 00000000 00350000 068F0000 0419>",
-    "Workspaces.1.isColorManage": true,
-    "Workspaces.1.isCompareDisplay": false,
-    "Workspaces.1.isEmbelDisplay": false,
-    "Workspaces.1.isEmbelDockVisible": true,
-    "Workspaces.1.isFavDockVisible": true,
-    "Workspaces.1.isFilterDockVisible": true,
-    "Workspaces.1.isFolderDockVisible": true,
-    "Workspaces.1.isFullScreen": false,
-    "Workspaces.1.isGridDisplay": false,
-    "Workspaces.1.isImageInfoVisible": true,
-    "Workspaces.1.isLoupeDisplay": true,
-    "Workspaces.1.isMetadataDockVisible": true,
-    "Workspaces.1.isReverseSort": false,
-    "Workspaces.1.isStatusBarVisible": false,
-    "Workspaces.1.isTableDisplay": false,
-    "Workspaces.1.isThumbDockVisible": true,
-    "Workspaces.1.isWindowTitleBarVisible": false,
-    "Workspaces.1.labelChoice": "",
-    "Workspaces.1.labelFontSizeGrid": 10,
-    "Workspaces.1.name": "f'qy geclrjkmgcjp0w9 tve,sndlkfj",
-    "Workspaces.1.showThumbLabels": false,
-    "Workspaces.1.showThumbLabelsGrid": true,
-    "Workspaces.1.sortColumn": 1,
-    "Workspaces.1.state": "<000000FF 00000000 FD000000 02000000 00000001 16000003 29FC0200 000001FC 00000000 00000329 0000007B 01000016 FA000000 01020000 0007FB00 00001600 46006F00 6C006400 65007200 73004400 6F006300 6B010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 42006F00 6F006B00 6D006100 72006B00 73010000 0000FFFF FFFF0000 006400FF FFFFFB00 00000E00 46006900 6C007400 65007200 73010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 49006D00 61006700 65004900 6E006600 6F010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001200 45006D00 62006500 6C004400 6F006300 6B010000 0000FFFF FFFF0000 006400FF FFFFFB00 00001400 49006D00 61006700 65002000 49006E00 66006F01 00000000 FFFFFFFF 00000000 00000000 FB000000 12006500 6D006200 65006C00 44006F00 63006B01 00000000 FFFFFFFF 00000000 00000000 00000003 00000690 0000009A FC010000 0001FB00 00001200 74006800 75006D00 62004400 6F006300 6B010000 00000000 06900000 005C00FF FFFF0000 05760000 03290000 00040000 00040000 00080000 0008FC00 000000>",
-    "Workspaces.1.thumbHeight": 122,
-    "Workspaces.1.thumbHeightGrid": 136,
-    "Workspaces.1.thumbPadding": 0,
-    "Workspaces.1.thumbPaddingGrid": 1827549376,
-    "Workspaces.1.thumbSpacing": 0,
-    "Workspaces.1.thumbSpacingGrid": -92340223,
-    "Workspaces.1.thumbWidth": 122,
-    "Workspaces.1.thumbWidthGrid": 136,
-    "Workspaces.size": 1
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+MW::insertFiles  dm->instance = 0
+DataModel::insert dmRow = 385 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+ImageCache::addCacheItemImageMetadata row = 385 "untitled-0001_Zen2048.JPG"
+DataModel::insert dmRow = 386 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0002_Zen2048.JPG"
+ImageCache::addCacheItemImageMetadata row = 386 "untitled-0002_Zen2048.JPG"
+DataModel::insert dmRow = 387 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0003_Zen2048.JPG"
+ImageCache::addCacheItemImageMetadata row = 387 "untitled-0003_Zen2048.JPG"
+WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
+ImageCache::setCurrentPosition start(QThread::LowestPriority)
+ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
+
+ImageCache::launchDecoders Decoder = 0
+WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
+ImageCache::setCurrentPosition start(QThread::LowestPriority)
+ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
+ImageCache::launchDecoders Decoder = 0
+WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
+ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
+ImageCache::setCurrentPosition start(QThread::LowestPriority)
+ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
+ImageCache::launchDecoders Decoder = 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+isRunning                = false
+abort                    = false
+
+instance                 = 0
+G::dmInstance            = 0
+
+key                      = 385
+prevKey                  = 385
+directionChangeThreshold = 3
+wtAhead                  = 7
+isForward                = true
+totFiles                 = 385
+currMB                   = 4617.5
+currMB Check             = 4617.5
+maxMB                    = 24000
+minMB                    = 24000
+folderMB                 = 0          (if all metadata loaded)
+targetFirst              = 0
+targetLast               = 384
+decoderCount             = 20
+
+currentPath              = /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG
+cacheSizeHasChanged      = true
+filterOrSortHasChanged   = false
+isCacheUpToDate          = true
+
+Decoders:
+  ID  Status          Key    DM Instance
+   0  Ready           375              0
+   1  Ready           382              0
+   2  Ready           372              0
+   3  Ready           368              0
+   4  Ready           374              0
+   5  Ready           381              0
+   6  Ready           384              0
+   7  Ready           379              0
+   8  Ready             8              0
+   9  Ready           383              0
+  10  Ready           383              0
+  11  Ready           376              0
+  12  Ready           378              0
+  13  Ready           380              0
+  14  Ready           382              0
+  15  Ready            15              0
+  16  Ready           371              0
+  17  Ready           381              0
+  18  Ready            18              0
+  19  Ready            19              0

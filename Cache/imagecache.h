@@ -90,6 +90,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
+    void syncToDatamodel();
     void addCacheItemImageMetadata(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);

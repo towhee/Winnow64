@@ -167,8 +167,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    qDebug() << "MW::test";
-    G::error("Failed to write to", "MW::test", "\\somepath");
+    qDebug() << "dm->sf->rowCount() =" << dm->sf->rowCount();
+    // thumbView->refreshThumbs();
+    return;
 }
 /*
    Performance
