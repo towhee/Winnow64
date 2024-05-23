@@ -328,9 +328,12 @@ int DataModel::insert(QString fPath)
     export or meanStack to quickly refresh the active folder with the just saved image.
 
     The datamodel must already contain the fPath folder.
+
+    After insertion, the call function should select row: sel->select(fPath);
+    This will invoke MetaRead which will load the metadata, icon and imageCache.
 */
     if (G::isLogger) G::log("DataModel::insert");
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::insert"
                  << "instance =" << instance
                  << "fPath =" << fPath;
@@ -348,10 +351,14 @@ int DataModel::insert(QString fPath)
             break;
         }
     }
-    if (dmRow >= rowCount()) dmRow = rowCount() - 1;
+    // if (dmRow >= rowCount()) dmRow = rowCount() - 1;
 
     // insert new row
     insertRow(dmRow);
+
+    qDebug() << "DataModel::insert"
+             << "dmRow =" << dmRow
+             << "fPath =" << fPath;
 
     // rebuild fileInfoList
     fileInfoList.clear();
@@ -367,18 +374,12 @@ int DataModel::insert(QString fPath)
     // update imageCount
     imageCount = rowCount();
 
-    // add the file data
+    // add the file data to datamodel
     addFileDataForRow(dmRow, insertFile);
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
-
-    /*
-    After insertion, in the call function add
-        sel->select(fPath);
-    This will invoke MetaRead which will load the metadata, icon and imageCache.
-    */
     return dmRow;
 }
 

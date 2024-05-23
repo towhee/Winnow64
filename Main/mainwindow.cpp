@@ -1796,26 +1796,27 @@ void MW::handleStartupArgs(const QString &args)
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
         // embellish src images (pathList) and return paths to embellished images
-        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
-        //qDebug() << "MW::handleStartUpArgs" << embellishedPaths;
-
+        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);        
         if (!embellishedPaths.size()) return;
+
+        // sort embellishedPaths
+        embellishedPaths.sort(Qt::CaseInsensitive);
 
         // go to first embellished image
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
-//        /* debug
+
+       /* debug
         qDebug() << "MW::handleStartUpArgs"
                  << "fDir" << fDir
                  << "G::currRootFolder" << G::currRootFolder
                  << "first path =" << embellishedPaths.at(0)
             ; //*/
 
-        // folder already open
-        if (fDir == G::currRootFolder) {
-            foreach (QString path, embellishedPaths) {
-                insertFile(path);
-            }
+        bool useDynamicInsertion = true;
+        // // folder already open
+        if (useDynamicInsertion && fDir == G::currRootFolder) {
+            insertFiles(embellishedPaths);
             // update filter counts
             buildFilters->recount();
             //filterChange("MW::handleStartupArgs_remoteEmbellish");
@@ -1824,7 +1825,7 @@ void MW::handleStartupArgs(const QString &args)
             sel->select(fPath);
         }
         // open the folder
-        else {
+        else if (!useDynamicInsertion) {
             // go there ...
             fsTree->select(fDir);
             // refresh FSTree counts
@@ -2222,7 +2223,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        /*
+        // /*
         qDebug() << "MW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ;
@@ -3058,7 +3059,6 @@ void MW::updateImageCacheStatus(QString instruction,
     }
 
     if (G::showProgress != G::ShowProgress::ImageCache) return;
-    //if (!isShowCacheProgressBar) return;
 
     // just repaint the progress bar gray and return.
     if (instruction == "Clear") {
@@ -3066,10 +3066,7 @@ void MW::updateImageCacheStatus(QString instruction,
         return;
     }
 
-//    int rows = cache.totFiles;
-    int rows = icd->cacheItemList.size();
-
-    //if (rows > )
+    int rows = static_cast<int>(icd->cacheItemList.size());
 
     if (instruction == "Update all rows") {
         // clear progress
@@ -3081,8 +3078,6 @@ void MW::updateImageCacheStatus(QString instruction,
                                          cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
-//            bool metaLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
-//            bool cached = dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool();
             if (icd->cacheItemList.at(i).isCached)
                 cacheProgressBar->updateImageCacheProgress(i, i + 1, rows,
                                   cacheProgressBar->imageCacheColorGradient);
