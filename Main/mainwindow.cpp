@@ -2223,11 +2223,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        // /*
+        /*
         qDebug() << "MW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
-                    ;
-                    //*/
+                    ; //*/
+
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
@@ -2846,8 +2846,6 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
 
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-        qDebug() << "MW::loadConcurrentDone buildFilters->build()";
-        // launchBuildFilters();   // new folder = true
         buildFilters->build();
     }
 

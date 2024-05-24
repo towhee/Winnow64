@@ -333,10 +333,11 @@ int DataModel::insert(QString fPath)
     This will invoke MetaRead which will load the metadata, icon and imageCache.
 */
     if (G::isLogger) G::log("DataModel::insert");
-    if (isDebug)
+    if (isDebug) {
         qDebug() << "DataModel::insert"
                  << "instance =" << instance
                  << "fPath =" << fPath;
+    }
 
     QFileInfo insertFile(fPath);
     QString insertFileName = insertFile.fileName().toLower();
@@ -356,9 +357,11 @@ int DataModel::insert(QString fPath)
     // insert new row
     insertRow(dmRow);
 
+    /*
     qDebug() << "DataModel::insert"
              << "dmRow =" << dmRow
              << "fPath =" << fPath;
+    //*/
 
     // rebuild fileInfoList
     fileInfoList.clear();
