@@ -178,9 +178,11 @@ void MW::insertFiles(QStringList fPaths)
 {
 /*
     Replace or insert a new image file into the datamodel.
+
+    After insertion, the call function should select row: sel->select(fPath);
+    This will invoke MetaRead which will load the metadata, icon and imageCache.
 */
-    if (G::isLogger) G::log("MW::insertFile");
-    qDebug() << "MW::insertFiles  dm->instance =" << dm->instance;
+    if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
 
     if (fPaths.isEmpty()) {
         qWarning() << "WARNING MW::insertFiles fPaths is empty.";
@@ -214,13 +216,6 @@ void MW::insertFiles(QStringList fPaths)
             imageCacheThread->addCacheItemImageMetadata(m, dm->instance);
         }
     }
-
-    // thumbView->refreshThumbs();
-
-    // int startRow = *std::min_element(insertedRows.begin(), insertedRows.end());
-    // imageView->isFirstImageNewFolder = true;
-    // metaReadThread->syncInstance();
-    // metaReadThread->setStartRow(startRow, true, "MW::insertFile");
 }
 
 void MW::deleteSelectedFiles()

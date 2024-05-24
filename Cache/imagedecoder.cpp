@@ -398,7 +398,7 @@ void ImageDecoder::run()
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
         mutex.unlock();
     }
-    // /*
+    /*
         qDebug() << "ImageDecoder::run"
                  << "Id =" << threadId
                  << "decoder->fPath =" << fPath

@@ -196,7 +196,7 @@ void ImageCache::updateTargets()
     log("updateTargets");
 
     isCacheItemListComplete = cacheItemListComplete();
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::updateTargets"
                            << "current position =" << icd->cache.key
@@ -738,6 +738,7 @@ bool ImageCache::cacheUpToDate()
                     "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
                 );
             //*/
+            /*
             qDebug().noquote()
                  << "ImageCache::cacheUpToDate passover"
                  << "row = " << i
@@ -745,6 +746,7 @@ bool ImageCache::cacheUpToDate()
                  << "isCached =" << icd->cacheItemList.at(i).isCached
                  << "isCaching =" << icd->cacheItemList.at(i).isCaching
                  << "attempts =" << icd->cacheItemList.at(i).attempts;
+            //*/
             icd->cacheItemList[i].isCached = false;
             icd->cacheItemList[i].isCaching = false;
             isCacheUpToDate = false;
@@ -769,6 +771,7 @@ bool ImageCache::cacheUpToDate()
                      << "isCaching =" << icd->cacheItemList.at(i).isCaching
                 ;
             }
+            /*
             qDebug().noquote()
                 << "ImageCache::cacheUpToDate not caching or cached"
                 << "row = " << i
@@ -776,11 +779,12 @@ bool ImageCache::cacheUpToDate()
                 << "isCached =" << icd->cacheItemList.at(i).isCached
                 << "isCaching =" << icd->cacheItemList.at(i).isCaching
                 << "attempts =" << icd->cacheItemList.at(i).attempts;
+            //*/
             isCacheUpToDate = false;
             break;
         }
     }
-    // if (debugCaching || debugThis)
+    if (debugCaching || debugThis)
     {
         qDebug() << "ImageCache::cacheUpToDate"
                  << "isCacheUpToDate =" << isCacheUpToDate
@@ -1305,7 +1309,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     MetaRead::readMetadata.
 */
     log("addCacheItemImageMetadata", "Row = " + QString::number(m.row));
-    // if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::addCacheItemImageMetadata"
                  << "row =" << m.row << m.fName
                     ;
@@ -1682,7 +1686,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::setCurrentPosition"
                            << dm->rowFromPath(fPath)
@@ -1692,7 +1696,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     }
 
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
-        // if (G::isWarningLogger)
+        if (G::isWarningLogger)
             qWarning() << "WARNING"
                        << "ImageCache::setCurrentPosition"
                        << "Instance clash"
@@ -1738,11 +1742,11 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     // cacheItemList.at(i).status
     if (isRunning()) {
         // reset target range
-        qDebug() << "ImageCache::setCurrentPosition before updateTargets";
+        // qDebug() << "ImageCache::setCurrentPosition before updateTargets";
         updateTargets();
     }
     else {
-        qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
+        // qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
         start(QThread::LowestPriority);
     }
 }
@@ -1822,19 +1826,21 @@ void ImageCache::cacheImage(int id, int cacheKey)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
         bool isImage = decoder[id]->image.width() > 0;
         if (!isImage) {
+            /*
             QString k = QString::number(cacheKey).leftJustified((4));
             qDebug().noquote() << "ImageCache::cacheImage"
                                << "     decoder" << id
                                << "row =" << k
                                << "NULL IMAGE"
-                ;
+                ; //*/
         }
+        /*
         QString k = QString::number(cacheKey).leftJustified((4));
         qDebug().noquote() << "ImageCache::cacheImage                       "
                            << "     decoder" << id
                            << "row =" << k
                            << "decoder[id]->fPath =" << decoder[id]->fPath
-            ;
+            ; //*/
         icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     }
 
@@ -1849,11 +1855,12 @@ void ImageCache::cacheImage(int id, int cacheKey)
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
-//            qDebug().noquote() << "ImageCache::cacheImage"
-//                               << "     decoder" << id
-//                               << "decoder[id]->fPath =" << decoder[id]->fPath
-//                               << "dm->currentFilePath =" << dm->currentFilePath
-//                ;
+            /*
+            qDebug().noquote() << "ImageCache::cacheImage"
+                              << "     decoder" << id
+                              << "decoder[id]->fPath =" << decoder[id]->fPath
+                              << "dm->currentFilePath =" << dm->currentFilePath
+               ; //*/
             // clear "Loading Image..." central msg
             emit centralMsg("");
             // load in ImageView
@@ -2047,7 +2054,7 @@ void ImageCache::launchDecoders()
 
     for (int id = 0; id < decoderCount; ++id) {
         bool isCacheUpToDate = cacheUpToDate();
-        // if (debugCaching)
+        if (debugCaching)
         {
             qDebug()
                 << "\nImageCache::launchDecoders"
@@ -2087,7 +2094,6 @@ void ImageCache::run()
 */
     if (debugCaching || G::isLogger) log("run");
     if (icd->cacheItemList.length() == 0) {
-        //qDebug().noquote() << "ImageCache::run  icd->cacheItemList.length() == 0";
         return;
     }
     if (debugCaching)
