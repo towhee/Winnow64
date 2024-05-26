@@ -21,10 +21,12 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
-//        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
-//        thumbView->isFloat = isFloat;
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        #ifdef Q_OS_WIN
+        Win::setTitleBarColor(thumbDock->winId(), G::backgroundColor);
+        #endif
     }
 }
 
