@@ -9,6 +9,8 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
+- Win thumbs float needs dark title bar
+- Win thumbs float missing vertical scrollbar
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
 - ImageView::load not always work when jumping around folders
 - ImageView zoom when click not always work (double click issue)

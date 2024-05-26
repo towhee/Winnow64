@@ -167,8 +167,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    qDebug() << "dm->sf->rowCount() =" << dm->sf->rowCount();
-    // thumbView->refreshThumbs();
+    qDebug() << "thumbView->setWrapping(true)";
+    thumbView->setWrapping(true);
+    Win::setTitleBarColor(thumbDock->winId(), G::backgroundColor);
     return;
 }
 /*

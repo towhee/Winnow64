@@ -2246,7 +2246,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         else {
             thumbView->setWrapping(true);
         }
-        if (thumbDock->isFloating()) thumbView->setWrapping(true);
+        if (thumbDock->isFloating()) thumbView->setWrapping(true); // nada
     }
 
     // update cursor position on progressBar
