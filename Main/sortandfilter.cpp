@@ -645,6 +645,7 @@ void MW::setRating()
         }
         // write to sidecar
         if (G::useSidecar) {
+            qDebug() << "MW::setRating";
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)

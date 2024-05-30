@@ -842,7 +842,11 @@ void IconView::thumbsFitTopOrBottom(QString src)
 
     // do nothing if exceed limits
     if (exceedsLimits) {
-        qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits";
+        qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
+                 << "newViewportHt =" << newViewportHt
+                 << "maxCellHeight =" << maxCellHeight
+                 << "minCellHeight =" << minCellHeight
+            ;
         return;
     }
 

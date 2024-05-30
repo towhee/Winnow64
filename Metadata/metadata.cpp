@@ -487,6 +487,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 */
     if (G::isLogger) G::log("Metadata::writeXMP");
 
+    qDebug() << "Metadata::writeXMP";
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -546,9 +547,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         return false;
     }
 
+    qDebug() << "Metadata::writeXMP1" << fPath;
     // make sure file is available ie usb drive may have been ejected
     QFileInfo fileInfo(fPath);
-    if (!fileInfo.exists()) return false;
+    // if (!fileInfo.exists()) return false;
+    qDebug() << "Metadata::writeXMP2";
 
     // data edited, open image file
     p.file.setFileName(fPath);
@@ -602,6 +605,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     //*/
 
     // if (G::useSidecar) xmp.writeSidecar();
+    qDebug() << "Metadata::writeXMP9";
     xmp.writeSidecar(p.file);
 
     p.file.close();

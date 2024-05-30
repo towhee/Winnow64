@@ -166,10 +166,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
+    // thumbDock->save();
+    embelDock->rpt("Test");
+    // embelDock->setGeometry(4000,500, 800,600);
+    // thumbDock->move(QPoint(4000,500));
+    // embelDock->rpt("Test after move");
+    // QByteArray ba = G::settings->value("ThumbDockFloat/geometry").toByteArray();
+    // thumbDock->deconstructSavedGeometry(ba);
 
-    qDebug() << "thumbView->setWrapping(true)";
-    thumbView->setWrapping(true);
-    Win::setTitleBarColor(thumbDock->winId(), G::backgroundColor);
+    // qDebug() << "ThumbDockFloat.geometry" << thumbDock->geometry();
+    return;
+
+    qDebug() << "ThumbDockFloat.pos" << thumbDock->dw.pos;
+    writeSetting("ThumbDockFloat.pos", thumbDock->dw.pos);
     return;
 }
 /*

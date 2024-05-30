@@ -1242,6 +1242,7 @@ private:
                                int frameHeight);
     void setfsModelFlags();
     void removeDeprecatedSettings();
+    void writeSetting(QString key, QVariant value);
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);

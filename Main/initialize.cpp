@@ -1057,7 +1057,7 @@ void MW::createStatusBar()
     progressLabel->setFixedWidth(cacheBarProgressWidth);
     progressLabel->setPixmap(*progressPixmap);
 
-    // tooltip
+    // progress tooltip
     QString progressToolTip = "Image cache status for current folder:\n";
     progressToolTip += "  • LightGray:  \tbackground for all images in folder\n";
     progressToolTip += "  • DarkGray:   \timages targeted to be cached\n";
@@ -1080,12 +1080,20 @@ void MW::createStatusBar()
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
+    QString tip = "Metadata and Icon caching:\n";
+    tip += "• Green:    \tAll cached\n";
+    tip += "• Red:      \tCaching in progress\n";
+    tip += "• Orange:   \tCaching had a hickup\n";
+    metadataThreadRunningLabel->setToolTip(tip);
 
     // label to show imageThreadRunning status
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
-    QString itrl = "Turns red when image caching in progress";
-    imageThreadRunningLabel->setToolTip(itrl);
+    tip = "Image caching:\n";
+    tip += "• Green:    \tAll cached\n";
+    tip += "• Red:      \tCaching in progress\n";
+    tip += "• Gray:     \tEmpty folder, no images to cache\n";
+    imageThreadRunningLabel->setToolTip(tip);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
 
     // label to show cache amount
@@ -1137,8 +1145,8 @@ void MW::createFolderDock()
     folderDockTabRichText = "test";
 //    folderDockTabRichText = Utilities::pixmapToString(pm);
     dockTextNames << folderDockTabText;
-    folderDock = new DockWidget(folderDockTabText, this);  // Folders 📁
-    folderDock->setObjectName("FoldersDock");
+    folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
+    // folderDock->setObjectName("FoldersDock");
     folderDock->setWidget(fsTree);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
@@ -1196,8 +1204,8 @@ void MW::createFavDock()
     if (G::isLogger) G::log("MW::createFavDock");
     favDockTabText = "  🔖  ";
     dockTextNames << favDockTabText;
-    favDock = new DockWidget(favDockTabText, this);  // Bookmarks📗 🔖 🏷️ 🗂️
-    favDock->setObjectName("Bookmarks");
+    favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
+    // favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
     // customize the favDock titlebar
@@ -1253,8 +1261,7 @@ void MW::createFilterDock()
     if (G::isLogger) G::log("MW::createFilterDock");
     filterDockTabText = "  🤏  ";
     dockTextNames << filterDockTabText;
-    filterDock = new DockWidget(filterDockTabText, this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
-    filterDock->setObjectName("Filters");
+    filterDock = new DockWidget(filterDockTabText, "FilterDock", this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
 
     // customize the filterDock titlebar
     QHBoxLayout *filterTitleLayout = new QHBoxLayout();
@@ -1351,8 +1358,7 @@ void MW::createMetadataDock()
 //    metadataDockTabText = Utilities::pixmapToString(pixmap);
     metadataDockTabText = "  📷  ";
     dockTextNames << metadataDockTabText;
-    metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
-    metadataDock->setObjectName("ImageInfo");
+    metadataDock = new DockWidget(metadataDockTabText, "MetadataDock", this);    // Metadata
     metadataDock->setWidget(infoView);
 
     /* Experimenting touse rich text in QTabWidget for docks
@@ -1405,9 +1411,10 @@ void MW::createThumbDock()
     if (G::isLogger) G::log("MW::createThumbDock");
     thumbDockTabText = "Thumbnails";
     dockTextNames << thumbDockTabText;
-    thumbDock = new DockWidget(thumbDockTabText, this);  // Thumbnails
-    thumbDock->setObjectName("thumbDock");
+    thumbDock = new DockWidget(thumbDockTabText, "ThumbDockFloat", this);  // Thumbnails
+    thumbDock->setObjectName("ThumbDock");
     thumbDock->setWidget(thumbView);
+    // thumbDock->setSettings(settings);
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
@@ -1438,7 +1445,7 @@ void MW::createEmbelDock()
 
     embelDockTabText = "  🎨  ";
     dockTextNames << embelDockTabText;
-    embelDock = new DockWidget(embelDockTabText, this);  // Embellish
+    embelDock = new DockWidget(embelDockTabText, "EmbelDock", this);  // Embellish
     embelDock->setObjectName("EmbelDock");
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);

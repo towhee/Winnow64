@@ -77,16 +77,18 @@ class DockWidget : public QDockWidget
 {
     Q_OBJECT
 public:
-    DockWidget(const QString &title, QWidget *parent = nullptr);
+    DockWidget(const QString &title, QString objName, QWidget *parent = nullptr);
     QSize sizeHint() const override;
 
     void rpt(QString s);
+    QRect deconstructSavedGeometry(QByteArray geometry);
 
     struct DWLoc {
         int screen;
         QPoint pos;
         QSize size;
-        qreal devicePixelRatio;
+        QRect geometry;
+        qreal devicePixelRatio = 1;
     };
     DWLoc dw;
 
@@ -94,13 +96,21 @@ public:
     double prevDpr = 1;
 
     bool ignoreResize;
-    bool isInitializing = true;
+    // bool isInitializing = true;
+
+    void save();
+    void restore();
+
+private:
+
+private slots:
+    // void onTopLevelChanged(bool topLevel);
 
 protected:
     bool event(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    void moveEvent(QMoveEvent *event) override;
-    void showEvent(QShowEvent *event) override;
+    // void resizeEvent(QResizeEvent *event) override;
+    // void moveEvent(QMoveEvent *event) override;
+    // void showEvent(QShowEvent *event) override;
 };
 
 #endif // DOCKWIDGET_H

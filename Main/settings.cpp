@@ -1,5 +1,11 @@
 #include "Main/mainwindow.h"
 
+void MW::writeSetting(QString key, QVariant value)
+{
+    qDebug() << "MW::writeSetting" << key << value;
+    settings->setValue(key, value);
+}
+
 void MW::writeSettings()
 {
 /*
@@ -121,52 +127,52 @@ void MW::writeSettings()
     settings->setValue("isSoloPrefDlg", isSoloPrefDlg);
 
      /* FolderDock floating info */
-    settings->beginGroup(("FolderDock"));
-    settings->setValue("screen", folderDock->dw.screen);
-    settings->setValue("pos", folderDock->dw.pos);
-    settings->setValue("size", folderDock->dw.size);
-    settings->setValue("devicePixelRatio", folderDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // settings->beginGroup(("FolderDock"));
+    // settings->setValue("screen", folderDock->dw.screen);
+    // settings->setValue("pos", folderDock->dw.pos);
+    // settings->setValue("size", folderDock->dw.size);
+    // settings->setValue("devicePixelRatio", folderDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
     /* FavDock floating info */
-    settings->beginGroup(("FavDock"));
-    settings->setValue("screen", favDock->dw.screen);
-    settings->setValue("pos", favDock->dw.pos);
-    settings->setValue("size", favDock->dw.size);
-    settings->setValue("devicePixelRatio", favDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // settings->beginGroup(("FavDock"));
+    // settings->setValue("screen", favDock->dw.screen);
+    // settings->setValue("pos", favDock->dw.pos);
+    // settings->setValue("size", favDock->dw.size);
+    // settings->setValue("devicePixelRatio", favDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
     /* MetadataDock floating info */
-    settings->beginGroup(("MetadataDock"));
-    settings->setValue("screen", metadataDock->dw.screen);
-    settings->setValue("pos", metadataDock->dw.pos);
-    settings->setValue("size", metadataDock->dw.size);
-    settings->setValue("devicePixelRatio", metadataDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // settings->beginGroup(("MetadataDock"));
+    // settings->setValue("screen", metadataDock->dw.screen);
+    // settings->setValue("pos", metadataDock->dw.pos);
+    // settings->setValue("size", metadataDock->dw.size);
+    // settings->setValue("devicePixelRatio", metadataDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
     /* EmbelDock floating info */
-    settings->beginGroup(("EmbelDock"));
-    settings->setValue("screen", embelDock->dw.screen);
-    settings->setValue("pos", embelDock->dw.pos);
-    settings->setValue("size", embelDock->dw.size);
-    settings->setValue("devicePixelRatio", embelDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // settings->beginGroup(("EmbelDock"));
+    // settings->setValue("screen", embelDock->dw.screen);
+    // settings->setValue("pos", embelDock->dw.pos);
+    // settings->setValue("size", embelDock->dw.size);
+    // settings->setValue("devicePixelRatio", embelDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
     /* FilterDock floating info */
-    settings->beginGroup(("FilterDock"));
-    settings->setValue("screen", filterDock->dw.screen);
-    settings->setValue("pos", filterDock->dw.pos);
-    settings->setValue("size", filterDock->dw.size);
-    settings->setValue("devicePixelRatio", filterDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // settings->beginGroup(("FilterDock"));
+    // settings->setValue("screen", filterDock->dw.screen);
+    // settings->setValue("pos", filterDock->dw.pos);
+    // settings->setValue("size", filterDock->dw.size);
+    // settings->setValue("devicePixelRatio", filterDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
-    /* ThumbDock floating info */
-    settings->beginGroup(("ThumbDockFloat"));
-    settings->setValue("screen", thumbDock->dw.screen);
-    settings->setValue("pos", thumbDock->dw.pos);
-    settings->setValue("size", thumbDock->dw.size);
-    settings->setValue("devicePixelRatio", thumbDock->dw.devicePixelRatio);
-    settings->endGroup();
+    // /* ThumbDock floating info */
+    // settings->beginGroup(("ThumbDockFloat"));
+    // settings->setValue("screen", thumbDock->dw.screen);
+    // settings->setValue("pos", thumbDock->dw.pos);
+    // settings->setValue("size", thumbDock->dw.size);
+    // settings->setValue("devicePixelRatio", thumbDock->dw.devicePixelRatio);
+    // settings->endGroup();
 
     /* InfoView okToShow fields */
     if (G::useInfoView) {
