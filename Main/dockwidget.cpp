@@ -159,18 +159,7 @@ void DockTitleBar::setTitle(QString title)
 
 void DockTitleBar::setStyle()
 {
-//    int g1 = G::backgroundShade;
-//    int g0 = g1 - 10;
-//    if (g0 < 0) g0 = 0;
-
-//    QString bg = G::backgroundColor.name();
-//    int c = G::backgroundShade + 30;
-    QString s = //"background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-                //"stop: 0 " + QColor(g1,g1,g1).name() + ", "
-                //"stop: 1 " + QColor(g0,g0,g0).name() + ");"
-                //"background: " + bg + ";"
-                "padding-left: 2px;"
-//                "padding-bottom: 2px;"
+    QString s = "padding-left: 2px;"
                 "border: none;"
                 "color: #6CC1E8;"
                 "font-size:" + G::strFontSize + "pt;";
@@ -197,64 +186,61 @@ stylesheet is used instead, along with a border around the DockTitleBar.
 
 */
 
-DockWidget::DockWidget(const QString &title, QWidget *parent)
+DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
     : QDockWidget(title, parent)
 {
+    setObjectName(objName);
     ignoreResize = false;
+    // connect(this, &DockWidget::topLevelChanged, this, &DockWidget::onTopLevelChanged);
 }
+
+// void DockWidget::onTopLevelChanged(bool topLevel)
+// {
+//     if (G::isInitializing) return;
+//     qDebug() << "\nDockWidget::onTopLevelChanged  topLevel =" << topLevel
+//         << "isFloating" << isFloating();
+//     return;
+//     // // docked to float
+//     G::settings->beginGroup(("ThumbDockFloat"));
+//     if (topLevel) {
+//         // restore geometry
+//         if (G::settings->contains("geometry")) {
+//             qDebug() << "DockWidget::onTopLevelChanged  restore";
+//             deconstructSavedGeometry(G::settings->value("geometry").toByteArray());
+//             restoreGeometry(G::settings->value("geometry").toByteArray());
+//         }
+//     }
+//     // float to docked
+//     else {
+//         // save geometry
+//         qDebug() << "DockWidget::onTopLevelChanged  save geometry" << geometry();
+//         QByteArray geometry = saveGeometry();
+//         deconstructSavedGeometry(geometry);
+//         G::settings->setValue("geometry", saveGeometry());
+//     }
+//     G::settings->endGroup();
+// }
 
 bool DockWidget::event(QEvent *event)
 {
+    // if (isInitializing) return false;
+
     if (event->type() == QEvent::MouseButtonDblClick) {
-        if (G::isLogger) G::log("DockWidget::DockWidget::");
-        /*
-        qDebug() << "DockWidget::DockWidget::" << event << objectName()
-                 << "isFloating =" << isFloating()
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-        ignoreResize = true;
-        setFloating(!isFloating());
+
+        qDebug() << "\nDockWidget::MouseButtonDblClick  isFloating =" << isFloating();
         if (isFloating()) {
-            move(dw.pos);
-            dw.devicePixelRatio =  dw.devicePixelRatio =  this->screen()->devicePixelRatio();
-            //dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
-            if (!qFuzzyCompare(dw.devicePixelRatio, prevDpr)) {
-                dprSize *= prevDpr;
-                dprSize /= dw.devicePixelRatio;
-            }
-            adjustSize();
+            save();
+            setFloating(false);
         }
-        ignoreResize = false;
+        else {
+            setFloating(true);  // must preceed calling restore()
+            restore();
+        }
         return true;
     }
 
     QDockWidget::event(event);
     return true;
-}
-
-void DockWidget::showEvent(QShowEvent *event)
-{
-    if (G::isLogger) G::log("DockWidget::showEvent", objectName());
-    /*
-    if (isFloating())
-        qDebug() << "DockWidget::showEvent" << event << objectName()
-                 << "isInitializing =" << isInitializing
-                 << "isFloating =" << isFloating()
-                 << "dprSize =" << dprSize
-                 << "dw.size =" << dw.size
-                 << "dw.pos =" << dw.pos
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-    if (isInitializing && isFloating()) {
-        dprSize = dw.size / dw.devicePixelRatio;
-        adjustSize();
-        isInitializing = false;
-    }
-    QDockWidget::showEvent(event);
 }
 
 QSize DockWidget::sizeHint() const
@@ -269,85 +255,99 @@ QSize DockWidget::sizeHint() const
     return QDockWidget::sizeHint();
 }
 
-void DockWidget::resizeEvent(QResizeEvent *event)
+void DockWidget::save()
 {
-    if (G::isLogger) G::log("DockWidget::resizeEvent");
+    G::settings->beginGroup((objectName()));
     /*
-    if (isFloating())
-        qDebug() << "DockWidget::resizeEvent" << event << objectName()
-                 << "isInitializing =" << isInitializing
-                 << "ignoreResize =" << ignoreResize
-                 << "isFloating =" << isFloating()
-                 << "spontaneous =" << event->spontaneous()
-                 << "dprSize =" << dprSize
-                 << "dw.size =" << dw.size
-                 << "dw.pos =" << dw.pos
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-    if (isInitializing) {
-        prevDpr = dw.devicePixelRatio;
-    }
-
-    if (ignoreResize) return;
-
-    if (isFloating()) {
-        //dw.screen = QApplication::desktop()->screenNumber(this);
-        prevDpr = dw.devicePixelRatio;
-        dw.devicePixelRatio =  this->screen()->devicePixelRatio();
-        //dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
-        dw.size = event->size();
-        dprSize = dw.size;
-        /*
-        qDebug() << "DockWidget::resizeEvent" << event << "Define dw:"
-                 << "dprSize =" << dprSize
-                 << "dw.size =" << dw.size
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-    }
-    QDockWidget::resizeEvent(event);
+    dw.screen = QGuiApplication::screens().indexOf(screen());
+    dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
+    dw.size = size();
+    dw.devicePixelRatio = screen()->devicePixelRatio();
+    G::settings->setValue("screen", dw.screen);
+    G::settings->setValue("pos", dw.pos);
+    G::settings->setValue("size", dw.size);
+    G::settings->setValue("devicePixelRatio", dw.devicePixelRatio);
+    */
+    G::settings->setValue("geometry", geometry());
+    // G::settings->setValue("geometry", geometry());
+    G::settings->endGroup();
+    rpt("Save");
 }
 
-void DockWidget::moveEvent(QMoveEvent *event)
+void DockWidget::restore()
 {
-    if (G::isLogger) G::log("DockWidget::moveEvent", objectName());
+    G::settings->beginGroup((objectName()));
     /*
-    if (isFloating())
-        qDebug() << "DockWidget::moveEvent" << event << objectName()
-                 << "ignore =" << ignoreResize
-                 << "isFloating =" << isFloating()
-                 << "spontaneous =" << event->spontaneous()
-                 << "dw.size =" << dw.size
-                 << "dw.pos =" << dw.pos
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-    if (isFloating()) {
-        //dw.screen = QApplication::desktop()->screenNumber(this);
-        dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
-        /*
-        qDebug() << "DockWidget::moveEvent" << "Redefine dw.pos:"
-                 << "dw.pos =" << dw.pos
-                 << "frameGeometry() =" << frameGeometry()
-                 << "dw.devicePixelRatio " << dw.devicePixelRatio
-                 << "prevDpr " << prevDpr
-                    ;
-                    //*/
-        return;
-    }
-    QDockWidget::moveEvent(event);
+    if (G::settings->contains("screen")) dw.screen = G::settings->value("screen").toInt();
+    if (G::settings->contains("pos")) dw.pos = G::settings->value("pos").toPoint();
+    if (G::settings->contains("size")) dw.size = G::settings->value("size").toSize();
+    if (G::settings->contains("devicePixelRatio")) dw.devicePixelRatio = G::settings->value("devicePixelRatio").toReal();
+    */
+    if (G::settings->contains("geometry")) dw.geometry = G::settings->value("geometry").toRect();
+    G::settings->endGroup();
+    // setGeometry(QRect(dw.pos, dw.size));
+    setGeometry(dw.geometry);
+    rpt("Restore");
+}
+
+QRect DockWidget::deconstructSavedGeometry(QByteArray geometry)
+{
+    // if (geometry.size() < 4)
+    //     return false;
+    QDataStream stream(geometry);
+    stream.setVersion(QDataStream::Qt_4_0);
+
+    const quint32 magicNumber = 0x1D9D0CB;
+    quint32 storedMagicNumber;
+    stream >> storedMagicNumber;
+    // if (storedMagicNumber != magicNumber)
+    //     return false;
+
+    const quint16 currentMajorVersion = 3;
+    quint16 majorVersion = 0;
+    quint16 minorVersion = 0;
+
+    stream >> majorVersion >> minorVersion;
+
+    // if (majorVersion > currentMajorVersion)
+    //     return false;
+    // (Allow all minor versions.)
+
+    QRect restoredFrameGeometry;
+    QRect restoredGeometry;
+    QRect restoredNormalGeometry;
+    qint32 restoredScreenNumber;
+    quint8 maximized;
+    quint8 fullScreen;
+    qint32 restoredScreenWidth = 0;
+
+    stream >> restoredFrameGeometry // Only used for sanity checks in version 0
+        >> restoredNormalGeometry
+        >> restoredScreenNumber
+        >> maximized
+        >> fullScreen;
+
+    qDebug() << "DockWidget::deconstructSavedGeometry"
+             << "\nrestoredFrameGeometry =" << restoredFrameGeometry
+             << "\nrrestoredGeometry     =" << restoredGeometry
+             << "\nrestoredNormalGeometry =" << restoredNormalGeometry
+        ;
 }
 
 void DockWidget::rpt(QString s)
 {
     qDebug() << s
+             << "objectName =" << objectName()
              << "isFloating" << isFloating()
-             << "screen" << dw.screen
+             << "screen" << QGuiApplication::screens().indexOf(screen())
+             << "screen()->geometry() =" << screen()->geometry()
+             << "isVisible =" << isVisible()
+             << "width" << width()
+             << "height" << height()
              << "pos" << dw.pos
-             << "size" << dw.size;
+             << "size" << dw.size
+             << "geometry() =" << geometry()
+             << "frameGeometry() =" << frameGeometry()
+        ;
     s = "";
 }

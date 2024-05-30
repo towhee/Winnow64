@@ -120,11 +120,9 @@ void Win::setTitleBarColor(WId winId, QColor bgColor)
     // WINVER not working - same for Win10 and Win11, must compile on Win11
     double osVersion = QSysInfo::productVersion().toDouble();
     if (osVersion < 11) return;
-    //#if NTDDI_VERSION >= 167772171  // windows 11 or later
         HWND hWnd = reinterpret_cast<HWND>(winId);
         COLORREF color = RGB(bgColor.red(), bgColor.green(), bgColor.blue());
         DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
-    //#endif
 }
 
 
