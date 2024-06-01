@@ -610,6 +610,7 @@ private slots:
     void setEmbelDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
+    void focusOnDock(DockWidget *dockWidget);
     void toggleThumbDockVisibity();
     void toggleEmbelDockVisibility();
     void toggleFolderDockVisibility();

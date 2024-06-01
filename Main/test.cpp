@@ -163,22 +163,39 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     if (G::isFlowLogger2) qDebug() << "";
 }
 
+void listChildren(const QObject *parent, int depth = 0) {
+    const QObjectList &children = parent->children();
+    for (QObject *child : children) {
+        QWidget *widget = qobject_cast<QWidget *>(child);
+        QString indent(depth * 2, ' '); // Indentation for readability
+        if (widget) {
+            qDebug() << indent << "Class name:" << widget->metaObject()->className() << ", Object name:" << widget->objectName();
+        } else {
+            qDebug() << indent << "Class name:" << child->metaObject()->className() << ", Object name:" << child->objectName();
+        }
+        listChildren(child, depth + 1); // Recursively list children
+    }
+}
+
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    // thumbDock->save();
-    embelDock->rpt("Test");
-    // embelDock->setGeometry(4000,500, 800,600);
-    // thumbDock->move(QPoint(4000,500));
-    // embelDock->rpt("Test after move");
-    // QByteArray ba = G::settings->value("ThumbDockFloat/geometry").toByteArray();
-    // thumbDock->deconstructSavedGeometry(ba);
-
-    // qDebug() << "ThumbDockFloat.geometry" << thumbDock->geometry();
-    return;
-
-    qDebug() << "ThumbDockFloat.pos" << thumbDock->dw.pos;
-    writeSetting("ThumbDockFloat.pos", thumbDock->dw.pos);
+    // qDebug() << "embelDock->hasCustomTitleBar()" << embelDock->hasCustomTitleBar();
+    // qDebug() << "thumbDock->hasCustomTitleBar()" << thumbDock->hasCustomTitleBar();
+    // qDebug() << "\n" << thumbDock->floatingGeometry;
+    thumbDock->setGeometry(thumbDock->floatingGeometry);
+    // filterDock->rpt("Test");
+    // thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
+    //                        QDockWidget::DockWidgetMovable  |
+    //                        QDockWidget::DockWidgetFloatable |
+    //                        QDockWidget::DockWidgetVerticalTitleBar);
+    // thumbDock->rpt("Test");
+    // qDebug() << thumbDock->findChild<QWidget*>("qt_dockwidget_title");
+    // thumbDock->listAllChildren();
+    // QDockWidget *w = new QDockWidget("test");
+    // w->setFloating(true);
+    // w->show();
+    // listChildren(thumbDock);
     return;
 }
 /*

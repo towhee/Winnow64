@@ -1148,6 +1148,7 @@ void MW::createFolderDock()
     folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
     // folderDock->setObjectName("FoldersDock");
     folderDock->setWidget(fsTree);
+    connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
@@ -1187,15 +1188,6 @@ void MW::createFolderDock()
     // Spacer
     folderTitleLayout->addSpacing(5);
 
-    if (isSettings) {
-        settings->beginGroup(("FolderDock"));
-        if (settings->contains("screen")) folderDock->dw.screen = settings->value("screen").toInt();
-        if (settings->contains("pos")) folderDock->dw.pos = settings->value("pos").toPoint();
-        if (settings->contains("size")) folderDock->dw.size = settings->value("size").toSize();
-        if (settings->contains("devicePixelRatio")) folderDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
-        settings->endGroup();
-    }
-
     connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
 }
 
@@ -1207,6 +1199,7 @@ void MW::createFavDock()
     favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
     // favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
+    connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // customize the favDock titlebar
     QHBoxLayout *favTitleLayout = new QHBoxLayout();
@@ -1245,15 +1238,6 @@ void MW::createFavDock()
 
     // Spacer
     favTitleLayout->addSpacing(5);
-
-    if (isSettings) {
-        settings->beginGroup(("FavDock"));
-        if (settings->contains("screen")) favDock->dw.screen = settings->value("screen").toInt();
-        if (settings->contains("pos")) favDock->dw.pos = settings->value("pos").toPoint();
-        if (settings->contains("size")) favDock->dw.size = settings->value("size").toSize();
-        if (settings->contains("devicePixelRatio")) favDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
-        settings->endGroup();
-    }
 }
 
 void MW::createFilterDock()
@@ -1269,6 +1253,7 @@ void MW::createFilterDock()
     filterTitleLayout->setSpacing(0);
     filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
+    connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
@@ -1338,15 +1323,6 @@ void MW::createFilterDock()
     QFrame *frame = new QFrame;
     frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
-
-    if (isSettings) {
-        settings->beginGroup(("FilterDock"));
-        if (settings->contains("screen")) filterDock->dw.screen = settings->value("screen").toInt();
-        if (settings->contains("pos")) filterDock->dw.pos = settings->value("pos").toPoint();
-        if (settings->contains("size")) filterDock->dw.size = settings->value("size").toSize();
-        if (settings->contains("devicePixelRatio")) filterDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
-        settings->endGroup();
-    }
 }
 
 void MW::createMetadataDock()
@@ -1360,6 +1336,7 @@ void MW::createMetadataDock()
     dockTextNames << metadataDockTabText;
     metadataDock = new DockWidget(metadataDockTabText, "MetadataDock", this);    // Metadata
     metadataDock->setWidget(infoView);
+    connect(metadataDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     /* Experimenting touse rich text in QTabWidget for docks
     RichTextTabBar *tabBar = new RichTextTabBar();
@@ -1395,15 +1372,6 @@ void MW::createMetadataDock()
 
     // Spacer
     metaTitleLayout->addSpacing(5);
-
-    if (isSettings) {
-        settings->beginGroup(("MetadataDock"));
-        if (settings->contains("screen")) metadataDock->dw.screen = settings->value("screen").toInt();
-        if (settings->contains("pos")) metadataDock->dw.pos = settings->value("pos").toPoint();
-        if (settings->contains("size")) metadataDock->dw.size = settings->value("size").toSize();
-        if (settings->contains("devicePixelRatio")) metadataDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
-        settings->endGroup();
-    }
 }
 
 void MW::createThumbDock()
@@ -1411,27 +1379,31 @@ void MW::createThumbDock()
     if (G::isLogger) G::log("MW::createThumbDock");
     thumbDockTabText = "Thumbnails";
     dockTextNames << thumbDockTabText;
-    thumbDock = new DockWidget(thumbDockTabText, "ThumbDockFloat", this);  // Thumbnails
-    thumbDock->setObjectName("ThumbDock");
+    thumbDock = new DockWidget(thumbDockTabText, "ThumbDock", this);  // Thumbnails
+    // thumbDock = new QDockWidget("Thumbs", this);  // Thumbnails
+    // thumbDock->setObjectName("ThumbDock");
     thumbDock->setWidget(thumbView);
-    // thumbDock->setSettings(settings);
-    thumbDock->installEventFilter(this);
 
-    if (isSettings) {
-        settings->beginGroup(("ThumbDockFloat"));
-        if (settings->contains("screen")) thumbDock->dw.screen = settings->value("screen").toInt();
-        if (settings->contains("pos")) thumbDock->dw.pos = settings->value("pos").toPoint();
-        if (settings->contains("size")) thumbDock->dw.size = settings->value("size").toSize();
-        if (settings->contains("devicePixelRatio")) thumbDock->dw.devicePixelRatio = settings->value("devicePixelRatio").toReal();
-        settings->endGroup();
-    }
-//    else thumbDock->dw.size = QSize(600, 600);
+    // thumbDock->titleBarWidget()->installEventFilter(thumbDock);
 
-    connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
-            this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));
 
-    connect(thumbDock, SIGNAL(topLevelChanged(bool)),
-            this, SLOT(setThumbDockFloatFeatures(bool)));
+    // QWidget *thumbTitleBar = new QWidget();
+    // thumbDock->setTitleBarWidget(thumbTitleBar);
+
+    // customize the embelDock titlebar
+    // QHBoxLayout *thumbTitleLayout = new QHBoxLayout();
+    // thumbTitleLayout->setContentsMargins(0, 0, 0, 0);
+    // thumbTitleLayout->setSpacing(0);
+    // DockTitleBar *thumbTitleBar = new DockTitleBar("Thumbs", thumbTitleLayout);
+    // thumbDock->setTitleBarWidget(thumbTitleBar);
+
+    connect(thumbDock, &DockWidget::focus, this, &MW::focusOnDock);
+    connect(thumbDock, &DockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
+    connect(thumbDock, &DockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
+    connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::toggleThumbDockVisibity);
+
+    // connect(thumbDock, &QDockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
+    // connect(thumbDock, &QDockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
 }
 
 void MW::createEmbelDock()
@@ -1452,6 +1424,7 @@ void MW::createEmbelDock()
     embelDock->setVisible(true);
     // prevent MW splitter resizing embelDock so cannot see header - and + buttons in embellish
     embelDock->setMinimumWidth(275);
+    connect(embelDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     connect(embelDock, &QDockWidget::visibilityChanged, this, &MW::embelDockVisibilityChange);
 
