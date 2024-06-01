@@ -149,6 +149,7 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
     titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
+
 }
 
 void DockTitleBar::setTitle(QString title)
@@ -166,23 +167,38 @@ void DockTitleBar::setStyle()
     setStyleSheet(s);
 }
 
+void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
+{
+/*
+    If this event is not propogated then QDockWidget::toggleTopLevel is not invoked.
+*/
+    // qDebug() << "DockTitleBar::mouseDoubleClickEvent";
+    // event->ignore();
+    QWidget::mouseDoubleClickEvent(event);
+}
+
+
 /* DockWidget *********************************************************************************
 
-QDockWidget has a feature where you can double click on the title bar and the dock will toggle
-to a floating window and back to its docked state. The problem is if you move and resize the
-floating window and then toggle back to the dock and then back to floating again, your
-position and size are lost.
+    QDockWidget has a feature where you can double click on the title bar and the dock
+    will toggle to a floating window and back to its docked state. The problem is if you
+    move and resize the floating window and then toggle back to the dock and then back to
+    floating again, your position and size are lost.
 
-This subclass of QDockWidget overrides the MouseButtonDblClick, resizeEvent and moveEvent,
-ignoring Qt's attempts to impose its size and location "suggestions". The screen, position,
-window size and screen devicePixelRatio are stored in a struct dw, which in turn is saved in
-QSettings for persistence between sessions.
+    This subclass of QDockWidget overrides the MouseButtonDblClick, resizeEvent and
+    moveEvent, ignoring Qt's attempts to impose its size and location "suggestions". The
+    DockWidget geometry is saved in QSettings for persistence between sessions.
 
-When a mouse double click occurs in the docked state, the stored screen, postion and size are
-used to re-establish the prior state, factoring in any changes to the screen scale.
+    When a mouse double click occurs in the docked state, the stored geometry is used to
+    re-establish the prior state, factoring in any changes to the screen scale.
 
-I have not figured out how to draw a border around the DockWidget, so the contained treeview
-stylesheet is used instead, along with a border around the DockTitleBar.
+    If the DockWidget does not have a custom TitleBarWidget (ie thumbDock), then the
+    mouse double click event is not triggered. The restore() function is called from
+    MW::setThumbDockFloatFeatures. The save() function is triggered from the
+    DockWidget::moveEvent and DockWidget::resizeEvent events.
+
+    I have not figured out how to draw a border around the DockWidget, so the contained
+    treeview stylesheet is used instead, along with a border around the DockTitleBar.
 
 */
 
@@ -190,108 +206,231 @@ DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
     : QDockWidget(title, parent)
 {
     setObjectName(objName);
-    ignoreResize = false;
-    // connect(this, &DockWidget::topLevelChanged, this, &DockWidget::onTopLevelChanged);
+    isRestoring = false;
 }
 
-// void DockWidget::onTopLevelChanged(bool topLevel)
+void DockWidget::listAllChildren()
+{
+    // Function to list all children of the QDockWidget
+    const QObjectList &children = this->children();
+    for (QObject *child : children) {
+        QWidget *widget = qobject_cast<QWidget *>(child);
+        if (widget) {
+            qDebug() << "Class name:" << widget->metaObject()->className() << ", Object name:" << widget->objectName();
+        } else {
+            qDebug() << "Class name:" << child->metaObject()->className() << ", Object name:" << child->objectName();
+        }
+    }
+}
+
+bool DockWidget::hasCustomTitleBar()
+{
+    QWidget *titleBarWidget = this->titleBarWidget();
+    if (titleBarWidget) return true;
+    else return false;
+}
+
+// void DockWidget::showEvent(QShowEvent *event)
 // {
-//     if (G::isInitializing) return;
-//     qDebug() << "\nDockWidget::onTopLevelChanged  topLevel =" << topLevel
-//         << "isFloating" << isFloating();
-//     return;
-//     // // docked to float
-//     G::settings->beginGroup(("ThumbDockFloat"));
-//     if (topLevel) {
-//         // restore geometry
-//         if (G::settings->contains("geometry")) {
-//             qDebug() << "DockWidget::onTopLevelChanged  restore";
-//             deconstructSavedGeometry(G::settings->value("geometry").toByteArray());
-//             restoreGeometry(G::settings->value("geometry").toByteArray());
-//         }
+//     QDockWidget::showEvent(event);
+
+//     // // QString defaultTitleWidgetName = "qt_dockwidget_title"; // nada
+//     // QString defaultTitleWidgetName = "qt_scrollarea_hcontainer";
+
+//     // // Install the event filter on the default title bar widget
+//     // QWidget *titleBarWidget = this->titleBarWidget();
+//     // if (titleBarWidget) {
+//     //     titleBarWidget->installEventFilter(this);
+//     // } else {
+//     //     // If titleBarWidget is not explicitly set, retrieve the default title bar widget
+//     //     QWidget *defaultTitleBarWidget = findChild<QWidget*>(defaultTitleWidgetName);
+//     //     if (defaultTitleBarWidget) {
+//     //         defaultTitleBarWidget->installEventFilter(this);
+//     //     }
+//     //     else qWarning() << "DockWidget::showEvent failed to install eventFilter" << objectName();
+//     // }
+// }
+
+// bool DockWidget::eventFilter(QObject *watched, QEvent *event)
+// {
+//     // qDebug() << "DockWidget::eventFilter"
+//     //          << "watched =" << watched  << watched->objectName()
+//     //          << event;
+//     if (/*watched == titleBarWidget() &&*/ event->type() == QEvent::MouseButtonDblClick) {
+//         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+//         qDebug() << "DockWidget title bar double-clicked at position:" << mouseEvent->pos();
+
+//         // Handle the double-click event as needed
+//         // ...
+
+//         return true; // Event handled
 //     }
-//     // float to docked
-//     else {
-//         // save geometry
-//         qDebug() << "DockWidget::onTopLevelChanged  save geometry" << geometry();
-//         QByteArray geometry = saveGeometry();
-//         deconstructSavedGeometry(geometry);
-//         G::settings->setValue("geometry", saveGeometry());
-//     }
-//     G::settings->endGroup();
+//     return QDockWidget::eventFilter(watched, event);
 // }
 
 bool DockWidget::event(QEvent *event)
 {
-    // if (isInitializing) return false;
+/*
+    QDockWidget title bar overrides MouseButtonDblClick and does not propogate the event
+    so it cannot be captured in DockWidget.  Instead capture here.
+*/
+    // QDockWidget::event(event);
+    // return true;
+    // qDebug() << "DockWidget::event" << event << objectName()
+    //          << "isFloating =" << isFloating();
 
+    if (event->type() == QEvent::NonClientAreaMouseButtonDblClick) {
+        // qDebug() << "DockWidget::event" << event << objectName()
+        //          << "isFloating =" << isFloating();
+        save();
+        setFloating(false);
+        emit focus(this);
+        return true;
+    }
     if (event->type() == QEvent::MouseButtonDblClick) {
-
-        qDebug() << "\nDockWidget::MouseButtonDblClick  isFloating =" << isFloating();
-        if (isFloating()) {
+        if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
+        // qDebug() << "DockWidget::event" << event << objectName()
+        //          << "isFloating =" << isFloating();
+        // qDebug() << "DockWidget::event" << event << objectName()
+        //          << "isFloating =" << isFloating();
+        if (isFloating() && hasCustomTitleBar()) {
             save();
             setFloating(false);
+            emit focus(this);
         }
         else {
+            doubleClickDocked = true;
+            setDefaultFloatingGeometry();
             setFloating(true);  // must preceed calling restore()
             restore();
         }
+        // do not propogate event
         return true;
     }
+
+    // if (event->type() == QEvent::ShowToParent) {
+    //     qDebug() << "DockWidget::event" << event << objectName()
+    //              << "isFloating =" << isFloating();
+    // }
+
+    // if (event->type() == QEvent::ActivationChange) {
+    //     qDebug() << "DockWidget::event" << event << objectName()
+    //              << "isFloating =" << isFloating();
+    //     // if (isRestoring) setGeometry(floatingGeometry);
+    //     isRestoring = false;
+    // }
 
     QDockWidget::event(event);
     return true;
 }
 
-QSize DockWidget::sizeHint() const
+// void DockWidget::resizeEvent(QResizeEvent *event)
+// {
+// /*
+//     If the DockWidget does not have a custom TitleBarWidget (ie thumbDock) and the
+//     DockWidget is floating, then the mouse double click event is not triggered and the
+//     save() function is not invoked when the floating DockWidget is docked via double
+//     click by the parent QDockWidget. As a failsafe, the save() function is invoked here,
+//     unless the event was triggered by a double click on the docked titlebar, which does
+//     trigger the mouse double click event.
+// */
+//     qDebug() << "DockWidget::resizeEvent" << event
+//              << "isFloating() =" << isFloating()
+//              << "doubleClickDocked =" << doubleClickDocked
+//     ;
+
+//     if (doubleClickDocked) {
+//         doubleClickDocked = false;
+//         return;
+//     }
+//     if (isFloating()) {
+//         // qDebug() << "DockWidget::resizeEvent isFloating() = true";
+//         // save();
+//     }
+//     QDockWidget::resizeEvent(event);
+// }
+
+// void DockWidget::moveEvent(QMoveEvent *event)
+// {
+// /*
+//     If the DockWidget does not have a custom TitleBarWidget (ie thumbDock) and the
+//     DockWidget is floating, then the mouse double click event is not triggered and the
+//     save() function is not invoked when the floating DockWidget is docked via double
+//     click by the parent QDockWidget. As a failsafe, the save() function is invoked here,
+//     unless the event was triggered by a double click on the docked titlebar, which does
+//     trigger the mouse double click event.
+// */
+//     // if (doubleClickDocked) {
+//     //     doubleClickDocked = false;
+//     //     return;
+//     // }
+//     if (isFloating()) {
+//         // qDebug() << "DockWidget::moveEvent isFloating() = true";
+//         // save();
+//     }
+//     QDockWidget::moveEvent(event);
+// }
+
+void DockWidget::closeEvent(QCloseEvent *event)
 {
-    if (G::isLogger) G::log("DockWidget::sizeHint");
-    if (isFloating()) {
-        /*
-        qDebug() << "DockWidget::sizeHint" << "dprSize =" << dprSize;
-        //*/
-        return dprSize;
-    }
-    return QDockWidget::sizeHint();
+    qDebug() << "DockWidget::closeEvent";
+    emit closeFloatingDock();
+    QDockWidget::closeEvent(event);
+}
+
+QRect DockWidget::setDefaultFloatingGeometry()
+{
+    if (G::isLogger) G::log("DockWidget::setDefaultFloatingGeometry");
+    // qDebug() << "DockWidget::setDefaultFloatingGeometry parentWidget()->geometry() ="
+    //          << parentWidget()->geometry();
+    QPoint screenOffset = parentWidget()->geometry().topLeft() +
+                          geometry().topLeft() +
+                          QPoint(20,20);
+    defaultFloatingGeometry = QRect(screenOffset, size());
 }
 
 void DockWidget::save()
 {
+    if (G::isLogger) G::log("DockWidget::save", objectName());
+    qDebug() << "DockWidget::save" << objectName() << geometry();
     G::settings->beginGroup((objectName()));
-    /*
-    dw.screen = QGuiApplication::screens().indexOf(screen());
-    dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
-    dw.size = size();
-    dw.devicePixelRatio = screen()->devicePixelRatio();
-    G::settings->setValue("screen", dw.screen);
-    G::settings->setValue("pos", dw.pos);
-    G::settings->setValue("size", dw.size);
-    G::settings->setValue("devicePixelRatio", dw.devicePixelRatio);
-    */
-    G::settings->setValue("geometry", geometry());
+    G::settings->setValue("geometry", frameGeometry());
     // G::settings->setValue("geometry", geometry());
     G::settings->endGroup();
-    rpt("Save");
+    // rpt("Save");
 }
 
 void DockWidget::restore()
 {
+    if (G::isLogger) G::log("DockWidget::restore", objectName());
+    doubleClickDocked = false;
+    isRestoring = true;
     G::settings->beginGroup((objectName()));
-    /*
-    if (G::settings->contains("screen")) dw.screen = G::settings->value("screen").toInt();
-    if (G::settings->contains("pos")) dw.pos = G::settings->value("pos").toPoint();
-    if (G::settings->contains("size")) dw.size = G::settings->value("size").toSize();
-    if (G::settings->contains("devicePixelRatio")) dw.devicePixelRatio = G::settings->value("devicePixelRatio").toReal();
-    */
-    if (G::settings->contains("geometry")) dw.geometry = G::settings->value("geometry").toRect();
+    QRect savedGeometry;
+    if (G::settings->contains("geometry")) {
+        floatingGeometry = G::settings->value("geometry").toRect();
+        savedGeometry = G::settings->value("geometry").toRect();
+    }
+    else {
+        floatingGeometry = defaultFloatingGeometry;
+    }
     G::settings->endGroup();
-    // setGeometry(QRect(dw.pos, dw.size));
-    setGeometry(dw.geometry);
-    rpt("Restore");
+    /*
+    qDebug() << "DockWidget::restore" << objectName()
+             << "savedGeometry =" << savedGeometry
+             << "defaultFloatingGeometry =" << defaultFloatingGeometry
+             << "floatingGeometry =" << floatingGeometry
+        ; //*/
+    G::wait(10);
+    setGeometry(floatingGeometry);
+    // rpt("Restore");
 }
 
 QRect DockWidget::deconstructSavedGeometry(QByteArray geometry)
 {
+/*
+    Qwidget::restoreGeometry(const QByteArray &geometry)
+*/
     // if (geometry.size() < 4)
     //     return false;
     QDataStream stream(geometry);
@@ -338,16 +477,13 @@ void DockWidget::rpt(QString s)
 {
     qDebug() << s
              << "objectName =" << objectName()
-             << "isFloating" << isFloating()
-             << "screen" << QGuiApplication::screens().indexOf(screen())
+             << "isFloating =" << isFloating()
+             << "screen =" << QGuiApplication::screens().indexOf(screen())
              << "screen()->geometry() =" << screen()->geometry()
-             << "isVisible =" << isVisible()
-             << "width" << width()
-             << "height" << height()
-             << "pos" << dw.pos
-             << "size" << dw.size
+             << "parentWidget()->geometry() =" << parentWidget()->geometry()
+             // << "isVisible =" << isVisible()
+             << "size =" << size()
              << "geometry() =" << geometry()
-             << "frameGeometry() =" << frameGeometry()
+             // << "frameGeometry() =" << frameGeometry()
         ;
-    s = "";
 }

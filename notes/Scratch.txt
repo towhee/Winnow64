@@ -1,2 +1,43 @@
-DockWidget::onTopLevelChanged  save geometry QRect(1536,935 356x185)
-1060,380
+WHEN ISFLOATING = FALSE
+2 DockWidget::event                                  QEvent::MouseButtonDblClick ThumbDock
+18,463 DockWidget::setDefaultFloatingGeometry
+7 MW::updateIconRange                                src = IconView::resizeEvent
+83 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+0 MW::updateIconRange                                src = IconView::showEvent
+7,840 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+1,289 MW::setThumbDockFloatFeatures                      isFloat = 1
+2 MW::setThumbDockFeatures
+15,390 DockWidget::restore                                ThumbDock
+
+679, 685
+
+test.cpp:169:18: Cannot initialize a variable of type 'QWidget *' with an rvalue of type 'const QWidget *'
+
+"" Class name: QDockWidgetLayout , Object name: ""
+"" Class name: QDockWidgetTitleButton , Object name: "qt_dockwidget_floatbutton"
+"" Class name: QDockWidgetTitleButton , Object name: "qt_dockwidget_closebutton"
+"" Class name: QAction , Object name: ""
+"" Class name: IconView , Object name: "Thumbnails"
+"  " Class name: QWidget , Object name: "ThumbnailsViewPort"
+"  " Class name: QWidget , Object name: "qt_scrollarea_hcontainer"
+"    " Class name: QScrollBar , Object name: "IconViewHorizontalScrollBar"
+"    " Class name: QBoxLayout , Object name: ""
+"  " Class name: QStyledItemDelegate , Object name: ""
+"  " Class name: QItemSelectionModel , Object name: ""
+"  " Class name: QWidget , Object name: "qt_scrollarea_vcontainer"
+"    " Class name: QScrollBar , Object name: "IconViewVerticalScrollBar"
+"    " Class name: QBoxLayout , Object name: ""
+
+DockWidget::event QEvent(ActivationChange, 0x16f2309a8) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f2309a8) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f2309a8) "EmbelDock" isFloating = true
+DockTitleBar::mouseDoubleClickEvent
+DockWidget::event QMouseEvent(MouseButtonDblClick LeftButton pos=176,17 scn=176.176,16.8789 gbl=4298,836 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1)) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f22fdd8) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f22e828) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f22f768) "EmbelDock" isFloating = true
+DockWidget::event QEvent(ActivationChange, 0x16f22f768) "EmbelDock" isFloating = true
+2024-06-01 14:00:25.389 Winnow[59682:1704373] TSMSendMessageToUIServer: CFMessagePortSendRequest FAILED(-1) to send to port com.apple.tsm.uiserver
+2024-06-01 14:00:25.389 Winnow[59682:1704373] TSMSendMessageToUIServer: CFMessagePortSendRequest FAILED(-1) to send to port com.apple.tsm.uiserver
+DockWidget::event QEvent(ShowToParent, 0x16f22ff20) "EmbelDock" isFloating = true
+DockWidget::restore "EmbelDock" savedGeometry = QRect(4159,602 658x520) defaultFloatingGeometry = QRect(9009,1779 502x394) floatingGeometry = QRect(4159,602 658x520)

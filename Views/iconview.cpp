@@ -1258,7 +1258,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     Show the image in loupe view.  Scroll the thumbView or gridView to position at
     center.
 */
-    /*
+    // /*
     qDebug() << "IconView::mouseDoubleClickEvent";
     //*/
     if (isDebug) G::log("IconView::mouseDoubleClickEvent", objectName());

@@ -1560,7 +1560,7 @@ void Filters::resizeEvent(QResizeEvent *event)
 
 void Filters::paintEvent(QPaintEvent *event)
 {
-    if (G::isLogger) G::log("Filters::paintEvent");
+    // if (G::isLogger) G::log("Filters::paintEvent");
     QTreeWidget::paintEvent(event);
 }
 

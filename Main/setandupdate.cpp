@@ -16,7 +16,9 @@ void MW::setCentralMessage(QString message)
 void MW::setThumbDockFloatFeatures(bool isFloat)
 {
     if (G::isLogger) G::log("MW::setThumbDockFloatFeatures", "isFloat = " + QString::number(isFloat));
+    qDebug() << "MW::setThumbDockFloatFeatures" << "isFloat =" << isFloat;
     if (isFloat) {
+        // thumbDock->restore();
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
                                QDockWidget::DockWidgetMovable  |
@@ -27,6 +29,8 @@ void MW::setThumbDockFloatFeatures(bool isFloat)
         #ifdef Q_OS_WIN
         Win::setTitleBarColor(thumbDock->winId(), G::backgroundColor);
         #endif
+    }
+    else {
     }
 }
 
@@ -194,9 +198,17 @@ void MW::setThumbDockVisibity()
     sel->setCurrentRow(dm->currentSfRow);
 }
 
+void MW::focusOnDock(DockWidget *dockWidget)
+{
+    if (G::isLogger) G::log("MW::focusOnDock", dockWidget->objectName());
+    dockWidget->raise();
+    dockWidget->setVisible(true);
+}
+
 void MW::toggleFolderDockVisibility()
 {
     if (G::isLogger) G::log("MW::toggleFolderDockVisibility");
+    qDebug() << "MW::toggleFolderDockVisibility";
     if (G::isInitializing) return;
     QString dock = folderDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -222,6 +234,7 @@ void MW::toggleFolderDockVisibility()
 void MW::toggleFavDockVisibility() {
     if (G::isLogger) G::log("MW::toggleFavDockVisibility");
     if (G::isInitializing) return;
+    qDebug() << "MW::toggleFavDockVisibility";
     QString dock = favDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (favDock->isVisible()) dockToggle = SetInvisible;
@@ -304,7 +317,7 @@ void MW::toggleThumbDockVisibity()
 //         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
 //         return;
 //     }
-//    qDebug() << "MW::toggleThumbDockVisibity";
+   qDebug() << "MW::toggleThumbDockVisibity";
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;

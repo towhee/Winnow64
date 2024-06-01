@@ -9,8 +9,8 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
-- Win thumbs float needs dark title bar
-- Win thumbs float missing vertical scrollbar
+- IconView zoom rect not showing for heic thumbnails
+- Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
 - ImageView::load not always work when jumping around folders
 - ImageView zoom when click not always work (double click issue)
@@ -119,6 +119,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Win thumbs float needs dark title bar
+- Win thumbs float missing vertical scrollbar
 - Scrolling when a filter change does not change the IconViews
 - No image showing when refilter after null filter.
 - Sort option not sticky when change folders but also not reset to filename in menu

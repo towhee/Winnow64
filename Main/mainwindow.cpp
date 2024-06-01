@@ -987,6 +987,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
+    // if (event->type() == QEvent::MouseButtonDblClick) {
+    //     qDebug() << event << obj << QCursor::pos();
+    // }
+
     /* DEBUG SPECIFIC EVENT (uncomment to use)
     if (obj->objectName() == "VideoWidget") {
         if (event->type() == QEvent::MouseMove) {
@@ -1411,18 +1415,18 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
 void MW::focusChange(QWidget *previous, QWidget *current)
 {
-    if (G::isLogger) {
-        QString s;
-        if (previous != nullptr) s = "Previous = " + previous->objectName();
-        if (current != nullptr) s += " Current = " + current->objectName();
-        G::log("MW::focusChange", s);
-    }
-//    qDebug() << "MW::focusChange" << previous << current;
-    if (current == nullptr) return;
-    // following does nothing, enableGoKeyActions has been commented out.  Remove??
-    if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
-    else enableGoKeyActions(true);
-    if (previous == nullptr) return;    // suppress compiler warning
+    // if (G::isLogger) {
+    //     QString s;
+    //     if (previous != nullptr) s = "Previous = " + previous->objectName();
+    //     if (current != nullptr) s += " Current = " + current->objectName();
+    //     G::log("MW::focusChange", s);
+    // }
+    // // qDebug() << "MW::focusChange" << previous << current;
+    // if (current == nullptr) return;
+    // // following does nothing, enableGoKeyActions has been commented out.  Remove??
+    // if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
+    // else enableGoKeyActions(true);
+    // if (previous == nullptr) return;    // suppress compiler warning
 }
 
 void MW::resetFocus()
@@ -2567,8 +2571,6 @@ bool MW::updateIconRange(bool sizeChange, QString src)
 
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
-    if (G::isLogger)
-        qDebug() << "   MW::updateIconRange  src =" << src;
 
     /*
     qDebug() << "   MW::updateIconRange  src =" << src
