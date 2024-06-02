@@ -1207,6 +1207,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }  //*/
 
+        /*
+        // Set icon to tabified dock widgets tabbar tabs
+        if (event->type() == QEvent::ChildAdded) {
+            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+            for (int i = 0; i < tabBar->count(); ++i) {
+                if (tabBar->tabText(i) == embelDockTabText)
+                    tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));            }
+        }  //*/
+
         // build filters when filter tab mouse clicked
         if (event->type() == QEvent::MouseButtonPress) {
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
@@ -1229,8 +1238,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
                 if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
-                if (tabBar->tabText(i) == embelDockTabText)
-                    tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
                 prevTabIndex = i;
                 QToolTip::showText(e->globalPos(), tip);
             }

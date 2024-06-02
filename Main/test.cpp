@@ -180,25 +180,9 @@ void listChildren(const QObject *parent, int depth = 0) {
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    qDebug() << "thumbDock->height() =" << thumbDock->height()
-             << "thumbView->iconHeight" << thumbView->iconHeight
-        ;
-    // qDebug() << "embelDock->hasCustomTitleBar()" << embelDock->hasCustomTitleBar();
-    // qDebug() << "thumbDock->hasCustomTitleBar()" << thumbDock->hasCustomTitleBar();
-    // qDebug() << "\n" << thumbDock->floatingGeometry;
-    // thumbDock->setGeometry(thumbDock->floatingGeometry);
-    // filterDock->rpt("Test");
-    // thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
-    //                        QDockWidget::DockWidgetMovable  |
-    //                        QDockWidget::DockWidgetFloatable |
-    //                        QDockWidget::DockWidgetVerticalTitleBar);
-    // thumbDock->rpt("Test");
-    // qDebug() << thumbDock->findChild<QWidget*>("qt_dockwidget_title");
-    // thumbDock->listAllChildren();
-    // QDockWidget *w = new QDockWidget("test");
-    // w->setFloating(true);
-    // w->show();
-    // listChildren(thumbDock);
+
+    QString testString = Utilities::pngToString(":/images/icon16/filter.png");
+    qDebug() << testString;
     return;
 }
 /*
