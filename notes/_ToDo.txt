@@ -9,6 +9,7 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
+- Cannot select other tabs if embel tab selected.
 - IconView zoom rect not showing for heic thumbnails
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
@@ -119,6 +120,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ThumbDock height shrinking when app reopened
+- DockWidgets not remembering prior state
 - Win thumbs float needs dark title bar
 - Win thumbs float missing vertical scrollbar
 - Scrolling when a filter change does not change the IconViews

@@ -351,12 +351,12 @@ void IconView::setThumbParameters()
     possibly altered thumbnail dimensions.
 */
     if (isDebug) G::log("IconView::setThumbParameters", objectName());
-        /*
-        qDebug() << "IconView::setThumbParameters" << objectName()
-                 << "iconWidth =" << iconWidth
-                 << "iconHeight =" << iconHeight
-                    ;
-                    //*/
+    /*
+    qDebug() << "IconView::setThumbParameters" << objectName()
+             << "iconWidth =" << iconWidth
+             << "iconHeight =" << iconHeight
+                ;
+                //*/
 
     /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
        thumbView cells are taller than the dock then QIconview::visualRect is not calculated
@@ -528,7 +528,7 @@ void IconView::setThumbSize()
 /*
 
 */
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "IconView::setThumbSize" << objectName();
     QString src = "IconView::setThumbSize";
 
@@ -571,6 +571,8 @@ void IconView::thumbsEnlarge()
         if (iconHeight > G::maxIconSize) iconHeight = G::maxIconSize;
     }
 
+    qDebug() << "IconView::thumbsEnlarge" << objectName()
+             << "iconHeight =" << iconHeight;
     setThumbSize();
     return;
 }
@@ -590,6 +592,8 @@ void IconView::thumbsShrink()
         if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
     }
 
+    qDebug() << "IconView::thumbsShrink" << objectName()
+             << "iconHeight =" << iconHeight;
     setThumbSize();
     return;
 }
@@ -758,7 +762,6 @@ void IconView::resizeEvent(QResizeEvent *)
              << "thumbSplitDrag =" << thumbSplitDrag
              << "isWrapping =" << isWrapping()
              << "G::isInitializing =" << G::isInitializing
-             << "G::isLinearLoadDone =" << G::isLinearLoadDone
              << "m2->gridDisplayFirstOpen =" <<  m2->gridDisplayFirstOpen
              << "midVisibleCell =" <<  midVisibleCell
                 ;
@@ -854,20 +857,18 @@ void IconView::thumbsFitTopOrBottom(QString src)
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-        /*
-        qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
-                 << "newViewportHt =" << newViewportHt
-                 << "maxCellHeight =" << maxCellHeight
-                 << "minCellHeight =" << minCellHeight
-                 << "bestAspectRatio =" << bestAspectRatio
-                 << "iconHeight =" << iconHeight
-                 << "iconWidth =" << iconWidth
-                 << "hMax =" << hMax
-                 << "hMin =" << hMin
-                 << "G::iconWMax =" << G::iconWMax
-                 << "G::iconHMax =" << G::iconHMax
-                 << "G::maxIconSize =" << G::maxIconSize
-                    ;
+    // /*
+    qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+             << "newViewportHt =" << newViewportHt
+             << "maxCellHeight =" << maxCellHeight
+             << "minCellHeight =" << minCellHeight
+             << "bestAspectRatio =" << bestAspectRatio
+             << "iconHeight =" << iconHeight
+             << "iconWidth =" << iconWidth
+             << "hMax =" << hMax
+             << "hMin =" << hMin
+             << "G::maxIconSize =" << G::maxIconSize
+                ;
     //    */
 
     setThumbSize();

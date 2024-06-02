@@ -180,10 +180,13 @@ void listChildren(const QObject *parent, int depth = 0) {
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
+    qDebug() << "thumbDock->height() =" << thumbDock->height()
+             << "thumbView->iconHeight" << thumbView->iconHeight
+        ;
     // qDebug() << "embelDock->hasCustomTitleBar()" << embelDock->hasCustomTitleBar();
     // qDebug() << "thumbDock->hasCustomTitleBar()" << thumbDock->hasCustomTitleBar();
     // qDebug() << "\n" << thumbDock->floatingGeometry;
-    thumbDock->setGeometry(thumbDock->floatingGeometry);
+    // thumbDock->setGeometry(thumbDock->floatingGeometry);
     // filterDock->rpt("Test");
     // thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
     //                        QDockWidget::DockWidgetMovable  |

@@ -564,6 +564,7 @@ void MW::createThumbView()
         thumbView->badgeSize = 13;
         thumbView->iconNumberSize = 24;
     }
+
     // double mouse click fires displayLoupe
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
@@ -1385,7 +1386,6 @@ void MW::createThumbDock()
     thumbDock->setWidget(thumbView);
 
     // thumbDock->titleBarWidget()->installEventFilter(thumbDock);
-
 
     // QWidget *thumbTitleBar = new QWidget();
     // thumbDock->setTitleBarWidget(thumbTitleBar);
