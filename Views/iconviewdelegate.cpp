@@ -276,10 +276,13 @@ int IconViewDelegate::getCellWidthFromThumbWidth(int width)
 
 int IconViewDelegate::getCellHeightFromThumbHeight(int height)
 {
-//    qDebug() << "IconViewDelegate::getCellHeightFromThumbHeight"
-//             << "pad2 =" << pad2
-//             << "textHeight =" << textHeight
-//                ;
+   /*
+   qDebug() << "IconViewDelegate::getCellHeightFromThumbHeight"
+            << "height =" << height
+            << "pad2 =" << pad2
+            << "textHeight =" << textHeight
+            << "cellHeight =" << height + pad2 + textHeight + 2
+               ; //*/
     return height + pad2 + textHeight + 2;
 }
 

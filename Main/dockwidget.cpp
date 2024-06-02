@@ -1,37 +1,37 @@
 #include "dockwidget.h"
 
 /*
-Try to create your own font that contains the graphic you want at the corresponding
-Unicode code point, such as U+2706 (✆). You can use a font editor such as FontForge or
-Glyphr Studio to design your graphic and assign it to the Unicode character. Then you can
-use the font in your web pages or applications.
+    Try to create your own font that contains the graphic you want at the corresponding
+    Unicode code point, such as U+2706 (✆). You can use a font editor such as FontForge or
+    Glyphr Studio to design your graphic and assign it to the Unicode character. Then you can
+    use the font in your web pages or applications.
 
-Embed a custom font file in your Qt application using a resource file (*.qrc). You can
-then use the QFontDatabase class to load the font from the resource file and use it in
-your application2. For example:
+    Embed a custom font file in your Qt application using a resource file (*.qrc). You can
+    then use the QFontDatabase class to load the font from the resource file and use it in
+    your application2. For example:
 
-// create a resource file with the font file (e.g. BYekan.ttf) under /fonts folder
-<qresource>
-    <file alias="BYekan.ttf">fonts/BYekan.ttf</file>
-</qresource>
+    // create a resource file with the font file (e.g. BYekan.ttf) under /fonts folder
+    <qresource>
+        <file alias="BYekan.ttf">fonts/BYekan.ttf</file>
+    </qresource>
 
-// load the font from the resource file using QFontDatabase
-int id = QFontDatabase::addApplicationFont(":/fonts/BYekan.ttf");
-QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+    // load the font from the resource file using QFontDatabase
+    int id = QFontDatabase::addApplicationFont(":/fonts/BYekan.ttf");
+    QString family = QFontDatabase::applicationFontFamilies(id).at(0);
 
-// create a QFont object with the loaded font family
-QFont customFont(family);
+    // create a QFont object with the loaded font family
+    QFont customFont(family);
 
-// create a QLabel and set its font and text
-QLabel *label = new QLabel(this);
-label->setFont(customFont);
-label->setText("This is a test");
+    // create a QLabel and set its font and text
+    QLabel *label = new QLabel(this);
+    label->setFont(customFont);
+    label->setText("This is a test");
 
-Use FontForge directly to create a new font and import your custom characters into it.
-You can then design the shape of each character using the drawing tools and assign it to
-the desired Unicode code point.
+    Use FontForge directly to create a new font and import your custom characters into it.
+    You can then design the shape of each character using the drawing tools and assign it to
+    the desired Unicode code point.
 
-Unicode to QString:  QString s = QString::fromUcs4(0x4FF0);
+    Unicode to QString:  QString s = QString::fromUcs4(0x4FF0);
 */
 
 /* RichTextTabBar *****************************************************************************
@@ -185,17 +185,25 @@ void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
     move and resize the floating window and then toggle back to the dock and then back to
     floating again, your position and size are lost.
 
-    This subclass of QDockWidget overrides the MouseButtonDblClick, resizeEvent and
-    moveEvent, ignoring Qt's attempts to impose its size and location "suggestions". The
-    DockWidget geometry is saved in QSettings for persistence between sessions.
+    This subclass of QDockWidget overrides the MouseButtonDblClick, and
+    NonClientAreaMouseButtonDblClick , ignoring Qt's attempts to impose its size and
+    location "suggestions". The DockWidget geometry is saved in QSettings for persistence
+    between sessions.
+
+    The QDockWidget topLevelChanged signal is not employed because it fires after the
+    DockWidget floating status has changed, and we need to know before, so we can save
+    the floating geometry.
 
     When a mouse double click occurs in the docked state, the stored geometry is used to
     re-establish the prior state, factoring in any changes to the screen scale.
 
     If the DockWidget does not have a custom TitleBarWidget (ie thumbDock), then the
-    mouse double click event is not triggered. The restore() function is called from
-    MW::setThumbDockFloatFeatures. The save() function is triggered from the
-    DockWidget::moveEvent and DockWidget::resizeEvent events.
+    MouseButtonDblClick event is not triggered when floating, but the
+    NonClientAreaMouseButtonDblClick is triggered.
+
+    Before DblClick floating a DockWidget the restore() function is called.from
+    MW::setThumbDockFloatFeatures. Before DblClick docking a DockWidget the save()
+    function is triggered.
 
     I have not figured out how to draw a border around the DockWidget, so the contained
     treeview stylesheet is used instead, along with a border around the DockTitleBar.
@@ -209,20 +217,6 @@ DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
     isRestoring = false;
 }
 
-void DockWidget::listAllChildren()
-{
-    // Function to list all children of the QDockWidget
-    const QObjectList &children = this->children();
-    for (QObject *child : children) {
-        QWidget *widget = qobject_cast<QWidget *>(child);
-        if (widget) {
-            qDebug() << "Class name:" << widget->metaObject()->className() << ", Object name:" << widget->objectName();
-        } else {
-            qDebug() << "Class name:" << child->metaObject()->className() << ", Object name:" << child->objectName();
-        }
-    }
-}
-
 bool DockWidget::hasCustomTitleBar()
 {
     QWidget *titleBarWidget = this->titleBarWidget();
@@ -230,69 +224,38 @@ bool DockWidget::hasCustomTitleBar()
     else return false;
 }
 
-// void DockWidget::showEvent(QShowEvent *event)
-// {
-//     QDockWidget::showEvent(event);
-
-//     // // QString defaultTitleWidgetName = "qt_dockwidget_title"; // nada
-//     // QString defaultTitleWidgetName = "qt_scrollarea_hcontainer";
-
-//     // // Install the event filter on the default title bar widget
-//     // QWidget *titleBarWidget = this->titleBarWidget();
-//     // if (titleBarWidget) {
-//     //     titleBarWidget->installEventFilter(this);
-//     // } else {
-//     //     // If titleBarWidget is not explicitly set, retrieve the default title bar widget
-//     //     QWidget *defaultTitleBarWidget = findChild<QWidget*>(defaultTitleWidgetName);
-//     //     if (defaultTitleBarWidget) {
-//     //         defaultTitleBarWidget->installEventFilter(this);
-//     //     }
-//     //     else qWarning() << "DockWidget::showEvent failed to install eventFilter" << objectName();
-//     // }
-// }
-
-// bool DockWidget::eventFilter(QObject *watched, QEvent *event)
-// {
-//     // qDebug() << "DockWidget::eventFilter"
-//     //          << "watched =" << watched  << watched->objectName()
-//     //          << event;
-//     if (/*watched == titleBarWidget() &&*/ event->type() == QEvent::MouseButtonDblClick) {
-//         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-//         qDebug() << "DockWidget title bar double-clicked at position:" << mouseEvent->pos();
-
-//         // Handle the double-click event as needed
-//         // ...
-
-//         return true; // Event handled
-//     }
-//     return QDockWidget::eventFilter(watched, event);
-// }
-
 bool DockWidget::event(QEvent *event)
 {
 /*
     QDockWidget title bar overrides MouseButtonDblClick and does not propogate the event
     so it cannot be captured in DockWidget.  Instead capture here.
-*/
-    // QDockWidget::event(event);
-    // return true;
-    // qDebug() << "DockWidget::event" << event << objectName()
-    //          << "isFloating =" << isFloating();
 
+    The QDockWidget topLevelChanged signal is not employed because it fires after the
+    DockWidget floating status has changed, and we need to know before, so we can save
+    the floating geometry.
+*/
     if (event->type() == QEvent::NonClientAreaMouseButtonDblClick) {
-        // qDebug() << "DockWidget::event" << event << objectName()
-        //          << "isFloating =" << isFloating();
+
+        /* This event is fired when the default (non-custom) floating DockWidget titlebar
+        is dblclick. If the DockWidget has a custom titlebar then this event is not
+        fired. So, only the thumbDock DockWidget when floating. */
+
+        if (G::isLogger) G::log("DockWidget::event", "QEvent::NonClientAreaMouseButtonDblClick " + objectName());
+        qDebug() << "DockWidget::event NonClientAreaMouseButtonDblClick" << objectName()
+                 << "isFloating =" << isFloating();
         save();
         setFloating(false);
         emit focus(this);
+        // do not propogate event
         return true;
     }
+
     if (event->type() == QEvent::MouseButtonDblClick) {
+        /*  This event is fired for DockWidgets with a custom titlebar when they are both
+        foating and docked and non-custom titlebar DockWidgets when docked. */
         if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
-        // qDebug() << "DockWidget::event" << event << objectName()
-        //          << "isFloating =" << isFloating();
-        // qDebug() << "DockWidget::event" << event << objectName()
-        //          << "isFloating =" << isFloating();
+        qDebug() << "DockWidget::event MouseButtonDblClick" << objectName()
+                 << "isFloating =" << isFloating();
         if (isFloating() && hasCustomTitleBar()) {
             save();
             setFloating(false);
@@ -308,68 +271,9 @@ bool DockWidget::event(QEvent *event)
         return true;
     }
 
-    // if (event->type() == QEvent::ShowToParent) {
-    //     qDebug() << "DockWidget::event" << event << objectName()
-    //              << "isFloating =" << isFloating();
-    // }
-
-    // if (event->type() == QEvent::ActivationChange) {
-    //     qDebug() << "DockWidget::event" << event << objectName()
-    //              << "isFloating =" << isFloating();
-    //     // if (isRestoring) setGeometry(floatingGeometry);
-    //     isRestoring = false;
-    // }
-
     QDockWidget::event(event);
     return true;
 }
-
-// void DockWidget::resizeEvent(QResizeEvent *event)
-// {
-// /*
-//     If the DockWidget does not have a custom TitleBarWidget (ie thumbDock) and the
-//     DockWidget is floating, then the mouse double click event is not triggered and the
-//     save() function is not invoked when the floating DockWidget is docked via double
-//     click by the parent QDockWidget. As a failsafe, the save() function is invoked here,
-//     unless the event was triggered by a double click on the docked titlebar, which does
-//     trigger the mouse double click event.
-// */
-//     qDebug() << "DockWidget::resizeEvent" << event
-//              << "isFloating() =" << isFloating()
-//              << "doubleClickDocked =" << doubleClickDocked
-//     ;
-
-//     if (doubleClickDocked) {
-//         doubleClickDocked = false;
-//         return;
-//     }
-//     if (isFloating()) {
-//         // qDebug() << "DockWidget::resizeEvent isFloating() = true";
-//         // save();
-//     }
-//     QDockWidget::resizeEvent(event);
-// }
-
-// void DockWidget::moveEvent(QMoveEvent *event)
-// {
-// /*
-//     If the DockWidget does not have a custom TitleBarWidget (ie thumbDock) and the
-//     DockWidget is floating, then the mouse double click event is not triggered and the
-//     save() function is not invoked when the floating DockWidget is docked via double
-//     click by the parent QDockWidget. As a failsafe, the save() function is invoked here,
-//     unless the event was triggered by a double click on the docked titlebar, which does
-//     trigger the mouse double click event.
-// */
-//     // if (doubleClickDocked) {
-//     //     doubleClickDocked = false;
-//     //     return;
-//     // }
-//     if (isFloating()) {
-//         // qDebug() << "DockWidget::moveEvent isFloating() = true";
-//         // save();
-//     }
-//     QDockWidget::moveEvent(event);
-// }
 
 void DockWidget::closeEvent(QCloseEvent *event)
 {
@@ -397,7 +301,6 @@ void DockWidget::save()
     G::settings->setValue("geometry", frameGeometry());
     // G::settings->setValue("geometry", geometry());
     G::settings->endGroup();
-    // rpt("Save");
 }
 
 void DockWidget::restore()
@@ -421,15 +324,15 @@ void DockWidget::restore()
              << "defaultFloatingGeometry =" << defaultFloatingGeometry
              << "floatingGeometry =" << floatingGeometry
         ; //*/
+    // Necessary to pause for the QDockWidget default geometry to be set before overriding.
     G::wait(10);
     setGeometry(floatingGeometry);
-    // rpt("Restore");
 }
 
 QRect DockWidget::deconstructSavedGeometry(QByteArray geometry)
 {
 /*
-    Qwidget::restoreGeometry(const QByteArray &geometry)
+    From Qwidget::restoreGeometry(const QByteArray &geometry)
 */
     // if (geometry.size() < 4)
     //     return false;

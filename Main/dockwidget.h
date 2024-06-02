@@ -80,36 +80,17 @@ class DockWidget : public QDockWidget
     Q_OBJECT
 public:
     DockWidget(const QString &title, QString objName, QWidget *parent = nullptr);
-    // QSize sizeHint() const override;
-
-    void rpt(QString s);
-    QRect deconstructSavedGeometry(QByteArray geometry);
-    void listAllChildren();
-    // struct DWLoc {
-    //     int screen;
-    //     QPoint pos;
-    //     QSize size;
-    //     QRect geometry;
-    //     qreal devicePixelRatio = 1;
-    // };
-    // DWLoc dw;
-
-    // QSize dprSize;
-    // double prevDpr = 1;
-
-    // bool ignoreResize;
-    // // bool isInitializing = true;
-
-    void save();
-    void restore();
-    QRect defaultFloatingGeometry;
-    QRect floatingGeometry;
-    bool hasCustomTitleBar();
 
 private:
     void toggleTopLevel();
     QRect setDefaultFloatingGeometry();
-    QRect parentGeometry;
+    QRect defaultFloatingGeometry;
+    QRect floatingGeometry;
+    bool hasCustomTitleBar();
+    void rpt(QString s);
+    QRect deconstructSavedGeometry(QByteArray geometry);
+    void save();
+    void restore();
     bool doubleClickDocked;
     bool isRestoring;
 
@@ -117,19 +98,9 @@ signals:
     void focus(DockWidget *dw);
     void closeFloatingDock();
 
-private slots:
-    // void onTopLevelChanged(bool topLevel);
-
 protected:
     bool event(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    // void moveEvent(QMoveEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
-
-    // void mouseDoubleClickEvent(QMouseEvent *event) override;
-    // void mousePressEvent(QMouseEvent *event) override;
-    // void showEvent(QShowEvent *event) override;
-    // bool eventFilter(QObject *watched, QEvent *event) override;
 };
 
 #endif // DOCKWIDGET_H

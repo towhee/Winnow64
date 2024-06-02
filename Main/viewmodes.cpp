@@ -31,9 +31,9 @@ void MW::loupeDisplay()
     //req'd to set G::mode = "Loupe" when starting program to show videos (better way??)
     //if (G::isInitializing) return;
 
-    if (!G::isInitializing && G::isLogger)
-        qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
-                 << QVariant(wasThumbDockVisible).toString();
+    // if (!G::isInitializing && G::isLogger)
+        // qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
+        //          << QVariant(wasThumbDockVisible).toString();
 
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
@@ -192,7 +192,8 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::tableDisplay";
+    // if (G::isLogger || G::isFlowLogger)
+        // qDebug() << "MW::tableDisplay";
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(

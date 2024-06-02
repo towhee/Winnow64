@@ -682,7 +682,8 @@ void MW::showEvent(QShowEvent *event)
     }
 
     // set thumbnail size to fit the thumbdock initial size
-    thumbView->thumbsFitTopOrBottom();
+    qDebug() << "\nMW::showEvent";
+    // thumbView->thumbsFitTopOrBottom();
 
     // initial status bar icon state
     updateStatusBar();
@@ -1228,6 +1229,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
                 if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                if (tabBar->tabText(i) == embelDockTabText)
+                    tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
                 prevTabIndex = i;
                 QToolTip::showText(e->globalPos(), tip);
             }
