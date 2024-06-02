@@ -339,6 +339,28 @@ QString Utilities::pixmapToString(QPixmap &pixmap)
     return imgHtml;
 }
 
+QString Utilities::pngToString(QString fPath)
+{
+    // Load the pixmap from the file
+    QPixmap pixmap(fPath);
+    if (pixmap.isNull()) {
+        return QString(); // Return an empty string if the image cannot be loaded
+    }
+
+    // Serialize the pixmap to a byte array
+    QByteArray byteArray;
+    QBuffer buffer(&byteArray);
+    buffer.open(QIODevice::WriteOnly);
+    pixmap.save(&buffer, "PNG");
+    buffer.close();
+
+    // Convert the byte array to a base64-encoded string
+    QString base64String = QString::fromLatin1(byteArray.toBase64().data());
+    // QString base64String = byteArray.toBase64();
+    QString imgHtml = "<img src=\"data:image/png;base64," + base64String + "\"/>";
+    return imgHtml;
+}
+
 // numbers: big endian = "MM" = 0x4D4D   little endian = "II" = 0x4949
 
 int Utilities::get4_1st(QByteArray c)

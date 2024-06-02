@@ -67,6 +67,26 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     }
 }
 
+void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
+{
+    int w = image.width();
+    int h = image.height();
+    if (h == 0) {
+        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        return;
+    }
+    double a = w * 1.0 / h;
+    int alignRight = Qt::AlignRight | Qt::AlignVCenter;
+    QString src = "Thumb::setImageDimensions";
+
+    emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
+    emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
+    emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
+    emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
+    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
+
+}
+
 void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
 /*
@@ -101,22 +121,7 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Fail;
     }
 
-    int w = image.width();
-    int h = image.height();
-    if (h == 0) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
-        return Status::Fail;
-    }
-    double a = w * 1.0 / h;
-    QString src = "Thumb::loadFromEntireFile";
-
-    int alignRight = Qt::AlignRight | Qt::AlignVCenter;
-
-    emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
-    emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
-    emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
-    emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
-    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
+    setImageDimensions(fPath, image, row);
 
     if (image.isNull()) {
         qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
@@ -334,7 +339,10 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
         if (ext == "heic") {
             status = loadFromHeic(fPath, image);
-            if (status == Status::Success) break;
+            if (status == Status::Success) {
+                setImageDimensions(fPath, image, dmRow);
+                break;
+            }
         }
 
         if (ext == "tif" && G::useMyTiff) {

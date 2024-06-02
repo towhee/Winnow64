@@ -9,8 +9,7 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
-- Cannot select other tabs if embel tab selected.
-- IconView zoom rect not showing for heic thumbnails
+- Add delay check for orphans in ImageCache
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
 - ImageView::load not always work when jumping around folders
@@ -120,6 +119,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- IconView zoom rect not showing for heic thumbnails
 - ThumbDock height shrinking when app reopened
 - DockWidgets not remembering prior state
 - Win thumbs float needs dark title bar

@@ -46,6 +46,7 @@ public:
     // Convert
     static QString stringListToString(QStringList list);
     static QString pixmapToString(QPixmap &pixmap);
+    static QString pngToString(QString fPath);
 
     // File variable byte operations
     static void saveByteArrayAsFile(QString fPath, QByteArray &ba);
