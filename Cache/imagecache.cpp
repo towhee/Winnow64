@@ -153,6 +153,14 @@ void ImageCache::stop()
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 }
 
+bool ImageCache::allDecodersReady()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
+    }
+    return true;
+}
+
 float ImageCache::getImCacheSize()
 {
     // return the current size of the cache
@@ -213,10 +221,10 @@ void ImageCache::updateTargets()
     icd->cache.currMB = getImCacheSize();
     setPriorities(icd->cache.key);
     setTargetRange();
-    resetAbortedCaching();
+    resetCachingFlags();
 }
 
-void ImageCache::resetAbortedCaching()
+void ImageCache::resetCachingFlags()
 {
 /*
     Rapidly updating the cache can result in aborted decoder threads that leave
@@ -534,7 +542,7 @@ bool ImageCache::nextToCache(int id)
     order to find the highest priority item to cache in the target range based on these
     criteria:
 
-    • isCaching and isCached are false.
+    • isCaching and isCached are false and attempts < maxAttemptsToCacheImage.
 
     • decoderId matches item, isCaching is true and isCached = false. If this is the case
       then we know the previous attempt failed, and we should try again if the failure was
@@ -636,7 +644,7 @@ bool ImageCache::nextToCache(int id)
         }
 
         // max attempts exceeded
-        if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage && !G::allMetadataLoaded) {
+        if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage /*&& !G::allMetadataLoaded*/) {
             // if (debugCaching)
             {
                 qDebug() << "ImageCache::nextToCache                           "
@@ -964,6 +972,7 @@ QString ImageCache::reportCacheParameters()
     rpt << "cacheSizeHasChanged      = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
     rpt << "filterOrSortHasChanged   = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
     rpt << "isCacheUpToDate          = " << (isCacheUpToDate ? "true" : "false") << "\n";
+    rpt << "isFinalCheckCompleted    = " << QVariant(isFinalCheckCompleted).toString() << "\n";
     return reportString;
 }
 
@@ -1875,13 +1884,13 @@ void ImageCache::cacheImage(int id, int cacheKey)
 void ImageCache::fillCache(int id)
 {
     /*
+    Read all the image files from the target range and save the QImages in  the
+    concurrent image cache hash icd->imCache (see cachedata.h).
+
     A number of ImageDecoders are created when ImageCache is created. Each ImageDecoder
     runs in a separate thread. The decoders convert an image file into a QImage and then
-    signal this function with their id so the QImage can be inserted into the image
-    cache. ImageDecoders are launched from CacheImage::run. CacheImage makes sure the
-    necessary metadata is available and reads the file and then runs the decoder. This is
-    very important, as file reads have to be sequential while the decoding can be
-    performed synchronously, which significantly improves performance.
+    signal this function (fillCache) with their id so the QImage can be inserted into the
+    image cache. The ImageDecoders are launched from ImageCache::launchDecoders.
 
     The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the
     decoder is created and when the QImage has been inserted into the image cache the
@@ -1892,10 +1901,10 @@ void ImageCache::fillCache(int id)
     more targeted images to be cached, the next one is assigned to the decoder, which is
     run again. The decoders keep running until all the targeted images have been cached.
 
-    Every time the ImageCache::run function encounters a change trigger (file selection
-    change, cache size change, color manage change or sort/filter change) the image cache
-    parameters are updated and this function is called for each Ready decoder. The
-    decoders not Ready are Busy and already in the fillCache loop.
+    If there is a file selection change, cache size change, color manage change or
+    sort/filter change the image cache parameters are updated and this function is called
+    for each Ready decoder. The decoders not Ready are Busy and already in the fillCache
+    loop.
 
     An image decoder can be running when a new folder is selected, returning an image
     from the previous folder. When an image decoder is run it is seeded with the
@@ -2027,6 +2036,14 @@ void ImageCache::fillCache(int id)
         // did caching start before cacheItemList was completed?
         if (!isCacheItemListComplete) updateTargets();
         decoder[id]->setReady();
+
+        // if all image decoders finished then make final check for orphans
+        if (!isFinalCheckCompleted && allDecodersReady()) {
+            isFinalCheckCompleted = true;
+            resetCachingFlags();
+            launchDecoders();
+            return;
+        }
 
         // turn off caching activity lights on statusbar
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
