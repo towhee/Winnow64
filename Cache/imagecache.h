@@ -115,6 +115,7 @@ private:
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
     bool isCacheItemListComplete = false;
+    bool isFinalCheckCompleted = false;
     int fileIsOpen = ImageDecoder::Status::FileOpen;
     int inValidImage = ImageDecoder::Status::Invalid;
 
@@ -132,7 +133,8 @@ private:
     float getImCacheSize();         // add up total MB cached
     bool cacheItemListComplete();
     void updateTargets();
-    void resetAbortedCaching();     // Set IsCaching = false within current target range
+    void resetCachingFlags();       // Set IsCaching = false within current target range
+    bool allDecodersReady();        // No decoders active
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead

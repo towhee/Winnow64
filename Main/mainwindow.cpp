@@ -1839,7 +1839,7 @@ void MW::handleStartupArgs(const QString &args)
             sel->select(fPath);
         }
         // open the folder
-        else if (!useDynamicInsertion) {
+        else {
             // go there ...
             fsTree->select(fDir);
             // refresh FSTree counts
