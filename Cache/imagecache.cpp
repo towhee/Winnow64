@@ -156,7 +156,16 @@ void ImageCache::stop()
 bool ImageCache::allDecodersReady()
 {
     for (int id = 0; id < decoderCount; ++id) {
-        if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
+        // if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
+        if (decoder[id]->isRunning()) return false;
+    }
+    return true;
+}
+
+bool ImageCache::lastDecoderDone()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (decoder[id]->status == ImageDecoder::Status::Busy) return false;
     }
     return true;
 }
@@ -647,7 +656,7 @@ bool ImageCache::nextToCache(int id)
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage /*&& !G::allMetadataLoaded*/) {
             // if (debugCaching)
             {
-                qDebug() << "ImageCache::nextToCache                           "
+                qWarning() << "WARNING: ImageCache::nextToCache                           "
                          << "row =" << i
                          << "exceeded max attempts"
                     ;
@@ -791,6 +800,13 @@ bool ImageCache::cacheUpToDate()
             isCacheUpToDate = false;
             break;
         }
+
+        // check if item not in imCache
+        if (!icd->imCache.contains(icd->cacheItemList.at(i).fPath)) {
+            icd->cacheItemList[i].isCached = false;
+            isCacheUpToDate = false;
+            break;
+        }
     }
     if (debugCaching || debugThis)
     {
@@ -858,9 +874,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
 /*
     Called when delete image(s).
 */
-    if (debugCaching)
-        log("removeFromCache");
-        qDebug() << "ImageCache::removeFromCache";
+    log("removeFromCache");
 
     // Mutex req'd (do not remove 2023-11-13)
     QMutexLocker locker(&gMutex);
@@ -992,6 +1006,7 @@ QString ImageCache::reportCacheDecoders()
     rpt << "Status        ";
     rpt << "  Key  ";
     rpt << "  DM Instance ";
+    rpt << "  isRunning ";
     rpt << "\n";
     for (int id = 0; id < decoderCount; ++id) {
         rpt << QString::number(id).rightJustified(4);
@@ -1000,6 +1015,8 @@ QString ImageCache::reportCacheDecoders()
         rpt << QString::number(decoder[id]->cacheKey).rightJustified(5);
         rpt << "  ";
         rpt << QString::number(instance).rightJustified(13);
+        rpt << "   ";
+        rpt << QVariant(decoder[id]->isRunning()).toString();
         rpt << "\n";
     }
 
@@ -1014,7 +1031,7 @@ QString ImageCache::reportCache(QString title)
     QHash<int, QString> rptStatus;
     rptStatus[0] = "Ready";
     rptStatus[1] = "Busy";
-    rptStatus[2] = "Done";
+    rptStatus[2] = "Success";
     rptStatus[3] = "Abort";
     rptStatus[4] = "Invalid";
     rptStatus[5] = "Failed";
@@ -1647,7 +1664,8 @@ void ImageCache::refreshImageCache()
     Reload all images in the cache.
 */
     log("refreshImageCache");
-    if (debugCaching) qDebug() << "ImageCache::refreshImageCache";
+    // if (debugCaching)
+        qDebug() << "ImageCache::refreshImageCache";
     if (useMutex) gMutex.lock();
     // make all isCached = false
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
@@ -1656,6 +1674,7 @@ void ImageCache::refreshImageCache()
         }
     }
     refreshCache = true;
+    isFinalCheckCompleted = false;
     if (useMutex) gMutex.unlock();
     if (!isRunning()) {
         start(QThread::LowestPriority);
@@ -1669,6 +1688,7 @@ void ImageCache::colorManageChange()
 */
     if (debugCaching) qDebug() << "ImageCache::colorManageChange";
     log("colorManageChange");
+    isFinalCheckCompleted = false;
     refreshImageCache();
 }
 
@@ -1679,9 +1699,11 @@ void ImageCache::cacheSizeChange()
     direction, priorities and target are reset and orphans fixed.
 */
     log("cacheSizeChange");
-    if (debugCaching) qDebug() << "ImageCache::cacheSizeChange";
+    // if (debugCaching)
+        qDebug() << "ImageCache::cacheSizeChange";
     if (useMutex) gMutex.lock();
     cacheSizeHasChanged = true;
+    isFinalCheckCompleted = false;
     if (useMutex) gMutex.unlock();
     if (!isRunning()) {
         start(QThread::LowestPriority);
@@ -1695,7 +1717,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::setCurrentPosition"
                            << dm->rowFromPath(fPath)
@@ -1748,6 +1770,8 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         }
     }
 
+    isFinalCheckCompleted = false;
+
     // cacheItemList.at(i).status
     if (isRunning()) {
         // reset target range
@@ -1755,7 +1779,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         updateTargets();
     }
     else {
-        // qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
+        qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
         start(QThread::LowestPriority);
     }
 }
@@ -1819,6 +1843,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
         qDebug().noquote() << "ImageCache::cacheImage                       "
                            << "     decoder" << id
                            << "row =" << k
+                           << "errMsg =" << decoder[id]->errMsg
                            << "decoder[id]->fPath =" << decoder[id]->fPath
                            //<< "dm->currentFilePath =" << dm->currentFilePath
             ;
@@ -1827,7 +1852,17 @@ void ImageCache::cacheImage(int id, int cacheKey)
     /* Safety check do not exceed max cache size.  The metadata determination of the image size
        could be wrong, resulting in icd->cacheItem.sizeMB being wrong.  If this is the case, then
        the target range will be wrong too.  */
-    if ((icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB) > icd->cache.maxMB) return;
+    if ((icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB) > icd->cache.maxMB) {
+        if (debugCaching)
+        {
+            QString k = QString::number(cacheKey).leftJustified((4));
+            qWarning() << "WARNING: ImageCache::cacheImage                           "
+                     << "row =" << k
+                     << "exceeded max cache size"
+                ;
+        }
+        // return;
+    }
 
     // cache the image if not a video
     if (decoder[id]->status != ImageDecoder::Status::Video) {
@@ -1835,11 +1870,12 @@ void ImageCache::cacheImage(int id, int cacheKey)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
         bool isImage = decoder[id]->image.width() > 0;
         if (!isImage) {
-            /*
+            // /*
             QString k = QString::number(cacheKey).leftJustified((4));
-            qDebug().noquote() << "ImageCache::cacheImage"
+            qWarning().noquote() << "WARNING: ImageCache::cacheImage"
                                << "     decoder" << id
                                << "row =" << k
+                               << "errMsg =" << decoder[id]->errMsg
                                << "NULL IMAGE"
                 ; //*/
         }
@@ -2024,6 +2060,9 @@ void ImageCache::fillCache(int id)
         }
     }
 
+    // decoder caching completed, reset status
+    // decoder[id]->status = ImageDecoder::Status::Ready;
+
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (!abort && !cacheUpToDate() && nextToCache(id) && isValidKey(icd->cache.toCacheKey)) {
         decodeNextImage(id);
@@ -2037,11 +2076,23 @@ void ImageCache::fillCache(int id)
         if (!isCacheItemListComplete) updateTargets();
         decoder[id]->setReady();
 
-        // if all image decoders finished then make final check for orphans
-        if (!isFinalCheckCompleted && allDecodersReady()) {
+        // if all image decoders except this one are finished then make final check for orphans
+        bool allDecodersDone = true;
+        for (int d = 0; d < decoderCount; ++d) {
+            if (d == id) continue;
+            if (decoder[d]->isRunning()) {
+                allDecodersDone = false;
+                break;
+            }
+        }
+        if (!isFinalCheckCompleted && allDecodersDone) {
+            qDebug() << "ImageCache::fillCache make final check"
+                     << "ImageCache isRunning =" << isRunning()
+                     << "cacheUpToDate() =" << cacheUpToDate()
+                ;
             isFinalCheckCompleted = true;
             resetCachingFlags();
-            launchDecoders();
+            launchDecoders("FinalCheck");
             return;
         }
 
@@ -2060,14 +2111,15 @@ void ImageCache::fillCache(int id)
     }
 }
 
-void ImageCache::launchDecoders()
+void ImageCache::launchDecoders(QString src)
 {
     if (debugCaching || G::isLogger) log("launchDecoders");
+    qDebug() << "ImageCache::launchDecoders src =" << src;
 
-    if (!isRunning()) {
-        start(QThread::LowestPriority);
-        return;
-    }
+    // if (!isRunning()) {
+    //     start(QThread::LowestPriority);
+    //     return;
+    // }
 
     for (int id = 0; id < decoderCount; ++id) {
         bool isCacheUpToDate = cacheUpToDate();
@@ -2092,10 +2144,6 @@ void ImageCache::launchDecoders()
             }
             fillCache(id);
         }
-        // if (cacheUpToDate()) {
-        //     qDebug() << "ImageCache::launchDecoders cacheUpToDate = true";
-        //     break;
-        // }
     }
 }
 
@@ -2113,7 +2161,7 @@ void ImageCache::run()
     if (icd->cacheItemList.length() == 0) {
         return;
     }
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::run";
     }
@@ -2129,5 +2177,5 @@ void ImageCache::run()
 
     // signal MW cache status
     emit updateIsRunning(true, true);
-    launchDecoders();
+    launchDecoders("ImageCache::run");
 }

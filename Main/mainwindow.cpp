@@ -681,8 +681,8 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
-    // set thumbnail size to fit the thumbdock initial size
-    qDebug() << "\nMW::showEvent";
+    /* set thumbnail size to fit the thumbdock initial size
+       canceled as dock height reduced every time a new session */
     // thumbView->thumbsFitTopOrBottom();
 
     // initial status bar icon state
@@ -1001,12 +1001,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* DEBUG SPECIFIC OBJECTNAME (uncomment to use)
     if (obj->objectName() == "QTabBar") {
-//        if (event->type()        != QEvent::Paint
-//                && event->type() != QEvent::UpdateRequest
-//                && event->type() != QEvent::ZeroTimerEvent
-//                && event->type() != QEvent::Timer
-//                && event->type() == QEvent::Enter
-//                )
+       // if (event->type()        != QEvent::Paint
+       //         && event->type() != QEvent::UpdateRequest
+       //         && event->type() != QEvent::ZeroTimerEvent
+       //         && event->type() != QEvent::Timer
+       //         && event->type() == QEvent::Enter
+       //         )
         {
             qDebug() << "MW::eventFilter"
                      << event << "\t"
@@ -1157,7 +1157,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             else {
                 QPoint pos = thumbView->mapFromGlobal(QCursor::pos());
                 QModelIndex idx = thumbView->indexAt(pos);
-//                qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
+                // qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
                 if (idx.isValid()) {
                     QString src = "MW::eventFilter ZoomCursor";
                     thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
@@ -2083,8 +2083,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     G::t.restart();
-    /*
-    if (G::isLogger || G::isFlowLogger)
+    // /*
+    // if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src
@@ -2787,7 +2787,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         //return;
     }
 
-    /*else */if (isFileSelectionChange)
+    else if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
 }
 

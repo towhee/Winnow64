@@ -332,7 +332,7 @@ void MW::deleteFiles(QStringList paths)
             ImageMetadata m = dm->imMetadata(fPath);
             if (!m.isReadWrite) {
                 fileWasLocked = true;
-                qDebug() << "MW::deleteFiles File is locked" << fPath;
+                qWarning() << "WARNING MW::deleteFiles File is locked" << fPath;
             }
             if (QFile(fPath).moveToTrash()) {
                 sldm.append(fPath);
@@ -344,11 +344,11 @@ void MW::deleteFiles(QStringList paths)
                 }
             }
             else {
-                qDebug() << "MW::deleteFiles Unable to move to trash" << fPath;
+                qWarning() << "WARNING MW::deleteFiles Unable to move to trash" << fPath;
             }
         }
         else {
-            qDebug() << "MW::deleteFiles File does not exist" << fPath;
+            qWarning() << "WARNING MW::deleteFiles File does not exist" << fPath;
         }
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
@@ -374,39 +374,24 @@ void MW::deleteFiles(QStringList paths)
     }
     filters->restore();
 
-    qDebug() << "MW::deleteFiles remove from datamodel      ms =" << t.elapsed(); t.restart();
-
     // cleanup G::rowsWithIcon
     metaReadThread->cleanupIcons();
 
-    qDebug() << "MW::deleteFiles clean up icons             ms =" << t.elapsed(); t.restart();
-
     // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);
-
-    qDebug() << "MW::deleteFiles remove from image cache    ms =" << t.elapsed(); t.restart();
 
     G::ignoreScrollSignal = false;
 
     // rebuild filters
     buildFilters->build();
-    //    buildFilters->recount();
-    qDebug() << "MW::deleteFiles rebuild filters all done   ms =" << t.elapsed(); t.restart();
 
     // update current index
     int sfRow;
-    qDebug() << "MW::deleteFiles  lowRow1 =" << lowRow;
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
-    qDebug() << "MW::deleteFiles  lowRow2 =" << lowRow;
     sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
 
-    qDebug() << "MW::deleteFiles  sfRow =" << sfRow;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    qDebug() << "MW::deleteFiles sfIdx.row() =" << sfIdx.row();
     sel->select(sfIdx);
-
-    qDebug() << "MW::deleteFiles update current index       ms =" << t.elapsed(); t.restart();
-
 }
 
 void MW::deleteFolder()
