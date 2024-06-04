@@ -9,11 +9,9 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
-- Add delay check for orphans in ImageCache
+- ImageView zoom when click not always work (double click issue)
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
-- ImageView::load not always work when jumping around folders
-- ImageView zoom when click not always work (double click issue)
 - Missing thumbs deacivated for now
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
@@ -119,6 +117,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Add final check for orphans in ImageCache
 - IconView zoom rect not showing for heic thumbnails
 - ThumbDock height shrinking when app reopened
 - DockWidgets not remembering prior state

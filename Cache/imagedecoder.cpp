@@ -251,9 +251,9 @@ bool ImageDecoder::load()
             QString err = "Could not decode using Winnow Tiff decoder.  "
                        "Trying Qt tiff library to decode" + fPath + ". ";
             if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageDecoder::load "
-                  << "Could not decode using Winnow Tiff decoder.  "
-                     "Trying Qt tiff library to decode " + fPath + ". ";
+                qWarning() << "WARNING" << "ImageDecoder::load "
+                      << "Could not decode using Winnow Tiff decoder.  "
+                         "Trying Qt tiff library to decode " + fPath + ". ";
             //if (abort) quit();
 
             // use Qt tiff decoder
@@ -391,6 +391,13 @@ void ImageDecoder::run()
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         status = Status::Success;
+    }
+    else {
+        qDebug() << "ImageDecoder::run load failed"
+                 << "cacheKey =" << cacheKey
+                 << "status =" << statusText.at(status)
+                 << "err =" << cacheKey
+                    ;
     }
 
     if (isDebug) {

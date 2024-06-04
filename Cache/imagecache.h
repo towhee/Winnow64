@@ -127,7 +127,7 @@ private:
     QHash<int,QString> pathFromKey;    // cache key for assigned path
     QList<int> priorityList;
 
-    void launchDecoders();
+    void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
@@ -135,6 +135,7 @@ private:
     void updateTargets();
     void resetCachingFlags();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // No decoders active
+    bool lastDecoderDone();         // No decoder is busy
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead

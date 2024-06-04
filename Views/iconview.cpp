@@ -1343,7 +1343,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "imW < cW && imH < cH";
     }
 
-    // /* // debugging
+    /* // debugging
     if (failReason.length()) {
         qWarning() << "WARNING IconView::zoomCursor Failed because" << failReason;
     }
