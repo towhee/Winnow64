@@ -291,6 +291,7 @@ QRect DockWidget::setDefaultFloatingGeometry()
                           geometry().topLeft() +
                           QPoint(20,20);
     defaultFloatingGeometry = QRect(screenOffset, size());
+    return defaultFloatingGeometry;
 }
 
 void DockWidget::save()
@@ -374,6 +375,7 @@ QRect DockWidget::deconstructSavedGeometry(QByteArray geometry)
              << "\nrrestoredGeometry     =" << restoredGeometry
              << "\nrestoredNormalGeometry =" << restoredNormalGeometry
         ;
+    return restoredGeometry;
 }
 
 void DockWidget::rpt(QString s)
