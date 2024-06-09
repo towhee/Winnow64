@@ -2084,7 +2084,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     G::t.restart();
     // /*
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src

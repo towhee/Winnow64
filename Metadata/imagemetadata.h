@@ -36,6 +36,8 @@ public:
     bool isEmbeddedThumbMissing = false;
     bool isThumbLoaded = false;             // refers to thumb only
 
+    QStringList err;
+
     bool isSearch = false;
     QString type = "";
     QString ext = "";
@@ -97,7 +99,6 @@ public:
     QString _rating = "";                   // original value
     QString _label = "";                    // original value
 
-    QStringList err;
     QByteArray nikonLensCode = nullptr;
 
     quint32 offsetFull = 0;

@@ -55,10 +55,12 @@ public:
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCacheParameters();
     QString reportCacheDecoders();
+    QString reportWarnings();
     QString reportCache(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
+    QStringList warnings;
 
     int decoderCount = 1;
 

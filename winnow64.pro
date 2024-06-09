@@ -139,6 +139,7 @@ HEADERS += Lcms2/lcms2_plugin.h
 # HEADERS += Lib/libtiff/tiffvers.h
 # HEADERS += Lib/libtiff/uvcode.h
 
+HEADERS += Log/issue.h
 HEADERS += Log/log.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
@@ -329,6 +330,7 @@ SOURCES += Lcms2/cmsxform.c
 # SOURCES += Lib/libtiff/tif_write.c
 # SOURCES += Lib/libtiff/tif_zip.c
 
+SOURCES += Log/issue.cpp
 SOURCES += Log/log.cpp
 SOURCES += Main/main.cpp
 # all part of MW (mainwindow)

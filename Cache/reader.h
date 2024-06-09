@@ -33,6 +33,7 @@ public:
     bool isReadIcon = true;
     qint64 msToRead;
     QString fPath = "";
+    QString errMsg = "";
     QModelIndex dmIdx = QModelIndex();
     Metadata *metadata;
     QPixmap pm;

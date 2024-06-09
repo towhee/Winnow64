@@ -78,6 +78,7 @@ public:
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
     bool missingThumbnails();
+    bool isDimensions(int sfRow);
     bool subFolderImagesLoaded = false;
     bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
@@ -142,6 +143,10 @@ public:
 
     QList<QFileInfo> modifiedFiles;     // used by MW::refreshCurrentFolder
 
+    /* errors are tracked by image (datamodel row) or general errors if not related to a
+       specific image */
+    QStringList generalErrors;
+
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
     bool abortLoadingModel;
@@ -170,6 +175,8 @@ public slots:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex sfIdx, int instance);
+    void errDM(QString functionName, QString msg, int sfRow);
+    void errGeneral(QString functionName, QString msg, QString fPath = "");
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
@@ -181,6 +188,19 @@ private:
     bool &combineRawJpg;
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
+
+    enum ErrorType {
+        General,
+        DM
+    };
+
+    struct Error {
+        ErrorType type;
+        QString functionName;
+        QString msg;
+        int sfRow;
+        QString fPath;
+    };
 
 //    QMutex mutex;
     bool mLock;
@@ -199,6 +219,7 @@ private:
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
     bool instanceClash(QModelIndex idx, QString src);
+    void processErr(Error e);
     int imageCount;
     int countInterval = 0;
     // QString buildMsg = "Building filters.  This could take a while to complete.<p>"

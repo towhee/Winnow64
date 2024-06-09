@@ -213,6 +213,8 @@ void ImageCache::updateTargets()
     log("updateTargets");
 
     isCacheItemListComplete = cacheItemListComplete();
+    warnings.clear();
+
     if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::updateTargets"
@@ -941,6 +943,7 @@ QString ImageCache::diagnostics()
     rpt << "\n\n";
     rpt << reportCacheParameters();
     rpt << reportCacheDecoders();
+    rpt << reportWarnings();
     rpt << reportCache("");
     rpt << reportImCache();
 
@@ -1017,6 +1020,27 @@ QString ImageCache::reportCacheDecoders()
         rpt << QString::number(instance).rightJustified(13);
         rpt << "   ";
         rpt << QVariant(decoder[id]->isRunning()).toString();
+        rpt << "\n";
+    }
+
+    return reportString;
+}
+
+QString ImageCache::reportWarnings()
+{
+    log("reportCacheDecoders");
+    if (debugCaching) qDebug() << "ImageCache::reportCacheDecoders";
+
+    QString reportString;
+
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "\nWarnings:\n";
+    for (QString warning : warnings) {
+        rpt << "  ";
+        rpt << warning;
         rpt << "\n";
     }
 
@@ -1699,7 +1723,7 @@ void ImageCache::cacheSizeChange()
     direction, priorities and target are reset and orphans fixed.
 */
     log("cacheSizeChange");
-    // if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::cacheSizeChange";
     if (useMutex) gMutex.lock();
     cacheSizeHasChanged = true;
@@ -1717,7 +1741,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::setCurrentPosition"
                            << dm->rowFromPath(fPath)
@@ -1779,7 +1803,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         updateTargets();
     }
     else {
-        qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
+        // qDebug() << "ImageCache::setCurrentPosition start(QThread::LowestPriority)";
         start(QThread::LowestPriority);
     }
 }
@@ -1853,6 +1877,8 @@ void ImageCache::cacheImage(int id, int cacheKey)
        could be wrong, resulting in icd->cacheItem.sizeMB being wrong.  If this is the case, then
        the target range will be wrong too.  */
     if ((icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB) > icd->cache.maxMB) {
+        QString k = QString::number(cacheKey);
+        warnings << "ImageCache::cacheImage row = " + k + " exceeded max cache size";
         if (debugCaching)
         {
             QString k = QString::number(cacheKey).leftJustified((4));
@@ -2086,10 +2112,13 @@ void ImageCache::fillCache(int id)
             }
         }
         if (!isFinalCheckCompleted && allDecodersDone) {
+            if (debugCaching)
+            {
             qDebug() << "ImageCache::fillCache make final check"
                      << "ImageCache isRunning =" << isRunning()
                      << "cacheUpToDate() =" << cacheUpToDate()
                 ;
+            }
             isFinalCheckCompleted = true;
             resetCachingFlags();
             launchDecoders("FinalCheck");
@@ -2114,7 +2143,7 @@ void ImageCache::fillCache(int id)
 void ImageCache::launchDecoders(QString src)
 {
     if (debugCaching || G::isLogger) log("launchDecoders");
-    qDebug() << "ImageCache::launchDecoders src =" << src;
+    // qDebug() << "ImageCache::launchDecoders src =" << src;
 
     // if (!isRunning()) {
     //     start(QThread::LowestPriority);
@@ -2161,7 +2190,7 @@ void ImageCache::run()
     if (icd->cacheItemList.length() == 0) {
         return;
     }
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::run";
     }

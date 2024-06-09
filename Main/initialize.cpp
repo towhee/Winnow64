@@ -249,6 +249,8 @@ void MW::createDataModel()
     else combineRawJpg = false;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
+    // enable global access to datamodel
+    G::setDM(dm);
 
     if (settings->contains("showThumbNailSymbolHelp"))
         dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();

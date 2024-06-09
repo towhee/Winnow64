@@ -304,39 +304,39 @@ QString MetaRead2::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead2 Diagnostics");
     rpt << "\n" ;
-    rpt << "\n" << "instance:                 " << instance;
+    rpt << "\n" << "instance:                   " << instance;
     rpt << "\n";
-    rpt << "\n" << "expansionFactor:          " << expansionFactor;
+    rpt << "\n" << "expansionFactor:            " << expansionFactor;
     rpt << "\n";
-    rpt << "\n" << "sfRowCount:               " << sfRowCount;
-    rpt << "\n" << "dm->currentSfRow:         " << dm->currentSfRow;
+    rpt << "\n" << "sfRowCount:                 " << sfRowCount;
+    rpt << "\n" << "dm->currentSfRow:           " << dm->currentSfRow;
     rpt << "\n";
-    rpt << "\n" << "defaultIconChunkSize:     " << dm->defaultIconChunkSize;
-    rpt << "\n" << "iconChunkSize:            " << dm->iconChunkSize;
-    rpt << "\n" << "iconLimit:                " << iconLimit;
-    rpt << "\n" << "firstIconRow:             " << firstIconRow;
-    rpt << "\n" << "lastIconRow:              " << lastIconRow;
-    rpt << "\n" << "dm->startIconRange:       " << dm->startIconRange;
-    rpt << "\n" << "dm->endIconRange:         " << dm->endIconRange;
-    rpt << "\n" << "dm->iconCount:            " << dm->iconCount();
+    rpt << "\n" << "defaultIconChunkSize:       " << dm->defaultIconChunkSize;
+    rpt << "\n" << "iconChunkSize:              " << dm->iconChunkSize;
+    rpt << "\n" << "iconLimit:                  " << iconLimit;
+    rpt << "\n" << "firstIconRow:               " << firstIconRow;
+    rpt << "\n" << "lastIconRow:                " << lastIconRow;
+    rpt << "\n" << "dm->startIconRange:         " << dm->startIconRange;
+    rpt << "\n" << "dm->endIconRange:           " << dm->endIconRange;
+    rpt << "\n" << "dm->iconCount:              " << dm->iconCount();
     rpt << "\n";
     QStringList s;
     for (int i : dm->metadataNotLoaded()) s << QString::number(i);
-    rpt << "\n" << "dm->isAllMetadataLoaded:  " << QVariant(dm->isAllMetadataAttempted()).toString();
-    if (s.size()) rpt << "  " << s.join(",");
-    rpt << "\n" << "G::allMetadataLoaded:     " << QVariant(G::allMetadataLoaded).toString();
-    rpt << "\n" << "G::iconChunkLoaded:       " << QVariant(G::iconChunkLoaded).toString();
+    rpt << "\n" << "dm->isAllMetadataAttempted: " << QVariant(dm->isAllMetadataAttempted()).toString();
+    if (s.size()) rpt << "  Rows not loaded: " << s.join(",");
+    rpt << "\n" << "G::allMetadataLoaded:       " << QVariant(G::allMetadataLoaded).toString();
+    rpt << "\n" << "G::iconChunkLoaded:         " << QVariant(G::iconChunkLoaded).toString();
     rpt << "\n";
-    rpt << "\n" << "isDone:                   " << QVariant(isDone).toString();
-    rpt << "\n" << "aIsDone && bIsDone:       " << QVariant(aIsDone && bIsDone).toString();
+    rpt << "\n" << "isDone:                     " << QVariant(isDone).toString();
+    rpt << "\n" << "aIsDone && bIsDone:         " << QVariant(aIsDone && bIsDone).toString();
     rpt << "\n";
-    rpt << "\n" << "abort:                    " << QVariant(abort).toString();
-    rpt << "\n" << "isRunning:                " << QVariant(isRunning()).toString();
-    rpt << "\n" << "isRunloop:                " << QVariant(runloop.isRunning()).toString();
-    rpt << "\n" << "isDispatching:            " << QVariant(isDispatching).toString();
+    rpt << "\n" << "abort:                      " << QVariant(abort).toString();
+    rpt << "\n" << "isRunning:                  " << QVariant(isRunning()).toString();
+    rpt << "\n" << "isRunloop:                  " << QVariant(runloop.isRunning()).toString();
+    rpt << "\n" << "isDispatching:              " << QVariant(isDispatching).toString();
     rpt << "\n";
-    rpt << "\n" << "redoCount:                " << QVariant(redoCount).toString();
-    rpt << "\n" << "redoMax:                  " << QVariant(redoMax).toString();
+    rpt << "\n" << "redoCount:                  " << QVariant(redoCount).toString();
+    rpt << "\n" << "redoMax:                    " << QVariant(redoMax).toString();
 
     /* toRead (to be removed)
     rpt << "\n";
@@ -363,20 +363,21 @@ QString MetaRead2::diagnostics()
     rpt << "\n";
     rpt << "\n";
     rpt << "Reader status:";
+    rpt << "\n";
+    rpt << "  ID  isRunning   Pending     Status";
     for (int id = 0; id < readerCount; id++) {
         rpt.setFieldAlignment(QTextStream::AlignRight);
         rpt.setFieldWidth(4);
         rpt << "\n" << id;
-        rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(11);
-        rpt << " isRunning";
-        rpt.setFieldWidth(7);
         rpt << QVariant(reader[id]->isRunning()).toString();
-        rpt.setFieldWidth(8);
-        rpt << "pending";
-        rpt.setFieldWidth(7);
+        rpt.setFieldWidth(10);
         rpt << QVariant(reader[id]->pending).toString();
-        rpt << "status " << reader[id]->statusText.at(reader[id]->status);
+        rpt.setFieldWidth(5);
+        rpt << " ";
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(30);
+        rpt << reader[id]->statusText.at(reader[id]->status);
     }
 
     // rows with icons
@@ -552,7 +553,8 @@ bool MetaRead2::allMetaIconLoaded()
 /*
     Has the datamodel been fully loaded?
 */
-    return dm->isAllMetadataLoaded() && dm->isIconRangeLoaded();
+    return dm->isAllMetadataAttempted() && dm->isIconRangeLoaded();
+    // return dm->isAllMetadataLoaded() && dm->isIconRangeLoaded();
 }
 
 void MetaRead2::redo()
@@ -715,8 +717,8 @@ void MetaRead2::dispatch(int id)
 
         // report read failure
         if (!(r->status == r->Status::Success /*|| r->status == r->Status::Ready*/)) {
-            QString error = "row " + QString::number(dmRow).rightJustified(5)
-                            + r->statusText.at(r->status).leftJustified(10) + " " + r->fPath;
+            QString error = "row " + QString::number(dmRow).rightJustified(5) + " " +
+                            r->statusText.at(r->status).leftJustified(10) + " " + r->fPath;
             err.append(error);
             if (isDebug)
             {
