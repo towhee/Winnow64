@@ -88,7 +88,7 @@ bool ImageDecoder::load()
                "row = " + QString::number(cacheKey) + "  " + fPath);
     QString fun = "ImageDecoder::load";
     if (isDebug)
-    qDebug() << fun << fPath;
+        qDebug() << fun << fPath;
 
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
@@ -149,6 +149,7 @@ bool ImageDecoder::load()
         if (n.lengthFull == 0) {
             imFile.close();
             errMsg = "Could not read embedded JPG because offset = 0.";
+            G::error("ImageDecoder::load", errMsg, n.key);
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
             status = Status::Invalid;
@@ -195,7 +196,7 @@ bool ImageDecoder::load()
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
             QString errMsg = "heic.decodePrimaryImage failed";
-            G::error(errMsg, fun, fPath);
+            // G::error("ImageDecoder::load", errMsg, n.key);
             imFile.close();
             status = Status::Invalid;
             return false;
@@ -262,7 +263,7 @@ bool ImageDecoder::load()
                 errMsg = "Could not read because Qt tiff decoder failed.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-                G::error(errMsg, fun, fPath);
+                G::error(fun, errMsg, n.key);
                 status = Status::Invalid;
                 return false;
             }
@@ -287,7 +288,7 @@ bool ImageDecoder::load()
             errMsg = "Could not read because decoder failed.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-            G::error(errMsg, fun, fPath);
+            G::error(fun, errMsg, n.key);
             status = Status::Invalid;
             return false;
         }

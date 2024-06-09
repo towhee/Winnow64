@@ -146,6 +146,7 @@ bool Jpeg::parse(MetadataParameters &p,
         qWarning() << "WARNING" << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
                  << m.fPath
                     ;
+        m.err << "JPG does not start with 0xFFD8.";
         return false;
     }
 

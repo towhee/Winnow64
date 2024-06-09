@@ -25,3 +25,22 @@ Key Priority  Decoder   Target Attempts  Caching   Cached   Status imCached dmCa
                                                      wrong            correct!
 
 Does ImageCache resetCachingFlags() and isFinalCheckCompleted when useDynamicInsertion from LR
+
+enum ErrorType {
+    General,
+    DM
+};
+
+struct Error {
+    ErrorType type;
+    QString functionName;
+    QString msg;
+    int sfRow;
+    QString fPath;
+};
+
+QStandardItemModel dm;
+Error err;
+
+How do I save the object err in dm?
+

@@ -209,6 +209,7 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
     if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
     if (column == G::CompareColumn) return fm.boundingRect("=Compare=").width();
+    if (column == G::ErrColumn) return fm.boundingRect("==ErrText=========================================================").width();
     return 50;
 }
 

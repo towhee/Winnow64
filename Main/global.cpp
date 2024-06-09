@@ -18,7 +18,7 @@ namespace G
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
     // Errors
-    QMap<QString,QStringList> err;
+    QMap<QString,QStringList> errList;
 
 
     // Rory version (expanded cache pref)
@@ -287,22 +287,33 @@ namespace G
         // }
     }
 
-    void error(QString err, QString functionName, QString fPath)
+    static QObject *modelInstance = nullptr;
+    void setDM(QObject *dm)
     {
-        // crashing
-        return;
-        // QString errMsg = functionName + " Error: " + err;
-        // // if (fPath.length()) G::err[fPath].append(errMsg);
-        // qDebug() << "" << errMsg;
+        modelInstance = dm;
+    }
 
-        // // add to errorLog ...
-        // // errlog(err, functionName, fPath);
+    void error(QString functionName, QString msg, QString fPath)
+    {
+        if (modelInstance) {
+            QMetaObject::invokeMethod(modelInstance, "errGeneral",
+                                      Q_ARG(QString, functionName),
+                                      Q_ARG(QString, msg),
+                                      Q_ARG(QString, fPath)
+                                      );
+        }
+    }
 
-        QString msg = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
-        msg += functionName + " ";
-        msg += err + " ";
-        msg += fPath;
-        errorLog.log(msg);
+    void error(QString functionName, QString msg, int sfRow)
+    {
+        if (modelInstance) {
+            QMetaObject::invokeMethod(modelInstance, "errDM",
+                                      Q_ARG(QString, functionName),
+                                      Q_ARG(QString, msg),
+                                      Q_ARG(int, sfRow)
+                                      );
+        }
+        // errorLog.log(msg);
     }
 
 

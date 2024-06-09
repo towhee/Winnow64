@@ -9,6 +9,7 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
+- Review image modification and xmp including rotation and embedding thumbnails
 - ImageView zoom when click not always work (double click issue)
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR

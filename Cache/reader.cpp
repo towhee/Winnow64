@@ -112,30 +112,24 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
-    //if (isMetaLoaded) {
-        metadata->m.row = dmRow;
-        metadata->m.instance = instance;
-        metadata->m.metadataAttempted = true;
-        metadata->m.metadataLoaded = isMetaLoaded;
 
-        if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-        //if (abort) quit();
+    metadata->m.row = dmRow;
+    metadata->m.instance = instance;
+    metadata->m.metadataAttempted = true;
+    metadata->m.metadataLoaded = isMetaLoaded;
 
-        if (!dm->isMetadataLoaded(dmRow)) {
-            status = Status::MetaFailed;
-            if (G::isWarningLogger)
-            qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
-        }
+    if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    //if (abort) quit();
 
-        if (!abort) emit addToImageCache(metadata->m, instance);
-        //if (abort) quit();
+    if (!dm->isMetadataLoaded(dmRow)) {
+        status = Status::MetaFailed;
+        if (G::isWarningLogger)
+        qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
+    }
 
-//    }
-//    else {
-//        status = Status::MetaFailed;
-//        if (G::isWarningLogger)
-//        qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - metadata not loaded." << fPath;
-//    }
+    if (!abort) emit addToImageCache(metadata->m, instance);
+    //if (abort) quit();
+
     return isMetaLoaded;
 }
 

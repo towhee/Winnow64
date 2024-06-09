@@ -181,8 +181,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    QString testString = Utilities::pngToString(":/images/icon16/filter.png");
-    qDebug() << testString;
+    G::error("MW::test", "Test GM originated action", 0);
+    G::error("MW::test", "Error test General", "some/file/path");
+    // G::error(0, "Error test 2");
     return;
 }
 /*

@@ -270,6 +270,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
 }
 
 void DataModel::clearDataModel()
@@ -1031,7 +1032,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
                 errMsg = "Failed to load metadata.";
                 if (G::isWarningLogger)
                 qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-                G::error(errMsg, fun, fPath);
+                G::error(fun, errMsg, row);
                 return false;
             }
         }
@@ -1039,7 +1040,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
         else {
             errMsg = "Cannot read matadata for this file type.";
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-            G::error(errMsg, fun, fPath);
+            G::error(fun, errMsg, row);
             metadata->clearMetadata();
             metadata->m.row = row;
             metadata->m.compare = false;
@@ -1096,7 +1097,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
             errMsg = "Failed to load metadata.";
             if (G::isWarningLogger)
             qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-            G::error(errMsg, fun, fPath);
+            G::error(fun, errMsg, row);
             mutex.unlock();
             return false;
         }
@@ -1106,7 +1107,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
         errMsg = "Cannot read metadata for this file type.";
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "DataModel::refreshMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-        G::error(errMsg, fun, fPath);
+        G::error(fun, errMsg, row);
         metadata->clearMetadata();
         metadata->m.row = row;
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
@@ -1342,6 +1343,74 @@ bool DataModel::metadataLoaded(int dmRow)
                           << "row =" << dmRow
                           << currentFolderPath;
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
+}
+
+bool DataModel::isDimensions(int sfRow)
+{
+    if (index(sfRow, G::WidthColumn).data().toInt() == 0) return false;
+    if (index(sfRow, G::HeightColumn).data().toInt() == 0) return false;
+    return true;
+}
+
+void DataModel::processErr(Error e)
+{
+    QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+    QString r = "Row: " + QString::number(e.sfRow) + " ";   // datamodel proxy row (sfRow)
+    QString s = "Src: " + e.functionName + " ";             // error source function
+    QString m = "Error: " + e.msg + "   ";                  // error message
+    QString p;                                              // path
+    QString l = "\n";                                       // newline separator
+    QString o = " ";                                        // offset datetime string width
+    o = o.repeated(d.count());
+
+    switch(e.type) {
+    case ErrorType::General:
+        p = e.fPath;
+        break;
+    case ErrorType::DM:
+        p = sf->index(e.sfRow,0).data(G::PathRole).toString();
+        break;
+    }
+
+    errMsg = d + m + s + r + p;
+    // errMsg = d + m + l + o + s + r + p;
+
+    // save errMsg in datamodel if type = "DM"
+    if (e.type == ErrorType::DM) {
+        QModelIndex sfIdx = sf->index(e.sfRow, G::ErrColumn);
+        QStringList errList = sfIdx.data().toStringList();
+        errList << errMsg;
+        QVariant v;
+        v.setValue(errList);
+        setValueSf(sfIdx, v, instance, "DataModel::processErr");
+    }
+    // qDebug() << errMsg;
+    // qDebug() << "DataModel::err" << sfRow << msg << errList << sfIdx.data().toStringList();
+}
+
+void DataModel::errGeneral(QString functionName, QString msg, QString fPath)
+{
+    // general error
+
+    Error e;
+    e.type = ErrorType::General;
+    e.functionName = functionName;
+    e.msg = msg;
+    e.fPath = fPath;
+    processErr(e);
+}
+
+void DataModel::errDM(QString functionName, QString msg, int sfRow)
+{
+    // error related to a datamodel row
+
+    Error e;
+    e.type = ErrorType::DM;
+    e.functionName = functionName;
+    e.msg = msg;
+    e.sfRow = sfRow;
+    e.fPath = "";
+    processErr(e);
 }
 
 bool DataModel::missingThumbnails()
@@ -2344,22 +2413,22 @@ QString DataModel::diagnosticsErrors()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "Error Listing");
     rpt << "\n\n";
-    if (G::err.isEmpty()) {
-        rpt << "No errors" << "\n";
-        rpt << "\n\n" ;
-        return reportString;
-    }
-    QMapIterator<QString,QStringList> item(G::err);
-    while (item.hasNext()) {
-        item.next();
-        if (item.value().size() == 0) continue;
-        // key = file path
-        rpt << item.key() + "\n";
-        // value = QStringList of errors for the key
-        for (int error = 0; error < item.value().size(); ++error) {
-            rpt << "  " << item.value().at(error) + "\n";
-        }
-    }
+    // if (G::err.isEmpty()) {
+    //     rpt << "No errors" << "\n";
+    //     rpt << "\n\n" ;
+    //     return reportString;
+    // }
+    // QMapIterator<QString,QStringList> item(G::err);
+    // while (item.hasNext()) {
+    //     item.next();
+    //     if (item.value().size() == 0) continue;
+    //     // key = file path
+    //     rpt << item.key() + "\n";
+    //     // value = QStringList of errors for the key
+    //     for (int error = 0; error < item.value().size(); ++error) {
+    //         rpt << "  " << item.value().at(error) + "\n";
+    //     }
+    // }
     rpt << "\n\n" ;
     return reportString;
 }
@@ -2526,6 +2595,15 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
     rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
+
+    QStringList errs = index(row, G::ErrColumn).data().toStringList();
+    rpt << "\n\nErrors: " << QString::number(errs.count());
+    for (const QString &msg : errs) {
+        QStringList msgList = msg.split('\n');
+        for (const QString &line : msgList) {
+            rpt << "\n   " << line;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------

@@ -16,6 +16,7 @@
 // #include "Main/logger.h"
 #include "Log/log.h"
 
+
 // METAREAD or METAREAD2: one or the other:
 #ifdef Q_OS_WIN
 #define METAREAD2
@@ -134,12 +135,12 @@ namespace G
         RotationDegreesColumn,
         ShootingInfoColumn,
         SearchTextColumn,
-        //LoadErrColumn,
+        ErrColumn,
         TotalColumns    // insert additional columns before this
     };
 
     // Errors
-    extern QMap<QString,QStringList> err;
+    extern QMap<QString,QStringList> errList;
 
     enum ImageFormat {
         UseQt,
@@ -309,6 +310,8 @@ namespace G
 
 //    extern QList<int>rowsWithIcon;
 
+    void setDM(QObject *dm);
+
 //    extern bool empty();
     extern Logger logger;
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
@@ -318,7 +321,9 @@ namespace G
                     bool zeroElapsedTime = false);
     extern ErrorLog errorLog;
     extern void errlog(QString err, QString functionName, QString fPath = "");
-    extern void error(QString err, QString functionName, QString fPath = "");
+    extern void error(QString functionName, QString msg, QString fPath = "");
+    extern void error(QString functionName, QString msg, int sfRow);
+    extern void err(QModelIndex idx, QString err);
 
     extern int wait(int ms);
     extern QString s(QVariant x);

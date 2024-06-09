@@ -77,6 +77,7 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
     }
     double a = w * 1.0 / h;
     int alignRight = Qt::AlignRight | Qt::AlignVCenter;
+    QString d = QString::number(w) + "x" + QString::number(h);
     QString src = "Thumb::setImageDimensions";
 
     emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
@@ -84,6 +85,7 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
     emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
     emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
     emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
+    emit setValue(dm->index(row, G::DimensionsColumn), d, instance, src, Qt::EditRole, alignRight);
 
 }
 
@@ -109,22 +111,25 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
     QString fun = "Thumb::loadFromEntireFile";
-    if (G::isLogger) G::log(fun, fPath);
+    // if (G::isLogger)
+        G::log(fun, fPath);
     if (instance != dm->instance) return Status::Fail;
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
+        G::log(fun, fPath + " isAlready open");
         return Status::Open;
     }
     if (!image.load(fPath)) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using QImage::load." << fPath;
+        qWarning() << "WARNING" << "Thumb::loadFromEntireFile" << "Could not read thumb using QImage::load." << fPath;
         return Status::Fail;
     }
 
+    qDebug() << "Thumb::loadFromEntireFile setImageDimensions" << row << image << fPath;
     setImageDimensions(fPath, image, row);
 
     if (image.isNull()) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        qWarning() << "WARNING" << "Thumb::loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return Status::Fail;
     }
 
