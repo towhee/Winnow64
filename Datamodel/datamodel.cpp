@@ -1388,30 +1388,63 @@ void DataModel::processErr(Error e)
     // qDebug() << "DataModel::err" << sfRow << msg << errList << sfIdx.data().toStringList();
 }
 
-void DataModel::errGeneral(QString functionName, QString msg, QString fPath)
-{
-    // general error
+// void DataModel::errGeneral(Issue issue)
+// {
+//     // general error
 
-    Error e;
-    e.type = ErrorType::General;
-    e.functionName = functionName;
-    e.msg = msg;
-    e.fPath = fPath;
-    processErr(e);
-}
+//     // Error e;
+//     // e.type = ErrorType::General;
+//     // e.functionName = functionName;
+//     // e.msg = msg;
+//     // e.fPath = fPath;
+//     // processErr(e);
+// }
 
-void DataModel::errDM(QString functionName, QString msg, int sfRow)
+void DataModel::issue(const QSharedPointer<Issue>& issue)
 {
     // error related to a datamodel row
 
-    Error e;
-    e.type = ErrorType::DM;
-    e.functionName = functionName;
-    e.msg = msg;
-    e.sfRow = sfRow;
-    e.fPath = "";
-    processErr(e);
+    // retrieve an existing list of issues for this datamodel row
+    QModelIndex sfIdx = sf->index(issue->sfRow, G::ErrColumn);
+    QVariant retrievedVariant = sfIdx.data(Qt::UserRole);
+    QList<QSharedPointer<Issue>> issueList = retrievedVariant.value<QList<QSharedPointer<Issue>>>();
+
+    // add the new issue
+    issueList.append(issue);
+
+    // resave the issue list in the datamodel
+    QVariant v;
+    v.setValue(issueList);
+    sf->setData(sfIdx, v);
 }
+
+// void DataModel::errDM(Issue issue)
+// {
+//     // // error related to a datamodel row
+
+//     // // Error e;
+//     // // e.type = ErrorType::DM;
+//     // // e.functionName = issue;
+//     // // e.msg = msg;
+//     // // e.sfRow = sfRow;
+//     // // e.fPath = "";
+//     // // processErr(e);
+
+//     // // use Issue class
+
+//     // // retrieve an existing list of issues for this datamodel row
+//     // QModelIndex sfIdx = sf->index(issue.sfRow, G::ErrColumn);
+//     // QVariant retrievedVariant = sfIdx.data(Qt::UserRole);
+//     // QList<Issue> issueList = retrievedVariant.value<QList<Issue>>();
+
+//     // // add the new issue
+//     // issueList.append(issue);
+
+//     // // resave the issue list in the datamodel
+//     // QVariant v;
+//     // v.setValue(issueList);
+//     // sf->setData(sfIdx, v);
+// }
 
 bool DataModel::missingThumbnails()
 {
@@ -1937,6 +1970,12 @@ int DataModel::proxyRowFromPath(QString fPath)
         if (sfIdx.isValid()) sfRow = sfIdx.row();
     }
     return sfRow;
+}
+
+QString DataModel::pathFromProxyRow(int sfRow)
+{
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    return sf->index(sfRow,0).data(G::PathRole).toString();
 }
 
 void DataModel::rebuildRowFromPathHash()

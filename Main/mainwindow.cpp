@@ -556,6 +556,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
+    qRegisterMetaType<QSharedPointer<Issue>>("QSharedPointer<Issue>");
+    // qRegisterMetaType<Issue>();
+    qRegisterMetaType<QList<Issue>>();
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);

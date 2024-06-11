@@ -10,6 +10,7 @@
 #include "selectionorpicksdlg.h"
 #include <QMessageBox>
 #include <algorithm>                // req'd for sorting fileInfoList
+#include "Log/issue.h"
 
 class SortFilter : public QSortFilterProxyModel
 {
@@ -96,6 +97,7 @@ public:
     bool isPath(QString fPath);
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath);
+    QString pathFromProxyRow(int sfRow);
     void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();
@@ -175,8 +177,9 @@ public slots:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex sfIdx, int instance);
-    void errDM(QString functionName, QString msg, int sfRow);
-    void errGeneral(QString functionName, QString msg, QString fPath = "");
+    void issue(const QSharedPointer<Issue>& issue);
+    // void errDM(Issue issue);
+    // void errGeneral(Issue issue);
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);

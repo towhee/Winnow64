@@ -3,24 +3,26 @@
 
 #include <QObject>
 #include <QtWidgets>
+// #include <QSharedPointer>
 
-class Issue
+class Issue : public QObject
 {
     Q_OBJECT
 public:
     Issue();
+    ~Issue() override;
 
-    enum IssueType {
+    enum Type {
         Warning,
         Error
     };
-    QStringList issueTypeDesc {"Warning", "Error"};
+    QStringList TypeDesc {"Warning", "Error"};
 
-    enum IssueCategory {
+    enum Category {
         General,
         DM
     };
-    QStringList issueCategoryDesc {"General", "DataModel"};
+    QStringList CategoryDesc {"General", "DataModel"};
 
     enum Format {
         OneRow,
@@ -30,15 +32,17 @@ public:
         FiveRow
     };
 
-    IssueType type;
-    IssueCategory category;
-    QString functionName;
+    Type type;
+    Category cat;
+    QString src;
+    QString msg;
     int sfRow;
     QString fPath;
-    QString msg;
 
     QString toString(Format format);
 
 };
+
+Q_DECLARE_METATYPE(QSharedPointer<Issue>)
 
 #endif // ISSUE_H
