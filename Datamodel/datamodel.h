@@ -178,6 +178,7 @@ public slots:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex sfIdx, int instance);
     void issue(const QSharedPointer<Issue>& issue);
+    QStringList rptIssues(int sfRow);
     // void errDM(Issue issue);
     // void errGeneral(Issue issue);
     void abortLoad();

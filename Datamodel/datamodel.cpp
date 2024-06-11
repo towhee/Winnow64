@@ -1402,7 +1402,13 @@ void DataModel::processErr(Error e)
 
 void DataModel::issue(const QSharedPointer<Issue>& issue)
 {
-    // error related to a datamodel row
+/*
+    Add issue related to a datamodel row
+*/
+    // check for null fPath
+    if (issue->fPath == "" && issue->sfRow > -1) {
+        issue->fPath = sf->index(issue->sfRow, 0).data(G::PathRole).toString();
+    }
 
     // retrieve an existing list of issues for this datamodel row
     QModelIndex sfIdx = sf->index(issue->sfRow, G::ErrColumn);
@@ -1415,7 +1421,24 @@ void DataModel::issue(const QSharedPointer<Issue>& issue)
     // resave the issue list in the datamodel
     QVariant v;
     v.setValue(issueList);
-    sf->setData(sfIdx, v);
+    sf->setData(sfIdx, v, Qt::UserRole); // not working
+}
+
+QStringList DataModel::rptIssues(int sfRow)
+{
+    // report all issues for a row in model
+    qDebug() << "DataModel::rptIssues";
+    QStringList list;
+    QModelIndex sfIdx = sf->index(sfRow, G::ErrColumn);
+    QVariant retrievedVariant = sfIdx.data(Qt::UserRole);
+    QList<QSharedPointer<Issue>> issueList = retrievedVariant.value<QList<QSharedPointer<Issue>>>();
+    qDebug() << "DataModel::rptIssues  issueList" << issueList;
+    foreach (QSharedPointer<Issue> issue, issueList) {
+        QString msg = issue->toString(Issue::Format::OneRow);
+        list.append(msg);
+        qDebug() << msg;
+    }
+    return list;
 }
 
 // void DataModel::errDM(Issue issue)
