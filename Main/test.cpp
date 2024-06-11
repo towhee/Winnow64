@@ -181,8 +181,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    G::error("MW::test", "Test GM originated action", 0);
-    G::error("MW::test", "Error test General", "some/file/path");
+    G::issue("Test that issue works", "MW::test", 0, "", "Error", "DataModel");
+    G::issue("Test that issue works 2", "MW::test", 0, "", "Error", "DataModel");
+
+    dm->rptIssues(0);
+
+
     // G::error(0, "Error test 2");
     return;
 }
