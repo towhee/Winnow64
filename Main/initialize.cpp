@@ -3,6 +3,8 @@
 void MW::initialize()
 {    
     if (G::isLogger) G::log("MW::initialize");
+
+
     setWindowTitle(winnowWithVersion);
     G::stop = false;
     G::dmEmpty = true;

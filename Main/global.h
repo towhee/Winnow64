@@ -14,6 +14,7 @@
 #include "popup.h"
 #include "Utilities/utilities.h"
 // #include "Main/logger.h"
+#include "Log/issue.h"
 #include "Log/log.h"
 
 
@@ -198,6 +199,7 @@ namespace G
     extern bool isWarningLogger;
     extern bool isFileLogger;
     extern bool isErrorLogger;
+    extern bool isIssueLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
     extern QFile errlogFile;
@@ -323,6 +325,8 @@ namespace G
     extern void errlog(QString err, QString functionName, QString fPath = "");
     extern void error(QString functionName, QString msg, QString fPath = "");
     extern void error(QString functionName, QString msg, int sfRow);
+    extern void issue(QString msg, QString src, int sfRow = -1, QString fPath = "",
+                      QString type = "Error", QString cat = "DataModel");
     extern void err(QModelIndex idx, QString err);
 
     extern int wait(int ms);
