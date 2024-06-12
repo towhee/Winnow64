@@ -18,28 +18,29 @@ public:
     };
     QStringList TypeDesc {"Warning", "Error"};
 
-    enum Category {
-        General,
-        DM
-    };
-    QStringList CategoryDesc {"General", "DataModel"};
+    // enum Category {
+    //     General,
+    //     DM
+    // };
+    // QStringList CategoryDesc {"General", "DataModel"};
 
-    enum Format {
-        OneRow,
-        TwoRow,
-        ThreeRow,
-        FourRow,
-        FiveRow
-    };
+    // enum Format {
+    //     OneRow,
+    //     TwoRow,
+    //     ThreeRow,
+    //     FourRow,
+    //     FiveRow
+    // };
 
     Type type;
-    Category cat;
+    // Category cat;
     QString src;
     QString msg;
     int sfRow;
     QString fPath;
+    QString timeStamp;
 
-    QString toString(Format format);
+    QString toString(bool isOneLine, int newLineOffset = 0);
 
 };
 

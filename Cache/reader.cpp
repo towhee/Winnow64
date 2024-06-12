@@ -109,6 +109,7 @@ bool Reader::readMetadata()
     }
     // read metadata from file into metadata->m
     int dmRow = dmIdx.row();
+    G::issue("Warning", "Testing load metadata", "Reader::readMetadata", dmRow, fPath);
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
@@ -125,6 +126,7 @@ bool Reader::readMetadata()
         status = Status::MetaFailed;
         if (G::isWarningLogger)
         qWarning() << "WARNING" << "Reader::readMetadata  row =" << dmRow << "Failed - emit addToDatamodel." << fPath;
+        G::issue("Warning", "Failed to load metadata", "Reader::readMetadata", dmRow, fPath);
     }
 
     if (!abort) emit addToImageCache(metadata->m, instance);
@@ -147,6 +149,7 @@ void Reader::readIcon()
     }
 
     int dmRow = dmIdx.row();
+    G::issue("Error", "Testing issues.", "Reader::readIcon", dmRow, fPath);
     QImage image;
     // get thumbnail or err.png or generic video
     bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
@@ -165,11 +168,13 @@ void Reader::readIcon()
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
         qWarning() << "WARNING" << "Reader::loadIcon  row =" << dmRow << "Failed to load thumbnail." << fPath;
+        G::issue("Warning", "Failed to load thumbnail.", "Reader::readIcon", dmRow, fPath);
     }
     if (pm.isNull()) {
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
         else status = Status::IconFailed;
         qWarning() << "WARNING" << "Reader::loadIcon  row =" << dmRow << "Failed - null icon." << fPath;
+        G::issue("Warning", "The loaded thumbnail is null.", "Reader::readIcon", dmRow, fPath);
         return;
     }
 

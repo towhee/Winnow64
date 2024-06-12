@@ -3,37 +3,34 @@
 Issue::Issue() {}
 Issue::~Issue() {}
 
-QString Issue::toString(Format format)
+QString Issue::toString(bool isOneLine, int newLineOffset)
 {
-    QString strType;
-    switch (type) {
-    case Type::Error: strType = "Error"; break;
-    case Type::Warning: strType = "Warning"; break;
-    }
-
-    QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
-    QString m = strType + ": " + msg + "   ";                // error message
-    QString s = "Src: " + src  + " ";                       // error source function
-    QString r = "Row: " + QString::number(sfRow) + " ";   // datamodel proxy row (sfRow)
-    QString p = fPath;                                              // path
+    QString d = timeStamp;                                  // time stamp "yyyy-MM-dd hh:mm:ss "
+    QString t = TypeDesc.at(type);                   // issue type
+    QString m = msg;                                // issue message
+    QString s = src;                       // issue source function
+    QString r = QString::number(sfRow);     // datamodel proxy row (sfRow)
+    QString p = fPath;                                      // path
     QString l = "\n";                                       // newline separator
     QString o = " ";                                        // offset datetime string width
-    o = o.repeated(d.count());
+    o = o.repeated(newLineOffset);
 
-    switch (format) {
-    case Format::OneRow:
-        return d + m + s + r + p;
-    case Format::TwoRow:
-
-        break;
-    case Format::ThreeRow:
-
-        break;
-    case Format::FourRow:
-
-        break;
-    case Format::FiveRow:
-
-        break;
+    if (isOneLine) {
+        d = timeStamp.leftJustified(20);
+        t = (t + ": ").leftJustified(9);
+        m = m.leftJustified(60);
+        s = ("Src: " + s).leftJustified(30);
+        r = ("Row: " + r + " ").rightJustified(12);
+        p = "  File: " + fPath;
+        return d + t + m + s + r + p;
+    }
+    else {
+        d = timeStamp;
+        t = (t + ": ").leftJustified(9);
+        m = m + "   ";
+        s = "Src:     " + s  + " ";
+        r = "Row:     " + r + " ";
+        p = "File:    " + fPath;
+        return d + t + m + l + o + s + l + o + r + l + o + p;
     }
 }

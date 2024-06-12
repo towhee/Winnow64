@@ -281,12 +281,12 @@ void Utilities::hideCursor()
     QApplication::setOverrideCursor(Qt::BlankCursor);
 }
 
-QString Utilities::centeredRptHdr(QChar padChar, QString title)
+QString Utilities::centeredRptHdr(QChar padChar, QString title, int width)
 {
     QString hdr;
     QTextStream rpt;
     rpt.setString(&hdr);
-    int hdrWidth = 120;
+    int hdrWidth = width;
     int titleWidth = title.size() + 4;
     int padWidth = (hdrWidth - titleWidth) / 2;
     rpt.reset();

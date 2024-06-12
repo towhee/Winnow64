@@ -181,8 +181,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    G::issue("Test that issue works", "MW::test", 0, "", "Error", "DataModel");
-    G::issue("Test that issue works 2", "MW::test", 0, "", "Error", "DataModel");
+    G::issue("Error", "Test that issue works", "MW::test", 0, "");
+    G::issue("Error", "Test that issue works 2", "MW::test", 0, "");
 
     dm->rptIssues(0);
 

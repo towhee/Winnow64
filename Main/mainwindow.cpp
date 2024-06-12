@@ -558,8 +558,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<QVector<int>>();
     qRegisterMetaType<QSharedPointer<Issue>>("QSharedPointer<Issue>");
     qRegisterMetaType<QList<QSharedPointer<Issue>>>("QList<QSharedPointer<Issue>>");
-    // qRegisterMetaType<Issue>();
-    // qRegisterMetaType<QList<Issue>>();
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);

@@ -1405,6 +1405,14 @@ void DataModel::issue(const QSharedPointer<Issue>& issue)
 /*
     Add issue related to a datamodel row
 */
+    QString fun = "DataModel::issue";
+    qDebug().noquote()
+        << fun.leftJustified(30)
+        << issue->TypeDesc.at(issue->type).leftJustified(10)
+        << QString::number(issue->sfRow).rightJustified(5)
+        << issue->msg.leftJustified(40)
+        << issue->src.leftJustified(30)
+        ;
     // check for null fPath
     if (issue->fPath == "" && issue->sfRow > -1) {
         issue->fPath = sf->index(issue->sfRow, 0).data(G::PathRole).toString();
@@ -1427,16 +1435,16 @@ void DataModel::issue(const QSharedPointer<Issue>& issue)
 QStringList DataModel::rptIssues(int sfRow)
 {
     // report all issues for a row in model
-    qDebug() << "DataModel::rptIssues";
     QStringList list;
     QModelIndex sfIdx = sf->index(sfRow, G::ErrColumn);
     QVariant retrievedVariant = sfIdx.data(Qt::UserRole);
     QList<QSharedPointer<Issue>> issueList = retrievedVariant.value<QList<QSharedPointer<Issue>>>();
-    qDebug() << "DataModel::rptIssues  issueList" << issueList;
     foreach (QSharedPointer<Issue> issue, issueList) {
-        QString msg = issue->toString(Issue::Format::OneRow);
+        bool oneLine = true;
+        int offset = 23;
+        QString msg = issue->toString(oneLine, offset);
         list.append(msg);
-        qDebug() << msg;
+        // qDebug() << msg;
     }
     return list;
 }
@@ -2658,13 +2666,13 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
 
-    QStringList errs = index(row, G::ErrColumn).data().toStringList();
-    rpt << "\n\nErrors: " << QString::number(errs.count());
-    for (const QString &msg : errs) {
-        QStringList msgList = msg.split('\n');
-        for (const QString &line : msgList) {
-            rpt << "\n   " << line;
-        }
+    rpt << "\n  ";
+    rpt << Utilities::centeredRptHdr('=', "Issues");
+
+    QStringList issues = rptIssues(row);
+    rpt << "\n\nIssues: " << QString::number(issues.count());
+    for (const QString &str : issues) {
+        rpt << "\n   " << str;
     }
 }
 
