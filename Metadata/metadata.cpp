@@ -1023,9 +1023,9 @@ QString Metadata::readExifToolTag(QString fPath, QString tag)
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("Metadata::readMetadata", path + " Source: " + source);
-//    qDebug() << "Metadata::readMetadata" << source;
+    // qDebug() << "Metadata::readMetadata" << source;
 
     // make sure file is available ie usb drive might have been ejected
     QFileInfo fileInfo(path);
@@ -1133,7 +1133,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                                  bool isReport, bool isLoadXmp, QString source,
                                  bool isRemote)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
 
     // check abort

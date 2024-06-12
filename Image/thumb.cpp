@@ -111,7 +111,7 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
     QString fun = "Thumb::loadFromEntireFile";
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log(fun, fPath);
     if (instance != dm->instance) return Status::Fail;
 
@@ -125,7 +125,6 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Fail;
     }
 
-    qDebug() << "Thumb::loadFromEntireFile setImageDimensions" << row << image << fPath;
     setImageDimensions(fPath, image, row);
 
     if (image.isNull()) {

@@ -20,7 +20,7 @@ bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
 // Errors
-QMap<QString,QStringList> errList;
+QMap<QString,QStringList> issueList;
 
 
 // Rory version (expanded cache pref)
@@ -295,25 +295,38 @@ void setDM(QObject *dm)
     modelInstance = dm;
 }
 
-void issue(QString msg, QString src, int sfRow,  QString fPath, QString type, QString cat)
+void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
     if (issue->TypeDesc.contains(type))
         issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
-    if (issue->CategoryDesc.contains(cat))
-        issue->cat = static_cast<Issue::Category>(issue->TypeDesc.indexOf(type));
+    // if (issue->CategoryDesc.contains(cat))
+    //     issue->cat = static_cast<Issue::Category>(issue->TypeDesc.indexOf(type));
     issue->src = src;
     issue->msg = msg;
     issue->sfRow = sfRow;
     issue->fPath = fPath;
+    issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
 
-    if (modelInstance && issue->cat == Issue::DM) {
+    bool includeInDataModel = sfRow >-1;
+
+    // /*
+    QString fun = "G::issue";
+    qDebug().noquote()
+        << fun.leftJustified(30)
+        << issue->TypeDesc.at(issue->type).leftJustified(10)
+        << QString::number(issue->sfRow).rightJustified(5)
+        << issue->msg.leftJustified(40)
+        << issue->src.leftJustified(30)
+        ;  //*/
+
+    if (modelInstance && includeInDataModel) {
         QMetaObject::invokeMethod(
             modelInstance,
             "issue",
             // Qt::BlockingQueuedConnection,
             Q_ARG(QSharedPointer<Issue>, issue)
-            );
+        );
     }
 
     // write to issue log (to do)

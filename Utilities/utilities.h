@@ -41,7 +41,7 @@ public:
     // Format
     static QString formatMemory(qulonglong bytes, int precision = 1);
     static QString enquote(QString &s);
-    static QString centeredRptHdr(QChar padChar, QString title);
+    static QString centeredRptHdr(QChar padChar, QString title, int width = 180);
 
     // Convert
     static QString stringListToString(QStringList list);

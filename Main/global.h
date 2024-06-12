@@ -141,7 +141,7 @@ namespace G
     };
 
     // Errors
-    extern QMap<QString,QStringList> errList;
+    extern QMap<QString,QStringList> issueList;
 
     enum ImageFormat {
         UseQt,
@@ -325,8 +325,7 @@ namespace G
     extern void errlog(QString err, QString functionName, QString fPath = "");
     extern void error(QString functionName, QString msg, QString fPath = "");
     extern void error(QString functionName, QString msg, int sfRow);
-    extern void issue(QString msg, QString src, int sfRow = -1, QString fPath = "",
-                      QString type = "Error", QString cat = "DataModel");
+    extern void issue(QString type, QString msg, QString src, int sfRow = -1, QString fPath = "");
     extern void err(QModelIndex idx, QString err);
 
     extern int wait(int ms);
