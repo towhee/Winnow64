@@ -1396,7 +1396,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
 
         // insert new row
-        G::isWarningLogger = true;
+        G::showIssueInConsole = true;
         if (row < icd->cacheItemList.size())
             icd->cacheItemList.insert(row, icd->cacheItem);
         else
@@ -1411,7 +1411,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     else row = keyFromPath[m.fPath];
 
     if (row >= icd->cacheItemList.size()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
             qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
                        << "row =" << row
                        << "exceeds icd->cacheItemList.size() of" << icd->cacheItemList.size();
@@ -1751,7 +1751,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     }
 
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
             qWarning() << "WARNING"
                        << "ImageCache::setCurrentPosition"
                        << "Instance clash"

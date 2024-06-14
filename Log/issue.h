@@ -18,20 +18,6 @@ public:
     };
     QStringList TypeDesc {"Warning", "Error"};
 
-    // enum Category {
-    //     General,
-    //     DM
-    // };
-    // QStringList CategoryDesc {"General", "DataModel"};
-
-    // enum Format {
-    //     OneRow,
-    //     TwoRow,
-    //     ThreeRow,
-    //     FourRow,
-    //     FiveRow
-    // };
-
     Type type;
     // Category cat;
     QString src;
@@ -40,7 +26,7 @@ public:
     QString fPath;
     QString timeStamp;
 
-    QString toString(bool isOneLine, int newLineOffset = 0);
+    QString toString(bool isOneLine = true, int newLineOffset = 0);
 
 };
 

@@ -10,17 +10,17 @@ bool isTestLogger = false;
 bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
-bool isWarningLogger = true;       // Writes warnings to qDebug
+bool showIssueInConsole = true;    // Writes warnings to qDebug
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
 bool isErrorLogger = false;         // Writes error log messages to file or console
-bool isIssueLogger = false;         // Writes error log messages to file or console
+bool isIssueLogger = false;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
 // still req'd?
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
 // Errors
-QMap<QString,QStringList> issueList;
+QStringList issueList;
 
 
 // Rory version (expanded cache pref)
@@ -295,8 +295,10 @@ void setDM(QObject *dm)
     modelInstance = dm;
 }
 
+QMutex issueListMutex;
 void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
+    QMutexLocker locker(&issueListMutex);
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
     if (issue->TypeDesc.contains(type))
         issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
@@ -308,9 +310,13 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
     issue->fPath = fPath;
     issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
 
+    if (showIssueInConsole) {
+        qDebug() << issue->toString();
+    }
+
     bool includeInDataModel = sfRow >-1;
 
-    // /*
+    /*
     QString fun = "G::issue";
     qDebug().noquote()
         << fun.leftJustified(30)
@@ -329,11 +335,13 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
         );
     }
 
+    // update current session issue list
+    issueList.append(issue->toString());
+
     // write to issue log (to do)
     if (isIssueLogger) {
         // errorLog.log(msg);  // rename to issueLog??
     }
-
 }
 
 void error(QString functionName, QString msg, QString fPath)
@@ -366,7 +374,7 @@ bool instanceClash(int instance, QString src)
 {
     bool clash = (dmInstance != instance);
     if (clash) {
-        if (isWarningLogger)
+        if (showIssueInConsole)
         qWarning() << "WARNING G::instanceClash"
                    << "instance =" << instance
                    << "DM instance =" << dmInstance

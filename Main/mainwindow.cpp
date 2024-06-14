@@ -2207,7 +2207,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
             }
             else {
-                if (!imageView->isFirstImageNewFolder && G::isWarningLogger)
+                if (!imageView->isFirstImageNewFolder && G::showIssueInConsole)
                     qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
             }
         }

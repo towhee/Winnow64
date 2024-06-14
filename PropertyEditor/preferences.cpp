@@ -331,7 +331,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "isErrorLogger") {
         G::isErrorLogger = v.toBool();
-        G::isWarningLogger = v.toBool();
+        G::showIssueInConsole = v.toBool();
         // if (G::isErrorLogger) mw->startLog();
     }
 

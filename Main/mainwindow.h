@@ -914,8 +914,8 @@ private:
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
     QAction *diagnosticsMainAction;
-    QAction *diagnosticsErrorsAction;
-    QAction *diagnosticsLogAction;
+    QAction *diagnosticsLogIssuesAction;
+    QAction *diagnosticsSessionIssuesAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsThumbViewAction;
     QAction *diagnosticsImageViewAction;
@@ -1320,8 +1320,8 @@ private:
     void diagnosticsIngest();
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString);
-    void errorReport();
-    void logReport();
+    void allIssuesReport();
+    void SessionIssuesReport();
 
     void mediaReadSpeed();
     void findDuplicates();

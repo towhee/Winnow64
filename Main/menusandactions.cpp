@@ -1417,17 +1417,17 @@ void MW::createHelpActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
-    diagnosticsErrorsAction = new QAction(tr("Error log"), this);
-    diagnosticsErrorsAction->setObjectName("diagnosticsErrorsAction");
-    diagnosticsErrorsAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsErrorsAction);
-    connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::errorReport);
+    diagnosticsLogIssuesAction = new QAction(tr("All Issues"), this);
+    diagnosticsLogIssuesAction->setObjectName("diagnosticsLogIssuesAction");
+    diagnosticsLogIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsLogIssuesAction);
+    connect(diagnosticsLogIssuesAction, &QAction::triggered, this, &MW::allIssuesReport);
 
-    diagnosticsLogAction = new QAction(tr("Activity log"), this);
-    diagnosticsLogAction->setObjectName("diagnosticsLogAction");
-    diagnosticsLogAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsLogAction);
-    connect(diagnosticsLogAction, &QAction::triggered, this, &MW::logReport);
+    diagnosticsSessionIssuesAction = new QAction(tr("Session Issues"), this);
+    diagnosticsSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
+    diagnosticsSessionIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsSessionIssuesAction);
+    connect(diagnosticsSessionIssuesAction, &QAction::triggered, this, &MW::SessionIssuesReport);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -1885,8 +1885,8 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
     helpMenu->addSeparator();
-    helpMenu->addAction(diagnosticsErrorsAction);
-    helpMenu->addAction(diagnosticsLogAction);
+    helpMenu->addAction(diagnosticsLogIssuesAction);
+    helpMenu->addAction(diagnosticsSessionIssuesAction);
     //    helpMenu->addSeparator();
     //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
@@ -2123,6 +2123,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(diagnosticsCurrentAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
+    thumbViewActions->append(diagnosticsSessionIssuesAction);
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);

@@ -310,9 +310,12 @@ void MW::diagnosticsReport(QString reportString)
     //std::cout << reportString.toStdString() << std::flush;
 }
 
-void MW::errorReport()
+void MW::allIssuesReport()
 {
-    if (G::isLogger) G::log("MW::errorReport");
+/*
+    Show the issue log, which is stored in the file G::issueLogFile
+*/
+    if (G::isLogger) G::log("MW::allIssuesReport");
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
@@ -331,22 +334,22 @@ void MW::errorReport()
     dlg->show();
 }
 
-void MW::logReport()
+void MW::SessionIssuesReport()
 {
-//    if (G::isLogger) G::log("MW::errorReport");
+/*
+    Show the issues from the current session (from when Winnow was opened)
+*/
+    if (G::isLogger) G::log("MW::SessionIssuesReport");
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Log");
+    dlg->setWindowTitle("Session Issues");
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    // if (!G::logFile.isOpen()) startLog();
-    // G::logFile.seek(0);
-    // QString logString(G::logFile.readAll());
-    //qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
-    // md.textBrowser->setText(logString);
+    QString content = G::issueList.join("\n");
+    md.textBrowser->setText(content);
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
     #endif

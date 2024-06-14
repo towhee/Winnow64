@@ -300,7 +300,7 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << fPath;
     }
     if (instance != dm->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING MetaRead::readMetadata Instance Clash"
                    << "row =" << sfIdx.row();
         return false;
@@ -425,7 +425,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     }
     else {
         pm = QPixmap(":/images/error_image256.png");
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "MetaRead::loadIcon" << "Failed to load thumbnail." << fPath;
     }
     if (abort) return;
@@ -458,7 +458,7 @@ void MetaRead::readRow(int sfRow)
     // valid index check
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     if (!sfIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning().noquote() << "WARNING MetaRead::readRow  "
                              << "invalid sfidx =" << sfIdx
                                  ;
