@@ -5,14 +5,14 @@ Issue::~Issue() {}
 
 QString Issue::toString(bool isOneLine, int newLineOffset)
 {
-    QString d = timeStamp;                                  // time stamp "yyyy-MM-dd hh:mm:ss "
-    QString t = TypeDesc.at(type);                   // issue type
+    QString d = timeStamp;                          // time stamp "yyyy-MM-dd hh:mm:ss "
+    QString t = TypeDesc.at(type);                  // issue type
     QString m = msg;                                // issue message
-    QString s = src;                       // issue source function
-    QString r = QString::number(sfRow);     // datamodel proxy row (sfRow)
-    QString p = fPath;                                      // path
-    QString l = "\n";                                       // newline separator
-    QString o = " ";                                        // offset datetime string width
+    QString s = src;                                // issue source function
+    QString r = QString::number(sfRow);             // datamodel proxy row (sfRow)
+    QString p = fPath;                              // path
+    QString l = "\n";                               // newline separator
+    QString o = " ";                                // offset datetime string width
     o = o.repeated(newLineOffset);
 
     if (isOneLine) {

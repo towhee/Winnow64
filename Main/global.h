@@ -141,7 +141,7 @@ namespace G
     };
 
     // Errors
-    extern QMap<QString,QStringList> issueList;
+    extern QStringList issueList;
 
     enum ImageFormat {
         UseQt,
@@ -196,7 +196,7 @@ namespace G
     extern bool isLogger;
     extern bool isFlowLogger;
     extern bool isFlowLogger2;
-    extern bool isWarningLogger;
+    extern bool showIssueInConsole;
     extern bool isFileLogger;
     extern bool isErrorLogger;
     extern bool isIssueLogger;
@@ -322,6 +322,7 @@ namespace G
                     QString comment = "",
                     bool zeroElapsedTime = false);
     extern ErrorLog errorLog;
+    extern QMutex issueListMutex;
     extern void errlog(QString err, QString functionName, QString fPath = "");
     extern void error(QString functionName, QString msg, QString fPath = "");
     extern void error(QString functionName, QString msg, int sfRow);

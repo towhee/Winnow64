@@ -834,7 +834,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     if (!success) {
          m.metadataLoaded = true;
         if (metadata->hasMetadataFormats.contains(m.type.toLower())) {
-            if (G::isWarningLogger)
+             if (G::showIssueInConsole)
             qWarning() << "WARNING" << "DataModel::imMetadata" << "Metadata not loaded to model for" << fPath;
         }
         //mutex.unlock();
@@ -966,7 +966,7 @@ void DataModel::addAllMetadata()
         }
         else {
             if (metadata->hasMetadataFormats.contains(ext)) {
-                if (G::isWarningLogger)
+                if (G::showIssueInConsole)
                 qWarning() << "WARNING" << "DataModel::addAllMetadata" << "Failed to load metadata." << fPath;
             }
         }
@@ -999,7 +999,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << fun << row << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -1030,17 +1030,18 @@ bool DataModel::readMetadataForItem(int row, int instance)
             }
             else {
                 errMsg = "Failed to load metadata.";
-                if (G::isWarningLogger)
-                qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-                G::error(fun, errMsg, row);
+                if (G::showIssueInConsole)
+                    qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
+                G::issue("Error", errMsg, fun, row, fPath);
                 return false;
             }
         }
         // cannot read this file type, load empty metadata
         else {
             errMsg = "Cannot read matadata for this file type.";
-            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-            G::error(fun, errMsg, row);
+            if (G::showIssueInConsole)
+                qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
+            G::issue("Error", errMsg, fun, row, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
             metadata->m.compare = false;
@@ -1065,7 +1066,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << fun << row << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -1095,9 +1096,10 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
         }
         else {
             errMsg = "Failed to load metadata.";
-            if (G::isWarningLogger)
-            qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-            G::error(fun, errMsg, row);
+            if (G::showIssueInConsole)
+            qWarning() << "WARNING" << "DataModel::readMetadataForItem"
+                       << errMsg << fPath;
+            G::issue("Error", errMsg, fun, row, fPath);
             mutex.unlock();
             return false;
         }
@@ -1105,9 +1107,8 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
     // cannot read this file type, load empty metadata
     else {
         errMsg = "Cannot read metadata for this file type.";
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::refreshMetadataForItem" << "cannot read this file type, load empty metadata for " + fPath;
-        G::error(fun, errMsg, row);
         metadata->clearMetadata();
         metadata->m.row = row;
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
@@ -1153,7 +1154,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING"
                    << "DataModel::addMetadataForItem Instance conflict "
                    << "m.instance =" << m.instance
@@ -1406,13 +1407,14 @@ void DataModel::issue(const QSharedPointer<Issue>& issue)
     Add issue related to a datamodel row
 */
     QString fun = "DataModel::issue";
+    /*
     qDebug().noquote()
         << fun.leftJustified(30)
         << issue->TypeDesc.at(issue->type).leftJustified(10)
         << QString::number(issue->sfRow).rightJustified(5)
         << issue->msg.leftJustified(40)
         << issue->src.leftJustified(30)
-        ;
+        ;  //*/
     // check for null fPath
     if (issue->fPath == "" && issue->sfRow > -1) {
         issue->fPath = sf->index(issue->sfRow, 0).data(G::PathRole).toString();
@@ -1493,7 +1495,7 @@ bool DataModel::instanceClash(QModelIndex idx, QString src)
     QModelIndex par = idx.parent();
     bool clash = &par != &instanceParent;
     if (clash) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning()  << "WARNING" << "DataModel::instanceClash" << src << idx;
     }
     return &par != &instanceParent;
@@ -1523,7 +1525,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                  << currentFolderPath;
     }
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValue" << dmIdx << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -1553,7 +1555,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                 ;
                 //*/
     if (!dmIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValue" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
@@ -1581,7 +1583,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
              << currentFolderPath;
     //*/
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValueSf" << sfIdx << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -1589,7 +1591,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
         return ;
     }
     if (!sfIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValueSf" << "sfIdx.isValid() =" << sfIdx.isValid() << sfIdx;
         return;
     }
@@ -1601,7 +1603,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
 void DataModel::setCurrent(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setCurrent" << "Instance conflict = "
                    << "DM instance =" << this->instance
                    << "Src instance =" << instance
@@ -1641,7 +1643,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
                 ;
                 //*/
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValuePath" << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -1652,7 +1654,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
 //    qDebug() << "DataModel::setValuePath" << "Instance =" << instance << currentFolderPath;
     QModelIndex dmIdx = index(fPathRow[fPath], col);
     if (!dmIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setValuePath" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
@@ -1686,12 +1688,12 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 
     if (G::stop) return;
     if (!dmIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIconFromVideoFrame" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
     if (fromInstance != instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "setIconFromVideoFrame" << dmIdx << "Instance conflict = "
                    << "DM instance =" << instance
                    << "Src instance =" << fromInstance;
@@ -1755,12 +1757,12 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
                  << currentFolderPath;
     }
     if (loadingModel) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << "loadingModel =" << loadingModel;
         return;
     }
     if (fromInstance != instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "Instance conflict = "
                  << "DM instance =" << instance
                  << "Src instance =" << fromInstance
@@ -1769,22 +1771,22 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
     if (loadingModel) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "loadingModel = " << loadingModel;
         return;
     }
     if (G::stop) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << dmIdx << "G::stop = " << G::stop;
         return;
     }
     if (!dmIdx.isValid()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << "dmIdx.isValid() =" << dmIdx.isValid() << dmIdx;
         return;
     }
     if (dmIdx.row() >= rowCount()) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::setIcon" << "row exceeds rowCount" << dmIdx.isValid() << dmIdx;
         return;
     }
@@ -1803,7 +1805,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
                           << currentFolderPath;
     // might be called from previous folder during folder change
     if (instance != this->instance) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::iconLoaded" << sfRow << "Instance conflict = "
                  << "DM instance =" << this->instance
                  << "Src instance =" << instance
@@ -2148,7 +2150,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
                           << "fPath =" << fPath
                           << currentFolderPath;
     if (!fPathRow.contains(fPath)) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Not in fPathrow";
         if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
@@ -2159,7 +2161,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
         return sfIdx;
     }
     else {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "DataModel::proxyIndexFromPath" << "Invalid proxy";
         return index(-1, -1);       // invalid index
     }

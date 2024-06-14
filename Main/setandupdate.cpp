@@ -535,7 +535,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         ; //*/
 
     if (dmRow == -1) {
-        if (G::isWarningLogger)
+        if (G::showIssueInConsole)
         qWarning() << "WARNING" << "MW::updateCachedStatus" << "dm->fPathrow does not contain" << fPath;
         return;
     }

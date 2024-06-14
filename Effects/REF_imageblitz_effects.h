@@ -66,13 +66,15 @@ int defaultConvolveMatrixSize(float radius, float sigma,
     float sigmaSQ2PI = M_SQ2PI*sigma;
     int max = quality ? 65535 : 255;
 
-    if(sigma == 0.0){
+    if (sigma == 0.0){
         qWarning("Blitz::convolve(): Zero sigma is invalid!");
         // G::error("Zero sigma is invalid.", "Blitz::defaultConvolveMatrixSize", "");
+        QString msg = "Zero sigma is invalid.";
+        G::issue("Error", msg, "Blitz::defaultConvolveMatrixSize");
         return(5);
     }
 
-    if(radius > 0.0)
+    if (radius > 0.0)
         return((int)(2.0*std::ceil(radius)+1.0));
 
     matrix_size = 5;
