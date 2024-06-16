@@ -94,6 +94,7 @@ private:
     bool pixiBox(quint32 &offset, quint32 &length);  // Color Information Box
 
     QFile *file;        // temp until decide what to do with constructor
+    ImageMetadata *m;
     QString fPath;
     qint64 eof;
     int exifItemID;

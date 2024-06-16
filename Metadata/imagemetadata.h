@@ -142,6 +142,7 @@ class MetadataParameters
 public:
     QString fPath;
     QFile file;
+    // int row;
     int instance;
     QBuffer buf;
     quint32 offset;

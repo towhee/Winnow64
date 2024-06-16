@@ -67,8 +67,6 @@ int defaultConvolveMatrixSize(float radius, float sigma,
     int max = quality ? 65535 : 255;
 
     if (sigma == 0.0){
-        qWarning("Blitz::convolve(): Zero sigma is invalid!");
-        // G::error("Zero sigma is invalid.", "Blitz::defaultConvolveMatrixSize", "");
         QString msg = "Zero sigma is invalid.";
         G::issue("Error", msg, "Blitz::defaultConvolveMatrixSize");
         return(5);
@@ -100,16 +98,16 @@ QImage convolve(QImage &img, int matrix_size, float *matrix)
     bool overflow = false;
 
     if(!(matrix_size % 2)){
-        qWarning("convolve(): kernel width must be an odd number!");
-        // G::error("Kernel width must be an odd number", "Blitz::convolve");
+        QString msg = "Kernel width must be an odd number.";
+        G::issue("Error", msg, "Blitz::convolve");
         return(img);
     }
 
     w = img.width();
     h = img.height();
     if (w < 3 || h < 3) {
-        qWarning("convolve(): Image is too small!");
-        // G::error("Image is too small", "Blitz::convolve");
+        QString msg = "Image is too small.";
+        G::issue("Error", msg, "Blitz::convolve");
         return(img);
     }
 
@@ -889,8 +887,8 @@ QImage emboss(QImage &img, float radius = 0.0, float sigma = 1.0,
                      EffectQuality quality = High)
 {
     if(sigma == 0.0){
-        qWarning("emboss(): Zero sigma is invalid!");
-        // G::error("Zero sigma is invalid", "Blitz::emboss");
+        QString msg = "Zero sigma is invalid.";
+        G::issue("Error", msg, "Blitz::emboss");
         return(img);
     }
 
@@ -928,8 +926,8 @@ QImage oilPaint(QImage &img, float radius = 0.0, EffectQuality quality = High)
     w = img.width();
     h = img.height();
     if (w < 3 || h < 3){
-        qWarning("oilPaint(): Image is too small!");
-        // G::error("Image is too small. Width and height must be > 2", "Blitz::oilPaint");
+        QString msg = "Image is too small. Width and height must be > 2.";
+        G::issue("Error", msg, "Blitz::oilPaint");
         return(img);
     }
 

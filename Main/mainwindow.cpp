@@ -1967,8 +1967,8 @@ void MW::folderSelectionChange(QString dPath)
     // load datamodel
     if (!dm->load(G::currRootFolder, G::includeSubfolders)) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
-        // if (G::isWarningLogger)
-        qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
+        QString msg = "Datamodel failed to load folder.";
+        G::issue("Warning", msg, "MW::folderSelectionChange", -1, G::currRootFolder);
         enableSelectionDependentMenus();
         enableStatusBarBtns();
         if (dm->abortLoadingModel) {

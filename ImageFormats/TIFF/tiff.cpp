@@ -759,7 +759,8 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (planarConfiguration == 2 && compression == 5) {
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
-    if (err != "") // G::error(err, "Tiff::parseForDecoding", p.fPath);
+    if (err != "") G::issue("Error", err, "Tiff::decode_2", -1, p.fPath);
+
     if (err != "" && !isReport) return false;
 
     /* rgh used for debugging - req'd?
@@ -801,6 +802,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
 /*
+    Decode_2 (used in Issue)
     Decode using unmapped QFile.  Set p.file, p.offset and call main decode.
 
 */
@@ -813,7 +815,8 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     p.fPath = fPath;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        // G::error("Unable to open file.", "Tiff::decode", fPath);
+        QString msg = "Unable to open file.";
+        G::issue("Error", msg, "Tiff::decode_2", m.row, fPath);
         return false;
     }
 
@@ -832,9 +835,10 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
 {
 /*
+    Decode_1 (used in Issue)
     The version is used by ImageDecoders in image cache.
 */
-    if (G::isLogger || isDebug) G::log("Tiff::decode1", fPath + " Source = " + source);
+    if (G::isLogger || isDebug) G::log("Tiff::decode_1", fPath + " Source = " + source);
     //qDebug() << "Tiff::decode2" << fPath;
 
     QFileInfo fileInfo(fPath);
@@ -844,7 +848,8 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     p.fPath = fPath;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        // G::error("Unable to open file.", "Tiff::decode", fPath);
+        QString msg = "Unable to open file.";
+        G::issue("Error", msg, "Tiff::decode", -1, fPath);
         return false;
     }
     p.offset = offset;
@@ -857,6 +862,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
 bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
 {
 /*
+    Decode_0 (used in Issue)
     Decode tiff into QImage &image.
 
     p.file must be set and opened. If called from ImageDecoder then p.file will be mapped
@@ -884,7 +890,7 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    bool decoded;
+    bool decoded = true;
     if (compression == 1) decoded = decodeBase(p, image);
     if (compression == 5 && predictor == 0) decoded = decodeLZW(p, image);
     p.file.close();

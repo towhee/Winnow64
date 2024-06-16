@@ -47,9 +47,7 @@ bool CanonCR3::parse(MetadataParameters *p,
     eof = p->file.size();
     trakCount = 0;
 
-    QFileInfo info(p->file);
     if (p->report) {
-//        p->rpt << "\nISO/IEC 14496-12 boxes";
         MetaReport::header("ISO/IEC 14496-12 boxes", p->rpt);
         p->rpt << "\nType     Offset    Hex   Length    Hex  Comment";
     }
@@ -161,26 +159,18 @@ bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "uuid") return uuidBox(offset, length);
     if (type == "vmhd") return vmhdBox(offset, length);
 
-    // err
-//    qDebug() << "CanonCR3::getHeifBox"
-//             << "offset:" << offset
-//             << "length:" << length
-//             << "type:" << type
-//             << "(Undefined)"
-//                ;
-    // G::error("Box type " + type + " unknown.", "CanonCR3::getHeifBox", m->fPath);
+    QString msg = "Box " + type + " is unknown.";
+    G::issue("Warning", msg, "CanonCR3::getHeifBox", m->row, m->fPath);
     offset += length;
     return true;
-//    return false;
 }
 
 bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log("CanonCR3::ftypBox");
     if (length == 0) {
-        // err
-        // G::error("ftyp not found.", "CanonCR3::ftypBox", m->fPath);
-        qDebug() << "CanonCR3::ftypBox" << "ftyp not found";
+        QString msg = "ftyp not found.";
+        G::issue("Warning", msg, "CanonCR3::ftypBox", m->row, m->fPath);
         return false;
     }
 
@@ -197,9 +187,8 @@ bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
         }
     }
     if (!isCR3) {
-        // err
-        // G::error("crx not found", "CanonCR3::ftypBox", m->fPath);
-        qDebug() << "CanonCR3::ftypBox" << "crx not found";
+        QString msg = "crx not found.";
+        G::issue("Warning", msg, "CanonCR3::ftypBox", m->row, m->fPath);
         return false;
     }
     offset += length;
@@ -326,8 +315,8 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
         qDebug() << "CanonCR3::colrBox" << colorProfile;
     }
     else {
-        // err
-        // G::error("Color type " + colrType + " is not recognized", "CanonCR3::colrBox", m->fPath);
+        QString msg = "Color type " + colrType + " is not recognized.";
+        G::issue("Warning", msg, "CanonCR3::colrBox", m->row, m->fPath);
         offset += length;
         return false;
     }
@@ -412,10 +401,9 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
                  << "base_offset" << base_offset
                  << "extent_count" << extent_count;
         if (extent_count > 100) {
-            QString err = "Quiting because extent_count has reached = " +
+            QString msg = "Quiting because extent_count has reached = " +
                     QString::number(extent_count);
-            // G::error(err, "CanonCR3::ilocBox", m->fPath);
-            qDebug() << "CanonCR3::ilocBox" << err;
+            G::issue("Warning", msg, "CanonCR3::ilocBox", m->row, m->fPath);
             offset += length;
             return false;
         }
@@ -475,8 +463,8 @@ bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
 //    qDebug() << "CanonCR3::iinfBox" << "iint entry count =" << entry_count << p->file.pos();
     if (entry_count == 0) {
         // err
-        QString err = "No iint entries found.";
-        // G::error(err, "CanonCR3::iinfBox", m->fPath);
+        QString msg = "No iint entries found.";
+        G::issue("Warning", msg, "CanonCR3::iinfBox", m->row, m->fPath);
         offset += length;
         return false;
     }
@@ -826,9 +814,8 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
 
     if (ipcoType != "ipco") {
         // err
-        QString err = "ipco not found in iprp box";
-        // G::error(err, "CanonCR3::iprpBox", m->fPath);
-        qDebug() << "CanonCR3::iprpBox" << "ipco not found in iprp box";
+        QString msg = "ipco not found in iprp box.";
+        G::issue("Warning", msg, "CanonCR3::iprpBox", m->row, m->fPath);
         return false;
     }
 

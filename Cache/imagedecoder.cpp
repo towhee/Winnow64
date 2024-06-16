@@ -267,8 +267,6 @@ bool ImageDecoder::load()
                 imFile.close();
                 errMsg = "Could not read because Qt tiff decoder failed.";
                 G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
-                if (G::showIssueInConsole)
-                    qWarning() << "Warning" << "ImageDecoder::load  Could not decode using Qt" << fPath;
                 status = Status::Invalid;
                 return false;
             }
