@@ -19,9 +19,9 @@ QString Issue::toString(bool isOneLine, int newLineOffset)
         d = timeStamp.leftJustified(20);
         t = (t + ": ").leftJustified(9);
         m = m.leftJustified(60);
-        s = ("Src: " + s).leftJustified(30);
+        s = ("Src: " + s).leftJustified(40);
         r = ("Row: " + r + " ").rightJustified(12);
-        p = "  File: " + fPath;
+        p = "  Obj: " + fPath;
         return d + t + m + s + r + p;
     }
     else {
@@ -30,7 +30,7 @@ QString Issue::toString(bool isOneLine, int newLineOffset)
         m = m + "   ";
         s = "Src:     " + s  + " ";
         r = "Row:     " + r + " ";
-        p = "File:    " + fPath;
+        p = "Obj:    " + fPath;
         return d + t + m + l + o + s + l + o + r + l + o + p;
     }
 }

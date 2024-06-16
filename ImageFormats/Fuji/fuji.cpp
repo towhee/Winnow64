@@ -146,8 +146,8 @@ bool Fuji::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
-            QString err = "Endian order not found.";
-            // G::error(err, "Fuji::parse", m.fPath);
+            QString msg = "Endian order not found.";
+            G::issue("Error", msg, "Fuji::parse", m.row, m.fPath);
             return false;
         }
     }

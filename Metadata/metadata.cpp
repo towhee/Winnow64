@@ -1107,10 +1107,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
     }
     else {  // not open file
-        QString msg =  "Unable to open file " + path + ".";
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
-        // G::error("Could not open p.file to read metadata.", "Metadata::readMetadata", path);
+        QString msg = "Unable to open file.";
+        G::issue("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
         return false;
     }
 
@@ -1118,7 +1116,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     /* not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {
-        // G::error("Metadata::readMetadata", path, "No embedded JPG found.");
+        QString msg = "No embedded JPG found.";
+        G::issue("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
     }
 
     if (m.lengthFull == 0 && m.lengthThumb > 0) {

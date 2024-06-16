@@ -573,12 +573,14 @@ bool ImageCache::nextToCache(int id)
     }
 
     if (priorityList.size() > icd->cacheItemList.size()) {
-        qWarning() << "WARNING"
-                   << "ImageCache::nextToCache"
-                   << "priorityList is out of date"
-                   << " instance =" <<  instance
-                   << "dm->instance =" << dm->instance
-            ;
+        if (debugCaching) {
+            qWarning() << "WARNING"
+                       << "ImageCache::nextToCache"
+                       << "priorityList is out of date"
+                       << " instance =" <<  instance
+                       << "dm->instance =" << dm->instance
+                ;
+        }
         return false;
     }
 
@@ -588,8 +590,10 @@ bool ImageCache::nextToCache(int id)
 
         // prevent crash when priority has just updated
         if (p >= priorityList.size()) {
-            qWarning() << "WARNING: ImageCache::nextToCache failed p >= priorityList.size()";
-            return false;
+            if (debugCaching) {
+                qWarning() << "WARNING: ImageCache::nextToCache failed p >= priorityList.size()";
+                return false;
+            }
         }
 
         // icd->cacheItemList row i
@@ -609,8 +613,10 @@ bool ImageCache::nextToCache(int id)
 
         // out of range
         if (i >= icd->cacheItemList.size()) {
-            qWarning() << "WARNING: ImageCache::nextToCache failed i >= icd->cacheItemList.size()";
-            return false;
+            if (debugCaching) {
+                qWarning() << "WARNING: ImageCache::nextToCache failed i >= icd->cacheItemList.size()";
+                return false;
+            }
         }
 
         // make sure metadata has been loaded
@@ -656,7 +662,7 @@ bool ImageCache::nextToCache(int id)
 
         // max attempts exceeded
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage /*&& !G::allMetadataLoaded*/) {
-            // if (debugCaching)
+            if (debugCaching)
             {
                 qWarning() << "WARNING: ImageCache::nextToCache                           "
                          << "row =" << i
@@ -1364,8 +1370,10 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
                  << "row =" << m.row << m.fName
                     ;
     if (instance != dm->instance) {
-        qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
-                   << "instance clash";
+        if (debugCaching) {
+            QString msg = "Instance clash.";
+            G::issue("Warning", msg, "ImageCache::addCacheItemImageMetadata", m.row, m.fPath);
+        }
         return;
     }
     if (!G::useImageCache) return;  // rgh isolate image cache
@@ -1379,8 +1387,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     if (!keyFromPath.contains(m.fPath)) {
         // insert new item in icd->cacheItemList
         row = m.row;
-        /*
-        qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath; //*/
+        // qDebug() << "ImageCache::addCacheItemImageMetadata" << "row =" << row << m.fPath;
         icd->cacheItem.isUpdated = false;
         icd->cacheItem.key = row;              // need to be able to sync with imageList
         icd->cacheItem.fPath = m.fPath;
@@ -1392,7 +1399,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = row;
-        //icd->cacheItem.metadataLoaded = true;
         icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
 
         // insert new row
@@ -1411,10 +1417,9 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     else row = keyFromPath[m.fPath];
 
     if (row >= icd->cacheItemList.size()) {
-        if (G::showIssueInConsole)
-            qWarning() << "WARNING" << "ImageCache::addCacheItemImageMetadata"
-                       << "row =" << row
-                       << "exceeds icd->cacheItemList.size() of" << icd->cacheItemList.size();
+        QString n = QString::number(icd->cacheItemList.size());
+        QString msg = "Row exceeds cacheItemList size of " + n;
+        G::issue("Warning", msg, "ImageCache::addCacheItemImageMetadata", row, m.fPath);
         return;
     }
 
@@ -1740,9 +1745,9 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
-    log("setCurrentPosition", "row = " + QString::number(dm->currentSfRow));
-    if (debugCaching)
-    {
+    int sfRow = dm->currentSfRow;
+    log("setCurrentPosition", "row = " + QString::number(sfRow));
+    if (debugCaching) {
         qDebug().noquote() << "ImageCache::setCurrentPosition"
                            << dm->rowFromPath(fPath)
                            << fPath
@@ -1750,14 +1755,11 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
                            << "isRunning =" << isRunning();
     }
 
-    if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
-        if (G::showIssueInConsole)
-            qWarning() << "WARNING"
-                       << "ImageCache::setCurrentPosition"
-                       << "Instance clash"
-                       << dm->rowFromPath(fPath)
-                       << src
-                       << fPath;
+    if (G::dmInstance != instance) {
+        if (debugCaching) {
+            QString msg = "Instance clash.  Src: " + src;
+            G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
+        }
         return;
     }
 
@@ -1780,16 +1782,16 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     // not in cache, maybe loading
     if (!icd->imCache.contains(fPath) && !isVideo) {
         emit centralMsg("Loading Image...");
-        // qWarning() << "WARNING ImageCache::setCurrentPosition"
-        //            << "icd->imCache hash does not contain" << fPath;
+        QString msg = "Not in imCache, might be loading.";
+        G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
     }
     // or could not load
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList.at(i).fPath == fPath) {
             if (icd->cacheItemList.at(i).status == ImageDecoder::Status::Invalid) {
                 emit centralMsg("Unable to load " + fPath);
-                qWarning() << "WARNING ImageCache::setCurrentPosition"
-                           << "ImageDecoder::Status::Invalid" << fPath;
+                QString msg = "Invalid status, unable to load.";
+                G::issue("Warning", msg, "ImageCache::setCurrentPosition", i, fPath);
             }
         }
     }
@@ -1875,19 +1877,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
 
     /* Safety check do not exceed max cache size.  The metadata determination of the image size
        could be wrong, resulting in icd->cacheItem.sizeMB being wrong.  If this is the case, then
-       the target range will be wrong too.  */
+       the target range will be wrong too.  Changed to issue a warning for now.*/
     if ((icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB) > icd->cache.maxMB) {
-        QString k = QString::number(cacheKey);
-        warnings << "ImageCache::cacheImage row = " + k + " exceeded max cache size";
-        if (debugCaching)
-        {
-            QString k = QString::number(cacheKey).leftJustified((4));
-            qWarning() << "WARNING: ImageCache::cacheImage                           "
-                     << "row =" << k
-                     << "exceeded max cache size"
-                ;
+        if (debugCaching) {
+            QString estMB =  QString::number(icd->cache.currMB + icd->cacheItemList[cacheKey].estSizeMB);
+            QString maxMB =  QString::number(icd->cache.maxMB);
+            QString msg = "Estimated cache ." + estMB + " MB exceeds the maximum " + maxMB + " MB.";
+            G::issue("Warning", msg, "ImageCache::cacheImage", cacheKey, decoder[id]->fPath);
         }
-        // return;
     }
 
     // cache the image if not a video
@@ -1896,22 +1893,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
         bool isImage = decoder[id]->image.width() > 0;
         if (!isImage) {
-            // /*
-            QString k = QString::number(cacheKey).leftJustified((4));
-            qWarning().noquote() << "WARNING: ImageCache::cacheImage"
-                               << "     decoder" << id
-                               << "row =" << k
-                               << "errMsg =" << decoder[id]->errMsg
-                               << "NULL IMAGE"
-                ; //*/
+            QString msg = "Decoder returned a null image.";
+            G::issue("Warning", msg, "ImageCache::cacheImage", cacheKey, decoder[id]->fPath);
         }
-        /*
-        QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::cacheImage                       "
-                           << "     decoder" << id
-                           << "row =" << k
-                           << "decoder[id]->fPath =" << decoder[id]->fPath
-            ; //*/
         icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     }
 

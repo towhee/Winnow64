@@ -186,8 +186,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     dm->rptIssues(0);
 
-
-    // G::error(0, "Error test 2");
     return;
 }
 /*

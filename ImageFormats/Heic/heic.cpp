@@ -67,8 +67,8 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         // add condition to check for EOF
         count++;
         if (count > 100) {
-            // err endian order not found
-            // G::error("Endian order not found.", "Heic::parseLibHeif", fPath);
+            QString msg = "Endian order not found.";
+            G::issue("Error", msg, "Heic::parseLibHeif", m->row, fPath);
             p.buf.close();
             return false;
         }
@@ -429,6 +429,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     else isDebug = false;
 //    isDebug = true;
 
+    this->m = &m;
     file = &p.file;
 
     quint32 offset = 0;
@@ -482,8 +483,8 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         // add condition to check for EOF
         count++;
         if (count > 100) {
-            // err endian order not found
-            // G::error("Endian order not found.", "Heic::parseLibHeif", fPath);
+            QString msg = "Endian order not found.";
+            G::issue("Error", msg, "Heic::parseExif", m.row, fPath);
             p.file.close();
             return false;
         }
@@ -699,13 +700,8 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "irot") return irotBox(offset, length);
     if (type == "pixi") return pixiBox(offset, length);
 
-    // err
-    QString err = "Box type " + type + " is unknown";
-    // G::error(err, "Heic::getHeifBox", fPath);
-    if (G::showIssueInConsole)
-    qWarning() << "WARNING Heic::getHeifBox"
-             << "Failed to get box for type ="
-             << type;
+    QString msg = "Box type " + type + " is unknown";
+    G::issue("Warning", msg, "Heic::getHeifBox", m->row, fPath);
     offset += length;
     return false;
 }
@@ -733,10 +729,8 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
         }
     }
     if (!isHeic) {
-        // err
-        QString err = "Brand heic or HEIC not found.";
-        // G::error(err, "Heic::ftypBox", fPath);
-        qWarning() << "Heic::ftypBox" << "heic not found";
+        QString msg = "Brand heic or HEIC not found.";
+        G::issue("Error", msg, "Heic::ftypBox", m->row, fPath);
         return false;
     }
     offset += length;
@@ -973,9 +967,9 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
                      << "extent_count" << extent_count;
         }
         if (extent_count > 100) {
-            QString err = "Quitting because extent_count has reached " + extent_count;
-            // G::error(err, "Heic::ilocBox", fPath);
-            qWarning() << "Heic::ilocBox" << "*** Quiting because extent_count =" << extent_count;
+            QString msg = "Quitting because extent_count has reached " +
+                          QString::number(extent_count);
+            G::issue("Warning", msg, "Heic::ilocBox", m->row, fPath);
             offset += length;
             return false;
         }
@@ -1322,9 +1316,8 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
 
         if (ipcoType != "ipco") {
             // err
-            QString err = "Type ipco not found in iprp box.";
-            // G::error(err, "Heic::iprpBox", fPath);
-            qDebug() << "Heic::iprpBox" << "ipco not found in iprp box";
+            QString msg = "Type ipco not found in iprp box.";
+            G::issue("Error", msg, "Heic::iprpBox", m->row, fPath);
             return false;
         }
 

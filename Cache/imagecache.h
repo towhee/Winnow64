@@ -125,8 +125,8 @@ private:
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
-    QHash<QString,int> keyFromPath;    // cache key for assigned path
-    QHash<int,QString> pathFromKey;    // cache key for assigned path
+    QHash<QString,int> keyFromPath;     // cache key for assigned path
+    QHash<int,QString> pathFromKey;     // cache key for assigned path
     QList<int> priorityList;
 
     void launchDecoders(QString src);

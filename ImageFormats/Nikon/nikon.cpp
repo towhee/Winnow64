@@ -724,8 +724,8 @@ bool Nikon::parse(MetadataParameters &p,
         order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
     }
     else {
-        // err, should have been endian order
-        // G::error("Endian order not found.", "Nikon::parse", m.fPath);
+        QString msg = "Endian order not found.";
+        G::issue("Error", msg, "Nikon::parse", m.row, m.fPath);
         return false;
     }
     p.file.read(2);       // skip over 0x2A
@@ -918,9 +918,9 @@ bool Nikon::parse(MetadataParameters &p,
             // add condition to check for EOF
             step++;
             if (step > 100) {
-                // err endian order not found
-                // G::error("Endian order not found.", "Nikon::parse", m.fPath);
-               break;
+                QString msg = "Endian order not found.";
+                G::issue("Error", msg, "Nikon::parse", m.row, m.fPath);
+                break;
             }
         }
         quint32 makerOffsetBase = static_cast<quint32>(p.file.pos()) - 2;

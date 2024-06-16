@@ -195,8 +195,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     }
 }
 
-void FrameDecoder::errorOccurred(QMediaPlayer::Error, const QString &errorString)
+void FrameDecoder::errorOccurred(QMediaPlayer::Error, const QString &msg)
 {
-    qWarning() << "WARNING" << "FrameDecoder::errorOccurred"
-               << "row =" << queue.at(0).dmIdx.row() << errorString;
+    G::issue("Error", msg, "FrameDecoder::errorOccurred", queue.at(0).dmIdx.row(), queue.at(0).fPath);
 }

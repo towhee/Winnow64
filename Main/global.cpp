@@ -37,7 +37,7 @@ bool dmEmpty;                   // DM is stopped and/or empty.  Flag to abort
 bool allMetadataLoaded;         // all metadata attempted
 bool iconChunkLoaded;           // all icon chunk loaded
 
-int dmInstance;
+int dmInstance;                 // DataModel instance
 
 // temp while resolving issues
 bool useMyTiff;
@@ -296,14 +296,13 @@ void setDM(QObject *dm)
 }
 
 QMutex issueListMutex;
+
 void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
     QMutexLocker locker(&issueListMutex);
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
     if (issue->TypeDesc.contains(type))
         issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
-    // if (issue->CategoryDesc.contains(cat))
-    //     issue->cat = static_cast<Issue::Category>(issue->TypeDesc.indexOf(type));
     issue->src = src;
     issue->msg = msg;
     issue->sfRow = sfRow;
