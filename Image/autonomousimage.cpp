@@ -85,7 +85,8 @@ bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
     if (G::isLogger) G::log(fun, fPath);
 
     if (!image.load(fPath)) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using QImage::load." << fPath;
+        QString msg = "Failed to load image.";
+        G::issue("Warning", msg, fun, m->row, fPath);
         return false;
     }
 
@@ -93,7 +94,8 @@ bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
     int w = image.width();
     int h = image.height();
     if (h == 0) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        QString msg = "Image has width or height = 0.";
+        G::issue("Warning", msg, fun, m->row, fPath);
         return false;
     }
 
@@ -101,8 +103,7 @@ bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
 
     if (image.isNull()) {
         QString msg = "Could not read thumb using thumbReader.";
-        G::issue("Error", msg, "AutonomousImage::loadFromEntireFile", m->row, fPath);
-        if (G::showIssueInConsole) qWarning() << "WARNING" << "loadFromEntireFile" << msg << fPath;
+        G::issue("Warning", msg, "AutonomousImage::loadFromEntireFile", m->row, fPath);
         return false;
     }
 
@@ -125,7 +126,8 @@ bool AutonomousImage::loadFromJpgData(QString &fPath, QImage &image)
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
-        qWarning() << "WARNING" << "Thumb::loadFromJpgData" << fPath << "is already open - return";
+        QString msg = "File is already open.";
+        G::issue("Warning", msg, fun, m->row, fPath);
         return false;
     }
 
@@ -146,14 +148,15 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
     if (G::isLogger) G::log(fun, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) {
-        qWarning() << "WARNING" << "Thumb::loadFromTiff" << fPath << "is already open - return";
+        QString msg = "File is already open.";
+        G::issue("Warning", msg, fun, m->row, fPath);
         return false;
     }
 
     if (m->samplesPerPixel > 3) {
         QString msg = "Could not read tiff because " + QString::number(m->samplesPerPixel)
                       + " samplesPerPixel > 3.";
-        G::issue("Error", msg, "AutonomousImage::loadFromTiff", m->row, fPath);
+        G::issue("Error", msg, fun, m->row, fPath);
         return false;
     }
 
@@ -222,17 +225,6 @@ bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString
 
     QString ext = fileInfo.suffix().toLower();
 
-    // get metadata for image at fPath
-    // if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image")) {
-    //     m = &metadata->m;
-    // }
-    // else {
-    //     QString errMsg = "Failed to load metadata";
-    //     if (G::isWarningLogger)
-    //         qWarning() << "WARNING" << "DataModel::readMetadataForItem" << "Failed to load metadata for " << fPath;
-    //     QFile(fPath).setPermissions(oldPermissions);
-    //     return false;
-    // }
     metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image");
     m = &metadata->m;
 

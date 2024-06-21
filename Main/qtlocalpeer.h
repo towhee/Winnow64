@@ -41,6 +41,7 @@
 #ifndef QTLOCALPEER_H
 #define QTLOCALPEER_H
 
+#include "Main/global.h"
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QDir>

@@ -68,7 +68,8 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
 */
 {
     if (!sfIdx.isValid()) {
-        qWarning() << "WARNING" << "Selection::setCurrentIndex  invalid index" << sfIdx;
+        QString msg = "Invalid index.";
+        G::issue("Warning", msg, "Selection::setCurrentIndex", sfIdx.row());
         return;
     }
 

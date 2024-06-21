@@ -574,12 +574,10 @@ bool ImageCache::nextToCache(int id)
 
     if (priorityList.size() > icd->cacheItemList.size()) {
         if (debugCaching) {
-            qWarning() << "WARNING"
-                       << "ImageCache::nextToCache"
-                       << "priorityList is out of date"
-                       << " instance =" <<  instance
-                       << "dm->instance =" << dm->instance
-                ;
+            QString dmInst = QString::number(dm->instance);
+            QString inst = QString::number(instance);
+            QString msg = "priorityList is out of date.  dmInstance: " + dmInst + " instance: " + inst + ".";
+            G::issue("Warning", msg, "ImageCache::nextToCache");
         }
         return false;
     }
@@ -591,7 +589,8 @@ bool ImageCache::nextToCache(int id)
         // prevent crash when priority has just updated
         if (p >= priorityList.size()) {
             if (debugCaching) {
-                qWarning() << "WARNING: ImageCache::nextToCache failed p >= priorityList.size()";
+                QString msg = "Exceeded priorityList range, priorities may have been just updated.";
+                G::issue("Warning", msg, "ImageCache::nextToCache");
                 return false;
             }
         }
@@ -614,7 +613,8 @@ bool ImageCache::nextToCache(int id)
         // out of range
         if (i >= icd->cacheItemList.size()) {
             if (debugCaching) {
-                qWarning() << "WARNING: ImageCache::nextToCache failed i >= icd->cacheItemList.size()";
+                QString msg = "Exceeded cacheItemList range.";
+                G::issue("Warning", msg, "ImageCache::nextToCache", i, icd->cacheItemList.at(i).fPath);
                 return false;
             }
         }
@@ -652,10 +652,9 @@ bool ImageCache::nextToCache(int id)
         if (icd->cacheItemList.at(i).status == inValidImage) {
             if (debugCaching)
             {
-                qDebug() << "ImageCache::nextToCache                           "
-                         << "row =" << i
-                         << "decoder status =" << icd->cacheItemList.at(i).status
-                    ;
+                QString status = decoder[id]->statusText.at(icd->cacheItemList.at(i).status);
+                QString msg = "Invalid image.  Decoder status: " + status + ".";
+                G::issue("Warning", msg, "ImageCache::nextToCache", i, icd->cacheItemList.at(i).fPath);
             }
             continue;
         }
@@ -664,10 +663,8 @@ bool ImageCache::nextToCache(int id)
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage /*&& !G::allMetadataLoaded*/) {
             if (debugCaching)
             {
-                qWarning() << "WARNING: ImageCache::nextToCache                           "
-                         << "row =" << i
-                         << "exceeded max attempts"
-                    ;
+                QString msg = "Exceeded max attempts.";
+                G::issue("Warning", msg, "ImageCache::nextToCache", i, icd->cacheItemList.at(i).fPath);
             }
             continue;
         }
@@ -1693,7 +1690,7 @@ void ImageCache::refreshImageCache()
     Reload all images in the cache.
 */
     log("refreshImageCache");
-    // if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::refreshImageCache";
     if (useMutex) gMutex.lock();
     // make all isCached = false
@@ -1782,8 +1779,10 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     // not in cache, maybe loading
     if (!icd->imCache.contains(fPath) && !isVideo) {
         emit centralMsg("Loading Image...");
-        QString msg = "Not in imCache, might be loading.";
-        G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
+        if (dm->currentSfRow > 0) {
+            QString msg = "Not in imCache, might be loading.";
+            G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
+        }
     }
     // or could not load
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {

@@ -72,7 +72,8 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
     int w = image.width();
     int h = image.height();
     if (h == 0) {
-        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        QString msg = "Image width and/or height = 0.";
+        G::issue("Warning", msg, "Thumb::setImageDimensions", dmRow, fPath);
         return;
     }
     double a = w * 1.0 / h;
@@ -121,14 +122,16 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Open;
     }
     if (!image.load(fPath)) {
-        qWarning() << "WARNING" << "Thumb::loadFromEntireFile" << "Could not read thumb using QImage::load." << fPath;
+        QString msg = "Could not read thumb using QImage::load.";
+        G::issue("Warning", msg, "Thumb::loadFromEntireFile", dmRow, fPath);
         return Status::Fail;
     }
 
     setImageDimensions(fPath, image, row);
 
     if (image.isNull()) {
-        qWarning() << "WARNING" << "Thumb::loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        QString msg = "Null image returned from thumbReader.";
+        G::issue("Warning", msg, "Thumb::loadFromEntireFile", dmRow, fPath);
         return Status::Fail;
     }
 
@@ -150,7 +153,8 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
-        qWarning() << "WARNING" << "Thumb::loadFromJpgData" << fPath << "is already open - return";
+        QString msg = "File is already open.";
+        G::issue("Warning", msg, "Thumb::loadFromJpgData", dmRow, fPath);
         return Status::Open;
     }
 
@@ -162,7 +166,8 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
         }
         imFile.close();
         if (image.isNull()) {
-            qWarning() << "WARNING" << "loadFromJpgData" << "Could not read thumb using image.loadFromData." << fPath;
+            QString msg = "Null image.";
+            G::issue("Warning", msg, "Thumb::loadFromJpgData", dmRow, fPath);
             return Status::Fail;
         }
         if (success) return Status::Success;
@@ -180,15 +185,15 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
-        qWarning() << "WARNING" << "Thumb::loadFromTiff" << fPath << "is already open - return";
+        QString msg = "File is already open.";
+        G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
         return Status::Open;
     }
 
     int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
     if (samplesPerPixel > 3) {
-        QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
-              + " samplesPerPixel > 3.";
-        qWarning() << "WARNING" << err;
+        QString msg = "Samples per pixel > 3.";
+        G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
         return Status::Fail;
     }
 
@@ -199,7 +204,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
      bool getThumb = true;
     if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) {
         if (image.isNull()) {
-            qWarning() << "WARNING" << "Thumb::loadFromTiff" << "Could not read thumb using Tiff::decode." << fPath;
+            QString msg = "Tiff::decode returned a null image.";
+            G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
             return Status::Fail;
         }
         return Status::Success;
@@ -209,7 +215,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
      qDebug() << "Thumb::loadFromTiff" << fPath;
      if (!tiff.decode(fPath, m.offsetFull, image)) {
          if (image.isNull()) {
-             qWarning() << "WARNING" << "Thumb::loadFromTiff" << "Could not read thumb using Tiff::decode." << fPath;
+             QString msg = "Could not read thumb using Tiff::decoder.";
+             G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
              return Status::Fail;
          }
          return Status::Success;
@@ -234,7 +241,8 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     // try to read heic thumbnail
     if (heic.decodeThumbnail(fPath, image)) {
         if (image.isNull()) {
-            qWarning() << "WARNING" << "Thumb::loadFromHeic" << "Could not read thumb using Heic::decodeThumbnail." << fPath;
+            QString msg = "Could not read thumb using Heic::decodeThumbnail.";
+            G::issue("Warning", msg, "Thumb::loadFromHeic", dmRow, fPath);
             return Status::Fail;
         }
         return Status::Success;
@@ -243,7 +251,8 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     // try read entire image
     if (heic.decodePrimaryImage(fPath, image)) {
         if (image.isNull()) {
-            qWarning() << "WARNING" << "Thumb::loadFromHeic" << "Could not read thumb using Heic::decodePrimaryImage." << fPath;
+            QString msg = "Could not read thumb using Heic::decodePrimaryImage.";
+            G::issue("Warning", msg, "Thumb::loadFromHeic", dmRow, fPath);
             return Status::Fail;
         }
         return Status::Success;
@@ -256,7 +265,8 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     // Heic natively supported on Mac
     if (image.load(fPath)) {
         if (image.isNull()) {
-            qWarning() << "WARNING" << "Thumb::loadFromHeic" << "Could not read thumb using QImage::load." << fPath;
+            QString msg = "Could not read thumb using QImage::load.";
+            G::issue("Warning", msg, "Thumb::loadFromHeic", dmRow, fPath);
             return Status::Fail;
         }
         return Status::Success;
@@ -276,15 +286,17 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
     if (isDebug) qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
 
+    dmRow = dm->rowFromPath(fPath);
+
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
-        qWarning() << "WARNING" << "Thumb::loadThumb instance clash";
+        QString msg = "Instance clash.";
+        G::issue("Warning", msg, "Thumb::loadThumb", dmRow, fPath);
         return false;
     }
     this->instance = instance;
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
-    int dmRow = dm->rowFromPath(fPath);
 
     // videos are loaded using videoFrameDecode
     bool isVideo = metadata->videoFormats.contains(ext);

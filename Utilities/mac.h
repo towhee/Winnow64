@@ -19,6 +19,7 @@ public:
     static void availableMemory();
     static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();
+    static void setSystemMenuBarVisible(bool visible);
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);
 //    static void spaces();

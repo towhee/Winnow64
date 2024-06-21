@@ -377,7 +377,7 @@ void MW::toggleEmbelDockVisibility() {
 void MW::setMenuBarVisibility()
 {
     if (G::isLogger) G::log("MW::setMenuBarVisibility");
-    //menuBar()->setVisible(menuBarVisibleAction->isChecked());
+    // menuBar()->setVisible(menuBarVisibleAction->isChecked());
 }
 
 void MW::setStatusBarVisibility()
@@ -521,26 +521,25 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     Make sure the file path exists in the datamodel. The most likely failure will be if a
     new folder has been selected but the image cache has not been rebuilt.
 */
-    int dmRow = dm->rowFromPath(fPath);
+    int sfRow = dm->proxyRowFromPath(fPath);
 
     if (G::isLogger) {
-        int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::updateCachedStatus", msg);
     }
     /*
     qDebug() << "MW::updateCachedStatus"
-             << "dmRow =" << dmRow
+             << "sfRow =" << sfRow
              << "isCached =" << isCached
         ; //*/
 
-    if (dmRow == -1) {
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING" << "MW::updateCachedStatus" << "dm->fPathrow does not contain" << fPath;
+    if (sfRow == -1) {
+        QString msg = "Image not found, maybe sudden folder change.";
+        G::issue("Warning", msg, "MW::updateCachedStatus");
         return;
     }
 
-    QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
+    QModelIndex sfIdx = dm->index(sfRow, 0);
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
         emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);
@@ -556,7 +555,8 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         gridView->refreshThumb(sfIdx, G::CachedRole);
     }
     else {
-        qWarning() << "WARNING" << "MW::updateCachedStatus" << "INVALID INDEX FOR" << sfIdx;
+        QString msg = "Invalid index.";
+        G::issue("Warning", msg, "MW::updateCachedStatus", sfRow, fPath);
     }
     return;
 }

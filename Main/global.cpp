@@ -310,7 +310,7 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
     issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
 
     if (showIssueInConsole) {
-        qDebug() << issue->toString();
+        qDebug().noquote() << issue->toString();
     }
 
     bool includeInDataModel = sfRow >-1;
@@ -374,7 +374,7 @@ bool instanceClash(int instance, QString src)
     bool clash = (dmInstance != instance);
     if (clash) {
         if (showIssueInConsole)
-        qWarning() << "WARNING G::instanceClash"
+        qDebug() << "WARNING G::instanceClash"
                    << "instance =" << instance
                    << "DM instance =" << dmInstance
                    << "src =" << src

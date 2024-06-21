@@ -3,7 +3,7 @@
 void MW::initialize()
 {    
     if (G::isLogger) G::log("MW::initialize");
-
+    // connect(this, &QWindow::windowStateChanged, this, &MW::onWindowStateChanged);
 
     setWindowTitle(winnowWithVersion);
     G::stop = false;
@@ -23,7 +23,7 @@ void MW::initialize()
     stopped["FrameDecoder"] = true;
     stopped["ImageCache"] = true;
     stopped["BuildFilters"] = true;
-    workspaces = new QList<workspaceData>;
+    workspaces = new QList<WorkspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
     hasGridBeenActivated = true;
@@ -149,6 +149,9 @@ void MW::checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredG
 }
 
 QRect MW::recoverGeometry(const QByteArray &geometry)
+/*
+    Not being used, see also Utilities::deconstructGeometry
+*/
 {
     QDataStream stream(geometry);
     stream.setVersion(QDataStream::Qt_4_0);
@@ -250,7 +253,8 @@ void MW::createDataModel()
         combineRawJpg = settings->value("combineRawJpg").toBool();
     else combineRawJpg = false;
 
-    dm = new DataModel(this, metadata, filters, combineRawJpg);
+    dm = new DataModel(nullptr, metadata, filters, combineRawJpg);
+    // dm = new DataModel(this, metadata, filters, combineRawJpg);
     // enable global access to datamodel
     G::setDM(dm);
 

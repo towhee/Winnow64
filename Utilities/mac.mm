@@ -130,7 +130,8 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 
     if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceClass, (const void**)&str))
     {
-        qWarning("kColorSyncDeviceClass failed");
+        QString msg = "kColorSyncDeviceID failed.";
+        G::issue("Warning", msg, "Mac::colorSyncIterateCallback");
         return true;
     }
     if (!CFEqual(str, kColorSyncDisplayDeviceClass))
@@ -139,7 +140,8 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
     }
     if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceID, (const void**)&uuid))
     {
-        qWarning("kColorSyncDeviceID failed");
+        QString msg = "kColorSyncDeviceID failed.";
+        G::issue("Warning", msg, "Mac::colorSyncIterateCallback");
         return true;
     }
     if (!CFEqual(uuid, iterData->dispuuid))
@@ -148,7 +150,8 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
     }
     if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceProfileIsCurrent, (const void**)&iscur))
     {
-        qWarning("kColorSyncDeviceProfileIsCurrent failed");
+        QString msg = "kColorSyncDeviceProfileIsCurrent failed.";
+        G::issue("Warning", msg, "Mac::colorSyncIterateCallback");
         return true;
     }
     if (!CFBooleanGetValue(iscur))
@@ -157,7 +160,8 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
     }
     if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceProfileURL, (const void**)&(iterData->url)))
     {
-        qWarning("Could not get current profile URL");
+        QString msg = "Could not get current profile URL.";
+        G::issue("Warning", msg, "Mac::colorSyncIterateCallback");
         return true;
     }
 
@@ -182,6 +186,24 @@ QString Mac::getDisplayProfileURL()
     }
 //    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return "";
+}
+
+void Mac::setSystemMenuBarVisible(bool visible)
+{
+    @autoreleasepool {
+        // NSApplication *app = [NSApplication sharedApplication];
+        // NSMenu *menu = [app mainMenu];
+
+        if (visible) {
+            [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationHideMenuBar | NSApplicationPresentationHideDock];
+            // [menu setHidden:NO];
+            // [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationDefault];
+        } else {
+            [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationDefault];
+            // [menu setHidden:YES];
+            // [[NSApplication sharedApplication] setPresentationOptions:(NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock)];
+        }
+    }
 }
 
 float Mac::getMouseCursorMagnification()

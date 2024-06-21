@@ -679,7 +679,8 @@ QString Xmp::getItem(QByteArray item)
     qDebug() << "\n" << "Xmp::getItem" << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << "Xmp::getItem" << item << "not found in xmpObjs";
+        QString msg = item + " not found in xmpObjs";
+        G::issue("Warning", msg, "Xmp::getItem", -1, filePath);
         return "";
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -724,7 +725,8 @@ QStringList Xmp::getItemList(QByteArray item)
     qDebug() << "\n" << "Xmp::getItemList" << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << "Xmp::getItemList" << item << "not found in xmpObjs";
+        QString msg = item + " not found in xmpObj";
+        G::issue("Warning", msg, "Xmp::getItemList", -1, filePath);
         return valList;
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -790,8 +792,8 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     // check valid item.
     item = item.toLower();
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << "Xmp::setItem" << "failed for" << item;
-        return false;
+        QString msg = "Failed for " + item + ".";
+        G::issue("Warning", msg, "Xmp::setItem", -1, filePath);
     }
 
     // check the item schema namespace has been defined in rdf:description

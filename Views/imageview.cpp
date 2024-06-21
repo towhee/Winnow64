@@ -159,7 +159,6 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     // No folder selected yet
     if (!fPath.length()) {
-        //qWarning() << "WARNING" << "ImageView::loadImage" << "Src =" << src << "No folder selected";
         return false;
     }
 
@@ -171,7 +170,9 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) {
-        qWarning() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
+        // qWDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
+        QString msg = "Processing exported images.  Canceled loadImage.";
+        G::issue("Warning", msg, "ImageView::loadImage");
         return false;
     }
 

@@ -232,7 +232,7 @@ void MW::tableDisplay()
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if(isNormalScreen){
+    if (isNormalScreen){
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);

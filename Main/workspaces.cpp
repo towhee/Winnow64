@@ -29,8 +29,8 @@
 
 void MW::newWorkspace()
 {
-    if (G::isLogger)
-        G::log("MW::newWorkspace");
+    if (G::isLogger) G::log("MW::newWorkspace");
+
     int n = workspaces->count();
     if (n > 9) {
         QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\n"
@@ -38,6 +38,7 @@ void MW::newWorkspace()
         QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
         return;
     }
+
     bool ok;
     QInputDialog *wsNew = new QInputDialog;
     QString workspaceName = wsNew->getText(this, tr("New Workspace"),
@@ -80,7 +81,7 @@ QString MW::fixDupWorkspaceName(QString name)
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
     if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
-    for (int i=0; i<workspaces->count(); i++) {
+    for (int i = 0; i < workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
             return;
@@ -88,19 +89,18 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     }
 }
 
-void MW::invokeWorkspace(const workspaceData &w)
+void MW::invokeWorkspace(const WorkspaceData &w)
 {
 /*
     invokeWorkspace is called from a workspace action. Since the workspace actions
     are a list of actions, the workspaceMenu triggered signal is captured, and the
     workspace with a matching name to the action is used.
+
+    It is also called from MW::toggleFullScreen.
 */
     if (G::isLogger) G::log("MW::invokeWorkspace");
-    restoreGeometry(w.geometry);
-    restoreState(w.state);
-    // two restoreState req'd for going from docked to floating docks
-    restoreState(w.state);
-    //menuBarVisibleAction->setChecked(w.isMenuBarVisible);
+
+    ws = w;     // current workspace ws
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
@@ -142,15 +142,22 @@ void MW::invokeWorkspace(const workspaceData &w)
         centralLayout->setCurrentIndex(VideoTab);
     }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
-//    setThumbDockVisibity();
+    // setThumbDockVisibity();
+    restoreGeometry(w.geometry);
+    restoreState(w.state);
+    // second restoreState req'd for going from docked to floating docks
+    restoreState(w.state);
+    if (w.isMaximised) showMaximized();
+    qDebug() << "MW::invokeWorkspace  w.isMaximised =" << w.isMaximised;
 }
 
-void MW::snapshotWorkspace(workspaceData &wsd)
+void MW::snapshotWorkspace(WorkspaceData &wsd)
 {
     if (G::isLogger) G::log("MW::snapshotWorkspace");
+    qDebug() << "MW::snapshotWorkspace  geometry()" << geometry();
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
-    wsd.isFullScreen = isFullScreen();
+    wsd.isMaximised = isMaximized();
     //wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
@@ -361,10 +368,17 @@ void MW::reportWorkspace(int n)
 {
     if (G::isLogger) G::log("MW::reportWorkspace");
     ws = workspaces->at(n);
-    qDebug() << G::t.restart() << "\t" << "\n\nName" << ws.name
-             << "\nGeometry" << ws.geometry
-             << "\nState" << ws.state
-             << "\nisFullScreen" << ws.isFullScreen
+    reportWorkspace(ws);
+}
+
+void MW::reportWorkspace(WorkspaceData &ws)
+{
+    if (G::isLogger) G::log("MW::reportWorkspace");
+    // ws = workspaces->at(n);
+    qDebug() << "\n\nName" << ws.name;
+    Utilities::deconstructGeometry(ws.geometry);
+    qDebug() << "isFullScreen" << ws.isFullScreen
+             << "\nisMaximised" << ws.isMaximised
              << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
              //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
              << "\nisStatusBarVisible" << ws.isStatusBarVisible
@@ -413,6 +427,7 @@ void MW::loadWorkspaces()
         ws.geometry = settings->value("geometry").toByteArray();
         ws.state = settings->value("state").toByteArray();
         ws.isFullScreen = settings->value("isFullScreen").toBool();
+        ws.isMaximised = settings->value("isMaximised").toBool();
         ws.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
         //ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
         ws.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
@@ -463,6 +478,7 @@ void MW::saveWorkspaces()
         settings->setValue("geometry", ws.geometry);
         settings->setValue("state", ws.state);
         settings->setValue("isFullScreen", ws.isFullScreen);
+        settings->setValue("isMaximised", ws.isMaximised);
         settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
         //settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
         settings->setValue("isStatusBarVisible", ws.isStatusBarVisible);

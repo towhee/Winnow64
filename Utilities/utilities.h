@@ -43,6 +43,9 @@ public:
     static QString enquote(QString &s);
     static QString centeredRptHdr(QChar padChar, QString title, int width = 180);
 
+    // Window
+    static void deconstructGeometry(QByteArray geometry);
+
     // Convert
     static QString stringListToString(QStringList list);
     static QString pixmapToString(QPixmap &pixmap);

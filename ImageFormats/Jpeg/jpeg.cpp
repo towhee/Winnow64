@@ -101,10 +101,8 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
         p.file.seek(p.offset);                  // APP1 FFE*
         marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
-            qWarning() << "WARNING" << "Jpeg::getDimensions"
-                     << "FAIL: MARKER < 0xFFC0"
-                     << "m.fPath =" << m.fPath
-                        ;
+            QString msg = "Failed, marker < 0xFFC0.";
+            G::issue("Warning", msg, "Jpeg::getDimensions", m.row, m.fPath);
             return false;
         }
         p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());

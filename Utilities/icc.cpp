@@ -19,14 +19,15 @@ namespace ICC
 
     void err(cmsContext contextID, cmsUInt32Number errorCode, const char *text)
     {
-        qWarning() << "WARNING" << "ICC::err" << errorCode << text << G::winOutProfilePath;
+        G::issue("Warning", text, "ICC::err", -1, G::winOutProfilePath);
     }
 
     bool setOutProfile()
     {
         if (G::isLogger) G::log("ICC::setOutProfile");
         if (G::winOutProfilePath == "") {
-            qWarning() << "WARNING" << "The outProfilePath has not been assigned";
+            QString msg = "The outProfilePath has not been assigned.";
+            G::issue("Warning", msg, "ICC::setOutProfile", -1, G::winOutProfilePath);
             cmsSetLogErrorHandler(err);
             return false;
         }
@@ -45,7 +46,8 @@ namespace ICC
         else {
             hInProfile = cmsOpenProfileFromMem(buf.data(), static_cast<uint32_t>(buf.length()));
             if (!hInProfile) {
-                qWarning() << "ICC::transform" << "ICC hInProfile failed.";
+                QString msg = "ICC hInProfile failed.";
+                G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
                 return;
             }
         }
@@ -60,15 +62,15 @@ namespace ICC
             quint32 size = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
             cmsDoTransform(hTransform, image.constBits(), image.bits(), size);
             if (!cmsCloseProfile(hInProfile)) {
-                qWarning() << "ICC::transform" << "ICC cmsCloseProfile failed.";
+                QString msg = "ICC cmsCloseProfile failed.";
+                G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
                 cmsSetLogErrorHandler(err);
             }
             cmsDeleteTransform(hTransform);
         }
         else {
-            qWarning() << "ICC::transform"
-                       << "ICC cmsCreateTransform failed."
-                          ;
+            QString msg = "ICC cmsCreateTransform failed.";
+            G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
             cmsSetLogErrorHandler(err);
         }
     }

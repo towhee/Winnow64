@@ -10,8 +10,10 @@ ExifTool::ExifTool()
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
     #endif
     // confirm exifToolPath exists
-    if (!QFile(exifToolPath).exists())
-        qWarning() << "WARNING" << "ExifTool::ExifTool" << exifToolPath << "is missing";
+    if (!QFile(exifToolPath).exists()) {
+        QString msg = "File is missing.";
+        G::issue("Warning", msg, "ExifTool::ExifTool", -1, exifToolPath);
+    }
     //process.setStandardOutputFile("/Users/roryhill/Pictures/_ThumbTest/PNG_.txt");
     //result.open(QIODevice::ReadWrite);
     //process.setStandardOutputProcess(&result);
@@ -47,8 +49,9 @@ int ExifTool::close()
     process.write(closeArgs);
     if (!process.waitForFinished(30000)) {
         // qDebug() << "ExifTool::close" << "ExifTool exit code =" << process.exitCode();
-        qWarning() << "WARNING" << "ExifTool::close"  << "process.waitForFinished failed";
-        if (G::isFileLogger) Utilities::log("ExifTool::close", "process.waitForFinished failed");
+        QString msg = "process.waitForFinished failed.";
+        G::issue("Warning", msg, "ExifTool::close");
+        // if (G::isFileLogger) Utilities::log("ExifTool::close", "process.waitForFinished failed");
         return -1;
     }
 
@@ -196,7 +199,10 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     process.write(args);
     if (process.waitForFinished(30000))
         qDebug() << "ExifTool::copyAll" << "ExifTool exit code =" << process.exitCode();
-    else qWarning("ExifTool::copyAll process.waitForFinished failed");
+    else {
+        QString msg = "process.waitForFinished failed.";
+        G::issue("Warning", msg, "ExifTool::copyAll");
+    }
 
     return process.exitCode();
 }

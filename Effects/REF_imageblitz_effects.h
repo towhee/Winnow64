@@ -559,7 +559,8 @@ QImage edge(QImage &img)
 {
     int x, y, w = img.width(), h = img.height();
     if(w < 3 || h < 3){
-        qWarning("Blitz::edge(): Image is too small!");
+        QString msg = "Image is too small.";
+        G::issue("Warning", msg, "Blitz::edge");
         return(img);
     }
     if(img.isNull())

@@ -155,8 +155,9 @@ ErrorLog::ErrorLog(QObject* parent) : QThread(parent)
                    + "/Winnow/Log/WinnowErrorLog.txt";
     file.setFileName(fPath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        qWarning() << "ErrorLog::ErrorLog" << "Failed to open error log file!" << fPath;
-    } else {
+        qDebug() << "ErrorLog::ErrorLog" << "Warning: Failed to open error log file." << fPath;
+    }
+    else {
         out.setDevice(&file);
     }
     // crashing

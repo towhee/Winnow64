@@ -794,6 +794,27 @@ void MW::resizeEvent(QResizeEvent *event)
     if (availSpace < progressWidthBeforeResizeWindow && availSpace > cacheBarProgressWidth)
         cacheBarProgressWidth = availSpace;
     updateProgressBarWidth();
+    // update current workspace
+    ws.isMaximised = isMaximized();
+    qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
+}
+
+void MW::onWindowStateChanged(Qt::WindowState state) {
+    #ifdef Q_OS_MAC
+    if (state == Qt::WindowFullScreen) {
+        Mac::setSystemMenuBarVisible(false);
+    } else {
+        Mac::setSystemMenuBarVisible(true);
+    }
+    #endif
+}
+
+void MW::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::WindowStateChange) {
+        if (window()->windowState() == Qt::WindowFullScreen)
+            onWindowStateChanged(Qt::WindowFullScreen);
+    }
 }
 
 //void MW::mousePressEvent(QMouseEvent *event)
@@ -2207,8 +2228,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
             }
             else {
-                if (!imageView->isFirstImageNewFolder && G::showIssueInConsole)
-                    qWarning() << "WARNING" << "MW::fileSelectionChange" << "loadImage failed for" << fPath;
+                if (!imageView->isFirstImageNewFolder) {
+                    int row = dm->proxyRowFromPath(fPath);
+                    QString msg = "imageView->loadImage failed.";
+                    G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
+                }
             }
         }
     }
@@ -2324,8 +2348,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
-        qWarning() << "WARNING" << "MW::folderAndFileSelectionChange" << "fsTree failed to select" << fPath;
-        if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "fsTree failed to select " + fPath);
+        QString msg = "fsTree failed to select folder.";
+        G::issue("Warning", msg, "MW::folderAndFileSelectionChange", -1, folder);
         return;
     }
 
@@ -4050,6 +4074,7 @@ void MW::toggleFullScreen()
     if (fullScreenAction->isChecked())
     {
         snapshotWorkspace(ws);
+        Utilities::deconstructGeometry(ws.geometry);
         isNormalScreen = false;
         showFullScreen();
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
@@ -4074,7 +4099,10 @@ void MW::toggleFullScreen()
     else
     {
         isNormalScreen = true;
-        showNormal();
+        // qDebug() << "MW::toggleFullScreen off  isMax = " << ws.isMaximised;
+        reportWorkspace(ws);
+        // if (ws.isMaximised) showMaximized();
+        // else showNormal();
         invokeWorkspace(ws);
     }
 }
@@ -4650,7 +4678,8 @@ void MW::ingest()
         settings->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
 
         if (!okToIngest) {
-            qWarning() << "WARNING" << "MW::ingest" << "Not ok to ingest";
+            QString msg = "Not okay to ingest.";
+            G::issue("Warning", msg, "MW::ingest");
             return;
         }
 

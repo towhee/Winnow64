@@ -507,7 +507,8 @@ void IngestDlg::ingest()
         if (copyOk && QFile(sourceSidecarPath).exists()) {
             sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
             if (!sidecarOk) {
-                qWarning() << "WARNING" << "IngestDlg::ingest" << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                QString msg = "Failer to copy " + sourceSidecarPath + " to " + destSidecarPath + ".";
+                G::issue("Warning", msg, "IngestDlg::ingest");
                 failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
@@ -516,7 +517,8 @@ void IngestDlg::ingest()
         // check if copied xmp = original xmp
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                qWarning() << "WARNING" << "IngestDlg::ingest" << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                QString msg = "Integrity failure, " + sourceSidecarPath + " not same as " + destSidecarPath + ".";
+                G::issue("Warning", msg, "IngestDlg::ingest");
                 integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
@@ -525,12 +527,14 @@ void IngestDlg::ingest()
         if (isBackup && sidecarOk) {
             bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
             if (!backupSidecarCopyOk) {
-                qWarning() << "WARNING" << "IngestDlg::ingest" << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
-                failedToCopy << destSidecarPath + " to " + backupSidecarPath;
+                QString msg = "Failed to copy " + destSidecarPath + " to " + backupSidecarPath + ".";
+                G::issue("Warning", msg, "IngestDlg::ingest");
+                integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    qWarning() << "WARNING" << "IngestDlg::ingest" << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    QString msg = "Integrity failure, " + destSidecarPath + " not same as " + backupSidecarPath + ".";
+                    G::issue("Warning", msg, "IngestDlg::ingest");
                     integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }

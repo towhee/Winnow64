@@ -14,15 +14,19 @@ QString Issue::toString(bool isOneLine, int newLineOffset)
     QString l = "\n";                               // newline separator
     QString o = " ";                                // offset datetime string width
     o = o.repeated(newLineOffset);
+    if (sfRow < 0) r = "n/a";
 
     if (isOneLine) {
         d = timeStamp.leftJustified(20);
         t = (t + ": ").leftJustified(9);
         m = m.leftJustified(60);
         s = ("Src: " + s).leftJustified(40);
-        r = ("Row: " + r + " ").rightJustified(12);
+        r = "Row: " + r.rightJustified(8) + " ";
         p = "  Obj: " + fPath;
-        return d + t + m + s + r + p;
+        if (sfRow < 0 && fPath == "")
+            return d + t + m + s;
+        else
+            return d + t + m + s + r + p;
     }
     else {
         d = timeStamp;

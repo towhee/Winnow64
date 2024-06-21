@@ -300,10 +300,8 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                  << fPath;
     }
     if (instance != dm->instance) {
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING MetaRead::readMetadata Instance Clash"
-                   << "row =" << sfIdx.row();
-        return false;
+        QString msg = "Instance Clash.";
+        G::issue("Warning", msg, "MetaRead::readMetadata", sfIdx.row(), fPath);        return false;
     }
 
 
@@ -314,10 +312,8 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
     if (abort) return false;
     if (!isMetaLoaded) {
-        qWarning() << "WARNING MetaRead::readMetadata"
-                 << "row =" << sfIdx.row()
-                 << "Load meta failed"
-                 ;
+        QString msg = "Metadata load failed.";
+        G::issue("Warning", msg, "MetaRead::readMetadata", sfIdx.row(), fPath);
     }
 
     metadata->m.row = dmRow;
@@ -362,12 +358,6 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         }
         return false;
     }
-
-    // moved to end of readRow()
-//    // add to ImageCache icd->cacheItemList (used to manage image cache)
-//    if (G::useImageCache) {
-//        emit addToImageCache(metadata->m);
-//    }
 
     if (isDebug)
     {
@@ -425,8 +415,8 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     }
     else {
         pm = QPixmap(":/images/error_image256.png");
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING" << "MetaRead::loadIcon" << "Failed to load thumbnail." << fPath;
+        QString msg = "Failed to load thumbnail.";
+        G::issue("Warning", msg, "MetaRead::readIcon", dmRow, fPath);
     }
     if (abort) return;
     emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
@@ -458,10 +448,8 @@ void MetaRead::readRow(int sfRow)
     // valid index check
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     if (!sfIdx.isValid()) {
-        if (G::showIssueInConsole)
-        qWarning().noquote() << "WARNING MetaRead::readRow  "
-                             << "invalid sfidx =" << sfIdx
-                                 ;
+        QString msg = "Invalid sfIdx.";
+        G::issue("Warning", msg, "MetaRead::readRow", sfRow);
         return;
     }
 

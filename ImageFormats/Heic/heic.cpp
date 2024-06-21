@@ -331,12 +331,14 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     int stride = 0;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
     if (!data) {
-        qWarning("QHeifHandler::read() pixel data not found");
+        QString msg = "No pixel data.";
+        G::issue("Warning", msg, "Heic::heic", m->row, m->fPath);
         return false;
     }
 
     if (stride <= 0) {
-        qWarning("QHeifHandler::read() invalid stride: %d", stride);
+        QString msg = "Invalid stride = " QString::number(d) +  +".";
+        G::issue("Warning", msg, "Heic::heic", m->row, m->fPath);
         return false;
     }
     /*
@@ -946,7 +948,8 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
                  << "ilocItemCount =" << ilocItemCount;
     }
     if (ilocItemCount > 100) {
-        qWarning() << "Heic::ilocBox" << "*** Quiting because ilocItemCount =" << ilocItemCount;
+        QString msg = "Failed, ilocItemCount > 100.";
+        G::issue("Warning", msg, "Heic::ilocBox", m->row, m->fPath);
         offset += length;
         return false;
     }
@@ -1080,7 +1083,8 @@ bool Heic::iinfBox(quint32 &offset, quint32 &length)
     }
     if (entry_count == 0) {
         // err
-        qWarning() << "Heic::iinfBox" << "No iinf entries found";
+        QString msg = "No iinf entries found.";
+        G::issue("Warning", msg, "Heic::iinfBox", m->row, m->fPath);
         offset += length;
         return false;
     }

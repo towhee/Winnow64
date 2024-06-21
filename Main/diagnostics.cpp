@@ -44,7 +44,7 @@ void MW::reportState(QString title)
 void MW::reportWorkspaceState()
 {
     if (G::isLogger) G::log("MW::reportWorkspaceState");
-    workspaceData w;
+    WorkspaceData w;
     snapshotWorkspace(w);
     qDebug() << G::t.restart()
              << "\t" << "\nisMaximized" << w.isFullScreen

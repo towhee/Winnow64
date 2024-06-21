@@ -185,7 +185,8 @@ void MW::insertFiles(QStringList fPaths)
     if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
 
     if (fPaths.isEmpty()) {
-        qWarning() << "WARNING MW::insertFiles fPaths is empty.";
+        QString msg = "No files to insert, fPaths is empty.";
+        G::issue("Warning", msg, "MW::insertFiles");
         return;
     }
 
@@ -332,7 +333,8 @@ void MW::deleteFiles(QStringList paths)
             ImageMetadata m = dm->imMetadata(fPath);
             if (!m.isReadWrite) {
                 fileWasLocked = true;
-                qWarning() << "WARNING MW::deleteFiles File is locked" << fPath;
+                QString msg = "File is locked.";
+                G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
             }
             if (QFile(fPath).moveToTrash()) {
                 sldm.append(fPath);
@@ -344,11 +346,13 @@ void MW::deleteFiles(QStringList paths)
                 }
             }
             else {
-                qWarning() << "WARNING MW::deleteFiles Unable to move to trash" << fPath;
+                QString msg = "Unable to move to trash.";
+                G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
             }
         }
         else {
-            qWarning() << "WARNING MW::deleteFiles File does not exist" << fPath;
+            QString msg = "File does not exist.";
+            G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
         }
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
