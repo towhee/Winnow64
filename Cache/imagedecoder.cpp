@@ -92,8 +92,8 @@ bool ImageDecoder::load()
 
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING" << "ImageDecoder::load  Null file path" << fPath;
+        errMsg = "Null file path.";
+        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
         status = Status::BlankFilePath;
         return false;
     }
@@ -114,8 +114,7 @@ bool ImageDecoder::load()
     // is file already open by another process
     if (imFile.isOpen()) {
         errMsg = "File already open.";
-        if (G::showIssueInConsole)
-        qWarning() << "WARNING" << "ImageDecoder::load  File already open" << fPath;
+        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
         status = Status::FileOpen;
         return false;
     }
@@ -134,11 +133,8 @@ bool ImageDecoder::load()
 //        }
 
 //        imFile.close();
-//        if (G::isWarningLogger)
-//            qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded"
-//                       << "threadId =" << threadId
-//                       << fPath;
-//        errMsg = "Could not read metadata.";
+//        errMsg = "IMetadata not loaded.";
+//        G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
 //        status = Status::NoMetadata;
 //        return false;
 //    }
@@ -148,11 +144,8 @@ bool ImageDecoder::load()
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
-            errMsg = "Could not read embedded JPG because offset = 0.";
+            errMsg = "Could not read embedded JPG because length = 0.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-            if (G::showIssueInConsole) {
-                qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
-            }
             status = Status::Invalid;
             return false;
         }
@@ -162,9 +155,6 @@ bool ImageDecoder::load()
             imFile.close();
             errMsg = "Could not read embedded JPG because offset is invalid.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-            if (G::showIssueInConsole) {
-                qWarning() << "WARNING" << "ImageDecoder::load Illegal offset to image " << fPath;
-            }
             status = Status::Invalid;
             return false;
         }
@@ -173,8 +163,6 @@ bool ImageDecoder::load()
         if (buf.length() == 0) {
             errMsg = "Could not read embedded JPG because buffer length = 0.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-            if (G::showIssueInConsole)
-            qWarning() << "WARNING" << "ImageDecoder::load  Zero JPG buffer" << fPath;
             imFile.close();
             status = Status::Invalid;
             return false;
@@ -182,12 +170,8 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
-            errMsg = "Could not read JPG because decoder failed.";
+            errMsg = "Could not read JPG because QImage::loadFromData failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-            if (G::showIssueInConsole)
-            qWarning() << "WARNING" << "ImageDecoder::load  image.loadFromData failed"
-                       << "instance =" << instance
-                       << fPath;
             imFile.close();
             status = Status::Invalid;
             return false;
@@ -217,8 +201,6 @@ bool ImageDecoder::load()
             errMsg = "Could not read because decoder failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             imFile.close();
-            //if (G::isWarningLogger)
-            qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
             status = Status::Invalid;
             return false;
         }
@@ -244,10 +226,8 @@ bool ImageDecoder::load()
         // check for sampling format we cannot read
         if (n.samplesPerPixel > 3) {
              imFile.close();
-             errMsg = "tiff samplesPerPixel more than 3.";
-             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-             if (G::showIssueInConsole)
-             qWarning() << "WARNING" << "ImageDecoder::load " << errMsg << fPath;
+             QString msg = "TIFF samplesPerPixel more than 3.";
+             G::issue("Warning", msg, "ImageDecoder::run", cacheKey, fPath);
              status = Status::Invalid;
              return false;
         }
@@ -382,8 +362,8 @@ void ImageDecoder::run()
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;
-        if (G::showIssueInConsole)
-            qWarning() << "WARNING" << "ImageDecoder::run  Instance clash" << fPath;
+        errMsg = "Instance clash.  New folder selected, processing old folder.";
+        G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
         emit done(threadId);
         return;
     }

@@ -349,7 +349,8 @@ int FindDuplicatesDlg::compareRGB(QImage &imA, QImage &imB)
     else h = imB.height();
 
     if (w == 0 || h == 0) {
-        qWarning() << "FindDuplicatesDlg::compareRGB WARNING ZERO IMAGE DIM";
+        QString msg = "Image width and/or height = 0.";
+        G::issue("Warning", msg, "FindDuplicatesDlg::compareRGB");
         return 255;
     }
     /*
@@ -651,7 +652,6 @@ void FindDuplicatesDlg::getMetadataBItems()
 
         if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             loadMeta = false;
-            //qWarning() << "WARNING" << "FindDuplicatesDlg::getMetadataBItems loadImageMetadata failed";
         }
         ImageMetadata *m = &metadata->m;
 

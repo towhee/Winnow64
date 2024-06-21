@@ -11,6 +11,13 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #    win32:QT += core5compat   # huge performance hit without this
 }
 
+# Compile without warnings
+# GCC / Clang
+# QMAKE_CXXFLAGS += -Wno-unused-variable
+# QMAKE_CFLAGS += -Wno-unused-variable
+# MSVC
+# pragma warning(disable: 4101) # 4101 is the warning number for unused variable in MSVC
+
 #QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
 # MacOS universal binaries

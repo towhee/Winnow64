@@ -631,15 +631,17 @@ if (G::isFileLogger) Utilities::log("Effects::convolve", "");
     uint mLen = static_cast<uint>(mDim * mDim);
     bool overflow = false;
 
-    if(!(mDim % 2)){
-        qWarning("convolve(): kernel width must be an odd number!");
+    if (!(mDim % 2)){
+        QString msg = "Kernel width must be an odd number.";
+        G::issue("Warning", msg, "Effects::convolve");
         return(img);
     }
 
     w = img.width();
     h = img.height();
     if (w < 3 || h < 3) {
-        qWarning("convolve(): Image is too small!");
+        QString msg = "Image is too small to convolve.";
+        G::issue("Warning", msg, "Effects::convolve");
         return(img);
     }
 

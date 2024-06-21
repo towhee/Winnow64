@@ -269,9 +269,8 @@ bool IFD::writeIFDCount(MetadataParameters &p, ImageMetadata &m, quint16 count)
     qint64 ret = p.file.write(Utilities::put16(count, m.isBigEnd));
     if (ret == 2) return true;
     else {
-        QString msg = "IFD::writeIFDCount failed. ";
-        msg += QString::number(ret) + "bytes written (should be 4) for " + m.fPath;
-        qWarning(msg.toLatin1());
+        QString msg = QString::number(ret) + "bytes written (should be 4).";
+        G::issue("Warning", msg, "IFD::writeIFDCount", m.row, m.fPath);
         return false;
     }
 }

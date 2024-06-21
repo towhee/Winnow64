@@ -13,11 +13,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     // check if instance clash (old folder signal)
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    int row = dm->rowFromPath(fPath);
-    if ((row == -1) && (dm->instance > -1) && (fPath != "")) {
-        qWarning() << "WARNING" << "MW::updateStatus"
-                   << fPath
-                   << "not found.  Probable instance clash";
+    int sfRow = dm->proxyRowFromPath(fPath);
+    if ((sfRow == -1) && (dm->instance > -1) && (fPath != "")) {
+        QString msg = "File not found.  Probable instance clash.";
+        G::issue("Warning", msg, "MW::updateStatus", sfRow, fPath);
         return;
     }
 
@@ -71,7 +70,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         }
     }
 
-    status = " " + base + s;
+    base += spacer + s;
+    base += spacer + "Workspace: " + ws.name;
+    // status = " " + base + s;
+    status = base;
     statusLabel->setText(status);
 
     // status label tooltip

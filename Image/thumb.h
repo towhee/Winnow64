@@ -41,6 +41,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;
+    int dmRow;
     QString err;
     QSize thumbMax;
     int instance;

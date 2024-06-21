@@ -43,14 +43,10 @@ class DataModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    DataModel(QWidget *parent,
+    DataModel(QObject *parent,
               Metadata *metadata,
               Filters *filters,
               bool &combineRawJpg);
-
-//    inline Status operator| (Status a, Status b) {
-//        return static_cast<Status> (static_cast<int> (a) | static_cast<int> (b));
-//    }
 
     void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
@@ -186,7 +182,7 @@ public slots:
     void searchStringChange(QString searchString);
 
 private:
-    QWidget *mw;
+    // QWidget *mw;
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
@@ -222,7 +218,6 @@ private:
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
-    bool instanceClash(QModelIndex idx, QString src);
     void processErr(Error e);
     int imageCount;
     int countInterval = 0;

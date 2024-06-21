@@ -127,8 +127,10 @@ bool QtLocalPeer::isClient()
         res = server->listen(socketName);
     }
 #endif
-    if (!res)
-        qWarning("QtSingleCoreApplication: listen on local socket failed, %s", qPrintable(server->errorString()));
+    if (!res) {
+        QString msg = "Listen on local socket failed, " + server->errorString();
+        G::issue("Warning", msg, "QtLocalPeer::isClient");
+    }
     QObject::connect(server, SIGNAL(newConnection()), SLOT(receiveConnection()));
     return false;
 }
@@ -179,7 +181,8 @@ void QtLocalPeer::receiveConnection()
 
     while (true) {
         if (socket->state() == QLocalSocket::UnconnectedState) {
-            qWarning("QtLocalPeer: Peer disconnected");
+            QString msg = "QtLocalPeer: Peer disconnected.";
+            G::issue("Warning", msg, "QtLocalPeer::receiveConnection");
             delete socket;
             return;
         }
@@ -201,7 +204,8 @@ void QtLocalPeer::receiveConnection()
         uMsgBuf += got;
     } while (remaining && got >= 0 && socket->waitForReadyRead(2000));
     if (got < 0) {
-        qWarning("QtLocalPeer: Message reception failed %s", socket->errorString().toLatin1().constData());
+        QString msg = "Message reception failed " + socket->errorString().toLatin1();
+        G::issue("Warning", msg, "QtLocalPeer::receiveConnection");
         delete socket;
         return;
     }

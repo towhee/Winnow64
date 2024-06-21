@@ -432,7 +432,8 @@ void Ingest::run()
         if (copyOk && QFile(sourceSidecarPath).exists()) {
             sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
             if (!sidecarOk) {
-                qWarning() << "WARNING" << "Ingest::run" << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                QString msg = "Failer to copy " + sourceSidecarPath + " to " + destSidecarPath + ".";
+                G::issue("Warning", msg, "Ingest::ingest");
                 failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
@@ -441,7 +442,8 @@ void Ingest::run()
         // check if copied xmp = original xmp
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                qWarning() << "WARNING" << "Ingest::run" << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                QString msg = "Integrity failure, " + sourceSidecarPath + " not same as " + destSidecarPath + ".";
+                G::issue("Warning", msg, "Ingest::ingest");
                 integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
@@ -450,12 +452,14 @@ void Ingest::run()
         if (isBackup && sidecarOk) {
             bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
             if (!backupSidecarCopyOk) {
-                qWarning() << "WARNING" << "Ingest::run" << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                QString msg = "Failed to copy " + destSidecarPath + " to " + backupSidecarPath + ".";
+                G::issue("Warning", msg, "Ingest::ingest");
                 failedToCopy << destSidecarPath + " to " + backupSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    qWarning() << "WARNING" << "Ingest::run" << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    QString msg = "Integrity failure, " + destSidecarPath + " not same as " + backupSidecarPath + ".";
+                    G::issue("Warning", msg, "Ingest::ingest");
                     integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }

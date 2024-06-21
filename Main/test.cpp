@@ -148,21 +148,6 @@ void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
     }
 }
 
-void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
-{
-
-    sel->recover();
-    return;
-
-    bounceFoldersStressTest(100, 1);
-
-    setCursor(QCursor(Qt::BlankCursor));
-    return;
-    QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
-    metadata->testNewFileFormat(fPath);
-    if (G::isFlowLogger2) qDebug() << "";
-}
-
 void listChildren(const QObject *parent, int depth = 0) {
     const QObjectList &children = parent->children();
     for (QObject *child : children) {
@@ -177,14 +162,37 @@ void listChildren(const QObject *parent, int depth = 0) {
     }
 }
 
+void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
+{
+    showNormal(); return;
+    {
+    sel->recover();
+    return;
+
+    bounceFoldersStressTest(100, 1);
+
+    setCursor(QCursor(Qt::BlankCursor));
+    return;
+    QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
+    metadata->testNewFileFormat(fPath);
+    if (G::isFlowLogger2) qDebug() << "";
+    }
+}
+
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    G::issue("Error", "Test that issue works", "MW::test", 0, "");
-    G::issue("Error", "Test that issue works 2", "MW::test", 0, "");
-
-    dm->rptIssues(0);
+    menuBar()->setVisible(false);
+    reportWorkspace(ws); return;
+    showFullScreen(); return;
+    resize(1680,1026); return;
+    restoreGeometry(ws.geometry);  return;
+    qDebug() << "MW::test  geometry() =" << geometry(); return;
+    showMaximized(); return;
+    qDebug() << isFullScreen() << isMaximized();
+    QByteArray geo = saveGeometry();
+    Utilities::deconstructGeometry(geo);
 
     return;
 }

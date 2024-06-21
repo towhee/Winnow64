@@ -309,10 +309,12 @@ void IconView::refreshThumb(QModelIndex idx, int role)
 {
     if (isDebug) G::log("IconView::refreshThumb", objectName());
     if (!idx.isValid()) {
-        qWarning() << "WARNING" << "WARNING"
+        qDebug() << "WARNING" << "WARNING"
                    << "IconView::refreshThumb"
                    << "idx =" << idx
                    << "is invalid";
+        QString msg = "Inalid index.";
+        G::issue("Warning", msg, "IconView::refreshThumb");
         return;
     }
     QVector<int> roles;
@@ -1345,7 +1347,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     /* // debugging
     if (failReason.length()) {
-        qWarning() << "WARNING IconView::zoomCursor Failed because" << failReason;
+        qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
+        QString msg = "Failed because " + failReason + ".";
+        G::issue("Warning", msg, "IconView::zoomCursor");
     }
     else {
         qDebug() << "IconView::zoomCursor" << "Succeeded";
@@ -1502,7 +1506,8 @@ void IconView::startDrag(Qt::DropActions)
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
-        qWarning() << "WARNING" << "IconView::startDrag" << "Empty selection";
+        QString msg = "Empty selection.";
+        G::issue("Warning", msg, "IconView::startDrag");
         return;
     }
 

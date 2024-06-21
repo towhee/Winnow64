@@ -1066,10 +1066,11 @@ bool EmbelProperties::saveTemplateToFile()
     dir.setPath(dPath);
 
     // create a file for the json encoded template settings
-    QString fName = dPath + "/" + templateName + ".template";
-    QFile file(fName);
+    QString fPath = dPath + "/" + templateName + ".template";
+    QFile file(fPath);
     if (!file.open(QIODevice::WriteOnly)) {
-        qWarning("Couldn't open save file.");
+        QString msg = "Could not open template file.";
+        G::issue("Warning", msg, "EmbelProperties:saveTemplateToFile", -1, fPath);
         return false;
     }
 
@@ -1110,22 +1111,18 @@ bool EmbelProperties::saveTemplateToFile()
         QModelIndex tIdx = model->index(i, 0, textsIdx);
         keys << getItemValue("metadataTemplate", tIdx).toString();
     }
-//    qDebug() << "EmbelProperties::saveTemplateToFile" << keys; return true;
-    /*
-    setting->beginGroup("InfoTemplates");
-        keys = setting->allKeys();
-    setting->endGroup();
-//    */
+
     if (keys.length() > 0) {
         for (int i = 0; i < keys.length(); ++i) {
             QString key = "InfoTemplates/" + keys.at(i);
             keysMap.insert(keys.at(i), setting->value(key));
         }
         keysJson = QJsonObject::fromVariantMap(keysMap);
-        fName = dPath + "/tokens.json";
-        QFile fTokens(fName);
+        fPath = dPath + "/tokens.json";
+        QFile fTokens(fPath);
         if (!fTokens.open(QIODevice::WriteOnly)) {
-            qWarning("Couldn't open file to save tokens.");
+            QString msg = "Could not open file to save tokens.";
+            G::issue("Warning", msg, "EmbelProperties:saveTemplateToFile", -1, fPath);
             return false;
         }
         fTokens.write(QJsonDocument(keysJson).toJson());
@@ -1210,11 +1207,10 @@ bool EmbelProperties::readTemplateFromFile()
 
     // read json template file
     QString tPath = dir.entryInfoList().at(0).absoluteFilePath();
-//    QString tPath = dstPath + "/" + srcTemplateName + ".template";
     QFile tFile(tPath);
     if (!tFile.open(QIODevice::ReadOnly)) {
-        qDebug() << "EmbelProperties::readTemplateFromFile" << "Could not open template file.";
-        qWarning("Couldn't open template file.");
+        QString msg = "Could not open template file.";
+        G::issue("Warning", msg, "EmbelProperties:readTemplateFromFile", -1, tPath);
         return false;
     }
     QByteArray ba = tFile.readAll();
@@ -6259,7 +6255,8 @@ void EmbelProperties::addText(int count)
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
         if (!styleList.contains(i.value.toString())) {
-            qWarning() << "WARNING" << "EmbelProperties:addText:" << "Style " << i.value << "no longer exists";
+            QString msg = "Style " + i.value.toString() + " no longer exists.";
+            G::issue("Warning", msg, "EmbelProperties:addText");
             i.value = "No style";
         }
     }

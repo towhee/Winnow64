@@ -150,11 +150,12 @@ public:
     QList<G::App> externalApps;          // list of external apps
     QVector<QString> xAppShortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 
-    struct workspaceData {
+    struct WorkspaceData {
         QString name;           // used for menu
         QByteArray geometry;
         QByteArray state;
         bool isFullScreen;
+        bool isMaximised;
         bool isWindowTitleBarVisible;
         bool isMenuBarVisible;
         bool isStatusBarVisible;
@@ -190,9 +191,9 @@ public:
         int sortColumn;
         bool isReverseSort;
     };
-    workspaceData ws;   // hold values for workspace n
-    workspaceData *w;
-    QList<workspaceData> *workspaces;
+    WorkspaceData ws;   // hold values for workspace n, current workspace
+    WorkspaceData *w;
+    QList<WorkspaceData> *workspaces;
 
     // persistant data
 
@@ -201,7 +202,7 @@ public:
     that are mutually dependent - so which one do we do first?  Save the
     values in struct mwd and use later.
      */
-    workspaceData mwd;  // hold the persistent start values from QSettings
+    WorkspaceData mwd;  // hold the persistent start values from QSettings
 
     int folderMaxWidth = 600;       // not in preferences or QSetting
 
@@ -358,6 +359,8 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
+    void onWindowStateChanged(Qt::WindowState state);
+    void changeEvent(QEvent *event) override;
 
 signals:
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
@@ -640,16 +643,17 @@ private slots:
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
     void invokeWorkspaceFromAction(QAction *workAction);
-    void invokeWorkspace(const workspaceData &w);
+    void invokeWorkspace(const WorkspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
     void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
-    void snapshotWorkspace(workspaceData &wsd);
+    void snapshotWorkspace(WorkspaceData &wsd);
     void manageWorkspaces();
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
     void defaultWorkspace();
     void reportWorkspace(int n);
+    void reportWorkspace(WorkspaceData &ws);
     void loadWorkspaces();
     void saveWorkspaces();
 
