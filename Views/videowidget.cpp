@@ -9,7 +9,7 @@
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
     isDebug = false;
-    if (G::isLogger || isDebug) qDebug() << "VideoWidget::VideoWidget";
+    if (G::isLogger || isDebug) G::log("VideoWidget::VideoWidget");
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
     mediaPlayer->setAudioOutput(audioOutput);
@@ -42,13 +42,13 @@ void VideoWidget::pause()
 
 void VideoWidget::stop()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoWidget::stop";
+    if (G::isLogger || isDebug) G::log("VideoWidget::stop");
     mediaPlayer->stop();
 }
 
 int VideoWidget::duration()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoWidget::duration";
+    if (G::isLogger || isDebug) G::log("VideoWidget::duration");
     return static_cast<int>(mediaPlayer->duration());
 }
 

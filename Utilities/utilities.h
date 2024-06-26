@@ -44,7 +44,7 @@ public:
     static QString centeredRptHdr(QChar padChar, QString title, int width = 180);
 
     // Window
-    static void deconstructGeometry(QByteArray geometry);
+    static bool isScreenValid(const QScreen *screen);
 
     // Convert
     static QString stringListToString(QStringList list);

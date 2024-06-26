@@ -152,10 +152,15 @@ public:
 
     struct WorkspaceData {
         QString name;           // used for menu
+        // State
         QByteArray geometry;
         QByteArray state;
+        int screenNumber;
+        QScreen *screen;
+        QRect geometryRect;
         bool isFullScreen;
         bool isMaximised;
+        // Visibility
         bool isWindowTitleBarVisible;
         bool isMenuBarVisible;
         bool isStatusBarVisible;
@@ -166,12 +171,19 @@ public:
         bool isEmbelDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
+        // View
+        bool isLoupeDisplay;
+        bool isGridDisplay;
+        bool isTableDisplay;
+        bool isCompareDisplay;
+        // Thumbview
         int thumbSpacing;
         int thumbPadding;
         int thumbWidth;
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
+        // GridView
         int thumbSpacingGrid;
         int thumbPaddingGrid;
         int thumbWidthGrid;
@@ -179,13 +191,10 @@ public:
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
         QString labelChoice;
+        // ImageView
         bool isImageInfoVisible;
-        bool includeSubfolders;
-        bool isLoupeDisplay;
-        bool isGridDisplay;
-        bool isTableDisplay;
-        bool isCompareDisplay;
         bool isEmbelDisplay;
+        // Processes
         bool isColorManage;
         QString cacheSizeMethod;
         int sortColumn;
@@ -194,6 +203,31 @@ public:
     WorkspaceData ws;   // hold values for workspace n, current workspace
     WorkspaceData *w;
     QList<WorkspaceData> *workspaces;
+
+    // recoverGeometry info
+    struct RecoverGeometry {
+        QRect frameGeometry;
+        QRect normalGeometry;
+        qint32 screenNumber;
+        quint8 maximized;
+        quint8 fullScreen;
+    } recover;
+
+    // location to return to after full screen, in case diff monitor due to workspce jumping
+    QRect prevNormalWindow;
+
+    // full screen behavior
+    struct FullScreenDocks {
+        bool isFolders;
+        bool isFavs;
+        bool isFilters;
+        bool isMetadata;
+        bool isThumbs;
+        bool isStatusBar;
+    } fullScreenDocks;
+
+    bool wasFullSpaceOnDiffScreen = false;
+    bool inVokeWorkSpaceWrongScreen = false;
 
     // persistant data
 
@@ -279,17 +313,6 @@ public:
     bool isCachePreview;
     int cachePreviewWidth;
     int cachePreviewHeight;
-
-    // full screen behavior
-    struct FullScreenDocks {
-        bool isFolders;
-        bool isFavs;
-        bool isFilters;
-        bool isMetadata;
-        bool isThumbs;
-        bool isStatusBar;
-    } fullScreenDocks;
-    bool isNormalScreen;
 
     // first use
     bool isFirstTimeTableViewVisible = true;
@@ -423,6 +446,22 @@ public slots:
     void slideshowHelpMsg();
     void imageCachePrevCentralView();
     void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
+    void invokeCurrentWorkspace();
+    void invokeWorkspaceFromAction(QAction *workAction);
+    void invokeWorkspace(const WorkspaceData &w, bool restore = true);
+    void invokeRecentFolder(QAction *recentFolderActions);
+    void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
+    void snapshotWorkspace(WorkspaceData &wsd);
+    void manageWorkspaces();
+    void deleteWorkspace(int n);
+    void renameWorkspace(int n, QString name);
+    void reassignWorkspace(int n);
+    void defaultWorkspace();
+    QString reportWorkspaces();
+    void reportWorkspaceNum(int n);
+    void reportWorkspace(WorkspaceData &ws, QString src = "");
+    void loadWorkspaces();
+    void saveWorkspaces();
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -642,20 +681,21 @@ private slots:
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
-    void invokeWorkspaceFromAction(QAction *workAction);
-    void invokeWorkspace(const WorkspaceData &w);
-    void invokeRecentFolder(QAction *recentFolderActions);
-    void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
-    void snapshotWorkspace(WorkspaceData &wsd);
-    void manageWorkspaces();
-    void deleteWorkspace(int n);
-    void renameWorkspace(int n, QString name);
-    void reassignWorkspace(int n);
-    void defaultWorkspace();
-    void reportWorkspace(int n);
-    void reportWorkspace(WorkspaceData &ws);
-    void loadWorkspaces();
-    void saveWorkspaces();
+    // void invokeWorkspaceFromAction(QAction *workAction);
+    // void invokeWorkspace(const WorkspaceData &w, bool restore = true);
+    // void invokeRecentFolder(QAction *recentFolderActions);
+    // void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
+    // void snapshotWorkspace(WorkspaceData &wsd);
+    // void manageWorkspaces();
+    // void deleteWorkspace(int n);
+    // void renameWorkspace(int n, QString name);
+    // void reassignWorkspace(int n);
+    // void defaultWorkspace();
+    // QString reportWorkspaces();
+    // void reportWorkspaceNum(int n);
+    // void reportWorkspace(WorkspaceData &ws, QString src = "");
+    // void loadWorkspaces();
+    // void saveWorkspaces();
 
     void help();
     void helpShortcuts();
@@ -918,6 +958,7 @@ private:
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
     QAction *diagnosticsMainAction;
+    QAction *diagnosticsWorkspacesAction;
     QAction *diagnosticsLogIssuesAction;
     QAction *diagnosticsSessionIssuesAction;
     QAction *diagnosticsGridViewAction;
@@ -1242,7 +1283,7 @@ private:
     void setupCentralWidget();
     void initialize();
     void setupPlatform();
-    QRect recoverGeometry(const QByteArray &geometry);
+    void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r);
     void checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
                                int frameHeight);
     void setfsModelFlags();
@@ -1303,6 +1344,7 @@ private:
     void diagnosticsCurrent();
     QString diagnostics();
     void diagnosticsMain();
+    void diagnosticsWorkspaces();
     void diagnosticsGridView();
     void diagnosticsThumbView();
     void diagnosticsImageView();
@@ -1341,6 +1383,8 @@ private:
     QElapsedTimer testTime;
     bool testCrash = false;
 
+    QByteArray geo;
+    QByteArray sta;
     void toggleRory();
     void rory();
 

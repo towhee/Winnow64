@@ -183,17 +183,29 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    menuBar()->setVisible(false);
-    reportWorkspace(ws); return;
-    showFullScreen(); return;
-    resize(1680,1026); return;
-    restoreGeometry(ws.geometry);  return;
-    qDebug() << "MW::test  geometry() =" << geometry(); return;
-    showMaximized(); return;
-    qDebug() << isFullScreen() << isMaximized();
-    QByteArray geo = saveGeometry();
-    Utilities::deconstructGeometry(geo);
+    // G::showAllEvents = true;
+    G::showAllEvents = false; return;
+    qDebug() << "MW::test  showNormal";
+    showNormal();
+    G::showAllEvents = true;
+    G::wait(2000);
+    G::showAllEvents = false;
+    return;
 
+    reportWorkspaces(); return;
+
+    RecoverGeometry r;
+    recoverGeometry(ws.geometry, r);
+    // return;
+
+    // settings->remove("Workspaces"); return;
+    qDebug() << "Test"
+        << "geometry() =" << geometry()
+        << "prevNormalWindow =" << prevNormalWindow
+        << "prevNormalWindow.isEmpty() =" << prevNormalWindow.isEmpty()
+        << "isFullScreen =" << isFullScreen()
+        ;
+    // move(prevNormalWindow.topLeft());
     return;
 }
 /*

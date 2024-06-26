@@ -1816,6 +1816,7 @@ void ImageCache::decodeNextImage(int id)
     The decoders run in separate threads. When they complete the decoding they signal
     back to fillCache.
 */
+    log ("decodeNextImage");
     int row = icd->cache.toCacheKey;
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].decoderId = id;
@@ -1832,7 +1833,7 @@ void ImageCache::decodeNextImage(int id)
         "status = " + decoder.at(id)->statusText.at(icd->cacheItemList.at(row).status)
         );
     */
-    if (debugCaching || G::isLogger)
+    if (debugCaching)
     {
         QString k = QString::number(row).leftJustified((4));
         qDebug().noquote()
@@ -2038,7 +2039,7 @@ void ImageCache::fillCache(int id)
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
     }
 
-    if (debugCaching || G::isLogger)
+    if (debugCaching)
     {
         if (cacheKey == -1) {
             qDebug().noquote() << "ImageCache::fillCache"

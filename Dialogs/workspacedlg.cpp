@@ -96,7 +96,7 @@ void WorkspaceDlg::report(QString signalName)
 void WorkspaceDlg::on_reportLinkButton_clicked()
 {
 //    int n = ui->workspaceCB->currentIndex();
-//    emit reportWorkspace(n);
+//    emit reportWorkspaceNum(n);
 }
 
 void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int /*index*/)

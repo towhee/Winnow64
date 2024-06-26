@@ -9,8 +9,6 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 
-//#include <Carbon/Carbon.h>
-
 #include "Main/global.h"                // req'd by availableMemory
 
 class Mac
@@ -19,7 +17,6 @@ public:
     static void availableMemory();
     static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();
-    static void setSystemMenuBarVisible(bool visible);
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);
 //    static void spaces();

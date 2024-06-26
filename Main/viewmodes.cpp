@@ -55,13 +55,10 @@ void MW::loupeDisplay()
     prevCentralView = LoupeTab;
 
     /* recover thumbdock if it was visible before as gridView and full screen can
-    hide the thumbdock */
-    if (isNormalScreen && wasThumbDockVisible) {
-//        if (!metaReadThread->isRunning()) {
+       hide the thumbdock */
+    if (!isFullScreen() && wasThumbDockVisible) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
-//        }
-//        sel->currentRow(dm->currentSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
@@ -232,7 +229,7 @@ void MW::tableDisplay()
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if (isNormalScreen){
+    if (!isFullScreen()){
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);

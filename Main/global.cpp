@@ -16,7 +16,7 @@ bool isErrorLogger = false;         // Writes error log messages to file or cons
 bool isIssueLogger = false;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
-// still req'd?
+bool showAllEvents = false;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
 // Errors
@@ -177,6 +177,13 @@ QString s(QVariant x)
 //        qDebug() << "Global::s" << x.typeName() << x.typeId();
     if (x.typeId() == QMetaType::QStringList)
         return Utilities::stringListToString(x.toStringList());
+    if (x.typeId() == QMetaType::QRect) {
+        QRect r = x.toRect();
+        return QString::number(r.x()) + ", " +
+               QString::number(r.y()) + ", " +
+               QString::number(r.width()) + "x" +
+               QString::number(r.height());
+    }
     return QVariant(x).toString();
 }
 

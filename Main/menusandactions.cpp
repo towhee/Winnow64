@@ -1435,6 +1435,12 @@ void MW::createHelpActions()
     addAction(diagnosticsMainAction);
     connect(diagnosticsMainAction, &QAction::triggered, this, &MW::diagnosticsMain);
 
+    diagnosticsWorkspacesAction = new QAction(tr("Workspaces diagnostics"), this);
+    diagnosticsWorkspacesAction->setObjectName("diagnosticsWorkspaces");
+    diagnosticsWorkspacesAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsWorkspacesAction);
+    connect(diagnosticsWorkspacesAction, &QAction::triggered, this, &MW::diagnosticsWorkspaces);
+
     diagnosticsGridViewAction = new QAction(tr("GridView diagnostics"), this);
     diagnosticsGridViewAction->setObjectName("diagnosticsGridView");
     diagnosticsGridViewAction->setShortcutVisibleInContextMenu(true);
@@ -1897,6 +1903,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
+    helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);

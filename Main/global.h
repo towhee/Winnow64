@@ -201,6 +201,7 @@ namespace G
     extern bool isErrorLogger;
     extern bool isIssueLogger;
     extern bool sendLogToConsole;
+    extern bool showAllEvents;
     extern QFile logFile;
     extern QFile errlogFile;
     extern bool isDev;
