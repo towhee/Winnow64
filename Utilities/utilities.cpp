@@ -306,46 +306,13 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title, int width)
     return hdr;
 }
 
-void Utilities::deconstructGeometry(QByteArray geometry)
+bool Utilities::isScreenValid(const QScreen *screen)
 {
-
-    // From Qwidget::restoreGeometry(const QByteArray &geometry)
-
-    QDataStream stream(geometry);
-    stream.setVersion(QDataStream::Qt_4_0);
-
-    const quint32 magicNumber = 0x1D9D0CB;
-    quint32 storedMagicNumber;
-    stream >> storedMagicNumber;
-
-    const quint16 currentMajorVersion = 3;
-    quint16 majorVersion = 0;
-    quint16 minorVersion = 0;
-
-    stream >> majorVersion >> minorVersion;
-
-    QRect frameGeometry;
-    QRect _geometry;
-    QRect normalGeometry;
-    qint32 screenNumber;
-    quint8 maximized;
-    quint8 fullScreen;
-    qint32 restoredScreenWidth = 0;
-
-    stream >> _geometry // Only used for sanity checks in version 0
-        >> normalGeometry
-        >> screenNumber
-        >> maximized
-        >> fullScreen;
-
-    qDebug() << "Utilities::deconstructGeometry"
-             << "\n\tFrameGeometry =" << frameGeometry
-             << "\n\tGeometry     =" << _geometry
-             << "\n\tNormalGeometry =" << normalGeometry
-             << "\n\tmaximized =" << maximized
-             << "\n\tfullScreen =" << fullScreen
-             << "\n\trestoredScreenWidth =" << restoredScreenWidth
-        ;
+    foreach(QScreen *scrn, qApp->screens()) {
+        // if (scrn->name() == screen->name()) return true;
+        if (scrn == screen) return true;
+    }
+    return false;
 }
 
 void Utilities::saveByteArrayAsFile(QString fPath, QByteArray &ba)

@@ -25,6 +25,10 @@
     along with the list of workspaces created by the user. Application state
     parameters that are used in the menus, like isFolderDockVisible, are kept in
     Actions while the rest are normal variables, like thumbWidth.
+
+    It is tricky to deal with the different window states in separate workspaces.
+    Switching to/from a maximized workspace using setGeometry works, but does not
+    when switching from a fullWindow workspace.
 */
 
 void MW::newWorkspace()
@@ -78,6 +82,14 @@ QString MW::fixDupWorkspaceName(QString name)
     return name;
 }
 
+void MW::invokeCurrentWorkspace()
+{
+/*
+    Called from a QTimer::singleShot in MW::eventFilter QEvent::WindowStateChange
+*/
+    invokeWorkspace(ws);
+}
+
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
     if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
@@ -89,18 +101,41 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     }
 }
 
-void MW::invokeWorkspace(const WorkspaceData &w)
+void MW::invokeWorkspace(const WorkspaceData &w, bool restore /*default = true*/)
 {
 /*
     invokeWorkspace is called from a workspace action. Since the workspace actions
     are a list of actions, the workspaceMenu triggered signal is captured, and the
     workspace with a matching name to the action is used.
 
-    It is also called from MW::toggleFullScreen.
+    It is also called from MW::toggleFullScreen, where restore = false.
 */
     if (G::isLogger) G::log("MW::invokeWorkspace");
 
+    qDebug() << "MW::invokeWorkspace  name =" << w.name
+             << "restore =" << restore
+        // << "prevNormalWindow =" << prevNormalWindow
+        ;
     ws = w;     // current workspace ws
+
+    // save old geometry if new workspace is full screen, else set empty
+    int screenNumber = QGuiApplication::screens().indexOf(screen());
+    if (isFullScreen() && screenNumber != w.screenNumber) {
+        wasFullSpaceOnDiffScreen = true;
+        // G::showAllEvents = true;
+        showNormal();
+        // qApp->processEvents();
+        // G::wait(2000);
+        // G::showAllEvents = false;
+        return;
+        // setGeometry(w.geometryRect);
+        // wasFullSpace = true;
+    }
+
+    //     prevNormalWindow = geometry();
+    // else prevNormalWindow = QRect(0,0,0,0);
+
+    // Visibility
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
@@ -109,24 +144,29 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
+    // View
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
-    asCompareAction->setChecked(w.isEmbelDisplay);
+    // Thumbview
     thumbView->iconWidth = w.thumbWidth;
     thumbView->iconHeight = w.thumbHeight;
     thumbView->labelFontSize = w.labelFontSize;
     thumbView->showIconLabels = w.showThumbLabels;
+    thumbView->rejustify();
+    thumbView->setThumbParameters();
+     // GridView
     gridView->iconWidth = w.thumbWidthGrid;
     gridView->iconHeight = w.thumbHeightGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
     gridView->labelChoice = w.labelChoice;
-    thumbView->rejustify();
     gridView->rejustify();
-    thumbView->setThumbParameters();
     gridView->setThumbParameters();
+    // ImageView
+    infoVisibleAction->setChecked(w.isImageInfoVisible);
+    // Processes
     if (w.isColorManage) toggleColorManage(Tog::on);
     else toggleColorManage(Tog::off);
     cacheSizeStrategy = w.cacheSizeMethod;
@@ -134,6 +174,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     updateSortColumn(sortColumn);
     if (w.isReverseSort) toggleSortDirection(Tog::on);
     else toggleSortDirection(Tog::off);
+
     updateState();
     workspaceChanged = true;
     sortChange("MW::invokeWorkspace");
@@ -142,22 +183,80 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         centralLayout->setCurrentIndex(VideoTab);
     }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
-    // setThumbDockVisibity();
-    restoreGeometry(w.geometry);
-    restoreState(w.state);
-    // second restoreState req'd for going from docked to floating docks
-    restoreState(w.state);
-    if (w.isMaximised) showMaximized();
-    qDebug() << "MW::invokeWorkspace  w.isMaximised =" << w.isMaximised;
+    setThumbDockVisibity();
+    // reportWorkspace(ws, "MW::invokeWorkspace before restoreGeometry");
+
+    if (screenNumber != w.screenNumber) {
+        qDebug() << "WRONG SCREEN!!";
+    }
+    else {
+        qDebug() << "RIGHT SCREEN!!";
+        wasFullSpaceOnDiffScreen = false;
+    }
+
+    // RecoverGeometry r;
+    // recoverGeometry(w.geometry, r);
+    // QPoint pos = r.normalGeometry.topLeft();
+    // QSize size = r.normalGeometry.size();
+    // qDebug() << "MW::invokeWorkspace  name =" << w.name
+    //          << "pos =" << pos
+    //          << "size =" << size
+    //     ;
+    // move(pos);
+    // resize(size);
+    // restoreState(w.state);
+    // return;
+
+    // do not restore if toggleFullScreen
+    // if (restore) {
+        restoreGeometry(w.geometry);
+        restoreState(w.state);
+        // second restoreState req'd for going from docked to floating docks
+        restoreGeometry(w.geometry);
+        restoreState(w.state);
+
+        // if (Utilities::isScreenValid(w.screen)) {
+        //     if (screen() != w.screen) {
+
+        //     }
+        // }
+        if (w.isMaximised) showMaximized();
+    // }
+
+    // setGeometry(w.geometryRect);
+
+        // if (screenNumber != w.screenNumber) {
+        //     qDebug() << "WRONG SCREEN!!";
+        // }
+        // else {
+        //     qDebug() << "RIGHT SCREEN!!";
+        //     wasFullSpaceOnDiffScreen = false;
+        // }
+    // check screen
+    // if (qApp->screens().contains(w.screen)) {
+    //     if (screen() != w.screen) {
+    //         restoreGeometry(w.geometry);
+    //         // QPoint topLeft = geometry().topLeft();
+    //         // QPoint bottomRight = geometry().bottomRight();
+    //     }
+    // }
 }
 
 void MW::snapshotWorkspace(WorkspaceData &wsd)
 {
-    if (G::isLogger) G::log("MW::snapshotWorkspace");
-    qDebug() << "MW::snapshotWorkspace  geometry()" << geometry();
+    QString fun = "MW::snapshotWorkspace";
+    if (G::isLogger) G::log(fun);
+    // qDebug() << "MW::snapshotWorkspace  geometry()" << geometry();
+
+    // State
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
+    wsd.screen = screen();
+    wsd.geometryRect = geometry();
+    wsd.isFullScreen = isFullScreen();
     wsd.isMaximised = isMaximized();
+
+    // Visibility
     //wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
     wsd.isStatusBarVisible = statusBarVisibleAction->isChecked();
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
@@ -168,24 +267,29 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
+    // View
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
     wsd.isGridDisplay = asGridAction->isChecked();
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
+    // Thumbview
     wsd.thumbWidth = thumbView->iconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showIconLabels;
 
+    // GridView
     wsd.thumbWidthGrid = gridView->iconWidth;
     wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
     wsd.showThumbLabelsGrid = gridView->showIconLabels;
     wsd.labelChoice = gridView->labelChoice;
 
+    // ImageView
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
+    // Processes
     wsd.isColorManage = G::colorManage;
     wsd.cacheSizeMethod = cacheSizeStrategy;
     wsd.sortColumn = sortColumn;
@@ -203,14 +307,19 @@ void MW::manageWorkspaces()
     for (int i=0; i<workspaces->count(); i++)
         wsList.append(workspaces->at(i).name);
     workspaceDlg = new WorkspaceDlg(&wsList, this);
-    connect(workspaceDlg, SIGNAL(deleteWorkspace(int)),
-            this, SLOT(deleteWorkspace(int)));
-    connect(workspaceDlg, SIGNAL(reassignWorkspace(int)),
-            this, SLOT(reassignWorkspace(int)));
-    connect(workspaceDlg, SIGNAL(renameWorkspace(int, QString)),
-            this, SLOT(renameWorkspace(int, QString)));
-    connect(workspaceDlg, SIGNAL(reportWorkspace(int)),
-            this, SLOT(reportWorkspace(int)));
+    connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
+    connect(workspaceDlg, &WorkspaceDlg::reassignWorkspace, this, &MW::reassignWorkspace);
+    connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
+    connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
+
+    // connect(workspaceDlg, SIGNAL(deleteWorkspace(int)),
+    //         this, SLOT(deleteWorkspace(int)));
+    // connect(workspaceDlg, SIGNAL(reassignWorkspace(int)),
+    //         this, SLOT(reassignWorkspace(int)));
+    // connect(workspaceDlg, SIGNAL(renameWorkspace(int, QString)),
+    //         this, SLOT(renameWorkspace(int, QString)));
+    // connect(workspaceDlg, SIGNAL(reportWorkspace(int)),
+    //         this, SLOT(reportWorkspace(int)));
     workspaceDlg->exec();
     delete workspaceDlg;
 }
@@ -224,8 +333,6 @@ void MW::deleteWorkspace(int n)
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
-    // remove workspace from settings deleting all and then saving all
-    settings->remove("Workspaces");
     saveWorkspaces();
 
     // sync menus by re-updating.  Tried to use indexes but had problems so
@@ -255,7 +362,8 @@ void MW::reassignWorkspace(int n)
     if (G::isLogger) G::log("MW::reassignWorkspace");
     QString name = workspaces->at(n).name;
     populateWorkspace(n, name);
-    reportWorkspace(n);
+    saveWorkspaces();
+    // reportWorkspaceNum(n);
 }
 
 void MW::defaultWorkspace()
@@ -364,70 +472,167 @@ void MW::populateWorkspace(int n, QString name)
     (*workspaces)[n].name = name;
 }
 
-void MW::reportWorkspace(int n)
+QString MW::reportWorkspaces()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Workspaces Diagnostics");
+    rpt << "\n\n";
+    int n = workspaces->count();
+    rpt << "Workspaces count = " << n;
+    rpt << "\n";
+    for (int i = 0; i < n; i++) {
+        ws = workspaces->at(i);
+        RecoverGeometry r;
+        recoverGeometry(ws.geometry, r);
+        // rpt
+        rpt
+            << "\nWorkspace: " << i
+            << "\n  Name                      " << ws.name
+            << "\nRestoreGeometryByteArray:"
+            << "\n  frameGeometry             " << G::s(r.frameGeometry)
+            // << "\n  Geometry                " << G::s(r.geometry)
+            << "\n  normalGeometry            " << G::s(r.normalGeometry)
+            << "\n  screenNumber              " << G::s(r.screenNumber)
+            << "\n  maximized                 " << G::s(r.maximized)
+            << "\n  fullScreen                " << G::s(r.fullScreen)
+            << "\nState:"
+            << "\n  geometryRect              " << G::s(ws.geometryRect)
+            << "\n  screenNumber              " << G::s(ws.screenNumber)
+            << "\n  isFullScreen              " << G::s(ws.isFullScreen)
+            << "\n  isMaximised               " << G::s(ws.isMaximised)
+            << "\nVisibility:"
+            << "\n  isWindowTitleBarVisible   " << G::s(ws.isWindowTitleBarVisible)
+            //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
+            << "\n  isStatusBarVisible        " << G::s(ws.isStatusBarVisible)
+            << "\n  isFolderDockVisible       " << G::s(ws.isFolderDockVisible)
+            << "\n  isFavDockVisible          " << G::s(ws.isFavDockVisible)
+            << "\n  isFilterDockVisible       " << G::s(ws.isFilterDockVisible)
+            << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
+            << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
+            << "\n  isThumbDockVisible        " << G::s(ws.isThumbDockVisible)
+            << "\nView:"
+            << "\n  isLoupeDisplay            " << G::s(ws.isLoupeDisplay)
+            << "\n  isGridDisplay             " << G::s(ws.isGridDisplay)
+            << "\n  isTableDisplay            " << G::s(ws.isTableDisplay)
+            << "\n  isCompareDisplay          " << G::s(ws.isCompareDisplay)
+            << "\nThumbView:"
+            << "\n  thumbSpacing              " << G::s(ws.thumbSpacing)
+            << "\n  thumbPadding              " << G::s(ws.thumbPadding)
+            << "\n  thumbWidth                " << G::s(ws.thumbWidth)
+            << "\n  thumbHeight               " << G::s(ws.thumbHeight)
+            << "\n  labelFontSize             " << G::s(ws.labelFontSize)
+            << "\n  showThumbLabels           " << G::s(ws.showThumbLabels)
+            << "\nGridView:"
+            << "\n  thumbSpacingGrid          " << G::s(ws.thumbSpacingGrid)
+            << "\n  thumbPaddingGrid          " << G::s(ws.thumbPaddingGrid)
+            << "\n  thumbWidthGrid            " << G::s(ws.thumbWidthGrid)
+            << "\n  thumbHeightGrid           " << G::s(ws.thumbHeightGrid)
+            << "\n  labelFontSizeGrid         " << G::s(ws.labelFontSizeGrid)
+            << "\n  showThumbLabelsGrid       " << G::s(ws.showThumbLabelsGrid)
+            << "\n  gridViewLabelChoice      " << G::s(ws.labelChoice)
+            << "\nImageView:"
+            << "\n  showShootingInfo          " << G::s(ws.isImageInfoVisible)
+            // << "\n  isEmbelDisplay            " << G::s(ws.isEmbelDisplay)
+            << "\nProcesses:"
+            << "\n  isColorManage             " << G::s(ws.isColorManage)
+            << "\n  cacheSizeMethod           " << G::s(ws.cacheSizeMethod)
+            << "\n  sortColumn                " << G::s(ws.sortColumn)
+            << "\n  isReverseSort             " << G::s(ws.isReverseSort)
+            << "\n"
+            //*/
+            ;
+    }
+    return reportString;
+}
+
+void MW::reportWorkspaceNum(int n)
 {
     if (G::isLogger) G::log("MW::reportWorkspace");
     ws = workspaces->at(n);
     reportWorkspace(ws);
 }
 
-void MW::reportWorkspace(WorkspaceData &ws)
+void MW::reportWorkspace(WorkspaceData &ws, QString src)
 {
+    return;
     if (G::isLogger) G::log("MW::reportWorkspace");
     // ws = workspaces->at(n);
-    qDebug() << "\n\nName" << ws.name;
-    Utilities::deconstructGeometry(ws.geometry);
-    qDebug() << "isFullScreen" << ws.isFullScreen
-             << "\nisMaximised" << ws.isMaximised
-             << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
-             //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
-             << "\nisStatusBarVisible" << ws.isStatusBarVisible
-             << "\nisFolderDockVisible" << ws.isFolderDockVisible
-             << "\nisFavDockVisible" << ws.isFavDockVisible
-             << "\nisFilterDockVisible" << ws.isFilterDockVisible
-             << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
-             << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
-             << "\nisThumbDockVisible" << ws.isThumbDockVisible
-             << "\nthumbSpacing" << ws.thumbSpacing
-             << "\nthumbPadding" << ws.thumbPadding
-             << "\nthumbWidth" << ws.thumbWidth
-             << "\nthumbHeight" << ws.thumbHeight
-             << "\nlabelFontSize" << ws.labelFontSize
-             << "\nshowThumbLabels" << ws.showThumbLabels
-             << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
-             << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
-             << "\nthumbWidthGrid" << ws.thumbWidthGrid
-             << "\nthumbHeightGrid" << ws.thumbHeightGrid
-             << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
-             << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
-             << "\nsgridViewLabelChoice" << ws.labelChoice
-             << "\nshowShootingInfo" << ws.isImageInfoVisible
-             << "\nisLoupeDisplay" << ws.isLoupeDisplay
-             << "\nisGridDisplay" << ws.isGridDisplay
-             << "\nisTableDisplay" << ws.isTableDisplay
-             << "\nisCompareDisplay" << ws.isCompareDisplay
-             << "\nisEmbelDisplay" << ws.isEmbelDisplay
-             << "\nisColorManage" << ws.isColorManage
-             << "\ncacheSizeMethod" << ws.cacheSizeMethod
-             << "\nsortColumn" << ws.sortColumn
-             << "\nisReverseSort" << ws.isReverseSort
-                ;
+    qDebug() << "\n\nName" << ws.name << "  Src:" << src;
+    RecoverGeometry r;
+    recoverGeometry(ws.geometry, r);
+    qDebug()
+        << "RecoverGeometry from QByteArray:"
+        << "\n   FrameGeometry" << r.frameGeometry
+        << "\n   NormalGeometry" << r.normalGeometry
+        << "\n   screenNumber" << r.screenNumber
+        << "\n   maximized" << r.maximized
+        << "\n   fullScreen" << r.fullScreen
+        << "screenNum" << ws.screenNumber
+        << "isFullScreen" << ws.isFullScreen
+        << "\nisMaximised" << ws.isMaximised
+        // /*
+        << "\nisWindowTitleBarVisible" << ws.isWindowTitleBarVisible
+        //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
+        << "\nisStatusBarVisible" << ws.isStatusBarVisible
+        << "\nisFolderDockVisible" << ws.isFolderDockVisible
+        << "\nisFavDockVisible" << ws.isFavDockVisible
+        << "\nisFilterDockVisible" << ws.isFilterDockVisible
+        << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
+        << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
+        << "\nisThumbDockVisible" << ws.isThumbDockVisible
+        << "\nthumbSpacing" << ws.thumbSpacing
+        << "\nthumbPadding" << ws.thumbPadding
+        << "\nthumbWidth" << ws.thumbWidth
+        << "\nthumbHeight" << ws.thumbHeight
+        << "\nlabelFontSize" << ws.labelFontSize
+        << "\nshowThumbLabels" << ws.showThumbLabels
+        << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
+        << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
+        << "\nthumbWidthGrid" << ws.thumbWidthGrid
+        << "\nthumbHeightGrid" << ws.thumbHeightGrid
+        << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
+        << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
+        << "\nsgridViewLabelChoice" << ws.labelChoice
+        << "\nshowShootingInfo" << ws.isImageInfoVisible
+        << "\nisLoupeDisplay" << ws.isLoupeDisplay
+        << "\nisGridDisplay" << ws.isGridDisplay
+        << "\nisTableDisplay" << ws.isTableDisplay
+        << "\nisCompareDisplay" << ws.isCompareDisplay
+        << "\nisEmbelDisplay" << ws.isEmbelDisplay
+        << "\nisColorManage" << ws.isColorManage
+        << "\ncacheSizeMethod" << ws.cacheSizeMethod
+        << "\nsortColumn" << ws.sortColumn
+        << "\nisReverseSort" << ws.isReverseSort
+        //*/
+        ;
 }
 
 void MW::loadWorkspaces()
 {
     if (G::isLogger) G::log("MW::loadWorkspaces");
     if (!isSettings) return;
+
+    // replace with the current list of workspaces
     int size = settings->beginReadArray("Workspaces");
     //qDebug() << "MW::loadWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
+        // Workspace
         settings->setArrayIndex(i);
         ws.name = settings->value("name").toString();
 
+        // State
         ws.geometry = settings->value("geometry").toByteArray();
         ws.state = settings->value("state").toByteArray();
+        RecoverGeometry r;
+        recoverGeometry(ws.geometry, r);
+        ws.screenNumber = r.screenNumber;
+        ws.geometryRect = settings->value("geometryRect").toRect();
         ws.isFullScreen = settings->value("isFullScreen").toBool();
         ws.isMaximised = settings->value("isMaximised").toBool();
+
+        // Visibility
         ws.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
         //ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
         ws.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
@@ -437,12 +642,22 @@ void MW::loadWorkspaces()
         ws.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
         ws.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
         ws.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
+
+        // View
+        ws.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
+        ws.isGridDisplay = settings->value("isGridDisplay").toBool();
+        ws.isTableDisplay = settings->value("isTableDisplay").toBool();
+        ws.isCompareDisplay = settings->value("isCompareDisplay").toBool();
+
+        // ThumbView
         ws.thumbSpacing = settings->value("thumbSpacing").toInt();
         ws.thumbPadding = settings->value("thumbPadding").toInt();
         ws.thumbWidth = settings->value("thumbWidth").toInt();
         ws.thumbHeight = settings->value("thumbHeight").toInt();
         ws.labelFontSize = settings->value("labelFontSize").toInt();
         ws.showThumbLabels = settings->value("showThumbLabels").toBool();
+
+        // GridView
         ws.thumbSpacingGrid = settings->value("thumbSpacingGrid").toInt();
         ws.thumbPaddingGrid = settings->value("thumbPaddingGrid").toInt();
         ws.thumbWidthGrid = settings->value("thumbWidthGrid").toInt();
@@ -450,12 +665,12 @@ void MW::loadWorkspaces()
         ws.labelFontSizeGrid = settings->value("labelFontSizeGrid").toInt();
         ws.showThumbLabelsGrid = settings->value("showThumbLabelsGrid").toBool();
         ws.labelChoice = settings->value("labelChoice").toString();
+
+        // ImageView
         ws.isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
-        ws.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
-        ws.isGridDisplay = settings->value("isGridDisplay").toBool();
-        ws.isTableDisplay = settings->value("isTableDisplay").toBool();
-        ws.isCompareDisplay = settings->value("isCompareDisplay").toBool();
-        ws.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
+        // ws.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
+
+        // Processes
         ws.isColorManage = settings->value("isColorManage").toBool();
         ws.cacheSizeMethod = settings->value("cacheSizeMethod").toString();
         ws.sortColumn = settings->value("sortColumn").toInt();
@@ -468,18 +683,29 @@ void MW::loadWorkspaces()
 void MW::saveWorkspaces()
 {
     if (G::isLogger) G::log("MW::saveWorkspaces");
+
+    // first remove the existing array of workspaces
+    settings->remove("Workspaces");
+
     int size = workspaces->count();
     settings->beginWriteArray("Workspaces", size);
     qDebug() << "MW::saveWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
+        // Workspace
         ws = workspaces->at(i);
         settings->setArrayIndex(i);
         settings->setValue("name", ws.name);
+
+        // State
         settings->setValue("geometry", ws.geometry);
         settings->setValue("state", ws.state);
-        settings->setValue("isFullScreen", ws.isFullScreen);
-        settings->setValue("isMaximised", ws.isMaximised);
-        settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
+        settings->setValue("screenNumber", QGuiApplication::screens().indexOf(screen()));
+        settings->setValue("geometryRect", ws.geometryRect);                        // need?
+        settings->setValue("isFullScreen", ws.isFullScreen);                        // need?
+        settings->setValue("isMaximised", ws.isMaximised);                          // need?
+
+        // Visibility
+        settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);  // need? Not used.
         //settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
         settings->setValue("isStatusBarVisible", ws.isStatusBarVisible);
         settings->setValue("isFolderDockVisible", ws.isFolderDockVisible);
@@ -488,11 +714,21 @@ void MW::saveWorkspaces()
         settings->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
         settings->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
         settings->setValue("isThumbDockVisible", ws.isThumbDockVisible);
-        settings->setValue("thumbSpacing", ws.thumbSpacing);
+
+        // View
+        settings->setValue("isLoupeDisplay", ws.isLoupeDisplay);
+        settings->setValue("isGridDisplay", ws.isGridDisplay);
+        settings->setValue("isTableDisplay", ws.isTableDisplay);
+        settings->setValue("isCompareDisplay", ws.isCompareDisplay);
+
+        // ThumbView
+        settings->setValue("thumbSpacing", ws.thumbSpacing);                        // need?
         settings->setValue("thumbPadding", ws.thumbPadding);
         settings->setValue("thumbWidth", ws.thumbWidth);
         settings->setValue("thumbHeight", ws.thumbHeight);
         settings->setValue("showThumbLabels", ws.showThumbLabels);
+
+        // GridView
         settings->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
         settings->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
         settings->setValue("thumbWidthGrid", ws.thumbWidthGrid);
@@ -500,12 +736,12 @@ void MW::saveWorkspaces()
         settings->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
         settings->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
         settings->setValue("labelChoice", ws.labelChoice);
+
+        // ImageView
         settings->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        settings->setValue("isLoupeDisplay", ws.isLoupeDisplay);
-        settings->setValue("isGridDisplay", ws.isGridDisplay);
-        settings->setValue("isTableDisplay", ws.isTableDisplay);
-        settings->setValue("isCompareDisplay", ws.isCompareDisplay);
-        settings->setValue("isEmbelDisplay", ws.isEmbelDisplay);
+        // settings->setValue("isEmbelDisplay", ws.isEmbelDisplay);                    // need?
+
+        // Processes
         settings->setValue("isColorManage", ws.isColorManage);
         settings->setValue("cacheSizeMethod", ws.cacheSizeMethod);
         settings->setValue("sortColumn", ws.sortColumn);

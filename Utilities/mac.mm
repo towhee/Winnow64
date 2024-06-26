@@ -4,6 +4,8 @@
 #import <ApplicationServices/ApplicationServices.h>
 #import <AppKit/NSSharingService.h>
 
+#import <Cocoa/Cocoa.h>
+
 /*
 First, you need to create an Objective-C++ source file (with the .mm extension) to
 implement your NSApplicationDelegate. In this file, you can import both Qt and Cocoa
@@ -186,24 +188,6 @@ QString Mac::getDisplayProfileURL()
     }
 //    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return "";
-}
-
-void Mac::setSystemMenuBarVisible(bool visible)
-{
-    @autoreleasepool {
-        // NSApplication *app = [NSApplication sharedApplication];
-        // NSMenu *menu = [app mainMenu];
-
-        if (visible) {
-            [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationHideMenuBar | NSApplicationPresentationHideDock];
-            // [menu setHidden:NO];
-            // [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationDefault];
-        } else {
-            [[NSApplication sharedApplication] setPresentationOptions:NSApplicationPresentationDefault];
-            // [menu setHidden:YES];
-            // [[NSApplication sharedApplication] setPresentationOptions:(NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock)];
-        }
-    }
 }
 
 float Mac::getMouseCursorMagnification()

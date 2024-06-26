@@ -521,7 +521,6 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
     if (isDebug || G::isFlowLogger) qDebug() << "IconView::sortThumbs" << objectName();
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
-    qDebug() << "IconView::sortThumbs";
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
 }
 

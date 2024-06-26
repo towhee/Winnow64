@@ -20,6 +20,11 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 #QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
+# Compile on MacOS without permission prompts:
+# - Add Build Step > Custom Process Step
+# - Command: chmod
+# - Arguments: +x /path/to.winnow.exe
+
 # MacOS universal binaries
 #QMAKE_APPLE_DEVICE_ARCHS = arm64
 #QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
@@ -413,8 +418,7 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Help/helppixeldelta.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui

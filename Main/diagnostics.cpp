@@ -74,7 +74,7 @@ void MW::reportWorkspaceState()
              << "\nisGridDisplay" << w.isGridDisplay
              << "\nisTableDisplay" << w.isTableDisplay
              << "\nisCompareDisplay" << w.isCompareDisplay
-             << "\nisEmbelDisplay" << w.isEmbelDisplay
+             // << "\nisEmbelDisplay" << w.isEmbelDisplay
              << "\nisColorManage" << ws.isColorManage
              << "\ncacheSizeMethod" << ws.cacheSizeMethod
                 ;
@@ -215,7 +215,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
-    rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
+    rpt << "\n" << "isNormalScreen = " << G::s(!isFullScreen());
     rpt << "\n" << "currentViewDir = " << G::s(G::currRootFolder);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(dm->currentSfRow);
@@ -263,30 +263,31 @@ QString MW::diagnostics()
 }
 
 void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics());}
+void MW::diagnosticsWorkspaces() {diagnosticsReport(this->reportWorkspaces());}
 void MW::diagnosticsGridView() {diagnosticsReport(gridView->diagnostics());}
 void MW::diagnosticsThumbView() {diagnosticsReport(thumbView->diagnostics());}
 void MW::diagnosticsImageView() {diagnosticsReport(imageView->diagnostics());}
-void MW::diagnosticsInfoView() {}
-void MW::diagnosticsTableView() {}
-void MW::diagnosticsCompareView() {}
-void MW::diagnosticsMetadata()
+void MW::diagnosticsInfoView() {} // dummy for now
+void MW::diagnosticsTableView() {} // dummy for now
+void MW::diagnosticsCompareView() {} // dummy for now
+void MW::diagnosticsMetadata() // dummy for now
 {
     dm->imMetadata(dm->currentFilePath, true);
     diagnosticsReport(metadata->diagnostics(dm->currentFilePath));
 }
-void MW::diagnosticsXMP() {}
+void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics());}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
-void MW::diagnosticsFilters() {}
-void MW::diagnosticsFileTree() {}
-void MW::diagnosticsBookmarks() {}
-void MW::diagnosticsPixmap() {}
-void MW::diagnosticsThumb() {}
-void MW::diagnosticsIngest() {}
-void MW::diagnosticsZoom() {}
+void MW::diagnosticsFilters() {} // dummy for now
+void MW::diagnosticsFileTree() {} // dummy for now
+void MW::diagnosticsBookmarks() {} // dummy for now
+void MW::diagnosticsPixmap() {} // dummy for now
+void MW::diagnosticsThumb() {} // dummy for now
+void MW::diagnosticsIngest() {} // dummy for now
+void MW::diagnosticsZoom() {} // dummy for now
 
 void MW::diagnosticsReport(QString reportString)
 {

@@ -2,7 +2,7 @@
 
 VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWidget{parent}
 {
-    if (G::isLogger) qDebug() << "VideoView::VideoView";
+    if (G::isLogger) G::log("VideoView::VideoView");
     setObjectName("VideoView");
     setMouseTracking(true);     // this does not work
 

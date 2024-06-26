@@ -338,14 +338,14 @@ void MW::toggleThumbDockVisibity()
         thumbDockVisibleAction->setChecked(true);
     }
 
-    if (G::mode != "Grid" && isNormalScreen) {
+    if (G::mode != "Grid" && !isFullScreen()) {
         wasThumbDockVisible = thumbDock->isVisible();
     }
 //    /*
       qDebug() << "MW::toggleThumbDockVisibity"
              << "wasThumbDockVisible =" << wasThumbDockVisible
              << "G::mode =" << G::mode
-             << "isNormalScreen =" << isNormalScreen
+             << "isNormalScreen =" << !isFullScreen()
              << "thumbDock->isVisible() =" << thumbDock->isVisible();
     //*/
 }
@@ -539,7 +539,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         return;
     }
 
-    QModelIndex sfIdx = dm->index(sfRow, 0);
+    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
         emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);

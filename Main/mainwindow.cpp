@@ -625,7 +625,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // crash log
     settings->setValue("hasCrashed", true);
 
-    if (G::isLogger) qDebug() << "MW::MW  Winnow running (end of MW::MW)";
+    // if (G::isLogger) qDebug() << "MW::MW  Winnow running (end of MW::MW)";
 }
 
 void MW::whenActivated(Qt::ApplicationState state)
@@ -742,6 +742,7 @@ void MW::closeEvent(QCloseEvent *event)
 
     // crash log
     settings->setValue("hasCrashed", false);
+
     if (G::popUp != nullptr) G::popUp->close();
     if (zoomDlg != nullptr) zoomDlg->close();
     hide();
@@ -770,8 +771,8 @@ void MW::moveEvent(QMoveEvent *event)
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
 */
-    if (G::isLogger)
-        qDebug() << "MW::moveEvent" << "isVisible() =" << isVisible();
+    if (G::isLogger) G::log("MW::moveEvent");
+
     QMainWindow::moveEvent(event);
     if (!G::isInitializing) {
         setDisplayResolution();
@@ -784,44 +785,91 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger)
-        qDebug() << "MW::resizeEvent";
+    if (G::isLogger) {
+        G::log("MW::resizeEvent");
+    }
     QMainWindow::resizeEvent(event);
+
     // re-position zoom dialog
     emit resizeMW(this->geometry(), centralWidget->geometry());
+
     // prevent progressBar overlapping in statusBar
     int availSpace = availableSpaceForProgressBar();
-    if (availSpace < progressWidthBeforeResizeWindow && availSpace > cacheBarProgressWidth)
+    if (availSpace < progressWidthBeforeResizeWindow && availSpace > cacheBarProgressWidth) {
         cacheBarProgressWidth = availSpace;
+    }
     updateProgressBarWidth();
+
     // update current workspace
     ws.isMaximised = isMaximized();
-    qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
+    // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
 }
 
 void MW::onWindowStateChanged(Qt::WindowState state) {
     #ifdef Q_OS_MAC
-    if (state == Qt::WindowFullScreen) {
-        Mac::setSystemMenuBarVisible(false);
-    } else {
-        Mac::setSystemMenuBarVisible(true);
-    }
+    // if (state == Qt::WindowFullScreen) {
+    //     Mac::setSystemMenuBarVisible(false);
+    // } else {
+    //     Mac::setSystemMenuBarVisible(true);
+    // }
     #endif
+    // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
 }
 
 void MW::changeEvent(QEvent *event) {
-    QMainWindow::changeEvent(event);
+    // qDebug() << "MW::changeEvent event =" << event;
+    // QMainWindow::changeEvent(event);
     if (event->type() == QEvent::WindowStateChange) {
-        if (window()->windowState() == Qt::WindowFullScreen)
-            onWindowStateChanged(Qt::WindowFullScreen);
+        Qt::WindowStates currWindowState = window()->windowState();
+        qDebug() << "\nMW::changeEvent WindowStateChange"
+                 << "window()->windowState() =" << window()->windowState();
+                 // << "geometry() =" << geometry();
+    //     if (currWindowState == Qt::WindowNoState) {
+    //         qDebug() << "MW::changeEvent WindowNoState"
+    //                  // << "windowState =" << currWindowState
+    //                  // << "prevNormalWindow =" << prevNormalWindow
+    //                  // << "geometry() =" << geometry()
+    //                  << "wasFullSpace =" << wasFullSpace
+    //                     ;
+    //         if (!prevNormalWindow.isEmpty()) {
+    //             if (prevNormalWindow == geometry()) {
+    //                 qDebug() << "MW::changeEvent WindowNoState prevNormalWindow == geometry() = true (no action req'd)";
+    //                 return;
+    //             }
+    //             // return window not same as before full screen window
+    //             qDebug() << "MW::changeEvent WindowNoState move to " << prevNormalWindow.topLeft();
+    //             move(prevNormalWindow.topLeft());
+    //             prevNormalWindow = QRect(0,0,0,0);
+    //             qDebug() << "MW::changeEvent  MUST MOVE TO PREVIOUS WINDOW LOC";
+    //         }
+    //         else qDebug() << "MW::changeEvent  prevNormalWindow was empty, no action req'd";
+    //         // wasFullSpace = false;
+    //     }
+    //     if (currWindowState & Qt::WindowFullScreen) {
+    //         wasFullSpace = true;
+    //         qDebug() << "MW::changeEvent WindowFullScreen"
+    //                  // << "windowState =" << currWindowState
+    //                  // << "prevNormalWindow =" << prevNormalWindow
+    //                  // << "geometry() =" << geometry()
+    //                  << "wasFullSpace =" << wasFullSpace
+    //                     ;
+    //     }
+    //     if (currWindowState & Qt::WindowMaximized) {
+    //         // wasFullSpace = false;
+    //         qDebug() << "MW::changeEvent WindowMaximized"
+    //                  // << "windowState =" << currWindowState
+    //                     // << "prevNormalWindow =" << prevNormalWindow
+    //                     // << "geometry() =" << geometry()
+    //                     << "wasFullSpace =" << wasFullSpace
+    //                     ;
+    //     }
+    //     // static Qt::WindowState prevWindowState = currWindowState;
+    //     qDebug();
+    //     return;
     }
-}
+    QMainWindow::changeEvent(event);
 
-//void MW::mousePressEvent(QMouseEvent *event)
-//{
-//    QMainWindow::mousePressEvent(event);
-//    qDebug() << "MW::mousePressEvent" << event;
-//}
+}
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
@@ -958,24 +1006,26 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     // return false to propagate events
-    /* ALL EVENTS (uncomment to use)
-    if (event->type()
-                             != QEvent::Paint
-            && event->type() != QEvent::UpdateRequest
-            && event->type() != QEvent::ZeroTimerEvent
-            && event->type() != QEvent::Timer
-            && event->type() != QEvent::MouseMove
-            && event->type() != QEvent::HoverMove
-            )
-    {
-        qDebug() << "MW::eventFilter"
-                 << "event:" <<event << "\t"
-                 << "event->type:" << event->type() << "\t"
-                 << "obj:" << obj << "\t"
-                 << "obj->objectName:" << obj->objectName()
-                 << "object->metaObject()->className:" << obj->metaObject()->className()
-                    ;
-        //return QWidget::eventFilter(obj, event);
+    // /* ALL EVENTS (uncomment to use)
+    if (G::showAllEvents) {
+        if (event->type()
+                                 != QEvent::Paint
+                && event->type() != QEvent::UpdateRequest
+                && event->type() != QEvent::ZeroTimerEvent
+                && event->type() != QEvent::Timer
+                && event->type() != QEvent::MouseMove
+                && event->type() != QEvent::HoverMove
+                )
+        {
+            qDebug() << "MW::eventFilter"
+                     << "event:" << event << "\t"
+                     << "event->type:" << event->type() << "\t"
+                     << "obj:" << obj << "\t"
+                     << "obj->objectName:" << obj->objectName()
+                     << "object->metaObject()->className:" << obj->metaObject()->className()
+                        ;
+            //return QWidget::eventFilter(obj, event);
+        }
     }
     //*/
 
@@ -1077,6 +1127,43 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     } // end section
 
+    /* QUIT FULLSCREEN
+
+    */
+    {
+    if (obj->objectName() == "MWWindow") {
+        // try using raise()
+        if (event->type() == QEvent::WindowStateChange) {
+            QWindowStateChangeEvent *e = static_cast<QWindowStateChangeEvent *>(event);
+            qDebug() << "\nQWindowStateChangeEvent" << e
+                     << "window()->windowState() =" << window()->windowState()
+                     << "isVisible() =" << isVisible()
+                     // << " =" << this->is
+                        ;
+            if (wasFullSpaceOnDiffScreen) {
+                // wasFullSpaceOnDiffScreen = false;
+                inVokeWorkSpaceWrongScreen = true;
+                // G::wait(500);
+                QTimer::singleShot(100, this, &MW::invokeCurrentWorkspace);
+            }
+        }
+    }
+    // if (obj->objectName() == "WinnowStatusBar") {
+    //     // try using raise()
+    //     if (event->type() == QEvent::QEvent::LayoutRequest) {
+    //         qDebug() << "\nLayoutRequest"
+    //                  << "window()->windowState() =" << window()->windowState()
+    //                  << "isVisible() =" << isVisible()
+    //                     // << " =" << this->is
+    //                     ;
+    //         if (inVokeWorkSpaceWrongScreen) {
+    //             inVokeWorkSpaceWrongScreen = false;
+    //             invokeWorkspace(ws);
+    //         }
+    //     }
+    // }
+    } // end section
+
     /* KEEP WINDOW ON TOP WHEN DRAGGING TO ANOTHER SCREEN
        Window is underneath apps on another screen on MacOS (sometimes)
 
@@ -1085,21 +1172,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
     */
     {
-    if (obj->objectName() == "MW") {
-        // try using raise()
-        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            if (e->button() == Qt::LeftButton) {
-                raise();
+        if (obj->objectName() == "MW") {
+            // try using raise()
+            if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                if (e->button() == Qt::LeftButton) {
+                    raise();
+                }
+            }
+            if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                if (e->button() == Qt::LeftButton) {
+                    raise();
+                }
             }
         }
-        if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            if (e->button() == Qt::LeftButton) {
-                raise();
-            }
-        }
-    }
     } // end section
 
     /* EMBEL DOCK TITLE
@@ -2109,11 +2196,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // /*
     if (G::isLogger || G::isFlowLogger)
     {
-        qDebug() << "MW::fileSelectionChange"
-                 << "src =" << src
-                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
-                 << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
-                 << current.data(G::PathRole).toString();
+        G::log("MW::fileSelectionChange", "Src = " + src);
+        // qDebug() << "MW::fileSelectionChange"
+        //          << "src =" << src
+        //          << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+        //          << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
+        //          << current.data(G::PathRole).toString();
     }
     //*/
     if (G::isFlowLogger)
@@ -2231,7 +2319,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (!imageView->isFirstImageNewFolder) {
                     int row = dm->proxyRowFromPath(fPath);
                     QString msg = "imageView->loadImage failed.";
-                    G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
+                    // G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
                 }
             }
         }
@@ -2702,8 +2790,8 @@ void MW::loadConcurrentNewFolder()
 {
     QString fun = "MW::loadConcurrentNewFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
-    if (G::isLogger)
-        qDebug().noquote() << fun << G::currRootFolder;
+    // if (G::isLogger)
+    //     qDebug().noquote() << fun << G::currRootFolder;
 
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;
@@ -3958,8 +4046,8 @@ void MW::getDisplayProfile()
     This is required for color management.  It is called after the show event when the
     progam is opening and when the main window is moved to a different screen.
 */
-    if (G::isLogger)
-        qDebug() << "MW::getDisplayProfile";
+    if (G::isLogger) G::log("MW::getDisplayProfile");
+
     #ifdef Q_OS_WIN
     if (G::winScreenHash.contains(screen()->name()))
         G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
@@ -4073,9 +4161,10 @@ void MW::toggleFullScreen()
     if (G::isLogger) G::log("MW::toggleFullScreen");
     if (fullScreenAction->isChecked())
     {
+        reportWorkspace(ws);
         snapshotWorkspace(ws);
-        Utilities::deconstructGeometry(ws.geometry);
-        isNormalScreen = false;
+        // prevNormalWindow = geometry();
+        qDebug() << "MW::toggleFullScreen  FULL";// << prevNormalWindow;
         showFullScreen();
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
@@ -4098,12 +4187,13 @@ void MW::toggleFullScreen()
     }
     else
     {
-        isNormalScreen = true;
-        // qDebug() << "MW::toggleFullScreen off  isMax = " << ws.isMaximised;
-        reportWorkspace(ws);
+        qDebug() << "MW::toggleFullScreen NORMAL";
         // if (ws.isMaximised) showMaximized();
         // else showNormal();
-        invokeWorkspace(ws);
+        showNormal();
+        // reportWorkspace(ws, "MW::toggleFullScreen off before invokeWorkspace");
+        bool restore = false;
+        invokeWorkspace(ws, restore);
     }
 }
 

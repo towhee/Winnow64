@@ -24,7 +24,7 @@ signals:
     void deleteWorkspace(int);
     void reassignWorkspace(int);
     void renameWorkspace(int, QString);
-    void reportWorkspace(int n);
+    void reportWorkspaceNum(int n);
 
 private slots:
     void on_deleteBtn_clicked();
