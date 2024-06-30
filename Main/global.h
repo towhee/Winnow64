@@ -203,7 +203,7 @@ namespace G
     extern bool sendLogToConsole;
     extern bool showAllEvents;
     extern QFile logFile;
-    extern QFile errlogFile;
+    extern QFile issueLogFile;
     extern bool isDev;
     extern bool isRemote;
 
@@ -311,24 +311,17 @@ namespace G
     extern bool isTimer;
     extern bool isTest;
 
-//    extern QList<int>rowsWithIcon;
-
     void setDM(QObject *dm);
 
-//    extern bool empty();
     extern Logger logger;
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
-    // extern QStringList doNotLog;
     extern void log(QString functionName = "",
                     QString comment = "",
                     bool zeroElapsedTime = false);
-    extern ErrorLog errorLog;
+    extern IssueLog issueLog;
     extern QMutex issueListMutex;
-    extern void errlog(QString err, QString functionName, QString fPath = "");
-    extern void error(QString functionName, QString msg, QString fPath = "");
-    extern void error(QString functionName, QString msg, int sfRow);
-    extern void issue(QString type, QString msg, QString src, int sfRow = -1, QString fPath = "");
-    extern void err(QModelIndex idx, QString err);
+    extern void issue(QString type, QString msg = "", QString src = "",
+                      int sfRow = -1, QString fPath = "");
 
     extern int wait(int ms);
     extern QString s(QVariant x);

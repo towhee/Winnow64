@@ -92,6 +92,11 @@ void MW::invokeCurrentWorkspace()
 
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
+/*
+    This is called from a workspace action. Since the workspace actions
+    are a list of actions, the workspaceMenu triggered signal is captured, and the
+    workspace with a matching name to the action is used.
+*/
     if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
     for (int i = 0; i < workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
@@ -101,39 +106,41 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     }
 }
 
-void MW::invokeWorkspace(const WorkspaceData &w, bool restore /*default = true*/)
+void MW::invokeWorkspace(const WorkspaceData &w)
 {
 /*
-    invokeWorkspace is called from a workspace action. Since the workspace actions
-    are a list of actions, the workspaceMenu triggered signal is captured, and the
-    workspace with a matching name to the action is used.
+    Changes the app appearance to conform with a workspace parameters which include:
+        - window screen, location and size
+        - application state
+        - dock visibility and location
+        - central widget view (loupe, grid, table, compare)
+        - thumbView and gridView parameters
+        - imageView show info
+        - processes (color manage, caching, sorting)
 
-    It is also called from MW::toggleFullScreen, where restore = false.
+
+    It is called from menu actions, MW::toggleFullScreen and QEvent::WindowStateChange
+    in MW::eventFilter.
+
+    There is an issue when attempting to invoke a workspace while in FullScreen state if
+    the new sworkspace is on a different screen.  The function showNormal() always shows
+    the window in the same screen and this taks some time.  MW::eventFilter overrides the
+    QEvent::WindowStateChange and calls invokeWorkspace after a delay to allow the showNormal
+    function to complete drawing the normal window.
 */
     if (G::isLogger) G::log("MW::invokeWorkspace");
 
-    qDebug() << "MW::invokeWorkspace  name =" << w.name
-             << "restore =" << restore
-        // << "prevNormalWindow =" << prevNormalWindow
-        ;
     ws = w;     // current workspace ws
 
-    // save old geometry if new workspace is full screen, else set empty
+    /* Fullscreen was on different screen from new workspace.  Set flag, showNormal and return.
+       In the QEvent::WindowStateChange override (MW::eventFilter) invokeWorkspace will be called
+       again after the normal window has been completed,*/
     int screenNumber = QGuiApplication::screens().indexOf(screen());
     if (isFullScreen() && screenNumber != w.screenNumber) {
         wasFullSpaceOnDiffScreen = true;
-        // G::showAllEvents = true;
         showNormal();
-        // qApp->processEvents();
-        // G::wait(2000);
-        // G::showAllEvents = false;
         return;
-        // setGeometry(w.geometryRect);
-        // wasFullSpace = true;
     }
-
-    //     prevNormalWindow = geometry();
-    // else prevNormalWindow = QRect(0,0,0,0);
 
     // Visibility
     statusBarVisibleAction->setChecked(w.isStatusBarVisible);
@@ -184,62 +191,14 @@ void MW::invokeWorkspace(const WorkspaceData &w, bool restore /*default = true*/
     }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
     setThumbDockVisibity();
-    // reportWorkspace(ws, "MW::invokeWorkspace before restoreGeometry");
 
-    if (screenNumber != w.screenNumber) {
-        qDebug() << "WRONG SCREEN!!";
-    }
-    else {
-        qDebug() << "RIGHT SCREEN!!";
-        wasFullSpaceOnDiffScreen = false;
-    }
+    restoreGeometry(w.geometry);
+    restoreState(w.state);
+    // second restoreState req'd for going from docked to floating docks
+    restoreGeometry(w.geometry);
+    restoreState(w.state);
 
-    // RecoverGeometry r;
-    // recoverGeometry(w.geometry, r);
-    // QPoint pos = r.normalGeometry.topLeft();
-    // QSize size = r.normalGeometry.size();
-    // qDebug() << "MW::invokeWorkspace  name =" << w.name
-    //          << "pos =" << pos
-    //          << "size =" << size
-    //     ;
-    // move(pos);
-    // resize(size);
-    // restoreState(w.state);
-    // return;
-
-    // do not restore if toggleFullScreen
-    // if (restore) {
-        restoreGeometry(w.geometry);
-        restoreState(w.state);
-        // second restoreState req'd for going from docked to floating docks
-        restoreGeometry(w.geometry);
-        restoreState(w.state);
-
-        // if (Utilities::isScreenValid(w.screen)) {
-        //     if (screen() != w.screen) {
-
-        //     }
-        // }
-        if (w.isMaximised) showMaximized();
-    // }
-
-    // setGeometry(w.geometryRect);
-
-        // if (screenNumber != w.screenNumber) {
-        //     qDebug() << "WRONG SCREEN!!";
-        // }
-        // else {
-        //     qDebug() << "RIGHT SCREEN!!";
-        //     wasFullSpaceOnDiffScreen = false;
-        // }
-    // check screen
-    // if (qApp->screens().contains(w.screen)) {
-    //     if (screen() != w.screen) {
-    //         restoreGeometry(w.geometry);
-    //         // QPoint topLeft = geometry().topLeft();
-    //         // QPoint bottomRight = geometry().bottomRight();
-    //     }
-    // }
+    if (w.isMaximised) showMaximized();
 }
 
 void MW::snapshotWorkspace(WorkspaceData &wsd)
@@ -749,4 +708,38 @@ void MW::saveWorkspaces()
     }
     settings->endArray();
     //setting->setValue("Workpaces.size", size);
+}
+
+void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r)
+/*
+    From Qwidget::restoreGeometry(const QByteArray &geometry)
+
+    This is used to recover the app geometry from the QByteArray generated by
+    QWidget::saveGeometry without running QWidget::recoverGeometry.
+*/
+{
+    QDataStream stream(geometry);
+    stream.setVersion(QDataStream::Qt_4_0);
+    quint32 magicNumber;
+    quint16 majorVersion = 0;
+    quint16 minorVersion = 0;
+    stream >> magicNumber
+        >> majorVersion
+        >> minorVersion
+        >> r.frameGeometry
+        >> r.normalGeometry
+        >> r.screenNumber
+        >> r.maximized
+        >> r.fullScreen;
+
+    /*
+    qDebug() << "MW::recoverGeometry"
+             << "\n\tQByteArray geometry =" << geometry
+             << "\n\tFrameGeometry       =" << r.frameGeometry
+             << "\n\tNormalGeometry      =" << r.normalGeometry
+             << "\n\tscreenNumber        =" << r.screenNumber
+             << "\n\tmaximized           =" << r.maximized
+             << "\n\tfullScreen          =" << r.fullScreen
+        ;
+        //*/
 }

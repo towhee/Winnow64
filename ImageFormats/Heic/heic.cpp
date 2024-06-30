@@ -703,7 +703,7 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "pixi") return pixiBox(offset, length);
 
     QString msg = "Box type " + type + " is unknown";
-    G::issue("Warning", msg, "Heic::getHeifBox", m->row, fPath);
+    G::issue("Warning", msg, "Heic::getHeifBox", m->row, m->fPath);
     offset += length;
     return false;
 }

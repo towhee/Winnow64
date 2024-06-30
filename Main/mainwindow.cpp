@@ -704,6 +704,9 @@ void MW::showEvent(QShowEvent *event)
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 
     G::isInitializing = false;
+
+    G::issue("New Session.");
+
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -731,7 +734,7 @@ void MW::closeEvent(QCloseEvent *event)
         folderDockVisibleAction->setChecked(true);
     }
 
-    G::errorLog.stop();
+    G::issueLog.stop();
 
     clearPickLog();
     clearRatingLog();
@@ -805,70 +808,11 @@ void MW::resizeEvent(QResizeEvent *event)
     // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
 }
 
-void MW::onWindowStateChanged(Qt::WindowState state) {
-    #ifdef Q_OS_MAC
-    // if (state == Qt::WindowFullScreen) {
-    //     Mac::setSystemMenuBarVisible(false);
-    // } else {
-    //     Mac::setSystemMenuBarVisible(true);
-    // }
-    #endif
-    // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
-}
-
 void MW::changeEvent(QEvent *event) {
-    // qDebug() << "MW::changeEvent event =" << event;
-    // QMainWindow::changeEvent(event);
-    if (event->type() == QEvent::WindowStateChange) {
-        Qt::WindowStates currWindowState = window()->windowState();
-        qDebug() << "\nMW::changeEvent WindowStateChange"
-                 << "window()->windowState() =" << window()->windowState();
-                 // << "geometry() =" << geometry();
-    //     if (currWindowState == Qt::WindowNoState) {
-    //         qDebug() << "MW::changeEvent WindowNoState"
-    //                  // << "windowState =" << currWindowState
-    //                  // << "prevNormalWindow =" << prevNormalWindow
-    //                  // << "geometry() =" << geometry()
-    //                  << "wasFullSpace =" << wasFullSpace
-    //                     ;
-    //         if (!prevNormalWindow.isEmpty()) {
-    //             if (prevNormalWindow == geometry()) {
-    //                 qDebug() << "MW::changeEvent WindowNoState prevNormalWindow == geometry() = true (no action req'd)";
-    //                 return;
-    //             }
-    //             // return window not same as before full screen window
-    //             qDebug() << "MW::changeEvent WindowNoState move to " << prevNormalWindow.topLeft();
-    //             move(prevNormalWindow.topLeft());
-    //             prevNormalWindow = QRect(0,0,0,0);
-    //             qDebug() << "MW::changeEvent  MUST MOVE TO PREVIOUS WINDOW LOC";
-    //         }
-    //         else qDebug() << "MW::changeEvent  prevNormalWindow was empty, no action req'd";
-    //         // wasFullSpace = false;
-    //     }
-    //     if (currWindowState & Qt::WindowFullScreen) {
-    //         wasFullSpace = true;
-    //         qDebug() << "MW::changeEvent WindowFullScreen"
-    //                  // << "windowState =" << currWindowState
-    //                  // << "prevNormalWindow =" << prevNormalWindow
-    //                  // << "geometry() =" << geometry()
-    //                  << "wasFullSpace =" << wasFullSpace
-    //                     ;
-    //     }
-    //     if (currWindowState & Qt::WindowMaximized) {
-    //         // wasFullSpace = false;
-    //         qDebug() << "MW::changeEvent WindowMaximized"
-    //                  // << "windowState =" << currWindowState
-    //                     // << "prevNormalWindow =" << prevNormalWindow
-    //                     // << "geometry() =" << geometry()
-    //                     << "wasFullSpace =" << wasFullSpace
-    //                     ;
-    //     }
-    //     // static Qt::WindowState prevWindowState = currWindowState;
-    //     qDebug();
-    //     return;
-    }
+/*
+    Not being used.
+*/
     QMainWindow::changeEvent(event);
-
 }
 
 void MW::keyPressEvent(QKeyEvent *event)
@@ -1006,28 +950,30 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     // return false to propagate events
-    // /* ALL EVENTS (uncomment to use)
-    if (G::showAllEvents) {
-        if (event->type()
-                                 != QEvent::Paint
-                && event->type() != QEvent::UpdateRequest
-                && event->type() != QEvent::ZeroTimerEvent
-                && event->type() != QEvent::Timer
-                && event->type() != QEvent::MouseMove
-                && event->type() != QEvent::HoverMove
-                )
-        {
-            qDebug() << "MW::eventFilter"
-                     << "event:" << event << "\t"
-                     << "event->type:" << event->type() << "\t"
-                     << "obj:" << obj << "\t"
-                     << "obj->objectName:" << obj->objectName()
-                     << "object->metaObject()->className:" << obj->metaObject()->className()
-                        ;
-            //return QWidget::eventFilter(obj, event);
+
+    /* ALL EVENTS (G::showAllEvents) */
+    {
+        if (G::showAllEvents) {
+            if (event->type()
+                                     != QEvent::Paint
+                    && event->type() != QEvent::UpdateRequest
+                    && event->type() != QEvent::ZeroTimerEvent
+                    && event->type() != QEvent::Timer
+                    && event->type() != QEvent::MouseMove
+                    && event->type() != QEvent::HoverMove
+                    )
+            {
+                qDebug() << "MW::eventFilter"
+                         << "event:" << event << "\t"
+                         << "event->type:" << event->type() << "\t"
+                         << "obj:" << obj << "\t"
+                         << "obj->objectName:" << obj->objectName()
+                         << "object->metaObject()->className:" << obj->metaObject()->className()
+                            ;
+                //return QWidget::eventFilter(obj, event);
+            }
         }
     }
-    //*/
 
     /* DEBUG KEY PRESSES (uncomment to use)
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
@@ -1037,7 +983,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* all key presses should hide a popup
+    /* ALL KEY PRESSES HIDE POPUP
     if (!G::isInitializing &&
         (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)
         )
@@ -1061,9 +1007,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
-    // if (event->type() == QEvent::MouseButtonDblClick) {
-    //     qDebug() << event << obj << QCursor::pos();
-    // }
+    /* MOUSE BUTTON DOUBLE CLICK */
+    {
+        if (event->type() == QEvent::MouseButtonDblClick) {
+            qDebug() << event << obj << QCursor::pos();
+        }
+    }
 
     /* DEBUG SPECIFIC EVENT (uncomment to use)
     if (obj->objectName() == "VideoWidget") {
@@ -1091,9 +1040,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* KEYPRESS INTERCEPT (NAVIGATION)
-
-    */
+    /* KEYPRESS INTERCEPT (NAVIGATION) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             if (obj->objectName() == "MWWindow") {
@@ -1125,49 +1072,25 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 }
             }
         }
-    } // end section
+    }
 
-    /* QUIT FULLSCREEN
-
-    */
+    /* QUIT FULLSCREEN */
     {
     if (obj->objectName() == "MWWindow") {
         // try using raise()
         if (event->type() == QEvent::WindowStateChange) {
-            QWindowStateChangeEvent *e = static_cast<QWindowStateChangeEvent *>(event);
-            qDebug() << "\nQWindowStateChangeEvent" << e
-                     << "window()->windowState() =" << window()->windowState()
-                     << "isVisible() =" << isVisible()
-                     // << " =" << this->is
-                        ;
             if (wasFullSpaceOnDiffScreen) {
-                // wasFullSpaceOnDiffScreen = false;
-                inVokeWorkSpaceWrongScreen = true;
-                // G::wait(500);
+                wasFullSpaceOnDiffScreen = false;
+                // wait for transition to showNormal is finished
                 QTimer::singleShot(100, this, &MW::invokeCurrentWorkspace);
             }
         }
     }
-    // if (obj->objectName() == "WinnowStatusBar") {
-    //     // try using raise()
-    //     if (event->type() == QEvent::QEvent::LayoutRequest) {
-    //         qDebug() << "\nLayoutRequest"
-    //                  << "window()->windowState() =" << window()->windowState()
-    //                  << "isVisible() =" << isVisible()
-    //                     // << " =" << this->is
-    //                     ;
-    //         if (inVokeWorkSpaceWrongScreen) {
-    //             inVokeWorkSpaceWrongScreen = false;
-    //             invokeWorkspace(ws);
-    //         }
-    //     }
-    // }
-    } // end section
+    }
 
     /* KEEP WINDOW ON TOP WHEN DRAGGING TO ANOTHER SCREEN
        Window is underneath apps on another screen on MacOS (sometimes)
-
-       Set and unset bit flags example
+       Set and unset bit flags example:
        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
        setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
     */
@@ -1187,7 +1110,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 }
             }
         }
-    } // end section
+    }
 
     /* EMBEL DOCK TITLE
 
@@ -1201,335 +1124,286 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     */
 
-    // CONTEXT MENU
-    {
-    /*
+    /* CONTEXT MENU
         - Intercept context menu to enable/disable:
             - eject usb drive menu item
             - add bookmarks menu item
         - mouseOverFolder is used in folder related context menu actions instead of
           currentViewDir
     */
+    {
 
-    if (event->type() == QEvent::ContextMenu) {
-        addBookmarkAction->setEnabled(true);
-        revealFileActionFromContext->setEnabled(true);
-        copyFolderPathFromContextAction->setEnabled(true);
-        if (obj == fsTree->viewport()) {
-            QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
-            QModelIndex idx = fsTree->indexAt(e->pos());
-            mouseOverFolderPath = idx.data(QFileSystemModel::FilePathRole).toString();
-            //enableEjectUsbMenu(mouseOverFolderPath);
-            // in folders or bookmarks but not on folder item
-            if(mouseOverFolderPath == "") {
-                addBookmarkAction->setEnabled(false);
-                revealFileActionFromContext->setEnabled(false);
-                copyFolderPathFromContextAction->setEnabled(false);
+        if (event->type() == QEvent::ContextMenu) {
+            addBookmarkAction->setEnabled(true);
+            revealFileActionFromContext->setEnabled(true);
+            copyFolderPathFromContextAction->setEnabled(true);
+            if (obj == fsTree->viewport()) {
+                QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
+                QModelIndex idx = fsTree->indexAt(e->pos());
+                mouseOverFolderPath = idx.data(QFileSystemModel::FilePathRole).toString();
+                //enableEjectUsbMenu(mouseOverFolderPath);
+                // in folders or bookmarks but not on folder item
+                if(mouseOverFolderPath == "") {
+                    addBookmarkAction->setEnabled(false);
+                    revealFileActionFromContext->setEnabled(false);
+                    copyFolderPathFromContextAction->setEnabled(false);
+                }
             }
-        }
-        else if (obj == bookmarks->viewport()) {
-            QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
-            QModelIndex idx = bookmarks->indexAt(e->pos());
-            mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
-            //enableEjectUsbMenu(mouseOverFolderPath);
-            // in folders or bookmarks but not on folder item
-            if (mouseOverFolderPath == "") {
-                addBookmarkAction->setEnabled(false);
-                revealFileActionFromContext->setEnabled(false);
-                copyFolderPathFromContextAction->setEnabled(false);
+            else if (obj == bookmarks->viewport()) {
+                QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
+                QModelIndex idx = bookmarks->indexAt(e->pos());
+                mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
+                //enableEjectUsbMenu(mouseOverFolderPath);
+                // in folders or bookmarks but not on folder item
+                if (mouseOverFolderPath == "") {
+                    addBookmarkAction->setEnabled(false);
+                    revealFileActionFromContext->setEnabled(false);
+                    copyFolderPathFromContextAction->setEnabled(false);
+                }
             }
-        }
-        else {
-            //enableEjectUsbMenu(G::currRootFolder);
-            if (G::currRootFolder == "") {
-                addBookmarkAction->setEnabled(false);
-                revealFileActionFromContext->setEnabled(false);
-                copyFolderPathFromContextAction->setEnabled(false);
+            else {
+                //enableEjectUsbMenu(G::currRootFolder);
+                if (G::currRootFolder == "") {
+                    addBookmarkAction->setEnabled(false);
+                    revealFileActionFromContext->setEnabled(false);
+                    copyFolderPathFromContextAction->setEnabled(false);
+                }
             }
         }
     }
-    } // end section
 
-    // THUMBVIEW ZOOMCURSOR
-    {
-    /*
+    /* THUMBVIEW ZOOMCURSOR
     Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.  The
     ImageView must be zoomed and no modifier keys pressed to show zoom cursor.
     */
-
-    if (thumbView->mouseOverThumbView) {
-        if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
-            QKeyEvent *e = static_cast<QKeyEvent *>(event);
-            if (e->modifiers() != 0) {
-                thumbView->setCursor(Qt::ArrowCursor);
-                //qDebug() << "MW::eventFilter" << "Modifier pressed" << event;
+    {
+        if (thumbView->mouseOverThumbView) {
+            if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
+                QKeyEvent *e = static_cast<QKeyEvent *>(event);
+                if (e->modifiers() != 0) {
+                    thumbView->setCursor(Qt::ArrowCursor);
+                    //qDebug() << "MW::eventFilter" << "Modifier pressed" << event;
+                }
+                else {
+                    QPoint pos = thumbView->mapFromGlobal(QCursor::pos());
+                    QModelIndex idx = thumbView->indexAt(pos);
+                    // qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
+                    if (idx.isValid()) {
+                        QString src = "MW::eventFilter ZoomCursor";
+                        thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
+                    }
+                }
             }
-            else {
-                QPoint pos = thumbView->mapFromGlobal(QCursor::pos());
-                QModelIndex idx = thumbView->indexAt(pos);
-                // qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
-                if (idx.isValid()) {
-                    QString src = "MW::eventFilter ZoomCursor";
-                    thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
+        }
+
+        if (obj == thumbView->viewport()) {
+            if (event->type() == QEvent::MouseMove) {
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                bool noModifiers = e->modifiers() == 0;
+                const QModelIndex idx = thumbView->indexAt(e->pos());
+                if (idx.isValid() && noModifiers) {
+                    QString src = "MW::eventFilter: ";
+                    thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
+                }
+                else {
+                    thumbView->setCursor(Qt::ArrowCursor);
                 }
             }
         }
     }
 
-    if (obj == thumbView->viewport()) {
-        if (event->type() == QEvent::MouseMove) {
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            bool noModifiers = e->modifiers() == 0;
-            const QModelIndex idx = thumbView->indexAt(e->pos());
-            if (idx.isValid() && noModifiers) {
-                QString src = "MW::eventFilter: ";
-                thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
-            }
-            else {
-                thumbView->setCursor(Qt::ArrowCursor);
-            }
-        }
-    }
-    } // end section
-
-    // DOCK TAB TOOLTIPS
-    {
-    /*
-    Show a tooltip for docked widget tabs.  Call filterDockTabMousePress if filter tab.
+    /* DOCK TAB TOOLTIPS
+       Show a tooltip for docked widget tabs.  Call filterDockTabMousePress if filter tab.
     */
-    static int prevTabIndex = -1;
-    QString tabBarClassName = "QTabBar";
-    #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
-    tabBarClassName = "QMainWindowTabBar";
-    #endif
-    if (QString(obj->metaObject()->className()) == tabBarClassName) {
-
-        /*
-        // Set rich text label to tabified dock widgets tabbar tabs
-        if (event->type() == QEvent::ChildAdded) {
-            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-            if (tabBarContainsDocks(tabBar)) {
-                if (!dockTabBars.contains(tabBar)) {
-                    dockTabBars.append(tabBar);
-                    tabBarAssignRichText(tabBar);
-                    qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
-                }
-            }
-        }  //*/
-
-        /*
-        // Set icon to tabified dock widgets tabbar tabs
-        if (event->type() == QEvent::ChildAdded) {
-            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-            for (int i = 0; i < tabBar->count(); ++i) {
-                if (tabBar->tabText(i) == embelDockTabText)
-                    tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));            }
-        }  //*/
-
-        // build filters when filter tab mouse clicked
-        if (event->type() == QEvent::MouseButtonPress) {
-            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            int i = tabBar->tabAt(e->pos());
-            if (tabBar->tabText(i) == filterDockTabText) {
-                filterDockTabMousePress();
-            }
-        }
-
-        // show tool tip for tab
-        if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
-            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            int i = tabBar->tabAt(e->pos());
-            if (i >= 0 && i != prevTabIndex) {
-                QString tip = "";
-                if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
-                if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
-                if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
-                if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
-                if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
-                prevTabIndex = i;
-                QToolTip::showText(e->globalPos(), tip);
-            }
-        }
-        if (event->type() == QEvent::Leave) {
-            prevTabIndex = -1;
-        }
-
-        /* experimenting to maybe replace text with an icon
-        if (event->type() == QEvent::ChildAdded) {
-            QChildEvent *e = static_cast<QChildEvent*>(event);
-            QTabBar *tabBar = static_cast<QTabBar*>(obj);
-            qDebug() << "event =" << event
-                << "obj =" << obj
-                << "e =" << e
-                << "e->child()->children() =" << e->child()->children();
-            for (int j = 0; j < tabBar->count(); j++) {
-                qDebug()
-                         << "tab" << j
-                         << "text" << tabBar->tabText(j)
-                    ;
-            }
-        }
-
-        if (event->type() == QEvent::ChildRemoved) {
-            qDebug() << event << obj;
-        }
-        //*/
-    }
-    } // end section
-
-    // THUMBDOCK SPLITTER
     {
-    /*
-    A splitter resize of top/bottom thumbDock is happening:
+        static int prevTabIndex = -1;
+        QString tabBarClassName = "QTabBar";
+        #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+        tabBarClassName = "QMainWindowTabBar";
+        #endif
+        if (QString(obj->metaObject()->className()) == tabBarClassName) {
 
-    Events are filtered from qApp here by an installEventFilter in the MW contructor to
-    monitor the splitter resize of the thumbdock when it is docked horizontally. In this
-    situation, as the vertical height of the thumbDock changes the size of the thumbnails is
-    modified to fit the thumbDock by calling thumbsFitTopOrBottom. The mouse events determine
-    when a mouseDrag operation is happening in combination with thumbDock resizing. The
-    thumbDock is referenced from the parent because thumbView is a friend class to MW.
-    */
-
-    if (event->type() == QEvent::MouseButtonPress) {
-        if (obj->objectName() == "FiltersViewport") return false;
-        QMouseEvent *e = static_cast<QMouseEvent *>(event);
-        if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
-        /*
-        qDebug() << "MW::eventFilter" << "MouseButtonPress"
-                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-                 << "isMouseDrag" << isMouseDrag
-                 << obj->objectName();
-                    //*/
-    }
-
-    if (event->type() == QEvent::MouseButtonRelease) {
-        QMouseEvent *e = static_cast<QMouseEvent *>(event);
-        if (e->button() == Qt::LeftButton) {
-            isLeftMouseBtnPressed = false;
-            isMouseDrag = false;
-//            if (thumbView->thumbSplitDrag) {
-//                thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
-//                thumbView->thumbSplitDrag = false;
-//            }
             /*
-            qDebug() << "MW::eventFilter" << "MouseButtonRelease"
+            // Set rich text label to tabified dock widgets tabbar tabs
+            if (event->type() == QEvent::ChildAdded) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                if (tabBarContainsDocks(tabBar)) {
+                    if (!dockTabBars.contains(tabBar)) {
+                        dockTabBars.append(tabBar);
+                        tabBarAssignRichText(tabBar);
+                        qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
+                    }
+                }
+            }  //*/
+
+            /*
+            // Set icon to tabified dock widgets tabbar tabs
+            if (event->type() == QEvent::ChildAdded) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                for (int i = 0; i < tabBar->count(); ++i) {
+                    if (tabBar->tabText(i) == embelDockTabText)
+                        tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));            }
+            }  //*/
+
+            // build filters when filter tab mouse clicked
+            if (event->type() == QEvent::MouseButtonPress) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                int i = tabBar->tabAt(e->pos());
+                if (tabBar->tabText(i) == filterDockTabText) {
+                    filterDockTabMousePress();
+                }
+            }
+
+            // show tool tip for tab
+            if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                int i = tabBar->tabAt(e->pos());
+                if (i >= 0 && i != prevTabIndex) {
+                    QString tip = "";
+                    if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
+                    if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
+                    if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
+                    if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
+                    if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                    prevTabIndex = i;
+                    QToolTip::showText(e->globalPos(), tip);
+                }
+            }
+            if (event->type() == QEvent::Leave) {
+                prevTabIndex = -1;
+            }
+
+            /* experimenting to maybe replace text with an icon
+            if (event->type() == QEvent::ChildAdded) {
+                QChildEvent *e = static_cast<QChildEvent*>(event);
+                QTabBar *tabBar = static_cast<QTabBar*>(obj);
+                qDebug() << "event =" << event
+                    << "obj =" << obj
+                    << "e =" << e
+                    << "e->child()->children() =" << e->child()->children();
+                for (int j = 0; j < tabBar->count(); j++) {
+                    qDebug()
+                             << "tab" << j
+                             << "text" << tabBar->tabText(j)
+                        ;
+                }
+            }
+
+            if (event->type() == QEvent::ChildRemoved) {
+                qDebug() << event << obj;
+            }
+            //*/
+        }
+    }
+
+    /* THUMBDOCK SPLITTER
+
+       A splitter resize of top/bottom thumbDock is happening:
+
+       Events are filtered from qApp here by an installEventFilter in the MW contructor to
+       monitor the splitter resize of the thumbdock when it is docked horizontally. In this
+       situation, as the vertical height of the thumbDock changes the size of the thumbnails is
+       modified to fit the thumbDock by calling thumbsFitTopOrBottom. The mouse events determine
+       when a mouseDrag operation is happening in combination with thumbDock resizing. The
+       thumbDock is referenced from the parent because thumbView is a friend class to MW.
+    */
+    {
+        if (event->type() == QEvent::MouseButtonPress) {
+            if (obj->objectName() == "FiltersViewport") return false;
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
+            /*
+            qDebug() << "MW::eventFilter" << "MouseButtonPress"
                      << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
                      << "isMouseDrag" << isMouseDrag
                      << obj->objectName();
                         //*/
         }
-    }
 
-    if (event->type() == QEvent::MouseMove /*&& obj->objectName() == "MWWindow"*/) {
-        if (isLeftMouseBtnPressed) isMouseDrag = true;
-        /*
-        qDebug() << "MW::eventFilter" << "MouseMove"
-                 << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-                 << "isMouseDrag" << isMouseDrag
-                 << obj->objectName();
-                 //*/
-    }
+        if (event->type() == QEvent::MouseButtonRelease) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                isLeftMouseBtnPressed = false;
+                isMouseDrag = false;
+                // if (thumbView->thumbSplitDrag) {
+                //    thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
+                //    thumbView->thumbSplitDrag = false;
+                // }
+                /*
+                qDebug() << "MW::eventFilter" << "MouseButtonRelease"
+                         << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                         << "isMouseDrag" << isMouseDrag
+                         << obj->objectName();
+                            //*/
+            }
+        }
 
-    if (event->type() == QEvent::MouseButtonDblClick) {
-        isMouseDrag = false;
-    }
-
-    // make thumbs fit the resized thumb dock
-    if (obj == thumbDock) {
-        if (event->type() == QEvent::Resize) {
+        if (event->type() == QEvent::MouseMove /*&& obj->objectName() == "MWWindow"*/) {
+            if (isLeftMouseBtnPressed) isMouseDrag = true;
             /*
-            qDebug() << "MW::eventFilter" << "thumbDock::Resize"
+            qDebug() << "MW::eventFilter" << "MouseMove"
                      << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
                      << "isMouseDrag" << isMouseDrag
                      << obj->objectName();
                      //*/
-            if (isMouseDrag) {
-                if (!thumbDock->isFloating()) {
-                    Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
-                    if (area == Qt::BottomDockWidgetArea
-                        || area == Qt::TopDockWidgetArea
-                        || !thumbView->isWrapping())
-                    {
-                        thumbView->thumbSplitDrag = true;
-                        thumbView->thumbsFitTopOrBottom();
+        }
+
+        if (event->type() == QEvent::MouseButtonDblClick) {
+            isMouseDrag = false;
+        }
+
+        // make thumbs fit the resized thumb dock
+        if (obj == thumbDock) {
+            if (event->type() == QEvent::Resize) {
+                /*
+                qDebug() << "MW::eventFilter" << "thumbDock::Resize"
+                         << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                         << "isMouseDrag" << isMouseDrag
+                         << obj->objectName();
+                         //*/
+                if (isMouseDrag) {
+                    if (!thumbDock->isFloating()) {
+                        Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
+                        if (area == Qt::BottomDockWidgetArea
+                            || area == Qt::TopDockWidgetArea
+                            || !thumbView->isWrapping())
+                        {
+                            thumbView->thumbSplitDrag = true;
+                            thumbView->thumbsFitTopOrBottom();
+                        }
                     }
                 }
             }
         }
     }
-    } // end section    
 
-    // CACHE PROGRESSBAR MOUSE CLICK
-    {
-    /*
-    Show cache preferences.
+    /* CACHE PROGRESSBAR OR CACHE STATUS MOUSE CLICK
+       Show cache preferences.
     */
-
-    if (event->type() == QEvent::MouseButtonPress) {
-        if (obj->objectName() == "StatusProgressLabel") {
-            preferences("CacheHeader");
-        }
-    }
-    } // end section
-
-    // VIDEOVIEW MOUSE MOVE SHOW CURSOR
     {
-    /*
-    QVideoWidget hides mouse movement - detect be monitoring paint and mouse pos.
-    */
-
-    if (obj->objectName() == "VideoView") {
-        if (event->type() == QEvent::Paint) {
-            QPoint diff = QCursor::pos() - videoView->mousePos;
-            if (qAbs(diff.x()) > 5 || qAbs(diff.y()) > 5) showMouseCursor();
-        }
-    }
-    } // end section
-
-    /* FiltersViewport
-    if (obj->objectName() == "FiltersViewport") {
         if (event->type() == QEvent::MouseButtonPress) {
-            QMouseEvent *e = static_cast<QMouseEvent *>(event);
-            if (e->button() == Qt::LeftButton) {
-                qDebug() << "MW::eventFilter" << obj << obj->objectName(); // << event;
-                QPoint p = e->pos();
-                QModelIndex idx = filters->indexAt(p);
-                bool isCtrlModifier = e->modifiers() & Qt::ControlModifier;
-                bool isLeftBtn = e->button() == Qt::LeftButton;
-                bool isHdr = idx.parent() == QModelIndex();
-                bool notIndentation = p.x() >= 10;
-                bool isValid = idx.isValid();
-                qDebug() << "Filters::eventFilter" << p
-                         << "isLeftBtn =" << isLeftBtn
-                         << "isHdr =" << isHdr
-                         << "notIndentation =" << notIndentation
-                         << "isValid =" << isValid
-                            ;
-                if (isHdr && isValid) {
-                    if (filters->isSolo && !isCtrlModifier) {
-                        if (filters->isExpanded(idx)) {
-                            bool otherHdrWasExpanded = filters->otherHdrExpanded(idx);
-                            filters->collapseAll();
-                            if (otherHdrWasExpanded) filters->expand(idx);
-                        }
-                        else {
-                            filters->collapseAll();
-                            filters->expand(idx);
-                        }
-                    }
-                    else {
-                        filters->isExpanded(idx) ? filters->collapse(idx) : filters->expand(idx);
-                    }
-                    return false;
-                }
+            if (obj->objectName() == "StatusProgressLabel" ||
+                obj->objectName() == "ImageCacheStatus")
+            {
+                preferences("CacheHeader");
             }
         }
     }
-    //*/
 
-    //return QWidget::eventFilter(obj, event);
+    /* VIDEOVIEW MOUSE MOVE SHOW CURSOR
+       QVideoWidget hides mouse movement - detect be monitoring paint and mouse pos.
+    */
+    {
+        if (obj->objectName() == "VideoView") {
+            if (event->type() == QEvent::Paint) {
+                QPoint diff = QCursor::pos() - videoView->mousePos;
+                if (qAbs(diff.x()) > 5 || qAbs(diff.y()) > 5) showMouseCursor();
+            }
+        }
+    }
+
     return false;
 }
 
@@ -4158,13 +4032,16 @@ void MW::escapeFullScreen()
 
 void MW::toggleFullScreen()
 {
+/*
+    Toggles between the FullScreen and NormalScreen states.  When in fullscreen, all docks
+    except those defined in settings are hidden. A snapshot of the current workspace state
+    is taken to be re-established when showNormal.
+*/
     if (G::isLogger) G::log("MW::toggleFullScreen");
     if (fullScreenAction->isChecked())
     {
         reportWorkspace(ws);
         snapshotWorkspace(ws);
-        // prevNormalWindow = geometry();
-        qDebug() << "MW::toggleFullScreen  FULL";// << prevNormalWindow;
         showFullScreen();
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
@@ -4180,20 +4057,13 @@ void MW::toggleFullScreen()
         embelDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
-        //menuBarVisibleAction->setChecked(false);
-        //setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
     else
     {
-        qDebug() << "MW::toggleFullScreen NORMAL";
-        // if (ws.isMaximised) showMaximized();
-        // else showNormal();
         showNormal();
-        // reportWorkspace(ws, "MW::toggleFullScreen off before invokeWorkspace");
-        bool restore = false;
-        invokeWorkspace(ws, restore);
+        invokeWorkspace(ws);
     }
 }
 

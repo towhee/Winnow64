@@ -18,7 +18,7 @@ bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
 bool showAllEvents = false;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
-QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
+QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 // Errors
 QStringList issueList;
 
@@ -166,11 +166,6 @@ QElapsedTimer t;
 bool isTimer;
 bool isTest;
 
-//    bool empty()
-//    {
-//        return currRootFolder.isEmpty();
-//    }
-
 QString s(QVariant x)
 // helper function to convert variable values to a string for reporting
 {
@@ -212,8 +207,6 @@ int wait(int ms)
     return duration;
 }
 
-Logger logger;
-
 void track(QString functionName, QString comment, bool hideTime)
 {
     qint64 nsecsElapsed = t.nsecsElapsed();
@@ -226,12 +219,7 @@ void track(QString functionName, QString comment, bool hideTime)
     t.restart();
 }
 
-// QStringList doNotLog =
-// {
-//     "ImageCache",
-//     "ImageDecoder",
-//     "MetadataCache"
-// };
+Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
@@ -266,35 +254,8 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
     t.restart();
 }
 
-ErrorLog errorLog;
 
-void errlog(QString err, QString functionName, QString fPath)
-{
-    // if (!isErrorLogger) return;
-    // if (G::errlogFile.open(QIODevice::WriteOnly  | QIODevice::Append)) {
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
-        QString s = "Src: " + functionName + " ";
-        // QString f = functionName.leftJustified(40, '.') + " ";
-        QString p = fPath;
-        QString e = err + " ";
-        // QString e = err.leftJustified(75, '.') + " ";
-        QString msg = d + s + e; // + "\n";
-//            if (errlogFile.isOpen()) {
-//                quint32 eof = errlogFile.size();
-//                errlogFile.seek(eof);
-//                errlogFile.write(msg.toUtf8());
-//                errlogFile.flush();
-//            }
-        // old version
-        // QTextStream stream(&G::errlogFile);
-        // stream << msg;
-        // G::errlogFile.close();
-
-        // new version
-        qDebug() << "G::errLog" << msg;
-        // errorLog.log(msg);
-    // }
-}
+IssueLog issueLog(popUp);
 
 static QObject *modelInstance = nullptr;
 void setDM(QObject *dm)
@@ -308,10 +269,17 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
     QMutexLocker locker(&issueListMutex);
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
-    if (issue->TypeDesc.contains(type))
+    if (issue->TypeDesc.contains(type)) {
+        if (type == "Comment") return;
         issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
+        issue->msg = msg;
+    }
+    else {
+        issue->type = issue->Type::Undefined;
+        issue->msg = type;
+    }
+
     issue->src = src;
-    issue->msg = msg;
     issue->sfRow = sfRow;
     issue->fPath = fPath;
     issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
@@ -345,35 +313,9 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
     issueList.append(issue->toString());
 
     // write to issue log (to do)
+    issueLog.log(issue->toString());  // rename to issueLog??
     if (isIssueLogger) {
-        // errorLog.log(msg);  // rename to issueLog??
     }
-}
-
-void error(QString functionName, QString msg, QString fPath)
-{
-    if (modelInstance) {
-        QMetaObject::invokeMethod(modelInstance, "errGeneral",
-                                  Q_ARG(QString, functionName),
-                                  Q_ARG(QString, msg),
-                                  Q_ARG(QString, fPath)
-                                  );
-    }
-
-    Issue issue;
-}
-
-void error(QString functionName, QString msg, int sfRow)
-{
-    if (modelInstance) {
-        QMetaObject::invokeMethod(modelInstance, "errDM",
-                                  Q_ARG(QString, functionName),
-                                  Q_ARG(QString, msg),
-                                  Q_ARG(int, sfRow)
-                                  );
-    }
-    // errorLog.log(msg);
-
 }
 
 bool instanceClash(int instance, QString src)

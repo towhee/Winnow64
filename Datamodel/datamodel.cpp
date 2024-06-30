@@ -1002,7 +1002,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, fun, row);
+        G::issue("Comment", errMsg, fun, row);
         return true;
     }
     if (G::stop) return false;
@@ -1061,7 +1061,7 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, fun, row);
+        G::issue("Comment", errMsg, fun, row);
         return true;
     }
     if (G::stop) return false;
@@ -1142,8 +1142,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
         if (G::showIssueInConsole)
-        errMsg = "Instance clash.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::addMetadataForItem", m.row);        return false;
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::addMetadataForItem", m.row);        return false;
     }
 
     int row = m.row;
@@ -1492,8 +1492,8 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                  << currentFolderPath;
     }
     if (instance != this->instance) {
-        errMsg = "Instance clash.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setValuePath", dmIdx.row());
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row());
         return;
     }
 
@@ -1526,8 +1526,8 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
              << currentFolderPath;
     //*/
     if (instance != this->instance) {
-        errMsg = "Instance clash.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setValueSF", sfIdx.row());
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setValueSF", sfIdx.row());
         return ;
     }
     if (!sfIdx.isValid()) {
@@ -1544,7 +1544,7 @@ void DataModel::setCurrent(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, "DataModel::setCurrent", sfIdx.row());
+        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
         return;
     }
 
@@ -1579,7 +1579,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     QModelIndex dmIdx = index(fPathRow[fPath], col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
+        G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
     if (G::stop) return;
@@ -1624,7 +1624,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     }
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, "DataModel::setIconFromVideoFrame", dmIdx.row());
+        G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmIdx.row());
         return;
     }
     //qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
@@ -1685,8 +1685,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
                  << currentFolderPath;
     }
     if (fromInstance != instance) {
-        errMsg = "Instance clash.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         return;
     }
     if (loadingModel) {
@@ -1725,7 +1725,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Warning", errMsg, "DataModel::iconLoaded", sfRow);
+        G::issue("Comment", errMsg, "DataModel::iconLoaded", sfRow);
         return true;
     }
     if (sfRow >= sf->rowCount()) return true;
@@ -2392,35 +2392,6 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
         if (showThumbNailSymbolHelp) tip += thumbnailHelp;
         setData(dmIdx, tip, Qt::ToolTipRole);
     }
-}
-
-QString DataModel::diagnosticsErrors()
-{
-    if (G::isLogger) G::log("DataModel::diagnosticsErrors");
-    if (isDebug) qDebug() << "DataModel::diagnosticsErrors" << "instance =" << instance << currentFolderPath;
-    QString reportString;
-    QTextStream rpt;
-    rpt.setString(&reportString);
-    rpt << Utilities::centeredRptHdr('=', "Error Listing");
-    rpt << "\n\n";
-    // if (G::err.isEmpty()) {
-    //     rpt << "No errors" << "\n";
-    //     rpt << "\n\n" ;
-    //     return reportString;
-    // }
-    // QMapIterator<QString,QStringList> item(G::err);
-    // while (item.hasNext()) {
-    //     item.next();
-    //     if (item.value().size() == 0) continue;
-    //     // key = file path
-    //     rpt << item.key() + "\n";
-    //     // value = QStringList of errors for the key
-    //     for (int error = 0; error < item.value().size(); ++error) {
-    //         rpt << "  " << item.value().at(error) + "\n";
-    //     }
-    // }
-    rpt << "\n\n" ;
-    return reportString;
 }
 
 QString DataModel::diagnostics()

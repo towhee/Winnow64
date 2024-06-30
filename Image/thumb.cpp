@@ -290,7 +290,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
-        G::issue("Warning", msg, "Thumb::loadThumb", dmRow, fPath);
+        G::issue("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
         return false;
     }
     this->instance = instance;

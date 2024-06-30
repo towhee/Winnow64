@@ -213,9 +213,6 @@ public:
         quint8 fullScreen;
     } recover;
 
-    // location to return to after full screen, in case diff monitor due to workspce jumping
-    QRect prevNormalWindow;
-
     // full screen behavior
     struct FullScreenDocks {
         bool isFolders;
@@ -227,7 +224,6 @@ public:
     } fullScreenDocks;
 
     bool wasFullSpaceOnDiffScreen = false;
-    bool inVokeWorkSpaceWrongScreen = false;
 
     // persistant data
 
@@ -382,7 +378,6 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
-    void onWindowStateChanged(Qt::WindowState state);
     void changeEvent(QEvent *event) override;
 
 signals:
@@ -448,7 +443,7 @@ public slots:
     void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
     void invokeCurrentWorkspace();
     void invokeWorkspaceFromAction(QAction *workAction);
-    void invokeWorkspace(const WorkspaceData &w, bool restore = true);
+    void invokeWorkspace(const WorkspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
     void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
     void snapshotWorkspace(WorkspaceData &wsd);

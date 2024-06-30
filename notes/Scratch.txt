@@ -1,121 +1,31 @@
-QString msg = "";
-G::issue("Warning", msg, "Class::function", n.key, fPath);
-
-QString msg = "";
-G::issue("Error", msg, "Class::function", n.key, fPath);
-
-I have a c++ subclass of QMainWindow called MW.
-
-// declared in header
-QByteArray geo;
-QByteArray sta;
-
-void MW::toggleFullScreen()
-{
-if (!isFullScreen())
-    {
-        geo = saveGeometry();
-        sta = saveState();
-        showFullScreen();
-    }
-    else {
-        restoreGeometry(geo);
-        restoreState(sta);
-    }
-}
-
-This works unless the app was maximized, or was on another screen before being set to full screen.  I want to change work spaces, where each workspace may have different geometry, state and monitor.  How can I do that?
-
-
-MW::invokeWorkspace  name = "Full screen on center monitor" restore = true
-MW::changeEvent WindowFullScreen wasFullSpace = true
-2024-06-26 08:21:15.655 Winnow[48687:4085650] not in fullscreen state
-MW::changeEvent WindowFullScreen wasFullSpace = true
-MW::invokeWorkspace  name = "Filters and metadata to the right" restore = true
-MW::eventFilter event: QResizeEvent(3840, 2132) 	 event->type: QEvent::Resize 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QResizeEvent(3840, 2132) 	 event->type: QEvent::Resize 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QChildEvent(ChildAdded, QAbstractAnimation(0x600003d6bd90)) 	 event->type: QEvent::ChildAdded 	 obj: QMainWindowTabBar(0x600002498b00) 	 obj->objectName: "" object->metaObject()->className: QMainWindowTabBar
-MW::eventFilter event: QChildEvent(ChildAdded, QAbstractAnimation(0x600003d6bdd0)) 	 event->type: QEvent::ChildAdded 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QResizeEvent(3840, 2132, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QResizeEvent(3840, 2132, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: QWidget(0x6000031e5290) 	 obj->objectName: "" object->metaObject()->className: QWidget
-MW::eventFilter event: QResizeEvent(3840, 2132, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: QWidget(0x6000031e5290) 	 obj->objectName: "" object->metaObject()->className: QWidget
-MW::eventFilter event: QEvent(CursorChange, 0x16d00ce10) 	 event->type: QEvent::CursorChange 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QMoveEvent(2515,1661, non-spontaneous) 	 event->type: QEvent::Move 	 obj: ClassificationLabel(0x600000a09500) 	 obj->objectName: "" object->metaObject()->className: ClassificationLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c9b0) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c920) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(StyleChange, 0x16d00cc88) 	 event->type: QEvent::StyleChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(544, 64, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(554, 74, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QMoveEvent(1330,476, non-spontaneous) 	 event->type: QEvent::Move 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(ToolTipChange, 0x16d00cac0) 	 event->type: QEvent::ToolTipChange 	 obj: QLabel(0x600003032d60) 	 obj->objectName: "" object->metaObject()->className: QLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00caa0) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00ca10) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(StyleChange, 0x16d00cd78) 	 event->type: QEvent::StyleChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(544, 64, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(554, 74, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QMoveEvent(0,28) 	 event->type: QEvent::Move 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QMoveEvent(0,28) 	 event->type: QEvent::Move 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QResizeEvent(1503, 983) 	 event->type: QEvent::Resize 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QResizeEvent(1503, 983) 	 event->type: QEvent::Resize 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QChildEvent(ChildAdded, QAbstractAnimation(0x600003d6b7f0)) 	 event->type: QEvent::ChildAdded 	 obj: QMainWindowTabBar(0x600002498b00) 	 obj->objectName: "" object->metaObject()->className: QMainWindowTabBar
-MW::eventFilter event: QChildEvent(ChildAdded, QAbstractAnimation(0x600003d6b810)) 	 event->type: QEvent::ChildAdded 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QResizeEvent(1503, 983, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QResizeEvent(1503, 983, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: QWidget(0x6000031e5290) 	 obj->objectName: "" object->metaObject()->className: QWidget
-MW::eventFilter event: QResizeEvent(1503, 983, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: QWidget(0x6000031e5290) 	 obj->objectName: "" object->metaObject()->className: QWidget
-MW::eventFilter event: QEvent(CursorChange, 0x16d00cd40) 	 event->type: QEvent::CursorChange 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QMoveEvent(1236,976, non-spontaneous) 	 event->type: QEvent::Move 	 obj: ClassificationLabel(0x600000a09500) 	 obj->objectName: "" object->metaObject()->className: ClassificationLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c8e0) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c850) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(StyleChange, 0x16d00cbb8) 	 event->type: QEvent::StyleChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(544, 64, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(554, 74, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QMoveEvent(270,10, non-spontaneous) 	 event->type: QEvent::Move 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(ToolTipChange, 0x16d00c9f0) 	 event->type: QEvent::ToolTipChange 	 obj: QLabel(0x600003032d60) 	 obj->objectName: "" object->metaObject()->className: QLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c9d0) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(PaletteChange, 0x16d00c940) 	 event->type: QEvent::PaletteChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QEvent(StyleChange, 0x16d00cca8) 	 event->type: QEvent::StyleChange 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(544, 64, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QResizeEvent(554, 74, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: DropShadowLabel(0x6000031e5560) 	 obj->objectName: "" object->metaObject()->className: DropShadowLabel
-MW::eventFilter event: QMoveEvent(0,0, non-spontaneous) 	 event->type: QEvent::Move 	 obj: QMenuBar(0x600003049440) 	 obj->objectName: "" object->metaObject()->className: QMenuBar
-MW::eventFilter event: QResizeEvent(1503, 0, non-spontaneous) 	 event->type: QEvent::Resize 	 obj: QMenuBar(0x600003049440) 	 obj->objectName: "" object->metaObject()->className: QMenuBar
-MW::eventFilter event: QMoveEvent(1274,686) 	 event->type: QEvent::Move 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QMoveEvent(1274,686) 	 event->type: QEvent::Move 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QWindowStateChangeEvent(WindowStateChange, 0x16d0102c8) 	 event->type: QEvent::WindowStateChange 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QEvent(ShowToParent, 0x16d00feb0) 	 event->type: QEvent::ShowToParent 	 obj: QSizeGrip(0x600003031a10) 	 obj->objectName: "" object->metaObject()->className: QSizeGrip
-MW::changeEvent WindowNoState wasFullSpace = true
-MW::changeEvent  prevNormalWindow was empty, no action req'd
-MW::eventFilter event: QEvent(MetaCall, 0x6000013e9700) 	 event->type: QEvent::MetaCall 	 obj: QAnimationTimer(0x600001037880) 	 obj->objectName: "" object->metaObject()->className: QAnimationTimer
-MW::eventFilter event: QEvent(DeferredDelete, 0x600003998d20) 	 event->type: QEvent::DeferredDelete 	 obj: QPropertyAnimation(0x600003d6bd90) 	 obj->objectName: "" object->metaObject()->className: QPropertyAnimation
-MW::eventFilter event: QChildEvent(ChildRemoved, QObject(0x600003d6bd90)) 	 event->type: QEvent::ChildRemoved 	 obj: QMainWindowTabBar(0x600002498b00) 	 obj->objectName: "" object->metaObject()->className: QMainWindowTabBar
-MW::eventFilter event: QEvent(LayoutRequest, 0x600003d6a500) 	 event->type: QEvent::LayoutRequest 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QEvent(DeferredDelete, 0x600003998e20) 	 event->type: QEvent::DeferredDelete 	 obj: QPropertyAnimation(0x600003d6bdd0) 	 obj->objectName: "" object->metaObject()->className: QPropertyAnimation
-MW::eventFilter event: QChildEvent(ChildRemoved, QObject(0x600003d6bdd0)) 	 event->type: QEvent::ChildRemoved 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QEvent(DeferredDelete, 0x600003998240) 	 event->type: QEvent::DeferredDelete 	 obj: QPropertyAnimation(0x600003d6b7f0) 	 obj->objectName: "" object->metaObject()->className: QPropertyAnimation
-MW::eventFilter event: QChildEvent(ChildRemoved, QObject(0x600003d6b7f0)) 	 event->type: QEvent::ChildRemoved 	 obj: QMainWindowTabBar(0x600002498b00) 	 obj->objectName: "" object->metaObject()->className: QMainWindowTabBar
-MW::eventFilter event: QEvent(MetaCall, 0x6000013e9580) 	 event->type: QEvent::MetaCall 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QEvent(MetaCall, 0x6000013e9500) 	 event->type: QEvent::MetaCall 	 obj: ImageView(0x142076ba0, name = "ImageView") 	 obj->objectName: "ImageView" object->metaObject()->className: ImageView
-MW::eventFilter event: QEvent(DeferredDelete, 0x600003998b20) 	 event->type: QEvent::DeferredDelete 	 obj: QPropertyAnimation(0x600003d6b810) 	 obj->objectName: "" object->metaObject()->className: QPropertyAnimation
-MW::eventFilter event: QChildEvent(ChildRemoved, QObject(0x600003d6b810)) 	 event->type: QEvent::ChildRemoved 	 obj: QWidget(0x600003164f30, name = "centralWidget") 	 obj->objectName: "centralWidget" object->metaObject()->className: QWidget
-MW::eventFilter event: QExposeEvent() 	 event->type: QEvent::Expose 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_0, ControlModifier, text="0") 	 event->type: QEvent::KeyRelease 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_0, ControlModifier, text="0") 	 event->type: QEvent::KeyRelease 	 obj: IconView(0x11218ddd0, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_0, ControlModifier, text="0") 	 event->type: QEvent::KeyRelease 	 obj: DockWidget(0x600001cfa990, name = "ThumbDock") 	 obj->objectName: "ThumbDock" object->metaObject()->className: DockWidget
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_0, ControlModifier, text="0") 	 event->type: QEvent::KeyRelease 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_Control) 	 event->type: QEvent::KeyRelease 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_Control) 	 event->type: QEvent::KeyRelease 	 obj: IconView(0x11218ddd0, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_Control) 	 event->type: QEvent::KeyRelease 	 obj: DockWidget(0x600001cfa990, name = "ThumbDock") 	 obj->objectName: "ThumbDock" object->metaObject()->className: DockWidget
-MW::eventFilter event: QKeyEvent(KeyRelease, Key_Control) 	 event->type: QEvent::KeyRelease 	 obj: MW(0x16d0121e8, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QWindowStateChangeEvent(WindowStateChange, 0x16d00dbc8) 	 event->type: QEvent::WindowStateChange 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-
-MW::eventFilter event: QExposeEvent() 	 event->type: QEvent::Expose 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-
-MW::eventFilter event: QExposeEvent() 	 event->type: QEvent::Expose 	 obj: QWidgetWindow(0x600001a03420, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow	 obj: QSizeGrip(0x600002902100) 	 obj->objectName: "" object->metaObject()->className: QSizeGrip
-
-
-MW::eventFilter event: QEvent(LayoutRequest, 0x600000e4f1a0) 	 event->type: QEvent::LayoutRequest 	 obj: QStatusBar(0x60000030db60, name = "WinnowStatusBar") 	 obj->objectName: "WinnowStatusBar" object->metaObject()->className: QStatusBar
+2024-06-15 04:49:26 New Session.
+2024-06-16 04:49:26 New Session.
+2024-06-20 04:49:26 New Session.
+2024-06-29 04:49:26 New Session.
+2024-06-29 04:49:26 New Session.
+2024-06-29 04:49:26 New Session.
+2024-06-29 04:49:26 New Session.
+2024-06-29 05:45:43 New Session.
+2024-06-29 05:46:10 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:        2   Obj: /Users/roryhill/Pictures/Test_Compare_To/2020-01-09_0001.jpg
+2024-06-29 05:46:10 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:        4   Obj: /Users/roryhill/Pictures/Test_Compare_To/2021-09-25_1050.arw
+2024-06-29 05:46:10 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:        5   Obj: /Users/roryhill/Pictures/Test_Compare_To/2021-09-25_1062.arw
+2024-06-29 05:46:10 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:        3   Obj: /Users/roryhill/Pictures/Test_Compare_To/2021-09-25_1049.arw
+2024-06-29 05:46:10 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:        1   Obj: /Users/roryhill/Pictures/Test_Compare_To/2007-03-13_0008.jpg
+2024-06-29 05:46:15 Warning: Box CNCV is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box CCTP is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box CTBO is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box free is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box mvhd is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box type moov is unknown                                    Src: Heic::getHeifBox                   Row:       36   Obj:
+2024-06-29 05:46:15 Warning: Unable to parse metadata.                                   Src: Metadata::readMetadata             Row:       36   Obj: /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
+2024-06-29 05:46:15 Warning: Metadata not loaded.                                        Src: Metadata::loadImageMetadata        Row:       36   Obj: /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
+2024-06-29 05:46:15 Warning: Box mdhd is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box free is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box free is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Box free is unknown.                                        Src: CanonCR3::getHeifBox               Row:        8   Obj: /Users/roryhill/Pictures/_ThumbTest/CR3.CR3
+2024-06-29 05:46:15 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:       17   Obj: /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
+2024-06-29 05:46:18 Warning: Could not read thumb using QImage::load.                    Src: Thumb::loadFromEntireFile          Row:        0   Obj: /Users/roryhill/Pictures/_ThumbTest/ARW A7R2.arw
+2024-06-29 05:46:18 Warning: Could not read thumb using QImage::load.                    Src: Thumb::loadFromEntireFile          Row:        0   Obj: /Users/roryhill/Pictures/_ThumbTest/ARW A7R2.arw
+2024-06-29 05:46:18 Warning: Failed to load thumbnail.                                   Src: Reader::readIcon                   Row:        0   Obj: /Users/roryhill/Pictures/_ThumbTest/ARW A7R2.arw
+2024-06-29 05:46:18 Warning: Failed to load thumbnail.                                   Src: Reader::readIcon                   Row:        0   Obj: /Users/roryhill/Pictures/_ThumbTest/ARW A7R2.arw
+2024-06-29 05:54:48 Warning: Failed to load metadata.                                    Src: Reader::readMetadata               Row:   17   Obj: /Users/roryhill/Pictures/_ThumbTest/Heic1.heic

@@ -13,10 +13,13 @@ public:
     ~Issue() override;
 
     enum Type {
+        Undefined,
         Warning,
-        Error
+        Error,
+        Comment,
+        General
     };
-    QStringList TypeDesc {"Warning", "Error"};
+    QStringList TypeDesc {"Undefined", "Warning", "Error", "Comment", "General"};
 
     Type type;
     // Category cat;

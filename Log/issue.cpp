@@ -5,6 +5,11 @@ Issue::~Issue() {}
 
 QString Issue::toString(bool isOneLine, int newLineOffset)
 {
+    QString t_delim = ": ";
+    if (type == Type::Undefined) t_delim = "";     // Undefined type = custom msg
+    QString s_src = "Src: ";
+    if (src == "") s_src = "";
+
     QString d = timeStamp;                          // time stamp "yyyy-MM-dd hh:mm:ss "
     QString t = TypeDesc.at(type);                  // issue type
     QString m = msg;                                // issue message
@@ -15,13 +20,17 @@ QString Issue::toString(bool isOneLine, int newLineOffset)
     QString o = " ";                                // offset datetime string width
     o = o.repeated(newLineOffset);
     if (sfRow < 0) r = "n/a";
+    if (type == Type::Undefined) {
+        t = m;
+        m = "";
+    }
 
     if (isOneLine) {
         d = timeStamp.leftJustified(20);
-        t = (t + ": ").leftJustified(9);
+        t = (t + t_delim).leftJustified(9);
         m = m.leftJustified(60);
-        s = ("Src: " + s).leftJustified(40);
-        r = "Row: " + r.rightJustified(8) + " ";
+        s = (s_src + s).leftJustified(40);
+        r = "Row: " + r.rightJustified(5) + " ";
         p = "  Obj: " + fPath;
         if (sfRow < 0 && fPath == "")
             return d + t + m + s;
@@ -30,7 +39,7 @@ QString Issue::toString(bool isOneLine, int newLineOffset)
     }
     else {
         d = timeStamp;
-        t = (t + ": ").leftJustified(9);
+        t = (t + t_delim).leftJustified(9);
         m = m + "   ";
         s = "Src:     " + s  + " ";
         r = "Row:     " + r + " ";

@@ -867,7 +867,7 @@ bool Metadata::parseSidecar()
     // extract metadata from sidecar xmp
     if (p.instance != G::dmInstance) {
         QString msg = "Instance clash.";
-        G::issue("Warning", msg, "Metadata::parseSidecar", m.row, sidecarPath);
+        G::issue("Comment", msg, "Metadata::parseSidecar", m.row, sidecarPath);
     }
 
     QString s;
@@ -1137,7 +1137,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // check instance up-to-date
     if (instance != G::dmInstance && !isRemote) {
         QString msg = "Instance clash.";
-        G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row);
+        G::issue("Comment", msg, "Metadata::loadImageMetadata", m.row);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
         return false;
     }

@@ -69,7 +69,6 @@ public:
     QModelIndex modelIndexFromProxyIndex(QModelIndex sfIdx);
     int nearestProxyRowFromDmRow(int dmRow);
     QString diagnostics();
-    QString diagnosticsErrors();
     QString diagnosticsForCurrentRow();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
