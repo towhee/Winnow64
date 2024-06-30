@@ -1,6 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include "popup.h"
 #include <QtWidgets>
 #include <QObject>
 #include <iostream>
@@ -36,35 +37,39 @@ private:
 // End Logger temp until integrate
 
 
-// Thread-safe queue for error messages
-class ErrorQueue {
+// Thread-safe queue for issue messages
+class IssueQueue {
 public:
-    void enqueue(const QString& error);
+    void enqueue(const QString& msg);
     QString dequeue();
     bool isEmpty() const;
 
 private:
-    std::queue<QString> errors;
+    std::queue<QString> messages;
     mutable QMutex mutex;
 };
 
-// Error logging thread
-class ErrorLog : public QThread
+// Issue logging thread
+class IssueLog : public QThread
 {
     Q_OBJECT
 public:
-    ErrorLog(QObject* parent = nullptr);
-    ~ErrorLog() override;
+    IssueLog(PopUp *popUp, QObject* parent = nullptr);
+    ~IssueLog() override;
 
     void log(const QString& msg);
+    QString logText();
     void stop();
 
 protected:
     void run() override;
 
 private:
-    ErrorQueue errorQueue;
-    QFile file;
+    bool open();
+    void trim(int daysToKeep);
+    IssueQueue issueQueue;
+    QString issueLogPath;
+    QFile issueLogFile;
     QTextStream out;
 };
 

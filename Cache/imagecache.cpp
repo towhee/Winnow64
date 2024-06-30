@@ -212,7 +212,7 @@ void ImageCache::updateTargets()
 */
     log("updateTargets");
 
-    isCacheItemListComplete = cacheItemListComplete();
+isCacheItemListComplete = cacheItemListBuildCompleted();
     warnings.clear();
 
     if (debugCaching)
@@ -239,14 +239,21 @@ void ImageCache::resetCachingFlags()
 {
 /*
     Rapidly updating the cache can result in aborted decoder threads that leave
-    isCaching and cached states orphaned.  Reset these in the target range.
+    isCaching and cached states orphaned.  Reset orphans to false in the target
+    range.
 */
     log("resetAbortedCaching");
+
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
         if (abort) break;
         if (i >= icd->cacheItemList.size()) break;
+        // imageCacheList build not finished
         if (!icd->cacheItemList.at(i).isUpdated) break;
-        if (icd->cacheItemList.at(i).isCaching) icd->cacheItemList[i].isCaching = false;
+        // isCaching
+        if (icd->cacheItemList.at(i).isCaching) {
+            icd->cacheItemList[i].isCaching = false;
+        }
+        // isCached and not in imCache
         if (icd->cacheItemList.at(i).isCached &&
             !icd->imCache.contains(icd->cacheItemList.at(i).fPath))
         {
@@ -255,7 +262,7 @@ void ImageCache::resetCachingFlags()
     }
 }
 
-bool ImageCache::cacheItemListComplete()
+bool ImageCache::cacheItemListBuildCompleted()
 {
     log("cacheItemListComplete");
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
@@ -747,9 +754,10 @@ bool ImageCache::cacheUpToDate()
     isCacheUpToDate = true;
     for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
         if (i >= icd->cacheItemList.count()) break;
+        // skip videos
         if (icd->cacheItemList.at(i).isVideo) continue;
 
-        // check if image was passed over while rapidly traversing the folder
+        // isCached is true but no associated decoder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).decoderId == -1) {
             /*
             log("cacheUpToDate passover",
@@ -1369,7 +1377,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
     if (instance != dm->instance) {
         if (debugCaching) {
             QString msg = "Instance clash.";
-            G::issue("Warning", msg, "ImageCache::addCacheItemImageMetadata", m.row, m.fPath);
+            G::issue("Comment", msg, "ImageCache::addCacheItemImageMetadata", m.row, m.fPath);
         }
         return;
     }
@@ -1754,8 +1762,8 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     if (G::dmInstance != instance) {
         if (debugCaching) {
-            QString msg = "Instance clash.  Src: " + src;
-            G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
+            QString msg = "Instance clash from " + src;
+            G::issue("Comment", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
         }
         return;
     }
@@ -2105,7 +2113,9 @@ void ImageCache::fillCache(int id)
             }
             isFinalCheckCompleted = true;
             resetCachingFlags();
-            launchDecoders("FinalCheck");
+            if (!cacheUpToDate()) {
+                launchDecoders("FinalCheck");
+            }
             return;
         }
 

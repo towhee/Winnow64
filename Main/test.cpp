@@ -184,29 +184,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // G::showAllEvents = true;
-    G::showAllEvents = false; return;
-    qDebug() << "MW::test  showNormal";
-    showNormal();
-    G::showAllEvents = true;
-    G::wait(2000);
-    G::showAllEvents = false;
-    return;
+    qDebug() << G::isIssueLogger;
 
-    reportWorkspaces(); return;
-
-    RecoverGeometry r;
-    recoverGeometry(ws.geometry, r);
-    // return;
-
-    // settings->remove("Workspaces"); return;
-    qDebug() << "Test"
-        << "geometry() =" << geometry()
-        << "prevNormalWindow =" << prevNormalWindow
-        << "prevNormalWindow.isEmpty() =" << prevNormalWindow.isEmpty()
-        << "isFullScreen =" << isFullScreen()
-        ;
-    // move(prevNormalWindow.topLeft());
-    return;
 }
 /*
    Performance

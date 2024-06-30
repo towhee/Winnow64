@@ -317,6 +317,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "errorLog") {
         G::isLogger = v.toBool();
         G::isErrorLogger = v.toBool();
+        G::isIssueLogger = v.toBool();
         mw->settings->setValue("isErrorLogger", v.toBool());
     }
 
@@ -570,7 +571,7 @@ void Preferences::addItems()
     i.key = "isErrorLogger";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-//    addItem(i);
+    addItem(i);
 
     // General header  > File modification header
 //    i.name = "FileModificationHeader";

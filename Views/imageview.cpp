@@ -118,6 +118,7 @@ ImageView::ImageView(QWidget *parent,
 
     // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
+    mouseMovementElapsedTimer = new QElapsedTimer;
 //    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
     // mouse wheel is spinning
@@ -705,7 +706,10 @@ void ImageView::zoomToggle()
 */
     if (G::isLogger) G::log("ImageView::zoomToggle");
 
-    if (isFit && zoomFit >= toggleZoom) return;
+    if (isFit && zoomFit >= toggleZoom) {
+        G::popUp->showPopup("Already at !00%", 1000);
+        return;
+    }
 
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
@@ -1113,9 +1117,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     // isLeftMouseBtnPressed = true;
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
+        isMouseDrag = false;
         mousePressPt.setX(event->x());
         mousePressPt.setY(event->y());
+        mouseDragPt.setX(event->x());
+        mouseDragPt.setY(event->y());
         QGraphicsView::mousePressEvent(event);
+        mouseMovementElapsedTimer->restart();
         return;
     }
 
@@ -1168,15 +1176,28 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     if (isLeftMouseBtnPressed) {
         if (G::isSlideShow) emit killSlideshow();
-        isMouseDrag = true;
         if (isScrollable) {
             setCursor(Qt::ClosedHandCursor);
+            int oldHSB = horizontalScrollBar()->value();
+            int oldVSB = verticalScrollBar()->value();
             horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
-                                           (event->x() - mousePressPt.x()));
+                                           (event->x() - mouseDragPt.x()));
             verticalScrollBar()->setValue(verticalScrollBar()->value() -
-                                          (event->y() - mousePressPt.y()));
-            mousePressPt.setX(event->x());
-            mousePressPt.setY(event->y());
+                                          (event->y() - mouseDragPt.y()));
+            if (!isMouseDrag) {
+                int hDelta = horizontalScrollBar()->value() - oldHSB;
+                int vDelta = verticalScrollBar()->value() - oldVSB;
+                if (qAbs(hDelta) > 0) isMouseDrag = true;
+                if (qAbs(vDelta) > 0) isMouseDrag = true;
+            }
+            /*
+            qDebug() << "ImageView::mouseMoveEvent"
+                     << "hDelta =" << hDelta
+                     << "vDelta =" << vDelta
+                     << "isMouseDrag =" << isMouseDrag
+                ; //*/
+            mouseDragPt.setX(event->x());
+            mouseDragPt.setY(event->y());
         }
     }
     else {
@@ -1230,26 +1251,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     isLeftMouseBtnPressed = false;
 
-    /*
-    qDebug() << "ImageView::mouseReleaseEvent"
-             << "isFit =" << isFit
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "isScrollable =" << isScrollable
-             << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-             << "zoomToggleOnRelease =" << zoomToggleOnRelease
-             << "isMouseDrag =" << isMouseDrag
-        ; //*/
-
     if (isScrollable) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
 
-    // if mouse was dragging then do not toggle zoom
-    if (isMouseDrag) {
-        isMouseDrag = false;
-        // return;
-    }
-    else {
+    if (!isMouseDrag) {
         zoomToggle();
     }
 

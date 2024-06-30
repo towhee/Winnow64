@@ -363,7 +363,7 @@ void ImageDecoder::run()
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
-        G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
+        G::issue("Comment", errMsg, "ImageDecoder::run", cacheKey, fPath);
         emit done(threadId);
         return;
     }

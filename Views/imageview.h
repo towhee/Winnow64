@@ -159,7 +159,9 @@ private:
 
     InfoString *infoString;
 
-    QTimer *mouseMovementTimer;
+    QTimer *mouseMovementTimer;                     // control cursor during slideshow
+    QElapsedTimer *mouseMovementElapsedTimer;       // detect valid mouse drag
+    int mouseMovementPixels;                        // detect valid mouse drag
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
 
@@ -200,7 +202,8 @@ private:
     } scrl;
 
     QPointF scrollPct;          // current position
-    QPoint mousePressPt;        // for mouse scrolling
+    QPoint mousePressPt;        // for mouse scrolling and mouse drag
+    QPoint mouseDragPt;         // for mouse scrolling and mouse drag
 
 //    QPointF compareMouseRelLoc;
     QSize preview;

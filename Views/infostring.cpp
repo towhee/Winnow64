@@ -452,11 +452,6 @@ QString InfoString::tokenValue(QString &token,
         return m.email.trimmed();
     if (token == "Url")
         return m.url.trimmed();
-    // if (token == "Err") {
-    //     QString err = "";
-    //     for (const auto& s : G::err[m.fPath]) err += s + "\n";
-    //     return err;
-    // }
     return "";
 }
 

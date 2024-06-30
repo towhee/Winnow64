@@ -126,14 +126,14 @@ private:
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
     QHash<QString,int> keyFromPath;     // cache key for assigned path
-    QHash<int,QString> pathFromKey;     // cache key for assigned path
+    QHash<int,QString> pathFromKey;     // path
     QList<int> priorityList;
 
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
-    bool cacheItemListComplete();
+    bool cacheItemListBuildCompleted();
     void updateTargets();
     void resetCachingFlags();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // No decoders active

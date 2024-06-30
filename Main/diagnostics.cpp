@@ -279,7 +279,6 @@ void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics());}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
-void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
 void MW::diagnosticsFilters() {} // dummy for now
 void MW::diagnosticsFileTree() {} // dummy for now
@@ -321,14 +320,11 @@ void MW::allIssuesReport()
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Error Log");
+    dlg->setWindowTitle("Winnow Issue Log");
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    G::errlogFile.seek(0);
-    QString errString(G::errlogFile.readAll());
-    //qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
-    md.textBrowser->setText(errString);
+    md.textBrowser->setText(G::issueLog.logText());
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
     #endif
