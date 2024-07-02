@@ -465,7 +465,9 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath
+DISTFILES += Docs/ingestautopath \
+    CMakeLists.txt \
+    _CMakeLists.txt
 DISTFILES += notes/Create help dialog.rtf
 DISTFILES += notes/Create help dialog.txt
 DISTFILES += Docs/ingestautopath.html

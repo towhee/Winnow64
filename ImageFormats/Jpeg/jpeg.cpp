@@ -1211,9 +1211,12 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     int g = static_cast<int>(floor(Y - 0.34414 * (Cb - 128.0) - 0.71414 * (Cr - 128)));
                     int b = static_cast<int>(floor(Y + 1.772 * (Cb - 128.0)));
 
-                    r = std::max(0, std::min(r, 255));
-                    g = std::max(0, std::min(g, 255));
-                    b = std::max(0, std::min(b, 255));
+                    r = qMax(0, qMin(r, 255));
+                    g = qMax(0, qMin(g, 255));
+                    b = qMax(0, qMin(b, 255));
+//                    r = std::max(0, std::min(r, 255));
+//                    g = std::max(0, std::min(g, 255));
+//                    b = std::max(0, std::min(b, 255));
 
                     rgb[0][y][x] = static_cast<uint>(r);
                     rgb[1][y][x] = static_cast<uint>(g);
