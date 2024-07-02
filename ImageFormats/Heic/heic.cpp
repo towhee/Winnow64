@@ -68,7 +68,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            G::issue("Error", msg, "Heic::parseLibHeif", m->row, fPath);
+            G::issue("Error", msg, "Heic::parseLibHeif", m.row, fPath);
             p.buf.close();
             return false;
         }
@@ -337,7 +337,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     }
 
     if (stride <= 0) {
-        QString msg = "Invalid stride = " QString::number(d) +  +".";
+        QString msg = "Invalid stride = " + QString::number(stride) + ".";
         G::issue("Warning", msg, "Heic::heic", m->row, m->fPath);
         return false;
     }

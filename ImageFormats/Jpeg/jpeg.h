@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <algorithm>
 //#include "Utilities/bit.h"
 
 class Jpeg : public QObject

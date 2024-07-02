@@ -1,0 +1,480 @@
+cmake_minimum_required(VERSION 3.16)
+project(Winnow VERSION 1.0 LANGUAGES C CXX)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Concurrent Gui Multimedia MultimediaWidgets Widgets)
+find_package(WrapZLIB 1.0.8)
+
+qt_standard_project_setup()
+
+qt_add_executable(Winnow WIN32 MACOSX_BUNDLE
+    Cache/cachedata.cpp Cache/cachedata.h
+    Cache/framedecoder.cpp Cache/framedecoder.h
+    Cache/imagecache.cpp Cache/imagecache.h
+    Cache/imagedecoder.cpp Cache/imagedecoder.h
+    Cache/metaread.cpp Cache/metaread.h
+    Cache/metaread2.cpp Cache/metaread2.h
+    Cache/reader.cpp Cache/reader.h
+    Cache/tshash.h
+    Datamodel/HashMap.h
+    Datamodel/HashNode.h
+    Datamodel/buildfilters.cpp Datamodel/buildfilters.h
+    Datamodel/datamodel.cpp Datamodel/datamodel.h
+    Datamodel/filters.cpp Datamodel/filters.h
+    Datamodel/selection.cpp Datamodel/selection.h
+    Dialogs/aboutdlg.cpp Dialogs/aboutdlg.h Dialogs/aboutdlg.ui
+    Dialogs/addthumbnailsdlg.cpp Dialogs/addthumbnailsdlg.h Dialogs/addthumbnailsdlg.ui
+    Dialogs/aligndlg.ui
+    Dialogs/appdlg.cpp Dialogs/appdlg.h Dialogs/appdlg.ui
+    Dialogs/copystyledlg.cpp Dialogs/copystyledlg.h Dialogs/copystyledlg.ui
+    Dialogs/editlistdlg.cpp Dialogs/editlistdlg.h Dialogs/editlistdlg.ui
+    Dialogs/erasememcardimagesdlg.cpp Dialogs/erasememcardimagesdlg.h Dialogs/erasememcardimagesdlg.ui
+    Dialogs/findduplicatesdlg.cpp Dialogs/findduplicatesdlg.h Dialogs/findduplicatesdlg.ui
+    Dialogs/imagedlg.cpp Dialogs/imagedlg.h Dialogs/imagedlg.ui
+    Dialogs/ingestdlg.cpp Dialogs/ingestdlg.h Dialogs/ingestdlg.ui
+    Dialogs/ingesterrors.cpp Dialogs/ingesterrors.h Dialogs/ingesterrors.ui
+    Dialogs/loadusbdlg.cpp Dialogs/loadusbdlg.h Dialogs/loadusbdlg.ui
+    Dialogs/managegraphicsdlg.cpp Dialogs/managegraphicsdlg.h Dialogs/managegraphicsdlg.ui
+    Dialogs/manageimagesdlg.cpp Dialogs/manageimagesdlg.h Dialogs/manageimagesdlg.ui
+    Dialogs/managetilesdlg.cpp Dialogs/managetilesdlg.h Dialogs/managetilesdlg.ui
+    Dialogs/patterndlg.cpp Dialogs/patterndlg.h Dialogs/patterndlg.ui
+    Dialogs/preferencesdlg.cpp Dialogs/preferencesdlg.h
+    Dialogs/renamedlg.cpp Dialogs/renamedlg.h Dialogs/renamedlg.ui
+    Dialogs/renamefiledlg.ui
+    Dialogs/saveasdlg.cpp Dialogs/saveasdlg.h Dialogs/saveasdlg.ui
+    Dialogs/selectionorpicksdlg.cpp Dialogs/selectionorpicksdlg.h Dialogs/selectionorpicksdlg.ui
+    Dialogs/test1.ui
+    Dialogs/test12.ui
+    Dialogs/testaligndlg.cpp Dialogs/testaligndlg.h Dialogs/testaligndlg.ui
+    Dialogs/testdlg.ui
+    Dialogs/tokendlg.cpp Dialogs/tokendlg.h Dialogs/tokendlg.ui
+    Dialogs/updateapp.cpp Dialogs/updateapp.h Dialogs/updateapp.ui
+    Dialogs/workspacedlg.cpp Dialogs/workspacedlg.h Dialogs/workspacedlg.ui
+    Dialogs/zoomdlg.cpp Dialogs/zoomdlg.h Dialogs/zoomdlg.ui
+    Effects/REF_imageblitz_effects.h
+    Effects/effects.cpp Effects/effects.h
+    Effects/graphicseffect.cpp Effects/graphicseffect.h
+    Effects/graphicsitemeventfilter.cpp Effects/graphicsitemeventfilter.h
+    Effects/interpolate.h
+    Embellish/Properties/embelproperties.cpp Embellish/Properties/embelproperties.h
+    Embellish/embel.cpp Embellish/embel.h
+    Embellish/embelCoord.ui
+    Embellish/embelexport.cpp Embellish/embelexport.h
+    File/bookmarks.cpp File/bookmarks.h
+    File/fstree.cpp File/fstree.h
+    File/ingest.cpp File/ingest.h
+    Help/filtershelp.ui
+    Help/filtershelp_copy.ui
+    Help/helpfindduplicates.ui
+    Help/helpform.ui
+    Help/helpingest.ui
+    Help/helppixeldelta.cpp Help/helppixeldelta.h Help/helppixeldelta.ui
+    Help/ingestautopath.ui
+    Help/introduction.ui
+    Help/message.ui
+    Help/shortcutsform.ui
+    Help/welcome.ui
+    Image/autonomousimage.cpp Image/autonomousimage.h
+    Image/imagealign.cpp Image/imagealign.h
+    Image/pixmap.cpp Image/pixmap.h
+    Image/stack.cpp Image/stack.h
+    Image/thumb.cpp Image/thumb.h
+    ImageFormats/Canon/canon.cpp ImageFormats/Canon/canon.h
+    ImageFormats/Canon/canoncr3.cpp ImageFormats/Canon/canoncr3.h
+    ImageFormats/Dng/dng.cpp ImageFormats/Dng/dng.h
+    ImageFormats/Fuji/fuji.cpp ImageFormats/Fuji/fuji.h
+    ImageFormats/Heic/Heic.cpp
+    ImageFormats/Heic/heic.h
+    ImageFormats/Heic/heif.h
+    ImageFormats/Jpeg/jpeg.h
+    ImageFormats/Nikon/nikon.cpp ImageFormats/Nikon/nikon.h
+    ImageFormats/Olympus/olympus.cpp ImageFormats/Olympus/olympus.h
+    ImageFormats/Panasonic/panasonic.cpp ImageFormats/Panasonic/panasonic.h
+    ImageFormats/Sony/sony.cpp ImageFormats/Sony/sony.h
+    ImageFormats/Tiff/tiff.cpp ImageFormats/Tiff/tiff.h
+    ImageFormats/jpeg/jpeg.cpp
+    Lcms2/cmsalpha.c
+    Lcms2/cmscam02.c
+    Lcms2/cmscgats.c
+    Lcms2/cmscnvrt.c
+    Lcms2/cmserr.c
+    Lcms2/cmsgamma.c
+    Lcms2/cmsgmt.c
+    Lcms2/cmshalf.c
+    Lcms2/cmsintrp.c
+    Lcms2/cmsio0.c
+    Lcms2/cmsio1.c
+    Lcms2/cmslut.c
+    Lcms2/cmsmd5.c
+    Lcms2/cmsmtrx.c
+    Lcms2/cmsnamed.c
+    Lcms2/cmsopt.c
+    Lcms2/cmspack.c
+    Lcms2/cmspcs.c
+    Lcms2/cmsplugin.c
+    Lcms2/cmsps2.c
+    Lcms2/cmssamp.c
+    Lcms2/cmssm.c
+    Lcms2/cmstypes.c
+    Lcms2/cmsvirt.c
+    Lcms2/cmswtpnt.c
+    Lcms2/cmsxform.c
+    Lcms2/lcms2.h
+    Lcms2/lcms2_plugin.h
+    Log/issue.cpp Log/issue.h
+    Log/log.cpp Log/log.h
+    Main/diagnostics.cpp
+    Main/dockwidget.cpp Main/dockwidget.h
+    Main/draganddrop.cpp
+    Main/externalapp.cpp
+    Main/fileoperations.cpp
+    Main/global.cpp Main/global.h
+    Main/initialize.cpp
+    Main/main.cpp
+    Main/mainwindow.cpp Main/mainwindow.h
+    Main/menusandactions.cpp
+    Main/navigate.cpp
+    Main/pick.cpp
+    Main/qtlocalpeer.cpp Main/qtlocalpeer.h
+    Main/qtlockedfile.cpp Main/qtlockedfile.h
+    Main/qtsingleapplication.cpp Main/qtsingleapplication.h
+    Main/setandupdate.cpp
+    Main/settings.cpp
+    Main/slideshow.cpp
+    Main/sortandfilter.cpp
+    Main/status.cpp
+    Main/test.cpp
+    Main/viewmodes.cpp
+    Main/widgetcss.cpp Main/widgetcss.h
+    Main/workspaces.cpp
+    Metadata/exif.cpp Metadata/exif.h
+    Metadata/exiftool.cpp Metadata/exiftool.h
+    Metadata/gps.cpp Metadata/gps.h
+    Metadata/ifd.cpp Metadata/ifd.h
+    Metadata/imagemetadata.h
+    Metadata/iptc.cpp Metadata/iptc.h
+    Metadata/irb.cpp Metadata/irb.h
+    Metadata/metadata.cpp Metadata/metadata.h
+    Metadata/metadatareport.ui
+    Metadata/metareport.cpp Metadata/metareport.h
+    Metadata/rapidxml.h
+    Metadata/rapidxml_print_rgh.h
+    Metadata/xmp.cpp Metadata/xmp.h
+    PropertyEditor/preferences.cpp PropertyEditor/preferences.h
+    PropertyEditor/propertydelegate.cpp PropertyEditor/propertydelegate.h
+    PropertyEditor/propertyeditor.cpp PropertyEditor/propertyeditor.h
+    PropertyEditor/propertywidgets.cpp PropertyEditor/propertywidgets.h
+    Utilities/bit.cpp Utilities/bit.h
+    Utilities/classificationlabel.cpp Utilities/classificationlabel.h
+    Utilities/coloranalysis.cpp Utilities/coloranalysis.h
+    Utilities/dropshadowlabel.cpp Utilities/dropshadowlabel.h
+    Utilities/foldercompressor.cpp Utilities/foldercompressor.h
+    Utilities/htmlwindow.cpp Utilities/htmlwindow.h
+    Utilities/icc.cpp Utilities/icc.h
+    Utilities/inputdlg.cpp Utilities/inputdlg.h Utilities/inputdlg.ui
+    Utilities/performance.cpp Utilities/performance.h
+    Utilities/popup.cpp Utilities/popup.h
+    Utilities/progressbar.cpp Utilities/progressbar.h
+    Utilities/renamefile.cpp Utilities/renamefile.h
+    Utilities/showhelp.cpp Utilities/showhelp.h
+    Utilities/usb.cpp Utilities/usb.h
+    Utilities/utilities.cpp Utilities/utilities.h
+    Views/compareImages.cpp Views/compareImages.h
+    Views/compareview.cpp Views/compareview.h
+    Views/iconview.cpp Views/iconview.h
+    Views/iconviewdelegate.cpp Views/iconviewdelegate.h
+    Views/imageview.cpp Views/imageview.h
+    Views/infostring.cpp Views/infostring.h
+    Views/infoview.cpp Views/infoview.h
+    Views/tableview.cpp Views/tableview.h
+    Views/videoview.cpp Views/videoview.h
+    Views/videowidget.cpp Views/videowidget.h
+)
+target_include_directories(Winnow PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    .
+    Dialogs
+    Utilities
+)
+
+target_link_libraries(Winnow PRIVATE
+    Qt::Concurrent
+    Qt::Core
+    Qt::Gui
+    Qt::Multimedia
+    Qt::MultimediaWidgets
+    Qt::Widgets
+)
+
+
+# Resources:
+set(winnow_resource_files
+    "Docs/Winnow help.html"
+    "Docs/_template.html"
+    "Docs/embelcoordsystem.html"
+    "Docs/filtershelp.fld/colorschememapping.xml"
+    "Docs/filtershelp.fld/filelist.xml"
+    "Docs/filtershelp.fld/themedata.thmx"
+    "Docs/filtershelp.html"
+    "Docs/images/EmbelCoordSystem.png"
+    "Docs/images/filters1.png"
+    "Docs/images/filters2.png"
+    "Docs/ingestautopath.html"
+    "Docs/ingesthelp.htm"
+    "Docs/versions.html"
+    "Docs/winnow.html"
+    "Sounds/ingest.wav"
+    "console.txt"
+    "images/Check_mark.png"
+    "images/NoImagesInFolder.png"
+    "images/SizeGrip1.png"
+    "images/SizeGrip2.png"
+    "images/Thumbs.db"
+    "images/ThumbsUp16.png"
+    "images/ThumbsUp48.png"
+    "images/ThumbsUp96.png"
+    "images/Winnow coordinate spaces.psd"
+    "images/about.png"
+    "images/back.png"
+    "images/badImage1.png"
+    "images/bookmarks.png"
+    "images/bottom.png"
+    "images/branch-blank.png"
+    "images/branch-closed-small.png"
+    "images/branch-closed-winnow.png"
+    "images/branch-closed.png"
+    "images/branch-open-small.png"
+    "images/branch-open-winnow.png"
+    "images/branch-open.png"
+    "images/busy.gif"
+    "images/checkbox_checked.png"
+    "images/checkbox_checked_blue.png"
+    "images/checkbox_checked_hover.png"
+    "images/checkbox_checked_pressed.png"
+    "images/checkbox_disabled.png"
+    "images/checkbox_unchecked.png"
+    "images/checkbox_unchecked_blue.png"
+    "images/checkbox_unchecked_hover.png"
+    "images/checkbox_unchecked_pressed.png"
+    "images/checkmark.png"
+    "images/checkmark128.png"
+    "images/checkmark256.png"
+    "images/checkmark48.png"
+    "images/checkmark64.png"
+    "images/clear.png"
+    "images/colors.png"
+    "images/combobox-updown-arrow"
+    "images/copy.png"
+    "images/crop.png"
+    "images/cut.png"
+    "images/delete.png"
+    "images/down-arrow.png"
+    "images/down-arrow1.png"
+    "images/down-arrow2.png"
+    "images/down-arrow3.png"
+    "images/down_arrow.png"
+    "images/down_arrow_disabled.png"
+    "images/dragfoldershere.png"
+    "images/duplicates.png"
+    "images/error_image.png"
+    "images/error_image256.png"
+    "images/filter_off.png"
+    "images/filter_on.png"
+    "images/first.png"
+    "images/flipH.png"
+    "images/flipV.png"
+    "images/frame.png"
+    "images/home.png"
+    "images/icon16/A-Z.png"
+    "images/icon16/Z-A.png"
+    "images/icon16/anchor.png"
+    "images/icon16/close.png"
+    "images/icon16/colorwheel.png"
+    "images/icon16/danger_red_16.png"
+    "images/icon16/delete.png"
+    "images/icon16/delta.png"
+    "images/icon16/delta_bw_16.png"
+    "images/icon16/delta_red_16.png"
+    "images/icon16/down.png"
+    "images/icon16/emboss_flat.png"
+    "images/icon16/emboss_gradient_brighter.png"
+    "images/icon16/emboss_gradient_darker.png"
+    "images/icon16/emboss_offset_ridge.png"
+    "images/icon16/emboss_offset_trough.png"
+    "images/icon16/emboss_ridge.png"
+    "images/icon16/emboss_trough.png"
+    "images/icon16/filter.png"
+    "images/icon16/foldertree.png"
+    "images/icon16/gear.png"
+    "images/icon16/graphic.png"
+    "images/icon16/greedy.png"
+    "images/icon16/lightning.png"
+    "images/icon16/lightning1.png"
+    "images/icon16/link.png"
+    "images/icon16/media_pause.png"
+    "images/icon16/media_play.png"
+    "images/icon16/moderate.png"
+    "images/icon16/morevertthin.png"
+    "images/icon16/new.png"
+    "images/icon16/norainbow.png"
+    "images/icon16/norainbow1.png"
+    "images/icon16/questionmark.png"
+    "images/icon16/rainbow.png"
+    "images/icon16/rainbow1.png"
+    "images/icon16/rawjpeg.png"
+    "images/icon16/rectangle.png"
+    "images/icon16/refresh.png"
+    "images/icon16/slideshow.png"
+    "images/icon16/subfolders.png"
+    "images/icon16/swap.png"
+    "images/icon16/text.png"
+    "images/icon16/thrifty.png"
+    "images/icon16/tile.png"
+    "images/icon16/up.png"
+    "images/last.png"
+    "images/new.png"
+    "images/new_bookmark.png"
+    "images/new_folder.png"
+    "images/new_tag.png"
+    "images/next.png"
+    "images/no_image.png"
+    "images/open.png"
+    "images/pagefold.png"
+    "images/paste.png"
+    "images/play.png"
+    "images/prev.png"
+    "images/pushbutton.png"
+    "images/pushbutton_hover.png"
+    "images/pushbutton_pressed.png"
+    "images/radiobutton_checked.png"
+    "images/radiobutton_checked_hover.png"
+    "images/radiobutton_checked_pressed.png"
+    "images/radiobutton_unchecked.png"
+    "images/radiobutton_unchecked_hover.png"
+    "images/radiobutton_unchecked_pressed.png"
+    "images/refresh.png"
+    "images/rotate_left.png"
+    "images/rotate_right.png"
+    "images/save.png"
+    "images/save_as.png"
+    "images/scale.png"
+    "images/settings.png"
+    "images/sizegrip.png"
+    "images/spindown.png"
+    "images/spindown_hover.png"
+    "images/spindown_off.png"
+    "images/spindown_pressed.png"
+    "images/spinup.png"
+    "images/spinup_hover.png"
+    "images/spinup_off.png"
+    "images/spinup_pressed.png"
+    "images/stop.png"
+    "images/tag_blue.png"
+    "images/tag_grey.png"
+    "images/tag_multi.png"
+    "images/tag_yellow.png"
+    "images/tokenBackground.png"
+    "images/top.png"
+    "images/tree.png"
+    "images/up.icns"
+    "images/up.png"
+    "images/up_arrow.png"
+    "images/up_arrow_disabled.png"
+    "images/video.png"
+    "images/winnow.icns"
+    "images/winnow.ico"
+    "images/winnow.png"
+    "images/winnow1.png"
+    "images/winnow2.png"
+    "images/winnow288.ico"
+    "images/winnow288.png"
+    "images/winnow64.png"
+    "images/zoom.png"
+    "images/zoom1.png"
+    "images/zoom_in.png"
+    "images/zoom_out.png"
+    "qss/winnow.css"
+)
+
+qt_add_resources(Winnow "winnow"
+    PREFIX
+        "/"
+    FILES
+        ${winnow_resource_files}
+)
+
+if((QT_VERSION_MAJOR GREATER 5))
+    target_compile_definitions(Winnow PRIVATE
+        QT_DISABLE_DEPRECATED_BEFORE=0x051500
+    )
+endif()
+
+if(WIN32)
+    target_sources(Winnow PUBLIC
+        ImageFormats/Heic/de265.h
+        Main/qtlockedfile_win.cpp
+        Main/winnativeeventfilter.cpp Main/winnativeeventfilter.h
+        Utilities/win.cpp Utilities/win.h
+    )
+
+    target_include_directories(Winnow PRIVATE
+        Lib/libde265/include
+        Lib/libheif/include
+        Lib/zlib
+    )
+
+    target_compile_options(Winnow
+        /Zc:__cplusplus
+        /std:c++17
+        /wd4138
+    )
+endif()
+
+if(MACOS)
+    target_sources(Winnow PUBLIC
+        Main/qtlockedfile_unix.cpp
+        Utilities/mac.h Utilities/mac.mm
+    )
+
+    target_link_libraries(Winnow PRIVATE
+        "-framework AppKit"
+        "-framework ApplicationServices"
+        "-framework CoreFoundation"
+        "-framework Foundation"
+    )
+endif()
+
+if(WIN32 AND CONFIG(release,debug OR release))
+    target_link_libraries(Winnow PRIVATE
+        # Remove: L${CMAKE_CURRENT_SOURCE_DIR}/Lib/libde265/release/
+        # Remove: L${CMAKE_CURRENT_SOURCE_DIR}/Lib/libheif/release/
+        # Remove: L${CMAKE_CURRENT_SOURCE_DIR}/Lib/zlib/x64-Release/
+        WrapZLIB::WrapZLIB
+        libde265
+        libheif
+    )
+endif()
+
+if((NOT (WIN32 AND CONFIG(release,debug OR release))) AND (WIN32 AND CONFIG(debug,debug OR release)))
+    target_link_libraries(Winnow PRIVATE
+        # Remove: L${CMAKE_CURRENT_SOURCE_DIR}/Lib/libde265/debug/
+        # Remove: L${CMAKE_CURRENT_SOURCE_DIR}/Lib/libheif/debug/
+        libde265
+        libheif
+    )
+endif()
+
+install(TARGETS Winnow
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+qt_generate_deploy_app_script(
+    TARGET Winnow
+    FILENAME_VARIABLE deploy_script
+    NO_UNSUPPORTED_PLATFORM_ERROR
+)
+install(SCRIPT ${deploy_script})
