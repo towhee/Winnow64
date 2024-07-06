@@ -268,7 +268,7 @@ void Logger::skipLine()
 
 void IssueQueue::enqueue(const QString& msg) {
     QMutexLocker locker(&mutex);
-    qDebug() << "IssueQueue::enqueue" << msg;
+    // qDebug() << "IssueQueue::enqueue" << msg;
     messages.push(msg);
 }
 

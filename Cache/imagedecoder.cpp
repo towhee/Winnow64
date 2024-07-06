@@ -234,13 +234,13 @@ bool ImageDecoder::load()
 
         // use Winnow decoder
         Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
-        //qDebug() << "ImageDecoder::load" << fPath;
+        // qDebug() << "ImageDecoder::load" << fPath;
         if (!tiff.decode(fPath, n.offsetFull, image)) {
             imFile.close();
-            /*
+            // /*
             qDebug() << "ImageDecoder::load "
-                  << "Could not decode using Winnow Tiff decoder.  "
-                     "Trying Qt tiff library to decode " + fPath + ". ";  //*/
+                     << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
+                        "Trying Qt tiff library to decode " + fPath + ". ";  //*/
 
             // use Qt tiff decoder
             if (!image.load(fPath)) {

@@ -1,6 +1,8 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
 
+macx:CONFIG += app_bundle
+
 # Must rerun qmake and rebuild when change:
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 #CONFIG(release, debug|release):DEFINES += QT_NO_WARNING_OUTPUT
@@ -507,6 +509,8 @@ macx:LIBS += -framework Foundation
 #macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
 
 # zLib
+macx:INCLUDEPATH += /usr/include
+macx:LIBS += -lz
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib

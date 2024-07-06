@@ -184,7 +184,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // G::showAllEvents = true;
-    qDebug() << G::isIssueLogger;
+    qDebug() << G::useMyTiff;
 
 }
 /*

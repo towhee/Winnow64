@@ -10,7 +10,7 @@ bool isTestLogger = false;
 bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
-bool showIssueInConsole = true;    // Writes warnings to qDebug
+bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
 bool isErrorLogger = false;         // Writes error log messages to file or console
 bool isIssueLogger = false;         // Writes issue log messages to file or console
@@ -40,7 +40,7 @@ bool iconChunkLoaded;           // all icon chunk loaded
 int dmInstance;                 // DataModel instance
 
 // temp while resolving issues
-bool useMyTiff;
+bool useMyTiff = true;
 bool useMissingThumbs = false;
 
 // limit functionality for testing

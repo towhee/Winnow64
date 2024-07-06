@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Winnow' in project 'Winnow'
+➜ Explicit dependency on target 'Qt Preprocess' in project 'Winnow'
+Target 'Qt Preprocess' in project 'Winnow' (no dependencies)
