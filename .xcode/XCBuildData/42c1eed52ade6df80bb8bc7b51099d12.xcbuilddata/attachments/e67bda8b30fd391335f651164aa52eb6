@@ -1,0 +1,2 @@
+#!/bin/sh
+make -C /Users/roryhill/Projects/Winnow64 -f Winnow.xcodeproj/qt_preprocess.mak

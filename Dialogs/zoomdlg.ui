@@ -17,7 +17,10 @@
    <double>0.850000000000000</double>
   </property>
   <property name="toolTip">
-   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt; font-weight:600;&quot;&gt;Zoom tips:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;Z &lt;/span&gt;opens and closes the zoom window.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;Enter &lt;/span&gt;or &lt;span style=&quot; font-weight:600; color:#aa007f;&quot;&gt;Esc &lt;/span&gt;will close this window.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;1&lt;/span&gt;&lt;span style=&quot; color:#aa0000;&quot;&gt; - &lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;6&lt;/span&gt; to quick set zoom percentage.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#000000;&quot;&gt;Use&lt;/span&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt; Set as toggle zoom amount&lt;/span&gt; buttom to change the toggle zoom amount (when clicking on the main image). The zoom will alternate between &lt;span style=&quot; text-decoration: underline;&quot;&gt;fill&lt;/span&gt; and the &lt;span style=&quot; text-decoration: underline;&quot;&gt;toggle zoom amount&lt;/span&gt; you have set here each time you mouse click on the image.&lt;/p&gt;&lt;p&gt;This window will stay-on-top so you can scroll the image, click zoom or pan to click point on a thumbnail.&lt;/p&gt;&lt;p&gt;Settings are sticky and will remain when you use Esc to exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Times'; font-size:18pt;&quot;&gt;Zoom tips:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;•&amp;nbsp;&lt;span style=&quot; font-family:'Times'; color:#fb0021;&quot;&gt;Z&lt;/span&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt; opens and closes the zoom window.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt;&lt;br/&gt;Mousing over the window activates it. When active:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;•&amp;nbsp; &lt;/span&gt;&lt;span style=&quot; font-family:'Times'; color:#fb0021;&quot;&gt;1 - 6&lt;/span&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt; to quick set zoom percentage.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;•&amp;nbsp; &lt;/span&gt;&lt;span style=&quot; font-family:'Times'; color:#fb0021;&quot;&gt;Set as toggle zoom&lt;/span&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt; amount button to change the amount of zoom when you mouse click on the image.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;•&amp;nbsp; &lt;/span&gt;&lt;span style=&quot; font-family:'Times'; color:#fb0021;&quot;&gt;Esc&lt;/span&gt;&lt;span style=&quot; font-family:'Times';&quot;&gt; closes the zoom window.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
+  <property name="toolTipDuration">
+   <number>100000</number>
   </property>
   <widget class="QFrame" name="border">
    <property name="geometry">
@@ -224,7 +227,6 @@
         <property name="font">
          <font>
           <pointsize>13</pointsize>
-          <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>

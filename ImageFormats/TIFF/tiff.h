@@ -13,6 +13,9 @@
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
+#include "zlib.h"
+#include <vector>
+#include <cstring>
 
 extern bool showDebug;
 
@@ -110,6 +113,7 @@ private:
 
     bool decodeBase(MetadataParameters &p, QImage &image);
     bool decodeLZW(MetadataParameters &p, QImage &image);
+    bool decodeZip(MetadataParameters &p, QImage &image);
 
     void perChannelToInterleave(QImage *im1);
     void toRRGGBBAA(QImage *im);
@@ -121,9 +125,11 @@ private:
     // LZW compression
     static TiffStrips lzwDecompress(TiffStrip t);
     TiffStrips lzwDecompress2(TiffStrip &t, MetadataParameters &p);
+    TiffStrips lzwDecompress3(TiffStrip &t, MetadataParameters &p);  // ChatGPT tweaks
     void lzwReset(QHash<quint32,QByteArray> &dictionary,
                   QByteArray &prevString,
                   quint32 &nextCode);
+    TiffStrips zipDecompress(TiffStrip &t, MetadataParameters &p);  // ChatGPT created
 
 };
 
