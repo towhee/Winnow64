@@ -1,105 +1,965 @@
+JpgSnoop  lily.jpg  MCU 0,0
+​
+*** Marker: DQT (xFFDB) ***
+  Define a Quantization Table.
+  OFFSET: 0x00006E6F
+  Table length = 132
+  ----
+  Precision=8 bits
+  Destination ID=0 (Luminance)
+    DQT, Row #0:   1   1   1   1   1   1   1   2
+    DQT, Row #1:   1   1   1   1   1   1   1   2
+    DQT, Row #2:   1   1   1   1   1   1   2   2
+    DQT, Row #3:   1   1   1   1   1   2   2   3
+    DQT, Row #4:   1   1   1   1   2   2   3   3
+    DQT, Row #5:   1   1   1   2   2   3   3   3
+    DQT, Row #6:   1   1   2   2   3   3   3   3
+    DQT, Row #7:   2   2   2   3   3   3   3   3
+    Approx quality factor = 98.11 (scaling=3.79 variance=4.10)
+  ----
+  Precision=8 bits
+  Destination ID=1 (Chrominance)
+    DQT, Row #0:   1   1   1   2   3   3   3   3
+    DQT, Row #1:   1   1   1   2   3   3   3   3
+    DQT, Row #2:   1   1   2   3   3   3   3   3
+    DQT, Row #3:   2   2   3   3   3   3   3   3
+    DQT, Row #4:   3   3   3   3   3   3   3   3
+    DQT, Row #5:   3   3   3   3   3   3   3   3
+    DQT, Row #6:   3   3   3   3   3   3   3   3
+    DQT, Row #7:   3   3   3   3   3   3   3   3
+    Approx quality factor = 98.36 (scaling=3.29 variance=0.42)
+
+*** Marker: DRI (Restart Interval) (xFFDD) ***
+  OFFSET: 0x00006EF5
+  Length     = 4
+  interval   = 256
+
+*** Marker: APP14 (xFFEE) ***
+  OFFSET: 0x00006EFB
+  Length            = 14
+  DCTEncodeVersion  = 100
+  APP14Flags0       = 49152
+  APP14Flags1       = 0
+  ColorTransform    = 1 [YCbCr]
+
+*** Marker: SOF0 (Baseline DCT) (xFFC0) ***
+  OFFSET: 0x00006F0B
+  Frame header length = 17
+  Precision = 8
+  Number of Lines = 1363
+  Samples per Line = 2048
+  Image Size = 2048 x 1363
+  Raw Image Orientation = Landscape
+  Number of Img components = 3
+    Component[1]: ID=0x00, Samp Fac=0x11 (Subsamp 1 x 1), Quant Tbl Sel=0x00 (Lum: Y)
+    Component[2]: ID=0x01, Samp Fac=0x11 (Subsamp 1 x 1), Quant Tbl Sel=0x01 (Chrom: Cb)
+    Component[3]: ID=0x02, Samp Fac=0x11 (Subsamp 1 x 1), Quant Tbl Sel=0x01 (Chrom: Cr)
+
+*** Marker: DHT (Define Huffman Table) (xFFC4) ***
+  OFFSET: 0x00006F1E
+  Huffman table length = 207
+  ----
+  Destination ID = 0
+  Class = 0 (DC / Lossless Table)
+    Codes of length 01 bits (000 total):
+    Codes of length 02 bits (002 total): 01 02
+    Codes of length 03 bits (002 total): 00 03
+    Codes of length 04 bits (003 total): 05 06 07
+    Codes of length 05 bits (001 total): 04
+    Codes of length 06 bits (001 total): 08
+    Codes of length 07 bits (001 total): 09
+    Codes of length 08 bits (001 total): 0A
+    Codes of length 09 bits (001 total): 0B
+    Codes of length 10 bits (000 total):
+    Codes of length 11 bits (000 total):
+    Codes of length 12 bits (000 total):
+    Codes of length 13 bits (000 total):
+    Codes of length 14 bits (000 total):
+    Codes of length 15 bits (000 total):
+    Codes of length 16 bits (000 total):
+    Total number of codes: 012
+
+  Expanded Form of Codes:
+    Codes of length 02 bits:
+      00 = 01                            (Total Len =  3)
+      01 = 02                            (Total Len =  4)
+    Codes of length 03 bits:
+      100 = 00                           (Total Len =  3)
+      101 = 03                           (Total Len =  6)
+    Codes of length 04 bits:
+      1100 = 05                          (Total Len =  9)
+      1101 = 06                          (Total Len = 10)
+      1110 = 07                          (Total Len = 11)
+    Codes of length 05 bits:
+      11110 = 04                         (Total Len =  9)
+    Codes of length 06 bits:
+      111110 = 08                        (Total Len = 14)
+    Codes of length 07 bits:
+      1111110 = 09                       (Total Len = 16)
+    Codes of length 08 bits:
+      11111110 = 0A                      (Total Len = 18)
+    Codes of length 09 bits:
+      111111110 = 0B                     (Total Len = 20)
+
+  ----
+  Destination ID = 1
+  Class = 0 (DC / Lossless Table)
+    Codes of length 01 bits (001 total): 00
+    Codes of length 02 bits (001 total): 01
+    Codes of length 03 bits (000 total):
+    Codes of length 04 bits (002 total): 02 03
+    Codes of length 05 bits (003 total): 04 05 06
+    Codes of length 06 bits (001 total): 07
+    Codes of length 07 bits (001 total): 08
+    Codes of length 08 bits (000 total):
+    Codes of length 09 bits (000 total):
+    Codes of length 10 bits (000 total):
+    Codes of length 11 bits (000 total):
+    Codes of length 12 bits (000 total):
+    Codes of length 13 bits (000 total):
+    Codes of length 14 bits (000 total):
+    Codes of length 15 bits (000 total):
+    Codes of length 16 bits (000 total):
+    Total number of codes: 009
+
+  Expanded Form of Codes:
+    Codes of length 01 bits:
+      0 = 00                             (Total Len =  1)
+    Codes of length 02 bits:
+      10 = 01                            (Total Len =  3)
+    Codes of length 04 bits:
+      1100 = 02                          (Total Len =  6)
+      1101 = 03                          (Total Len =  7)
+    Codes of length 05 bits:
+      11100 = 04                         (Total Len =  9)
+      11101 = 05                         (Total Len = 10)
+      11110 = 06                         (Total Len = 11)
+    Codes of length 06 bits:
+      111110 = 07                        (Total Len = 13)
+    Codes of length 07 bits:
+      1111110 = 08                       (Total Len = 15)
+
+  ----
+  Destination ID = 0
+  Class = 1 (AC Table)
+    Codes of length 01 bits (000 total):
+    Codes of length 02 bits (001 total): 01
+    Codes of length 03 bits (003 total): 02 11 21
+    Codes of length 04 bits (002 total): 03 31
+    Codes of length 05 bits (004 total): 00 04 12 41
+    Codes of length 06 bits (003 total): 05 51 61
+    Codes of length 07 bits (005 total): 06 13 22 71 81
+    Codes of length 08 bits (006 total): 07 32 91 A1 B1 F0
+    Codes of length 09 bits (005 total): 14 42 C1 D1 E1
+    Codes of length 10 bits (004 total): 08 23 52 F1
+    Codes of length 11 bits (002 total): 15 62
+    Codes of length 12 bits (001 total): 72
+    Codes of length 13 bits (003 total): 24 33 82
+    Codes of length 14 bits (000 total):
+    Codes of length 15 bits (001 total): 09
+    Codes of length 16 bits (021 total): 16 25 34 43 92 A2 B2 53 C2 17 35 44 D2 26 63 73
+                                         36 45 B3 E2 F2
+    Total number of codes: 061
+
+  Expanded Form of Codes:
+    Codes of length 02 bits:
+      00 = 01                            (Total Len =  3)
+    Codes of length 03 bits:
+      010 = 02                           (Total Len =  5)
+      011 = 11                           (Total Len =  4)
+      100 = 21                           (Total Len =  4)
+    Codes of length 04 bits:
+      1010 = 03                          (Total Len =  7)
+      1011 = 31                          (Total Len =  5)
+    Codes of length 05 bits:
+      11000 = 00 (EOB)                   (Total Len =  5)
+      11001 = 04                         (Total Len =  9)
+      11010 = 12                         (Total Len =  7)
+      11011 = 41                         (Total Len =  6)
+    Codes of length 06 bits:
+      111000 = 05                        (Total Len = 11)
+      111001 = 51                        (Total Len =  7)
+      111010 = 61                        (Total Len =  7)
+    Codes of length 07 bits:
+      1110110 = 06                       (Total Len = 13)
+      1110111 = 13                       (Total Len = 10)
+      1111000 = 22                       (Total Len =  9)
+      1111001 = 71                       (Total Len =  8)
+      1111010 = 81                       (Total Len =  8)
+    Codes of length 08 bits:
+      11110110 = 07                      (Total Len = 15)
+      11110111 = 32                      (Total Len = 10)
+      11111000 = 91                      (Total Len =  9)
+      11111001 = A1                      (Total Len =  9)
+      11111010 = B1                      (Total Len =  9)
+      11111011 = F0 (ZRL)                (Total Len =  8)
+    Codes of length 09 bits:
+      111111000 = 14                     (Total Len = 13)
+      111111001 = 42                     (Total Len = 11)
+      111111010 = C1                     (Total Len = 10)
+      111111011 = D1                     (Total Len = 10)
+      111111100 = E1                     (Total Len = 10)
+    Codes of length 10 bits:
+      1111111010 = 08                    (Total Len = 18)
+      1111111011 = 23                    (Total Len = 13)
+      1111111100 = 52                    (Total Len = 12)
+      1111111101 = F1                    (Total Len = 11)
+    Codes of length 11 bits:
+      11111111100 = 15                   (Total Len = 16)
+      11111111101 = 62                   (Total Len = 13)
+    Codes of length 12 bits:
+      111111111100 = 72                  (Total Len = 14)
+    Codes of length 13 bits:
+      1111111111010 = 24                 (Total Len = 17)
+      1111111111011 = 33                 (Total Len = 16)
+      1111111111100 = 82                 (Total Len = 15)
+    Codes of length 15 bits:
+      111111111110100 = 09               (Total Len = 24)
+    Codes of length 16 bits:
+      1111111111101010 = 16              (Total Len = 22)
+      1111111111101011 = 25              (Total Len = 21)
+      1111111111101100 = 34              (Total Len = 20)
+      1111111111101101 = 43              (Total Len = 19)
+      1111111111101110 = 92              (Total Len = 18)
+      1111111111101111 = A2              (Total Len = 18)
+      1111111111110000 = B2              (Total Len = 18)
+      1111111111110001 = 53              (Total Len = 19)
+      1111111111110010 = C2              (Total Len = 18)
+      1111111111110011 = 17              (Total Len = 23)
+      1111111111110100 = 35              (Total Len = 21)
+      1111111111110101 = 44              (Total Len = 20)
+      1111111111110110 = D2              (Total Len = 18)
+      1111111111110111 = 26              (Total Len = 22)
+      1111111111111000 = 63              (Total Len = 19)
+      1111111111111001 = 73              (Total Len = 19)
+      1111111111111010 = 36              (Total Len = 22)
+      1111111111111011 = 45              (Total Len = 21)
+      1111111111111100 = B3              (Total Len = 19)
+      1111111111111101 = E2              (Total Len = 18)
+      1111111111111110 = F2              (Total Len = 18)
+
+  ----
+  Destination ID = 1
+  Class = 1 (AC Table)
+    Codes of length 01 bits (000 total):
+    Codes of length 02 bits (002 total): 00 01
+    Codes of length 03 bits (001 total): 02
+    Codes of length 04 bits (002 total): 03 11
+    Codes of length 05 bits (003 total): 04 21 31
+    Codes of length 06 bits (006 total): 05 12 41 51 61 F0
+    Codes of length 07 bits (003 total): 06 71 81
+    Codes of length 08 bits (006 total): 13 22 91 A1 B1 E1
+    Codes of length 09 bits (004 total): 14 32 C1 D1
+    Codes of length 10 bits (005 total): 07 23 42 52 F1
+    Codes of length 11 bits (003 total): 15 62 72
+    Codes of length 12 bits (003 total): 24 33 82
+    Codes of length 13 bits (003 total): 92 A2 B2
+    Codes of length 14 bits (003 total): 16 34 43
+    Codes of length 15 bits (000 total):
+    Codes of length 16 bits (011 total): C2 08 17 53 63 D2 25 35 44 73 93
+    Total number of codes: 055
+
+  Expanded Form of Codes:
+    Codes of length 02 bits:
+      00 = 00 (EOB)                      (Total Len =  2)
+      01 = 01                            (Total Len =  3)
+    Codes of length 03 bits:
+      100 = 02                           (Total Len =  5)
+    Codes of length 04 bits:
+      1010 = 03                          (Total Len =  7)
+      1011 = 11                          (Total Len =  5)
+    Codes of length 05 bits:
+      11000 = 04                         (Total Len =  9)
+      11001 = 21                         (Total Len =  6)
+      11010 = 31                         (Total Len =  6)
+    Codes of length 06 bits:
+      110110 = 05                        (Total Len = 11)
+      110111 = 12                        (Total Len =  8)
+      111000 = 41                        (Total Len =  7)
+      111001 = 51                        (Total Len =  7)
+      111010 = 61                        (Total Len =  7)
+      111011 = F0 (ZRL)                  (Total Len =  6)
+    Codes of length 07 bits:
+      1111000 = 06                       (Total Len = 13)
+      1111001 = 71                       (Total Len =  8)
+      1111010 = 81                       (Total Len =  8)
+    Codes of length 08 bits:
+      11110110 = 13                      (Total Len = 11)
+      11110111 = 22                      (Total Len = 10)
+      11111000 = 91                      (Total Len =  9)
+      11111001 = A1                      (Total Len =  9)
+      11111010 = B1                      (Total Len =  9)
+      11111011 = E1                      (Total Len =  9)
+    Codes of length 09 bits:
+      111111000 = 14                     (Total Len = 13)
+      111111001 = 32                     (Total Len = 11)
+      111111010 = C1                     (Total Len = 10)
+      111111011 = D1                     (Total Len = 10)
+    Codes of length 10 bits:
+      1111111000 = 07                    (Total Len = 17)
+      1111111001 = 23                    (Total Len = 13)
+      1111111010 = 42                    (Total Len = 12)
+      1111111011 = 52                    (Total Len = 12)
+      1111111100 = F1                    (Total Len = 11)
+    Codes of length 11 bits:
+      11111111010 = 15                   (Total Len = 16)
+      11111111011 = 62                   (Total Len = 13)
+      11111111100 = 72                   (Total Len = 13)
+    Codes of length 12 bits:
+      111111111010 = 24                  (Total Len = 16)
+      111111111011 = 33                  (Total Len = 15)
+      111111111100 = 82                  (Total Len = 14)
+    Codes of length 13 bits:
+      1111111111010 = 92                 (Total Len = 15)
+      1111111111011 = A2                 (Total Len = 15)
+      1111111111100 = B2                 (Total Len = 15)
+    Codes of length 14 bits:
+      11111111111010 = 16                (Total Len = 20)
+      11111111111011 = 34                (Total Len = 18)
+      11111111111100 = 43                (Total Len = 17)
+    Codes of length 16 bits:
+      1111111111110100 = C2              (Total Len = 18)
+      1111111111110101 = 08              (Total Len = 24)
+      1111111111110110 = 17              (Total Len = 23)
+      1111111111110111 = 53              (Total Len = 19)
+      1111111111111000 = 63              (Total Len = 19)
+      1111111111111001 = D2              (Total Len = 18)
+      1111111111111010 = 25              (Total Len = 21)
+      1111111111111011 = 35              (Total Len = 21)
+      1111111111111100 = 44              (Total Len = 20)
+      1111111111111101 = 73              (Total Len = 19)
+      1111111111111110 = 93              (Total Len = 19)
 
 
+*** Marker: SOS (Start of Scan) (xFFDA) ***
+  OFFSET: 0x00006FEF
+  Scan header length = 12
+  Number of img components = 3
+    Component[1]: selector=0x00, table=0(DC),0(AC)
+    Component[2]: selector=0x01, table=1(DC),1(AC)
+    Component[3]: selector=0x02, table=1(DC),1(AC)
+  Spectral selection = 0 .. 63
+  Successive approximation = 0x00
+
+  Scan Data: (after bitstuff removed)
+    fe 38 ef 2e 1d c3 9e 7b 90 40 f9 7d bf ce ce ac b3 78 09 71 ca 03 5e 5f 6e b8 84 18 00 a9 21 a4
+    0d 98 75 4d b0 03 30 04 5a c4 30 8b da de bf 77 02 c4 90 fe 22 1a 1a 4e f0 ff 7f ec 07 23 48 0c
+    e5 c4 8f 9d ce fe b8 00 81 12 64 90 09 d9 cc bf a6 20 18 0f 74 07 37 17 bf 5f 9e 28 be 43 30 3b
+    69 83 1c 83 ff a9 c0 04 18 06 e2 de 26 21 d9 87 e9 8a 08 25 c3 97 36 2f fe 26 06 d8 14 62 43 05
+    31 2c 42 60 ee 3f 4d b0 00 d2 0c a4 96 6d a3 a3 7a e0 40 12 02 40 21 81 77 23 a0 80 5f f7 c0 6a
+    07 d9 d8 97 1e 96 8f 3c 00 8a 00 f9 6e 0d 9f 6f bf 9e 28 2b d2 ec f2 4e f6 04 7f 8b 79 e0 08 47
+    44 8b 0e 41 b9 3f dc e0 08 a4 a4 58 10 0c 1d a0 2b de 7e 5e 98 0d 0a cc 07 78 54 0e 5d 27 00 2f
+    28 00 24 b3 91 1e 47 fd 7f 14 00 f5 79 2a f3 ea 30 04 09 72 03 97 8d a2 67 e5 80 14 80 e0 6a 8f
+    56 3c 8c e2 81 55 04 40 1e 40 1b da db 61 c0 02 ec e9 0e 3c 2d c8 92 df 0c 00 08 66 00 99 87 d8
+    90 65 c6 00 42 ce 05 89 f4 91 80 e0 28 4b 92 e0 ef e8 92 60 81 8a 40 80 4d dd ac 58 82 2d 68 fd
+    f1 00 ac 92 4b 40 72 da 7f fc 26 eb 81 40 c5 80 bc 5b 60 46 f3 be 28 1e f6 16 0c 79 37 97 c6 e3
+    00 28 09 9d fc 85 89 3c e2 f8 01 88 75 38 01 c5 9f ff c2 c0 2e 40 1b 98 0c 76 31 02 f8 01 82 61
+    89 81 1b 99 b2 4e 00 81 37 04 97 31 7f 59 ff 78 80 29 4d c0 96 6e 8e ff c7 5f 86 05 f3 1c 20 36
+    92 04 a5 5a 60 90 1f d3 00 46 17 dc 06 0d a5 8b ef 18 02 00 ed 2d cb fc 49 da 4e 00 b7 49 21 ec
+    f6 e5 1b 01 80 0c 2b 90 bd fa 0b 0c 00 c9 48 3d 01 01 84 b3 59 8c e0 0b 34 c0 2d be fb 11 00 7d
+    9c 40 00 97 97 3a 8b 73 07 91 8c 50 33 28 10 c1 df f2 86 78 1b 8d b0 c8 0c d0 22 25 51 72 f2 dd
+    1b 00 30 2e 03 81 60 5e cc e7 e9 e5 81 50 c9 00 c8 f2 20 6c 0d 94 1d ba 62 82 c0 1c fb bd 41 90
+    c4 75 c0 a3 24 27 c2 48 f2 12 09 2e c1 db 14 71 0b 31 09 0c c7 a0 00 91 70 7a e0 07 08 70 76 04
+    f2 f8 bf e9 80 2c d1 ee cf 85 a1 dd 81 27 f3 7c 71 40 e1 20 dc b3 91 2c 24 e0 06 63 01 c9 67 60
+    58 02 77 c0 2e a3 00 c2 00 91 71 b8 05 e5 f0 28 c9 10 fd 14 36 71 d7 ec 60 0b 12 12 40 1a 48 24
+    WARNING: Dump truncated.
 
 
+*** Decoding SCAN Data ***
+  OFFSET: 0x00006FFD
+  Scan Decode Mode: Full IDCT (AC + DC)
 
 
+    Lum (Tbl #0), MCU=[0,0]
+      [0x00006FFD.0]: ZRL=[ 0] Val=[ -796] Coef=[00= DC] Data=[0x FE 38 EF 2E = 0b (11111110 00111000 11------ --------)]
+      [0x00006FFF.2]: ZRL=[ 3] Val=[    1] Coef=[01..04] Data=[0x EF 2E 1D C3 = 0b (--10111- -------- -------- --------)]
+      [0x00006FFF.7]: ZRL=[ 2] Val=[    1] Coef=[05..07] Data=[0x EF 2E 1D C3 = 0b (-------1 001----- -------- --------)]
+      [0x00007000.3]: ZRL=[ 1] Val=[    1] Coef=[08..09] Data=[0x 2E 1D C3 9E = 0b (---0111- -------- -------- --------)]
+      [0x00007000.7]: ZRL=[ 0] Val=[   -1] Coef=[10..10] Data=[0x 2E 1D C3 9E = 0b (-------0 00------ -------- --------)]
+      [0x00007001.2]: ZRL=[ 1] Val=[    1] Coef=[11..12] Data=[0x 1D C3 9E 7B = 0b (--0111-- -------- -------- --------)]
+      [0x00007001.6]: ZRL=[ 1] Val=[    1] Coef=[13..14] Data=[0x 1D C3 9E 7B = 0b (------01 11------ -------- --------)]
+      [0x00007002.2]: ZRL=[ 0] Val=[   -1] Coef=[15..15] Data=[0x C3 9E 7B 90 = 0b (--000--- -------- -------- --------)]
+      [0x00007002.5]: ZRL=[ 1] Val=[    1] Coef=[16..17] Data=[0x C3 9E 7B 90 = 0b (-----011 1------- -------- --------)]
+      [0x00007003.1]: ZRL=[ 0] Val=[    1] Coef=[18..18] Data=[0x 9E 7B 90 40 = 0b (-001---- -------- -------- --------)]
+      [0x00007003.4]: ZRL=[ 5] Val=[    1] Coef=[19..24] Data=[0x 9E 7B 90 40 = 0b (----1110 011----- -------- --------)]
+      [0x00007004.3]: ZRL=[ 4] Val=[    1] Coef=[25..29] Data=[0x 7B 90 40 F9 = 0b (---11011 1------- -------- --------)]
+      [0x00007005.1]: ZRL=[ 0] Val=[    1] Coef=[30..30] Data=[0x 90 40 F9 7D = 0b (-001---- -------- -------- --------)]
+      [0x00007005.4]: ZRL=[ 0] Val=[   -1] Coef=[31..31] Data=[0x 90 40 F9 7D = 0b (----000- -------- -------- --------)]
+      [0x00007005.7]: ZRL=[ 0] Val=[    1] Coef=[32..32] Data=[0x 90 40 F9 7D = 0b (-------0 01------ -------- --------)]
+      [0x00007006.2]: ZRL=[ 0] Val=[   -1] Coef=[33..33] Data=[0x 40 F9 7D BF = 0b (--000--- -------- -------- --------)]
+      [0x00007006.5]: ZRL=[ 0] Val=[   -1] Coef=[34..34] Data=[0x 40 F9 7D BF = 0b (-----000 -------- -------- --------)]
+      [0x00007007.0]: ZRL=[10] Val=[   -1] Coef=[35..45] Data=[0x F9 7D BF CE = 0b (11111001 0------- -------- --------)]
+      [0x00007008.1]: ZRL=[15] Val=[    0] Coef=[46..61] Data=[0x 7D BF CE CE = 0b (-1111101 1------- -------- --------)]
+      [0x00007009.1]: ZRL=[ 1] Val=[    1] Coef=[62..63] Data=[0x BF CE CE AC = 0b (-0111--- -------- -------- --------)] EOB64
+                      DCT Matrix=[ -796     0     0     0     1    -1     0     0]
+                                 [    0     1     1     0     0     0     1     0]
+                                 [    0     0     1     1     0     1     0     0]
+                                 [    1     0     1     1    -1     0     0     0]
+                                 [   -1     0     0     1     0    -2     0     0]
+                                 [    0     0    -1     0     0     0     0     0]
+                                 [    0    -1     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     3]
+
+    Chr(0) (Tbl #1), MCU=[0,0]
+      [0x00007009.5]: ZRL=[ 0] Val=[  -68] Coef=[00= DC] Data=[0x BF CE CE AC = 0b (-----111 11001110 11------ --------)]
+      [0x0000700B.2]: ZRL=[ 0] Val=[    0] Coef=[01..01] Data=[0x CE AC B3 78 = 0b (--00---- -------- -------- --------)] EOB
+                      DCT Matrix=[  -68     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+
+    Chr(0) (Tbl #1), MCU=[0,0]
+      [0x0000700B.4]: ZRL=[ 0] Val=[  -20] Coef=[00= DC] Data=[0x CE AC B3 78 = 0b (----1110 101011-- -------- --------)]
+      [0x0000700C.6]: ZRL=[ 0] Val=[    0] Coef=[01..01] Data=[0x AC B3 78 09 = 0b (------00 -------- -------- --------)] EOB
+                      DCT Matrix=[  -20     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+                                 [    0     0     0     0     0     0     0     0]
+
+  Scan Data encountered marker   0xFFD9 @ 0x000C8615.0
+
+  Detailed IDCT Dump (RGB):
+    MCU [  0,  0]:
+      [ x18220D x17210C x17210C x16200B x17210C x18220D x17210C x17210C  ]
+      [ x18220D x17210C x17210C x18220D x16200B x17210C x17210C x17210C  ]
+      [ x17210C x16200B x18220D x17210C x18220D x16200B x17210C x17210C  ]
+      [ x16200B x18220D x16200B x18220D x17210C x17210C x151F0A x17210C  ]
+      [ x17210C x17210C x17210C x16200B x18220D x17210C x17210C x17210C  ]
+      [ x17210C x17210C x17210C x18220D x17210C x18220D x18220D x18220D  ]
+      [ x17210C x17210C x17210C x17210C x18220D x17210C x18220D x17210C  ]
+      [ x17210C x17210C x16200B x17210C x17210C x17210C x17210C x17210C  ]
+
+  Compression stats:
+    Compression Ratio: 10.57:1
+    Bits per pixel:     2.27:1
+
+  Huffman code histogram stats:
+    Huffman Table: (Dest ID: 0, Class: DC)
+      # codes of length 01 bits:        0 (  0%)
+      # codes of length 02 bits:    24064 ( 55%)
+      # codes of length 03 bits:    11192 ( 26%)
+      # codes of length 04 bits:     5496 ( 13%)
+      # codes of length 05 bits:     1363 (  3%)
+      # codes of length 06 bits:     1110 (  3%)
+      # codes of length 07 bits:      327 (  1%)
+      # codes of length 08 bits:      223 (  1%)
+      # codes of length 09 bits:        1 (  0%)
+      # codes of length 10 bits:        0 (  0%)
+      # codes of length 11 bits:        0 (  0%)
+      # codes of length 12 bits:        0 (  0%)
+      # codes of length 13 bits:        0 (  0%)
+      # codes of length 14 bits:        0 (  0%)
+      # codes of length 15 bits:        0 (  0%)
+      # codes of length 16 bits:        0 (  0%)
+
+    Huffman Table: (Dest ID: 1, Class: DC)
+      # codes of length 01 bits:    45423 ( 52%)
+      # codes of length 02 bits:    24315 ( 28%)
+      # codes of length 03 bits:        0 (  0%)
+      # codes of length 04 bits:     8072 (  9%)
+      # codes of length 05 bits:     8241 (  9%)
+      # codes of length 06 bits:     1244 (  1%)
+      # codes of length 07 bits:      257 (  0%)
+      # codes of length 08 bits:        0 (  0%)
+      # codes of length 09 bits:        0 (  0%)
+      # codes of length 10 bits:        0 (  0%)
+      # codes of length 11 bits:        0 (  0%)
+      # codes of length 12 bits:        0 (  0%)
+      # codes of length 13 bits:        0 (  0%)
+      # codes of length 14 bits:        0 (  0%)
+      # codes of length 15 bits:        0 (  0%)
+      # codes of length 16 bits:        0 (  0%)
+
+    Huffman Table: (Dest ID: 0, Class: AC)
+      # codes of length 01 bits:        0 (  0%)
+      # codes of length 02 bits:   327557 ( 34%)
+      # codes of length 03 bits:   328920 ( 34%)
+      # codes of length 04 bits:   100440 ( 10%)
+      # codes of length 05 bits:   116611 ( 12%)
+      # codes of length 06 bits:    39278 (  4%)
+      # codes of length 07 bits:    28274 (  3%)
+      # codes of length 08 bits:    14874 (  2%)
+      # codes of length 09 bits:     7269 (  1%)
+      # codes of length 10 bits:     2461 (  0%)
+      # codes of length 11 bits:      632 (  0%)
+      # codes of length 12 bits:      159 (  0%)
+      # codes of length 13 bits:      310 (  0%)
+      # codes of length 14 bits:        0 (  0%)
+      # codes of length 15 bits:       78 (  0%)
+      # codes of length 16 bits:      250 (  0%)
+
+    Huffman Table: (Dest ID: 1, Class: AC)
+      # codes of length 01 bits:        0 (  0%)
+      # codes of length 02 bits:   136714 ( 54%)
+      # codes of length 03 bits:    25667 ( 10%)
+      # codes of length 04 bits:    31383 ( 12%)
+      # codes of length 05 bits:    23159 (  9%)
+      # codes of length 06 bits:    22557 (  9%)
+      # codes of length 07 bits:     5179 (  2%)
+      # codes of length 08 bits:     5236 (  2%)
+      # codes of length 09 bits:     1873 (  1%)
+      # codes of length 10 bits:     1089 (  0%)
+      # codes of length 11 bits:      246 (  0%)
+      # codes of length 12 bits:      149 (  0%)
+      # codes of length 13 bits:       83 (  0%)
+      # codes of length 14 bits:       45 (  0%)
+      # codes of length 15 bits:        0 (  0%)
+      # codes of length 16 bits:       35 (  0%)
+
+  YCC clipping in DC:
+    Y  component: [<0=    0] [>255=    0]
+    Cb component: [<0=    0] [>255=    0]
+    Cr component: [<0=    0] [>255=    0]
+
+  RGB clipping in DC:
+    R  component: [<0=    0] [>255=    0]
+    G  component: [<0=    0] [>255=    0]
+    B  component: [<0=    0] [>255=    0]
+
+  Average Pixel Luminance (Y):
+    Y=[ 56] (range: 0..255)
+
+  Brightest Pixel Search:
+    YCC=[ 1006,   -3,  -28] RGB=[247,255,251] @ MCU[145, 97]
+
+  Finished Decoding SCAN Data
+    Number of RESTART markers decoded: 170
+    Next position in scan buffer: Offset 0x000C8614.7
 
 
+*** Marker: EOI (End of Image) (xFFD9) ***
+  OFFSET: 0x000C8615
 
 
+*** Embedded JPEG Thumbnail ***
+  Offset: 0x000001F8
+  Length: 0x00001AFE (6910)
+
+  * Embedded Thumb Marker: SOI
+
+  * Embedded Thumb Marker: DQT
+    Length = 132
+    ----
+    Precision=8 bits
+    Destination ID=0 (Luminance, typically)
+      DQT, Row #0:   6   4   4   6   9  11  12  16
+      DQT, Row #1:   4   5   5   6   8  10  12  12
+      DQT, Row #2:   4   5   5   6  10  12  12  12
+      DQT, Row #3:   6   6   6  11  12  12  12  12
+      DQT, Row #4:   9   8  10  12  12  12  12  12
+      DQT, Row #5:  11  10  12  12  12  12  12  12
+      DQT, Row #6:  12  12  12  12  12  12  12  12
+      DQT, Row #7:  16  12  12  12  12  12  12  12
+    ----
+    Precision=8 bits
+    Destination ID=1 (Chrominance, typically)
+      DQT, Row #0:   7   7  13  24  20  20  17  17
+      DQT, Row #1:   7  12  16  14  14  12  12  12
+      DQT, Row #2:  13  16  14  14  12  12  12  12
+      DQT, Row #3:  24  14  14  12  12  12  12  12
+      DQT, Row #4:  20  14  12  12  12  12  12  12
+      DQT, Row #5:  20  12  12  12  12  12  12  12
+      DQT, Row #6:  17  12  12  12  12  12  12  12
+      DQT, Row #7:  17  12  12  12  12  12  12  12
+
+  * Embedded Thumb Marker: DRI
+    Length = 4
+
+  * Embedded Thumb Marker: APP14
+    Length = 14
+
+  * Embedded Thumb Marker: SOF
+    Frame header length = 17
+    Precision = 8
+    Number of Lines = 170
+    Samples per Line = 256
+    Image Size = 256 x 170
+
+  * Embedded Thumb Marker: DHT
+    Length = 418
+
+  * Embedded Thumb Marker: SOS
+    Skipping scan data
+    Skipped 6287 bytes
+
+  * Embedded Thumb Marker: EOI
+
+  * Embedded Thumb Signature: 01180AF3DE63318828A86409EF4013DD
+
+*** Searching Compression Signatures ***
+
+  Signature:           01DADDC4908E9BA57CC067EEAD54E67D
+  Signature (Rotated): 01DADDC4908E9BA57CC067EEAD54E67D
+  File Offset:         0 bytes
+  Chroma subsampling:  1x1
+  EXIF Make/Model:     NONE
+  EXIF Makernotes:     NONE
+  EXIF Software:       OK   [Adobe Photoshop Lightroom Classic 12.3 (Macintosh)]
+
+  Searching Compression Signatures: (3347 built-in, 0 user(*) )
+
+          EXIF.Make / Software        EXIF.Model                            Quality           Subsamp Match?
+          -------------------------   -----------------------------------   ----------------  --------------
+     SW :[Adobe Photoshop          ]                                       [Save As 12      ]
+
+  NOTE: EXIF Software field recognized as from editor
+  Based on the analysis of compression characteristics and EXIF metadata:
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+JpgSnoop  lily.jpg  MCU 0,1
 
 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+MCU 0,0
+c = 0 m =  0 zz = 0,0 table = 0  consumed = 18 huffLength = 8  huffCode = 254   11111110     huffVal = 10  repeat = 0  bits = 0011100011 huffResult = 227  huffSignedResult = -796 Q = 1  DCT = 227  11111110 0011100011 10111100101110 Next 11111110 00111000 11101111 00101110  No bits to align
+c = 0 m =  4 zz = 1,1 table = 10 consumed = 7  huffLength = 4  huffCode = 11    1011         huffVal = 49  repeat = 3  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    1011 1 1001011100001110111000011__ Next 00011101 11000011  No bits to align
+c = 0 m =  7 zz = 1,2 table = 10 consumed = 11 huffLength = 3  huffCode = 4     100          huffVal = 33  repeat = 2  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 2  DCT = 2    100 1 011100001110111000011_______ Next  No bits to align
+c = 0 m =  9 zz = 3,0 table = 10 consumed = 7  huffLength = 3  huffCode = 3     011          huffVal = 17  repeat = 1  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    011 1 0000111011100001110011110___ Next 10011110  No bits to align
+c = 0 m = 10 zz = 4,0 table = 10 consumed = 10 huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 1  DCT = 0    00 0 0111011100001110011110_______ Next  No bits to align
+c = 0 m = 12 zz = 2,2 table = 10 consumed = 6  huffLength = 3  huffCode = 3     011          huffVal = 17  repeat = 1  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    011 1 01110000111001111001111011__ Next 01111011  No bits to align
+c = 0 m = 14 zz = 0,4 table = 10 consumed = 10 huffLength = 3  huffCode = 3     011          huffVal = 17  repeat = 1  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    011 1 0000111001111001111011______ Next  No bits to align
+c = 0 m = 15 zz = 0,5 table = 10 consumed = 5  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 2  DCT = 0    00 0 011100111100111101110010000__ Next 10010000  No bits to align
+c = 0 m = 17 zz = 2,3 table = 10 consumed = 9  huffLength = 3  huffCode = 3     011          huffVal = 17  repeat = 1  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    011 1 00111100111101110010000_____ Next  No bits to align
+c = 0 m = 18 zz = 3,2 table = 10 consumed = 4  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    00 1 1110011110111001000001000000_ Next 01000000  No bits to align
+c = 0 m = 24 zz = 3,3 table = 10 consumed = 11 huffLength = 6  huffCode = 57    111001       huffVal = 81  repeat = 5  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    111001 1 110111001000001000000____ Next  No bits to align
+c = 0 m = 29 zz = 1,6 table = 10 consumed = 9  huffLength = 5  huffCode = 27    11011        huffVal = 65  repeat = 4  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 2  DCT = 2    11011 1 00100000100000011111001___ Next 11111001  No bits to align
+c = 0 m = 30 zz = 2,5 table = 10 consumed = 4  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 2  DCT = 2    00 1 0000010000001111100101111101_ Next 01111101  No bits to align
+c = 0 m = 31 zz = 3,4 table = 10 consumed = 7  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 3  DCT = 0    00 0 0010000001111100101111101____ Next  No bits to align
+c = 0 m = 32 zz = 4,3 table = 10 consumed = 10 huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 1  DCT = 1    00 1 0000001111100101111101_______ Next  No bits to align
+c = 0 m = 33 zz = 5,2 table = 10 consumed = 5  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 1  DCT = 0    00 0 000111110010111110110111111__ Next 10111111  No bits to align
+c = 0 m = 34 zz = 6,1 table = 10 consumed = 8  huffLength = 2  huffCode = 0     00           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 1  DCT = 0    00 0 111110010111110110111111_____ Next  No bits to align
+c = 0 m = 45 zz = 4,5 table = 10 consumed = 9  huffLength = 8  huffCode = 249   11111001     huffVal = 161 repeat = 10 bits = 0          huffResult = 0    huffSignedResult = -1   Q = 3  DCT = 0    11111001 0 11111011011111111001110 Next 11001110  No bits to align
+c = 0 m = 61 zz = 6,7 table = 10 consumed = 9  huffLength = 8  huffCode = 251   11111011     huffVal = 240 repeat = 15 bits = 0          huffResult = 0    huffSignedResult = 0    Q = 3  DCT = 0    11111011  01111111100111011001110_ Next 11001110  No bits to align
+c = 0 m = 63 zz = 7,7 table = 10 consumed = 5  huffLength = 3  huffCode = 3     011          huffVal = 17  repeat = 1  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    011 1 111110011101100111010101100_ Next 10101100  No bits to align
+decode HUFF CODE NOT FOUND buf = "11111001110110011101010110000000" mcuRow = 0 mcuCol = 0 c = 1 m = 0
+c = 1 m = 11 zz = 3,1 table = 11 consumed = 14 huffLength = 8  huffCode = 249   11111001     huffVal = 161 repeat = 10 bits = 1          huffResult = 1    huffSignedResult = 1    Q = 2  DCT = 2    11111001 1 101100111010101100_____ Next  No bits to align
+c = 1 m = 13 zz = 1,3 table = 11 consumed = 11 huffLength = 4  huffCode = 11    1011         huffVal = 17  repeat = 1  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 3  DCT = 0    1011 0 011101010110010110011______ Next 10110011  No bits to align
+c = 1 m = 14 zz = 0,4 table = 11 consumed = 6  huffLength = 2  huffCode = 1     01           huffVal = 1   repeat = 0  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    01 1 10101011001011001101111000___ Next 01111000  No bits to align
+c = 1 m = 15 zz = 0,5 table = 11 consumed = 13 huffLength = 4  huffCode = 10    1010         huffVal = 3   repeat = 0  bits = 101        huffResult = 5    huffSignedResult = 5    Q = 3  DCT = 15   1010 101 1001011001101111000______ Next  No bits to align
+c = 1 m = 16 zz = 1,4 table = 11 consumed = 10 huffLength = 3  huffCode = 4     100          huffVal = 2   repeat = 0  bits = 10         huffResult = 2    huffSignedResult = 2    Q = 1  DCT = 2    100 10 1100110111100000001001_____ Next 00001001  No bits to align
+c = 1 m = 19 zz = 4,1 table = 11 consumed = 8  huffLength = 5  huffCode = 25    11001        huffVal = 33  repeat = 2  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    11001 1 011110000000100101110001__ Next 01110001  No bits to align
+c = 1 m = 20 zz = 5,0 table = 11 consumed = 3  huffLength = 2  huffCode = 1     01           huffVal = 1   repeat = 0  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    01 1 11000000010010111000111001010 Next 11001010  No bits to align
+c = 1 m = 21 zz = 6,0 table = 11 consumed = 12 huffLength = 5  huffCode = 24    11000        huffVal = 4   repeat = 0  bits = 0000       huffResult = 0    huffSignedResult = -15  Q = 3  DCT = 0    11000 0000 10010111000111001010___ Next  No bits to align
+c = 1 m = 22 zz = 5,1 table = 11 consumed = 9  huffLength = 3  huffCode = 4     100          huffVal = 2   repeat = 0  bits = 10         huffResult = 2    huffSignedResult = 2    Q = 3  DCT = 6    100 10 11100011100101000000011____ Next 00000011  No bits to align
+c = 1 m = 27 zz = 0,6 table = 11 consumed = 8  huffLength = 6  huffCode = 56    111000       huffVal = 65  repeat = 4  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    111000 1 110010100000001101011110_ Next 01011110  No bits to align
+c = 1 m = 30 zz = 2,5 table = 11 consumed = 6  huffLength = 5  huffCode = 25    11001        huffVal = 33  repeat = 2  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 3  DCT = 0    11001 0 10000000110101111001011111 Next 01011111  No bits to align
+c = 1 m = 31 zz = 3,4 table = 11 consumed = 11 huffLength = 3  huffCode = 4     100          huffVal = 2   repeat = 0  bits = 00         huffResult = 0    huffSignedResult = -3   Q = 3  DCT = 0    100 00 000110101111001011111______ Next  No bits to align
+c = 1 m = 32 zz = 4,3 table = 11 consumed = 5  huffLength = 2  huffCode = 0     00           huffVal = 0   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = 0    Q = 3  DCT = 0    00  011010111100101111101101110___ Next 01101110  No bits to align EOB
+c = 2 m =  0 zz = 0,0 table = 1  consumed = 6  huffLength = 1  huffCode = 0     0            huffVal = 0   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = 0    Q = 1  DCT = 0    0  11010111100101111101101110_____ Next  No bits to align
+c = 2 m =  4 zz = 1,1 table = 11 consumed = 12 huffLength = 5  huffCode = 26    11010        huffVal = 49  repeat = 3  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    11010 1 11100101111101101110______ Next  No bits to align
+c = 2 m = 10 zz = 4,0 table = 11 consumed = 11 huffLength = 6  huffCode = 57    111001       huffVal = 81  repeat = 5  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 1  DCT = 0    111001 0 111110110111010111000____ Next 10111000  No bits to align
+c = 2 m = 25 zz = 2,4 table = 11 consumed = 12 huffLength = 8  huffCode = 251   11111011     huffVal = 225 repeat = 14 bits = 0          huffResult = 0    huffSignedResult = -1   Q = 2  DCT = 0    11111011 0 11101011100010000100___ Next 10000100  No bits to align
+c = 2 m = 32 zz = 4,3 table = 11 consumed = 11 huffLength = 6  huffCode = 58    111010       huffVal = 97  repeat = 6  bits = 1          huffResult = 1    huffSignedResult = 1    Q = 3  DCT = 3    111010 1 110001000010000011000____ Next 00011000  No bits to align
+c = 2 m = 33 zz = 5,2 table = 11 consumed = 12 huffLength = 5  huffCode = 24    11000        huffVal = 4   repeat = 0  bits = 1000       huffResult = 8    huffSignedResult = 8    Q = 3  DCT = 24   11000 1000 01000001100000000000___ Next 00000000  No bits to align
+c = 2 m = 34 zz = 6,1 table = 11 consumed = 7  huffLength = 2  huffCode = 1     01           huffVal = 1   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = -1   Q = 3  DCT = 0    01 0 0000110000000000010101001____ Next 10101001  No bits to align
+c = 2 m = 35 zz = 7,0 table = 11 consumed = 9  huffLength = 2  huffCode = 0     00           huffVal = 0   repeat = 0  bits = 0          huffResult = 0    huffSignedResult = 0    Q = 3  DCT = 0    00  00110000000000010101001_______ Next  No bits to align EOB
 
-MW::insertFiles  dm->instance = 0
-DataModel::insert dmRow = 385 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-ImageCache::addCacheItemImageMetadata row = 385 "untitled-0001_Zen2048.JPG"
-DataModel::insert dmRow = 386 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0002_Zen2048.JPG"
-ImageCache::addCacheItemImageMetadata row = 386 "untitled-0002_Zen2048.JPG"
-DataModel::insert dmRow = 387 fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0003_Zen2048.JPG"
-ImageCache::addCacheItemImageMetadata row = 387 "untitled-0003_Zen2048.JPG"
-WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
-ImageCache::setCurrentPosition start(QThread::LowestPriority)
-ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
+REPORT PARAMETERS
+    jpgfile = /Users/roryhill/Pictures/_JPG/test.jpg
+    isBigEndian = true
+    iWidth = 2048
+    iHeight = 1363
+    lines = 1363
+    mcuRows = 173
+    mcuCols = 256
+    c = 0
+    samplesPerLine = 2048
+    subFormat = 0
+    losslessFormat = false
+    precision = 8
+    componentsInFrame = 3
+    scanDataOffset = 28669
+    sosComponentCount = 3
 
-ImageCache::launchDecoders Decoder = 0
-WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
-ImageCache::setCurrentPosition start(QThread::LowestPriority)
-ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
-ImageCache::launchDecoders Decoder = 0
-WARNING MW::fileSelectionChange loadImage failed for "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG"
-ImageCache::setCurrentPosition 385 /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG src = MW::fileSelectionChange isRunning = false
-ImageCache::setCurrentPosition start(QThread::LowestPriority)
-ImageCache::updateTargets current position = 385 total = 388   isCacheItemListComplete true
-ImageCache::launchDecoders Decoder = 0
+REPORT DQT
+    dqtOffset = 6e73 28275
+    dqtLength = 132
+    dqtPrecision = 0 8 bit
+
+    Quantization Table 0 Luminance
+    Row 0      1   1   1   1   1   1   1   2
+    Row 1      1   1   1   1   1   1   1   2
+    Row 2      1   1   1   1   1   1   2   2
+    Row 3      1   1   1   1   1   2   2   3
+    Row 4      1   1   1   1   2   2   3   3
+    Row 5      1   1   1   2   2   3   3   3
+    Row 6      1   1   2   2   3   3   3   3
+    Row 7      2   2   2   3   3   3   3   3
+
+    Quantization Table 1 Chrominance
+    Row 0      1   1   1   2   3   3   3   3
+    Row 1      1   1   1   2   3   3   3   3
+    Row 2      1   1   2   3   3   3   3   3
+    Row 3      2   2   3   3   3   3   3   3
+    Row 4      3   3   3   3   3   3   3   3
+    Row 5      3   3   3   3   3   3   3   3
+    Row 6      3   3   3   3   3   3   3   3
+    Row 7      3   3   3   3   3   3   3   3
+
+REPORT HUFFMAN TABLES
+
+Table = 0x00 DC component of Luminance (Y)
+Bit Length = 2  Code = 0     00                 Value =   1
+Bit Length = 2  Code = 1     01                 Value =   2
+Bit Length = 3  Code = 4     100                Value =   0
+Bit Length = 3  Code = 5     101                Value =   3
+Bit Length = 4  Code = 12    1100               Value =   5
+Bit Length = 4  Code = 13    1101               Value =   6
+Bit Length = 4  Code = 14    1110               Value =   7
+Bit Length = 5  Code = 30    11110              Value =   4
+Bit Length = 6  Code = 62    111110             Value =   8
+Bit Length = 7  Code = 126   1111110            Value =   9
+Bit Length = 8  Code = 254   11111110           Value =  10
+Bit Length = 9  Code = 510   111111110          Value =  11
+Total number of codes: 12
+
+Table = 0x01 DC component of Chrominance (Cb & Cr)
+Bit Length = 1  Code = 0     0                  Value =   0
+Bit Length = 2  Code = 2     10                 Value =   1
+Bit Length = 4  Code = 6     0110               Value =   2
+Bit Length = 4  Code = 7     0111               Value =   3
+Bit Length = 5  Code = 16    10000              Value =   4
+Bit Length = 5  Code = 17    10001              Value =   5
+Bit Length = 5  Code = 18    10010              Value =   6
+Bit Length = 6  Code = 38    100110             Value =   7
+Bit Length = 7  Code = 78    1001110            Value =   8
+Total number of codes: 9
+
+Table = 0x10 AC component of Luminance (Y)
+Bit Length = 2  Code = 0     00                 Value =   1
+Bit Length = 3  Code = 2     010                Value =   2
+Bit Length = 3  Code = 3     011                Value =  17
+Bit Length = 3  Code = 4     100                Value =  33
+Bit Length = 4  Code = 10    1010               Value =   3
+Bit Length = 4  Code = 11    1011               Value =  49
+Bit Length = 5  Code = 24    11000              Value =   0
+Bit Length = 5  Code = 25    11001              Value =   4
+Bit Length = 5  Code = 26    11010              Value =  18
+Bit Length = 5  Code = 27    11011              Value =  65
+Bit Length = 6  Code = 56    111000             Value =   5
+Bit Length = 6  Code = 57    111001             Value =  81
+Bit Length = 6  Code = 58    111010             Value =  97
+Bit Length = 7  Code = 118   1110110            Value =   6
+Bit Length = 7  Code = 119   1110111            Value =  19
+Bit Length = 7  Code = 120   1111000            Value =  34
+Bit Length = 7  Code = 121   1111001            Value = 113
+Bit Length = 7  Code = 122   1111010            Value = 129
+Bit Length = 8  Code = 246   11110110           Value =   7
+Bit Length = 8  Code = 247   11110111           Value =  50
+Bit Length = 8  Code = 248   11111000           Value = 145
+Bit Length = 8  Code = 249   11111001           Value = 161
+Bit Length = 8  Code = 250   11111010           Value = 177
+Bit Length = 8  Code = 251   11111011           Value = 240
+Bit Length = 9  Code = 504   111111000          Value =  20
+Bit Length = 9  Code = 505   111111001          Value =  66
+Bit Length = 9  Code = 506   111111010          Value = 193
+Bit Length = 9  Code = 507   111111011          Value = 209
+Bit Length = 9  Code = 508   111111100          Value = 225
+Bit Length = 10 Code = 1018  1111111010         Value =   8
+Bit Length = 10 Code = 1019  1111111011         Value =  35
+Bit Length = 10 Code = 1020  1111111100         Value =  82
+Bit Length = 10 Code = 1021  1111111101         Value = 241
+Bit Length = 11 Code = 2044  11111111100        Value =  21
+Bit Length = 11 Code = 2045  11111111101        Value =  98
+Bit Length = 12 Code = 4092  111111111100       Value = 114
+Bit Length = 13 Code = 8186  1111111111010      Value =  36
+Bit Length = 13 Code = 8187  1111111111011      Value =  51
+Bit Length = 13 Code = 8188  1111111111100      Value = 130
+Bit Length = 15 Code = 16378 011111111111010    Value =   9
+Bit Length = 16 Code = 32758 0111111111110110   Value =  22
+Bit Length = 16 Code = 32759 0111111111110111   Value =  37
+Bit Length = 16 Code = 32760 0111111111111000   Value =  52
+Bit Length = 16 Code = 32761 0111111111111001   Value =  67
+Bit Length = 16 Code = 32762 0111111111111010   Value = 146
+Bit Length = 16 Code = 32763 0111111111111011   Value = 162
+Bit Length = 16 Code = 32764 0111111111111100   Value = 178
+Bit Length = 16 Code = 32765 0111111111111101   Value =  83
+Bit Length = 16 Code = 32766 0111111111111110   Value = 194
+Bit Length = 16 Code = 32767 0111111111111111   Value =  23
+Bit Length = 16 Code = 32768 1000000000000000   Value =  53
+Bit Length = 16 Code = 32769 1000000000000001   Value =  68
+Bit Length = 16 Code = 32770 1000000000000010   Value = 210
+Bit Length = 16 Code = 32771 1000000000000011   Value =  38
+Bit Length = 16 Code = 32772 1000000000000100   Value =  99
+Bit Length = 16 Code = 32773 1000000000000101   Value = 115
+Bit Length = 16 Code = 32774 1000000000000110   Value =  54
+Bit Length = 16 Code = 32775 1000000000000111   Value =  69
+Bit Length = 16 Code = 32776 1000000000001000   Value = 179
+Bit Length = 16 Code = 32777 1000000000001001   Value = 226
+Bit Length = 16 Code = 32778 1000000000001010   Value = 242
+Total number of codes: 61
+
+Table = 0x11 AC component of Chrominance (Cb & Cr)
+Bit Length = 2  Code = 0     00                 Value =   0
+Bit Length = 2  Code = 1     01                 Value =   1
+Bit Length = 3  Code = 4     100                Value =   2
+Bit Length = 4  Code = 10    1010               Value =   3
+Bit Length = 4  Code = 11    1011               Value =  17
+Bit Length = 5  Code = 24    11000              Value =   4
+Bit Length = 5  Code = 25    11001              Value =  33
+Bit Length = 5  Code = 26    11010              Value =  49
+Bit Length = 6  Code = 54    110110             Value =   5
+Bit Length = 6  Code = 55    110111             Value =  18
+Bit Length = 6  Code = 56    111000             Value =  65
+Bit Length = 6  Code = 57    111001             Value =  81
+Bit Length = 6  Code = 58    111010             Value =  97
+Bit Length = 6  Code = 59    111011             Value = 240
+Bit Length = 7  Code = 120   1111000            Value =   6
+Bit Length = 7  Code = 121   1111001            Value = 113
+Bit Length = 7  Code = 122   1111010            Value = 129
+Bit Length = 8  Code = 246   11110110           Value =  19
+Bit Length = 8  Code = 247   11110111           Value =  34
+Bit Length = 8  Code = 248   11111000           Value = 145
+Bit Length = 8  Code = 249   11111001           Value = 161
+Bit Length = 8  Code = 250   11111010           Value = 177
+Bit Length = 8  Code = 251   11111011           Value = 225
+Bit Length = 9  Code = 504   111111000          Value =  20
+Bit Length = 9  Code = 505   111111001          Value =  50
+Bit Length = 9  Code = 506   111111010          Value = 193
+Bit Length = 9  Code = 507   111111011          Value = 209
+Bit Length = 10 Code = 1016  1111111000         Value =   7
+Bit Length = 10 Code = 1017  1111111001         Value =  35
+Bit Length = 10 Code = 1018  1111111010         Value =  66
+Bit Length = 10 Code = 1019  1111111011         Value =  82
+Bit Length = 10 Code = 1020  1111111100         Value = 241
+Bit Length = 11 Code = 2042  11111111010        Value =  21
+Bit Length = 11 Code = 2043  11111111011        Value =  98
+Bit Length = 11 Code = 2044  11111111100        Value = 114
+Bit Length = 12 Code = 4090  111111111010       Value =  36
+Bit Length = 12 Code = 4091  111111111011       Value =  51
+Bit Length = 12 Code = 4092  111111111100       Value = 130
+Bit Length = 13 Code = 8186  1111111111010      Value = 146
+Bit Length = 13 Code = 8187  1111111111011      Value = 162
+Bit Length = 13 Code = 8188  1111111111100      Value = 178
+Bit Length = 14 Code = 16378 11111111111010     Value =  22
+Bit Length = 14 Code = 16379 11111111111011     Value =  52
+Bit Length = 14 Code = 16380 11111111111100     Value =  67
+Bit Length = 16 Code = 32762 0111111111111010   Value = 194
+Bit Length = 16 Code = 32763 0111111111111011   Value =   8
+Bit Length = 16 Code = 32764 0111111111111100   Value =  23
+Bit Length = 16 Code = 32765 0111111111111101   Value =  83
+Bit Length = 16 Code = 32766 0111111111111110   Value =  99
+Bit Length = 16 Code = 32767 0111111111111111   Value = 210
+Bit Length = 16 Code = 32768 1000000000000000   Value =  37
+Bit Length = 16 Code = 32769 1000000000000001   Value =  53
+Bit Length = 16 Code = 32770 1000000000000010   Value =  68
+Bit Length = 16 Code = 32771 1000000000000011   Value = 115
+Bit Length = 16 Code = 32772 1000000000000100   Value = 147
+Total number of codes: 55
+
+REPORT SCAN DATA 1ST 640 BYTES
+    scanDataOffset = 6FFD 28669
+    sosComponentCount = 3
+    fe 38 ef 2e 1d c3 9e 7b 90 40 f9 7d bf ce ce ac b3 78 09 71 ca 03 5e 5f 6e b8 84 18 00 a9 21 a4
+    0d 98 75 4d b0 03 30 04 5a c4 30 8b da de bf 77 02 c4 90 fe 22 1a 1a 4e f0 ff 00 7f ec 07 23 48
+    0c e5 c4 8f 9d ce fe b8 00 81 12 64 90 09 d9 cc bf a6 20 18 0f 74 07 37 17 bf 5f 9e 28 be 43 30
+    3b 69 83 1c 83 ff 00 a9 c0 04 18 06 e2 de 26 21 d9 87 e9 8a 08 25 c3 97 36 2f fe 26 06 d8 14 62
+    43 05 31 2c 42 60 ee 3f 4d b0 00 d2 0c a4 96 6d a3 a3 7a e0 40 12 02 40 21 81 77 23 a0 80 5f f7
+    c0 6a 07 d9 d8 97 1e 96 8f 3c 00 8a 00 f9 6e 0d 9f 6f bf 9e 28 2b d2 ec f2 4e f6 04 7f 8b 79 e0
+    08 47 44 8b 0e 41 b9 3f dc e0 08 a4 a4 58 10 0c 1d a0 2b de 7e 5e 98 0d 0a cc 07 78 54 0e 5d 27
+    00 2f 28 00 24 b3 91 1e 47 fd 7f 14 00 f5 79 2a f3 ea 30 04 09 72 03 97 8d a2 67 e5 80 14 80 e0
+    6a 8f 56 3c 8c e2 81 55 04 40 1e 40 1b da db 61 c0 02 ec e9 0e 3c 2d c8 92 df 0c 00 08 66 00 99
+    87 d8 90 65 c6 00 42 ce 05 89 f4 91 80 e0 28 4b 92 e0 ef e8 92 60 81 8a 40 80 4d dd ac 58 82 2d
+    68 fd f1 00 ac 92 4b 40 72 da 7f fc 26 eb 81 40 c5 80 bc 5b 60 46 f3 be 28 1e f6 16 0c 79 37 97
+    c6 e3 00 28 09 9d fc 85 89 3c e2 f8 01 88 75 38 01 c5 9f ff 00 c2 c0 2e 40 1b 98 0c 76 31 02 f8
+    01 82 61 89 81 1b 99 b2 4e 00 81 37 04 97 31 7f 59 ff 00 78 80 29 4d c0 96 6e 8e ff 00 c7 5f 86
+    05 f3 1c 20 36 92 04 a5 5a 60 90 1f d3 00 46 17 dc 06 0d a5 8b ef 18 02 00 ed 2d cb fc 49 da 4e
+    00 b7 49 21 ec f6 e5 1b 01 80 0c 2b 90 bd fa 0b 0c 00 c9 48 3d 01 01 84 b3 59 8c e0 0b 34 c0 2d
+    be fb 11 00 7d 9c 40 00 97 97 3a 8b 73 07 91 8c 50 33 28 10 c1 df f2 86 78 1b 8d b0 c8 0c d0 22
+    25 51 72 f2 dd 1b 00 30 2e 03 81 60 5e cc e7 e9 e5 81 50 c9 00 c8 f2 20 6c 0d 94 1d ba 62 82 c0
+    1c fb bd 41 90 c4 75 c0 a3 24 27 c2 48 f2 12 09 2e c1 db 14 71 0b 31 09 0c c7 a0 00 91 70 7a e0
+    07 08 70 76 04 f2 f8 bf e9 80 2c d1 ee cf 85 a1 dd 81 27 f3 7c 71 40 e1 20 dc b3 91 2c 24 e0 06
+    63 01 c9 67 60 58 02 77 c0 2e a3 00 c2 00 91 71 b8 05 e5 f0 28 c9 10 fd 14 36 71 d7 ec 60 0b 12
+
+REPORT IDCT [0,0]
+Lum: Y
+      29      29      28      26      28      29      28      28
+      30      28      28      28      27      28      27      29
+      28      27      29      28      29      27      27      29
+      27      29      27      28      29      28      25      29
+      27      29      28      26      30      28      27      28
+      27      29      28      29      28      29      29      28
+      28      28      28      29      29      27      29      27
+      27      28      26      28      29      27      27      28
+Chrom: Cb
+     127     125     128     126     122     124     125     122
+     134     129     134     137     133     134     137     137
+     123     114     119     125     120     118     121     122
+     136     127     132     135     129     129     131     129
+     131     127     131     132     127     131     134     128
+     121     118     122     121     116     122     124     117
+     138     134     136     137     133     136     137     132
+     127     120     123     126     124     124     125     125
+Chrom: Cr
+     131     129     126     124     124     127     129     129
+     123     127     131     133     132     129     124     121
+     128     128     127     127     126     127     128     130
+     133     129     125     123     123     125     129     131
+     124     125     129     132     133     129     125     123
+     125     126     128     129     129     128     128     128
+     133     130     126     122     122     125     130     133
+     123     125     128     130     131     130     127     125
+
+REPORT MCU [0,0]
+    Lum: Y
+    -796       0       0       0       1      -2       0       0
+       0       1       2       0       0       0       2       0
+       0       0       1       1       0       2       0       0
+       1       0       1       1      -3       0       0       0
+      -1       0       0       1       0      -3       0       0
+       0       0      -1       0       0       0       0       0
+       0      -1       0       0       0       0       0       0
+       0       0       0       0       0       0       0       3
+    Chrom: Cb
+       0       0       0       0       3      15       3       0
+       0       0       0      -3       2       0       0       0
+       0       0       0       0       0      -3       0       0
+       0       2       0       0      -9       0       0       0
+       0       3       0       0       0       0       0       0
+       3       6       0       0       0       0       0       0
+     -45       0       0       0       0       0       0       0
+       0       0       0       0       0       0       0       0
+    Chrom: Cr
+       0       0       0       0       0       0       0       0
+       0       3       0       0       0       0       0       0
+       0       0       0       0      -2       0       0       0
+       0       0       0       0       0       0       0       0
+      -1       0       0       3       0       0       0       0
+       0       0      24       0       0       0       0       0
+       0      -3       0       0       0       0       0       0
+       0       0       0       0       0       0       0       0
+
+REPORT RGB [0,0]
+  211B1B  1E1D17  191D1C  141D16  162011  1B1F15  1D1C16  1D1D11     33 ,27 ,27   30 ,29 ,23   25 ,29 ,28   20 ,29 ,22   22 ,32 ,17   27 ,31 ,21   29 ,28 ,22   29 ,29 ,17
+  161F28  1A1C1D  201726  23152B  201623  1D1926  151A2A  131E2C     22 ,31 ,40   26 ,28 ,29   32 ,23 ,38   35 ,21 ,43   32 ,22 ,35   29 ,25 ,38   21 ,26 ,42   19 ,30 ,44
+  1C1D13  1B1F20  1B20D0  1A1D16  1A21E0  191F90  1B1DE0  1F1D12     28 ,29 ,19   27 ,31 ,2    27 ,32 ,13   26 ,29 ,22   26 ,33 ,14   25 ,31 ,9    27 ,29 ,14   31 ,29 ,18
+  221429  1E1C1B  161B22  141D28  15201E  171D1D  1A171E  211A1E     34 ,20 ,41   30 ,28 ,27   22 ,27 ,34   20 ,29 ,40   21 ,32 ,30   23 ,29 ,29   26 ,23 ,30   33 ,26 ,30
+  151C20  181F1B  1D1A21  1F1521  251A1C  1D1A21  161B25  141F1C     21 ,28 ,32   24 ,31 ,27   29 ,26 ,33   31 ,21 ,33   37 ,26 ,28   29 ,26 ,33   22 ,27 ,37   20 ,31 ,28
+  161FE0  1A21B0  1C1E11  1E1E10  1D1F60  1D1F12  1D1E15  1C1F80     22 ,31 ,14   26 ,33 ,11   28 ,30 ,17   30 ,30 ,16   29 ,31 ,6    29 ,31 ,18   29 ,30 ,21   28 ,31 ,8
+  23142D  1E1826  191A2A  141E2C  141F25  161A29  1F182C  221622     35 ,20 ,45   30 ,24 ,38   25 ,26 ,42   20 ,30 ,44   20 ,31 ,37   22 ,26 ,41   31 ,24 ,44   34 ,22 ,34
+  131E19  1720D0  1A1B11  1E1B18  211C15  1D1A13  191C15  171F16     19 ,30 ,25   23 ,32 ,13   26 ,27 ,17   30 ,27 ,24   33 ,28 ,21   29 ,26 ,19   25 ,28 ,21   23 ,31 ,22
+
+Reverse engineer
+Chr(0) (Tbl #1), MCU=[0,0]
+  [0x00007009.5]: ZRL=[ 0] Val=[  -68] Coef=[00= DC] Data=[0x BF CE CE AC = 0b (-----111 11001110 11------ --------)]
+  [0x0000700B.2]: ZRL=[ 0] Val=[    0] Coef=[01..01] Data=[0x CE AC B3 78 = 0b (--00---- -------- -------- --------)] EOB
+                  DCT Matrix=[  -68     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+                             [    0     0     0     0     0     0     0     0]
+signed2Huff   signedVal = -68 bits = 7  result = 59       bin = 111011               Buffer = 11111001110110011101010110000000 In buffer = true
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-isRunning                = false
-abort                    = false
-
-instance                 = 0
-G::dmInstance            = 0
-
-key                      = 385
-prevKey                  = 385
-directionChangeThreshold = 3
-wtAhead                  = 7
-isForward                = true
-totFiles                 = 385
-currMB                   = 4617.5
-currMB Check             = 4617.5
-maxMB                    = 24000
-minMB                    = 24000
-folderMB                 = 0          (if all metadata loaded)
-targetFirst              = 0
-targetLast               = 384
-decoderCount             = 20
-
-currentPath              = /Users/roryhill/Pictures/Zen2048/pbase2048/untitled-0001_Zen2048.JPG
-cacheSizeHasChanged      = true
-filterOrSortHasChanged   = false
-isCacheUpToDate          = true
-
-Decoders:
-  ID  Status          Key    DM Instance
-   0  Ready           375              0
-   1  Ready           382              0
-   2  Ready           372              0
-   3  Ready           368              0
-   4  Ready           374              0
-   5  Ready           381              0
-   6  Ready           384              0
-   7  Ready           379              0
-   8  Ready             8              0
-   9  Ready           383              0
-  10  Ready           383              0
-  11  Ready           376              0
-  12  Ready           378              0
-  13  Ready           380              0
-  14  Ready           382              0
-  15  Ready            15              0
-  16  Ready           371              0
-  17  Ready           381              0
-  18  Ready            18              0
-  19  Ready            19              0
+111110 0111011 0011101010110000000

@@ -18,6 +18,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <algorithm>
+
+#include <turbojpeg.h>
 //#include "Utilities/bit.h"
 
 class Jpeg : public QObject
@@ -42,8 +44,11 @@ public:
     QHash<QString, quint32> segmentHash;
 
     void decodeScan(MetadataParameters &p);
+    void decodeScan(QString fPath, QImage &image);
     void decodeScan(QFile &file, QImage &image);
     void decodeScan(QByteArray &ba, QImage &image);
+    QImage turboDecode(QString &filePath);              // uses libjpeg-turbo
+    QImage turboDecode(QByteArray &ba);    // uses libjpeg-turbo
 
     void embedThumbnail(ImageMetadata &m);
 
@@ -55,11 +60,18 @@ private:
     void parseQuantizationTable(MetadataParameters &p, quint16 len);
     void parseSOSHeader(MetadataParameters &p, quint16 len);
 
+    void processMCU(QByteArray &ba, quint32 &offset, uint &buf,
+                    uint &consumed, int &bitsToResetMarker, bool &eos);
+    void appendMCUScanlines2QImage(QImage &im, int &mcuRow);
+    void idctTransformMCU();
+    void rgbTransformMCU();
+    void appendMCU2QImage();
+
     int  huff2Signed(uint val, uint bits);
 
     void buildMask();
-    void bufAppend(uint &buf, quint8 byte, int &consumed);
-    uint bufExtract(uint &buf, uint nBits, int &consumed);
+    void bufAppend(uint &buf, quint8 byte, uint &consumed);
+    uint bufExtract(uint &buf, uint nBits, uint &consumed);
     uint bufPeek(uint &buf, uint nBits);
 
     void buildIdctLookup();
@@ -214,6 +226,7 @@ private:
     QHash<quint32, QString> segCodeHash;
     quint32 order;
     QString err;
+    bool isErr = false;
     bool isXmp;
 
 };
