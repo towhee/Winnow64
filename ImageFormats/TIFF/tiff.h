@@ -82,9 +82,11 @@ private:
         NoCompression,
         LzwCompression,
         LzwPredictorCompression,
-        ZipCompression
+        ZipCompression,
+        JpgCompression
     };
     int compressionType;
+    QStringList compressionString {"None", "LZW", "LZW Predictor", "Zip", "Jpg"};
     quint8 rgb[3];  // being used?
 
     struct TiffStrip {
@@ -111,9 +113,12 @@ private:
     QString filePath;  // for debugging
     bool isDebug;
 
-    bool decodeBase(MetadataParameters &p, QImage &image);
-    bool decodeLZW(MetadataParameters &p, QImage &image);
-    bool decodeZip(MetadataParameters &p, QImage &image);
+    void parseJpgTables(MetadataParameters &p, ImageMetadata &m);
+
+    bool decodeBase(MetadataParameters &p);
+    bool decodeLZW(MetadataParameters &p);
+    bool decodeZip(MetadataParameters &p);
+    bool decodeJpg(MetadataParameters &p);
 
     void perChannelToInterleave(QImage *im1);
     void toRRGGBBAA(QImage *im);
@@ -123,13 +128,13 @@ private:
     TiffType getTiffType();
 
     // LZW compression
-    static TiffStrips lzwDecompress(TiffStrip t);
-    TiffStrips lzwDecompress2(TiffStrip &t, MetadataParameters &p);
-    TiffStrips lzwDecompress3(TiffStrip &t, MetadataParameters &p);  // ChatGPT tweaks
+    void lzwDecompress(TiffStrip &t, MetadataParameters &p);  // Rory tweaks
+    void lzwDecompressOld(TiffStrip &t, MetadataParameters &p);  // Rory tweaks
     void lzwReset(QHash<quint32,QByteArray> &dictionary,
                   QByteArray &prevString,
                   quint32 &nextCode);
     TiffStrips zipDecompress(TiffStrip &t, MetadataParameters &p);  // ChatGPT created
+    bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
 };
 

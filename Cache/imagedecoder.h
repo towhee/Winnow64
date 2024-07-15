@@ -65,6 +65,22 @@ public:
         "FileOpen"
     };
 
+    enum decoders {
+        Qt,
+        TurboJpg,
+        MacOS,
+        LibHeif,
+        Rory
+    } decoderToUse;
+
+    QStringList decodersText {
+        "Qt",
+        "TurboJpg",
+        "MacOS",
+        "LibHeif",
+        "Rory"
+    };
+
 protected:
     void run() Q_DECL_OVERRIDE;
 

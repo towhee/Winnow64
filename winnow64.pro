@@ -526,3 +526,6 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llib
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
+
+macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build -lturbojpeg
+macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo

@@ -307,11 +307,15 @@ bool Tiff::parse(MetadataParameters &p,
         ? m.samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
         : m.samplesPerPixel = 0;
 
-
-//    }
-
     p.offset = m.ifd0Offset;
     if (p.report) parseForDecoding(p, ifd);
+
+    // IFD0: Jpeg table
+    if (ifd->ifdDataHash.contains(347)) {
+        p.offset = ifd->ifdDataHash.value(347).tagValue + 2;
+        if (p.report) parseJpgTables(p, m);
+    }
+
 
     /* Search for thumbnail in chained IFDs, IRB and subIFDs.
        - if no thumbnail found then:    m.offsetThumb == m.offsetFull
@@ -319,7 +323,6 @@ bool Tiff::parse(MetadataParameters &p,
        - if IFD tiff thumb found then:  m.offsetThumb != m.offsetFull
     */
     // IRB:  Get embedded JPG thumbnail if available
-//    bool foundJpgThumb = false;
     if (ifdPhotoshopOffset) {
         if (p.report) {
             p.hdr = "IRB";
@@ -703,8 +706,10 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     (ifd->ifdDataHash.contains(259))
             ? compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
             : compression = 1;
-    if (!(compression == 1  || compression == 5)) {
-        err = "Compression != 1 or 5.  \n";
+    QList validCompressions{1,5,7,8};
+    // if (!(compression == 1  || compression == 5)) {
+    if (!(validCompressions.contains(compression))) {
+        err = "Compression " + QString::number(compression) + " is not supported\n";
     }
     switch (compression) {
     case 1:
@@ -713,6 +718,9 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     case 5:
         if (predictor == 2) compressionType = LzwPredictorCompression;
         else compressionType = LzwCompression;
+        break;
+    case 7:
+        compressionType = JpgCompression;
         break;
     case 8:
         compressionType = ZipCompression;
@@ -760,10 +768,12 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
     if (err != "") G::issue("Error", err, "Tiff::decode_2", -1, p.fPath);
+    if (err != "") qDebug() << "TIFF::parseForDecoding  err =" << err;
 
     if (err != "" && !isReport) return false;
 
-    /* rgh used for debugging - req'd?
+
+    /* rgh used for debugging
     G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
                   " Compression:" + QString::number(compression) +
                   " Predictor:" + QString::number(predictor) +
@@ -780,12 +790,24 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
         p.rpt.setFieldWidth(w1); p.rpt << "PhotometricInterpation" << photoInterp; p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "SamplesPerPixel" << samplesPerPixel; p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "RowsPerStrip" << rowsPerStrip; p.rpt.setFieldWidth(0); p.rpt << "\n";
-        p.rpt.setFieldWidth(w1); p.rpt << "Compression" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
+        p.rpt.setFieldWidth(w1); p.rpt << "Compression code" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
+        p.rpt.setFieldWidth(w1); p.rpt << "Compression type" << compressionString.at(compressionType); p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "PlanarConfiguration" << planarConfiguration; p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "Predictor" << predictor; p.rpt.setFieldWidth(0); p.rpt << "\n";
     }
 
     return true;
+}
+
+void Tiff::parseJpgTables(MetadataParameters &p, ImageMetadata &m)
+{
+/*
+    If the tiff file has been encoded with jpg compression then the tiff exif will contain
+    JPEGTables in IFD0.  Use the Jpeg class to parse this.
+*/
+    Jpeg jpg;
+    jpg.initSegCodeHash();
+    jpg.getJpgSegments(p, m);
 }
 
 /*  DECODING is required to produce a QImage from the tiff file.
@@ -839,7 +861,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     The version is used by ImageDecoders in image cache.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decode_1", fPath + " Source = " + source);
-    //qDebug() << "Tiff::decode2" << fPath;
+    qDebug() << "Tiff::decode(fPath,offset,image)" << fPath;
 
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
@@ -880,6 +902,7 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, ifd)) {
+        qDebug() << "Tiff::decode(p,image,newsize)  parseForDecoding failed"<< p.fPath;
         return false;
     }
 
@@ -890,10 +913,12 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
+    qDebug() << "Tiff::decode(p,image,newsize)  compression =" << compression << p.fPath;
     bool decoded = true;
-    if (compression == 1) decoded = decodeBase(p, image);
-    if (compression == 5 && predictor == 0) decoded = decodeLZW(p, image);
-    if (compression == 8) decoded = decodeZip(p, image);
+    if (compression == 1) decoded = decodeBase(p);
+    if (compression == 5 /*&& predictor == 0*/) decoded = decodeLZW(p);
+    if (compression == 8) decoded = decodeZip(p);
+    if (compression == 7) decoded = decodeJpg(p);
     p.file.close();
     if (!decoded) return false;
 
@@ -920,7 +945,7 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     return true;
 }
 
-bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
+bool Tiff::decodeBase(MetadataParameters &p)
 {
 /*
     Decodes TIFF image data with no compression (compression type 1) and loading it into
@@ -928,41 +953,18 @@ bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
     into the QImage object row by row.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decodeBase", p.fPath + " Source = " + source);
-    // int strips = stripOffsets.count();
-    // int line = 0;
-    // quint32 scanBytes = 0;
-    // for (int strip = 0; strip < strips; ++strip) {
-    //     quint32 stripBytes = stripByteCounts.at(strip);
-    //     QByteArray ba;
-    //     p.file.seek(stripOffsets.at(strip));
-    //     ba = p.file.read(stripBytes);
-    //     QBuffer buf(&ba);
-    //     buf.open(QBuffer::ReadOnly);
-    //     for (int row = 0; row < rowsPerStrip; row++) {
-    //         /*
-    //         qDebug() << "Tiff::decodeBase"
-    //                  << "strip =" << strip
-    //                  << "row =" << row
-    //                  << "buf.pos() =" << buf.pos()
-    //                  << "bytesPerRow =" << bytesPerRow
-    //                  << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
-    //                  << "ba.length() =" << ba.length()
-    //                  << "scanBytes =" << scanBytes
-    //                  << "scanBytesAvail =" << scanBytesAvail
-    //                     ;
-    //                     //*/
-    //         // last strip may have less than rowsPerStrip rows
-    //         if ((buf.pos() + bytesPerRow) > ba.length()) break;
-    //         if (scanBytes + bytesPerRow > scanBytesAvail) break;
-    //         std::memcpy(im->scanLine(line++),
-    //                     buf.read(bytesPerRow),
-    //                     static_cast<size_t>(bytesPerRow));
-    //         scanBytes += bytesPerRow;
-    //     }
-    // }
-    // return true;
-
-    // ChatGPT version
+    /*
+    qDebug() << "Tiff::decodeBase"
+             << "strip =" << strip
+             << "row =" << row
+             << "buf.pos() =" << buf.pos()
+             << "bytesPerRow =" << bytesPerRow
+             << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
+             << "ba.length() =" << ba.length()
+             << "scanBytes =" << scanBytes
+             << "scanBytesAvail =" << scanBytesAvail
+                ;
+                //*/
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;
@@ -978,7 +980,8 @@ bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
     for (int strip = 0; strip < strips; ++strip) {
         const quint32 stripBytes = stripByteCounts.at(strip);
         QByteArray ba;
-        ba.reserve(stripBytes); // Preallocate memory to avoid reallocations
+        // Preallocate memory to avoid reallocations
+        ba.reserve(stripBytes);
 
         // Seek to the strip offset and read the strip data
         if (!p.file.seek(stripOffsets.at(strip))) {
@@ -1001,11 +1004,13 @@ bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
                 break; // Avoid reading beyond the available scan bytes
             }
 
+            // ptr to pixel row in QImage
             uchar *dest = im->scanLine(line++);
             const QByteArray rowData = buf.read(bytesPerRow);
             if (rowData.size() != bytesPerRow) {
                 return false;
             }
+            // write the row of pixels
             std::memcpy(dest, rowData.constData(), static_cast<size_t>(bytesPerRow));
 
             scanBytes += bytesPerRow;
@@ -1017,13 +1022,13 @@ bool Tiff::decodeBase(MetadataParameters &p, QImage &image)
 }
 
 //bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
-bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
+bool Tiff::decodeLZW(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
     qDebug() << "Tiff::decodeLZW" << p.fPath;
     int strips = stripOffsets.count();
-    TiffStrips tiffStrips;
-//    QFuture<void> future;
+    // TiffStrips tiffStrips;
+    // QFuture<void> future;
     // pass info to concurrent threads via TiffStrip for each strip
     TiffStrip tiffStrip;
     for (int strip = 0; strip < strips; ++strip) {
@@ -1050,7 +1055,7 @@ bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
 
             So, return and use default tif decoder for now.
             */
-            return false;
+            // return false;
         }
         // read tiff strip into QByteArray
         p.file.seek(stripOffsets.at(strip));
@@ -1059,24 +1064,19 @@ bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
         tiffStrip.in = inBa[strip].data();
         // length of incoming strip in bytes
         tiffStrip.incoming = inBa[strip].size();
+        // ptr to start of pixel row in QImage
         tiffStrip.out = im->scanLine(strip * rowsPerStrip);
-        /* debugging
-        tiffStrip.fName = p.file.fileName();
-        tiffStrip.rowsPerStrip = rowsPerStrip;
-        */
 
-        tiffStrips.append(tiffStrip);
-
-        //lzwDecompress(tiffStrip);   // no future
-        // lzwDecompress2(tiffStrip, p);   // no future
-        lzwDecompress3(tiffStrip, p);   // no future  (ChatGPT tweaaks)
+        // decompress strip and write to QImage im
+        lzwDecompress(tiffStrip, p);   // no future
+        // lzwDecompressOld(tiffStrip, p);   // no future
     }
-//    future = QtConcurrent::map(tiffStrips, lzwDecompress);
-//    future.waitForFinished();
+    // future = QtConcurrent::map(tiffStrips, lzwDecompress);
+    // future.waitForFinished();
     return true;
 }
 
-bool Tiff::decodeZip(MetadataParameters &p, QImage &image)
+bool Tiff::decodeZip(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
     //qDebug() << "Tiff::decodeLZW" << p.fPath;
@@ -1092,24 +1092,24 @@ bool Tiff::decodeZip(MetadataParameters &p, QImage &image)
         tiffStrip.stripBytes = stripByteCounts.at(strip);
         if (predictor == 2) {
             tiffStrip.predictor = true;
-            /*
-            this is causing a crash when decoding
-            /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
-            in Tiff::TiffStrips Tiff::lzwDecompress:
+        //     /*
+        //     this is causing a crash when decoding
+        //     /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
+        //     in Tiff::TiffStrips Tiff::lzwDecompress:
 
-            if (t.predictor) {
-                // output char string for code (add from left)
-                // pBuf   00000000 11111111 22222222 33333333
-                for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-                    if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
-                    else *out++ = (*(s[code] + i) + *(out - 3));  // crash here
-                    ++n;
-                }
-            }
+        //     if (t.predictor) {
+        //         // output char string for code (add from left)
+        //         // pBuf   00000000 11111111 22222222 33333333
+        //         for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+        //             if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
+        //             else *out++ = (*(s[code] + i) + *(out - 3));  // crash here
+        //             ++n;
+        //         }
+        //     }
 
-            So, return and use default tif decoder for now.
-            */
-            return false;
+        //     So, return and use default tif decoder for now.
+        //     */
+        //     return false;
         }
         // read tiff strip into QByteArray
         p.file.seek(stripOffsets.at(strip));
@@ -1129,6 +1129,65 @@ bool Tiff::decodeZip(MetadataParameters &p, QImage &image)
         //lzwDecompress(tiffStrip);   // no future
         // lzwDecompress2(tiffStrip, p);   // no future
         zipDecompress(tiffStrip, p);   // no future  (ChatGPT tweaaks)
+    }
+    //    future = QtConcurrent::map(tiffStrips, lzwDecompress);
+    //    future.waitForFinished();
+    return true;
+}
+
+bool Tiff::decodeJpg(MetadataParameters &p)
+{
+    if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
+    qDebug() << "Tiff::decodeJpg" << p.fPath;
+    int strips = stripOffsets.count();
+    TiffStrips tiffStrips;
+    //    QFuture<void> future;
+    // pass info to concurrent threads via TiffStrip for each strip
+    TiffStrip tiffStrip;
+    for (int strip = 0; strip < strips; ++strip) {
+        tiffStrip.strip = strip;
+        tiffStrip.bitsPerSample = bitsPerSample;
+        tiffStrip.bytesPerRow = bytesPerRow;
+        tiffStrip.stripBytes = stripByteCounts.at(strip);
+        if (predictor == 2) {
+            tiffStrip.predictor = true;
+        //     /*
+        //     this is causing a crash when decoding
+        //     /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
+        //     in Tiff::TiffStrips Tiff::lzwDecompress:
+
+        //     if (t.predictor) {
+        //         // output char string for code (add from left)
+        //         // pBuf   00000000 11111111 22222222 33333333
+        //         for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+        //             if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
+        //             else *out++ = (*(s[code] + i) + *(out - 3));  // crash here
+        //             ++n;
+        //         }
+        //     }
+
+        //     So, return and use default tif decoder for now.
+        //     */
+        //     return false;
+        }
+        // read tiff strip into QByteArray
+        p.file.seek(stripOffsets.at(strip));
+        inBa.append(p.file.read(stripByteCounts.at(strip)));
+        // ptr to start of strip QByteArray
+        tiffStrip.in = inBa[strip].data();
+        // length of incoming strip in bytes
+        tiffStrip.incoming = inBa[strip].size();
+        tiffStrip.out = im->scanLine(strip * rowsPerStrip);
+        /* debugging
+        tiffStrip.fName = p.file.fileName();
+        tiffStrip.rowsPerStrip = rowsPerStrip;
+        */
+
+        tiffStrips.append(tiffStrip);
+
+        //lzwDecompress(tiffStrip);   // no future
+        // lzwDecompress2(tiffStrip, p);   // no future
+        jpgDecompress(tiffStrip, p);   // no future  (ChatGPT tweaaks)
     }
     //    future = QtConcurrent::map(tiffStrips, lzwDecompress);
     //    future.waitForFinished();
@@ -1239,8 +1298,8 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     bool decoded;
     qDebug() << "Tiff::encodeThumbnail" << p.fPath;
-    if (compression == 1) decoded = decodeBase(/*m, */p, *im);
-    if (compression == 5) decoded = decodeLZW(p, *im);
+    if (compression == 1) decoded = decodeBase(/*m, */p/*, *im*/);
+    if (compression == 5) decoded = decodeLZW(p/*, *im*/);
     if (!decoded) return false;
 
     if (bitsPerSample == 16) {
@@ -1401,132 +1460,253 @@ void Tiff::lzwReset(QHash<quint32, QByteArray> &dictionary,
     prevString.clear();
 }
 
-Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
+// void Tiff::lzwDecompress(TiffStrip &t, MetadataParameters &p)
+// {
+//     /*
+//         Receives a tiff strip, decompresses it, and writes the data to QImage Tiff::im
+//     */
+//     if (G::isLogger || isDebug)
+//         G::log("Tiff::lzwDecompress3", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
+
+//     TiffStrips tiffStrips;
+//     int alphaRowComponent = t.bytesPerRow / 3;
+//     const unsigned int clearCode = 256;
+//     const unsigned int EOFCode = 257;
+//     const unsigned int maxCode = 4095;  // 12-bit max
+
+//     // Input and output pointers
+//     char* c = t.in;
+//     std::vector<uchar> tempBuffer(t.bytesPerRow * rowsPerStrip);  // Temporary buffer for decompressed data
+//     uchar* tempOut = tempBuffer.data();
+
+//     // String table initialization
+//     char* s[4096] = {nullptr};  // Pointers to strings for each possible code
+//     int8_t sLen[4096] = {0};  // Code string length
+//     std::memset(sLen, 1, 256);  // 0-255 one char strings
+
+//     char strings[128000];
+//     for (int i = 0; i < 256; i++) {
+//         strings[i] = (char)i;
+//         s[i] = &strings[i];
+//     }
+//     strings[256] = 0;  s[256] = &strings[256];  // Clear code
+//     strings[257] = 0;  s[257] = &strings[257];  // EOF code
+//     char* sEnd = s[257];  // Pointer to current end of strings
+
+//     char ps[256];  // Previous string
+//     size_t psLen = 0;  // Length of previous string
+//     uint32_t code;  // Key to string for code
+//     uint32_t nextCode = 258;  // Used to preset string for next
+//     uint n = 0;  // Output byte counter
+//     uint32_t iBuf = 0;  // Incoming bit buffer
+//     int32_t nBits = 0;  // Incoming bits in the buffer
+//     int32_t codeBits = 9;  // Number of bits to make code (9-12)
+//     uint32_t nextBump = 511;  // When to increment code size first time
+//     uint32_t mask = (1 << codeBits) - 1;  // Extract code from iBuf
+
+//     // Read incoming bytes into the bit buffer (iBuf) using the char pointer c
+//     while (t.incoming) {
+//         // GetNextCode: Read bits to form the next code
+//         while (nBits < codeBits && t.incoming) {
+//             iBuf = (iBuf << 8) | (uint8_t)*c++;
+//             nBits += 8;
+//             --t.incoming;
+//         }
+//         code = (iBuf >> (nBits - codeBits)) & mask;  // Extract code from buffer
+//         nBits -= codeBits;
+
+//         // Handle special codes
+//         if (code == clearCode) {
+//             codeBits = 9;
+//             mask = (1 << codeBits) - 1;
+//             nextBump = 511;
+//             sEnd = s[257];
+//             nextCode = 258;
+//             psLen = 0;
+//             continue;
+//         }
+
+//         if (code == EOFCode) {
+//             break;
+//         }
+
+//         // Handle new code then add prevString + prevString[0]
+//         if (code == nextCode) {
+//             s[code] = sEnd;
+//             switch(psLen) {
+//             case 1:
+//                 *s[code] = ps[0];
+//                 break;
+//             case 2:
+//                 std::memcpy(s[code], ps, 2);
+//                 break;
+//             case 4:
+//                 std::memcpy(s[code], ps, 4);
+//                 break;
+//             default:
+//                 std::memcpy(s[code], ps, psLen);
+//             }
+//             *(s[code] + psLen) = ps[0];
+//             sLen[code] = (int8_t)psLen + 1;
+//             sEnd = s[code] + psLen + 1;
+//         }
+
+//         // Output the decoded string for the current code
+//         // for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
+//         //     if (s[code] != nullptr) {
+//         //         *tempOut++ = (uchar)*(s[code] + i);
+//         //     }
+//         // }
+//         // rgh replace
+//         if (t.bitsPerSample == 8) {
+//             for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
+//                 if (s[code] != nullptr)
+//                     *tempOut++ = (uchar)*(s[code] + i);
+//             }
+//         }
+//         if (t.bitsPerSample == 16) {
+//             for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
+//                 *tempOut++ = (uchar)*(s[code] + i);
+//                 ++n;
+//                 if (n % t.bytesPerRow == 0)
+//                     tempOut += alphaRowComponent;
+//             }
+//         }
+
+
+//         // Add string to nextCode (prevString + strings[code][0])
+//         if (psLen && nextCode <= maxCode) {
+//             s[nextCode] = sEnd;
+//             switch(psLen) {
+//             case 1:
+//                 *s[nextCode] = ps[0];
+//                 break;
+//             case 2:
+//                 std::memcpy(s[nextCode], ps, 2);
+//                 break;
+//             case 4:
+//                 std::memcpy(s[nextCode], ps, 4);
+//                 break;
+//             default:
+//                 std::memcpy(s[nextCode], ps, psLen);
+//             }
+//             *(s[nextCode] + psLen) = *s[code];
+//             sLen[nextCode] = (int8_t)(psLen + 1);
+//             sEnd = s[nextCode] + psLen + 1;
+//             ++nextCode;
+//         }
+
+//         // Copy strings[code] to ps
+//         switch(sLen[code]) {
+//         case 1:
+//             ps[0] = *s[code];
+//             break;
+//         case 2:
+//             ps[0] = *s[code];
+//             ps[1] = *(s[code] + 1);
+//             break;
+//         case 4:
+//             std::memcpy(ps, s[code], 4);
+//             break;
+//         default:
+//             std::memcpy(ps, s[code], sLen[code]);
+//         }
+
+//         psLen = (size_t)sLen[code];
+
+//         // Code size management
+//         if (nextCode == nextBump) {
+//             if (nextCode < maxCode) {
+//                 nextBump = (nextBump << 1) + 1;
+//                 ++codeBits;
+//                 mask = (1 << codeBits) - 1;
+//             } else if (nextCode == maxCode) {
+//                 continue;
+//             } else {
+//                 codeBits = 9;
+//                 mask = (1 << codeBits) - 1;
+//                 nextBump = 511;
+//                 sEnd = s[257];
+//                 nextCode = 258;
+//                 psLen = 0;
+//             }
+//         }
+//     }
+
+//     // Apply the predictor if necessary
+//     if (t.predictor) {
+//         uchar* tempIn = tempBuffer.data();
+//         uchar* out = t.out;
+//         for (int row = 0; row < rowsPerStrip; ++row) {
+//             for (uint32_t col = 0; col < t.bytesPerRow; ++col) {
+//                 if (col < 3) {
+//                     *out++ = *tempIn++;
+//                 } else {
+//                     *out++ = (*tempIn++ + *(out - 3));
+//                 }
+//             }
+//         }
+//     } else {
+//         // Copy the data from the temporary buffer to the QImage if no predictor is used
+//         std::memcpy(t.out, tempBuffer.data(), tempBuffer.size());
+//     }
+
+//     return;
+// }
+
+void Tiff::lzwDecompress(TiffStrip &t, MetadataParameters &p)
 {
-/*
-    Decompress a tiff strip that has LZW Prediction compression.
+    if (G::isLogger || isDebug)
+        G::log("Tiff::lzwDecompress3", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
 
-    The algorithm to decompress LZW (from TIFF6 Specification):
-
-    while ((Code = GetNextCode()) != EoiCode) {
-        if (Code == ClearCode) {
-            InitializeTable();
-            Code = GetNextCode();
-            if (Code == EoiCode)
-                break;
-            WriteString(StringFromCode(Code));
-            OldCode = Code;
-        } // end of ClearCode case
-        else {
-            if (IsInTable(Code)) {
-                WriteString(StringFromCode(Code));
-                AddStringToTable(StringFromCode(OldCode)+FirstChar(StringFromCode(Code)));
-                OldCode = Code;
-            } else {
-                OutString = StringFromCode(OldCode) + FirstChar(StringFromCode(OldCode));
-                WriteString(OutString);
-                AddStringToTable(OutString);
-                OldCode = Code;
-            }
-        } // end of not-ClearCode case
-    } // end of while loop
-
-    The prediction variant uses the difference between row pixels of the same color channel
-    for the code value.
-
-    Alternatives to std::memcpy to improve performance.
-
-        // option for byte-by-byte
-
-        char* pDst = s[nextCode];
-        char* pSrc = (char*)&ps;
-        for (size_t i = 0; i != psLen; ++i) pDst[i] = pSrc[i];
-
-        // or
-
-        char* pDst = s[nextCode];
-        char* pSrc = (char*)&ps;
-        size_t len = psLen;
-        while (len--)
-        {
-            *pDst++ = *pSrc++;
-        }
-
-        // option for 4 bytes at a time
-
-        uint32_t* pDst = (uint32_t*)s[nextCode];
-        uint32_t* pSrc = (uint32_t*)&ps;
-        size_t len = psLen / 4 + 1;
-        for (size_t i = 0; i != len; ++i) pDst[i] = pSrc[i];
-*/
     TiffStrips tiffStrips;
     int alphaRowComponent = t.bytesPerRow / 3;
-    /*
-    qDebug() << "Tiff::lzwDecompress"
-             << "t.predictor =" << t.predictor
-             << "t.bytesPerRow =" << t.bytesPerRow
-                ;
-                //*/
-
     const unsigned int clearCode = 256;
     const unsigned int EOFCode = 257;
-    const unsigned int maxCode = 4095;              // 12 bit max
+    const unsigned int maxCode = 4095;  // 12-bit max
 
-    // input and output pointers
+    // Input and output pointers
     char* c = t.in;
-    uchar* out = t.out;
+    std::vector<uchar> tempBuffer(t.bytesPerRow * rowsPerStrip);  // Temporary buffer for decompressed data
+    uchar* tempOut = tempBuffer.data();
 
-    char* s[4096];                                  // ptrs in strings for each possible code
-    int8_t sLen[4096];                              // code string length
-    std::memset(&sLen, 1, 256);                     // 0-255 one char strings
+    // String table initialization
+    char* s[4096] = {nullptr};  // Pointers to strings for each possible code
+    int8_t sLen[4096] = {0};  // Code string length
+    std::memset(sLen, 1, 256);  // 0-255 one char strings
 
     char strings[128000];
-    // initialize first 256 code strings
-    for (int i = 0 ; i != 256 ; i++ ) {
+    for (int i = 0; i < 256; i++) {
         strings[i] = (char)i;
         s[i] = &strings[i];
     }
-    strings[256] = 0;  s[256] = &strings[256];      // Clear code
-    strings[257] = 0;  s[257] = &strings[257];      // EOF code
-    char* sEnd;                                     // ptr to current end of strings
+    strings[256] = 0;  s[256] = &strings[256];  // Clear code
+    strings[257] = 0;  s[257] = &strings[257];  // EOF code
+    char* sEnd = s[257];  // Pointer to current end of strings
 
-    char ps[256];                                   // previous string
-    size_t psLen = 0;                               // length of prevString
-    uint32_t code;                                  // key to string for code
-    uint32_t nextCode = 258;                        // used to preset string for next
-    uint n = 0;                                     // output byte counter
-    uint32_t iBuf = 0;                              // incoming bit buffer
-    int32_t nBits = 0;                              // incoming bits in the buffer
-    int32_t codeBits = 9;                           // number of bits to make code (9-12)
-    uint32_t nextBump = 511;                        // when to increment code size 1st time
-    uint32_t pBuf = 0;                              // previous out bit buffer
-    uint32_t mask = (1 << codeBits) - 1;            // extract code from iBuf
+    char ps[256];  // Previous string
+    size_t psLen = 0;  // Length of previous string
+    uint32_t code;  // Key to string for code
+    uint32_t nextCode = 258;  // Used to preset string for next
+    uint n = 0;  // Output byte counter
+    uint32_t iBuf = 0;  // Incoming bit buffer
+    int32_t nBits = 0;  // Incoming bits in the buffer
+    int32_t codeBits = 9;  // Number of bits to make code (9-12)
+    uint32_t nextBump = 511;  // When to increment code size first time
+    uint32_t mask = (1 << codeBits) - 1;  // Extract code from iBuf
 
-    uint32_t* pSrc;                                 // ptr to src for word copies
-    uint32_t* pDst;                                 // ptr to dst for word copies
-
-
-    // read incoming bytes into the bit buffer (iBuf) using the char pointer c
+    // Read incoming bytes into the bit buffer (iBuf) using the char pointer c
     while (t.incoming) {
-        /*
-        The incoming stream is read 8 bits at a time into a bit buffer called iBuf. The buffer
-        is consumed (most significant) codeBits at a time (code). codeBits starts at 9 bits,
-        and is incremented each time nextCode exceeds the bit capacity. codeSize maximum is 12
-        bits. nextCode starts at 258 and is incremented each time an code is consumed.
-        */
-        // GetNextCode
-        iBuf = (iBuf << 8) | (uint8_t)*c++;         // make room in bit buf for char
-        nBits += 8;
-        --t.incoming;
-        if (nBits < codeBits) {
-            iBuf = (iBuf << 8) | (uint8_t)*c++;     // make room in bit buf for char
+        // GetNextCode: Read bits to form the next code
+        while (nBits < codeBits && t.incoming) {
+            iBuf = (iBuf << 8) | (uint8_t)*c++;
             nBits += 8;
             --t.incoming;
         }
-        code = (iBuf >> (nBits - codeBits)) & mask; // extract code from buffer
-        nBits -= codeBits;                          // update available bits to process
+        code = (iBuf >> (nBits - codeBits)) & mask;  // Extract code from buffer
+        nBits -= codeBits;
 
-        // reset at start and when codes = max ~ 4094
+        // Handle special codes
         if (code == clearCode) {
             codeBits = 9;
             mask = (1 << codeBits) - 1;
@@ -1537,13 +1717,11 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
             continue;
         }
 
-        // finished (should not need as incoming counts down to zero)
         if (code == EOFCode) {
-            return tiffStrips;
+            break;
         }
 
-        // new code then add prevString + prevString[0]
-        // copy prevString
+        // Handle new code then add prevString + prevString[0]
         if (code == nextCode) {
             s[code] = sEnd;
             switch(psLen) {
@@ -1551,202 +1729,75 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
                 *s[code] = ps[0];
                 break;
             case 2:
-                *s[code] = ps[0];
-                *(s[code]+1) = ps[1];
+                std::memcpy(s[code], ps, 2);
                 break;
             case 4:
-                pDst = (uint32_t*)s[code];
-                pSrc = (uint32_t*)&ps;
-                *pDst = *pSrc;
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                pDst = (uint32_t*)s[nextCode];
-                pSrc = (uint32_t*)&ps;
-                *pDst = *pSrc;
-                *(pDst+1) = *(pSrc+1);
+                std::memcpy(s[code], ps, 4);
                 break;
             default:
-                std::memcpy(s[code], &ps, psLen);
+                std::memcpy(s[code], ps, psLen);
             }
-
-            // copy prevString[0]
             *(s[code] + psLen) = ps[0];
             sLen[code] = (int8_t)psLen + 1;
             sEnd = s[code] + psLen + 1;
         }
 
-        if (t.predictor) {
-            // output char string for code (add from left)
-            // pBuf   00000000 11111111 22222222 33333333
-            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-                if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
-                else *out++ = (*(s[code] + i) + *(out - 3));
-                ++n;
-            }
-        }
-        else if (t.bitsPerSample == 8) {
-            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-                *out++ = (uchar)*(s[code] + i);
-            }
-        }
-        else if (t.bitsPerSample == 16) {
-            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-//                if (n > 0 && n % t.bytesPerRow == 0) out += alphaRowComponent;
-                *out++ = (uchar)*(s[code] + i);
-                ++n;
-                if (n % t.bytesPerRow == 0) out += alphaRowComponent;
+        // Output the decoded string for the current code
+        for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
+            if (s[code] != nullptr) {
+                *tempOut++ = (uchar)*(s[code] + i);
             }
         }
 
-        // add string to nextCode (prevString + strings[code][0])
-        // copy prevString
-        if (psLen/* && nextCode <= MAXCODE*/) {
+        // Add string to nextCode (prevString + strings[code][0])
+        if (psLen && nextCode <= maxCode) {
             s[nextCode] = sEnd;
             switch(psLen) {
             case 1:
                 *s[nextCode] = ps[0];
                 break;
             case 2:
-                *s[nextCode] = ps[0];
-                *(s[nextCode]+1) = ps[1];
+                std::memcpy(s[nextCode], ps, 2);
                 break;
             case 4:
-                pDst = (uint32_t*)s[nextCode];
-                pSrc = (uint32_t*)&ps;
-                *pDst = *pSrc;
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                pDst = (uint32_t*)s[nextCode];
-/*
-The warning is due to the fact that char* has an alignment of 1 byte, while uint32_t*
-requires an alignment of 4 bytes. This means that a uint32_t* must point to an address
-that is a multiple of 4, but a char* can point to any address. When you cast a char* to a
-uint32_t*, you may end up with a pointer that does not respect the required alignment.
-
-To avoid this warning, you can use a type that has the correct alignment. If you want to
-keep an array of bytes, but sometimes treat it as an array of uint32_t, one approach is
-to use a union. Here’s an example:
-
-union AlignedData {
-    char c[4];
-    uint32_t i;
-};
-
-AlignedData s[4096];
-uint32_t nextCode = 258;
-uint32_t* pDst = &s[nextCode].i;
-
-In this code, s[nextCode].i will give you a uint32_t that has the correct alignment, and
-s[nextCode].c will give you a char[4] that allows you to manipulate individual bytes.
-This way, you avoid the alignment warning. Please note that this code assumes that
-sizeof(uint32_t) == 4. If this is not the case on your platform, you will need to adjust
-the size of the c array accordingly. Also, be aware of the endianness of your platform
-when using this method. The order of bytes in the uint32_t may not be the same as the
-order in the char[4].
-
------------------------
-
-Is there a better way to save an offset into the buffer s?
-
-Yes, if you want to save an offset into the buffer s, you can simply use an integer to
-store the offset. Here’s an example:
-
-char s[4096];
-uint32_t nextCode = 258;
-uint32_t offset = nextCode * sizeof(uint32_t); // calculate offset
-
-In this code, offset is an integer that stores the offset into the buffer s. When you
-want to read or write a uint32_t at this offset, you can use memcpy:
-
-// Write a uint32_t to the buffer at the given offset
-uint32_t value = 123456;
-memcpy(s + offset, &value, sizeof(value));
-
-// Read a uint32_t from the buffer at the given offset
-uint32_t readValue;
-memcpy(&readValue, s + offset, sizeof(readValue));
-
-This code avoids the alignment warning because memcpy does not require the destination to
-be aligned. It also works correctly regardless of the endianness of your platform.
-However, it may be slower than the previous method because memcpy has to copy byte by
-byte. If performance is a concern and you know that your platform allows unaligned
-access, you can cast the pointer to uint32_t* after adding the offset:
-
-// Write a uint32_t to the buffer at the given offset
-uint32_t value = 123456;
-*(uint32_t*)(s + offset) = value;
-
-// Read a uint32_t from the buffer at the given offset
-uint32_t readValue = *(uint32_t*)(s + offset);
-
-This code may be faster, but it can cause undefined behavior on platforms that do not
-allow unaligned access. It also does not handle endianness automatically. You should only
-use this method if you are sure that it is safe on your platform and you handle
-endianness manually if necessary. Please note that this method will still cause the
-alignment warning. To suppress the warning, you can use a #pragma directive or a compiler
-flag, but this is generally not recommended because the warning is there for a reason.
-It’s better to write code that does not cause the warning in the first place.
-*/
-                pSrc = (uint32_t*)&ps;
-                *pDst = *pSrc;
-                *(pDst+1) = *(pSrc+1);
+                std::memcpy(s[nextCode], ps, 4);
                 break;
             default:
-                std::memcpy(s[nextCode], &ps, psLen);
+                std::memcpy(s[nextCode], ps, psLen);
             }
-
-            // copy strings[code][0]
             *(s[nextCode] + psLen) = *s[code];
-
             sLen[nextCode] = (int8_t)(psLen + 1);
             sEnd = s[nextCode] + psLen + 1;
             ++nextCode;
         }
 
-        // strings[code][0] copy
+        // Copy strings[code] to ps
         switch(sLen[code]) {
         case 1:
-            ps[0] = *s[code];   // crash
+            ps[0] = *s[code];
             break;
         case 2:
             ps[0] = *s[code];
-            ps[1] = *(s[code]+1);
+            ps[1] = *(s[code] + 1);
             break;
         case 4:
-            pSrc = (uint32_t*)s[code];
-            pDst = (uint32_t*)&ps;
-            *pDst = *pSrc;
-            break;
-        case 5:
-        case 6:
-        case 7:
-        case 8:
-            pSrc = (uint32_t*)s[code];
-            pDst = (uint32_t*)&ps;
-            *pDst = *pSrc;
-            *(pDst+1) = *(pSrc+1);
+            std::memcpy(ps, s[code], 4);
             break;
         default:
-            memcpy(&ps, s[code], (size_t)sLen[code]);
+            std::memcpy(ps, s[code], sLen[code]);
         }
 
         psLen = (size_t)sLen[code];
 
-        // codeBits change
+        // Code size management
         if (nextCode == nextBump) {
             if (nextCode < maxCode) {
                 nextBump = (nextBump << 1) + 1;
                 ++codeBits;
                 mask = (1 << codeBits) - 1;
-            }
-            else if (nextCode == maxCode) continue;
-            else {
+            } else if (nextCode == maxCode) {
+                continue;
+            } else {
                 codeBits = 9;
                 mask = (1 << codeBits) - 1;
                 nextBump = 511;
@@ -1755,441 +1806,60 @@ It’s better to write code that does not cause the warning in the first place.
                 psLen = 0;
             }
         }
-
-    } // end while
-    //qDebug() << "Tiff::lzwDecompress" << "finish thread" << QThread::currentThreadId();
-
-    return tiffStrips;
-}
-
-Tiff::TiffStrips Tiff::lzwDecompress2(TiffStrip &t, MetadataParameters &p)
-{
-    /*
-    Decompress a tiff strip that has LZW Prediction compression.
-
-    The algorithm to decompress LZW (from TIFF6 Specification):
-
-    while ((Code = GetNextCode()) != EoiCode) {
-        if (Code == ClearCode) {
-            InitializeTable();
-            Code = GetNextCode();
-            if (Code == EoiCode)
-                break;
-            WriteString(StringFromCode(Code));
-            OldCode = Code;
-        } // end of ClearCode case
-        else {
-            if (IsInTable(Code)) {
-                WriteString(StringFromCode(Code));
-                AddStringToTable(StringFromCode(OldCode)+FirstChar(StringFromCode(Code)));
-                OldCode = Code;
-            } else {
-                OutString = StringFromCode(OldCode) + FirstChar(StringFromCode(OldCode));
-                WriteString(OutString);
-                AddStringToTable(OutString);
-                OldCode = Code;
-            }
-        } // end of not-ClearCode case
-    } // end of while loop
-
-    // Perplexity AI: c++ code to decode a tiff strip with LZW compression
-    #include <iostream>
-    #include <fstream>
-    #include <vector>
-    #include <string>
-
-    std::vector<int> LZWDecode(std::vector<int> compressedData) {
-        std::vector<int> result;
-        int dictSize = 256;
-        std::vector<std::string> dictionary;
-
-        for (int i = 0; i < 256; i++) {
-            dictionary.push_back(std::string(1, i));
-        }
-
-        int currentCode = compressedData[0];
-        std::string currentString = dictionary[currentCode];
-        std::string nextString;
-
-        result.push_back(currentCode);
-
-        for (int i = 1; i < compressedData.size(); i++) {
-            int nextCode = compressedData[i];
-
-            if (nextCode >= dictSize) {
-                nextString = currentString + currentString[0];
-            } else {
-                nextString = dictionary[nextCode];
-            }
-
-            result.push_back(nextCode);
-
-            if (dictSize < 4096) {
-                dictionary.push_back(currentString + nextString[0]);
-                dictSize++;
-            }
-
-            currentString = nextString;
-        }
-
-        return result;
     }
 
-
-
-    The prediction variant uses the difference between row pixels of the same color channel
-    for the code value.
-
-    Alternatives to std::memcpy to improve performance.
-
-        // option for byte-by-byte
-
-        char* pDst = s[nextCode];
-        char* pSrc = (char*)&ps;
-        for (size_t i = 0; i != psLen; ++i) pDst[i] = pSrc[i];
-
-        // or
-
-        char* pDst = s[nextCode];
-        char* pSrc = (char*)&ps;
-        size_t len = psLen;
-        while (len--)
-        {
-            *pDst++ = *pSrc++;
-        }
-
-        // option for 4 bytes at a time
-
-        uint32_t* pDst = (uint32_t*)s[nextCode];
-        uint32_t* pSrc = (uint32_t*)&ps;
-        size_t len = psLen / 4 + 1;
-        for (size_t i = 0; i != len; ++i) pDst[i] = pSrc[i];
-*/
-    if (G::isLogger || isDebug) G::log("Tiff::lzwDecompress2", "strip = "
-               + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
-
-    TiffStrips tiffStrips;
-    int alphaRowComponent = t.bytesPerRow / 3;
-    ///*
-    qDebug() << "Tiff::lzwDecompress"
-             << "t.predictor =" << t.predictor
-             << "t.bytesPerRow =" << t.bytesPerRow
-             << "t.incoming =" << t.incoming
-                ;
-                //*/
-
-    const unsigned int clearCode = 256;
-    const unsigned int EOFCode = 257;
-    const unsigned int maxCode = 4095;              // 12 bit max
-
-    // input and output pointers
-    char* c = t.in;
+    // Apply the predictor if necessary
+    uchar* tempIn = tempBuffer.data();
     uchar* out = t.out;
-
-    char* s[4096];                                  // ptrs in strings for each possible code
-    for (int i = 0 ; i != 4096 ; i++ )
-        s[i] = nullptr;
-    int8_t sLen[4096];                              // code string length
-    std::memset(&sLen, 1, 256);                     // 0-255 one char strings
-
-    char strings[128000];
-    // initialize first 256 code strings
-    for (int i = 0; i != 256 ; i++ ) {
-        strings[i] = (char)i;
-        s[i] = &strings[i];
-    }
-    strings[256] = 0;  s[256] = &strings[256];      // Clear code
-    strings[257] = 0;  s[257] = &strings[257];      // EOF code
-    char* sEnd = s[257];                            // ptr to current end of strings
-
-    char ps[256];                                   // previous string
-    size_t psLen = 0;                               // length of prevString
-    uint32_t code;                                  // key to string for code
-    uint32_t nextCode = 258;                        // used to preset string for next
-    uint n = 0;                                     // output byte counter
-    uint32_t iBuf = 0;                              // incoming bit buffer
-    int32_t nBits = 0;                              // incoming bits in the buffer
-    int32_t codeBits = 9;                           // number of bits to make code (9-12)
-    uint32_t nextBump = 511;                        // when to increment code size 1st time
-    uint32_t pBuf = 0;                              // previous out bit buffer
-    uint32_t mask = (1 << codeBits) - 1;            // extract code from iBuf
-
-    char* pSrc;                                 // ptr to src for word copies
-    char* pDst;                                 // ptr to dst for word copies
-
-    // read incoming bytes into the bit buffer (iBuf) using the char pointer c
-    while (t.incoming) {
-        /*
-        The incoming stream is read 8 bits at a time into a bit buffer called iBuf. The buffer
-        is consumed (most significant) codeBits at a time (code). codeBits starts at 9 bits,
-        and is incremented each time nextCode exceeds the bit capacity. codeSize maximum is 12
-        bits. nextCode starts at 258 and is incremented each time an code is consumed.
-        */
-        // GetNextCode
-        iBuf = (iBuf << 8) | (uint8_t)*c++;         // make room in bit buf for char
-        nBits += 8;
-        --t.incoming;
-        if (nBits < codeBits) {
-            iBuf = (iBuf << 8) | (uint8_t)*c++;     // make room in bit buf for char
-            nBits += 8;
-            --t.incoming;
-        }
-        code = (iBuf >> (nBits - codeBits)) & mask; // extract code from buffer
-        nBits -= codeBits;                          // update available bits to process
-
-        // reset at start and when codes = max ~ 4094
-        if (code == clearCode) {
-            codeBits = 9;
-            mask = (1 << codeBits) - 1;
-            nextBump = 511;
-            sEnd = s[257];
-            nextCode = 258;
-            psLen = 0;
-            continue;
-        }
-
-        // finished (should not need as incoming counts down to zero)
-        if (code == EOFCode) {
-            return tiffStrips;
-        }
-
-        // new code then add prevString + prevString[0]
-        // copy prevString
-        if (code == nextCode) {
-            s[code] = sEnd;
-            switch(psLen) {
-            case 1:
-                *s[code] = ps[0];
-                break;
-            case 2:
-                *s[code] = ps[0];
-                *(s[code]+1) = ps[1];
-                break;
-            case 4:
-                pDst = /*(uint32_t*)*/s[code];
-                pSrc = /*(uint32_t*)&*/ps;
-                *pDst = *pSrc;
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                pDst = /*(uint32_t*)*/s[nextCode];
-                pSrc = /*(uint32_t*)&*/ps;
-                *pDst = *pSrc;
-                *(pDst+1) = *(pSrc+1);
-                break;
-            default:
-                std::memcpy(s[code], &ps, psLen);
-            }
-
-            // copy prevString[0]
-            *(s[code] + psLen) = ps[0];
-            sLen[code] = (int8_t)psLen + 1;
-            sEnd = s[code] + psLen + 1;
-        }
-
-        if (t.predictor) {
-            // output char string for code (add from left)
-            // pBuf   00000000 11111111 22222222 33333333
-            for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
-                if (s[code] != nullptr) {
-                    if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i); // crash
-                    else *out++ = (*(s[code] + i) + *(out - 3));
+    if (t.predictor) {
+        if (t.bitsPerSample == 8) {
+            for (int row = 0; row < rowsPerStrip; ++row) {
+                for (uint32_t col = 0; col < t.bytesPerRow; ++col) {
+                    if (col < 3) {
+                        *out++ = *tempIn++;
+                    } else {
+                        *out++ = (*tempIn++ + *(out - 3));
+                    }
                 }
-                ++n;
+            }
+        } else if (t.bitsPerSample == 16) {
+            for (int row = 0; row < rowsPerStrip; ++row) {
+                for (uint32_t col = 0; col < t.bytesPerRow; col += 2) {
+                    if (col < 6) {
+                        *out++ = *tempIn++;
+                        *out++ = *tempIn++;
+                    } else {
+                        *out++ = (*tempIn++ + *(out - 6));
+                        *out++ = (*tempIn++ + *(out - 6));
+                    }
+                }
+                out += alphaRowComponent;  // Handle alpha component
             }
         }
-        else if (t.bitsPerSample == 8) {
-            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-                if (s[code] != nullptr)
-                    *out++ = (uchar)*(s[code] + i);  // crash
+    } else {
+        // Copy the data from the temporary buffer to the QImage, considering the alphaRowComponent
+        if (t.bitsPerSample == 8) {
+            for (int row = 0; row < rowsPerStrip; ++row) {
+                std::memcpy(out, tempIn, t.bytesPerRow);
+                out += t.bytesPerRow;
+                tempIn += t.bytesPerRow;
+            }
+        } else if (t.bitsPerSample == 16) {
+            for (int row = 0; row < rowsPerStrip; ++row) {
+                std::memcpy(out, tempIn, t.bytesPerRow);
+                out += t.bytesPerRow + alphaRowComponent;
+                tempIn += t.bytesPerRow;
             }
         }
-        else if (t.bitsPerSample == 16) {
-            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
-                *out++ = (uchar)*(s[code] + i);
-                ++n;
-                if (n % t.bytesPerRow == 0) out += alphaRowComponent;
-            }
-        }
+    }
 
-        // add string to nextCode (prevString + strings[code][0])
-        // copy prevString
-        if (psLen/* && nextCode <= MAXCODE*/) {
-            s[nextCode] = sEnd;
-            switch(psLen) {
-            case 1:
-                *s[nextCode] = ps[0];
-                break;
-            case 2:
-                *s[nextCode] = ps[0];
-                *(s[nextCode]+1) = ps[1];
-                break;
-            case 4:
-                pDst = /*(uint32_t*)*/s[nextCode];
-                pSrc = /*(uint32_t*)&*/ps;
-                *pDst = *pSrc;
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                pDst = s[nextCode];
-                /*
-The warning is due to the fact that char* has an alignment of 1 byte, while uint32_t*
-requires an alignment of 4 bytes. This means that a uint32_t* must point to an address
-that is a multiple of 4, but a char* can point to any address. When you cast a char* to a
-uint32_t*, you may end up with a pointer that does not respect the required alignment.
-
-To avoid this warning, you can use a type that has the correct alignment. If you want to
-keep an array of bytes, but sometimes treat it as an array of uint32_t, one approach is
-to use a union. Here’s an example:
-
-union AlignedData {
-    char c[4];
-    uint32_t i;
-};
-
-AlignedData s[4096];
-uint32_t nextCode = 258;
-uint32_t* pDst = &s[nextCode].i;
-
-In this code, s[nextCode].i will give you a uint32_t that has the correct alignment, and
-s[nextCode].c will give you a char[4] that allows you to manipulate individual bytes.
-This way, you avoid the alignment warning. Please note that this code assumes that
-sizeof(uint32_t) == 4. If this is not the case on your platform, you will need to adjust
-the size of the c array accordingly. Also, be aware of the endianness of your platform
-when using this method. The order of bytes in the uint32_t may not be the same as the
-order in the char[4].
-
------------------------
-
-Is there a better way to save an offset into the buffer s?
-
-Yes, if you want to save an offset into the buffer s, you can simply use an integer to
-store the offset. Here’s an example:
-
-char s[4096];
-uint32_t nextCode = 258;
-uint32_t offset = nextCode * sizeof(uint32_t); // calculate offset
-
-In this code, offset is an integer that stores the offset into the buffer s. When you
-want to read or write a uint32_t at this offset, you can use memcpy:
-
-// Write a uint32_t to the buffer at the given offset
-uint32_t value = 123456;
-memcpy(s + offset, &value, sizeof(value));
-
-// Read a uint32_t from the buffer at the given offset
-uint32_t readValue;
-memcpy(&readValue, s + offset, sizeof(readValue));
-
-This code avoids the alignment warning because memcpy does not require the destination to
-be aligned. It also works correctly regardless of the endianness of your platform.
-However, it may be slower than the previous method because memcpy has to copy byte by
-byte. If performance is a concern and you know that your platform allows unaligned
-access, you can cast the pointer to uint32_t* after adding the offset:
-
-// Write a uint32_t to the buffer at the given offset
-uint32_t value = 123456;
-*(uint32_t*)(s + offset) = value;
-
-// Read a uint32_t from the buffer at the given offset
-uint32_t readValue = *(uint32_t*)(s + offset);
-
-This code may be faster, but it can cause undefined behavior on platforms that do not
-allow unaligned access. It also does not handle endianness automatically. You should only
-use this method if you are sure that it is safe on your platform and you handle
-endianness manually if necessary. Please note that this method will still cause the
-alignment warning. To suppress the warning, you can use a #pragma directive or a compiler
-flag, but this is generally not recommended because the warning is there for a reason.
-It’s better to write code that does not cause the warning in the first place.
-*/
-                pSrc = ps;
-                *pDst = *pSrc;
-                *(pDst+1) = *(pSrc+1);
-                break;
-            default:
-                std::memcpy(s[nextCode], &ps, psLen);
-            }
-
-            // copy strings[code][0]
-            *(s[nextCode] + psLen) = *s[code];
-
-            sLen[nextCode] = (int8_t)(psLen + 1);
-            sEnd = s[nextCode] + psLen + 1;
-            ++nextCode;
-        }
-
-        // strings[code][0] copy
-        //if (code > 0) {
-            int x;
-            char cx;
-            switch(sLen[code]) {
-            case 1:
-                x = (int)(*s[code]);
-                cx = (char)(*s[code]);
-                ps[0] = *s[code];   // crash
-                break;
-            case 2:
-                ps[0] = *s[code];
-                ps[1] = *(s[code]+1);
-                break;
-            case 4:
-                pSrc = /*(uint32_t*)*/s[code];
-                pDst = /*(uint32_t*)&*/ps;
-                *pDst = *pSrc;
-                break;
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                pSrc = /*(uint32_t*)*/s[code];
-                pDst = /*(uint32_t*)&*/ps;
-                *pDst = *pSrc;
-                *(pDst+1) = *(pSrc+1);
-                break;
-            default:
-                memcpy(&ps, s[code], (size_t)sLen[code]);
-            }
-        //}
-
-        psLen = (size_t)sLen[code];
-
-        // codeBits change
-        if (nextCode == nextBump) {
-            if (nextCode < maxCode) {
-                nextBump = (nextBump << 1) + 1;
-                ++codeBits;
-                mask = (1 << codeBits) - 1;
-            }
-            else if (nextCode == maxCode) continue;
-            else {
-                codeBits = 9;
-                mask = (1 << codeBits) - 1;
-                nextBump = 511;
-                sEnd = s[257];
-                nextCode = 258;
-                psLen = 0;
-            }
-        }
-
-    } // end while t.incoming
-    //qDebug() << "Tiff::lzwDecompress" << "finish thread" << QThread::currentThreadId();
-
-    return tiffStrips;
+    return;
 }
 
-Tiff::TiffStrips Tiff::lzwDecompress3(TiffStrip &t, MetadataParameters &p)
+void Tiff::lzwDecompressOld(TiffStrip &t, MetadataParameters &p)
 {
 /*
-    lzwDecompress2 with ChatGPT tweaks:
-    1.	Additional Null Checks: Added checks before accessing s[code] to ensure it is not nullptr.
-    2.	Boundary Checks: Ensured all array accesses are within bounds.
-    3.	Memory Handling: Simplified memory copy operations using std::memcpy.
-    4.	Documentation: Added comments for better understanding and maintainability.
-    5.	Code Simplification: Simplified the repeated sections for copying strings.
+    Receives a tiff strip, decompresses it, and writes the data to QImage Tiff::im
 */
     if (G::isLogger || isDebug)
         G::log("Tiff::lzwDecompress3", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
@@ -2253,7 +1923,7 @@ Tiff::TiffStrips Tiff::lzwDecompress3(TiffStrip &t, MetadataParameters &p)
         }
 
         if (code == EOFCode) {
-            return tiffStrips;
+            return;
         }
 
         // Handle new code then add prevString + prevString[0]
@@ -2361,7 +2031,7 @@ Tiff::TiffStrips Tiff::lzwDecompress3(TiffStrip &t, MetadataParameters &p)
         }
     }
 
-    return tiffStrips;
+    return;
 }
 
 /* Created by ChatGPT
@@ -2411,6 +2081,65 @@ Tiff::TiffStrips Tiff::zipDecompress(TiffStrip &t, MetadataParameters &p)
 
     tiffStrips.push_back(t);
     return tiffStrips;
+}
+
+#include <QImage>
+#include <QBuffer>
+
+bool Tiff::jpgDecompress(TiffStrip &t, MetadataParameters &p)
+{
+    if (G::isLogger || isDebug)
+        G::log("Tiff::jpgDecompress", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
+    qDebug() << "Tiff::jpgDecompress";
+    // Read the JPEG data from the file
+    p.file.seek(stripOffsets.at(t.strip));
+    QByteArray jpegData = p.file.read(t.stripBytes);
+
+    // Load the JPEG data into a QImage
+    QImage tempImage;
+    if (!tempImage.loadFromData(jpegData, "JPEG")) {
+        return false;
+    }
+
+    // Handle 8-bit and 16-bit data
+    if (t.bitsPerSample == 8) {
+        for (int y = 0; y < tempImage.height(); ++y) {
+            uchar* scanLine = tempImage.scanLine(y);
+            uchar* out = t.out + y * t.bytesPerRow;
+            if (t.predictor) {
+                for (int x = 0; x < t.bytesPerRow; ++x) {
+                    if (x < 3) {
+                        *out++ = *scanLine++;
+                    } else {
+                        *out++ = (*scanLine++ + *(out - 3));
+                    }
+                }
+            } else {
+                std::memcpy(out, scanLine, t.bytesPerRow);
+            }
+        }
+    } else if (t.bitsPerSample == 16) {
+        for (int y = 0; y < tempImage.height(); ++y) {
+            uchar* scanLine = tempImage.scanLine(y);
+            uchar* out = t.out + y * (t.bytesPerRow + t.bytesPerRow / 3);
+            if (t.predictor) {
+                for (int x = 0; x < t.bytesPerRow; x += 2) {
+                    if (x < 6) {
+                        *out++ = *scanLine++;
+                        *out++ = *scanLine++;
+                    } else {
+                        *out++ = (*scanLine++ + *(out - 6));
+                        *out++ = (*scanLine++ + *(out - 6));
+                    }
+                }
+            } else {
+                std::memcpy(out, scanLine, t.bytesPerRow);
+                out += t.bytesPerRow / 3;  // Handle alpha component
+            }
+        }
+    }
+
+    return true;
 }
 
 /*
