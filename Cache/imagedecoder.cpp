@@ -234,25 +234,40 @@ bool ImageDecoder::load()
 
     // TIFF format
     else if (ext == "tif") {
-        // check for sampling format we cannot read
-        if (n.samplesPerPixel > 3) {
-             imFile.close();
-             errMsg = "TIFF samplesPerPixel more than 3.";
-             G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
-             status = Status::Invalid;
-             return false;
+
+        // decoderToUse = Qt;
+        decoderToUse = LibTiff;
+        // decoderToUse = Rory;
+
+        if (decoderToUse == LibTiff) {
+            Tiff tiff("ImageDecoder::load");
+            image = tiff.readTiffToQImage(fPath);
         }
 
-        // use Winnow decoder
-        Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
-        // qDebug() << "ImageDecoder::load" << fPath;
-        // if (!tiff.decode(fPath, n.offsetFull, image)) {
-        //     imFile.close();
-        //     // /*
-        //     qDebug() << "ImageDecoder::load "
-        //              << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
-        //                 "Trying Qt tiff library to decode " + fPath + ". ";  //*/
+        if (decoderToUse == Rory) {
+            // check for sampling format we cannot read
+            if (n.samplesPerPixel > 3) {
+                 imFile.close();
+                 errMsg = "TIFF samplesPerPixel more than 3.";
+                 G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
+                 status = Status::Invalid;
+                 return false;
+            }
 
+            // try Winnow decoder
+            Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
+            qDebug() << "ImageDecoder::load" << fPath;
+            if (!tiff.decode(fPath, n.offsetFull, image)) {
+                imFile.close();
+                decoderToUse = Qt;
+                // /*
+                qDebug() << "ImageDecoder::load "
+                         << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
+                            "Trying Qt tiff library to decode " + fPath + ". ";  //*/
+            }
+        }
+
+        if (decoderToUse == Qt) {
             // use Qt tiff decoder
             if (!image.load(fPath)) {
                 imFile.close();
@@ -261,7 +276,7 @@ bool ImageDecoder::load()
                 status = Status::Invalid;
                 return false;
             }
-        // }
+        }
 
         imFile.close();
     }
@@ -407,7 +422,7 @@ void ImageDecoder::run()
 
     if (load()) {
         if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
-        if (isDebug)
+        // if (isDebug)
         qDebug().noquote()
             << "ImageDecoder::run                    "
             << "decoder" <<  QString::number(threadId).leftJustified(2)

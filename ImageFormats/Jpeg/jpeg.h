@@ -100,7 +100,6 @@ private:
     /* image scan mcu row from top left most mcu to bottom right most mcu equivalent
        to 8 scanlines joined together one after the other in format FFRRGGBBFFRRGGBB ... */
     typedef QVector<uint> scanMcuRow;
-//    QVector<QVector<uint>> scanLines;
     scanMcuRow scanLine[8];
 
     // image width and height in pixels
@@ -165,6 +164,15 @@ private:
     48,21	49,34	50,37	51,47	52,50	53,56	54,59	55,61
     56,35	57,36	58,48	59,49	60,57	61,58	62,62	63,63
     */
+
+
+    // Endian
+    bool isBigEndian;
+
+    // DQT
+    qint64 dqtOffset;
+    quint16 dqtLength;
+    int dqtPrecision;
 
     // SOF
     int subFormat;

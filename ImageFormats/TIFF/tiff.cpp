@@ -902,7 +902,8 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, ifd)) {
-        qDebug() << "Tiff::decode(p,image,newsize)  parseForDecoding failed"<< p.fPath;
+        qDebug() << "Tiff::decode(p,image,newsize)  parseForDecoding failed"
+                 << "src:" << source << p.fPath;
         return false;
     }
 
@@ -913,7 +914,8 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    qDebug() << "Tiff::decode(p,image,newsize)  compression =" << compression << p.fPath;
+    qDebug() << "Tiff::decode(p,image,newsize)  compression =" << compression
+             << "src:" << source << p.fPath;
     bool decoded = true;
     if (compression == 1) decoded = decodeBase(p);
     if (compression == 5 /*&& predictor == 0*/) decoded = decodeLZW(p);
@@ -2155,8 +2157,15 @@ TIFFTAG_SUBFILETYPE to FILETYPE_REDUCEDIMAGE, and TIFFTAG_SUBIFD to the offset o
 thumbnail directory. Close the TIFF file using TIFFClose. Here's an example code snippet
 that demonstrates adding a JPEG thumbnail to a TIFF file using LibTIFF: c #include
 <tiffio.h>
+*/
 
-int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size) {
+/*
+This code creates a new directory for the thumbnail, sets the appropriate fields, writes
+the JPEG compressed thumbnail data, and then sets the TIFFTAG_SUBFILETYPE and
+TIFFTAG_SUBIFD fields in the main image directory to link to the thumbnail.
+*/
+
+int Tiff::add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size) {
     uint16 thumb_photometric = PHOTOMETRIC_RGB;
     uint16 thumb_bps = 8;
     uint16 thumb_spp = 3;
@@ -2183,9 +2192,483 @@ int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data
     return 1;
 }
 
-This code creates a new directory for the thumbnail, sets the appropriate fields, writes
-the JPEG compressed thumbnail data, and then sets the TIFFTAG_SUBFILETYPE and
-TIFFTAG_SUBIFD fields in the main image directory to link to the thumbnail.
+QImage Tiff::readTiffToQImage(const QString &filePath) {
+    /*
+    TIFF *tif = TIFFOpen(filePath.toStdString().c_str(), "r");
+    if (!tif) {
+        qDebug() << "Tiff::readTiffToQImage" << "Failed to open TIFF file." << filePath;
+        return QImage();
+    }
+
+    uint32 width, height;
+    uint16 samplesPerPixel, bitsPerSample, orientation;
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+    TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+    if (!TIFFGetField(tif, TIFFTAG_ORIENTATION, &orientation)) {
+        orientation = ORIENTATION_TOPLEFT; // Default orientation
+    }
+
+    if (bitsPerSample != 8 && bitsPerSample != 16) {
+        qDebug() << "Tiff::readTiffToQImage" << "Unsupported TIFF format. Only 8 or 16 bits per channel are supported." << filePath;
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    QImage image(width, height, (samplesPerPixel == 3) ? QImage::Format_RGB888 : QImage::Format_ARGB32);
+
+    if (bitsPerSample == 16) {
+        uint16 *scanline = (uint16 *)_TIFFmalloc(TIFFScanlineSize(tif));
+        if (!scanline) {
+            qDebug() << "Tiff::readTiffToQImage" << "Failed to allocate memory for 16-bit scanline." << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        for (uint32 y = 0; y < height; ++y) {
+            if (TIFFReadScanline(tif, scanline, y, 0) == -1) {
+                qDebug() << "Tiff::readTiffToQImage" << "Failed to read TIFF scanline (16-bit)." << filePath;
+                _TIFFfree(scanline);
+                TIFFClose(tif);
+                return QImage();
+            }
+
+            for (uint32 x = 0; x < width; ++x) {
+                uint16 r = scanline[x * samplesPerPixel];
+                uint16 g = scanline[x * samplesPerPixel + 1];
+                uint16 b = scanline[x * samplesPerPixel + 2];
+                uint16 a = samplesPerPixel == 4 ? scanline[x * samplesPerPixel + 3] : 65535;
+
+                uint8_t r8 = static_cast<uint8_t>((r * 255) / 65535);
+                uint8_t g8 = static_cast<uint8_t>((g * 255) / 65535);
+                uint8_t b8 = static_cast<uint8_t>((b * 255) / 65535);
+                uint8_t a8 = static_cast<uint8_t>((a * 255) / 65535);
+
+                uint32 destY = (orientation == ORIENTATION_TOPLEFT) ? y : (height - y - 1);
+                if (samplesPerPixel == 3) {
+                    image.setPixelColor(x, destY, QColor(r8, g8, b8));
+                } else {
+                    image.setPixelColor(x, destY, QColor(r8, g8, b8, a8));
+                }
+            }
+        }
+
+        _TIFFfree(scanline);
+    } else { // 8 bits per sample
+        uint8 *scanline = (uint8 *)_TIFFmalloc(TIFFScanlineSize(tif));
+        if (!scanline) {
+            qDebug() << "Tiff::readTiffToQImage" << "Failed to allocate memory for 8-bit scanline." << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        for (uint32 y = 0; y < height; ++y) {
+            if (TIFFReadScanline(tif, scanline, y, 0) == -1) {
+                qDebug() << "Tiff::readTiffToQImage" << "Failed to read TIFF scanline (8-bit)." << filePath;
+                _TIFFfree(scanline);
+                TIFFClose(tif);
+                return QImage();
+            }
+
+            for (uint32 x = 0; x < width; ++x) {
+                uint8_t r = scanline[x * samplesPerPixel];
+                uint8_t g = scanline[x * samplesPerPixel + 1];
+                uint8_t b = scanline[x * samplesPerPixel + 2];
+                uint8_t a = samplesPerPixel == 4 ? scanline[x * samplesPerPixel + 3] : 255;
+
+                uint32 destY = (orientation == ORIENTATION_TOPLEFT) ? y : (height - y - 1);
+                if (samplesPerPixel == 3) {
+                    image.setPixelColor(x, destY, QColor(r, g, b));
+                } else {
+                    image.setPixelColor(x, destY, QColor(r, g, b, a));
+                }
+            }
+        }
+
+        _TIFFfree(scanline);
+    }
+
+    TIFFClose(tif);
+
+    // Mirror the image if orientation is not top-left
+    if (orientation != ORIENTATION_TOPLEFT) {
+        image = image.mirrored();
+    }
+
+    return image;
+    */
 
 
+    /*
+    TIFF *tif = TIFFOpen(filePath.toStdString().c_str(), "r");
+    if (!tif) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Failed to open TIFF file."
+            << filePath;
+        return QImage();
+    }
+
+    uint32 width, height;
+    uint16 samplesPerPixel, bitsPerSample;
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+    TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+
+    if (bitsPerSample != 8 && bitsPerSample != 16) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Unsupported TIFF format. Only 8 or 16 bits per channel are supported."
+            << filePath;
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    size_t npixels = width * height;
+
+    QImage image;
+    if (bitsPerSample == 16) {
+        uint16 *raster16 = (uint16 *)_TIFFmalloc(npixels * samplesPerPixel * sizeof(uint16));
+        if (!raster16) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to allocate memory for 16-bit raster."
+                << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        // Read each scanline and store it in raster16
+        for (uint32 y = 0; y < height; ++y) {
+            if (TIFFReadScanline(tif, raster16 + y * width * samplesPerPixel, y, 0) == -1) {
+                qDebug()
+                    << "Tiff::readTiffToQImage"
+                    << "Failed to read TIFF image (16-bit)."
+                    << filePath;
+                _TIFFfree(raster16);
+                TIFFClose(tif);
+                return QImage();
+            }
+        }
+
+        // Process raster16 data into QImage with correct orientation
+        image = QImage(width, height, QImage::Format_RGB888); // Assuming RGB888 format
+
+        for (uint32 y = 0; y < height; ++y) {
+            for (uint32 x = 0; x < width; ++x) {
+                uint16 r = raster16[y * width * samplesPerPixel + x * samplesPerPixel];
+                uint16 g = raster16[y * width * samplesPerPixel + x * samplesPerPixel + 1];
+                uint16 b = raster16[y * width * samplesPerPixel + x * samplesPerPixel + 2];
+
+                // Normalize to 8-bit range
+                uint8_t r8 = static_cast<uint8_t>((r * 255) / 65535);
+                uint8_t g8 = static_cast<uint8_t>((g * 255) / 65535);
+                uint8_t b8 = static_cast<uint8_t>((b * 255) / 65535);
+
+                image.setPixelColor(x, height - y - 1, QColor(r8, g8, b8));
+            }
+        }
+        image.mirror();
+
+        _TIFFfree(raster16);
+
+    } else { // 8 bits per sample
+        uint32 *raster = (uint32 *)_TIFFmalloc(npixels * sizeof(uint32));
+        if (!raster) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to allocate memory for raster."
+                << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to read TIFF image (8-bit)."
+                << filePath;
+            _TIFFfree(raster);
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        image = QImage(width, height, QImage::Format_RGB888); // Assuming RGB888 format
+
+        for (uint32 y = 0; y < height; ++y) {
+            for (uint32 x = 0; x < width; ++x) {
+                uint32 pixel = raster[y * width + x];
+                uint8_t r = TIFFGetR(pixel);
+                uint8_t g = TIFFGetG(pixel);
+                uint8_t b = TIFFGetB(pixel);
+
+                image.setPixelColor(x, height - y - 1, QColor(r, g, b));
+            }
+        }
+
+        _TIFFfree(raster);
+    }
+
+    TIFFClose(tif);
+
+    return image;
 */
+    /*
+    TIFF *tif = TIFFOpen(filePath.toStdString().c_str(), "r");
+    if (!tif) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Failed to open TIFF file."
+            << filePath;
+        return QImage();
+    }
+
+    uint32 width, height;
+    uint16 samplesPerPixel, bitsPerSample;
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+    TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+
+    if (bitsPerSample != 8 && bitsPerSample != 16) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Unsupported TIFF format. Only 8 or 16 bits per channel are supported."
+            << filePath;
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    size_t npixels = width * height;
+    QImage image;
+
+    if (bitsPerSample == 16) {
+        uint16 *raster16 = (uint16 *)_TIFFmalloc(width * height * samplesPerPixel * sizeof(uint16));
+        if (!raster16) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to allocate memory for 16-bit raster."
+                << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        // Read each scanline and store it in raster16
+        for (uint32 y = 0; y < height; ++y) {
+            if (!TIFFReadScanline(tif, raster16 + y * width * samplesPerPixel, y, 0)) {
+                qDebug()
+                    << "Tiff::readTiffToQImage"
+                    << "Failed to read TIFF image (16-bit)."
+                    << filePath;
+                _TIFFfree(raster16);
+                TIFFClose(tif);
+                return QImage();
+            }
+        }
+
+        // Process raster16 data into QImage with correct orientation
+        image = QImage(width, height, QImage::Format_Invalid);
+        if (samplesPerPixel == 3) {
+            image = QImage(width, height, QImage::Format_RGB888);
+        } else if (samplesPerPixel == 4) {
+            image = QImage(width, height, QImage::Format_ARGB32);
+        }
+
+        for (uint32 y = 0; y < height; ++y) {
+            for (uint32 x = 0; x < width; ++x) {
+                uint16 r = raster16[y * width * samplesPerPixel + x * samplesPerPixel];
+                uint16 g = raster16[y * width * samplesPerPixel + x * samplesPerPixel + 1];
+                uint16 b = raster16[y * width * samplesPerPixel + x * samplesPerPixel + 2];
+                uint16 a = (samplesPerPixel == 4) ? raster16[y * width * samplesPerPixel + x * samplesPerPixel + 3] : 65535; // Default alpha to 1.0 (16-bit)
+
+                // Normalize to 8-bit range
+                uint8_t r8 = static_cast<uint8_t>((r * 255) / 65535);
+                uint8_t g8 = static_cast<uint8_t>((g * 255) / 65535);
+                uint8_t b8 = static_cast<uint8_t>((b * 255) / 65535);
+                uint8_t a8 = static_cast<uint8_t>((a * 255) / 65535);
+
+                if (samplesPerPixel == 3) {
+                    image.setPixel(x, height - y - 1, qRgb(r8, g8, b8)); // Flip image vertically
+                } else if (samplesPerPixel == 4) {
+                    image.setPixel(x, height - y - 1, qRgba(r8, g8, b8, a8)); // Flip image vertically
+                }
+            }
+        }
+
+        _TIFFfree(raster16);
+    } else { // 8 bits per sample
+        uint32 *raster = (uint32 *)_TIFFmalloc(npixels * sizeof(uint32));
+        if (!raster) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to allocate memory for raster."
+                << filePath;
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
+            qDebug()
+                << "Tiff::readTiffToQImage"
+                << "Failed to read TIFF image (8-bit)."
+                << filePath;
+            _TIFFfree(raster);
+            TIFFClose(tif);
+            return QImage();
+        }
+
+        image = QImage(width, height, QImage::Format_Invalid);
+        if (samplesPerPixel == 3) {
+            image = QImage(width, height, QImage::Format_RGB888);
+        } else if (samplesPerPixel == 4) {
+            image = QImage(width, height, QImage::Format_ARGB32);
+        }
+
+        for (uint32 y = 0; y < height; ++y) {
+            for (uint32 x = 0; x < width; ++x) {
+                uint32 pixel = raster[y * width + x];
+                uint8_t r = TIFFGetR(pixel);
+                uint8_t g = TIFFGetG(pixel);
+                uint8_t b = TIFFGetB(pixel);
+                uint8_t a = TIFFGetA(pixel);
+                if (samplesPerPixel == 3) {
+                    image.setPixel(x, height - y - 1, qRgb(r, g, b)); // Flip image vertically
+                } else if (samplesPerPixel == 4) {
+                    image.setPixel(x, height - y - 1, qRgba(r, g, b, a)); // Flip image vertically
+                }
+            }
+        }
+
+        _TIFFfree(raster);
+    }
+
+    TIFFClose(tif);
+
+    // Convert to AARRGGBB format if necessary
+    if (image.format() == QImage::Format_ARGB32) {
+        QImage convertedImage = image.convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < convertedImage.height(); ++y) {
+            QRgb *line = (QRgb *)convertedImage.scanLine(y);
+            for (int x = 0; x < convertedImage.width(); ++x) {
+                QRgb pixel = line[x];
+                uint8_t a = qAlpha(pixel);
+                uint8_t r = qRed(pixel);
+                uint8_t g = qGreen(pixel);
+                uint8_t b = qBlue(pixel);
+                line[x] = (a << 24) | (r << 16) | (g << 8) | b;
+            }
+        }
+        return convertedImage;
+    }
+
+    return image;
+    */
+
+    // /*
+    TIFF *tif = TIFFOpen(filePath.toStdString().c_str(), "r");
+    if (!tif) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Failed to open TIFF file."
+            << filePath
+            ;
+        return QImage();
+    }
+
+    uint32 width, height;
+    uint16 samplesPerPixel, bitsPerSample;
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+    TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+
+    if (bitsPerSample != 8) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Unsupported TIFF format. Only 8 bits per channel are supported."
+            << filePath
+            ;
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    size_t npixels = width * height;
+    uint32 *raster = (uint32 *)_TIFFmalloc(npixels * sizeof(uint32));
+    if (!raster) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Failed to allocate memory for raster."
+            << filePath
+            ;
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    QImage::Format imageFormat = QImage::Format_Invalid;
+    if (samplesPerPixel == 3) {
+        imageFormat = QImage::Format_RGB888;
+    } else if (samplesPerPixel == 4) {
+        imageFormat = QImage::Format_ARGB32;
+    } else {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Unsupported TIFF format. Only 3-channel (RGB) or 4-channel (RGBA) images are supported."
+            << filePath
+            ;
+        _TIFFfree(raster);
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
+        qDebug()
+            << "Tiff::readTiffToQImage"
+            << "Failed to read TIFF image."
+            << filePath
+            ;
+        _TIFFfree(raster);
+        TIFFClose(tif);
+        return QImage();
+    }
+
+    QImage image(width, height, imageFormat);
+    for (uint32 y = 0; y < height; ++y) {
+        for (uint32 x = 0; x < width; ++x) {
+            uint32 pixel = raster[y * width + x];
+            uint8_t r = TIFFGetR(pixel);
+            uint8_t g = TIFFGetG(pixel);
+            uint8_t b = TIFFGetB(pixel);
+            uint8_t a = TIFFGetA(pixel);
+            if (samplesPerPixel == 3) {
+                image.setPixel(x, height - y - 1, qRgb(r, g, b)); // Flip image vertically
+            } else if (samplesPerPixel == 4) {
+                image.setPixel(x, height - y - 1, qRgba(r, g, b, a)); // Flip image vertically
+            }
+        }
+    }
+
+    _TIFFfree(raster);
+    TIFFClose(tif);
+
+    // Convert to AARRBBGG format if necessary
+    if (imageFormat == QImage::Format_ARGB32) {
+        QImage convertedImage = image.convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < convertedImage.height(); ++y) {
+            QRgb *line = (QRgb *)convertedImage.scanLine(y);
+            for (int x = 0; x < convertedImage.width(); ++x) {
+                QRgb pixel = line[x];
+                uint8_t a = qAlpha(pixel);
+                uint8_t r = qRed(pixel);
+                uint8_t g = qGreen(pixel);
+                uint8_t b = qBlue(pixel);
+                line[x] = (a << 24) | (a << 16) | (r << 8) | g;
+            }
+        }
+        return convertedImage;
+    }
+
+    return image;
+    //*/
+}

@@ -137,6 +137,7 @@ HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
+# HEADERS += Lib/libtiff/h
 # HEADERS += Lib/libtiff/t4.h
 # HEADERS += Lib/libtiff/tif_config.h
 # HEADERS += Lib/libtiff/tif_config.vc.h
@@ -302,6 +303,7 @@ SOURCES += Lcms2/cmsvirt.c
 SOURCES += Lcms2/cmswtpnt.c
 SOURCES += Lcms2/cmsxform.c
 
+# SOURCES += Lib/libtiff/*.c
 # SOURCES += Lib/libtiff/mkg3states.c
 # SOURCES += Lib/libtiff/tif_aux.c
 # SOURCES += Lib/libtiff/tif_close.c
@@ -527,5 +529,13 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lli
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
+# libtiff
+# LIBS += -L/usr/local/opt/libtiff/lib -ltiff
+# LIBS += /usr/local/opt/libtiff/lib/libtiff.dylib
+# INCLUDEPATH += /usr/local/opt/libtiff/include
+LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
+INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+
+# libjpeg-turbo
 macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build -lturbojpeg
 macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo

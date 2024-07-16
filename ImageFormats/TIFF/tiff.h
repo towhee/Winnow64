@@ -13,9 +13,11 @@
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
-#include "zlib.h"
 #include <vector>
 #include <cstring>
+
+#include "zlib.h"
+#include <tiffio.h>     // libtiff
 
 extern bool showDebug;
 
@@ -44,7 +46,12 @@ public:
     // decode using QFile mapped to memory
     bool decode(MetadataParameters &p, QImage &image, int newSize = 0);
 
+    // add a thumbnail to the tiff for faster thumbnail generation
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+
+    // test libtiff
+    QImage readTiffToQImage(const QString &filePath);
+    void testLibtiff(QString fPath);
 
 private:
     Utilities u;
@@ -136,6 +143,8 @@ private:
     TiffStrips zipDecompress(TiffStrip &t, MetadataParameters &p);  // ChatGPT created
     bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
+    // try libtiff
+    int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
 };
 
 #endif // TIFF_H
