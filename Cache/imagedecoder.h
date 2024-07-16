@@ -67,6 +67,7 @@ public:
 
     enum decoders {
         Qt,
+        LibTiff,
         TurboJpg,
         MacOS,
         LibHeif,
@@ -75,6 +76,7 @@ public:
 
     QStringList decodersText {
         "Qt",
+        "LibTiff",
         "TurboJpg",
         "MacOS",
         "LibHeif",

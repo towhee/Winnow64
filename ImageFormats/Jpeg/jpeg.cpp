@@ -752,31 +752,47 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
 
 void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
 {
+/*
+    DQT Segment Structure
+
+    1.	Marker: 0xFFDB
+    2.	Length: 2 bytes, indicating the length of the segment excluding the marker but including the length field itself.
+    3.	Quantization Table Information:
+        •	Identifier (4 bits): The ID of the quantization table (0-3).
+    4.	Quantization Table Data:
+    •	For 8-bit precision: 64 bytes.
+    •	For 16-bit precision: 128 bytes.
+
+    Each table follows the zigzag order used in JPEG compression.
+*/
     quint32 pos = static_cast<quint32>(p.file.pos());
-    quint32 endOffset = pos + len - 2;
+    dqtOffset = pos;
+    dqtLength = len;
+    qint32 endOffset = dqtOffset + len - 2;
 
     while (p.file.pos() < endOffset) {
         QByteArray c = p.file.read(1);
-//        quint8 table = u.get8(c);
-        int precision = u.get4_1st(c);
+        //        quint8 table = get8(c);
+        dqtPrecision = u.get4_1st(c);
         int table = u.get4_2nd(c);
         QVector<int> q(64);
-        if (precision == 0) {
-            for (int i = 0; i < 64; i++) q[i] = u.get8(p.file.read(1));
+        if (dqtPrecision == 0) {
+             for (int i = 0; i < 64; i++) q[zzmcu[i]] = u.get8(p.file.read(1));
         }
         else {
-            for (int i = 0; i < 64; i++) q[i] = u.get16(p.file.read(2));
+             for (int i = 0; i < 64; i++) q[zzmcu[i]] = u.get16(p.file.read(2), isBigEndian);
         }
         dqt[table] = q;
     }
 
     // report
-//    qDebug() << "\n" << "Jpeg::parseQuantizationTable";
+    // qDebug() << "\nQuantization Table Report:";
     QMapIterator<int, QVector<int>> table(dqt);
     while (table.hasNext()) {
         table.next();
-//        qDebug() << "Jpeg::parseQuantizationTable" << "Quantization Table" << table.key()
-//                 << dqtDescription[table.key()];
+        /*
+            qDebug() << __FUNCTION__ << "Quantization Table" << table.key()
+                     << dqtDescription[table.key()]; //*/
         int i = 0;
         for (int r = 0; r < 8; r++) {
             QString rStr = "";
@@ -784,8 +800,9 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
                 rStr += QString::number(dqt[table.key()][i]).rightJustified(4);
                 i++;
             }
-//            qDebug() << "Jpeg::parseQuantizationTable" << "  "
-//                     << "Row" << r << " " << rStr;
+            /*
+                qDebug() << __FUNCTION__ << "  "
+                         << "Row" << r << " " << rStr; //*/
         }
     }
 
@@ -923,19 +940,20 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
 QImage Jpeg::turboDecode(QString &filePath)
 {
-    /*
+/*
     libjpeg-turbo library
 */
+    // Initialize TurboJPEG decompressor
     tjhandle tjInstance = tjInitDecompress();
     if (!tjInstance) {
-        std::cerr << "Failed to initialize TurboJPEG: " << tjGetErrorStr() << std::endl;
+        qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to initialize TurboJPEG: " << tjGetErrorStr();
         return QImage();
     }
 
     // Read JPEG file into memory
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        std::cerr << "Failed to open JPEG file." << std::endl;
+        qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to open JPEG file.";
         tjDestroy(tjInstance);
         return QImage();
     }
@@ -947,34 +965,93 @@ QImage Jpeg::turboDecode(QString &filePath)
     int width, height, jpegSubsamp, jpegColorspace;
     if (tjDecompressHeader3(tjInstance, (unsigned char*)ba.data(), ba.size(),
                             &width, &height, &jpegSubsamp, &jpegColorspace) != 0) {
-        std::cerr << "Failed to read JPEG header: " << tjGetErrorStr() << std::endl;
+        qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to read JPEG header: " << tjGetErrorStr();
         tjDestroy(tjInstance);
         return QImage();
     }
 
     // Allocate memory for the decompressed image
-    unsigned char* imgBuffer = new unsigned char[width * height * tjPixelSize[TJPF_RGB]];
+    int pixelFormat = TJPF_RGB;
+    int pitch = width * tjPixelSize[pixelFormat];
+    unsigned char* imgBuffer = (unsigned char*)tjAlloc(pitch * height);
     if (!imgBuffer) {
-        std::cerr << "Failed to allocate memory for decompressed image." << std::endl;
+        qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to allocate memory for decompressed image.";
         tjDestroy(tjInstance);
         return QImage();
     }
 
     // Decompress the JPEG image
     if (tjDecompress2(tjInstance, (unsigned char*)ba.data(), ba.size(), imgBuffer,
-                      width, 0, height, TJPF_RGB, TJFLAG_FASTDCT) != 0) {
-        std::cerr << "Failed to decompress JPEG image: " << tjGetErrorStr() << std::endl;
-        delete[] imgBuffer;
+                      width, pitch, height, pixelFormat, 0) != 0) {
+        qDebug() << "Failed to decompress JPEG image: " << tjGetErrorStr();
+        tjFree(imgBuffer);
         tjDestroy(tjInstance);
         return QImage();
     }
 
     // Create QImage from the decompressed data
-    QImage img(imgBuffer, width, height, QImage::Format_RGB888);
-    delete[] imgBuffer;
+    QImage img(imgBuffer, width, height, pitch, QImage::Format_RGB888);
+    QImage finalImage = img.copy(); // Make a deep copy to take ownership of the buffer
+    finalImage.convertTo(QImage::Format_ARGB32);
+
+    // Cleanup
+    tjFree(imgBuffer);
     tjDestroy(tjInstance);
-    img.convertTo(QImage::Format_ARGB32);
-    return img;
+
+    return finalImage;
+    // tjhandle tjInstance = tjInitDecompress();
+    // if (!tjInstance) {
+    //     qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to initialize TurboJPEG: " << tjGetErrorStr();
+    //     return QImage();
+    // }
+
+    // // Read JPEG file into memory
+    // QFile file(filePath);
+    // if (!file.open(QIODevice::ReadOnly)) {
+    //     qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to open JPEG file.";
+    //     tjDestroy(tjInstance);
+    //     return QImage();
+    // }
+
+    // QByteArray ba = file.readAll();
+    // file.close();
+
+    // // Get image dimensions and colorspace
+    // int width, height, jpegSubsamp, jpegColorspace;
+    // if (tjDecompressHeader3(tjInstance, (unsigned char*)ba.data(), ba.size(),
+    //                         &width, &height, &jpegSubsamp, &jpegColorspace) != 0) {
+    //     qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to read JPEG header: " << tjGetErrorStr();
+    //     tjDestroy(tjInstance);
+    //     return QImage();
+    // }
+
+    // // Allocate memory for the decompressed image
+    // int pixelFormat = TJPF_RGB;
+    // int pitch = width * tjPixelSize[pixelFormat]; // This is the stride
+    // unsigned char* imgBuffer = (unsigned char*)malloc(pitch * height);
+    // if (!imgBuffer) {
+    //     qDebug() << "Jpeg::turboDecode(fPath)" << "Failed to allocate memory for decompressed image.";
+    //     tjDestroy(tjInstance);
+    //     return QImage();
+    // }
+
+    // // Decompress the JPEG image
+    // // if (tjDecompress2(tjInstance, (unsigned char*)ba.data(), ba.size(), imgBuffer,
+    // //                   width, pitch, height, pixelFormat, TJFLAG_FASTDCT) != 0) {
+    // if (tjDecompress2(tjInstance, (unsigned char*)ba.data(), ba.size(), imgBuffer,
+    //                   width, pitch, height, pixelFormat, 0) != 0) {
+    //     std::cerr << "Failed to decompress JPEG image: " << tjGetErrorStr();
+    //     delete[] imgBuffer;
+    //     tjDestroy(tjInstance);
+    //     return QImage();
+    // }
+
+    // // Create QImage from the decompressed data
+    // QImage img(imgBuffer, width, height, QImage::Format_RGB888);
+    // delete[] imgBuffer;
+    // tjDestroy(tjInstance);
+    // img.convertTo(QImage::Format_ARGB32);
+    // return img;
 }
 
 QImage Jpeg::turboDecode(QByteArray &ba)
@@ -1016,9 +1093,9 @@ QImage Jpeg::turboDecode(QByteArray &ba)
 
     // Create QImage from the decompressed data
     QImage img(imgBuffer, width, height, QImage::Format_RGB888);
+    img.convertTo(QImage::Format_ARGB32);
     delete[] imgBuffer;
     tjDestroy(tjInstance);
-    img.convertTo(QImage::Format_ARGB32);
     return img;
 }
 
@@ -1060,10 +1137,6 @@ void Jpeg::buildMask()
 void Jpeg::buildIdctLookup()
 {
     double pi = 3.141592654;
-    /*
-    double pi16 = 3.141592654/16.0;          // 0.196350
-    double sqrtHalf	= 0.707106781;
-*/
     for (int i = 0; i != 106; i++) cosine[i] = cos(i*pi/16);
     for (int c = 0; c != 3; ++c) {
         for (uint y = 0; y != 8; ++y) {
@@ -1078,15 +1151,6 @@ void Jpeg::buildIdctLookup()
                         else
                             tmp *= 0.1767766952966368811;
                         iIdctLookup[c][y][x][v][u] = static_cast<int>(tmp);
-                        /*
-                        fIdctLookup[c][y][x][v][u] = tmp;
-                        double cu = (u == 0) ? sqrtHalf : 1;
-                        double cv = (v == 0) ? sqrtHalf : 1;
-                        double cosProd = std::cos((2*x+1)*u*M_PI/16.0) * std::cos((2*y+1)*v*M_PI/16.0);
-                        double insideProd = cu * cv * cosProd;
-                        fIdctLookup[c][y][x][v][u] = insideProd;
-                        iIdctLookup[c][y][x][v][u] = static_cast<int>(insideProd * (1 << 10));
-                        */
                     }
                 }
             }
