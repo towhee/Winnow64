@@ -758,6 +758,7 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
     1.	Marker: 0xFFDB
     2.	Length: 2 bytes, indicating the length of the segment excluding the marker but including the length field itself.
     3.	Quantization Table Information:
+        •	Precision (4 bits): Indicates whether the quantization values are 8-bit (0) or 16-bit (1).
         •	Identifier (4 bits): The ID of the quantization table (0-3).
     4.	Quantization Table Data:
     •	For 8-bit precision: 64 bytes.
