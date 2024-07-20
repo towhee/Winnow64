@@ -916,6 +916,7 @@ void Metadata::clearMetadata()
     m.offsetThumb = 0;
     m.lengthThumb = 0;
     m.isBigEnd = false;
+    m.ifdOffsets.clear();
     m.ifd0Offset = 0;
     m.offsetFull = 0;
     m.lengthFull = 0;

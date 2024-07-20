@@ -184,8 +184,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // G::showAllEvents = true;
-    qDebug() << G::useMyTiff;
-
+    qDebug() << "MW::test";
+    QString path ="/Users/roryhill/Pictures/_jpg/test/lily.jpg";
+    JpgDecoder jpg;
+    jpg.decode(path);
 }
 /*
    Performance

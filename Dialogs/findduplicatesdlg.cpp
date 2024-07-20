@@ -224,7 +224,7 @@ void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
     }
     else {
         frameDecoder->clear();
-        imageDecoder->decode(image, metadata, *m);
+        imageDecoder->decodeIndependent(image, metadata, *m);
     }
 }
 

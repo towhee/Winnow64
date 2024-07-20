@@ -257,6 +257,7 @@ void DataModel::setModelProperties()
 
     setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ifdOffsetsColumn, new QStandardItem("ifd0Offsets")); horizontalHeaderItem(G::ifdOffsetsColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpSegmentLengthColumn, new QStandardItem("XmpSegmentLengthColumn")); horizontalHeaderItem(G::XmpSegmentLengthColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
@@ -906,6 +907,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.samplesPerPixel = index(row, G::samplesPerPixelColumn).data().toInt();
     m.isBigEnd = index(row, G::isBigEndianColumn).data().toBool();
     m.ifd0Offset = index(row, G::ifd0OffsetColumn).data().toUInt();
+    m.ifdOffsets = index(row, G::ifdOffsetsColumn).data().toList();
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
     m.xmpSegmentLength = index(row, G::XmpSegmentLengthColumn).data().toUInt();
     m.isXmp = index(row, G::IsXMPColumn).data().toBool();
@@ -1287,6 +1289,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
     setData(index(row, G::isBigEndianColumn), m.isBigEnd);
     setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
+    setData(index(row, G::ifdOffsetsColumn), m.ifdOffsets);
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
     setData(index(row, G::XmpSegmentLengthColumn), m.xmpSegmentLength);
     setData(index(row, G::IsXMPColumn), m.isXmp);

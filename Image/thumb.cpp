@@ -190,15 +190,33 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
         return Status::Open;
     }
 
+    // use QtTiff decoder
+    // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
+
+    ImageMetadata m = dm->imMetadata(fPath);
+    Tiff tiff("Thumb::loadFromTiff");
+    if (tiff.read(fPath, &image, m.offsetThumb)) {
+        qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
+        image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+        return Status::Success;
+    }
+    else {
+        QString errMsg = "Could not read because QtTiff read failed.";
+        G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
+        return Status::Fail;
+    }
+
     int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
+    /*
     if (samplesPerPixel > 3) {
         QString msg = "Samples per pixel > 3.";
         G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
         return Status::Fail;
     }
+    //*/
 
-    ImageMetadata m = dm->imMetadata(fPath);
-    Tiff tiff("Thumb::loadFromTiff");
+    // ImageMetadata m = dm->imMetadata(fPath);
+    // Tiff tiff("Thumb::loadFromTiff");
 
      // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
      bool getThumb = true;
@@ -223,6 +241,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
      }
 
     // use Qt tiff library to decode embedded thumbnail (does not work)
+    // image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
 
     return Status::Fail;
 }

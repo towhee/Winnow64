@@ -62,7 +62,10 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    ImageFormats/Jpeg/decoderJpg.h \
+    ImageFormats/Jpeg/jpeg2.h \
+    ImageFormats/Jpeg/jpgdecoder.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -212,7 +215,9 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    ImageFormats/Jpeg/jpeg2.cpp \
+    ImageFormats/Jpeg/jpgdecoder.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
