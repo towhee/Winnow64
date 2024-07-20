@@ -53,8 +53,8 @@ bool ImageDecoder::quit()
     abort = false;
     status = Status::Abort;
     fPath = "";
-    QImage blank;
-    image = blank;
+    // QImage blank;
+    // image = QImage();
     cacheKey = -1;
     return false;
 }
@@ -139,7 +139,7 @@ bool ImageDecoder::load()
 //        return false;
 //    }
 
-    decoderToUse = Qt;  // default unless overridden
+    decoderToUse = QtImage;  // default unless overridden
 
     // Embedded JPG format (including embedded in raw files)
     if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
@@ -178,7 +178,7 @@ bool ImageDecoder::load()
             Jpeg jpg;
             image = jpg.turboDecode(buf);
         }
-        if (decoderToUse == Qt) {
+        if (decoderToUse == QtImage) {
             if (!image.loadFromData(buf, "JPEG")) {
                 errMsg = "Could not read JPG because QImage::loadFromData failed.";
                 G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
@@ -235,13 +235,16 @@ bool ImageDecoder::load()
     // TIFF format
     else if (ext == "tif") {
 
-        // decoderToUse = Qt;
-        decoderToUse = LibTiff;
+        // decoderToUse = QtImage;
+        decoderToUse = QtTiff;
+        // decoderToUse = LibTiff;
         // decoderToUse = Rory;
 
         if (decoderToUse == LibTiff) {
             Tiff tiff("ImageDecoder::load");
-            image = tiff.readTiffToQImage(fPath);
+            // qDebug() << "ImageDecoder::load using libtiff:" << fPath;
+            image = tiff.testLibtiff(fPath, n.key + 1);
+            // image = tiff.readTiffToQImage(fPath);
         }
 
         if (decoderToUse == Rory) {
@@ -259,7 +262,7 @@ bool ImageDecoder::load()
             qDebug() << "ImageDecoder::load" << fPath;
             if (!tiff.decode(fPath, n.offsetFull, image)) {
                 imFile.close();
-                decoderToUse = Qt;
+                decoderToUse = QtImage;
                 // /*
                 qDebug() << "ImageDecoder::load "
                          << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
@@ -267,7 +270,7 @@ bool ImageDecoder::load()
             }
         }
 
-        if (decoderToUse == Qt) {
+        if (decoderToUse == QtImage) {
             // use Qt tiff decoder
             if (!image.load(fPath)) {
                 imFile.close();
@@ -278,16 +281,30 @@ bool ImageDecoder::load()
             }
         }
 
+        if (decoderToUse == QtTiff) {
+            // use QTiffHandler code override
+            Tiff tiff("ImageDecoder::load");
+            qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
+            if (!tiff.read(fPath, &image)) {
+                imFile.close();
+                errMsg = "Could not read because QTiff decoder failed.";
+                G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+                status = Status::Invalid;
+                return false;
+            }
+        }
+
         imFile.close();
     }
 
     else if (ext == "jpg" || ext == "jpeg") {
-        // decoderToUse = Qt;
-        decoderToUse = TurboJpg;
-        // decoderToUse = Rory;
+        // decoderToUse = QtImage;
+        // decoderToUse = TurboJpg;
+        decoderToUse = Rory;
 
         if (decoderToUse == Rory) {
             Jpeg jpeg;
+            // Jpeg2 jpeg;
             jpeg.decodeScan(imFile, image);
         }
 
@@ -296,7 +313,7 @@ bool ImageDecoder::load()
             image = jpeg.turboDecode(fPath);
         }
 
-        if (decoderToUse == Qt) {
+        if (decoderToUse == QtImage) {
             image.load(fPath);
         }
     }
@@ -456,7 +473,7 @@ void ImageDecoder::run()
     emit done(threadId);
 }
 
-bool ImageDecoder::decode(QImage &img, Metadata *metadata, ImageMetadata &m)
+bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
 {
 /*
     This function is called externally, does not require the DataModel and does not

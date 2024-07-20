@@ -124,6 +124,7 @@ namespace G
         samplesPerPixelColumn,
         isBigEndianColumn,
         ifd0OffsetColumn,
+        ifdOffsetsColumn,
         XmpSegmentOffsetColumn,
         XmpSegmentLengthColumn,
         IsXMPColumn,

@@ -24,7 +24,7 @@ public:
                  DataModel *dm,
                  Metadata *metadata);
     void decode(ImageCacheData::CacheItem item, int instance);
-    bool decode(QImage &img, Metadata *metadata, ImageMetadata &m);
+    bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
     void setReady();
     void stop();
 
@@ -66,16 +66,18 @@ public:
     };
 
     enum decoders {
-        Qt,
-        LibTiff,
-        TurboJpg,
-        MacOS,
-        LibHeif,
-        Rory
+        QtImage,        // use QImage::load or QImage::loadFromData
+        QtTiff,         // use QTTIFFHANDLER code with nonQt libtiff
+        LibTiff,        // use libtiff and convert to QImage
+        TurboJpg,       // use turbojpg to decode jpegs
+        MacOS,          // use MacOS to decode heic
+        LibHeif,        // use libheif to decode heic
+        Rory            // use my decoder
     } decoderToUse;
 
     QStringList decodersText {
-        "Qt",
+        "QtImage",
+        "QtTiff",
         "LibTiff",
         "TurboJpg",
         "MacOS",

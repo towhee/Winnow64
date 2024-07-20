@@ -51,7 +51,11 @@ public:
 
     // test libtiff
     QImage readTiffToQImage(const QString &filePath);
-    void testLibtiff(QString fPath);
+    QImage testLibtiff(QString fPath, int row);
+    void listDirectories(ImageMetadata &m);
+
+    // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
+    bool read(QString fPath, QImage *image, quint32 ifdOffset = 0);
 
 private:
     Utilities u;
@@ -96,6 +100,20 @@ private:
     QStringList compressionString {"None", "LZW", "LZW Predictor", "Zip", "Jpg"};
     quint8 rgb[3];  // being used?
 
+    struct TiffFields {
+        int directory;
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+        uint16_t samplesPerPixel;
+        uint16_t bitsPerSample;
+        uint16_t compression;
+        uint16_t planarConfig;
+        uint16_t predictor;
+        uint16_t orientation;
+        uint16_t photometric;
+    };
+
     struct TiffStrip {
         int strip;
         char* in;
@@ -131,7 +149,6 @@ private:
     void toRRGGBBAA(QImage *im);
     void invertEndian16(QImage *im);
     void sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h);
-    void scaleFromQImage(QImage &im, QByteArray &bas, int newLongSide);
     TiffType getTiffType();
 
     // LZW compression
@@ -144,7 +161,19 @@ private:
     bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
     // try libtiff
+    void rptFields(TiffFields &f);
     int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
+
+    // from QTiffHandler
+    QImageIOHandler::Transformations exif2Qt(int exifOrientation);
+    int qt2Exif(QImageIOHandler::Transformations transformation);
+    void convert32BitOrder(void *buffer, int width);
+    void rgb48fixup(QImage *image, bool floatingPoint);
+    void rgb96fixup(QImage *image);
+    void rgbFixup(QImage *image);
+    bool readHeaders(TIFF *tiff, QSize &size, QImage::Format &format, uint16_t &photometric,
+                     bool &grayscale, bool &floatingPoint,
+                     QImageIOHandler::Transformations transformation);
 };
 
 #endif // TIFF_H

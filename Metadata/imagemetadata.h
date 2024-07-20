@@ -112,6 +112,7 @@ public:
     int samplesPerPixel = 0;
 
     bool isBigEnd = false;
+    QList<QVariant> ifdOffsets;             // type must be QVariant to add to datamodel
     quint32 ifd0Offset = 0;
     quint32 xmpSegmentOffset = 0;
     quint32 xmpSegmentLength = 0;

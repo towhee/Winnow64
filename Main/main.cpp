@@ -36,11 +36,17 @@ int main(int argc, char *argv[])
     }
 
     // terminate if Winnow already open and no arguments to pass
-    if (args == "" && instance.isRunning()) return 0;
+    if (args == "" && instance.isRunning()) {
+        QString msg = "Winnow or a Winnow report is open.";
+        // G::popUp->showPopup(msg);
+        return 0;
+    }
 
     // instance already running
     if (instance.sendMessage(args)) {
         if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
+        QString msg = "Winnow or a Winnow report is open.";
+        // G::popUp->showPopup(msg);
         return 0;
     }
 
