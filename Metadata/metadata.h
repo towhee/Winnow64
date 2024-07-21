@@ -31,6 +31,7 @@
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Jpeg/jpeg2.h"
 #include "ImageFormats/Jpeg/jpgdecoder.h"
+#include "ImageFormats/Jpeg/jpegturbo.h"
 #include "ImageFormats/Canon/canon.h"
 #include "ImageFormats/Canon/canoncr3.h"
 #include "ImageFormats/Dng/dng.h"

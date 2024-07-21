@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <algorithm>
 
-#include <turbojpeg.h>
 //#include "Utilities/bit.h"
 
 class Jpeg : public QObject
@@ -47,8 +46,6 @@ public:
     void decodeScan(QString fPath, QImage &image);
     void decodeScan(QFile &file, QImage &image);
     void decodeScan(QByteArray &ba, QImage &image);
-    QImage turboDecode(QString &filePath);              // uses libjpeg-turbo
-    QImage turboDecode(QByteArray &ba);    // uses libjpeg-turbo
 
     void embedThumbnail(ImageMetadata &m);
 

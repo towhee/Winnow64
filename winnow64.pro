@@ -62,10 +62,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    ImageFormats/Jpeg/decoderJpg.h \
-    ImageFormats/Jpeg/jpeg2.h \
-    ImageFormats/Jpeg/jpgdecoder.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -133,6 +130,10 @@ HEADERS += ImageFormats/Heic/heif.h
 #win32:HEADERS += ImageFormats/Heic/heif.h
 win32:HEADERS += ImageFormats/Heic/de265.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
+HEADERS += ImageFormats/Jpeg/decoderJpg.h
+HEADERS += ImageFormats/Jpeg/jpeg2.h
+HEADERS += ImageFormats/Jpeg/jpgdecoder.h
+HEADERS += ImageFormats/jpeg/jpegturbo.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
@@ -215,9 +216,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    ImageFormats/Jpeg/jpeg2.cpp \
-    ImageFormats/Jpeg/jpgdecoder.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -275,6 +274,9 @@ SOURCES += ImageFormats/Fuji/fuji.cpp
 SOURCES += ImageFormats/Heic/Heic.cpp
 #win32:SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/jpeg/jpeg.cpp
+SOURCES += ImageFormats/Jpeg/jpeg2.cpp
+SOURCES += ImageFormats/Jpeg/jpgdecoder.cpp         # JED project
+SOURCES += ImageFormats/jpeg/jpegturbo.cpp          # libjpeg-turbo
 SOURCES += ImageFormats/Nikon/nikon.cpp
 SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += ImageFormats/Panasonic/panasonic.cpp

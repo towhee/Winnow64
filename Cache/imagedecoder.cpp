@@ -309,8 +309,8 @@ bool ImageDecoder::load()
         }
 
         if (decoderToUse == TurboJpg) {
-            Jpeg jpeg;
-            image = jpeg.turboDecode(fPath);
+            JpegTurbo jpegTurbo;
+            image = jpegTurbo.decode(fPath);
         }
 
         if (decoderToUse == QtImage) {
