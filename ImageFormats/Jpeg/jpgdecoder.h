@@ -43,6 +43,7 @@ public:
     bool decode(QString fPath);
 
 private:
+    QElapsedTimer t;
     bool isDebug  = false;
 
     typedef unsigned char quint8;

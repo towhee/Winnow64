@@ -299,8 +299,8 @@ bool ImageDecoder::load()
 
     else if (ext == "jpg" || ext == "jpeg") {
         // decoderToUse = QtImage;
-        // decoderToUse = TurboJpg;
-        decoderToUse = Rory;
+        decoderToUse = TurboJpg;
+        // decoderToUse = Rory;
 
         if (decoderToUse == Rory) {
             Jpeg jpeg;
@@ -439,7 +439,7 @@ void ImageDecoder::run()
 
     if (load()) {
         if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
-        // if (isDebug)
+        if (isDebug)
         qDebug().noquote()
             << "ImageDecoder::run                    "
             << "decoder" <<  QString::number(threadId).leftJustified(2)

@@ -185,9 +185,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // G::showAllEvents = true;
     qDebug() << "MW::test";
-    QString path ="/Users/roryhill/Pictures/_jpg/test/lily.jpg";
     JpgDecoder jpg;
-    jpg.decode(path);
+    jpg.decode(dm->currentFilePath);
 }
 /*
    Performance

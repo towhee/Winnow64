@@ -699,11 +699,13 @@ void JpgDecoder::readScans(BitReader& bitReader, JPGImage* const image)
 {
     // decode first scan
     readStartOfScan(bitReader, image);
+    qDebug() << "readStartOfScan         µs =" << t.nsecsElapsed() /1000; t.restart();
     if (!image->valid) {
         return;
     }
     if (isDebug) printScanInfo(image);
     decodeHuffmanData(bitReader, image);
+    qDebug() << "decodeHuffmanData       µs =" << t.nsecsElapsed() /1000; t.restart();
 
     quint8 last = bitReader.readByte();
     quint8 current = bitReader.readByte();
@@ -759,6 +761,7 @@ void JpgDecoder::readScans(BitReader& bitReader, JPGImage* const image)
         last = bitReader.readByte();
         current = bitReader.readByte();
     }
+    // qDebug() << "decode additional scans µs =" << t.nsecsElapsed() /1000; t.restart();
 }
 
 JpgDecoder::JPGImage* JpgDecoder::readJPG(const std::string& filename)
@@ -778,6 +781,7 @@ JpgDecoder::JPGImage* JpgDecoder::readJPG(const std::string& filename)
     }
 
     readFrameHeader(bitReader, image);
+    qDebug() << "readFrameHeader         µs =" << t.nsecsElapsed() /1000; t.restart();
 
     if (!image->valid) {
         return image;
@@ -793,6 +797,7 @@ JpgDecoder::JPGImage* JpgDecoder::readJPG(const std::string& filename)
     }
 
     readScans(bitReader, image);
+    // qDebug() << "readScans               µs =" << t.nsecsElapsed() /1000; t.restart();
 
     return image;
 }
@@ -1134,13 +1139,14 @@ void JpgDecoder::decodeHuffmanData(BitReader& bitReader, JPGImage* const image)
                     for (uint v = 0; v < vMax; ++v) {
                         for (uint h = 0; h < hMax; ++h) {
                             if (!decodeBlockComponent(
-                                    image,
-                                    bitReader,
-                                    image->blocks[(y + v) * image->blockWidthReal + (x + h)][i],
-                                    previousDCs[i],
-                                    skips,
-                                    image->huffmanDCTables[component.huffmanDCTableID],
-                                    image->huffmanACTables[component.huffmanACTableID])) {
+                                image,
+                                bitReader,
+                                image->blocks[(y + v) * image->blockWidthReal + (x + h)][i],
+                                previousDCs[i],
+                                skips,
+                                image->huffmanDCTables[component.huffmanDCTableID],
+                                image->huffmanACTables[component.huffmanACTableID]))
+                            {
                                 return;
                             }
                         }
@@ -1457,11 +1463,11 @@ bool JpgDecoder::decode(QString fPath)
 {
     const std::string filename = fPath.toStdString();
 
-    QElapsedTimer t;
     t.start();
 
     // read image
     JPGImage* image = readJPG(filename);
+    qDebug() << "readJPG                 µs =" << t.nsecsElapsed() /1000; t.restart();
     // validate image
     if (image == nullptr) {
         return false;
@@ -1475,19 +1481,24 @@ bool JpgDecoder::decode(QString fPath)
         delete image;
         return false;
     }
+    // qDebug() << "finish prep             µs =" << t.nsecsElapsed() /1000; t.restart();
 
     // dequantize DCT coefficients
     dequantize(image);
+    qDebug() << "dequantize              µs =" << t.nsecsElapsed() /1000; t.restart();
 
     // Inverse Discrete Cosine Transform
     inverseDCT(image);
+    qDebug() << "inverseDCT              µs =" << t.nsecsElapsed() /1000; t.restart();
 
     // color conversion
     YCbCrToRGB(image);
+    qDebug() << "YCbCrToRGB              µs =" << t.nsecsElapsed() /1000; t.restart();
 
-    qDebug() << "JpgDecoder::decode  ms =" << t.elapsed() << fPath;
+    // qDebug() << "JpgDecoder::decode  ms =" << t.elapsed() << fPath;
 
-    if (isDebug) {
+    if (isDebug)
+    {
         // write BMP file
         const std::size_t pos = filename.find_last_of('.');
         const std::string outFilename = (pos == std::string::npos) ?
