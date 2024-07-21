@@ -10,29 +10,47 @@
 
 BitReader::BitReader(const std::string& filename) {
     inFile.open(filename, std::ios::in | std::ios::binary);
+    // QFile file(QString::fromStdString(filename));
+    // if (file.open(QIODevice::ReadOnly)) {
+    //     QByteArray data = file.readAll();
+    //     buffer.setData(data);
+    //     buffer.open(QIODevice::ReadOnly);
+    //     nextBit = 0;
+    // } else {
+    //     std::cerr << "Error - Unable to open file: " << filename << '\n';
+    // }
 }
 
 BitReader::~BitReader()
 {
-    if (inFile.is_open()) {
-        inFile.close();
+    // if (inFile.is_open()) {
+    //     inFile.close();
+    // }
+    if (buffer.isOpen()) {
+        buffer.close();
     }
 }
 
 bool BitReader::hasBits()
 {
     return !!inFile;
+    // return buffer.bytesAvailable() > 0;
 }
 
 quint8 BitReader::readByte()
 {
     nextBit = 0;
     return (quint8)inFile.get();
+    // return static_cast<quint8>(buffer.getChar());
 }
 
 uint BitReader::readWord() {
     nextBit = 0;
     return (inFile.get() << 8) + inFile.get();
+    // char highByte, lowByte;
+    // buffer.getChar(&highByte);
+    // buffer.getChar(&lowByte);
+    // return (static_cast<quint8>(highByte) << 8) + static_cast<quint8>(lowByte);
 }
 
 // read one bit (0 or 1) or return -1 if all bits have already been read
@@ -43,11 +61,13 @@ uint BitReader::readBit()
             return -1;
         }
         nextByte = inFile.get();
+        // buffer.getChar(reinterpret_cast<char*>(&nextByte));
         while (nextByte == 0xFF) {
             if (!hasBits()) {
                 return -1;
             }
             quint8 marker = inFile.peek();
+            // char marker = static_cast<char>(buffer.peek(buffer.pos()));
             // ignore multiple 0xFF's in a row
             while (marker == 0xFF) {
                 inFile.get();

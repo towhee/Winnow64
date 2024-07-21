@@ -11,8 +11,8 @@ public:
     BitReader(const std::string& filename);
     ~BitReader();
 
-    quint8 nextByte = 0;
-    quint8 nextBit = 0;
+    // quint8 nextByte = 0;
+    // quint8 nextBit = 0;
     std::ifstream inFile;
     bool hasBits();
     quint8 readByte();
@@ -32,6 +32,10 @@ public:
     const quint8 RST6 = 0xD6;
     const quint8 RST7 = 0xD7;
 
+private:
+    QBuffer buffer;
+    quint8 nextByte = 0;
+    quint8 nextBit = 0;
 };
 
 class JpgDecoder : public QObject

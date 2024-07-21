@@ -19,7 +19,7 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
-    isDebug = false;
+    isDebug = true;
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
