@@ -16,7 +16,7 @@ public:
     ~AddThumbnailsDlg();
 
 signals:
-    void ignore();
+    void ignore(bool ignore);
     void backup(bool isBackup);
 
 private slots:

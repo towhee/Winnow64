@@ -184,9 +184,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // G::showAllEvents = true;
-    qDebug() << "MW::test";
-    JpgDecoder jpg;
-    jpg.decode(dm->currentFilePath);
+    // qDebug() << thumbView->iconViewDelegate->missingThumbRect;
+
 }
 /*
    Performance

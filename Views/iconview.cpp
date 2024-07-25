@@ -1114,6 +1114,13 @@ void IconView::showEvent(QShowEvent *event)
     QListView::showEvent(event);
 }
 
+bool IconView::viewportEvent(QEvent *event)
+{
+    // use to intercept help event to change tooltips
+    // qDebug() << "IconView::viewportEvent" << event;
+    QListView::viewportEvent(event);
+}
+
 void IconView::paintEvent(QPaintEvent *event)
 {
     //qDebug() << "IconView::paintEvent" << event << event->region() << viewport()->visibleRegion();
@@ -1186,6 +1193,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (isDebug) G::log("IconView::mouseMoveEvent", objectName());
+    qDebug() << "IconView::mouseMoveEvent";
     if (isLeftMouseBtnPressed) {
         // allow small 'jiggle' tolerance before start drag
         int deltaX = qAbs(mousePressPos.x() - event->pos().x());
@@ -1202,6 +1210,17 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
             if (event->modifiers() & Qt::AltModifier) startDrag(Qt::CopyAction);
             if (!event->modifiers()) startDrag(Qt::MoveAction);
         }
+    }
+    else {
+        /*
+        // missing thumb tooltip
+        qDebug() << "IconView::mouseMoveEvent missingThumbRect"
+                 << "Mouse =" << event->pos()
+                 << "Missing rect =" << iconViewDelegate->missingThumbRect
+            ;
+        if (iconViewDelegate->missingThumbRect.contains(event->pos())) {
+        }
+        //*/
     }
 }
 
@@ -1235,7 +1254,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         QPoint iconPt = event->pos() - iconRect.topLeft();
         xPct = iconPt.x() * 1.0 / iconRect.width();
         yPct = iconPt.y() * 1.0 / iconRect.height();
-        /* debug
+        // /* debug
         qDebug() << "IconView::mousePressEvent"
                  << "\n currentIndex =" << currentIndex()
                  << "\n iconRect     =" << iconRect

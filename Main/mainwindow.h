@@ -634,7 +634,7 @@ private slots:
     void addIngestHistoryFolder(QString fPath);
     void ingestFinished();
 
-    void setIgnoreAddThumbnailsDlg();
+    void setIgnoreAddThumbnailsDlg(bool ignore);
     void setBackupModifiedFiles(bool isBackup);
 
     void setCentralView();
@@ -1149,7 +1149,6 @@ private:
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;
     QString refreshCurrentPath;
-    bool warnMissingEmbeddedThumbs = false;
 
     bool simulateJustInstalled;
     bool isSettings = false;

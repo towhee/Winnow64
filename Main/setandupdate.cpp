@@ -601,11 +601,12 @@ void MW::updateClassification()
                                             thumbView->currentIndex());
 }
 
-void MW::setIgnoreAddThumbnailsDlg()
+void MW::setIgnoreAddThumbnailsDlg(bool ignore)
 {
     qDebug() << "MW::setIgnoreAddThumbnailsDlg";
-    settings->setValue("ignoreAddThumbnailsDlg", true);
-    ignoreAddThumbnailsDlg = true;
+    settings->setValue("ignoreAddThumbnailsDlg", ignore);
+    pref->setItemValue("ignoreAddThumbnailsDlg", !ignore); // means to show in preferences
+    ignoreAddThumbnailsDlg = ignore;
 }
 
 void MW::setBackupModifiedFiles(bool isBackup)

@@ -294,7 +294,7 @@ void DataModel::clearDataModel()
     // reset iconChunkSize
     iconChunkSize = defaultIconChunkSize;
     // reset missing thumb (jpg/tiff)
-    isMissingEmbeddedThumb = false;
+    folderHasMissingEmbeddedThumb = false;
 }
 
 void DataModel::newInstance()
@@ -1311,7 +1311,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (m.isReadWrite)
         if (metadata->canEmbedThumb.contains(m.type.toLower()))
             if (m.isEmbeddedThumbMissing) {
-                isMissingEmbeddedThumb = true;
+                folderHasMissingEmbeddedThumb = true;
             }
 
     // req'd for 1st image, probably loaded before metadata cached
@@ -1466,8 +1466,12 @@ QStringList DataModel::rptIssues(int sfRow)
 bool DataModel::missingThumbnails()
 {
     for (int row = 0; row < sf->rowCount(); row++) {
-        if (index(row, G::MissingThumbColumn).data().toBool()) return true;
+        if (index(row, G::MissingThumbColumn).data().toBool()) {
+            folderHasMissingEmbeddedThumb = true;
+            return true;
+        }
     }
+    folderHasMissingEmbeddedThumb = false;
     return false;
 }
 

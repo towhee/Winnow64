@@ -944,9 +944,9 @@ void Jpeg::bufAppend(uint &buf, quint8 byte, uint &consumed)
     if (consumed > 7) {
         uint shift = consumed - 8;
         buf >>= shift;
-//        qDebug() << QString::number(buf, 2) << "shifted right" << shift;
+        // qDebug() << QString::number(buf, 2) << "shifted right" << shift;
         buf = buf | byte;
-//        qDebug() << QString::number(buf, 2) << "buf = buf | byte   byte =" << byte;
+        // qDebug() << QString::number(buf, 2) << "buf = buf | byte   byte =" << byte;
         buf <<= shift;
         consumed -= 8;
     }

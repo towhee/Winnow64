@@ -1343,11 +1343,24 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::MouseMove /*&& obj->objectName() == "MWWindow"*/) {
             if (isLeftMouseBtnPressed) isMouseDrag = true;
             /*
-            qDebug() << "MW::eventFilter" << "MouseMove"
-                     << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
-                     << "isMouseDrag" << isMouseDrag
-                     << obj->objectName();
-                     //*/
+            // G::popUp->showPopup(msg);
+            if (obj->objectName() == "ThumbnailsViewPort") {
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                if (thumbView->iconViewDelegate->missingIconRect.contains(e->pos())) {
+                    QString msg = "Image does not have an embedded thumbnail";
+                    int x = e->globalPos().x();
+                    int y = e->globalPos().y() - 40;
+                    QToolTip::showText(QPoint(x,y), msg);
+                    qDebug() << "MW::eventFilter" << "MouseMove"
+                         << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
+                         << "isMouseDrag" << isMouseDrag
+                         << thumbView->iconViewDelegate->missingIconRect
+                         << e->pos()
+                         << obj->objectName();
+                }
+                // else QToolTip::hideText();
+            }
+            //*/
         }
 
         if (event->type() == QEvent::MouseButtonDblClick) {
@@ -2723,11 +2736,8 @@ void MW::loadConcurrentNewFolder()
     if (reset(src + QString::number(count++))) return;
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
-    // reset warning missing embedded thumbs
-    warnMissingEmbeddedThumbs = true;
-
     // set selection and current index, start metaReadThread
-    //testTime.restart();
+    // testTime.restart();
     sel->setCurrentRow(targetRow);
 }
 
@@ -2816,12 +2826,26 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
 
     // missing thumbnails
-    if (!ignoreAddThumbnailsDlg
-        && warnMissingEmbeddedThumbs
-        && !G::autoAddMissingThumbnails)
+    qDebug() << "MW::LoadConcurrentDone"
+             << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
+             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
+                ;
+    // missing thumbnails menu enabled
+    if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
+        embedThumbnailsAction->setEnabled(true);
+    }
+    else {
+        embedThumbnailsAction->setEnabled(false);
+    }
+
+    // if missing thumbnails show missing thumb dialog
+    if (G::modifySourceFiles
+        && !ignoreAddThumbnailsDlg
+        && !G::autoAddMissingThumbnails
+        && dm->folderHasMissingEmbeddedThumb
+       )
     {
-        warnMissingEmbeddedThumbs = false;
-        chkMissingEmbeddedThumbnails();
+        chkMissingEmbeddedThumbnails("FromLoading");
         if (reset(src + QString::number(count++))) return;
     }
 
@@ -4785,13 +4809,7 @@ void MW::embedThumbnailsFromAction()
 
 void MW::chkMissingEmbeddedThumbnails(QString src)
 /*
-    metadata->canEmbedThumb
-    m.isEmbeddedThumbMissing
-    dm->isMissingEmbeddedThumb
-    G::modifySourceFiles
-    G::autoAddMissingThumbnails
-    G::MissingThumbColumn
-    MW::embedThumbnails()
+    See embedThumbnails for documentation
 */
 {
     if (G::isLogger) G::log("MW::chkMissingEmbeddedThumbnails");
@@ -4802,9 +4820,12 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
     //*/
 
     if (!G::useMissingThumbs) return;
-    if (!dm->isMissingEmbeddedThumb) return;
-//    if (G::modifySourceFiles) return;
+    // just in case, should not be able to get here if !dm->folderHasMissingEmbeddedThumb
+    if (!dm->folderHasMissingEmbeddedThumb) return;
+    // just in case, should not be able to get here if !G::modifySourceFiles
+    if (!G::modifySourceFiles) return;
 
+    // show missing thumbnails dialog unless turned off
     if (!ignoreAddThumbnailsDlg && src == "FromLoading") {
         AddThumbnailsDlg *dlg = new AddThumbnailsDlg;
         connect (dlg, &AddThumbnailsDlg::ignore, this, &MW::setIgnoreAddThumbnailsDlg);
@@ -4826,15 +4847,46 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 QString MW::embedThumbnails()
 {
 /*
-    MENU:  Edit > Utilities > Embed missing thumbnails
-           Also in thumbView context menu
+    This function embeds a thumbnail in jpeg and tiff files that do not have one.  This makes
+    the thumb loading much faster, especially for tiff files.
+
+    This function will not be triggered if G::modifySourceFiles = false
+
+    Triggered by:
+        MENU:  Edit > Utilities > Embed missing thumbnails
+               ThumbView context menu > Embed missing thumbnails
 
     There are two routines to do this:
 
-        • Thumb::insertThumbnailsInJpg inserts thumbnails for a batch of files at
+        • JPEG: Thumb::insertThumbnailsInJpg inserts thumbnails for a batch of files at
           a time using ExifTool.
 
-        • Tiff::encodeThumbnail inserts thumbnails one open file at a time.
+        • TIFF: Tiff::encodeThumbnail inserts thumbnails one open file at a time.
+
+    Missing thumbnail variables:
+    metadata->canEmbedThumb             list of file types can embed thumbnails
+    G::MissingThumbColumn               datamodel missing thumb column
+    dm->folderHasMissingEmbeddedThumb   datamodel missing thumb in folder flag
+    m.isEmbeddedThumbMissing            datamodel field flag
+    MW::ignoreAddThumbnailsDlg          show addThumbnailsDlg flag
+    G::modifySourceFiles                modifySourceFiles flag
+    G::autoAddMissingThumbnails         silently embed thumbnails flag
+    G::backupBeforeModifying            backup flag
+    G::useMissingThumbs                 missing thumbs use flag
+
+    Settings:
+    modifySourceFiles                   flag
+    backupBeforeModifying               flag
+    autoAddMissingThumbnails            flag
+    ignoreAddThumbnailsDlg              flag
+
+    AddThumbnailsDlg                    Dialog to explain / set flags / embed thumbnails
+
+    MW::chkMissingEmbeddedThumbnails()  function to show AddThumbnailsDlg
+    MW::embedThumbnails()               function to trigger embed thumbnails
+    Thumb:insertThumbnailsInJpg()       function to do insertion
+    Tiff::parse()                       function to parse tiff metadata, calls encodethumbnail
+    Tiff::encodeThumbnail               function to add a tiff directory for thumbnail
 
 */
     if (G::isLogger) G::log("MW::insertThumbnails");
@@ -4856,14 +4908,15 @@ QString MW::embedThumbnails()
         rows.append(dmRow);
     }
 
+    // flags for return messaging
     bool lockEncountered = false;
     bool embeddingHappened = false;
 
-    // set flags for Tiff::parse to call Tiff::encodeThumbnail
-    bool okToModify = G::modifySourceFiles;
+    // temp set flags for Tiff::parse to call Tiff::encodeThumbnail
     bool autoAdd = G::autoAddMissingThumbnails;
-    G::modifySourceFiles = true;
     G::autoAddMissingThumbnails = true;
+
+    // process selection
     for (int i = 0; i < n; i++) {
         G::popUp->setProgress(i+1);
         if (G::useProcessEvents) qApp->processEvents();
@@ -4878,15 +4931,22 @@ QString MW::embedThumbnails()
             if (G::backupBeforeModifying) {
                 Utilities::backup(fPath, "backup");
             }
+            /* Add a thumbnail.  If tiff, tif->parse calls tif->encodeThumbnail.
+            */
             dm->refreshMetadataForItem(dmRow, dm->instance);
             embeddingHappened = true;
         }
     }
     // reset flags
-    G::modifySourceFiles = okToModify;
     G::autoAddMissingThumbnails = autoAdd;
+    if (dm->missingThumbnails()) {
+        embedThumbnailsAction->setEnabled(true);
+    }
+    else {
+        embedThumbnailsAction->setEnabled(false);
+    }
 
-    refreshBookmarks();
+    refreshBookmarks();     // rgh req'd?
 
     // update filter list and counts
     buildFilters->updateCategory(BuildFilters::MissingThumbEdit, BuildFilters::NoAfterAction);
@@ -4901,7 +4961,7 @@ QString MW::embedThumbnails()
     if (msg.length()) br = "<br>";
     if (lockEncountered) msg += br + "Unable to embed thumbnails in locked files";
 
-    //embedThumbnailsAction->setEnabled(false);
+    embedThumbnailsAction->setEnabled(false);
     return msg;
 }
 

@@ -453,10 +453,15 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
 
     // missing thumb rect located bottom left as containment for circle
-    QPoint missingThumbTopLeft(thumbRect.left() + dotDiam - dotOffset,
+    const QPoint missingThumbTopLeft(thumbRect.left() + dotDiam - dotOffset,
                         thumbRect.bottom() - dotDiam - dotOffset);
-    QPoint missingThumbBottomRight(thumbRect.left() + dotDiam + dotOffset, thumbRect.bottom() - dotOffset);
+    const QPoint missingThumbBottomRight(thumbRect.left() + dotDiam + dotOffset,
+                                         thumbRect.bottom() - dotOffset);
     QRect missingThumbRect(missingThumbTopLeft, missingThumbBottomRight);
+    // public class var so can show tooltip
+    int missingThumbX = fPad + tPad + dotDiam - dotOffset;
+    int missingThumbY = fPad + tPad + thumbRect.height() - dotDiam - dotOffset;
+    missingIconRect.setRect(missingThumbX, missingThumbY, dotDiam, dotDiam);
 
     QPainterPath iconPath;
     iconPath.addRoundedRect(iconRect, 6, 6);
@@ -621,8 +626,6 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // draw icon number
     if (isIconNumberVisible) {
-//        painter->setBrush(Qt::transparent);
-//        painter->setBrush(G::backgroundColor);
         painter->setBrush(labelColorToUse);
         QFont numberFont = painter->font();
         int pxSize = iconNumberSize;

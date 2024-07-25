@@ -175,8 +175,8 @@ bool ImageDecoder::load()
         decoderToUse = TurboJpg;    // Qt or TurboJpg or Rory
 
         if (decoderToUse == TurboJpg) {
-            Jpeg jpg;
-            image = jpg.turboDecode(buf);
+            JpegTurbo jpegTurbo;
+            image = jpegTurbo.decode(buf);
         }
         if (decoderToUse == QtImage) {
             if (!image.loadFromData(buf, "JPEG")) {

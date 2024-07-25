@@ -287,7 +287,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->toggleModifyImages();
         setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
-        //setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
+        setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
     }
 
     if (source == "backupBeforeModify") {
@@ -302,6 +302,7 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "ignoreAddThumbnailsDlg") {
         mw->ignoreAddThumbnailsDlg = !v.toBool();
+
     }
 
     if (source == "useSidecar") {
@@ -633,9 +634,8 @@ void Preferences::addItems()
     i.key = "autoAddMissingThumbnails";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs)
-        addItem(i);
-    setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
+    if (G::useMissingThumbs) addItem(i);
+    // setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
 
     // Show missing thumbnails dialog
     i.name = "ignoreAddThumbnailsDlg";
@@ -651,9 +651,8 @@ void Preferences::addItems()
     i.key = "ignoreAddThumbnailsDlg";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs)
-        addItem(i);
-    //setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
+    if (G::useMissingThumbs) addItem(i);
+    setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
 
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";

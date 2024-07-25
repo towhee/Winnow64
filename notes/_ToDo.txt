@@ -9,9 +9,9 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 
 BUGS / TO DO
-- TIFF jpg encoding and samples per pixel > 3
 - Review image modification and xmp including rotation and embedding thumbnails
-- ImageView zoom when click not always work (double click issue)
+- Add rotation to image modification
+- Move Image modification to separate Preferences category from General
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
 - Missing thumbs deacivated for now
@@ -118,6 +118,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImageView zoom when click not always work (double click issue)
+- Decode tiff files with jpeg compression (libtiff)
+- TIFF jpg encoding and samples per pixel > 3 (libtiff)
 - Add final check for orphans in ImageCache
 - IconView zoom rect not showing for heic thumbnails
 - ThumbDock height shrinking when app reopened

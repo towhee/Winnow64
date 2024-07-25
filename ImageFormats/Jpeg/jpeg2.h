@@ -22,6 +22,10 @@
 #include <turbojpeg.h>
 //#include "Utilities/bit.h"
 
+/*
+    Copy of jpeg.h / jpeg.cpp for experimentation
+*/
+
 class Jpeg2 : public QObject
 {
     Q_OBJECT
