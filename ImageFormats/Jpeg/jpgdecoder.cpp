@@ -3,6 +3,63 @@
 
 #include "jpgDecoder.h"
 
+
+
+/****************************************************************************************
+    JPEG terminology
+*****************************************************************************************
+
+Baseline
+Progressive
+Huffman Coding
+    Symbols
+        The bit length of a coeffients in MCU
+    Codes
+        The lookup bits stuffed into the bitstream
+    Values
+        The coefficient value in the MCU
+
+Zigzag
+
+Inverse Quantization
+Inverse DCT
+
+Frequency
+    The similarity / difference of adjacent pixels
+    How homoginous the image is
+
+Discrete Cosine Transformation
+Chroma subsampling
+
+YCrCb
+    Y  - Luminace
+    Cr - Red chrominance
+    Cb - Blue chrominance
+
+Quantization
+    Setting the number of steps or values for a component
+    ie if Quantization = 16, then divide component by 16
+    Separate divisors for every element of each MCU channel
+    Different quantization talbes for different jpg qualities ie 50 vs 100
+
+Chillitomatonoodle - youtuber c++
+OneLoneCoder
+Color Channel
+    A part of a color space
+    ie RGB is three color channels: Red, Green and Blue channels
+       YCrCb same thing
+
+Component
+    The value of color channel of a pixel ie R in RGB
+
+MCU Minimum Coded Unit
+    8x8 pixels by component
+    Coefficient
+        The value of each elemennt of the MCU
+
+
+*/
+
 /****************************************************************************************
     BitReader Class
     helper class to read bits from a file
@@ -821,6 +878,8 @@ JpgDecoder::JPGImage* JpgDecoder::readJPG(const std::string& filename)
 
     return image;
 }
+
+// HUFFMAN VERSION 1
 
 // return the symbol from the Huffman table that corresponds to
 //   the next Huffman code read from the BitReader

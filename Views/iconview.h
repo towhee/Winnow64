@@ -117,6 +117,7 @@ protected:
     void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
+    bool viewportEvent(QEvent *event) override;
 
 signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,

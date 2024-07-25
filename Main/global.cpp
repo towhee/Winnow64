@@ -39,9 +39,9 @@ bool iconChunkLoaded;           // all icon chunk loaded
 
 int dmInstance;                 // DataModel instance
 
-// temp while resolving issues
+// temp while resolving issues, set false to not use
 bool useMyTiff = true;
-bool useMissingThumbs = false;
+bool useMissingThumbs = true;
 
 // limit functionality for testing
 bool useApplicationStateChanged = false;

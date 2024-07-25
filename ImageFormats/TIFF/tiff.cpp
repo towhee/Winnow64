@@ -435,7 +435,8 @@ bool Tiff::parse(MetadataParameters &p,
         }
     }
 
-    if (G::modifySourceFiles && G::autoAddMissingThumbnails &&
+    if (G::modifySourceFiles &&
+        G::autoAddMissingThumbnails &&
         m.offsetThumb == m.offsetFull && thumbLongside > 512)
     {
         p.offset = m.offsetThumb;        // Smallest preview to use
@@ -446,13 +447,13 @@ bool Tiff::parse(MetadataParameters &p,
             if (xmp.isValid) {
                 QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
                 xmp.setItem("WinnowAddThumb", val);
-//            xmp.writeSidecar(p.file);
+                // xmp.writeSidecar(p.file);
             }
         }
     }
 
     // Identify thumbnail is missing
-    m.isEmbeddedThumbMissing = m.offsetThumb == m.offsetFull;
+    m.isEmbeddedThumbMissing = (m.offsetThumb == m.offsetFull);
 
     // EXIF: *******************************************************************
 

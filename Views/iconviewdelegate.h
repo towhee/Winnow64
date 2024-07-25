@@ -47,6 +47,7 @@ public:
     mutable int firstVisible;
     mutable int lastVisible;
     mutable int midVisible;
+    mutable QRect missingIconRect;  // cell coordinates
 
     const QRect r;
 

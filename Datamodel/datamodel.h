@@ -131,7 +131,7 @@ public:
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
-    bool isMissingEmbeddedThumb;        // jpg/tiff only
+    bool folderHasMissingEmbeddedThumb;        // jpg/tiff only
 
     // rgh check if reqd still
     bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true

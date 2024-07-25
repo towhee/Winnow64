@@ -33,7 +33,7 @@ void AddThumbnailsDlg::on_backupChk_clicked()
 void AddThumbnailsDlg::on_ignoreChk_clicked()
 {
     qDebug() << "AddThumbnailsDlg::on_ignoreChk_clicked";
-    emit ignore();
+    emit ignore(ui->ignoreChk->isChecked());
 }
 
 void AddThumbnailsDlg::on_cancelBtn_clicked()

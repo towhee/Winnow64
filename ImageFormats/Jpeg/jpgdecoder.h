@@ -5,6 +5,13 @@
 #include <cmath>
 #include <fstream>
 
+/*
+    Source: https://github.com/dannye/jed/blob/master/src/decoder.cpp
+
+    Everything you need to know about JPG:
+    https://www.youtube.com/playlist?list=PLpsTn9TA_Q8VMDyOPrDKmSJYt1DLgDZU4
+*/
+
 class BitReader
 {
 public:
