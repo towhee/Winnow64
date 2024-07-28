@@ -4861,10 +4861,9 @@ QString MW::embedThumbnails()
 
     There are two routines to do this:
 
-        • JPEG: Thumb::insertThumbnailsInJpg inserts thumbnails for a batch of files at
-          a time using ExifTool.
+        • JPEG: TJpeg::embedThumbnail inserts thumbnail using ExifTool.
 
-        • TIFF: Tiff::encodeThumbnail inserts thumbnails one open file at a time.
+        • TIFF: Tiff::encodeThumbnail inserts thumbnail from Tiff::parse.
 
     Missing thumbnail variables:
     metadata->canEmbedThumb             list of file types can embed thumbnails
@@ -4927,12 +4926,12 @@ QString MW::embedThumbnails()
     for (int i = 0; i < n; i++) {
         G::popUp->setProgress(i+1);
         if (G::useProcessEvents) qApp->processEvents();
-        int dmRow = rows.at(i);
-        QString fileType = dm->index(dmRow, G::TypeColumn).data().toString().toLower();
+        int sfRow = rows.at(i);
+        QString fileType = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
         if (!metadata->canEmbedThumb.contains(fileType)) continue;
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
-        bool isMissing = dm->index(dmRow, G::MissingThumbColumn).data().toBool();
-        bool isReadWrite = dm->index(dmRow, G::ReadWriteColumn).data().toBool();
+        QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
+        bool isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
+        bool isReadWrite = dm->sf->index(sfRow, G::ReadWriteColumn).data().toBool();
         if (!isReadWrite) lockEncountered = true;
         if (isMissing && isReadWrite) {
             if (G::backupBeforeModifying) {
@@ -4941,14 +4940,15 @@ QString MW::embedThumbnails()
             // Add a thumbnail
             if (fileType == "tif") {
                 // call tif->parse which calls tif->encodeThumbnail
-                dm->refreshMetadataForItem(dmRow, dm->instance);
+                dm->refreshMetadataForItem(sfRow, dm->instance);
             }
             else {
                 // must be a jpeg
-                ImageMetadata m = dm->imMetadata(fPath);
                 Jpeg jpeg;
-                jpeg.embedThumbnail(m);
-                dm->addMetadataForItem(m, "MW::embedThumbnails");
+                if (jpeg.embedThumbnail(fPath)) {
+                    QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
+                    dm->setValueSf(sfIdx, true, dm->instance, "MW::embedthumbnails");
+                }
             }
             thumbView->refreshThumbs();
             embeddingHappened = true;
