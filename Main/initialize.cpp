@@ -1513,8 +1513,6 @@ void MW::createMessageView()
     if (G::isLogger) G::log("MW::createMessageView");
     messageView = new QWidget;
     msg.setupUi(messageView);
-//    Ui::message ui;
-//    ui.setupUi(messageView);
 }
 
 void MW::createPreferences()

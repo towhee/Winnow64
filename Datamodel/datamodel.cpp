@@ -1049,32 +1049,32 @@ bool DataModel::readMetadataForItem(int row, int instance)
     return true;
 }
 
-bool DataModel::refreshMetadataForItem(int row, int instance)
+bool DataModel::refreshMetadataForItem(int sfRow, int instance)
 {
 /*
-    Reads the image metadata into the datamodel for the row.
+    Reads the image metadata into the datamodel for the row.  rgh change to sfRow
 */
     QString fun = "DataModel::refreshMetadataForItem";
-    if (G::isLogger) G::log(fun, index(row, 0).data(G::PathRole).toString());
+    if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::PathRole).toString());
     if (isDebug) qDebug() << fun << "instance =" << instance
-                          << "row =" << row
+                          << "row =" << sfRow
                           << currentFolderPath;
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, fun, row);
+        G::issue("Comment", errMsg, fun, sfRow);
         return true;
     }
     if (G::stop) return false;
 
-    QString fPath = index(row, 0).data(G::PathRole).toString();
+    QString fPath = sf->index(sfRow, 0).data(G::PathRole).toString();
 
     // load metadata
     /*
      qDebug() << "DataModel::refreshMetadataForItem"
               << "Metadata loaded ="
-              << index(row, G::MetadataLoadedColumn).data().toBool()
+              << sf->index(row, G::MetadataLoadedColumn).data().toBool()
               << fPath; //*/
 
     QFileInfo fileInfo(fPath);
@@ -1084,12 +1084,12 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
     if (metadata->hasMetadataFormats.contains(ext)) {
         //qDebug() << "DataModel::readMetadataForItem" << fPath;
         if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
-            metadata->m.row = row;
+            metadata->m.row = sfRow;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
         }
         else {
             errMsg = "Failed to load metadata.";
-            G::issue("Warning", errMsg, fun, row, fPath);
+            G::issue("Warning", errMsg, fun, sfRow, fPath);
             mutex.unlock();
             return false;
         }
@@ -1097,9 +1097,9 @@ bool DataModel::refreshMetadataForItem(int row, int instance)
     // cannot read this file type, load empty metadata
     else {
         errMsg = "Cannot read metadata for this file type.";
-        G::issue("Warning", errMsg, fun, row, fPath);
+        G::issue("Warning", errMsg, fun, sfRow, fPath);
         metadata->clearMetadata();
-        metadata->m.row = row;
+        metadata->m.row = sfRow;
         addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
         return false;
     }
