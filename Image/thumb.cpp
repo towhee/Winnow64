@@ -19,7 +19,7 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
-    isDebug = true;
+    isDebug = false;
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
@@ -196,7 +196,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff("Thumb::loadFromTiff");
     if (tiff.read(fPath, &image, m.offsetThumb)) {
-        qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
+        // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
         image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
         return Status::Success;
     }
@@ -230,7 +230,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     }
 
      // try load entire tif using Winnow
-     qDebug() << "Thumb::loadFromTiff" << fPath;
+     // qDebug() << "Thumb::loadFromTiff" << fPath;
      if (!tiff.decode(fPath, m.offsetFull, image)) {
          if (image.isNull()) {
              QString msg = "Could not read thumb using Tiff::decoder.";
@@ -410,7 +410,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
 {
 /*
-    Fix missing thumbnails in JPG
+    Fix missing thumbnails in JPG.  Not being used.  Also see Jpeg::embedThumbnail().
 */
     qDebug() << "Thumb::insertThumbnailsInJpg";
     int count = selection.count();

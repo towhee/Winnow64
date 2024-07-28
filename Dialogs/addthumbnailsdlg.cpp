@@ -25,7 +25,7 @@ AddThumbnailsDlg::~AddThumbnailsDlg()
 
 void AddThumbnailsDlg::on_backupChk_clicked()
 {
-    qDebug() << "AddThumbnailsDlg::on_cancelBtn_clicked";
+    // qDebug() << "AddThumbnailsDlg::on_cancelBtn_clicked";
     bool isBackup = ui->backupChk->isChecked();
     emit backup(isBackup);
 }

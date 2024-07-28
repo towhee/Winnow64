@@ -530,9 +530,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createMessageView();
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
+    createPreferences();
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
+
 
     // platform specific settings (must follow dock creation)
     setupPlatform();
@@ -2826,10 +2828,11 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
 
     // missing thumbnails
+    /*
     qDebug() << "MW::LoadConcurrentDone"
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
-                ;
+                ; //*/
     // missing thumbnails menu enabled
     if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
         embedThumbnailsAction->setEnabled(true);
@@ -3593,7 +3596,7 @@ void MW::preferences(QString text)
 */
     if (G::isLogger) G::log("MW::preferences");
     if (preferencesDlg == nullptr) {
-        pref = new Preferences(this);
+        // pref = new Preferences(this);
         if (text != "") pref->expandBranch(text);
         // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
@@ -4888,6 +4891,10 @@ QString MW::embedThumbnails()
     Tiff::parse()                       function to parse tiff metadata, calls encodethumbnail
     Tiff::encodeThumbnail               function to add a tiff directory for thumbnail
 
+    To remove thumbnails from jpeg for testing:
+        In terminal cd path/with/jpg/to/remove/thumb
+        exiftool -ifd1:all= -ext jpg Filename.jpg
+
 */
     if (G::isLogger) G::log("MW::insertThumbnails");
 
@@ -4931,14 +4938,25 @@ QString MW::embedThumbnails()
             if (G::backupBeforeModifying) {
                 Utilities::backup(fPath, "backup");
             }
-            /* Add a thumbnail.  If tiff, tif->parse calls tif->encodeThumbnail.
-            */
-            dm->refreshMetadataForItem(dmRow, dm->instance);
+            // Add a thumbnail
+            if (fileType == "tif") {
+                // call tif->parse which calls tif->encodeThumbnail
+                dm->refreshMetadataForItem(dmRow, dm->instance);
+            }
+            else {
+                // must be a jpeg
+                ImageMetadata m = dm->imMetadata(fPath);
+                Jpeg jpeg;
+                jpeg.embedThumbnail(m);
+                dm->addMetadataForItem(m, "MW::embedThumbnails");
+            }
+            thumbView->refreshThumbs();
             embeddingHappened = true;
         }
     }
     // reset flags
     G::autoAddMissingThumbnails = autoAdd;
+
     if (dm->missingThumbnails()) {
         embedThumbnailsAction->setEnabled(true);
     }

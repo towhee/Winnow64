@@ -1349,6 +1349,7 @@ void Jpeg::embedThumbnail(ImageMetadata &m)
     et.close();
 
     // delete the temp thumbnail file
+    // qDebug() << "Jpeg::embedThumb" << thumbPath << m.fPath;
     QFile::remove(thumbPath);
 
     // update datamodel thumb information

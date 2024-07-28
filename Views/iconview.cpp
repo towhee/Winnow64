@@ -1254,8 +1254,8 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         QPoint iconPt = event->pos() - iconRect.topLeft();
         xPct = iconPt.x() * 1.0 / iconRect.width();
         yPct = iconPt.y() * 1.0 / iconRect.height();
-        // /* debug
-        qDebug() << "IconView::mousePressEvent"
+        /* debug
+        qDebug() << "IconView::mouseReleaseEvent"
                  << "\n currentIndex =" << currentIndex()
                  << "\n iconRect     =" << iconRect
                  << "\n mousePt      =" << event->pos()

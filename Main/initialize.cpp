@@ -1517,3 +1517,9 @@ void MW::createMessageView()
 //    ui.setupUi(messageView);
 }
 
+void MW::createPreferences()
+{
+    if (G::isLogger) G::log("MW::createPreferences");
+    pref = new Preferences(this);
+}
+

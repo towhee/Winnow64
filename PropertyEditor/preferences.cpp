@@ -574,19 +574,22 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // General header  > File modification header
-//    i.name = "FileModificationHeader";
-//    i.parentName = "GeneralHeader";
-//    i.captionText = "Source file modification";
-//    i.tooltip = "";
-//    i.hasValue = false;
-//    i.captionIsEditable = false;
-//    i.delegateType = DT_None;
-//    addItem(i);
+    // Modify Files header  > File modification header
+    i.name = "ModifyHeader";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Modify";
+    i.tooltip = "Modify image files";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
 
     // Allow source files to be changed
     i.name = "modifySourceFiles";
-    i.parentName = "GeneralHeader";
+    i.parentName = "ModifyHeader";
     i.captionText = "Permit image file modification";
     i.tooltip = "Permit file modification to change image orientation\n"
                 "or embed thumbnails automatically without notification."
@@ -656,7 +659,7 @@ void Preferences::addItems()
 
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";
-    i.parentName = "GeneralHeader";
+    i.parentName = "ModifyHeader";
     i.captionText = "Use xmp sidecars";
     i.tooltip = "This will NOT MODIFY your source image file.\n\n"
                 "If you edit metadata (rating, color class, title, creator,\n"
