@@ -782,7 +782,7 @@ bool Metadata::parseJPG(quint32 startOffset)
         G::modifySourceFiles && G::autoAddMissingThumbnails)
     {
         p.file.close();
-        jpeg->embedThumbnail(m);
+        jpeg->embedThumbnail(m.fPath);
     }
 
     return ok;

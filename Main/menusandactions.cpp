@@ -2289,6 +2289,18 @@ void MW::enableSelectionDependentMenus()
     diagnosticsMetadataCacheAction->setEnabled(enable);
     diagnosticsImageCacheAction->setEnabled(enable);
     diagnosticsEmbellishAction->setEnabled(enable);
+
+    // Missing thumbnails
+    bool isMissing = false;
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    if (!selection.isEmpty()) {
+        for (int i = 0; i < selection.size(); i++) {
+            int sfRow = selection.at(i).row();
+            isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
+            if (isMissing) break;
+        }
+    }
+    embedThumbnailsAction->setEnabled(isMissing);
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)
