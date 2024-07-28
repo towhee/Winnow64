@@ -1324,36 +1324,34 @@ void Jpeg::rptRGB(int col, int row)
     //*/
 }
 
-void Jpeg::embedThumbnail(ImageMetadata &m)
+bool Jpeg::embedThumbnail(QString fPath)
 {
-    if (G::isLogger) G::log("Jpeg::embedThumbnail", m.fPath);
+    if (G::isLogger) G::log("Jpeg::embedThumbnail", fPath);
 
-    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    if (G::backupBeforeModifying) Utilities::backup(fPath, "backup");
 
     ExifTool et;
     et.setOverWrite(true);
 
     // create path for temp jpg thumbnail file = thumbPath
-    QFileInfo info(m.fPath);
+    QFileInfo info(fPath);
     QString folder = info.dir().path();
     QString base = info.baseName();
     QString thumbPath = folder + "/" + base + "_thumb.jpg";
 
     // create a thumbnail size jpg
-    QImage thumb = QImage(m.fPath).scaled(160, 160, Qt::KeepAspectRatio);
-    thumb.save(thumbPath, "JPG", 60);
+    QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
+    if (!thumb.save(thumbPath, "JPG", 60)) return false;
 
     // add the thumb.jpg to the source file
-    et.addThumb(thumbPath, m.fPath);
+    et.addThumb(thumbPath, fPath);
 
     et.close();
 
     // delete the temp thumbnail file
-    // qDebug() << "Jpeg::embedThumb" << thumbPath << m.fPath;
     QFile::remove(thumbPath);
 
-    // update datamodel thumb information
-    m.isEmbeddedThumbMissing = false;
+    return true;
 }
 
 
