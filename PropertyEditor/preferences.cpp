@@ -283,7 +283,8 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "modifySourceFiles") {
         G::modifySourceFiles = v.toBool();
-        mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+        // mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
+        // toggle status bar modify images button
         mw->toggleModifyImages();
         setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);

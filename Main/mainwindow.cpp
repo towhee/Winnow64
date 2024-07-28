@@ -2834,12 +2834,13 @@ void MW::loadConcurrentDone()
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                 ; //*/
     // missing thumbnails menu enabled
-    if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
-        embedThumbnailsAction->setEnabled(true);
-    }
-    else {
-        embedThumbnailsAction->setEnabled(false);
-    }
+    enableSelectionDependentMenus();
+    // if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
+    //     embedThumbnailsAction->setEnabled(true);
+    // }
+    // else {
+    //     embedThumbnailsAction->setEnabled(false);
+    // }
 
     // if missing thumbnails show missing thumb dialog
     if (G::modifySourceFiles
@@ -4946,8 +4947,9 @@ QString MW::embedThumbnails()
                 // must be a jpeg
                 Jpeg jpeg;
                 if (jpeg.embedThumbnail(fPath)) {
-                    QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
-                    dm->setValueSf(sfIdx, true, dm->instance, "MW::embedthumbnails");
+                    dm->refreshMetadataForItem(sfRow, dm->instance);
+                    // QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
+                    // dm->setValueSf(sfIdx, true, dm->instance, "MW::embedthumbnails");
                 }
             }
             thumbView->refreshThumbs();
@@ -4957,12 +4959,14 @@ QString MW::embedThumbnails()
     // reset flags
     G::autoAddMissingThumbnails = autoAdd;
 
-    if (dm->missingThumbnails()) {
-        embedThumbnailsAction->setEnabled(true);
-    }
-    else {
-        embedThumbnailsAction->setEnabled(false);
-    }
+    // enable/disable menu
+    enableSelectionDependentMenus();
+    // if (dm->missingThumbnails()) {
+    //     embedThumbnailsAction->setEnabled(true);
+    // }
+    // else {
+    //     embedThumbnailsAction->setEnabled(false);
+    // }
 
     refreshBookmarks();     // rgh req'd?
 
