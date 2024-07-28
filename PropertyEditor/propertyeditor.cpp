@@ -238,6 +238,7 @@ QModelIndex PropertyEditor::findCaptionIndex(QString name)
 
 QModelIndex PropertyEditor::findValueIndex(QString name)
 {
+    qDebug() << "PropertyEditor::findValueIndex name =" << name;
     QModelIndex start = model->index(0,0,QModelIndex());
     QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
     if (list.size() > 0) {

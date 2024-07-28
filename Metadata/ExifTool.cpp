@@ -7,12 +7,14 @@ ExifTool::ExifTool()
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
     #endif
     #ifdef Q_OS_MAC
+    // exifToolPath = "/usr/local/bin/exiftool";
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
     #endif
     // confirm exifToolPath exists
     if (!QFile(exifToolPath).exists()) {
         QString msg = "File is missing.";
         G::issue("Warning", msg, "ExifTool::ExifTool", -1, exifToolPath);
+        qWarning() << "ExifTool::ExifTool  File is missing:" << exifToolPath;
     }
     //process.setStandardOutputFile("/Users/roryhill/Pictures/_ThumbTest/PNG_.txt");
     //result.open(QIODevice::ReadWrite);
@@ -145,13 +147,13 @@ void ExifTool::writeXMP(QString dst, QString tag, QString val)
 
 void ExifTool::addThumb(QString src, QString dst)
 {
-//    '-ThumbnailImage<=thumb.jpg' dst.jpg
+    // qDebug().noquote() << "ExifTool::addThumb  exifToolPath =" << exifToolPath;
     QByteArray args;
-//    args += "-thumbnailimage<=:/thumb.jpg\n";
     args.append("-thumbnailimage<=" + src.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";
     args.append(dst.toUtf8() + "\n");
     args.append("-execute\n");
+    // qDebug().noquote() << "ExifTool::addThumb" << args;
     process.write(args);
     process.waitForBytesWritten(30000);
 }

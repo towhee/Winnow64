@@ -284,7 +284,7 @@ bool ImageDecoder::load()
         if (decoderToUse == QtTiff) {
             // use QTiffHandler code override
             Tiff tiff("ImageDecoder::load");
-            qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
+            // qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
             if (!tiff.read(fPath, &image)) {
                 imFile.close();
                 errMsg = "Could not read because QTiff decoder failed.";

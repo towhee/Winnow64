@@ -601,7 +601,8 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // draw the missing thumb circle
-    if (G::useMissingThumbs && isMissingThumb && !G::isSlideShow) {
+    qDebug() << "IconviewDeledate::paint" << index.row() << "isMissingThumb =" << isMissingThumb;
+    if (G::useMissingThumbs && isMissingThumb /*&& !G::isSlideShow*/) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(missingThumbColor);
         painter->drawEllipse(missingThumbRect);

@@ -47,7 +47,7 @@ public:
     void decodeScan(QFile &file, QImage &image);
     void decodeScan(QByteArray &ba, QImage &image);
 
-    void embedThumbnail(ImageMetadata &m);
+    bool embedThumbnail(QString fPath);
 
 private:
     Utilities u;

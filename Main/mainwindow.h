@@ -1273,6 +1273,7 @@ private:
     void updateProgressBarWidth();
     void updateStatusBar();
     void createMessageView();
+    void createPreferences();
     void createAppStyle();
     void setupCentralWidget();
     void initialize();

@@ -51,7 +51,7 @@ public:
     void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
-    bool refreshMetadataForItem(int row, int instance);
+    bool refreshMetadataForItem(int sfRow, int instance);
     void clearDataModel();
     void newInstance();
     bool hasFolderChanged();
