@@ -197,7 +197,7 @@ bool ImageView::loadImage(QString fPath, QString src)
             if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "ImageView::loadImage")) {
                 metadata->m.row = dmRow;
                 metadata->m.instance = dm->instance;
-                dm->addMetadataForItem(metadata->m, "ImageView::loadImage"); // rgh investigate warning
+                dm->addMetadataForItem(metadata->m, "ImageView::loadImage"); // rgh investigate warning (QVariant issue probably)
             }
         }
 
