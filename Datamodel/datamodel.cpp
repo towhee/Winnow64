@@ -1737,7 +1737,8 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     }
     if (sfRow >= sf->rowCount()) return true;
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
-    return !(itemFromIndex(dmIdx)->icon().isNull());
+    if (dmIdx.isValid()) return !(itemFromIndex(dmIdx)->icon().isNull());
+    else return false;
 }
 
 int DataModel::iconCount()

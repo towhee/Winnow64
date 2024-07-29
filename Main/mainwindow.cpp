@@ -530,7 +530,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createMessageView();
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
-    createPreferences();
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
@@ -653,6 +652,7 @@ void MW::whenActivated(Qt::ApplicationState state)
     setDisplayResolution();
     updateDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
+    createPreferences();
 }
 
 //   EVENT HANDLERS
@@ -2835,6 +2835,7 @@ void MW::loadConcurrentDone()
                 ; //*/
     // missing thumbnails menu enabled
     enableSelectionDependentMenus();
+
     // if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
     //     embedThumbnailsAction->setEnabled(true);
     // }

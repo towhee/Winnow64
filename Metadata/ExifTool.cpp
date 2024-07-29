@@ -153,7 +153,6 @@ void ExifTool::addThumb(QString src, QString dst)
     if (isOverWrite) args += "-overwrite_original\n";
     args.append(dst.toUtf8() + "\n");
     args.append("-execute\n");
-    // qDebug().noquote() << "ExifTool::addThumb" << args;
     process.write(args);
     process.waitForBytesWritten(30000);
 }
