@@ -406,6 +406,7 @@ void MW::defaultWorkspace()
     sortReverseAction->setChecked(false);
     sortColumn = 0;
     sortChange("MW::defaultWorkspace");
+    ws.name = "Default";
     updateState();
 }
 

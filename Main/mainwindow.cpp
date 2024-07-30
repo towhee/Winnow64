@@ -652,6 +652,8 @@ void MW::whenActivated(Qt::ApplicationState state)
     setDisplayResolution();
     updateDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
+
+    // moved from contructor because created a glitch in dock title bar - don't know why.
     createPreferences();
 }
 
@@ -3573,6 +3575,23 @@ void MW::about()
     aboutDlg->exec();
 }
 
+void MW::helpThumbViewStatusBarSymbols()
+{
+    // if (G::isLogger) G::log("MW::helpThumbViewStatusBarSymbols");
+    // HtmlWindow *w = new HtmlWindow("Winnow - Film Strip and Status Bar Symbols",
+    //                                ":/Docs/helpfilmstrip.html",
+    //                                QSize(1601,710));
+
+    const QSize windowSize(1601, 710);
+
+    // Center the HtmlWindow on top of the main window
+    const QRect mwRect = geometry(); // Get the geometry of the main window
+
+    HtmlWindow *w = new HtmlWindow("Winnow - Film Strip and Status Bar Symbols",
+                                   ":/Docs/helpfilmstrip.html",
+                                   windowSize, mwRect, this);
+}
+
 void MW::allPreferences()
 {
     if (G::isLogger) G::log("MW::allPreferences");
@@ -4371,7 +4390,7 @@ void MW::refreshBookmarks()
     bookmark folder.
 */
     if (G::isLogger) G::log("MW::refreshBookmarks");
-    bookmarks->count();
+    bookmarks->updateCount();
 }
 
 void MW::updateState()
@@ -4479,7 +4498,7 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
     embelExport.exportImages(picks, isRemote);
     embelProperties->doNotEmbellish();
     G::isProcessingExportedImages = false;
-    bookmarks->count();
+    bookmarks->updateCount();
 }
 
 void MW::exportEmbel()
@@ -4778,7 +4797,7 @@ void MW::ejectUsb(QString path)
         // drive was ejected
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            bookmarks->count();
+            bookmarks->updateCount();
             #ifdef Q_OS_WIN
             fsTree->refreshModel();
             #endif
@@ -5457,7 +5476,7 @@ void MW::generateMeanStack()
         sel->setCurrentPath(fPath);
         // update FSTree image count
         fsTree->refreshModel();
-        bookmarks->count();
+        bookmarks->updateCount();
     }
 }
 

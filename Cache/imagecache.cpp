@@ -804,15 +804,15 @@ bool ImageCache::cacheUpToDate()
                     "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
                 );
             //*/
-            /*
+            if (debugThis) {
             qDebug().noquote()
-                 << "ImageCache::cacheUpToDate passover"
+                 << "ImageCache::cacheUpToDate isCached is true but no associated decoder"
                  << "row = " << i
                  << "decoder =" << icd->cacheItemList.at(i).decoderId
                  << "isCached =" << icd->cacheItemList.at(i).isCached
                  << "isCaching =" << icd->cacheItemList.at(i).isCaching
                  << "attempts =" << icd->cacheItemList.at(i).attempts;
-            //*/
+            }
             icd->cacheItemList[i].isCached = false;
             icd->cacheItemList[i].isCaching = false;
             isCacheUpToDate = false;
@@ -832,12 +832,6 @@ bool ImageCache::cacheUpToDate()
             */
             if (debugThis)
             {
-            qDebug() << "ImageCache::cacheUpToDate  failed on row" << i
-                     << "isCached =" << icd->cacheItemList.at(i).isCached
-                     << "isCaching =" << icd->cacheItemList.at(i).isCaching
-                ;
-            }
-            /*
             qDebug().noquote()
                 << "ImageCache::cacheUpToDate not caching or cached"
                 << "row = " << i
@@ -845,7 +839,7 @@ bool ImageCache::cacheUpToDate()
                 << "isCached =" << icd->cacheItemList.at(i).isCached
                 << "isCaching =" << icd->cacheItemList.at(i).isCaching
                 << "attempts =" << icd->cacheItemList.at(i).attempts;
-            //*/
+            }
             isCacheUpToDate = false;
             break;
         }
@@ -2101,14 +2095,15 @@ void ImageCache::fillCache(int id)
 
     // add decoded QImage to imCache.
     if (cacheKey != -1 && decoder[id]->status == ImageDecoder::Status::Success) {
-        QString k = QString::number(cacheKey).leftJustified((4));
-        /*
+        if (debugCaching)
+        {
         qDebug().noquote() << "ImageCache::fillCache cache          "
                            << "decoder" <<  QString::number(id).leftJustified(2)
-                           << "row =" << k    // row = key
+                           << "row =" << QString::number(cacheKey).leftJustified(4)    // row = key
                            << "decoder isRunning =" << decoder[id]->isRunning()
                            << decoder[id]->fPath
-            ; //*/
+            ;
+        }
         cacheImage(id, cacheKey);
     }
     // failed to load current image
@@ -2120,14 +2115,15 @@ void ImageCache::fillCache(int id)
 
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (!abort && !cacheUpToDate() && nextToCache(id) && isValidKey(icd->cache.toCacheKey)) {
-        QString k = QString::number(cacheKey).leftJustified((4));
-        /*
+        if (debugCaching)
+        {
         qDebug().noquote() << "ImageCache::fillCache dispatch       "
                            << "decoder" << QString::number(id).leftJustified(2)
                            << "row =" << QString::number(icd->cache.toCacheKey).leftJustified(4)
                            << "decoder status =" << decoder[id]->statusText.at(decoder[id]->status)
                            << decoder[id]->fPath
-            ; //*/
+            ;
+        }
         decodeNextImage(id);
     }
     // caching completed
@@ -2155,19 +2151,21 @@ void ImageCache::fillCache(int id)
             {
             qDebug() << "ImageCache::fillCache make final check"
                      << "ImageCache isRunning =" << isRunning()
-                     << "cacheUpToDate() =" << cacheUpToDate()
+                     // << "cacheUpToDate() =" << cacheUpToDate()
                 ;
             }
             isFinalCheckCompleted = true;
             // resetCachingFlags();
             if (!cacheUpToDate()) {
-                /*
+                // /*
+                if (debugCaching)
+                {
                 qDebug().noquote() << "ImageCache::fillCache Final check allDecodersdone = true"
                                    << "cacheUpToDate = false  launch Decoders"; //*/
+                }
 
                 launchDecoders("FinalCheck");
             }
-            return;
         }
 
         // Ok, now we are really done
@@ -2180,8 +2178,8 @@ void ImageCache::fillCache(int id)
             updateStatus("Update all rows", "ImageCache::fillCache after check cacheUpToDate");
         }
         if (debugCaching)
-        if (cacheKey != -1)
         {
+        if (cacheKey != -1)
             qDebug().noquote()
                 << "ImageCache::fillCache finished       "
                 << "decoder" <<  QString::number(id).leftJustified(2)

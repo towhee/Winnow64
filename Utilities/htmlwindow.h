@@ -11,6 +11,7 @@ public:
     HtmlWindow(const QString &title,
                const QString &htmlPath,
                const QSize &size,
+               const QRect mwRect = QRect(),
                QObject *parent = nullptr);
     ~HtmlWindow() override;
 private:

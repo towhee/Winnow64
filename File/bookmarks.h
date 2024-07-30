@@ -15,8 +15,8 @@ public:
     void reloadBookmarks();
     void saveBookmarks(QSettings *setting);
     void select(QString fPath);
-    void count();
-    void count(QString fPath);
+    void updateCount();
+    void updateCount(QString fPath);
 
     QSet<QString> bookmarkPaths;
     bool showImageCount;
@@ -25,7 +25,7 @@ public:
 
 public slots:
 	void removeBookmark();
-    void update();
+    void updateBookmarks();
 
 private:
     void addBookmark(QString itemPath);

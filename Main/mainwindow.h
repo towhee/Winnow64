@@ -464,6 +464,7 @@ private slots:
     void checkForUpdate();
     void setShowImageCount();
     void about();
+    void helpThumbViewStatusBarSymbols();
     void ingest();
     void exportEmbelFromAction(QAction *embelExportAction);
     void exportEmbel();
@@ -947,6 +948,7 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
+    QAction *helpFilmStripAction;
     QAction *helpRevealLogFileAction;
 
     // Help Diagnostics Menu

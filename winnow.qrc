@@ -185,5 +185,7 @@
         <file>images/prev.png</file>
         <file>images/dragfoldershere.png</file>
         <file>Sounds/ingest.wav</file>
+        <file>Docs/images/HelpFilmStrip.png</file>
+        <file>Docs/helpfilmstrip.html</file>
     </qresource>
 </RCC>

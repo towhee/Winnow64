@@ -221,7 +221,7 @@ void MW::insertFiles(QStringList fPaths)
 
 void MW::deleteSelectedFiles()
 {
-    /*
+/*
     Build a QStringList of the selected files and call MW::deleteFiles.
 */
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
@@ -396,6 +396,11 @@ void MW::deleteFiles(QStringList paths)
 
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     sel->select(sfIdx);
+
+    /* Just in case deletion was from a bookmark folder then force update for image count.
+       This is required if fsTree is hidden, and consequently, is not receiving signals.
+       As a result, fsTree does not update its data and does not signal back to Bookmarks. */
+    bookmarks->updateBookmarks();
 }
 
 void MW::deleteFolder()

@@ -703,9 +703,9 @@ void FSTree::dropEvent(QDropEvent *event)
         refreshModel();
 
         // if the drag is into the current FSTree folder then need to reload
-//        QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
+        // QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
         if (G::currRootFolder == dropDir) {
-//            QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+            // QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
             emit folderSelection(dropDir);
         }
         event->acceptProposedAction();
