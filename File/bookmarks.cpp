@@ -121,23 +121,7 @@ void BookMarks::updateBookmarks()
 */
     if (G::isLogger)
         G::log("BookMarks::update");
-    qDebug() << "BookMarks::update";
     updateCount();
-    /* update only changed folder (to do if required)
-    // pass dPath and make FSModel::count and FSModel::combineCount public
-    QTreeWidgetItemIterator it(this);
-    while (*it) {
-        QString path = (*it)->toolTip(0);
-        qDebug() << "BookMarks::update" << path << dPath;
-        QString countStr;
-        if (combineRawJpg)
-            countStr = QString::number(fsTree->fsModel->combineCount[dPath]);
-        else
-            countStr = QString::number(fsTree->fsModel->count[dPath]);
-        (*it)->setText(1, countStr);
-        ++it;
-    }
-    //*/
 }
 
 void BookMarks::updateCount()
@@ -210,6 +194,9 @@ void BookMarks::select(QString fPath)
 /*
     This is called from MW::folderSelectionChange to attempt to sync bookmarks with
     the FSTree folders view.
+
+    It is also called when there is a drop event to another folder to reestablish the
+    bookmark that was selected that is consistent with the datamodel.
 */
     if (G::isLogger)
          G::log("BookMarks::select");
