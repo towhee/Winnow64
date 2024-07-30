@@ -546,3 +546,6 @@ INCLUDEPATH += /opt/homebrew/opt/libtiff/include
 # libjpeg-turbo
 macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build -lturbojpeg
 macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo
+macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build
+# Ensure rpath is set correctly
+macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build

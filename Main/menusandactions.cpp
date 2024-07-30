@@ -1397,6 +1397,12 @@ void MW::createHelpActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
+    helpFilmStripAction = new QAction(tr("Film strip and status bar symbols"), this);
+    helpFilmStripAction->setObjectName("helpFilmStrip");
+    helpFilmStripAction->setShortcutVisibleInContextMenu(true);
+    addAction(helpFilmStripAction);
+    connect(helpFilmStripAction, &QAction::triggered, this, &MW::helpThumbViewStatusBarSymbols);
+
     helpRevealLogFileAction = new QAction("Send log file to Rory", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
@@ -1890,6 +1896,7 @@ void MW::createHelpMenu()
     //    helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
+    helpMenu->addAction(helpFilmStripAction);
     helpMenu->addSeparator();
     helpMenu->addAction(diagnosticsLogIssuesAction);
     helpMenu->addAction(diagnosticsSessionIssuesAction);
@@ -2131,6 +2138,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
     thumbViewActions->append(diagnosticsSessionIssuesAction);
+    thumbViewActions->append(helpFilmStripAction);
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);

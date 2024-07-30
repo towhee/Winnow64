@@ -81,7 +81,7 @@ void BookMarks::reloadBookmarks()
 		QString itemPath = it.next();
         addBookmark(itemPath);
     }
-    count();
+    updateCount();
 }
 
 void BookMarks::addBookmark(QString itemPath)
@@ -114,14 +114,15 @@ void BookMarks::saveBookmarks(QSettings *setting)
     setting->endGroup();
 }
 
-void BookMarks::update()
+void BookMarks::updateBookmarks()
 {
 /*
     Update the image count for each folder bookmarked;
 */
     if (G::isLogger)
         G::log("BookMarks::update");
-    count();
+    qDebug() << "BookMarks::update";
+    updateCount();
     /* update only changed folder (to do if required)
     // pass dPath and make FSModel::count and FSModel::combineCount public
     QTreeWidgetItemIterator it(this);
@@ -139,7 +140,7 @@ void BookMarks::update()
     //*/
 }
 
-void BookMarks::count()
+void BookMarks::updateCount()
 {
 /*
      Update the image count for all folders in BookMarks
@@ -170,7 +171,7 @@ void BookMarks::count()
      }
 }
 
-void BookMarks::count(QString dPath)
+void BookMarks::updateCount(QString dPath)
 {
 /*
      Only update the image count for the folder dPath
@@ -415,6 +416,7 @@ void BookMarks::dropEvent(QDropEvent *event)
     G::stopCopyingFiles = false;
     G::isCopyingFiles = true;
     QStringList srcPaths;
+    int sidecarCount = 0;
 
     // popup
     int count = event->mimeData()->urls().count();
@@ -436,7 +438,7 @@ void BookMarks::dropEvent(QDropEvent *event)
         QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
         bool copied = QFile::copy(srcPath, destPath);
-        /*
+        // /*
         qDebug() << "BookMarks::dropEvent"
                  << "Copy" << srcPath
                  << "to" << destPath << "Copied:" << copied
@@ -446,7 +448,8 @@ void BookMarks::dropEvent(QDropEvent *event)
             srcPaths << srcPath;
             // copy any sidecars if internal drag operation
             if (event->source()) {
-                 QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
+                QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
+                sidecarCount += srcSidecarPaths.count();
                 foreach (QString srcSidecarPath, srcSidecarPaths) {
                     if (QFile(srcSidecarPath).exists()) {
                         QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
@@ -459,11 +462,14 @@ void BookMarks::dropEvent(QDropEvent *event)
     if (G::stopCopyingFiles) {
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup("Terminated " + operation + "operation", 2000);
+        G::popUp->showPopup("Terminated " + operation + "operation", 4000);
     }
     else {
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
+        QString images = QString::number(srcPaths.count()) + " images and ";
+        QString sidecars = QString::number(sidecarCount) + " sidecars.";
+        G::popUp->showPopup("Copied " + images + sidecars, 4000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
@@ -479,10 +485,13 @@ void BookMarks::dropEvent(QDropEvent *event)
     // End mirrored code section
 
     if (G::currRootFolder == dropDir) {
-        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+        // QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
         emit folderSelection(dropDir);
+    }
+    else {
+        select(G::currRootFolder);
     }
 
     // update bookmarks folder count
-    this->count();
+    updateCount();
 }

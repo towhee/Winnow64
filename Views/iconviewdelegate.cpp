@@ -363,6 +363,9 @@ void IconViewDelegate::paint(QPainter *painter,
                 ;
              //*/
 
+    // show all symbols to document for help
+    bool showAllSymbols = false;
+
     // make default border relative to background
     int l40 = G::backgroundShade + 40;
     QPen border;
@@ -514,7 +517,7 @@ void IconViewDelegate::paint(QPainter *painter,
             // */
 
     int videoDurationHt = 0;
-    if (isVideo) {
+    if (isVideo || showAllSymbols) {
         QFont videoFont = painter->font();
         videoFont.setPixelSize(G::fontSize);
         painter->setFont(videoFont);
@@ -530,7 +533,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // rating badge (color filled circle with rating number in center)
-    if (isRatingBadgeVisible) {
+    if (isRatingBadgeVisible || showAllSymbols) {
         // label/rating rect located top-right as containment for circle
         QColor textColor(Qt::white);
         if (G::ratings.contains(rating)) {
@@ -567,7 +570,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // show lock if file does not have read/write permissions
-    if (!isReadWrite) {
+    if (!isReadWrite || showAllSymbols) {
         int lockSize = thumbRect.height() / 6;
         if (lockSize < 11) lockSize = 11;
         if (lockSize > 20) lockSize = 20;
@@ -594,15 +597,15 @@ void IconViewDelegate::paint(QPainter *painter,
 
 
     // draw the cache circle
-    if (!isCached && !isVideo && metaLoaded && !G::isSlideShow) {
+    if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);
     }
 
     // draw the missing thumb circle
-    qDebug() << "IconviewDeledate::paint" << index.row() << "isMissingThumb =" << isMissingThumb;
-    if (G::useMissingThumbs && isMissingThumb /*&& !G::isSlideShow*/) {
+    // qDebug() << "IconviewDeledate::paint" << index.row() << "isMissingThumb =" << isMissingThumb;
+    if ((G::useMissingThumbs && isMissingThumb) || showAllSymbols /*&& !G::isSlideShow*/) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(missingThumbColor);
         painter->drawEllipse(missingThumbRect);
@@ -626,7 +629,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // draw icon number
-    if (isIconNumberVisible) {
+    if (isIconNumberVisible || showAllSymbols) {
         painter->setBrush(labelColorToUse);
         QFont numberFont = painter->font();
         int pxSize = iconNumberSize;
