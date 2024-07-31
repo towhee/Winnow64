@@ -2087,6 +2087,8 @@ void MW::createThumbViewContextMenu()
     separatorAction8->setSeparator(true);
     QAction *separatorAction9 = new QAction(this);
     separatorAction9->setSeparator(true);
+    QAction *separatorAction0 = new QAction(this);
+    separatorAction0->setSeparator(true);
 
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
     openWithGroupAct->setMenu(openWithMenu);
@@ -2138,6 +2140,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
     thumbViewActions->append(diagnosticsSessionIssuesAction);
+    thumbViewActions->append(separatorAction0);
     thumbViewActions->append(helpFilmStripAction);
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
