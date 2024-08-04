@@ -105,6 +105,8 @@ signals:
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
     void renamePasteContextAction(QString folderName);
+    void addBookmarkAction(QString folderName);
+    void status(bool keepBase, QString msg, QString src);
 
 private:
 	QModelIndex dndOrigSelection;

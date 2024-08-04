@@ -42,7 +42,7 @@ FrameDecoder::FrameDecoder(QObject *parent)
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
     abort = false;  // version 1.33
-    isDebugging = true;
+    isDebugging = false;
 }
 
 void FrameDecoder::stop()

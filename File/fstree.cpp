@@ -616,57 +616,76 @@ void FSTree::dropEvent(QDropEvent *event)
     Copy files to FSTree folder.  If Qt::MoveAction then delete the source files after
     the copy operation.  If DnD is internal then also copy/move any sidecar files.
 */
-    if (G::isLogger) G::log("FSTree::dropEvent");
+    QString src = "FSTree::dropEvent";
+    if (G::isLogger) G::log(src);
 
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) return;
 
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
-    /*
-    qDebug() << "FSTree::dropEvent"
-             << "event->source() =" << event->source()
-             << event
-             << mimeData->hasUrls() << mimeData->urls();
-    //*/
 
-    /*  This code section is mirrored in BookMarks::dropEvent.  Make sure to sync any
-        changes. */
+    // START MIRRORED CODE SECTION
+    // This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any changes.
+
+    /* Drag and Drop files:
+
+       There are two types of source for the drag operation: Internal (Winnow) and External
+       (another program ie finder/explorer).
+
+       1. Internal: Only image files are being dragged, sidecar files are inferred.  Popup
+          work.
+
+       2. External: Any file can be dragged: image, sidecar or other.  Popup messages do not work
+          because the external program has the operating system window focus.
+       */
+
     G::stopCopyingFiles = false;
     G::isCopyingFiles = true;
+    bool isInternal;
+    event->source() ? isInternal = true : isInternal = false;
+    QString srcPath;
     QStringList srcPaths;
+    int sidecarCount = 0;
+    QString fileCategory;
+    QMap<QString, int> fileCategoryCounts {
+        {"image", 0},
+        {"sidecar", 0},
+        {"other", 0}
+    };
 
-    // popup
+    // Copy or Move operation
+    QString operation = "Copy";
+    if (event->dropAction() == Qt::MoveAction) operation = "Move";
+
+    // Number of files (internal = images, external = all files selected)
     int count = event->mimeData()->urls().count();
-    QString operation = "Copying ";
-    if (event->source() && event->dropAction() == Qt::MoveAction) operation = "Moving ";
+
+    // popup for internal drag&drop progress reporting
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
-    QString txt = operation + QString::number(count) +
+    QString msg = operation + QString::number(count) +
                   " to " + dropDir +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(txt, 0, true, 1);
+    G::popUp->showPopup(msg, 0, true, 1);
 
+    // iterate files
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-        // processEvents is necessary
-        qApp->processEvents();
+        qApp->processEvents();        // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }
-        QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+        srcPath = event->mimeData()->urls().at(i).toLocalFile();
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
         bool copied = QFile::copy(srcPath, destPath);
-        /*
-        qDebug() << "FSTree::dropEvent"
-                 << "Copy" << srcPath
-                 << "to" << destPath << "Copied:" << copied
-                 << event->dropAction();  //*/
+
         if (copied) {
             // make list of src files to delete if Qt::MoveAction
             srcPaths << srcPath;
-            // copy any sidecars if internal drag operation
-            if (event->source()) {
+            // infer and copy/move any sidecars if internal drag operation
+            if (isInternal) {
                 QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
+                sidecarCount += srcSidecarPaths.count();
                 foreach (QString srcSidecarPath, srcSidecarPaths) {
                     if (QFile(srcSidecarPath).exists()) {
                         QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
@@ -676,27 +695,68 @@ void FSTree::dropEvent(QDropEvent *event)
             }
         }
     }
+
+    // count file categories
+    foreach (srcPath, srcPaths) {
+        QString cat = metadata->fileCategory(srcPath, srcPaths);
+        fileCategoryCounts[cat]++;
+    }
+
     if (G::stopCopyingFiles) {
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup("Terminated " + operation + "operation", 2000);
+        G::popUp->showPopup("Terminated " + operation + "operation", 4000);
     }
     else {
+        //report on copy/move operation
+        QString op;
+        operation == "Copy" ? op = "Copied " : op = "Moved ";
+        int totFiles = srcPaths.count();
+
+        QString msg = op;
+        int imageCount = 0;
+        int otherCount = 0;
+        if (event->source()) imageCount = srcPaths.count();
+        else {
+            imageCount = fileCategoryCounts["image"];
+            sidecarCount = fileCategoryCounts["sidecar"];
+            otherCount = fileCategoryCounts["other"];
+        }
+
+        if (imageCount)
+            msg += QString::number(imageCount) + " images";
+        if (sidecarCount) {
+            if (imageCount) msg += ", ";
+            msg += QString::number(sidecarCount) + " sidecars";
+        }
+        if (otherCount) {
+            if (imageCount || sidecarCount) msg += ", ";
+            msg += QString::number(otherCount) + " other";
+            if (otherCount == 1) msg += " file";
+            else msg += " files";
+        }
+        if (totFiles == 0)
+            msg += "0 files.";
+        else
+            msg += ".";
+
+        emit status(false, msg, src);
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
+        G::popUp->showPopup(msg, 4000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
 
-    // if Winnow source and QMoveAction
-    if (event->source() && event->dropAction() == Qt::MoveAction) {
+    // if internal (Winnow) and move then delete source files
+    if (isInternal && event->dropAction() == Qt::MoveAction) {
         setCurrentIndex(dndOrigSelection);
         if (srcPaths.count()) {
             // deleteFiles also deletes sidecars
             emit deleteFiles(srcPaths);
         }
     }
-    // End mirrored code section
+    // END MIRRORED CODE SECTION
 
     // if external source
     if (!event->source()) {

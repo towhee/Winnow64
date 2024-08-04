@@ -20,6 +20,7 @@ public:
     static QString getDriveName(QString path);
     static QString getDrive(QString path);
     static QString getFileName(QString srcPath);
+    static QString getFileBase(QString srcPath);
     static QString getSuffix(QString srcPath);
     static QString getFolderPath(QString fPath);
     static QString assocXmpPath(QString fPath);

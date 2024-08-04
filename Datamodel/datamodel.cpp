@@ -2734,7 +2734,7 @@ void SortFilter::filterChange(QString src)
         ms += 10;
         if (ms > waitMs) {
             timeIsUp = true;
-            qDebug() << "SortFilter::filterChange  timeIsUp triggered";
+            // qDebug() << "SortFilter::filterChange  timeIsUp triggered";
         }
     }
     /*

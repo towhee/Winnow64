@@ -146,6 +146,7 @@ public:
     QString nikonLensCode;
 
     void missingThumbnailWarning();
+    QString fileCategory(QString &path, QStringList &paths);
 
 private:
     QMutex mutex;

@@ -3229,10 +3229,10 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
         if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(image->bits()), qt2Exif(transformation), stopOnError)) {
             for (uint32_t y=0; y<height; ++y)
                 convert32BitOrder(image->scanLine(y), width);
-            qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << filePath;
+            // qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << filePath;
         } else {
             TIFFClose(tiff); tiff = nullptr;
-            qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << filePath;
+            // qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << filePath;
             return false;
         }
     }

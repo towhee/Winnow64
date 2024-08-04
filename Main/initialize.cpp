@@ -917,8 +917,14 @@ void MW::createFSTree()
     // rename menu item "Erase mem card images" and enable/disable for context menu only
     connect(fsTree, &FSTree::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
 
+    // add menu item "Add Bookmark folder name"
+    // connect(fsTree, &FSTree::addBookmarkAction, this, &MW::addBookmarkAction);
+
     // rename menu item "Paste files" and enable/disable for context menu only
-    connect(fsTree, &FSTree::renamePasteContextAction, this, &MW::renamePasteFilesMenu);
+    connect(fsTree, &FSTree::renamePasteContextAction, this, &MW::renamePasteFilesAction);
+
+    // update status in status bar
+    connect(fsTree, &FSTree::status, this, &MW::updateStatus);
 
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
@@ -975,6 +981,12 @@ void MW::createBookmarks()
 
     // rename menu item "Erase mem card images" and enable/disable for context menu only
     connect(bookmarks, &BookMarks::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
+
+    // rename menu item "Remove Bookmark folder name"
+    connect(bookmarks, &BookMarks::renameRemoveBookmarkAction, this, &MW::renameRemoveBookmarkAction);
+
+    // update status in status bar
+    connect(bookmarks, &BookMarks::status, this, &MW::updateStatus);
 }
 
 void MW::createAppStyle()

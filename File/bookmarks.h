@@ -49,6 +49,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
 
@@ -59,6 +60,8 @@ signals:
     void folderSelection(QString dPath);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
+    void renameRemoveBookmarkAction(QString folderName);
+    void status(bool keepBase, QString msg = "", QString src = "");
 };
 
 #endif // BOOKMARKS_H
