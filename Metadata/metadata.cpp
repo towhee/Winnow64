@@ -432,6 +432,29 @@ QString Metadata::diagnostics(QString fPath)
     return reportString;
 }
 
+QString Metadata::fileCategory(QString &fPath, QStringList &paths)
+{
+    if (G::isLogger) G::log("Metadata::fileCategory");
+
+    QString ext = Utilities::getSuffix(fPath);
+
+    // image file
+    if (supportedFormats.contains(ext)) return "image";
+
+    // sidecar (shares same file base name as an image in list)
+    QString fBase = Utilities::getFileBase(fPath);
+    QString aPath;
+    foreach (aPath, paths) {
+        if (aPath == fPath) continue;
+        QString aExt = Utilities::getSuffix(aPath);
+        QString aBase = Utilities::getFileBase(aPath);
+        if (supportedFormats.contains(aExt) && aBase == fBase) return "sidecar";
+    }
+
+    // non image file
+    return "other";
+}
+
 void Metadata::missingThumbnailWarning()
 {
     return;

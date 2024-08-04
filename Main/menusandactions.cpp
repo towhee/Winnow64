@@ -2185,7 +2185,12 @@ void MW::renameEjectUsbMenu(QString path)
     ejectActionFromContextMenu->setText(text);
 }
 
-void MW::renamePasteFilesMenu(QString folderName)
+void MW::renameRemoveBookmarkAction(QString folderName)
+{
+    removeBookmarkAction->setText("Remove Bookmark " +  Utilities::enquote(folderName));
+}
+
+void MW::renamePasteFilesAction(QString folderName)
 {
     if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
         QString txt = "Paste files into " + Utilities::enquote(folderName);

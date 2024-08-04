@@ -55,25 +55,26 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     }
     else base = "";
 
-    // image of total: fileCount
+    // define base status text
     if (keepBase && isCurrentFolderOkay) {
-//        base += "Mem: " + mem + spacer;
+        // base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel") {
             base += "Zoom: " + getZoom();
         }
         base += spacer + "Pos: " + getPosition();
         if (source != "nextSlide") {
             QString s = QString::number(sel->count());
-//            QString s = QString::number(thumbView->getSelectedCount());
             base += spacer +" Selected: " + s;
             base += spacer + "Picked: " + getPicked();
         }
+        base += spacer + s;
+        base += spacer + "Workspace: " + ws.name;
+        // status = " " + base + s;
+        status = base;
     }
 
-    base += spacer + s;
-    base += spacer + "Workspace: " + ws.name;
-    // status = " " + base + s;
-    status = base;
+    if (!keepBase) status = s;
+
     statusLabel->setText(status);
 
     // status label tooltip

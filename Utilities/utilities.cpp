@@ -84,6 +84,13 @@ QString Utilities::getFileName(QString srcPath)
     return fileInfo.fileName();
 }
 
+QString Utilities::getFileBase(QString srcPath)
+{
+    if (G::isLogger) G::log("Utilities::getFileName");
+    QFileInfo fileInfo(srcPath);
+    return fileInfo.baseName();
+}
+
 QString Utilities::getSuffix(QString srcPath)
 {
     if (G::isLogger) G::log("Utilities::getFileName");
@@ -125,7 +132,7 @@ QString Utilities::replaceSuffix(QString srcPath, QString newSuffix)
 
 QStringList Utilities::getSidecarPaths(QString srcPath)
 {
-    if (G::isLogger) G::log("Utilities::getPossibleSidecars");
+    if (G::isLogger) G::log("Utilities::getSidecarPaths");
     QStringList extensions;
     extensions << ".xmp" << ".txt";
     QStringList sidecarPaths;
