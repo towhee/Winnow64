@@ -142,20 +142,22 @@ void FSModel::refresh(const QModelIndex &index)
     beginResetModel();
     endResetModel();
     return;
-
+    /*
     QList<int> roles;
     roles << Qt::DisplayRole;
     emit dataChanged(index, index, roles);
-    //qDebug() << "FSModel::refresh" << index << testIdx;
+    qDebug() << "FSModel::refresh index" << index << testIdx;
+    */
 }
 
 void FSModel::refresh(const QString &dPath)
 {
+    // not being used
     const QModelIndex idx = index(dPath, imageCountColumn);
     QList<int> roles;
     roles << Qt::DisplayRole;
     emit dataChanged(idx, idx, roles);
-    //qDebug() << "FSModel::refresh" << index << testIdx;
+    // qDebug() << "FSModel::refresh dPath" << dPath;
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
