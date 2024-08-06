@@ -251,11 +251,31 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
+
     // return tooltip for folder path
     if (index.column() == 0) {
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
         }
+        // else if (role == Qt::DecorationRole) {
+        //     QFileInfo info = fileInfo(index);
+        //     qDebug() << "FSModel::data"
+        //              << "isDir =" << info.isDir()
+        //              << "isRoot =" << info.isRoot()
+        //              << info.baseName();
+        //     if (info.isDir()) {
+        //         if (info.absoluteFilePath() == QDir::rootPath())
+        //             return iconProvider()->icon(QFileIconProvider::Computer);
+        //         else if (info.isRoot())
+        //             return iconProvider()->icon(QFileIconProvider::Drive);
+        //         else
+        //            return iconProvider()->icon(QFileIconProvider::Folder);
+        //     }
+        //     else if (info.isFile())
+        //         return iconProvider()->icon(QFileIconProvider::File);
+        //     else
+        //         return iconProvider()->icon(QFileIconProvider::Drive);
+        // }
         else {
             return QFileSystemModel::data(index, role);
         }
@@ -346,6 +366,12 @@ void FSTree::createModel()
 
     // apply model to treeview
     setModel(fsFilter);
+
+
+
+    QAbstractFileIconProvider *iconProvider = fsModel->iconProvider();
+    QIcon icon = fsModel->iconProvider()->icon(QFileIconProvider::Folder);
+    // qDebug() << icon(QFileInfo(QDir::currentPath()));
 }
 
 void FSTree::refreshModel()
