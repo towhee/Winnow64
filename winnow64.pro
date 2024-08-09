@@ -273,10 +273,10 @@ SOURCES += ImageFormats/Dng/dng.cpp
 SOURCES += ImageFormats/Fuji/fuji.cpp
 SOURCES += ImageFormats/Heic/Heic.cpp
 #win32:SOURCES += ImageFormats/Heic/Heic.cpp
-SOURCES += ImageFormats/jpeg/jpeg.cpp               # For parsing
-SOURCES += ImageFormats/Jpeg/jpeg2.cpp              # Copy jpeg.h for experimenting
-SOURCES += ImageFormats/Jpeg/jpgdecoder.cpp         # JED project
-SOURCES += ImageFormats/jpeg/jpegturbo.cpp          # libjpeg-turbo
+SOURCES += ImageFormats/Jpeg/jpeg.cpp               # For parsing
+macx:SOURCES += ImageFormats/Jpeg/jpeg2.cpp         # Copy jpeg.h for experimenting
+macx:SOURCES += ImageFormats/Jpeg/jpgdecoder.cpp    # JED project (Jpeg Encoder Decoder)
+macx:SOURCES += ImageFormats/Jpeg/jpegturbo.cpp     # libjpeg-turbo
 SOURCES += ImageFormats/Nikon/nikon.cpp
 SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += ImageFormats/Panasonic/panasonic.cpp
@@ -522,6 +522,7 @@ macx:INCLUDEPATH += /usr/include
 macx:LIBS += -lz
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
 win32:INCLUDEPATH += $$PWD/Lib/zlib
+win32:INCLUDEPATH += $$PWD/Lib/zlib/x64-Release
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
 # libde265 (frame parallel)
@@ -537,11 +538,11 @@ win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
 # libtiff
-# LIBS += -L/usr/local/opt/libtiff/lib -ltiff
-# LIBS += /usr/local/opt/libtiff/lib/libtiff.dylib
-# INCLUDEPATH += /usr/local/opt/libtiff/include
-LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
-INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+win32:LIBS += -LC:/Users/hillr/Projects/Winnow64/Lib/libtiff/build/Release -ltiff
+win32:INCLUDEPATH += C:/Users/hillr/Projects/Winnow64/Lib/libtiff/libtiff
+win32:INCLUDEPATH += C:/Users/hillr/Projects/Winnow64/Lib/libtill/build/libtiff
+macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
+macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
 
 # libjpeg-turbo
 macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build -lturbojpeg

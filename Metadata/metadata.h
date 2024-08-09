@@ -29,9 +29,11 @@
 //#endif
 
 #include "ImageFormats/Jpeg/jpeg.h"
+#ifdef Q_OS_MAC
 #include "ImageFormats/Jpeg/jpeg2.h"
 #include "ImageFormats/Jpeg/jpgdecoder.h"
 #include "ImageFormats/Jpeg/jpegturbo.h"
+#endif
 #include "ImageFormats/Canon/canon.h"
 #include "ImageFormats/Canon/canoncr3.h"
 #include "ImageFormats/Dng/dng.h"

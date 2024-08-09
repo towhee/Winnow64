@@ -171,13 +171,17 @@ bool ImageDecoder::load()
         }
 
         // try to decode the jpg data
-        // decoderToUse = Qt;          // Qt or TurboJpg or Rory
+        #ifdef Q_OS_WIN
+        decoderToUse = QtImage;          // Qt or TurboJpg or Rory
+        #endif
+        #ifdef Q_OS_MAC
         decoderToUse = TurboJpg;    // Qt or TurboJpg or Rory
-
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(buf);
         }
+        #endif
+
         if (decoderToUse == QtImage) {
             if (!image.loadFromData(buf, "JPEG")) {
                 errMsg = "Could not read JPG because QImage::loadFromData failed.";
@@ -240,12 +244,14 @@ bool ImageDecoder::load()
         // decoderToUse = LibTiff;
         // decoderToUse = Rory;
 
+        #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {
             Tiff tiff("ImageDecoder::load");
             // qDebug() << "ImageDecoder::load using libtiff:" << fPath;
             image = tiff.testLibtiff(fPath, n.key + 1);
             // image = tiff.readTiffToQImage(fPath);
         }
+        #endif
 
         if (decoderToUse == Rory) {
             // check for sampling format we cannot read
@@ -298,9 +304,13 @@ bool ImageDecoder::load()
     }
 
     else if (ext == "jpg" || ext == "jpeg") {
-        // decoderToUse = QtImage;
-        decoderToUse = TurboJpg;
         // decoderToUse = Rory;
+        #ifdef Q_OS_WIN
+        decoderToUse = QtImage;
+        #endif
+        #ifdef Q_OS_MAC
+        decoderToUse = TurboJpg;
+        #endif
 
         if (decoderToUse == Rory) {
             Jpeg jpeg;
@@ -308,10 +318,12 @@ bool ImageDecoder::load()
             jpeg.decodeScan(imFile, image);
         }
 
+        #ifdef Q_OS_MAC
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(fPath);
         }
+        #endif
 
         if (decoderToUse == QtImage) {
             image.load(fPath);
