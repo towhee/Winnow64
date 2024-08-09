@@ -2157,6 +2157,7 @@ the JPEG compressed thumbnail data, and then sets the TIFFTAG_SUBFILETYPE and
 TIFFTAG_SUBIFD fields in the main image directory to link to the thumbnail.
 */
 
+// #ifdef Q_OS_MAC
 int Tiff::add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size) {
     uint16 thumb_photometric = PHOTOMETRIC_RGB;
     uint16 thumb_bps = 8;
@@ -3274,3 +3275,4 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
     return true;
 }
+// #endif

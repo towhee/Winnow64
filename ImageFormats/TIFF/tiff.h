@@ -16,8 +16,10 @@
 #include <vector>
 #include <cstring>
 
+// #ifdef Q_OS_MAC
 #include "zlib.h"
-#include <tiffio.h>     // libtiff
+#include "Lib/libtiff/build/libtiff/tiffconf.h"     // libtiff
+// #endif
 
 extern bool showDebug;
 
@@ -50,12 +52,14 @@ public:
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
     // test libtiff
+    // #ifdef Q_OS_MAC
     QImage readTiffToQImage(const QString &filePath);
     QImage testLibtiff(QString fPath, int row);
     void listDirectories(ImageMetadata &m);
 
     // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
     bool read(QString fPath, QImage *image, quint32 ifdOffset = 0);
+    // #endif
 
 private:
     Utilities u;
@@ -161,6 +165,7 @@ private:
     bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
     // try libtiff
+    // #ifdef Q_OS_MAC
     void rptFields(TiffFields &f);
     int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
 
@@ -174,6 +179,7 @@ private:
     bool readHeaders(TIFF *tiff, QSize &size, QImage::Format &format, uint16_t &photometric,
                      bool &grayscale, bool &floatingPoint,
                      QImageIOHandler::Transformations transformation);
+    // #endif
 };
 
 #endif // TIFF_H
