@@ -105,20 +105,6 @@ private:
     QStringList compressionString {"None", "LZW", "LZW Predictor", "Zip", "Jpg"};
     quint8 rgb[3];  // being used?
 
-    // struct TiffFields {
-    //     int directory;
-    //     uint32_t width;
-    //     uint32_t height;
-    //     uint32_t depth;
-    //     uint16_t samplesPerPixel;
-    //     uint16_t bitsPerSample;
-    //     uint16_t compression;
-    //     uint16_t planarConfig;
-    //     uint16_t predictor;
-    //     uint16_t orientation;
-    //     uint16_t photometric;
-    // };
-
     struct TiffStrip {
         int strip;
         char* in;
@@ -165,12 +151,7 @@ private:
     TiffStrips zipDecompress(TiffStrip &t, MetadataParameters &p);  // ChatGPT created
     bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
-    // // try libtiff
-    // // #ifdef Q_OS_MAC
-    // void rptFields(TiffFields &f);
-    // int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
-
-    // // from QTiffHandler
+    // from QTiffHandler
     QImageIOHandler::Transformations exif2Qt(int exifOrientation);
     int qt2Exif(QImageIOHandler::Transformations transformation);
     void convert32BitOrder(void *buffer, int width);
@@ -180,7 +161,6 @@ private:
     bool readHeaders(TIFF *tiff, QSize &size, QImage::Format &format, uint16_t &photometric,
                      bool &grayscale, bool &floatingPoint,
                      QImageIOHandler::Transformations transformation);
-    // // #endif
 };
 
 #endif // TIFF_H
