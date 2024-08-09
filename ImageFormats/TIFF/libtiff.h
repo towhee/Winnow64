@@ -35,17 +35,6 @@ private:
     };
     void rptFields(TiffFields &f);
     int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
-
-    // // from QTiffHandler
-    // QImageIOHandler::Transformations exif2Qt(int exifOrientation);
-    // int qt2Exif(QImageIOHandler::Transformations transformation);
-    // void convert32BitOrder(void *buffer, int width);
-    // void rgb48fixup(QImage *image, bool floatingPoint);
-    // void rgb96fixup(QImage *image);
-    // void rgbFixup(QImage *image);
-    // bool readHeaders(TIFF *tiff, QSize &size, QImage::Format &format, uint16_t &photometric,
-    //                  bool &grayscale, bool &floatingPoint,
-    //                  QImageIOHandler::Transformations transformation);
 };
 
 #endif // LIBTIFF_H
