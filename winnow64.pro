@@ -139,6 +139,7 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
+macx:HEADERS += ImageFormats/Tiff/libtiff.h
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
 # HEADERS += Lib/libtiff/h
@@ -282,6 +283,7 @@ SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += ImageFormats/Panasonic/panasonic.cpp
 SOURCES += ImageFormats/Sony/sony.cpp
 SOURCES += ImageFormats/Tiff/tiff.cpp
+macx:SOURCES += ImageFormats/Tiff/libtiff.cpp
 
 SOURCES += Lcms2/cmsalpha.c
 SOURCES += Lcms2/cmscam02.c

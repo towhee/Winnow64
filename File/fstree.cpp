@@ -82,6 +82,8 @@ FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
 
     count.clear();
     combineCount.clear();
+
+    this->iconProvider()->setOptions(QFileIconProvider::DontUseCustomDirectoryIcons);
 }
 
 void FSModel::insertCount(QString dPath, QString value)
@@ -257,25 +259,27 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
         }
-        // else if (role == Qt::DecorationRole) {
-        //     QFileInfo info = fileInfo(index);
-        //     qDebug() << "FSModel::data"
-        //              << "isDir =" << info.isDir()
-        //              << "isRoot =" << info.isRoot()
-        //              << info.baseName();
-        //     if (info.isDir()) {
-        //         if (info.absoluteFilePath() == QDir::rootPath())
-        //             return iconProvider()->icon(QFileIconProvider::Computer);
-        //         else if (info.isRoot())
-        //             return iconProvider()->icon(QFileIconProvider::Drive);
-        //         else
-        //            return iconProvider()->icon(QFileIconProvider::Folder);
-        //     }
-        //     else if (info.isFile())
-        //         return iconProvider()->icon(QFileIconProvider::File);
-        //     else
-        //         return iconProvider()->icon(QFileIconProvider::Drive);
-        // }
+        /*
+        else if (role == Qt::DecorationRole) {
+            QFileInfo info = fileInfo(index);
+            qDebug() << "FSModel::data"
+                     << "isDir =" << info.isDir()
+                     << "isRoot =" << info.isRoot()
+                     << info.baseName();
+            if (info.isDir()) {
+                if (info.absoluteFilePath() == QDir::rootPath())
+                    return iconProvider()->icon(QFileIconProvider::Computer);
+                else if (info.isRoot())
+                    return iconProvider()->icon(QFileIconProvider::Drive);
+                else
+                   return iconProvider()->icon(QFileIconProvider::Folder);
+            }
+            else if (info.isFile())
+                return iconProvider()->icon(QFileIconProvider::File);
+            else
+                return iconProvider()->icon(QFileIconProvider::Drive);
+        }
+        //*/
         else {
             return QFileSystemModel::data(index, role);
         }
