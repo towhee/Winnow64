@@ -6,7 +6,7 @@ static QString rory = "Rory";
 
 int main(int argc, char *argv[])
 {
-    /* Original multi instance version
+    // /* Original multi instance version
     QApplication a(argc, argv);
     QString args;
     QString delimiter = "\n";
@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
         if (i < argc - 1) args += delimiter;
     }
     QCoreApplication::addLibraryPath("./");
+
     MW mw(args);
     mw.show();
     return a.exec();
@@ -25,7 +26,9 @@ int main(int argc, char *argv[])
        QtSingleApplication required
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-    */
+    //*/
+
+    /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
 
     QString args;

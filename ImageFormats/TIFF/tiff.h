@@ -16,10 +16,11 @@
 #include <vector>
 #include <cstring>
 
-// #ifdef Q_OS_MAC
-#include "zlib.h"
-#include "Lib/libtiff/build/libtiff/tiffconf.h"     // libtiff
-// #endif
+#ifdef Q_OS_MAC
+#include "ImageFormats/Tiff/libtiff.h"
+// #include "zlib.h"
+// #include <tiffio.h>    // libtiff
+#endif
 
 extern bool showDebug;
 
@@ -51,15 +52,15 @@ public:
     // add a thumbnail to the tiff for faster thumbnail generation
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
-    // test libtiff
-    // #ifdef Q_OS_MAC
-    QImage readTiffToQImage(const QString &filePath);
-    QImage testLibtiff(QString fPath, int row);
-    void listDirectories(ImageMetadata &m);
+    // // test libtiff
+    // // #ifdef Q_OS_MAC
+    // QImage readTiffToQImage(const QString &filePath);
+    // QImage testLibtiff(QString fPath, int row);
+    // void listDirectories(ImageMetadata &m);
 
-    // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
+    // // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
     bool read(QString fPath, QImage *image, quint32 ifdOffset = 0);
-    // #endif
+    // // #endif
 
 private:
     Utilities u;
@@ -104,19 +105,19 @@ private:
     QStringList compressionString {"None", "LZW", "LZW Predictor", "Zip", "Jpg"};
     quint8 rgb[3];  // being used?
 
-    struct TiffFields {
-        int directory;
-        uint32_t width;
-        uint32_t height;
-        uint32_t depth;
-        uint16_t samplesPerPixel;
-        uint16_t bitsPerSample;
-        uint16_t compression;
-        uint16_t planarConfig;
-        uint16_t predictor;
-        uint16_t orientation;
-        uint16_t photometric;
-    };
+    // struct TiffFields {
+    //     int directory;
+    //     uint32_t width;
+    //     uint32_t height;
+    //     uint32_t depth;
+    //     uint16_t samplesPerPixel;
+    //     uint16_t bitsPerSample;
+    //     uint16_t compression;
+    //     uint16_t planarConfig;
+    //     uint16_t predictor;
+    //     uint16_t orientation;
+    //     uint16_t photometric;
+    // };
 
     struct TiffStrip {
         int strip;
@@ -164,12 +165,12 @@ private:
     TiffStrips zipDecompress(TiffStrip &t, MetadataParameters &p);  // ChatGPT created
     bool jpgDecompress(TiffStrip &t, MetadataParameters &p);
 
-    // try libtiff
-    // #ifdef Q_OS_MAC
-    void rptFields(TiffFields &f);
-    int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
+    // // try libtiff
+    // // #ifdef Q_OS_MAC
+    // void rptFields(TiffFields &f);
+    // int add_jpeg_thumbnail(TIFF* tif, uint32 width, uint32 height, uint8* thumb_data, uint32 thumb_size);
 
-    // from QTiffHandler
+    // // from QTiffHandler
     QImageIOHandler::Transformations exif2Qt(int exifOrientation);
     int qt2Exif(QImageIOHandler::Transformations transformation);
     void convert32BitOrder(void *buffer, int width);
@@ -179,7 +180,7 @@ private:
     bool readHeaders(TIFF *tiff, QSize &size, QImage::Format &format, uint16_t &photometric,
                      bool &grayscale, bool &floatingPoint,
                      QImageIOHandler::Transformations transformation);
-    // #endif
+    // // #endif
 };
 
 #endif // TIFF_H

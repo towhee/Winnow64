@@ -239,17 +239,20 @@ bool ImageDecoder::load()
     // TIFF format
     else if (ext == "tif") {
 
-        // decoderToUse = QtImage;
-        decoderToUse = QtTiff;
+        decoderToUse = QtImage;
+        // decoderToUse = QtTiff;
         // decoderToUse = LibTiff;
         // decoderToUse = Rory;
 
         #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {
-            Tiff tiff("ImageDecoder::load");
+            // Tiff tiff("ImageDecoder::load");
             // qDebug() << "ImageDecoder::load using libtiff:" << fPath;
-            image = tiff.testLibtiff(fPath, n.key + 1);
+            // image = tiff.testLibtiff(fPath, n.key + 1);
             // image = tiff.readTiffToQImage(fPath);
+            class LibTiff libTiff;
+            image = libTiff.readTiffToQImage(fPath);
+            // image = libTiff.testLibtiff(fPath, n.key + 1);
         }
         #endif
 
