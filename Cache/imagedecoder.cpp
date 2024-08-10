@@ -141,8 +141,23 @@ bool ImageDecoder::load()
 
     decoderToUse = QtImage;  // default unless overridden
 
+    bool isEmbeddedJpg = false;
+    // raw file or jpg
+    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.lengthFull) {
+        isEmbeddedJpg = true;
+    }
+    // heic saved as a jpg
+    qDebug() << "ImageDeecoder::load  heic saved as a jpg"
+             << "ext =" << ext
+             << "n.lengthFull =" << n.lengthFull
+                ;
+    if (metadata->hasHeic.contains(ext) && n.lengthFull) {
+        qDebug() << "ImageDeecoder::load  heic saved as a jpg";
+        isEmbeddedJpg = true;
+    }
+
     // Embedded JPG format (including embedded in raw files)
-    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
+    if (isEmbeddedJpg) {
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
