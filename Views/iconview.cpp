@@ -1118,7 +1118,7 @@ bool IconView::viewportEvent(QEvent *event)
 {
     // use to intercept help event to change tooltips
     // qDebug() << "IconView::viewportEvent" << event;
-    QListView::viewportEvent(event);
+    return QListView::viewportEvent(event);
 }
 
 void IconView::paintEvent(QPaintEvent *event)

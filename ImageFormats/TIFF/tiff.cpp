@@ -2578,4 +2578,3 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
     return true;
 }
-// // #endif

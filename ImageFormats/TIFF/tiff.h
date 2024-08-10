@@ -18,8 +18,14 @@
 
 #ifdef Q_OS_MAC
 #include "ImageFormats/Tiff/libtiff.h"
+#include <tiffio.h>    // libtiff-6
 // #include "zlib.h"
-// #include <tiffio.h>    // libtiff
+#endif
+#ifdef Q_OS_WIN
+#include "Lib/libtiff/libtiff/tiff.h"
+#include "Lib/libtiff/libtiff/tiffio.h"
+#include "Lib/libtiff/build/libtiff/tiffconf.h"
+#include "zlib.h"
 #endif
 
 extern bool showDebug;
@@ -154,7 +160,7 @@ private:
     // from QTiffHandler
     QImageIOHandler::Transformations exif2Qt(int exifOrientation);
     int qt2Exif(QImageIOHandler::Transformations transformation);
-    void convert32BitOrder(void *buffer, int width);
+    void convert32BitOrder(void* buffer, int width);
     void rgb48fixup(QImage *image, bool floatingPoint);
     void rgb96fixup(QImage *image);
     void rgbFixup(QImage *image);

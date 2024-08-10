@@ -1192,6 +1192,10 @@ void Jpeg::rgbTransformMCU()
             int g = static_cast<int>(floor(Y - 0.34414 * (Cb - 128.0) - 0.71414 * (Cr - 128)));
             int b = static_cast<int>(floor(Y + 1.772 * (Cb - 128.0)));
 
+            // req'd for windows compilation
+            #undef max
+            #undef min
+
             r = std::max(0, std::min(r, 255));
             g = std::max(0, std::min(g, 255));
             b = std::max(0, std::min(b, 255));

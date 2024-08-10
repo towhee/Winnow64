@@ -814,11 +814,11 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
-    // qDebug() << "Metadata::parseHEIF" << p.fPath;
+     qDebug() << "Metadata::parseHEIF" << p.fPath;
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
         // if (G::isWarningLogger)
-        // qDebug() << "Metadata::parseHEIF  is a jpg";
+         qDebug() << "Metadata::parseHEIF  is a jpg";
         bool ok = parseJPG(0);
         return ok;
     }

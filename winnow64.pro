@@ -130,10 +130,10 @@ HEADERS += ImageFormats/Heic/heif.h
 #win32:HEADERS += ImageFormats/Heic/heif.h
 win32:HEADERS += ImageFormats/Heic/de265.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
-HEADERS += ImageFormats/Jpeg/decoderJpg.h
-HEADERS += ImageFormats/Jpeg/jpeg2.h
-HEADERS += ImageFormats/Jpeg/jpgdecoder.h
-HEADERS += ImageFormats/jpeg/jpegturbo.h
+macx:HEADERS += ImageFormats/Jpeg/decoderJpg.h
+macx:HEADERS += ImageFormats/Jpeg/jpgdecoder.h
+macx:HEADERS += ImageFormats/Jpeg/jpeg2.h
+macx:HEADERS += ImageFormats/jpeg/jpegturbo.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
@@ -482,7 +482,9 @@ RC_ICONS = images/winnow.ico
 
 DISTFILES += Docs/ingestautopath \
     CMakeLists.txt \
-    _CMakeLists.txt
+    _CMakeLists.txt \
+    notes/_install library.txt \
+    notes/_install library.txt
 DISTFILES += notes/Create help dialog.rtf
 DISTFILES += notes/Create help dialog.txt
 DISTFILES += Docs/ingestautopath.html
@@ -524,10 +526,10 @@ macx:LIBS += -framework Foundation
 # zLib
 macx:INCLUDEPATH += /usr/include
 macx:LIBS += -lz
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
 win32:INCLUDEPATH += $$PWD/Lib/zlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib/x64-Release
-win32:DEPENDPATH += $$PWD/Lib/zlib
+win32:INCLUDEPATH += $$PWD/Lib/zlib/build
+win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
@@ -542,9 +544,12 @@ win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
 # libtiff
-win32:LIBS += -LC:/Users/hillr/Projects/Winnow64/Lib/libtiff/build/Release -ltiff
-win32:INCLUDEPATH += C:/Users/hillr/Projects/Winnow64/Lib/libtiff/libtiff
-win32:INCLUDEPATH += C:/Users/hillr/Projects/Winnow64/Lib/libtill/build/libtiff
+win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
+#win32: CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
+
+win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
+win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
+win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
 macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
 macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
 
