@@ -1,0 +1,21 @@
+WINDOWS
+
+- Open Developer Command Prompt (search)
+- cd C:\Users\hillr\Projects\Winnow64\Lib
+- git clone https://github.com/some/project  ie https://github.com/madler/zlib
+- cd newlibrary ie zlib
+- mkdir build
+- cd build
+- cmake -G "Visual Studio 17 2022" -A x64 ..
+- cmake --build . --config Release
+
+- open winnow64.pro
+- zlib example
+  win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
+  win32:INCLUDEPATH += $$PWD/Lib/zlib        # zlib.h
+  win32:INCLUDEPATH += $$PWD/Lib/zlib/build  # zconf.h
+
+- copy dll ie zlib.dll to the winnow.exe release folder 
+
+MACOS
+
