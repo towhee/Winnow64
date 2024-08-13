@@ -734,6 +734,18 @@ void MetaRead2::dispatch(int id)
         // trigger fileSelectionChange which starts ImageCache if this row = startRow
         if (fileSelectionChanged && dmRow == startRow) {
             QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
+
+            // if (isDebug)  // returning reader, row has been processed by reader
+            {
+                qDebug().noquote()
+                    << "MetaRead2::dispatch     startRow         "
+                    << "dmRow =" << dmRow
+                    << "startRow =" << startRow
+                    << "r->dmIdx =" << r->dmIdx
+                    << "sfIdx =" << sfIdx
+                    ;
+            }
+
             if (G::isFlowLogger)
             {
                 G::log("MetaRead2::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
@@ -748,7 +760,8 @@ void MetaRead2::dispatch(int id)
                     << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
                     << r->fPath;
             }
-            if (!abort) emit fileSelectionChange(sfIdx);
+            if (!abort) emit fileSelectionChange(r->dmIdx);
+            // if (!abort) emit fileSelectionChange(sfIdx);
         }
 
         if (isDebug)  // returning reader, row has been processed by reader

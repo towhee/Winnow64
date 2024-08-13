@@ -803,22 +803,24 @@ bool Nikon::parse(MetadataParameters &p,
             m.height = ifd->ifdDataHash.value(257).tagValue;
         }
 
-//        if (m.orientation == 6 || m.orientation == 8) {
-//            int swap = m.width;
-//            m.width = m.height;
-//            m.height = swap;
-//        }
+        /*
+        if (m.orientation == 6 || m.orientation == 8) {
+           int swap = m.width;
+           m.width = m.height;
+           m.height = swap;
+        }
 
-        // SubIFD3 contains small size jpg offset and length
-//        if (ifdOffsets.count() > 2) {
-//            hdr = "SubIFD3";
-//            p.hdr = "SubIFD3";
-//            p.offset = ifdOffsets[2];
-//            ifd->readIFD(p, isBigEnd);
-//            m.offsetSmall = ifd->ifdDataHash.value(513).tagValue;
-//            m.lengthSmall = ifd->ifdDataHash.value(514).tagValue;
-////            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
-//        }
+        SubIFD3 contains small size jpg offset and length
+        if (ifdOffsets.count() > 2) {
+           hdr = "SubIFD3";
+           p.hdr = "SubIFD3";
+           p.offset = ifdOffsets[2];
+           ifd->readIFD(p, isBigEnd);
+           m.offsetSmall = ifd->ifdDataHash.value(513).tagValue;
+           m.lengthSmall = ifd->ifdDataHash.value(514).tagValue;
+           // if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
+        }
+        //*/
     }
 
     // read ExifIFD

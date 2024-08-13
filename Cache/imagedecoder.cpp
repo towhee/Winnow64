@@ -143,14 +143,10 @@ bool ImageDecoder::load()
 
     bool isEmbeddedJpg = false;
     // raw file or jpg
-    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.lengthFull) {
+    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
         isEmbeddedJpg = true;
     }
     // heic saved as a jpg
-    qDebug() << "ImageDeecoder::load  heic saved as a jpg"
-             << "ext =" << ext
-             << "n.lengthFull =" << n.lengthFull
-                ;
     if (metadata->hasHeic.contains(ext) && n.lengthFull) {
         qDebug() << "ImageDeecoder::load  heic saved as a jpg";
         isEmbeddedJpg = true;
@@ -185,12 +181,43 @@ bool ImageDecoder::load()
             return false;
         }
 
-        // try to decode the jpg data
+        // SELECT DECODER TO USE
+
+        // only Qt image library available in windows code
         #ifdef Q_OS_WIN
-        decoderToUse = QtImage;          // Qt or TurboJpg or Rory
+        decoderToUse = QtImage;
         #endif
+
         #ifdef Q_OS_MAC
-        decoderToUse = TurboJpg;    // Qt or TurboJpg or Rory
+        // uncomment decoder to use
+        // decoderToUse = QtImage;
+        decoderToUse = TurboJpg;
+        // decoderToUse = Rory;
+
+        /* This is fixed in JpegTurbo
+        // check if early nikon (TurboJpg does not work)
+        if (decoderToUse != QtImage && ext == "nef") {
+            QString cameraModel = dm->sf->index(n.key, G::CameraModelColumn).data().toString();
+            if (metadata->earlyNikons.contains(cameraModel)) {
+                // qDebug() << "ImageDecoder::load early nikon";
+                decoderToUse = QtImage;
+            }
+        }
+
+        // TurboJpg does not work for all dng embedded jpeg
+        if (decoderToUse != QtImage && ext == "dng") {
+            decoderToUse = QtImage;
+        }
+
+        qDebug() << "ImageDecoder::load"
+                 << "ext =" << ext
+                 << "cameraModel =" << dm->sf->index(n.key, G::CameraModelColumn).data().toString()
+                 << "n.offsetFull =" << n.offsetFull
+                 << "n.lengthFull =" << n.lengthFull
+                 << fPath
+            ;
+        //*/
+
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(buf);
@@ -226,18 +253,20 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        //qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
+        qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
         if (!image.load(fPath)) {
             errMsg = "Could not read because decoder failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             imFile.close();
             status = Status::Invalid;
+            qDebug() << "ImageDecoder::load" << "HEIC image decoder failed" << fPath;
             return false;
         }
         else if (image.width() == 0) {
             errMsg = "Unable to read heic image";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             status = Status::Invalid;
+            qDebug() << "ImageDecoder::load" << "HEIC image Unable to read heic imag" << fPath;
             return false;
         }
         imFile.close();
@@ -321,6 +350,7 @@ bool ImageDecoder::load()
         imFile.close();
     }
 
+    // JPEG format
     else if (ext == "jpg" || ext == "jpeg") {
         // decoderToUse = Rory;
         #ifdef Q_OS_WIN
