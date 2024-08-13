@@ -140,7 +140,7 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-         QString msg = "JPG does not start with 0xFFD8.";
+        QString msg = "JPG does not start with 0xFFD8.";
         G::issue("Error", msg, "Jpeg::parse", m.row, m.fPath);
         return false;
     }
@@ -405,6 +405,7 @@ bool Jpeg::parse(MetadataParameters &p,
 
         if (p.report) p.xmpString = xmp.srcToString();
     }
+
     return true;
 }
     
@@ -426,6 +427,7 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
             << "Jpeg::getJpgSegments"
             << "fPath =" << m.fPath
             ; //*/
+
     segmentHash.clear();
     isXmp = false;
     // big endian by default in Utilities: only IFD/EXIF can be little endian
@@ -746,7 +748,8 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         // Value = dhtMap[dhtType][length][code]
         dhtMap[dhtType] = dhtLengthMap;
         dhtLengthMap.clear();
-        qDebug() << "\n";
+        if (isDebug)
+            qDebug() << "\n";
     }
 }
 

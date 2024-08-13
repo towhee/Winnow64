@@ -735,7 +735,7 @@ void MetaRead2::dispatch(int id)
         if (fileSelectionChanged && dmRow == startRow) {
             QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
 
-            // if (isDebug)  // returning reader, row has been processed by reader
+            if (isDebug)  // returning reader, row has been processed by reader
             {
                 qDebug().noquote()
                     << "MetaRead2::dispatch     startRow         "
@@ -743,6 +743,7 @@ void MetaRead2::dispatch(int id)
                     << "startRow =" << startRow
                     << "r->dmIdx =" << r->dmIdx
                     << "sfIdx =" << sfIdx
+                    << r->fPath
                     ;
             }
 

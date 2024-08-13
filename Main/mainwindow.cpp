@@ -2084,17 +2084,19 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     G::t.restart();
-    // /*
+
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::fileSelectionChange", "Src = " + src);
-        // qDebug() << "MW::fileSelectionChange"
-        //          << "src =" << src
-        //          << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
-        //          << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
-        //          << current.data(G::PathRole).toString();
+        /*
+        qDebug() << "MW::fileSelectionChange"
+                 << "src =" << src
+                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+                 << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
+                 << current.data(G::PathRole).toString()
+                    ; //*/
     }
-    //*/
+
     if (G::isFlowLogger)
         G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
 
@@ -2198,14 +2200,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update loupe/video view
     if (G::useMultimedia) videoView->stop();
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (G::mode == "Loupe") {
-        if (isVideo) {
+    if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
+        if (isVideo && G::mode == "Loupe") {
             if (G::useMultimedia) {
-                // bool autoplay = true;
-                // if (G::mode == "Loupe") {
-                //     // must be startup, do not auto play video
-                //     autoplay = false;
-                // }
                 centralLayout->setCurrentIndex(VideoTab);
                 videoView->load(fPath);
                 videoView->play();
@@ -2279,8 +2276,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update cursor position on progressBar
-    if (cacheProgressBar->isVisible() && G::showProgress == G::ShowProgress::ImageCache)
+    if (cacheProgressBar->isVisible() && G::showProgress == G::ShowProgress::ImageCache) {
         cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
+    }
 
     fsTree->scrollToCurrent();
 
@@ -2780,7 +2778,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     /*
     {
         qDebug().noquote()
-                 << "MW::loadConcurrent  Row =" << QVariant(sfRow).toString().leftJustified(5)
+                 << "MW::loadConcurrent  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
                  << "isFileSelectionChange = " << QVariant(isFileSelectionChange).toString().leftJustified(5)
                  << "src =" << src
                  << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
@@ -2796,9 +2794,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::loadConcurrent");
         metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::loadConcurrent");
-        //return;
     }
-
     else if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
 }

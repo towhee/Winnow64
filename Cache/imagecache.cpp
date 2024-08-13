@@ -2212,6 +2212,7 @@ void ImageCache::launchDecoders(QString src)
                 ;
         }
         if (isCacheUpToDate) {
+            emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
             break;
         }
         if (decoder[id]->status == ImageDecoder::Status::Ready) {
@@ -2255,6 +2256,6 @@ void ImageCache::run()
     //if (cacheUpToDate()) return;
 
     // signal MW cache status
-    emit updateIsRunning(true, true);
+    emit updateIsRunning(true, true);   // (isRunning, showCacheLabel)
     launchDecoders("ImageCache::run");
 }
