@@ -1193,7 +1193,6 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (isDebug) G::log("IconView::mouseMoveEvent", objectName());
-    qDebug() << "IconView::mouseMoveEvent";
     if (isLeftMouseBtnPressed) {
         // allow small 'jiggle' tolerance before start drag
         int deltaX = qAbs(mousePressPos.x() - event->pos().x());

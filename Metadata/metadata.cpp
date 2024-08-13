@@ -303,6 +303,14 @@ void Metadata::initSupportedFiles()
                         << "wmv"
                         << "yuv"
                            ;
+
+        /* The early nikons used a different raw file format, where the metadata is arranged
+           differently.  NOT BEING USED */
+        earlyNikons     << "NIKON D2H"
+                        << "NIKON D100 "    // space in quotes is necessary
+                        << "NIKON D1H"
+                        << "NIKON D1"
+                           ;
 }
 
 void Metadata::initOrientationHash()
@@ -509,8 +517,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     copied unchanged.
 */
     if (G::isLogger) G::log("Metadata::writeXMP");
+    bool isDebug = false;
 
-    qDebug() << "Metadata::writeXMP";
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -565,16 +573,16 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         // && !rotationChanged
        )
     {
-        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
+        qWarning() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
                  << "src =" << src;
         return false;
     }
 
-    qDebug() << "Metadata::writeXMP1" << fPath;
+    if (isDebug) qDebug() << "Metadata::writeXMP1" << fPath;
     // make sure file is available ie usb drive may have been ejected
     QFileInfo fileInfo(fPath);
     // if (!fileInfo.exists()) return false;
-    qDebug() << "Metadata::writeXMP2";
+    if (isDebug) qDebug() << "Metadata::writeXMP2";
 
     // data edited, open image file
     p.file.setFileName(fPath);
@@ -628,7 +636,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     //*/
 
     // if (G::useSidecar) xmp.writeSidecar();
-    qDebug() << "Metadata::writeXMP9";
+    if (isDebug) qDebug() << "Metadata::writeXMP9";
     xmp.writeSidecar(p.file);
 
     p.file.close();
@@ -814,11 +822,9 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
-     qDebug() << "Metadata::parseHEIF" << p.fPath;
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
-        // if (G::isWarningLogger)
-         qDebug() << "Metadata::parseHEIF is a jpg";
+        qDebug() << "Metadata::parseHEIF is a jpg";
         bool ok = parseJPG(0);
         return ok;
     }

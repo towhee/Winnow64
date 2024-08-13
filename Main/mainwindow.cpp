@@ -2112,11 +2112,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << "row =" << current.row()
              << "dm->currentDmIdx =" << dm->currentDmIdx
              << "G::isInitializing =" << G::isInitializing
-             << "G::isLinearLoadDone =" << G::isLinearLoadDone
-//             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
+             // << "G::isLinearLoadDone =" << G::isLinearLoadDone
+             // << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
-//             << "isCurrentFolderOkay =" << isCurrentFolderOkay
-//             << "icon row =" << thumbView->currentIndex().row()
+             // << "isCurrentFolderOkay =" << isCurrentFolderOkay
+             // << "icon row =" << thumbView->currentIndex().row()
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
@@ -2142,16 +2142,26 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // if new folder and 1st file is a video and mode == "Table"
-    if (G::mode == "Table" && centralLayout->currentIndex() != TableTab)
+    if (G::mode == "Table" && centralLayout->currentIndex() != TableTab) {
         tableDisplay();
+    }
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
     enableStatusBarBtns();
 
     // the file path is used as an index in ImageView
-    QString fPath = current.data(G::PathRole).toString();
+    QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
+    // QString fPath = current.data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
+
+    /* debug
+    qDebug() << "MW::fileSelectionChange"
+             << "src =" << src
+             << "fPath =" << fPath
+             << "dm->currentFilePath =" << dm->currentFilePath
+                ;
+                //*/
 
     // don't scroll if mouse click source (screws up double clicks and disorients users)
     G::ignoreScrollSignal = true;

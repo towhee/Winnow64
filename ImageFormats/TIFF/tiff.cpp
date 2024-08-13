@@ -383,7 +383,7 @@ bool Tiff::parse(MetadataParameters &p,
             int thumbLong;
             w > h ? thumbLong = w : thumbLong = h;
             if (thumbLong < G::maxIconSize) break;
-            qDebug() << "Tiff::parse  thumbLong =" << thumbLong;
+            // qDebug() << "Tiff::parse  thumbLong =" << thumbLong;
             m.offsetThumb = p.offset;
         }
         if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;

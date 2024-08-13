@@ -96,6 +96,7 @@ public:
     QStringList noMetadataFormats;
     QStringList supportedFormats;
     QStringList videoFormats;
+    QStringList earlyNikons;
 
     QStringList ratings;
     QStringList labels;
