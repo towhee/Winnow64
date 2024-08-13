@@ -24,10 +24,11 @@
 void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
+    /*
     qDebug() << "MW::filterDockTabMousePress"
              << "filterDock->isVisible() =" << filterDock->isVisible()
              << "filters->filtersBuilt =" << filters->filtersBuilt
-        ;
+        ; //*/
 
     // Clicking on the filter dock tab toggles visibility before this function is called,
     // so test for the opposite.

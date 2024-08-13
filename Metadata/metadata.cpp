@@ -824,7 +824,7 @@ bool Metadata::parseHEIF()
     if (G::isLogger) G::log("Metadata::parseHEIF");
     // might be a JPG
     if (Utilities::get16(p.file.read(2)) == 0xFFD8) {
-        qDebug() << "Metadata::parseHEIF is a jpg";
+        // qDebug() << "Metadata::parseHEIF is a jpg";
         bool ok = parseJPG(0);
         return ok;
     }
@@ -1066,7 +1066,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         p.rpt << Utilities::centeredRptHdr('=', "Metadata Diagnostics for Current Image");
         p.rpt << "\n";
     }
-//    clearMetadata();  // moved to loadMetadata
+
     m.fPath = path;
     p.fPath = path;
     p.file.setFileName(path);
@@ -1240,8 +1240,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     m.shootingInfo = s;
     m.loadMsecPerMp = 0;
 
-//    m.thumbUnavailable = thumbUnavailable;
-//    m.imageUnavailable = imageUnavailable;
     //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
     return m.metadataLoaded;
 }

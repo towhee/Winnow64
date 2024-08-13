@@ -91,8 +91,9 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     bool isFileSelectionChange = true;
     /*
     qDebug() << "Selection::setCurrentIndex about to emit loadConcurrent"
-             << sfIdx.row()
-             << isFileSelectionChange;
+             << "isFileSelectionChange =" << isFileSelectionChange
+             << "sfIdx.row() =" << sfIdx.row()
+        ;
         //*/
     emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
 }
@@ -136,18 +137,8 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
         G::popUp->reset();
     }
 
-    // #ifdef METAREAD2
-    // if (ok) {
-    //     G::popUp->reset();
-    // }
-    // else {
-    //     G::popUp->showPopup("Selection is disabled");
-    //     qApp->beep();
-    // }
-    // #endif
-
     //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
-    ///*
+
     bool isNoModifier = modifiers & Qt::NoModifier;
     bool isControlModifier = modifiers & Qt::ControlModifier;
     bool isShiftModifier = modifiers & Qt::ShiftModifier;

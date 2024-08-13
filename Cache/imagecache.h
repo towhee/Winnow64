@@ -84,7 +84,7 @@ signals:
                          ImageCacheData::Cache cache,
                          QString source = "");
     void centralMsg(QString msg);
-    void updateIsRunning(bool, bool);
+    void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
     void updateCacheOnThumbs(QString fPath, bool isCached, QString src);
     void dummyDecoder(int id);
 

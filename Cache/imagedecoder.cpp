@@ -148,7 +148,7 @@ bool ImageDecoder::load()
     }
     // heic saved as a jpg
     if (metadata->hasHeic.contains(ext) && n.lengthFull) {
-        qDebug() << "ImageDeecoder::load  heic saved as a jpg";
+        // qDebug() << "ImageDeecoder::load  heic saved as a jpg";
         isEmbeddedJpg = true;
     }
 
@@ -253,20 +253,17 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        qDebug() << "ImageDecoder::load" << "HEIC image" << fPath;
         if (!image.load(fPath)) {
             errMsg = "Could not read because decoder failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             imFile.close();
             status = Status::Invalid;
-            qDebug() << "ImageDecoder::load" << "HEIC image decoder failed" << fPath;
             return false;
         }
         else if (image.width() == 0) {
             errMsg = "Unable to read heic image";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             status = Status::Invalid;
-            qDebug() << "ImageDecoder::load" << "HEIC image Unable to read heic imag" << fPath;
             return false;
         }
         imFile.close();
@@ -358,6 +355,7 @@ bool ImageDecoder::load()
         #endif
         #ifdef Q_OS_MAC
         decoderToUse = TurboJpg;
+        // decoderToUse = QtImage;
         #endif
 
         if (decoderToUse == Rory) {
