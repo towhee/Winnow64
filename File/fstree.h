@@ -40,7 +40,7 @@ public:
     int imageCountColumn = 4;
 
 signals:
-    void update() const;
+    void update();
 
 private:
     QDir *dir;
