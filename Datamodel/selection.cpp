@@ -100,7 +100,8 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)
 {
-    if (G::isLogger || isDebug) G::log("Selection::updateCurrentIndex");
+    if (G::isLogger || G::isFlowLogger || isDebug)
+        G::log("Selection::updateCurrentIndex", "row = " + QString::number(sfIdx.row()));
 
     // update datamodel current parameters
     dm->setCurrent(sfIdx, G::dmInstance);
@@ -111,22 +112,26 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 
 void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 {
-    if (G::isLogger || isDebug) G::log("Selection::select QString");
+    if (G::isLogger || G::isFlowLogger || isDebug) G::log("Selection::select(QString)", fPath);
     //qDebug() << "Selection::select QString" << fPath;
     select(dm->proxyIndexFromPath(fPath), modifiers);
 }
 
 void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 {
-    if (G::isLogger || isDebug) G::log("Selection::select(row)");
+    if (G::isLogger || G::isFlowLogger || isDebug)
+        G::log("Selection::select(row)", "row = " + QString::number(sfRow));
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     //qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
     select(sfIdx, modifiers);
 }
 
-void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers)
+void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QString src)
 {
-    if (G::isLogger || isDebug) G::log("Selection::select(QModelIndex)");
+    if (G::isLogger || G::isFlowLogger || isDebug)
+        G::log("Selection::select(QModelIndex)",
+               "row = " + QString::number(sfIdx.row()) +
+               " src = " + src);
 
     if (!sfIdx.isValid()) {
         G::popUp->showPopup("Selection is invalid");

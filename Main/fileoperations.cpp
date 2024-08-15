@@ -395,7 +395,7 @@ void MW::deleteFiles(QStringList paths)
     sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
 
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    sel->select(sfIdx);
+    sel->select(sfIdx, Qt::NoModifier,"MW::deleteFiles");
 
     /* Just in case deletion was from a bookmark folder then force update for image count.
        This is required if fsTree is hidden, and consequently, is not receiving signals.

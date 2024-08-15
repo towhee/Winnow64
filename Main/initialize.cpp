@@ -532,7 +532,8 @@ void MW::createThumbView()
     }
 
     // double mouse click fires displayLoupe
-    connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+    // connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
+    connect(thumbView, &IconView::displayLoupe, this, &MW::loupeDisplay);
 
     // back and forward mouse buttons toggle pick
 //    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);

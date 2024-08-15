@@ -86,15 +86,17 @@ TableView::TableView(QWidget *parent, DataModel *dm)
 
 void TableView::updateVisible(QString src)
 {
-    if (G::isLogger) G::log("TableView::setViewportParameters");
+    if (G::isLogger) G::log("TableView::updateVisible");
     //    /*
     //qDebug() << "TableView::updateVisible src =" << src;
     //*/
-    firstVisibleRow = rowAt(0);
-    lastVisibleRow = rowAt(height());
-    if (lastVisibleRow < 0) lastVisibleRow = 0;
-    midVisibleRow = lastVisibleRow / 2;
+    int lastRow = dm->sf->rowCount() - 1;
     if (rowHeight(0)) visibleRowCount = height() / rowHeight(0);
+    else visibleRowCount = 0;
+    firstVisibleRow = rowAt(0);
+    lastVisibleRow = firstVisibleRow + visibleRowCount - 1;
+    if (lastVisibleRow > lastRow) lastVisibleRow = lastRow;
+    midVisibleRow = lastVisibleRow / 2;
     /*
     qDebug() << "TableView::updateVisible"
              << "firstVisibleRow =" << firstVisibleRow
@@ -118,21 +120,20 @@ bool TableView::isRowVisible(int row)
 
 void TableView::scrollToRow(int row, QString source)
 {
-    if (G::isLogger) G::log("TableView::scrollToRow", source);
+    if (G::isLogger || G::isFlowLogger) G::log("TableView::scrollToRow", source);
     /* debug
     qDebug() << "TableView::scrollToRow" << objectName() << "row =" << row
              << "source =" << source;
              //*/
-    QModelIndex idx = dm->sf->index(row, 0);
-//    scrollTo(idx);
-    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+    QModelIndex sfIdx = dm->sf->index(row, 0);
+    scrollTo(sfIdx, QAbstractItemView::PositionAtCenter);
 }
 
 void TableView::scrollToCurrent()
 {
     if (G::isLogger) G::log("TableView::scrollToCurrent");
-    QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
-    scrollTo(idx, ScrollHint::PositionAtCenter);
+    QModelIndex sfIdx = dm->sf->index(currentIndex().row(), 1);
+    scrollTo(sfIdx, ScrollHint::PositionAtCenter);
 }
 
 int TableView::defaultColumnWidth(int column)
@@ -343,7 +344,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
     // propogate mouse press if pressed in a table row, otherwise do nothing
     if (event->button() == Qt::LeftButton) {
         G::fileSelectionChangeSource = "TableMouseClick";
-        m5->sel->select(sfIdx, event->modifiers());
+        m5->sel->select(sfIdx, event->modifiers(), "TableView::mousePressEvent");
     }
 }
 
@@ -352,11 +353,15 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* event)
     if (G::isLogger) G::log("TableView::mouseDoubleClickEvent");
 
     // check mouse click was not in area after last row
-    QModelIndex idx = indexAt(event->pos());
-    if (!idx.isValid()) return;
+    QModelIndex sfIdx = indexAt(event->pos());
+    if (!sfIdx.isValid()) return;
 
     if (!event->modifiers() && event->button() == Qt::LeftButton) {
+        G::fileSelectionChangeSource = "TableMouseClick";
+        m5->sel->select(sfIdx, event->modifiers(), "TableView::mouseDoubleClickEvent");
+        qDebug() << "TableView::mouseDoubleClickEvent row =" << sfIdx.row();
         emit displayLoupe();
+        // thumbView->scrollToRow(idx.row(), "TableView::mouseDoubleClickEvent");
     }
 }
 
