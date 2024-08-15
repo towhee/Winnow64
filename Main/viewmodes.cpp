@@ -28,7 +28,7 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    /*
+    // /*
     if (!G::isInitializing && G::isLogger)
         qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
                  << QVariant(wasThumbDockVisible).toString()
@@ -79,7 +79,6 @@ void MW::loupeDisplay()
     thumbView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
-//    updateIconRange(-1, "MW::loupeDisplay1");
     if (prevMode == "Table") {
         if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
         else scrollRow = tableView->midVisibleRow;
@@ -89,7 +88,6 @@ void MW::loupeDisplay()
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
-        //qDebug() << "MW::loupeDisplay" << dm->currentSfRow;
         scrollRow = dm->currentSfRow;
     }
     G::ignoreScrollSignal = false;

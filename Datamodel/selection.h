@@ -15,7 +15,9 @@ public:
               IconView *gridView, TableView *tableView);
     void select(QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(int sfRow, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
-    void select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void select(QModelIndex sfIdx,
+                Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                QString src = "");
     void select(QModelIndex sfIdx, QModelIndex sfIdx2);
     void updateCurrentIndex(QModelIndex sfIdx);
     void setCurrentIndex(QModelIndex sfIdx, bool clearSelection = true);

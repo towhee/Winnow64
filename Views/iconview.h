@@ -124,6 +124,7 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
     void displayLoupe();
+    void displayVideo();
     void updateThumbDockHeight();
 
 private:
@@ -138,6 +139,7 @@ private:
     float yPct;
 
     bool isLeftMouseBtnPressed;
+    bool justMouseDoubleClicked = false;
     bool isMouseDrag;
     bool wheelSpinningOnEntry;
     QTimer wheelTimer;

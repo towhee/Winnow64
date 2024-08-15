@@ -120,8 +120,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fixed mouseDoubleClick on ThumbView while in Table mode behavior
 - ImageCache running indicator not turning off if filter and everything already cached
-- ImageView not updating if in Grid or Table view, change row and fo to Loupe view
+- ImageView not updating if in Grid or Table view, change row and to Loupe view
 - Add help for film strip and status bar symbols
 - Move Image modification to separate Preferences category from General
 - Redo embedded thumbnails

@@ -153,7 +153,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
     // qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
-    if (G::isLogger || G::isFlowLogger) G::log("ImageView::loadImage", "Src:" + src + " " + fPath);
+    if (G::isLogger || G::isFlowLogger) {
+    QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
+        G::log("ImageView::loadImage", row + " Src:" + src + " " + fPath);
+    }
 
     // ignore if result of remote operation
     if (G::isRemote) return false;

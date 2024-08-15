@@ -31,7 +31,7 @@ void MW::keyRight(Qt::KeyboardModifiers modifier)
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Right"));
+        sel->select(compareImages->go("Right"), Qt::NoModifier,"MW::keyRight");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next();
@@ -44,7 +44,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Left"));
+        sel->select(compareImages->go("Left"), Qt::NoModifier,"MW::keyLeft");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev();

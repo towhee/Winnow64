@@ -159,7 +159,7 @@ void MW::filterChange(QString source)
 
     // select after filtration
     if (newSelectReqd) {
-        sel->select(newSfIdx);
+        sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
     else {
         sel->updateCurrentIndex(newSfIdx);
@@ -493,7 +493,7 @@ void MW::sortReverse()
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
-    sel->select(idx);
+    sel->select(idx, Qt::NoModifier,"MW::sortReverse");
 
     scrollToCurrentRow();
 }

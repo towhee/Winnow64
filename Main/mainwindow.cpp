@@ -985,7 +985,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         G::log("MW::eventFilter", "Performance profiling");
         qDebug() << event <<  obj;
     }
-//    */
+    //    */
 
     /* ALL KEY PRESSES HIDE POPUP
     if (!G::isInitializing &&
@@ -1011,12 +1011,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
-    /* MOUSE BUTTON DOUBLE CLICK */
+    /* MOUSE BUTTON DOUBLE CLICK
     {
         if (event->type() == QEvent::MouseButtonDblClick) {
             qDebug() << event << obj << QCursor::pos();
         }
-    }
+    }   //*/
 
     /* DEBUG SPECIFIC EVENT (uncomment to use)
     if (obj->objectName() == "VideoWidget") {
@@ -2087,7 +2087,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MW::fileSelectionChange", "Src = " + src);
+
+        G::log("MW::fileSelectionChange",
+               "row = " + QString::number(current.row()) + " Src = " + src);
         /*
         qDebug() << "MW::fileSelectionChange"
                  << "src =" << src
@@ -2110,16 +2112,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
-             << "current =" << current
+             << "G::mode =" << G::mode
+             // << "current =" << current
              << "row =" << current.row()
-             << "dm->currentDmIdx =" << dm->currentDmIdx
-             << "G::isInitializing =" << G::isInitializing
+             // << "dm->currentDmIdx =" << dm->currentDmIdx
+             // << "G::isInitializing =" << G::isInitializing
+             // << "isFilterChange =" << isFilterChange
+             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
              // << "G::isLinearLoadDone =" << G::isLinearLoadDone
              // << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
-             << "isFilterChange =" << isFilterChange
              // << "isCurrentFolderOkay =" << isCurrentFolderOkay
              // << "icon row =" << thumbView->currentIndex().row()
-             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
 
@@ -2187,8 +2190,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (thumbView->isVisible())  thumbView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
-    G::ignoreScrollSignal = false;
-    G::fileSelectionChangeSource = "";
+    // G::ignoreScrollSignal = false;
+    // G::fileSelectionChangeSource = "";
 
     // if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
@@ -2201,11 +2204,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::useMultimedia) videoView->stop();
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
-        if (isVideo && G::mode == "Loupe") {
-            if (G::useMultimedia) {
-                centralLayout->setCurrentIndex(VideoTab);
-                videoView->load(fPath);
-                videoView->play();
+        if (isVideo) {
+            if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                if (G::useMultimedia) {
+                    qDebug() << "MW::fileSelectionChange play video";
+                    centralLayout->setCurrentIndex(VideoTab);
+                    videoView->load(fPath);
+                    videoView->play();
+                }
             }
         }
         else if (G::useImageView) {
@@ -2222,6 +2228,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
         }
     }
+
+    G::ignoreScrollSignal = false;
+    G::fileSelectionChangeSource = "";
 
     // update caching
     //fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
@@ -2772,7 +2781,9 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::loadConcurrent", "row = " + QString::number(sfRow)
-        + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString());
+        + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
+        + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString()
+        + " src = " + src);
     }
 
     /*
@@ -2917,7 +2928,8 @@ void MW::thumbHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger) G::log("MW::thumbHasScrolled");
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::thumbasScrolled", "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString());
 //    if (G::isLogger)
 //        qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
@@ -2965,9 +2977,11 @@ void MW::gridHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
-                 << QString::number(gridView->isVisible());
+    if (G::isLogger || G::isFlowLogger) {
+        G::log("MW::gridHasScrolled", "isVisible = " + QVariant(gridView->isVisible()).toString());
+        // qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
+        //          << QVariant(gridView->isVisible()).toString();
+    }
     if (G::isInitializing) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -3006,12 +3020,16 @@ void MW::tableHasScrolled()
     icons within the cache range.
 */
     if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::tableHasScrolled";
+        G::log("MW::tableHasScrolled");
     if (G::isInitializing) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(false, "MW::tableHasScrolled");
+        /*
+        qDebug() << "MW::tableHasScrolled"
+                 << "tableView->midVisibleRow =" << tableView->midVisibleRow
+                    ; //*/
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         }
@@ -4869,7 +4887,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
     }
 
     QString result = embedThumbnails();
-    if (src == "FromLoading") sel->select(dm->currentSfIdx);
+    if (src == "FromLoading") sel->select(dm->currentSfIdx, Qt::NoModifier,"MW::chkMissingEmbeddedThumbnails");
     thumbView->refreshThumbs();
     G::popUp->showPopup(result, 3000);
 }

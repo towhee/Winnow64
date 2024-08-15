@@ -40,7 +40,7 @@ public:
     int imageCountColumn = 4;
 
 signals:
-    void update();
+    void update() const;        // const req'd but shows warning
 
 private:
     QDir *dir;
