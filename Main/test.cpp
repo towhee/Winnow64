@@ -184,10 +184,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     qDebug()
-        << "bookmarks->isEnabled()" << bookmarks->isEnabled()
-        << "bookmarks->isActiveWindow()" << bookmarks->isActiveWindow()
-        << "bookmarks->isHidden()" << bookmarks->isHidden()
-        << "bookmarks->isVisible()" << bookmarks->isVisible()
+        << QApplication::keyboardModifiers()
         ;
     bookmarks->updateBookmarks();
 }

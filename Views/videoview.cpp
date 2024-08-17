@@ -214,17 +214,12 @@ bool VideoView::event(QEvent *event)
 */
     //qDebug() << "VideoView::event" << event;
     if (event->type() == QEvent::NativeGesture) {
-        if (G::isLogger) qDebug() << "VideoView::event", "QEvent::NativeGesture";
-        emit togglePick();
-        /*
+        if (G::isLogger) G::log("VideoView::event", "QEvent::NativeGesture");
+        // qDebug() << "VideoView::event NativeGesture";
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
-        if (e->value() == 0) {
-            // forward
-        }
-        else {
-            // back
-        }
-        //*/
+        int direction = static_cast<int>(e->value());
+        emit mouseSideKeyPress(direction);
+        return true;
     }
     QWidget::event(event);
     return true;

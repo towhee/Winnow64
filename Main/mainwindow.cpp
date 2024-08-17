@@ -631,6 +631,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
 void MW::whenActivated(Qt::ApplicationState state)
 {
+    // NOT BEING USED (REMOVED FROM MAIN.CPP)
 /*
     Invoked after the application becomes active.
 
@@ -1044,26 +1045,55 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* KEYPRESS INTERCEPT (NAVIGATION) */
+    /* NATIVE GESTURE LOGITECH SIDE KEY IN CENTRAL WIDGET */
+    {
+        if (!G::isInitializing && (event->type() == QEvent::NativeGesture)) {
+            if (obj->objectName() == "centralWidget") {
+                static int prevLayoutIndex = -1;
+                if (prevLayoutIndex == MessageTab) {
+                    /*
+                    qDebug() << "MW::eventFilter QEvent::NativeGesture"
+                             << "obj->objectName:" << obj->objectName()
+                             << "row =" << dm->currentSfRow
+                                ; //*/
+                    QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
+                    int direction = static_cast<int>(e->value());
+                    mouseSideKeyPress(direction);
+                }
+                prevLayoutIndex = centralLayout->currentIndex();
+            }
+        }
+    }
+
+    /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
+             QKeyEvent *e = static_cast<QKeyEvent *>(event);
+             Qt::KeyboardModifiers k = e->modifiers();
+             /* Assign global modifier status here because not all event support modifiers,
+                including QEvent::NativeGesture, which is used to capture forward and back keys
+                on a logitech mouse in IconView. */
+             G::isShift = k & Qt::ShiftModifier;
+             G::isControl = k & Qt::ControlModifier;
+             G::isAlt = k & Qt::AltModifier;
+             G::isMeta = k & Qt::MetaModifier;
+             G::isNoModifier = !G::isShift && !G::isControl && !G::isAlt && !G::isMeta;
+
             if (obj->objectName() == "MWWindow") {
-                QKeyEvent *e = static_cast<QKeyEvent *>(event);
-                if (G::isLogger) {
-                    qDebug() << "MW::eventFilter" << e->type() << e
-                             << "key =" << e->key()
-                             << "modifier =" << e->modifiers()
-                             << "obj->objectName:" << obj->objectName()
-                        ;}
-                // if (G::isFlowLogger) G::logger.skipLine();
-                if (G::isFlowLogger) G::log("MW::eventFilter", "Key = " + QString::number(e->key()));
+                // /*
+                qDebug() << "MW::eventFilter"
+                         << "obj->objectName:" << obj->objectName().leftJustified(25)
+                         // << "key =" << e->key()
+                         << "G::isNoModifier =" << QVariant(G::isNoModifier).toString().leftJustified(5)
+                         << "G::isShift =" << QVariant(G::isShift).toString().leftJustified(5)
+                         << "G::isControl =" << QVariant(G::isControl).toString().leftJustified(5)
+                         << "G::isAlt =" << QVariant(G::isAlt).toString().leftJustified(5)
+                         << "G::isMeta =" << QVariant(G::isMeta).toString().leftJustified(5)
+                         << k
+                            ; //*/
 
                 // ignore if modifier pressed
-                Qt::KeyboardModifiers k = e->modifiers();
-                bool isModifier = k & Qt::AltModifier;
-                //qDebug() << "MW::eventFilter isModifier =" << isModifier;
-
-                if (!isModifier) {
+                // if (!G::isAlt) {
                     //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
                     if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
                     if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
@@ -1073,8 +1103,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     if (e->key() == Qt::Key_End) sel->last(e->modifiers());
                     if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
                     if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
-                }
+                // }
             }
+        }
+
+        if (!G::isInitializing && (event->type() == QEvent::KeyRelease)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            QMainWindow::keyReleaseEvent(e);
+            Qt::KeyboardModifiers k = QApplication::keyboardModifiers();
+            if (k & Qt::NoModifier) G::isNoModifier = false;
+            if (k & Qt::ShiftModifier) G::isShift = false;
+            if (k & Qt::ControlModifier) G::isControl = false;
+            if (k & Qt::AltModifier) G::isAlt = false;
+            if (k & Qt::MetaModifier) G::isMeta = false;
+            if (G::isShift || G::isControl || G::isAlt || G::isMeta) G::isNoModifier = false;
+            else G::isNoModifier = true;
+            /*
+            qDebug() << "MW::eventFilter KeyRelease"
+                     << obj->objectName()
+                     << k
+                     << G::isNoModifier;//*/
         }
     }
 
@@ -2217,7 +2265,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         else if (G::useImageView) {
             if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
                 updateClassification();
-                if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+                if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                    centralLayout->setCurrentIndex(LoupeTab);
+                }
             }
             else {
                 if (!imageView->isFirstImageNewFolder) {
@@ -3640,6 +3690,7 @@ void MW::preferences(QString text)
 
 */
     if (G::isLogger) G::log("MW::preferences");
+    if (pref == nullptr) createPreferences();
     if (preferencesDlg == nullptr) {
         // pref = new Preferences(this);
         if (text != "") pref->expandBranch(text);

@@ -680,7 +680,7 @@ void MW::setRating()
     }
 
     // auto advance
-    if (autoAdvance) sel->next();
+    if (G::autoAdvance) sel->next();
 }
 
 int MW::ratingLogCount()
@@ -868,7 +868,7 @@ void MW::setColorClass()
     }
 
     // auto advance
-    if (autoAdvance) sel->next();
+    if (G::autoAdvance) sel->next();
 }
 
 int MW::colorClassLogCount()

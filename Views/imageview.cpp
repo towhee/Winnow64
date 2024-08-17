@@ -1060,18 +1060,12 @@ bool ImageView::event(QEvent *event) {
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    //qDebug() << "ImageView::event" << event << event->type();
     if (event->type() == QEvent::NativeGesture) {
-        emit togglePick();
-        /*
+        // qDebug() << "ImageView::event" << event << event->type() << QApplication::keyboardModifiers();
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
-        if (e->value() == 0) {
-            // forward
-        }
-        else {
-            // back
-        }
-        //*/
+        int direction = static_cast<int>(e->value());
+        emit mouseSideKeyPress(direction);
+        return true;
     }
 
     if (event->type() == QEvent::Enter) {
@@ -1107,7 +1101,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mousePressEvent", "isScrollable =" + QVariant(isScrollable).toString());
-    /*
+    // /*
     qDebug() << "\nImageView::mousePressEvent"
              << "Button =" << event->button()
         ;
@@ -1118,7 +1112,6 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // isLeftMouseBtnPressed = true;
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
@@ -1136,15 +1129,42 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // forward and back buttons
+    // back button
     if (event->button() == Qt::BackButton) {
-        // thumbView->selectPrev();
-        emit togglePick();
+        bool noModifier = event->modifiers() == Qt::NoModifier;
+        qDebug() << "ImageView::mousePressEvent BackButton"
+                 << "noModifier =" << noModifier
+                 << event->button()
+                 << event->modifiers()
+            ;
+        if (noModifier) {
+            sel->prev();
+        }
+        else {
+            bool autoAdvanceTemp = G::autoAdvance;
+            G::autoAdvance = false;
+            emit togglePick();
+            sel->prev();
+            G::autoAdvance = autoAdvanceTemp;
+        }
         return;
     }
+
+    // forward button
     if (event->button() == Qt::ForwardButton) {
-        // thumbView->selectNext();
-        emit togglePick();
+        bool noModifier = event->modifiers() && Qt::NoModifier;
+        qDebug() << "ImageView::mousePressEvent ForwardButton"
+                 << "noModifier =" << noModifier
+                 << event->button()
+                 << event->modifiers()
+            ;
+        if (noModifier) {
+            sel->next();
+        }
+        else {
+            emit togglePick();  // advances if autoAdvance
+            if (!G::autoAdvance) sel->next();
+        }
         return;
     }
 }
@@ -1254,6 +1274,14 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
 
     isLeftMouseBtnPressed = false;
+
+    // prevent zooming if release is outside the ImageView area
+    qDebug() << "ImageView::mouseReleaseEvent"
+             << "viewport()->rect() =" << viewport()->rect()
+             << "event->pos() =" << event->pos()
+             << "viewport()->rect().contains(event->pos()) =" << viewport()->rect().contains(event->pos())
+        ;
+    if (!viewport()->rect().contains(event->pos())) return;
 
     // zoom > zoomFit (set in scale)
     if (isScrollable) setCursor(Qt::OpenHandCursor);
