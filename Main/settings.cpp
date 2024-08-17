@@ -23,7 +23,7 @@ void MW::writeSettings()
     settings->setValue("limitFit100Pct", imageView->limitFit100Pct);
     //setting->setValue("sortColumn", sortColumn);
     //setting->setValue("sortReverse", sortReverseAction->isChecked());
-    settings->setValue("autoAdvance", autoAdvance);
+    settings->setValue("autoAdvance", G::autoAdvance);
     settings->setValue("turnOffEmbellish", turnOffEmbellish);
     settings->setValue("deleteWarning", deleteWarning);
     settings->setValue("modifySourceFiles", G::modifySourceFiles);
@@ -348,7 +348,7 @@ bool MW::loadSettings()
     // sortColumn = setting->value("sortColumn").toInt();
     // prevSortColumn = sortColumn;
     // isReverseSort = setting->value("sortReverse").toBool();
-    autoAdvance = settings->value("autoAdvance").toBool();
+    G::autoAdvance = settings->value("autoAdvance").toBool();
     turnOffEmbellish = settings->value("turnOffEmbellish").toBool();
     /*
     if (setting->contains("isFileLogger"))

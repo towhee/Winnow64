@@ -262,6 +262,7 @@ namespace G
 
     extern QString mode;
     extern QString fileSelectionChangeSource;
+    extern bool autoAdvance;
 
     extern int fontSize;                        // in pixels
     extern QString strFontSize;                 // in pixels
@@ -270,6 +271,13 @@ namespace G
     extern int textShade;
     extern int backgroundShade;
     extern QString css;
+
+    // key modifier status
+    extern bool isNoModifier;
+    extern bool isShift;
+    extern bool isControl;                      // Mac: Command
+    extern bool isAlt;                          // Mac: option
+    extern bool isMeta;                         // Mac: control
 
     extern QString currRootFolder;
     extern bool ignoreScrollSignal;

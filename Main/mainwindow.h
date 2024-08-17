@@ -238,11 +238,11 @@ public:
 
     // general
     int lastPrefPage;
-//    bool mouseClickScroll;       // positionAtCenter scrolling when mouse click?
-//    int displayHorizontalPixels; // move to global
-//    int displayVerticalPixels;   // move to global
+    // bool mouseClickScroll;       // positionAtCenter scrolling when mouse click?
+    // int displayHorizontalPixels; // move to global
+    // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;
-    bool autoAdvance = false;
+    // bool autoAdvance = false;    // move to global
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
     bool isStartingWhileUpdating = true;
@@ -536,6 +536,7 @@ private slots:
     void zoomIn();
     void zoomToFit();
     void enableGoKeyActions(bool ok);
+    void mouseSideKeyPress(int direction);
     void keyRight(Qt::KeyboardModifiers modifer = Qt::NoModifier);
     void keyLeft();
     void keyUp();

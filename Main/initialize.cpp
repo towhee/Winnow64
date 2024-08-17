@@ -640,6 +640,7 @@ void MW::createVideoView()
 
     // back and forward mouse buttons toggle pick
     connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
+    connect(videoView, &VideoView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
     // drop event
     connect(videoView, &VideoView::handleDrop, this, &MW::handleDrop);
     // show mouse cursor
@@ -722,6 +723,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
+    connect(imageView, &ImageView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
     connect(imageCacheThread, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
@@ -1531,6 +1533,7 @@ void MW::createMessageView()
 void MW::createPreferences()
 {
     if (G::isLogger) G::log("MW::createPreferences");
+    qDebug() << "MW::createPreferences";
     pref = new Preferences(this);
 }
 

@@ -21,6 +21,7 @@ public:
 
 signals:
     void togglePick();
+    void mouseSideKeyPress(int direction);  // logitech mouse NativeGesture event
     void handleDrop(QString fPath);
     void showMouseCursor();
     void hideMouseCursor();

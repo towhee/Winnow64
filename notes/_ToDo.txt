@@ -8,6 +8,7 @@ WHAT'S NEW
 - Pick audio
 - Tweak mouse wheel / trackpad sensitivity algorithm
 - Help for film strip and status bar symbols
+- Change use of forward/back buttons on mouse
 
 BUGS / TO DO
 - Reverse sort not working

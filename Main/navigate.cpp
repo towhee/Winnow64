@@ -25,13 +25,52 @@ void MW::enableGoKeyActions(bool ok)
 //    }
 }
 
+void MW::mouseSideKeyPress(int direction) {
+/*
+    back/forward buttons on Logitech mouse sent from central widget.
+    direction == 0 forward, else back
+*/
+    if (G::isLogger || G::isFlowLogger) {
+        G::log("MW::nativeLeftRight", "ROW: " + QString::number(dm->currentSfRow));
+    }
+    if (direction == 0) {
+        // forward
+        if (G::isNoModifier) {
+            qDebug() << "MW::mouseSideKeyPress"
+                     << "row =" << dm->currentSfRow
+                     << "centralLayout->currentIndex() =" << centralLayout->currentIndex()
+                ;
+            sel->next();
+        }
+        else {
+            emit togglePick();  // advances if autoAdvance
+            if (!G::autoAdvance) sel->next();
+        }
+        return;
+    }
+    else {
+        // backward
+        if (G::isNoModifier) {
+            sel->prev();
+        }
+        else {
+            bool autoAdvanceTemp = G::autoAdvance;
+            G::autoAdvance = false;
+            emit togglePick();
+            sel->prev();
+            G::autoAdvance = autoAdvanceTemp;
+        }
+        return;
+    }
+}
+
 void MW::keyRight(Qt::KeyboardModifiers modifier)
 {
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Right"), Qt::NoModifier,"MW::keyRight");
+        sel->select(compareImages->go("Right"), Qt::NoModifier, "MW::keyRight");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next();
@@ -44,7 +83,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Left"), Qt::NoModifier,"MW::keyLeft");
+        sel->select(compareImages->go("Left"), Qt::NoModifier, "MW::keyLeft");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev();
@@ -196,9 +235,6 @@ void MW::jump()
     private:
         QLineEdit *lineEdit;
     };
-
-//    QStringList empty;
-//    QString srow = Utilities::inputText("Jump","Enter row:", empty, "");
 
     LineEditDialog dialog(this);
     QString srow;

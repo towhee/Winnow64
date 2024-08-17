@@ -1156,8 +1156,8 @@ void IconView::mousePressEvent(QMouseEvent *event)
     // record modifier (used in IconView::selectionChanged)
     modifiers = event->modifiers();
     // index clicked
-    QModelIndex idx = indexAt(event->pos());
-    // mouse position
+    QModelIndex sfIdx = indexAt(event->pos());
+    // mouse position used for jiggle allowance
     mousePressPos = event->pos();
 
     // is start tab currently visible
@@ -1168,28 +1168,28 @@ void IconView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    if (!idx.isValid()) return;
+    if (!sfIdx.isValid()) return;
 
-    // forward and back buttons
-    // see also IconView::event for event->type() == QEvent::NativeGesture for
-    // Logitech mouse
+    /* forward and back buttons
+       see also IconView::event for event->type() == QEvent::NativeGesture
+       for Logitech mouse */
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
         /*
         qDebug() << "IconView::mousePressEvent forward/back button" << idx;
         //*/
-        if (idx.isValid()) {
-            m2->togglePickMouseOverItem(idx);
+        if (sfIdx.isValid()) {
+            m2->togglePickMouseOverItem(sfIdx);
         }
         return;
     }
 
     // left button or touch
     if (event->button() == Qt::LeftButton) {
-        qDebug() << "IconView::mousePressEvent LeftMouseBtnPressed  row =" << idx.row();
+        // qDebug() << "IconView::mousePressEvent LeftMouseBtnPressed  row =" << sfIdx.row();
         isLeftMouseBtnPressed = true;
         if (objectName() == "Grid") G::fileSelectionChangeSource = "GridMouseClick";
         else G::fileSelectionChangeSource =  "ThumbMouseClick";
-        dragQueue.append(idx.row());
+        dragQueue.append(sfIdx.row());
     }
 }
 
@@ -1204,36 +1204,21 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
         ; //*/
 
     if (isLeftMouseBtnPressed) {
-        qDebug() << "IconView::mouseMoveEvent LeftMouseBtnPressed  row ="
-                 << indexAt(event->pos()).row();
         // allow small 'jiggle' tolerance before start drag
         int deltaX = qAbs(mousePressPos.x() - event->pos().x());
         int deltaY = qAbs(mousePressPos.y() - event->pos().y());
         if (deltaX > 2)  isMouseDrag = true;
         if (deltaY > 2)  isMouseDrag = true;
         if (isMouseDrag) {
-            QModelIndex idx = indexAt(event->pos());
-            if (!dragQueue.contains(idx.row())) {
-                if (event->modifiers() & Qt::ControlModifier) m2->sel->toggleSelect(idx);
-                if (event->modifiers() & Qt::ShiftModifier)  m2->sel->select(idx, event->modifiers(), "IconView::mouseMoveEvent");
-                dragQueue.append(idx.row());
-            }
+            // QModelIndex idx = indexAt(event->pos());
+            // if (!dragQueue.contains(idx.row())) {
+            //     if (event->modifiers() & Qt::ControlModifier) m2->sel->toggleSelect(idx);
+            //     if (event->modifiers() & Qt::ShiftModifier)  m2->sel->select(idx, event->modifiers(), "IconView::mouseMoveEvent");
+            //     dragQueue.append(idx.row());
+            // }
             if (event->modifiers() & Qt::AltModifier) startDrag(Qt::CopyAction);
             if (!event->modifiers()) startDrag(Qt::MoveAction);
         }
-    }
-    else {
-        qDebug() << "IconView::mouseMoveEvent LeftMouseBtnPressed not precessed, do nothing"
-                 << " row =" << indexAt(event->pos()).row();
-        /*
-        // missing thumb tooltip
-        qDebug() << "IconView::mouseMoveEvent missingThumbRect"
-                 << "Mouse =" << event->pos()
-                 << "Missing rect =" << iconViewDelegate->missingThumbRect
-            ;
-        if (iconViewDelegate->missingThumbRect.contains(event->pos())) {
-        }
-        //*/
     }
 }
 
@@ -1243,61 +1228,54 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     /*
     qDebug() << "IconView::mouseReleaseEvent"
              << event
+             << " row =" << indexAt(event->pos()).row()
              << "btn =" << event->button()
              << "modifiers =" << event->modifiers()
              << "G::mode =" << G::mode
         ; //*/
 
-    // Chk if not loupe view and mouse double click happened
-    if (justMouseDoubleClicked) {
-        qDebug() << "IconView::mouseReleaseEvent ignore because justMouseDoubleClicked"
-                 << " row =" << indexAt(event->pos()).row();
-        justMouseDoubleClicked = false;
-        // scrollToCurrent("IconView::mouseReleaseEvent");
+    QModelIndex sfIdx = indexAt(event->pos());
+
+    // update selection
+    if (sfIdx.isValid()) {
+        m2->sel->select(sfIdx, modifiers, "IconView::mouseReleaseEvent");
     }
-    else {
-        qDebug() << "IconView::mouseReleaseEvent business as usual"
-                 << " row =" << indexAt(event->pos()).row();
-        QModelIndex idx = indexAt(event->pos());
 
-        // update selection
-        m2->sel->select(idx, modifiers, "IconView::mouseReleaseEvent");
+    /* debug
+    qDebug() << "\nIconView::mouseReleaseEvent"
+             << "\n" << "idx =" << idx
+             << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
+             << "\n" << "row =" << idx.row()
+             << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
+             << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
+             << "\n" << "dm selected =" << dm->isSelected(idx.row())
+             << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
+                ;
+                //*/
 
+    if (!event->modifiers() && event->button() == Qt::LeftButton && G::mode == "Loupe") {
+        QString src = "IconView::mouseReleaseEvent";
+        // Capture the percent coordinates of the mouse click within the thumbnail
+        // so that the full scale image can be zoomed to the same point.
+        QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
+        QPoint iconPt = event->pos() - iconRect.topLeft();
+        xPct = iconPt.x() * 1.0 / iconRect.width();
+        yPct = iconPt.y() * 1.0 / iconRect.height();
         /* debug
-        qDebug() << "\nIconView::mouseReleaseEvent"
-                 << "\n" << "idx =" << idx
-                 << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
-                 << "\n" << "row =" << idx.row()
-                 << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
-                 << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
-                 << "\n" << "dm selected =" << dm->isSelected(idx.row())
-                 << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
-                    ;
-                    //*/
-
-        if (!event->modifiers() && event->button() == Qt::LeftButton && G::mode == "Loupe") {
-            QString src = "IconView::mouseReleaseEvent";
-            // Capture the percent coordinates of the mouse click within the thumbnail
-            // so that the full scale image can be zoomed to the same point.
-            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
-            QPoint iconPt = event->pos() - iconRect.topLeft();
-            xPct = iconPt.x() * 1.0 / iconRect.width();
-            yPct = iconPt.y() * 1.0 / iconRect.height();
-            /* debug
-            qDebug() << "IconView::mouseReleaseEvent"
-                     << "\n currentIndex =" << currentIndex()
-                     << "\n iconRect     =" << iconRect
-                     << "\n mousePt      =" << event->pos()
-                     << "\n iconPt       =" << iconPt
-                     << "\n xPct         =" << xPct
-                     << "\n yPct         =" << yPct;
-            //*/
-            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-                // signal ImageView
-                emit thumbClick(xPct, yPct);
-            }
+        qDebug() << "IconView::mouseReleaseEvent"
+                 << "\n currentIndex =" << currentIndex()
+                 << "\n iconRect     =" << iconRect
+                 << "\n mousePt      =" << event->pos()
+                 << "\n iconPt       =" << iconPt
+                 << "\n xPct         =" << xPct
+                 << "\n yPct         =" << yPct;
+        //*/
+        if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+            // signal ImageView
+            emit thumbClick(xPct, yPct);
         }
     }
+
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
 }
@@ -1323,30 +1301,15 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
     // required to rapidly toggle ctrl click select/deselect without a delay
     if (event->modifiers() & Qt::ControlModifier) {
-        qDebug() << "IconView::mouseDoubleClickEvent ctrl key pressed"
-                 << " row =" << indexAt(event->pos()).row();
         QListView::mouseDoubleClickEvent(event);
         return;
     }
 
-    // show/play wehn not in loupe mode
+    // show/play when not in loupe mode
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
-        qDebug() << "IconView::mouseDoubleClickEvent not loupe"
-                 << " row =" << indexAt(event->pos()).row();
-        // justMouseDoubleClicked = true;  // rgh remove
-        // emit displayLoupe();
         G::fileSelectionChangeSource = "IconMouseDoubleClick";
-        // G::mode = "Loupe";
-        return;
-        if (objectName() == "GridView") {
-            // scrollToRow(currentIndex().row(), "IconView::mouseDoubleClickEvent");
-        }
+        G::mode = "Loupe";
     }
-
-    // if (G::mode == "Loupe" && event->button() == Qt::LeftButton) {
-    //     qDebug() << "IconView::mouseDoubleClickEvent is loupe, do nothing"
-    //              << " row =" << indexAt(event->pos()).row();
-    // }
 }
 
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)

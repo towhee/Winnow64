@@ -190,7 +190,7 @@ void MW::togglePick()
     updateClassification();
 
     // auto advance
-    if (autoAdvance && !picksBeingFiltered) sel->next();
+    if (G::autoAdvance && !picksBeingFiltered) sel->next();
 }
 
 void MW::toggleReject()

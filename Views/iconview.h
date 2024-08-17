@@ -139,7 +139,7 @@ private:
     float yPct;
 
     bool isLeftMouseBtnPressed;
-    bool justMouseDoubleClicked = false;
+    // bool justMouseDoubleClicked = false;
     bool isMouseDrag;
     bool wheelSpinningOnEntry;
     QTimer wheelTimer;

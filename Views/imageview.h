@@ -106,6 +106,7 @@ signals:
     void setCentralMessage(QString msg);
     void killSlideshow();                   // only call when slideshow is active
     void keyPress(QKeyEvent *event);
+    void mouseSideKeyPress(int direction);  // logitech mouse NativeGesture event
     void zoomChange(qreal zoomValue, QString src);
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);

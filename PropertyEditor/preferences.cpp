@@ -270,7 +270,7 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "autoAdvance") {
-        mw->autoAdvance = v.toBool();
+        G::autoAdvance = v.toBool();
     }
 
     if (source == "turnOffEmbellish") {
@@ -494,7 +494,7 @@ void Preferences::addItems()
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->autoAdvance;
+    i.value = G::autoAdvance;
     i.key = "autoAdvance";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
