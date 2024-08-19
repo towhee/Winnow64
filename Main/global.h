@@ -272,13 +272,6 @@ namespace G
     extern int backgroundShade;
     extern QString css;
 
-    // key modifier status
-    extern bool isNoModifier;
-    extern bool isShift;
-    extern bool isControl;                      // Mac: Command
-    extern bool isAlt;                          // Mac: option
-    extern bool isMeta;                         // Mac: control
-
     extern QString currRootFolder;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;

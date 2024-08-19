@@ -577,9 +577,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             // process the persistant folder if available
             if (rememberLastDir && !isShiftOnOpen) {
                 if (isFolderValid(lastDir, true, true)) {
+                    G::isInitializing = false;
                     centralLayout->setCurrentIndex(LoupeTab);
                     fsTree->select(lastDir);
                     folderSelectionChange();
+                    updateIconRange(false, "MW::MW rememberLastDir");
                 }
             }
 
@@ -1045,13 +1047,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //    */
 
-    /* NATIVE GESTURE LOGITECH SIDE KEY IN CENTRAL WIDGET */
+    /* NATIVE GESTURE LOGITECH SIDE KEY IN CENTRAL WIDGET
+       This is used when navigating and the current image cannot be displayed in
+       ImageView.  The central widget is switched to the MessageTab to explain
+       that the image cannot be rendered.
+    */
     {
         if (!G::isInitializing && (event->type() == QEvent::NativeGesture)) {
             if (obj->objectName() == "centralWidget") {
                 static int prevLayoutIndex = -1;
                 if (prevLayoutIndex == MessageTab) {
-                    /*
+                    // /*
                     qDebug() << "MW::eventFilter QEvent::NativeGesture"
                              << "obj->objectName:" << obj->objectName()
                              << "row =" << dm->currentSfRow
@@ -1070,74 +1076,42 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
              QKeyEvent *e = static_cast<QKeyEvent *>(event);
              Qt::KeyboardModifiers k = e->modifiers();
-             /* Assign global modifier status here because not all event support modifiers,
-                including QEvent::NativeGesture, which is used to capture forward and back keys
-                on a logitech mouse in IconView. */
-             G::isShift = k & Qt::ShiftModifier;
-             G::isControl = k & Qt::ControlModifier;
-             G::isAlt = k & Qt::AltModifier;
-             G::isMeta = k & Qt::MetaModifier;
-             G::isNoModifier = !G::isShift && !G::isControl && !G::isAlt && !G::isMeta;
 
             if (obj->objectName() == "MWWindow") {
-                // /*
+                /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
-                         // << "key =" << e->key()
-                         << "G::isNoModifier =" << QVariant(G::isNoModifier).toString().leftJustified(5)
-                         << "G::isShift =" << QVariant(G::isShift).toString().leftJustified(5)
-                         << "G::isControl =" << QVariant(G::isControl).toString().leftJustified(5)
-                         << "G::isAlt =" << QVariant(G::isAlt).toString().leftJustified(5)
-                         << "G::isMeta =" << QVariant(G::isMeta).toString().leftJustified(5)
+                         << "key =" << e->key()
                          << k
                             ; //*/
 
-                // ignore if modifier pressed
-                // if (!G::isAlt) {
-                    //if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
-                    if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
-                    if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
-                    if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
-                    if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
-                    if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
-                    if (e->key() == Qt::Key_End) sel->last(e->modifiers());
-                    if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
-                    if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
-                // }
-            }
-        }
+                if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
 
-        if (!G::isInitializing && (event->type() == QEvent::KeyRelease)) {
-            QKeyEvent *e = static_cast<QKeyEvent *>(event);
-            QMainWindow::keyReleaseEvent(e);
-            Qt::KeyboardModifiers k = QApplication::keyboardModifiers();
-            if (k & Qt::NoModifier) G::isNoModifier = false;
-            if (k & Qt::ShiftModifier) G::isShift = false;
-            if (k & Qt::ControlModifier) G::isControl = false;
-            if (k & Qt::AltModifier) G::isAlt = false;
-            if (k & Qt::MetaModifier) G::isMeta = false;
-            if (G::isShift || G::isControl || G::isAlt || G::isMeta) G::isNoModifier = false;
-            else G::isNoModifier = true;
-            /*
-            qDebug() << "MW::eventFilter KeyRelease"
-                     << obj->objectName()
-                     << k
-                     << G::isNoModifier;//*/
+                // see menu shortcuts instead of this
+                // if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
+                // if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
+                // if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
+                // if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
+                // if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
+                // if (e->key() == Qt::Key_End) sel->last(e->modifiers());
+                // if (e->key() == Qt::Key_PageUp) sel->prevPage(e->modifiers());
+                // if (e->key() == Qt::Key_PageDown) sel->nextPage(e->modifiers());
+            }
         }
     }
 
     /* QUIT FULLSCREEN */
     {
-    if (obj->objectName() == "MWWindow") {
-        // try using raise()
-        if (event->type() == QEvent::WindowStateChange) {
-            if (wasFullSpaceOnDiffScreen) {
-                wasFullSpaceOnDiffScreen = false;
-                // wait for transition to showNormal is finished
-                QTimer::singleShot(100, this, &MW::invokeCurrentWorkspace);
+        if (obj->objectName() == "MWWindow") {
+            // try using raise()
+            if (event->type() == QEvent::WindowStateChange) {
+                if (wasFullSpaceOnDiffScreen) {
+                    wasFullSpaceOnDiffScreen = false;
+                    // wait for transition to showNormal is finished
+                    QTimer::singleShot(100, this, &MW::invokeCurrentWorkspace);
+                }
             }
         }
-    }
     }
 
     /* KEEP WINDOW ON TOP WHEN DRAGGING TO ANOTHER SCREEN

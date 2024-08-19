@@ -13,6 +13,7 @@ void MW::setCentralView()
         setCentralMessage(msg);
         prevMode = "Loupe";
     }
+    enableSelectionDependentMenus();
 }
 
 void MW::loupeDisplay()
@@ -98,6 +99,7 @@ void MW::loupeDisplay()
 
     prevMode = "Loupe";
 
+    enableSelectionDependentMenus();
 }
 
 void MW::gridDisplay()
@@ -181,6 +183,7 @@ void MW::gridDisplay()
     prevMode = "Grid";
     gridDisplayFirstOpen = false;
 
+    enableSelectionDependentMenus();
 //    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
 
@@ -269,6 +272,7 @@ void MW::tableDisplay()
 
     tableView->setFocus();
     prevMode = "Table";
+    enableSelectionDependentMenus();
 }
 
 void MW::compareDisplay()
@@ -332,5 +336,7 @@ void MW::compareDisplay()
 
     hasGridBeenActivated = false;
     prevMode = "Compare";
+
+    enableSelectionDependentMenus();
 }
 

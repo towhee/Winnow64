@@ -112,7 +112,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.38" ;
+    QString versionNumber = "1.39" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -535,9 +535,8 @@ private slots:
     void zoomOut();
     void zoomIn();
     void zoomToFit();
-    void enableGoKeyActions(bool ok);
     void mouseSideKeyPress(int direction);
-    void keyRight(Qt::KeyboardModifiers modifer = Qt::NoModifier);
+    void keyRight(/*Qt::KeyboardModifiers modifer = Qt::NoModifier*/);
     void keyLeft();
     void keyUp();
     void keyDown();
@@ -549,6 +548,8 @@ private slots:
     void keyScrollUp();
     void keyScrollPageDown();
     void keyScrollPageUp();
+    void keyScrollHome();
+    void keyScrollEnd();
     void scrollToCurrentRow();
     void jump();
     void zoomToggle();
@@ -806,29 +807,34 @@ private:
     QAction *oldPrefAction;
 
     // Go Menu
-//    QAction *keyRightAction;
-//    QAction *keyLeftAction;
-//    QAction *keyUpAction;
-//    QAction *keyDownAction;
-//    QAction *keyHomeAction;
-//    QAction *keyEndAction;
-//    QAction *keyPageUpAction;
-//    QAction *keyPageDownAction;
+   QAction *keyRightAction;
+   QAction *keyLeftAction;
+   QAction *keyUpAction;
+   QAction *keyDownAction;
+   QAction *keyPageUpAction;
+   QAction *keyPageDownAction;
+   QAction *keyHomeAction;
+   QAction *keyEndAction;
 
-    QAction *jumpAction;                    // shortcut "J"
-    QAction *jumpAction1;                   // shortcut "="
+    QAction *keyRightAddToSelectionAction;
+    QAction *keyLeftAddToSelectionAction;
+    QAction *keyUpAddToSelectionAction;
+    QAction *keyDownAddToSelectionAction;
+    QAction *keyPageUpAddToSelectionAction;
+    QAction *keyPageDownAddToSelectionAction;
+    QAction *keyHomeAddToSelectionAction;
+    QAction *keyEndAddToSelectionAction;
+
+    QAction *jumpAction;                    // shortcut "J", "="
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;
-
     QAction *keyScrollDownAction;
     QAction *keyScrollUpAction;
-
-    QAction *keyScrollPageLeftAction;
-    QAction *keyScrollPageRightAction;
-
     QAction *keyScrollPageDownAction;
     QAction *keyScrollPageUpAction;
+    QAction *keyScrollHomeAction;
+    QAction *keyScrollEndAction;
 
     QAction *nextPickAction;
     QAction *prevPickAction;

@@ -47,6 +47,9 @@ public:
     // Window
     static bool isScreenValid(const QScreen *screen);
 
+    // keyboard
+    static bool modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val);
+
     // Convert
     static QString stringListToString(QStringList list);
     static QString pixmapToString(QPixmap &pixmap);

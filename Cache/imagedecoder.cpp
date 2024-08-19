@@ -354,8 +354,8 @@ bool ImageDecoder::load()
         decoderToUse = QtImage;
         #endif
         #ifdef Q_OS_MAC
-        decoderToUse = TurboJpg;
-        // decoderToUse = QtImage;
+        // decoderToUse = TurboJpg;
+        decoderToUse = QtImage;
         #endif
 
         if (decoderToUse == Rory) {

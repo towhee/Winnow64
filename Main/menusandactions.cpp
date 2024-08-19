@@ -604,66 +604,110 @@ void MW::createGoActions()
 {
     // Go menu
 
-    //    keyRightAction = new QAction(tr("Next"), this);
-    //    keyRightAction->setObjectName("nextImage");
-    //    keyRightAction->setShortcutVisibleInContextMenu(true);
-    //    keyRightAction->setEnabled(true);
-    //    addAction(keyRightAction);
-    //    connect(keyRightAction, &QAction::triggered, this, [this](){ keyRight(Qt::NoModifier); });
+    keyRightAction = new QAction(tr("Next"), this);
+    keyRightAction->setObjectName("nextImage");
+    keyRightAction->setShortcutVisibleInContextMenu(true);
+    keyRightAction->setEnabled(true);
+    addAction(keyRightAction);
+    connect(keyRightAction, &QAction::triggered, this, &MW::keyRight);
+    // connect(keyRightAction, &QAction::triggered, this, [this](){ keyRight(Qt::NoModifier); });
 
-    //    keyLeftAction = new QAction(tr("Previous"), this);
-    //    keyLeftAction->setObjectName("prevImage");
-    //    keyLeftAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyLeftAction);
-    //    connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
+    keyLeftAction = new QAction(tr("Previous"), this);
+    keyLeftAction->setObjectName("prevImage");
+    keyLeftAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyLeftAction);
+    connect(keyLeftAction, &QAction::triggered, this, &MW::keyLeft);
 
-    //    keyUpAction = new QAction(tr("Up"), this);
-    //    keyUpAction->setObjectName("moveUp");
-    //    keyUpAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyUpAction);
-    //    connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
+    keyUpAction = new QAction(tr("Up"), this);
+    keyUpAction->setObjectName("moveUp");
+    keyUpAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyUpAction);
+    connect(keyUpAction, &QAction::triggered, this, &MW::keyUp);
 
-    //    keyDownAction = new QAction(tr("Down"), this);
-    //    keyDownAction->setObjectName("moveDown");
-    //    keyDownAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyDownAction);
-    //    connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
+    keyDownAction = new QAction(tr("Down"), this);
+    keyDownAction->setObjectName("moveDown");
+    keyDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyDownAction);
+    connect(keyDownAction, &QAction::triggered, this, &MW::keyDown);
 
-    //    keyPageUpAction = new QAction(tr("Page Up"), this);
-    //    keyPageUpAction->setObjectName("movePageUp");
-    //    keyPageUpAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyPageUpAction);
-    //    connect(keyPageUpAction, &QAction::triggered, this, &MW::keyPageUp);
+    keyPageUpAction = new QAction(tr("Prev Page"), this);
+    keyPageUpAction->setObjectName("movePageUp");
+    keyPageUpAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageUpAction);
+    connect(keyPageUpAction, &QAction::triggered, this, &MW::keyPageUp);
 
-    //    keyPageDownAction = new QAction(tr("Page Down"), this);
-    //    keyPageDownAction->setObjectName("movePageDown");
-    //    keyPageDownAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyPageDownAction);
-    //    connect(keyPageDownAction, &QAction::triggered, this, &MW::keyPageDown);
+    keyPageDownAction = new QAction(tr("Next Page"), this);
+    keyPageDownAction->setObjectName("movePageDown");
+    keyPageDownAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageDownAction);
+    connect(keyPageDownAction, &QAction::triggered, this, &MW::keyPageDown);
 
-    //    keyHomeAction = new QAction(tr("First"), this);
-    //    keyHomeAction->setObjectName("firstImage");
-    //    keyHomeAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyHomeAction);
-    //    connect(keyHomeAction, &QAction::triggered, this, &MW::keyHome);
+    keyHomeAction = new QAction(tr("First"), this);
+    keyHomeAction->setObjectName("firstImage");
+    keyHomeAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyHomeAction);
+    connect(keyHomeAction, &QAction::triggered, this, &MW::keyHome);
 
-    //    keyEndAction = new QAction(tr("Last"), this);
-    //    keyEndAction->setObjectName("lastImage");
-    //    keyEndAction->setShortcutVisibleInContextMenu(true);
-    //    addAction(keyEndAction);
-    //    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
+    keyEndAction = new QAction(tr("Last"), this);
+    keyEndAction->setObjectName("lastImage");
+    keyEndAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyEndAction);
+    connect(keyEndAction, &QAction::triggered, this, &MW::keyEnd);
+
+    keyRightAddToSelectionAction = new QAction(tr("Add Next to Selection"), this);
+    keyRightAddToSelectionAction->setObjectName("addNextToSelectione");
+    keyRightAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    keyRightAddToSelectionAction->setEnabled(true);
+    addAction(keyRightAddToSelectionAction);
+    connect(keyRightAddToSelectionAction, &QAction::triggered, this, &MW::keyRight);
+
+    keyLeftAddToSelectionAction = new QAction(tr("Add Previous to Selection"), this);
+    keyLeftAddToSelectionAction->setObjectName("addPrevToSelectione");
+    keyLeftAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyLeftAddToSelectionAction);
+    connect(keyLeftAddToSelectionAction, &QAction::triggered, this, &MW::keyLeft);
+
+    keyUpAddToSelectionAction = new QAction(tr("Add Up to Selection"), this);
+    keyUpAddToSelectionAction->setObjectName("addUpToSelectione");
+    keyUpAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyUpAddToSelectionAction);
+    connect(keyUpAddToSelectionAction, &QAction::triggered, this, &MW::keyUp);
+
+    keyDownAddToSelectionAction = new QAction(tr("Add Down to Selection"), this);
+    keyDownAddToSelectionAction->setObjectName("addDownToSelectione");
+    keyDownAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyDownAddToSelectionAction);
+    connect(keyDownAddToSelectionAction, &QAction::triggered, this, &MW::keyDown);
+
+    keyPageUpAddToSelectionAction = new QAction(tr("Add Prev Page to Selection"), this);
+    keyPageUpAddToSelectionAction->setObjectName("addPageUpToSelectione");
+    keyPageUpAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageUpAddToSelectionAction);
+    connect(keyPageUpAddToSelectionAction, &QAction::triggered, this, &MW::keyPageUp);
+
+    keyPageDownAddToSelectionAction = new QAction(tr("Add Next Page to Selection"), this);
+    keyPageDownAddToSelectionAction->setObjectName("addPageDownToSelectione");
+    keyPageDownAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyPageDownAddToSelectionAction);
+    connect(keyPageDownAddToSelectionAction, &QAction::triggered, this, &MW::keyPageDown);
+
+    keyHomeAddToSelectionAction = new QAction(tr("Add all to First to Selection"), this);
+    keyHomeAddToSelectionAction->setObjectName("addHomeToSelectione");
+    keyHomeAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyHomeAddToSelectionAction);
+    connect(keyHomeAddToSelectionAction, &QAction::triggered, this, &MW::keyHome);
+
+    keyEndAddToSelectionAction = new QAction(tr("Add all to Last to Selection"), this);
+    keyEndAddToSelectionAction->setObjectName("addEndToSelectione");
+    keyEndAddToSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyEndAddToSelectionAction);
+    connect(keyEndAddToSelectionAction, &QAction::triggered, this, &MW::keyEnd);
 
     jumpAction = new QAction(tr("Jump to Row"), this);
     jumpAction->setObjectName("jump");
     jumpAction->setShortcutVisibleInContextMenu(true);
     addAction(jumpAction);
     connect(jumpAction, &QAction::triggered, this, &MW::jump);
-
-    jumpAction1 = new QAction(tr("Jump to Row"), this);
-    jumpAction1->setObjectName("jump");
-    jumpAction1->setShortcutVisibleInContextMenu(true);
-    addAction(jumpAction1);
-    connect(jumpAction1, &QAction::triggered, this, &MW::jump);
 
     keyScrollLeftAction = new QAction(tr("Scroll Left"), this);
     keyScrollLeftAction->setObjectName("scrollLeft");
@@ -689,29 +733,29 @@ void MW::createGoActions()
     addAction(keyScrollDownAction);
     connect(keyScrollDownAction, &QAction::triggered, this, &MW::keyScrollDown);
 
-    keyScrollPageLeftAction = new QAction(tr("Scroll Page Left"), this);
-    keyScrollPageLeftAction->setObjectName("scrollPageLeft");
-    keyScrollPageLeftAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyScrollPageLeftAction);
-    connect(keyScrollPageLeftAction, &QAction::triggered, this, &MW::keyScrollPageUp);
-
-    keyScrollPageRightAction = new QAction(tr("Scroll Page Right"), this);
-    keyScrollPageRightAction->setObjectName("scrollPageRight");
-    keyScrollPageRightAction->setShortcutVisibleInContextMenu(true);
-    addAction(keyScrollPageRightAction);
-    connect(keyScrollPageRightAction, &QAction::triggered, this, &MW::keyScrollPageDown);
-
-    keyScrollPageUpAction = new QAction(tr("Scroll Page up"), this);
+    keyScrollPageUpAction = new QAction(tr("Scroll Prev Page"), this);
     keyScrollPageUpAction->setObjectName("scrollPageUp");
     keyScrollPageUpAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollPageUpAction);
     connect(keyScrollPageUpAction, &QAction::triggered, this, &MW::keyScrollPageUp);
 
-    keyScrollPageDownAction = new QAction(tr("Scroll Page down"), this);
+    keyScrollPageDownAction = new QAction(tr("Scroll Next Page"), this);
     keyScrollPageDownAction->setObjectName("scrollPageDown");
     keyScrollPageDownAction->setShortcutVisibleInContextMenu(true);
     addAction(keyScrollPageDownAction);
     connect(keyScrollPageDownAction, &QAction::triggered, this, &MW::keyScrollPageDown);
+
+    keyScrollHomeAction = new QAction(tr("Scroll Home"), this);
+    keyScrollHomeAction->setObjectName("scrollHome");
+    keyScrollHomeAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollHomeAction);
+    connect(keyScrollHomeAction, &QAction::triggered, this, &MW::keyScrollHome);
+
+    keyScrollEndAction = new QAction(tr("Scroll End"), this);
+    keyScrollEndAction->setObjectName("scrollEnd");
+    keyScrollEndAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollEndAction);
+    connect(keyScrollEndAction, &QAction::triggered, this, &MW::keyScrollEnd);
 
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
@@ -1732,28 +1776,37 @@ void MW::createGoMenu()
     goMenu = new QMenu(this);
     goGroupAct = new QAction("Go", this);
     goGroupAct->setMenu(goMenu);
-    /* moved to MW::eveeentFilter
+    goMenu->addAction(jumpAction);
+    goMenu->addSeparator();
+    // moved to MW::eventFilter
     goMenu->addAction(keyRightAction);
     goMenu->addAction(keyLeftAction);
     goMenu->addAction(keyUpAction);
     goMenu->addAction(keyDownAction);
-    goMenu->addAction(keyPageUpAction);
     goMenu->addAction(keyPageDownAction);
+    goMenu->addAction(keyPageUpAction);
     goMenu->addAction(keyHomeAction);
     goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
-    */
-    goMenu->addAction(jumpAction);
-    goMenu->addAction(jumpAction1);
+    goMenu->addAction(keyRightAddToSelectionAction);
+    goMenu->addAction(keyLeftAddToSelectionAction);
+    goMenu->addAction(keyUpAddToSelectionAction);
+    goMenu->addAction(keyDownAddToSelectionAction);
+    goMenu->addAction(keyPageUpAddToSelectionAction);
+    goMenu->addAction(keyPageDownAddToSelectionAction);
+    goMenu->addAction(keyHomeAddToSelectionAction);
+    goMenu->addAction(keyEndAddToSelectionAction);
     goMenu->addSeparator();
     goMenu->addAction(keyScrollLeftAction);
     goMenu->addAction(keyScrollRightAction);
     goMenu->addAction(keyScrollUpAction);
     goMenu->addAction(keyScrollDownAction);
-    goMenu->addAction(keyScrollPageLeftAction);
-    goMenu->addAction(keyScrollPageRightAction);
+    // goMenu->addAction(keyScrollPageLeftAction);
+    // goMenu->addAction(keyScrollPageRightAction);
     goMenu->addAction(keyScrollPageUpAction);
     goMenu->addAction(keyScrollPageDownAction);
+    goMenu->addAction(keyScrollHomeAction);
+    goMenu->addAction(keyScrollEndAction);
     goMenu->addSeparator();
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
@@ -2231,80 +2284,90 @@ void MW::enableSelectionDependentMenus()
 */
     if (G::isLogger) G::log("MW::enableSelectionDependentMenus");
 
-    bool enable = dm->rowCount() > 0;
+    bool dmHasRows = dm->rowCount() > 0;
 
     // File menu
-    refreshCurrentAction->setEnabled(enable);
-    openWithMenu->setEnabled(enable);
-    ingestAction->setEnabled(enable);
-    revealFileAction->setEnabled(enable);
-    revealFileActionFromContext->setEnabled(enable);
-    addBookmarkAction->setEnabled(enable);
-    reportMetadataAction->setEnabled(enable);
-    copyFolderPathFromContextAction->setEnabled(enable);
-    copyImagePathFromContextAction->setEnabled(enable);
-    renameAction->setEnabled(enable);
-    saveAsFileAction->setEnabled(enable);
-    reportMetadataAction->setEnabled(enable);
+    refreshCurrentAction->setEnabled(dmHasRows);
+    openWithMenu->setEnabled(dmHasRows);
+    ingestAction->setEnabled(dmHasRows);
+    revealFileAction->setEnabled(dmHasRows);
+    revealFileActionFromContext->setEnabled(dmHasRows);
+    addBookmarkAction->setEnabled(dmHasRows);
+    reportMetadataAction->setEnabled(dmHasRows);
+    copyFolderPathFromContextAction->setEnabled(dmHasRows);
+    copyImagePathFromContextAction->setEnabled(dmHasRows);
+    renameAction->setEnabled(dmHasRows);
+    saveAsFileAction->setEnabled(dmHasRows);
+    reportMetadataAction->setEnabled(dmHasRows);
 
     //Edit menu
-    selectAllAction->setEnabled(enable);
-    invertSelectionAction->setEnabled(enable);
-    shareFilesAction->setEnabled(enable);
-    copyFilesAction->setEnabled(enable);
-    copyImageAction->setEnabled(enable);
-    copyImagePathFromContextAction->setEnabled(enable);
-    deleteImagesAction->setEnabled(enable);
-    pickAction->setEnabled(enable);
-    rejectAction->setEnabled(enable);
-    pickUnlessRejectedAction->setEnabled(enable);
-    popPickHistoryAction->setEnabled(enable);
-    searchTextEditAction->setEnabled(enable);
-    ratingsMenu->setEnabled(enable);
-    ratingsMenu->setEnabled(enable);
-    labelsMenu->setEnabled(enable);
-    rotateRightAction->setEnabled(enable);
-    rotateLeftAction->setEnabled(enable);
-    utilitiesMenu->setEnabled(enable);
+    selectAllAction->setEnabled(dmHasRows);
+    invertSelectionAction->setEnabled(dmHasRows);
+    shareFilesAction->setEnabled(dmHasRows);
+    copyFilesAction->setEnabled(dmHasRows);
+    copyImageAction->setEnabled(dmHasRows);
+    copyImagePathFromContextAction->setEnabled(dmHasRows);
+    deleteImagesAction->setEnabled(dmHasRows);
+    pickAction->setEnabled(dmHasRows);
+    rejectAction->setEnabled(dmHasRows);
+    pickUnlessRejectedAction->setEnabled(dmHasRows);
+    popPickHistoryAction->setEnabled(dmHasRows);
+    searchTextEditAction->setEnabled(dmHasRows);
+    ratingsMenu->setEnabled(dmHasRows);
+    ratingsMenu->setEnabled(dmHasRows);
+    labelsMenu->setEnabled(dmHasRows);
+    rotateRightAction->setEnabled(dmHasRows);
+    rotateLeftAction->setEnabled(dmHasRows);
+    utilitiesMenu->setEnabled(dmHasRows);
 
     // Go menu
-    goMenu->setEnabled(enable);
+    goMenu->setEnabled(dmHasRows);
+    bool isUpDown = gridView->isVisible() || tableView->isVisible();
+    keyUpAction->setEnabled(isUpDown);
+    keyDownAction->setEnabled(isUpDown);
+    keyScrollUpAction->setEnabled(isUpDown);
+    keyScrollDownAction->setEnabled(isUpDown);
+    keyUpAddToSelectionAction->setEnabled(isUpDown);
+    keyDownAddToSelectionAction->setEnabled(isUpDown);
+
+    // keyPageDownAction->setEnabled(isUpDown);
+    // keyPageUpAction->setEnabled(isUpDown);
 
     // Filter menu
-    filterMenu->setEnabled(enable);
+    filterMenu->setEnabled(dmHasRows);
 
     // Sort menu
-    sortMenu->setEnabled(enable);
+    sortMenu->setEnabled(dmHasRows);
 
 //    // Embellish menu
     //embelExportMenu->setEnabled(enable);
-    embelExportMenu->setEnabled(enable);
-    embelNewTemplateAction->setEnabled(enable);
-    embelReadTemplateAction->setEnabled(enable);
-    embelSaveTemplateAction->setEnabled(enable);
+    embelExportMenu->setEnabled(dmHasRows);
+    embelNewTemplateAction->setEnabled(dmHasRows);
+    embelReadTemplateAction->setEnabled(dmHasRows);
+    embelSaveTemplateAction->setEnabled(dmHasRows);
 
     // View menu
-    slideShowAction->setEnabled(enable);
-    zoomToAction->setEnabled(enable);
-    zoomInAction->setEnabled(enable);
-    zoomOutAction->setEnabled(enable);
-    zoomToggleAction->setEnabled(enable);
-    thumbsEnlargeAction->setEnabled(enable);
-    thumbsShrinkAction->setEnabled(enable);
+    slideShowAction->setEnabled(dmHasRows);
+    zoomToAction->setEnabled(dmHasRows);
+    zoomInAction->setEnabled(dmHasRows);
+    zoomOutAction->setEnabled(dmHasRows);
+    zoomToggleAction->setEnabled(dmHasRows);
+    thumbsEnlargeAction->setEnabled(dmHasRows);
+    thumbsShrinkAction->setEnabled(dmHasRows);
 
     // Help menu
-    helpDiagnosticsMenu->setEnabled(enable);
-    diagnosticsAllAction->setEnabled(enable);
-    diagnosticsCurrentAction->setEnabled(enable);
-    diagnosticsMainAction->setEnabled(enable);
-    diagnosticsGridViewAction->setEnabled(enable);
-    diagnosticsThumbViewAction->setEnabled(enable);
-    diagnosticsImageViewAction->setEnabled(enable);
-    diagnosticsMetadataAction->setEnabled(enable);
-    diagnosticsDataModelAction->setEnabled(enable);
-    diagnosticsMetadataCacheAction->setEnabled(enable);
-    diagnosticsImageCacheAction->setEnabled(enable);
-    diagnosticsEmbellishAction->setEnabled(enable);
+    helpDiagnosticsMenu->setEnabled(dmHasRows);
+    diagnosticsAllAction->setEnabled(dmHasRows);
+    diagnosticsCurrentAction->setEnabled(dmHasRows);
+    diagnosticsMainAction->setEnabled(dmHasRows);
+    diagnosticsGridViewAction->setEnabled(dmHasRows);
+    diagnosticsThumbViewAction->setEnabled(dmHasRows);
+    diagnosticsImageViewAction->setEnabled(dmHasRows);
+    diagnosticsMetadataAction->setEnabled(dmHasRows);
+    diagnosticsDataModelAction->setEnabled(dmHasRows);
+    diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
+    diagnosticsImageCacheAction->setEnabled(dmHasRows);
+    diagnosticsEmbellishAction->setEnabled(dmHasRows);
 
     // Missing thumbnails
     bool isMissing = false;
@@ -2324,6 +2387,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     if (G::isLogger) G::log("MW::loadShortcuts");
 
     QList<QKeySequence> shortcuts;
+    QString actionText;
 
     // Add customizable key shortcut actions
     actionKeys[fullScreenAction->objectName()] = fullScreenAction;
@@ -2358,7 +2422,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[zoomToggleAction->objectName()] = zoomToggleAction;
     actionKeys[rotateLeftAction->objectName()] = rotateLeftAction;
     actionKeys[rotateRightAction->objectName()] = rotateRightAction;
-    //    actionKeys[moveRightAct->objectName()] = moveRightAct;
+       // actionKeys[moveRightAct->objectName()] = moveRightAct;
     //    actionKeys[moveLeftAct->objectName()] = moveLeftAct;
     //    actionKeys[copyToAction->objectName()] = copyToAction;
     //    actionKeys[moveToAction->objectName()] = moveToAction;
@@ -2410,7 +2474,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     {
         //    formats to set shortcut
         //    keyRightAction->setShortcut(QKeySequence("Right"));
-        //    keyRightAction->setShortcut((Qt::Key_Right);
+           // keyRightAction->setShortcut(Qt::Key_Right);
 
         //        cutAction->setShortcut(QKeySequence("Ctrl+X"));
         //        copyAction->setShortcut(QKeySequence("Ctrl+C"));
@@ -2463,30 +2527,42 @@ void MW::loadShortcuts(bool defaultShortcuts)
         prefAction->setShortcut(QKeySequence("Ctrl+,"));
 
         // Go
-//        keyRightAction->setShortcut(QKeySequence("Right"));
-//        keyLeftAction->setShortcut(QKeySequence("Left"));
-//        keyHomeAction->setShortcut(QKeySequence("Home"));
-//        keyEndAction->setShortcut(QKeySequence("End"));
-//        keyDownAction->setShortcut(QKeySequence("Down"));
-//        keyUpAction->setShortcut(QKeySequence("Up"));
-//        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
-//        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
+        shortcuts.clear();
+        shortcuts << QKeySequence("J") << QKeySequence("=");
+        jumpAction->setShortcuts(shortcuts);
+        QString actionText = QString("Jump to Row\t%1, %2")
+                                 .arg(shortcuts.at(0).toString(QKeySequence::NativeText))
+                                 .arg(shortcuts.at(1).toString(QKeySequence::NativeText));
+        jumpAction->setText(actionText);
 
-        // shortcuts.clear();
-        // shortcuts << QKeySequence("J") << QKeySequence("=");
-        // jumpAction->setShortcuts(shortcuts);
-        jumpAction->setShortcut(QKeySequence("J"));
-        jumpAction1->setShortcut(QKeySequence("="));
+        keyRightAction->setShortcut(QKeySequence("Right"));
+        keyLeftAction->setShortcut(QKeySequence("Left"));
+        keyDownAction->setShortcut(QKeySequence("Down"));
+        keyUpAction->setShortcut(QKeySequence("Up"));
+        keyPageUpAction->setShortcut(QKeySequence("PgUp"));
+        keyPageDownAction->setShortcut(QKeySequence("PgDown"));
+        keyHomeAction->setShortcut(QKeySequence("Home"));
+        keyEndAction->setShortcut(QKeySequence("End"));
+
+        keyRightAddToSelectionAction->setShortcut(QKeySequence("Shift+Right"));
+        keyLeftAddToSelectionAction->setShortcut(QKeySequence("Shift+Left"));
+        keyDownAddToSelectionAction->setShortcut(QKeySequence("Shift+Down"));
+        keyUpAddToSelectionAction->setShortcut(QKeySequence("Shift+Up"));
+        keyPageUpAddToSelectionAction->setShortcut(QKeySequence("Shift+PgUp"));
+        keyPageDownAddToSelectionAction->setShortcut(QKeySequence("Shift+PgDown"));
+        keyHomeAddToSelectionAction->setShortcut(QKeySequence("Shift+Home"));
+        keyEndAddToSelectionAction->setShortcut(QKeySequence("Shift+End"));
 
         keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
         keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));
         keyScrollUpAction->setShortcut(QKeySequence("Alt+Up"));
         keyScrollDownAction->setShortcut(QKeySequence("Alt+Down"));
-
-        keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
-        keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
-        keyScrollPageUpAction->setShortcut(QKeySequence("Ctrl+Alt+Up"));
-        keyScrollPageDownAction->setShortcut(QKeySequence("Ctrl+Alt+Down"));
+        // keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
+        // keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
+        keyScrollPageUpAction->setShortcut(QKeySequence("Alt+PgUp"));
+        keyScrollPageDownAction->setShortcut(QKeySequence("Alt+PgDown"));
+        keyScrollHomeAction->setShortcut(QKeySequence("Alt+Home"));
+        keyScrollEndAction->setShortcut(QKeySequence("Alt+End"));
 
         nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));

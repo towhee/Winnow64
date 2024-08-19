@@ -322,6 +322,18 @@ bool Utilities::isScreenValid(const QScreen *screen)
     return false;
 }
 
+bool Utilities::modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val)
+{
+/*
+    modifiers = current system keyboard modifiers, which could include modifiers other than
+    control, alt, shift and meta (ie keyboard etc).  We want to make sure that we only
+    compare val (the comparitor) to the first 4 modifiers.
+*/
+    Qt::KeyboardModifiers mask = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+    Qt::KeyboardModifiers masked = modifiers &= mask;
+    return val == masked;
+}
+
 void Utilities::saveByteArrayAsFile(QString fPath, QByteArray &ba)
 {
 /*
