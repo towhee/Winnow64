@@ -499,6 +499,11 @@ QModelIndex IconView::pageDownIndex(int fromRow)
     int pageUpCell = fromRow + cellsPerPage;
     if (pageUpCell > max) pageUpCell = fromRow;
     scrollToRow(pageUpCell, "IconView::pageDownIndex");
+    qDebug() << "IconView::pageDownIndex  scrollToRow"
+             << "fromRow =" << fromRow
+             << "cellsPerPage =" << cellsPerPage
+             << "pageUpCell =" << pageUpCell
+        ;
     return dm->sf->index(pageUpCell, 0);
     //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }

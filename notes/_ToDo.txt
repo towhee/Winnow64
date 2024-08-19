@@ -8,10 +8,9 @@ WHAT'S NEW
 - Pick audio
 - Tweak mouse wheel / trackpad sensitivity algorithm
 - Help for film strip and status bar symbols
-- Change use of forward/back buttons on mouse
 
 BUGS / TO DO
-- Reverse sort not working
+- Ingest rename
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification

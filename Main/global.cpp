@@ -123,13 +123,6 @@ bool autoAdvance;
 int maxIconSize = 256;
 int minIconSize = 40;
 
-// key modifier status
-bool isNoModifier = true;
-bool isShift;
-bool isControl;                      // Mac: Command
-bool isAlt;                          // Mac: option
-bool isMeta;                         // Mac: control
-
 // status
 QString currRootFolder;
 bool ignoreScrollSignal;

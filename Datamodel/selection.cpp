@@ -142,44 +142,25 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         G::popUp->reset();
     }
 
-    //qDebug() << "Selection::select QModelIndex sfIdx =" << sfIdx;
-
-    bool isNoModifier = modifiers & Qt::NoModifier;
-    bool isControlModifier = modifiers & Qt::ControlModifier;
-    bool isShiftModifier = modifiers & Qt::ShiftModifier;
-    bool isAltModifier = modifiers & Qt::AltModifier;
-    bool isMetaModifier = modifiers & Qt::MetaModifier;
-    bool isKeypadModifier = modifiers & Qt::KeypadModifier;
-    Qt::KeyboardModifiers m_modifiers = modifiers ^ Qt::KeypadModifier;
-    /*
-    qDebug() << "Selection::select" << "sfIdx =" << sfIdx << modifiers
-             << "isNoModifier =" << isNoModifier
-             << "isControlModifier =" << isControlModifier
-             << "isShiftModifier =" << isShiftModifier
-             << "isAltModifier =" << isAltModifier
-             << "isMetaModifier =" << isMetaModifier
-             << "isKeypadModifier =" << isKeypadModifier
-                ;
-            //*/
-    if (modifiers & Qt::ControlModifier) {
+    if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
         if (sm->isSelected(sfIdx)) {
             shiftAnchorIndex = sfIdx;
             shiftExtendIndex = sfIdx;
         }
-        //qDebug() << "Selection::select  ControlModifier  shiftAnchorIndex =" << shiftAnchorIndex;
         return;
     }
-    if (modifiers & Qt::ShiftModifier) {
-        //qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
+
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
+        qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
         shiftExtendIndex = sfIdx;
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         return;
     }
-    //qDebug() << "Selection::select  Fall through  sfIdx =" << sfIdx;
+
     sm->clear();
     setCurrentIndex(sfIdx);
 }
@@ -196,14 +177,7 @@ void Selection::okToSelect(bool isOk)
 void Selection::toggleSelect(QModelIndex sfIdx)
 {
     if (G::isLogger || isDebug) G::log("Selection::toggleSelect");
-    /*
-    bool test = sfIdx == dm->currentSfIdx;
-    qDebug() << "Selection::toggleSelect  nextIdx"
-             << "sfIdx =" << sfIdx
-             << "dm->currentSfIdx =" << dm->currentSfIdx
-             << "Equal =" << test
-                ;
-                //*/
+
     // current index is always selected
     if (sfIdx == dm->currentSfIdx) {
         QModelIndex nextIdx = nearestSelectedIndex(sfIdx.row());
@@ -223,14 +197,14 @@ void Selection::toggleSelect(QModelIndex sfIdx)
     QItemSelection toggleSelection;
     toggleSelection.select(sfIdx, sfIdx);
     sm->select(toggleSelection, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
-
 }
 
 void Selection::next(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::next");
+
     G::fileSelectionChangeSource = "Key_Right";
-    if (modifiers & Qt::ShiftModifier) {
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         while (sm->isSelected(shiftExtendIndex)) {
             int row = shiftExtendIndex.row();
             if (row == dm->sf->rowCount() - 1) break;
@@ -241,7 +215,6 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
     else {
         int row = dm->currentSfRow;
         if (row < dm->sf->rowCount() - 1) row++;
-        //qDebug() << "Selection::next row =" << row << modifiers;
         select(row, modifiers);
     }
 }
@@ -249,7 +222,7 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
 void Selection::prev(Qt::KeyboardModifiers modifiers)
 {
     G::fileSelectionChangeSource = "Key_Left";
-    if (modifiers & Qt::ShiftModifier) {
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // find prev unselected row
         while (sm->isSelected(shiftExtendIndex)) {
             int row = shiftExtendIndex.row();
@@ -272,7 +245,8 @@ void Selection::up(Qt::KeyboardModifiers modifiers)
     G::fileSelectionChangeSource = "Key_Up";
     if (gridView->isVisible()) {
         int row = dm->currentSfRow;
-        if (modifiers & Qt::ShiftModifier)  row = startSelectionBlock(shiftExtendIndex.row());
+        if (Utilities::modifiers(modifiers, Qt::ShiftModifier))
+            row = startSelectionBlock(shiftExtendIndex.row());
         select(gridView->upIndex(row), modifiers);
     }
     if (tableView->isVisible()) {
@@ -286,7 +260,8 @@ void Selection::down(Qt::KeyboardModifiers modifiers)
     G::fileSelectionChangeSource = "Key_Down";
     if (gridView->isVisible()) {
         int row = dm->currentSfRow;
-        if (modifiers & Qt::ShiftModifier)  row = endSelectionBlock(shiftExtendIndex.row());
+        if (Utilities::modifiers(modifiers, Qt::ShiftModifier))
+            row = endSelectionBlock(shiftExtendIndex.row());
         select(gridView->downIndex(row), modifiers);
         return;
     }
@@ -313,12 +288,16 @@ void Selection::last(Qt::KeyboardModifiers modifiers)
 void Selection::prevPage(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::prevPage");
-    qDebug() << "Selection::prevPage";
+    // qDebug() << "Selection::prevPage";
     G::fileSelectionChangeSource = "Key_PageDown";
     int fromRow = dm->currentSfRow;
-    if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
         select(gridView->pageUpIndex(fromRow), modifiers);
+        return;
+    }
+    if (thumbView->isVisible()) {
+        select(thumbView->pageUpIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {
@@ -330,12 +309,16 @@ void Selection::prevPage(Qt::KeyboardModifiers modifiers)
 void Selection::nextPage(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::nextPage");
-    qDebug() << "Selection::nextPage";
+    // qDebug() << "Selection::nextPage";
     G::fileSelectionChangeSource = "Key_PageUp";
     int fromRow = dm->currentSfRow;
-    if (modifiers & Qt::ShiftModifier) fromRow = shiftExtendIndex.row();
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendIndex.row();
     if (gridView->isVisible()) {
         select(gridView->pageDownIndex(fromRow), modifiers);
+        return;
+    }
+    if (thumbView->isVisible()) {
+        select(thumbView->pageDownIndex(fromRow), modifiers);
         return;
     }
     if (tableView->isVisible()) {

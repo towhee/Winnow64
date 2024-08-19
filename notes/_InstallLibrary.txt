@@ -1,0 +1,94 @@
+WINDOWS
+
+- Open Developer Command Prompt (search)
+- cd C:\Users\hillr\Projects\Winnow64\Lib
+- git clone https://github.com/some/project  ie https://github.com/madler/zlib
+- cd newlibrary ie zlib
+- mkdir build
+- cd build
+- cmake -G "Visual Studio 17 2022" -A x64 ..
+- cmake --build . --config Release
+
+- open winnow64.pro
+- zlib example
+  win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
+  win32:INCLUDEPATH += $$PWD/Lib/zlib        # zlib.h
+  win32:INCLUDEPATH += $$PWD/Lib/zlib/build  # zconf.h
+
+- copy dll ie zlib.dll to the winnow.exe release folder
+
+MACOS
+
+Using Homebrew:
+    - Install Homebrew if necessary in terminal
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    - Update Homebrew
+      brew update
+
+    - Install library (ie libtiff)
+      brew install libtiff
+
+From ChatGPT: "Install GitHub Library MacOS"
+
+1. Clone the Repository
+   - Open Terminal.
+   - Navigate to the directory where you want to clone the repository.
+   - Use the git clone command to clone the repository:
+     git clone https://github.com/username/repository.git
+   - Replace https://github.com/username/repository.git with the actual URL of the GitHub repository.
+
+2. Install Dependencies
+   - The library might have dependencies that need to be installed. Check the repository's README.md or INSTALL.md files for any required dependencies.
+   - You can install these using a package manager like Homebrew:
+     brew install dependency_name
+
+3. Build the Library
+   - Navigate to the cloned repository’s directory:
+     cd repository
+   - Look for a build system configuration file like CMakeLists.txt (for CMake), configure (for autotools), or Makefile.
+   - If the library uses CMake, you can build it with the following commands:
+     Copy code
+     mkdir build
+     cd build
+     cmake ..
+     make
+     sudo make install
+   - If it's using QMake (since you're working with Qt), you might find a .pro file. Build it with:
+     qmake
+     make
+     sudo make install
+
+4. Link the Library to Your Qt Project
+   - In your Qt project’s .pro file, add the library’s include path and the library itself:
+     INCLUDEPATH += /path/to/library/include
+     LIBS += -L/path/to/library/lib -llibrary_name
+   - Replace /path/to/library/include with the actual path to the library’s header files.
+   - Replace /path/to/library/lib with the path to the compiled library files.
+   - Replace -llibrary_name with the actual name of the library.
+
+5. Update and Build Your Project
+   - Run qmake to update your project files:
+     qmake
+   - Then, build your project:
+     make
+
+6. Test the Integration
+   - Test the integration by including the library's header files in your project and using its functions:
+        #include <library_header.h>
+        int main() {
+            // Use the library functions here
+            return 0;
+        }
+
+7. Run Your Application
+   - Once everything is set up, run your application to verify that the library has been successfully integrated.
+
+8. Copy compiled library to winnow executable and add this step to Deploy process
+
+Notes:
+Ensure that the library is compatible with your macOS version and Qt setup.
+If the library includes a .framework file (common for macOS), you might need to link it differently in your .pro file:
+qmake
+Copy code
+LIBS += -F/path/to/framework -framework FrameworkName

@@ -314,18 +314,7 @@
          <string>Mouse side button</string>
         </property>
         <property name="text">
-         <string>Toggles pick on/off without selecting image</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Pick Image</string>
-        </property>
-        <property name="text">
-         <string>Shift + Alt + Mouse Left Button</string>
-        </property>
-        <property name="text">
-         <string>Toggles pick on/off without selecting image</string>
+         <string>Toggles pick on/off without selecting image (click on thumbnail)</string>
         </property>
        </item>
        <item>
@@ -455,6 +444,17 @@
        </property>
        <item>
         <property name="text">
+         <string>Jump</string>
+        </property>
+        <property name="text">
+         <string>J or =</string>
+        </property>
+        <property name="text">
+         <string>Enter row #</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Next Image</string>
         </property>
         <property name="text">
@@ -470,6 +470,14 @@
         </property>
         <property name="text">
          <string>When in Loupe view</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Next Image</string>
+        </property>
+        <property name="text">
+         <string>Mouse forward button</string>
         </property>
        </item>
        <item>
@@ -493,6 +501,14 @@
        </item>
        <item>
         <property name="text">
+         <string>Previous Image</string>
+        </property>
+        <property name="text">
+         <string>Mouse back button</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Image Above</string>
         </property>
         <property name="text">
@@ -509,6 +525,22 @@
        </item>
        <item>
         <property name="text">
+         <string>Next Page</string>
+        </property>
+        <property name="text">
+         <string>Page Down</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Previous Page</string>
+        </property>
+        <property name="text">
+         <string>Page Up</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>First Image</string>
         </property>
         <property name="text">
@@ -521,22 +553,6 @@
         </property>
         <property name="text">
          <string>End</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Next Page of Thumbnails</string>
-        </property>
-        <property name="text">
-         <string>Page Down</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Previous Page of Thumbnails</string>
-        </property>
-        <property name="text">
-         <string>Page Up</string>
         </property>
        </item>
        <item>

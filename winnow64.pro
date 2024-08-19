@@ -483,6 +483,9 @@ RC_ICONS = images/winnow.ico
 DISTFILES += Docs/ingestautopath \
     CMakeLists.txt \
     _CMakeLists.txt \
+    notes/_InstallLibrary.txt \
+    notes/_install library.txt \
+    notes/_install library.txt \
     notes/_install library.txt \
     notes/_install library.txt
 DISTFILES += notes/Create help dialog.rtf

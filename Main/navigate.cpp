@@ -1,31 +1,33 @@
 #include "Main/mainwindow.h"
 
-void MW::enableGoKeyActions(bool ok)
-{
-    if (G::isLogger) G::log("MW::enableGoKeyActions");
-//    if (ok) {
-//        keyRightAction->setEnabled(true);
-//        keyLeftAction->setEnabled(true);
-//        keyUpAction->setEnabled(true);
-//        keyDownAction->setEnabled(true);
-//        keyHomeAction->setEnabled(true);
-//        keyEndAction->setEnabled(true);
-//        keyPageUpAction->setEnabled(true);
-//        keyPageDownAction->setEnabled(true);
-//    }
-//    else {
-//        keyRightAction->setEnabled(false);
-//        keyLeftAction->setEnabled(false);
-//        keyUpAction->setEnabled(false);
-//        keyDownAction->setEnabled(false);
-//        keyHomeAction->setEnabled(false);
-//        keyEndAction->setEnabled(false);
-//        keyPageUpAction->setEnabled(false);
-//        keyPageDownAction->setEnabled(false);
-//    }
-}
+/*
+Navigation can be initiated from the following:
 
-void MW::mouseSideKeyPress(int direction) {
+    • QActions: if there is a shortcut, then it is executed and the keystroke(s) are not
+      registered by any of the QKey events.
+
+    • Overriding key and mouse events in IconView, ImageView, VideoView
+
+    • Overriding key press and mouse press in the MW eventFilter
+
+Keyboard modifiers
+
+    Shift, Control/Cmd, Alt/option and Meta/Control can be used in Winnow.
+    Get state with qApp->keyboardModifiers().
+    Determine exact match with Utilities::modifier().
+    ie Utilities::modifier(qApp->keyboardModifiers(Qt::ShiftModifier | Qt::AltModifier))
+
+Program
+
+    mainwindow
+    navigate
+    menusandactions
+    selection
+    IconView, TableView, ImageView
+*/
+
+void MW::mouseSideKeyPress(int direction)
+{
 /*
     back/forward buttons on Logitech mouse sent from central widget.
     direction == 0 forward, else back
@@ -33,47 +35,21 @@ void MW::mouseSideKeyPress(int direction) {
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::nativeLeftRight", "ROW: " + QString::number(dm->currentSfRow));
     }
-    if (direction == 0) {
-        // forward
-        if (G::isNoModifier) {
-            qDebug() << "MW::mouseSideKeyPress"
-                     << "row =" << dm->currentSfRow
-                     << "centralLayout->currentIndex() =" << centralLayout->currentIndex()
-                ;
-            sel->next();
-        }
-        else {
-            emit togglePick();  // advances if autoAdvance
-            if (!G::autoAdvance) sel->next();
-        }
-        return;
-    }
-    else {
-        // backward
-        if (G::isNoModifier) {
-            sel->prev();
-        }
-        else {
-            bool autoAdvanceTemp = G::autoAdvance;
-            G::autoAdvance = false;
-            emit togglePick();
-            sel->prev();
-            G::autoAdvance = autoAdvanceTemp;
-        }
-        return;
-    }
+
+    if (direction == 0) sel->next();
+    else sel->prev();
 }
 
-void MW::keyRight(Qt::KeyboardModifiers modifier)
+void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
 {
-    if (G::isLogger || G::isFlowLogger) {
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
-    }
+
     if (G::mode == "Compare") {
         sel->select(compareImages->go("Right"), Qt::NoModifier, "MW::keyRight");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
-        sel->next();
+        sel->next(qApp->keyboardModifiers());
     }
 }
 
@@ -86,42 +62,42 @@ void MW::keyLeft()
         sel->select(compareImages->go("Left"), Qt::NoModifier, "MW::keyLeft");
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
-        sel->prev();
+        sel->prev(qApp->keyboardModifiers());
     }
 }
 
 void MW::keyUp()
 {
     if (G::isLogger) G::log("MW::keyUp");
-    if (G::mode == "Loupe") sel->up();
-    if (G::mode == "Table") sel->up();
-    if (G::mode == "Grid") sel->up();
+    if (G::mode == "Loupe") sel->up(qApp->keyboardModifiers());
+    if (G::mode == "Table") sel->up(qApp->keyboardModifiers());
+    if (G::mode == "Grid") sel->up(qApp->keyboardModifiers());
 }
 
 void MW::keyDown()
 {
     if (G::isLogger) G::log("MW::keyDown");
-    if (G::mode == "Loupe") sel->down();
-    if (G::mode == "Table") sel->down();
-    if (G::mode == "Grid") sel->down();
+    if (G::mode == "Loupe") sel->down(qApp->keyboardModifiers());
+    if (G::mode == "Table") sel->down(qApp->keyboardModifiers());
+    if (G::mode == "Grid") sel->down(qApp->keyboardModifiers());
 }
 
 void MW::keyPageUp()
 {
     if (G::isLogger)
         G::log("MW::keyPageUp");
-    if (G::mode == "Loupe") sel->nextPage();
-    if (G::mode == "Table") sel->nextPage();
-    if (G::mode == "Grid") sel->nextPage();
+    if (G::mode == "Loupe") sel->prevPage(qApp->keyboardModifiers());
+    if (G::mode == "Table") sel->prevPage(qApp->keyboardModifiers());
+    if (G::mode == "Grid") sel->prevPage(qApp->keyboardModifiers());
 }
 
 void MW::keyPageDown()
 {
     if (G::isLogger)
         G::log("MW::keyPageDown");
-    if (G::mode == "Loupe") sel->prevPage();
-    if (G::mode == "Table") sel->prevPage();
-    if (G::mode == "Grid") sel->prevPage();
+    if (G::mode == "Loupe") sel->nextPage(qApp->keyboardModifiers());
+    if (G::mode == "Table") sel->nextPage(qApp->keyboardModifiers());
+    if (G::mode == "Grid") sel->nextPage(qApp->keyboardModifiers());
 }
 
 void MW::keyHome()
@@ -132,7 +108,7 @@ void MW::keyHome()
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("Home");
-    sel->first();
+    sel->first(qApp->keyboardModifiers());
 }
 
 void MW::keyEnd()
@@ -143,7 +119,7 @@ void MW::keyEnd()
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("End");
-    else sel->last();
+    else sel->last(qApp->keyboardModifiers());
 }
 
 void MW::keyScrollDown()
@@ -172,6 +148,21 @@ void MW::keyScrollPageUp()
     if (G::isLogger) G::log("MW::keyScrollPageUp");
     if (G::mode == "Grid") gridView->scrollPageUp(0);
     if (thumbView->isVisible()) thumbView->scrollPageUp(0);
+}
+
+void MW::keyScrollHome()
+{
+    if (G::isLogger) G::log("MW::keyScrollHome");
+    if (G::mode == "Grid") gridView->scrollToRow(0, "MW::keyScrollHome");
+    if (thumbView->isVisible()) thumbView->scrollToRow(0, "MW::keyScrollHome");
+}
+
+void MW::keyScrollEnd()
+{
+    if (G::isLogger) G::log("MW::keyScrollEnd");
+    int last = dm->sf->rowCount() - 1;
+    if (G::mode == "Grid") gridView->scrollToRow(last, "MW::keyScrollEnd");
+    if (thumbView->isVisible()) thumbView->scrollToRow(last, "MW::keyScrollEnd");
 }
 
 void MW::scrollToCurrentRow()
