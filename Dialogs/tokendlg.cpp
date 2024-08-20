@@ -472,6 +472,7 @@ void TokenDlg::on_renameBtn_clicked()
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
     QString oldName = name;
+    QString value = templatesMap.value(name);
     QStringList existing = existingTemplates(row);
     // get new name
     RenameDlg *nameDlg = new RenameDlg(name, existing,
@@ -484,6 +485,9 @@ void TokenDlg::on_renameBtn_clicked()
     if (name != oldName) {
         ui->templatesCB->setItemText(row, name);
         emit rename(oldName, name);
+        // update templatesMap
+        templatesMap.insert(name, value);
+        templatesMap.remove(oldName);
     }
     /* update in QSettings done when Winnow closes
     QSettings *setting = new QSettings("Winnow", "winnow_100");

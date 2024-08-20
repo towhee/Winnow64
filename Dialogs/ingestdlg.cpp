@@ -1429,12 +1429,15 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
         QVariant iKey = i.key();
         if (i.key() == "") continue;
         ui->pathTemplatesCB->addItem(i.key());
-        if (i.key() == currentKey) index = row;
+        // if (i.key() == currentKey) index = row;
         row++;
     }
-    int len = ui->pathTemplatesCB->count();
+    int count = ui->pathTemplatesCB->count();
+    if (index >= count) index = count - 1;
     ui->pathTemplatesCB->setCurrentIndex(index);
-    on_pathTemplatesCB_currentTextChanged(currentKey);
+    qDebug() << "currentKey =" << currentKey;
+    // on_pathTemplatesCB_currentTextChanged(currentKey);
+    on_pathTemplatesCB_currentTextChanged(ui->pathTemplatesCB->currentText());
 }
 
 void IngestDlg::on_pathTemplatesBtn_2_clicked()
