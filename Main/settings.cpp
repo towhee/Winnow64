@@ -157,28 +157,29 @@ void MW::writeSettings()
     }
     settings->endGroup();
 
+    // moved to MW::ingest
     /* Tokens used for ingest operations */
-    settings->beginGroup("PathTokens");
-    settings->remove("");
-    // save path templates
-    QMapIterator<QString, QString> pathIter(pathTemplates);
-    while (pathIter.hasNext()) {
-        pathIter.next();
-        settings->setValue(pathIter.key(), pathIter.value());
-    }
-    settings->endGroup();
+    // settings->beginGroup("PathTokens");
+    // settings->remove("");
+    // // save path templates
+    // QMapIterator<QString, QString> pathIter(pathTemplates);
+    // while (pathIter.hasNext()) {
+    //     pathIter.next();
+    //     settings->setValue(pathIter.key(), pathIter.value());
+    // }
+    // settings->endGroup();
 
-    // save filename templates
-    settings->beginGroup("FileNameTokens");
-    settings->remove("");
-    QMapIterator<QString, QString> filenameIter(filenameTemplates);
-    while (filenameIter.hasNext()) {
-        filenameIter.next();
-        settings->setValue(filenameIter.key(), filenameIter.value());
-    }
-    settings->endGroup();
+    // // save filename templates
+    // settings->beginGroup("FileNameTokens");
+    // settings->remove("");
+    // QMapIterator<QString, QString> filenameIter(filenameTemplates);
+    // while (filenameIter.hasNext()) {
+    //     filenameIter.next();
+    //     settings->setValue(filenameIter.key(), filenameIter.value());
+    // }
+    // settings->endGroup();
 
-    /* Token templates used for shooting information shown in ImageView */
+    /* Token templates used for shooting information shown in ImageView*/
     settings->setValue("loupeInfoTemplate", infoString->loupeInfoTemplate);
     settings->beginGroup("InfoTemplates");
     settings->remove("");

@@ -909,7 +909,9 @@ void IngestDlg::updateFolderPaths()
     if (isAuto) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
-        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription;
+        if (fromRootToBaseFolder + baseFolderDescription != "")
+        folderPath += "/";
         /*
         qDebug() << "IngestDlg::"
                  << "\nrootFolderPath        =" << rootFolderPath
@@ -1374,10 +1376,17 @@ void IngestDlg::initExampleMap()
 void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 {
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesCB_currentTextChanged");
+
+    // When pathTemplatesCB is cleared, this function is signalled, and arg1 == "".
+    // Must ignore, else a null item will be appended to QMap pathTemplates
+    if (arg1 == "") return;
+
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
 //    if (fromRootToBaseFolder.length() > 0) fromRootToBaseFolder += "/";
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
+    qDebug() << "IngestDlg::on_pathTemplatesCB_currentTextChanged"
+             << "pathTemplateSelected =" << pathTemplateSelected;
     updateFolderPaths();
     seqStart += getSequenceStart(folderPath);
     updateExistingSequence();
@@ -1405,39 +1414,54 @@ void IngestDlg::on_filenameTemplatesCB_currentTextChanged(const QString &arg1)
 void IngestDlg::on_pathTemplatesBtn_clicked()
 {
 /*
-
+    Open the token editot.
 */
     if (G::isLogger) G::log("IngestDlg::on_pathTemplatesBtn_clicked");
-    qDebug() << "IngestDlg::on_pathTemplatesBtn_clicked";
+
     // setup TokenDlg
     QMap<QString,QString> usingTokenMap;
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
-    QString currentKey = ui->pathTemplatesCB->currentText();
+    int index_2 = ui->pathTemplatesCB_2->currentIndex();
+    QString currentText = ui->pathTemplatesCB->currentText();
+    QString currentText_2 = ui->pathTemplatesCB_2->currentText();
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, usingTokenMap,
-                                      index, currentKey, title, this);
+                                      index, currentText, title, this);
 
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity
     ui->pathTemplatesCB->clear();
+    ui->pathTemplatesCB_2->clear();
     // for some reason ui->pathTemplatesCB->clear() prepends blank item to pathTemplatesMap
     pathTemplatesMap.remove("");
     QMap<QString, QString>::iterator i;
     int row = 0;
     for (i = pathTemplatesMap.begin(); i != pathTemplatesMap.end(); ++i) {
-        QVariant iKey = i.key();
-        if (i.key() == "") continue;
+        if (i.key() == "") {
+            continue;
+        }
+        /*
+        qDebug() << "IngestDlg::on_pathTemplatesBtn_clicked"
+                 << i.key() << i.value(); //*/
         ui->pathTemplatesCB->addItem(i.key());
-        // if (i.key() == currentKey) index = row;
+        ui->pathTemplatesCB_2->addItem(i.key());
         row++;
     }
     int count = ui->pathTemplatesCB->count();
     if (index >= count) index = count - 1;
-    ui->pathTemplatesCB->setCurrentIndex(index);
-    qDebug() << "currentKey =" << currentKey;
-    // on_pathTemplatesCB_currentTextChanged(currentKey);
+    if (index_2 >= count) index_2 = count - 1;
+
+    if (Utilities::comboBoxContainsText(ui->pathTemplatesCB, currentText)) {
+        ui->pathTemplatesCB->setCurrentIndex(index);
+    }
+    if (Utilities::comboBoxContainsText(ui->pathTemplatesCB_2, currentText_2)) {
+        ui->pathTemplatesCB_2->setCurrentIndex(index_2);
+    }
+
+    // make sure ui is updated to the current template
     on_pathTemplatesCB_currentTextChanged(ui->pathTemplatesCB->currentText());
+    on_pathTemplatesCB_2_currentTextChanged(ui->pathTemplatesCB_2->currentText());
 }
 
 void IngestDlg::on_pathTemplatesBtn_2_clicked()

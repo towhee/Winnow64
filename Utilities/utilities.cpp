@@ -213,6 +213,16 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     } while (fileAlreadyExists);
 }
 
+bool Utilities::comboBoxContainsText(QComboBox* comboBox, const QString& text)
+{
+    for (int i = 0; i < comboBox->count(); ++i) {
+        if (comboBox->itemText(i) == text) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Utilities::backup(QString fPath, QString subfolderName)
 {
     QString fName = QFileInfo(fPath).fileName();
