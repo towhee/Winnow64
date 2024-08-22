@@ -80,8 +80,10 @@ public:
                       QMap<QString, QString> &exampleMap,
                       QMap<QString, QString> &templatesMap,
                       QMap<QString, QString> &usingTokenMap,
-                      int &index,
-                      QString &currentKey,
+                      int index,
+                      QString currentKey,
+                      // int &index,
+                      // QString &currentKey,
                       QString title,
                       QWidget *parent = 0);
     ~TokenDlg();
@@ -113,6 +115,7 @@ private:
     QString title;
     QStringList existingTemplates(int row = -1);
     bool indexJustChanged;
+    bool isInitializing = true;
 };
 
 #endif // TOKENDLG_H

@@ -4692,7 +4692,7 @@ void MW::ingest()
                                   css);
 
         bool okToIngest = ingestDlg->exec();
-        delete ingestDlg;
+        // do not delete ingestDlg: scrambles QMap objects for some reason
 
         // update ingest history folders
         // get rid of "/" at end of path for history (in file menu)
@@ -4726,6 +4726,8 @@ void MW::ingest()
         settings->setValue("gotoIngestFolder", gotoIngestFolder);
         settings->setValue("ingestRootFolder", ingestRootFolder);
         settings->setValue("ingestRootFolder2", ingestRootFolder2);
+        qDebug() << "MW::ingest"
+                 << "pathTemplateSelected =" << pathTemplateSelected;
         settings->setValue("pathTemplateSelected", pathTemplateSelected);
         settings->setValue("pathTemplateSelected2", pathTemplateSelected2);
         settings->setValue("manualFolderPath", manualFolderPath);
@@ -4733,6 +4735,26 @@ void MW::ingest()
         settings->setValue("filenameTemplateSelected", filenameTemplateSelected);
         settings->setValue("ingestCount", G::ingestCount);
         settings->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
+
+        // save path templates
+        settings->beginGroup("PathTokens");
+        settings->remove("");
+        QMapIterator<QString, QString> pathIter(pathTemplates);
+        while (pathIter.hasNext()) {
+            pathIter.next();
+            settings->setValue(pathIter.key(), pathIter.value());
+        }
+        settings->endGroup();
+
+        // save filename templates
+        settings->beginGroup("FileNameTokens");
+        settings->remove("");
+        QMapIterator<QString, QString> filenameIter(filenameTemplates);
+        while (filenameIter.hasNext()) {
+            filenameIter.next();
+            settings->setValue(filenameIter.key(), filenameIter.value());
+        }
+        settings->endGroup();
 
         if (!okToIngest) {
             QString msg = "Not okay to ingest.";
@@ -4784,8 +4806,8 @@ void MW::ingest()
         updateStatus(true, "", "MW::ingest");
     }
     else {
-             QMessageBox::information(this,
-             "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+        QMessageBox::information(this,
+        "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
     }
 }
 

@@ -183,10 +183,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    qDebug()
-        << QApplication::keyboardModifiers()
-        ;
-    bookmarks->updateBookmarks();
+    foreach (const QString &key, pathTemplates.keys()) {
+        qDebug() << "Key:" << key << ", Value:" << pathTemplates.value(key);
+    }
+
 }
 /*
    Performance

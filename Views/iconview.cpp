@@ -437,6 +437,7 @@ void IconView::updateVisible(QString src)
     isFirstCellPartial = !viewport()->rect().contains(visualRect(tlIdx));
     isLastCellPartial = !viewport()->rect().contains(visualRect(brIdx));
     if (isDebug)
+    {
     qDebug() << "IconView::updateVisible"
              << objectName()
              << "cellsPerRow" << cellsPerRow
@@ -452,6 +453,7 @@ void IconView::updateVisible(QString src)
              << "isFirstCellPartial =" << isFirstCellPartial
              << "isLastCellPartial =" << isLastCellPartial
         ;
+    }
     return;
 }
 

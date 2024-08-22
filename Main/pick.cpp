@@ -145,11 +145,12 @@ void MW::togglePick()
     foundFalse ? pickStatus = "Picked" : pickStatus = "Unpicked";
 
     if (settings->value("playPickAudio").toBool()) {
+        /*
         qDebug() << "MW::togglePick pickClick"
                  << pickClick->source() << pickClick->status()
                  << "volume =" << pickClick->volume()
                  << "loopCount =" << pickClick->loopCount()
-            ;
+            ; //*/
         pickClick->play();
     }
 
