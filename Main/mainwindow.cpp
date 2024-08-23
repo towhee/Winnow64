@@ -4513,8 +4513,8 @@ void MW::tokenEditor()
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
+    qDebug() << "MW::tokenEditor  info =" << info;
     imageView->setShootingInfo(info);
-    //qDebug() << "MW::tokenEditor" << "call  updateMetadataTemplateList";
     embelProperties->updateMetadataTemplateList();
     //qDebug() << "MW::tokenEditor" << "updateMetadataTemplateList did not crash";
 }
