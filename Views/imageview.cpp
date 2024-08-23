@@ -880,6 +880,8 @@ void ImageView::updateShootingInfo()
     QString current = infoString->getCurrentInfoTemplate();
     shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
                                                 currentImagePath, idx);
+    qDebug() << "ImageView::updateShootingInfo"
+             << "shootingInfo =" << shootingInfo;
     infoOverlay->setText(shootingInfo);
 //    moveShootingInfo(shootingInfo);
 //    qDebug() << "ImageView::sceneGeometry" << shootingInfo;
@@ -1101,11 +1103,11 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mousePressEvent", "isScrollable =" + QVariant(isScrollable).toString());
-    // /*
+    /*
     qDebug() << "\nImageView::mousePressEvent"
              << "Button =" << event->button()
-        ;
-    //*/
+        ; //*/
+
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) {
