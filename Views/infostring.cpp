@@ -114,8 +114,9 @@ void InfoString::editTemplates()
     usingToken();
     int index = getCurrentInfoTemplateIndex();
     bool showInLoupeView = true;
+    QString title = "Loupe View Info Token Editor";
     TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, usingTokenMap, index,
-                      loupeInfoTemplate, "Token Editor", showInLoupeView, this);
+                      loupeInfoTemplate, title, showInLoupeView, this);
     connect(&tokenDlg, &TokenDlg::rename, ep, &EmbelProperties::renameMetadataTemplateList);
     tokenDlg.exec();
 
