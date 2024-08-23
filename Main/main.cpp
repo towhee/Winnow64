@@ -6,7 +6,7 @@ static QString rory = "Rory";
 
 int main(int argc, char *argv[])
 {
-    // /* Original multi instance version
+    /* Original multi instance version
     QApplication a(argc, argv);
     QString args;
     QString delimiter = "\n";
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     //*/
 
-    /*Single instance version
+    // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
 
     QString args;
