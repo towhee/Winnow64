@@ -277,9 +277,8 @@ TokenDlg::TokenDlg(QStringList &tokens,
                    QMap<QString, QString> &usingTokenMap,
                    int index,
                    QString currentKey,
-                   // int &index,
-                   // QString &currentKey,
                    QString title,
+                   bool showInLoupeView,
                    QWidget *parent) :
 
                    QDialog(parent),
@@ -344,6 +343,9 @@ TokenDlg::TokenDlg(QStringList &tokens,
 
     ui->tokenEdit->exampleMap = exampleMap;
     ui->uniqueWarningLabel->setVisible(false);
+
+    qDebug() << "showInLoupeView =" << showInLoupeView;
+    ui->chkUseInLoupeView->setVisible(showInLoupeView);
 
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);

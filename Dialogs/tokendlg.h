@@ -82,10 +82,9 @@ public:
                       QMap<QString, QString> &usingTokenMap,
                       int index,
                       QString currentKey,
-                      // int &index,
-                      // QString &currentKey,
                       QString title,
-                      QWidget *parent = 0);
+                      bool showInLoupeView = false,
+                      QWidget *parent = nullptr);
     ~TokenDlg();
 
 signals:

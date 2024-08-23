@@ -1425,8 +1425,9 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     int index_2 = ui->pathTemplatesCB_2->currentIndex();
     QString currentText = ui->pathTemplatesCB->currentText();
     QString currentText_2 = ui->pathTemplatesCB_2->currentText();
+    bool showInLoupeView = false;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, usingTokenMap,
-                                      index, currentText, title, this);
+                                      index, currentText, title, showInLoupeView, this);
 
     tokenDlg->exec();
 
@@ -1484,8 +1485,9 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     QMap<QString,QString> usingTokenMap;    // dummy
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
+    bool showInLoupeView = false;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, usingTokenMap,
-                                      index, currentKey, title, this);
+                                      index, currentKey, title, showInLoupeView, this);
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity
