@@ -10,7 +10,6 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Ingest rename template is awkward
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification
@@ -120,6 +119,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Ingest rename template is awkward
 - Fixed mouseDoubleClick on ThumbView while in Table mode behavior
 - ImageCache running indicator not turning off if filter and everything already cached
 - ImageView not updating if in Grid or Table view, change row and to Loupe view

@@ -6,7 +6,6 @@
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
-//#include "Cache/cachedata.h"
 #include "Views/iconview.h"
 #include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"
@@ -65,13 +64,16 @@ public:
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotateImage(int degrees);
-    void setShootingInfo(QString infoString);
+    void setShootingInfo(QString infoString = "");
     void updateShootingInfo();
     QPoint scene2CW(QPointF pctPt);
     void focus();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
-    QString shootingInfo;
+
+    void changeInfoOverlay();
+    QString infoText;
     int infoOverlayFontSize;
+
     ClassificationLabel *classificationLabel;
     bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;

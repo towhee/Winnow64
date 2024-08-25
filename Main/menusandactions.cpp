@@ -1182,20 +1182,20 @@ void MW::createViewActions()
     addAction(iconNumberVisibleAction);
     connect(iconNumberVisibleAction, &QAction::triggered, this, &MW::setIconNumberVisibility);
 
-    infoVisibleAction = new QAction(tr("Show info overlay"), this);
+    infoVisibleAction = new QAction(tr("Show Info Overlay"), this);
     infoVisibleAction->setObjectName("toggleInfo");
     infoVisibleAction->setShortcutVisibleInContextMenu(true);
     infoVisibleAction->setCheckable(true);
     addAction(infoVisibleAction);
     connect(infoVisibleAction, &QAction::triggered, this, &MW::setShootingInfoVisibility);
 
-    infoSelectAction = new QAction(tr("Select or edit info overlay   "), this);
+    infoSelectAction = new QAction(tr("Change Info Overlay   "), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
     if (isSettings && settings->contains("isImageInfoVisible")) infoVisibleAction->setChecked(settings->value("isImageInfoVisible").toBool());
     else infoVisibleAction->setChecked(false);
     addAction(infoSelectAction);
-    connect(infoSelectAction, &QAction::triggered, this, &MW::tokenEditor);
+    connect(infoSelectAction, &QAction::triggered, this, &MW::changeInfoOverlay);
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);

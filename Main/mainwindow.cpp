@@ -513,7 +513,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createSelection();          // dependent on DataModel, ThumbView, GridView, TableView
-    createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
+    createInfoString();         // dependent on QSetting, DataModel, //EmbelProperties?
     createInfoView();           // dependent on DataModel, Metadata, ThumbView, Filters, BuildFilters
     createFrameDecoder();       // dependent on DataModel
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
@@ -3793,7 +3793,7 @@ void MW::setInfoFontSize()
     if (G::isLogger) G::log("MW::setInfoFontSize");
     /* imageView->infoOverlayFontSize already defined in preferences - just call
        so can redraw  */
-    imageView->setShootingInfo(imageView->shootingInfo);
+    imageView->setShootingInfo(imageView->infoText);
 }
 
 void MW::setClassificationBadgeImageDiam(int d)
@@ -4503,20 +4503,16 @@ void MW::newEmbelTemplate()
     loupeDisplay();
 }
 
-void MW::tokenEditor()
+void MW::changeInfoOverlay()
 {
     if (G::isLogger) G::log("MW::tokenEditor");
-    infoString->editTemplates();
-    // display new info
-    QModelIndex idx = dm->currentSfIdx;  //thumbView->currentIndex();
-    QString fPath = dm->currentFilePath;  //thumbView->getCurrentFilePath();
-    QString sel = infoString->getCurrentInfoTemplate();
-    QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
-                                        fPath, idx);
-    qDebug() << "MW::tokenEditor  info =" << info;
-    imageView->setShootingInfo(info);
+
+    if (!infoVisibleAction->isChecked()) {
+        infoVisibleAction->setChecked(true);
+        imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
+    }
+    imageView->changeInfoOverlay();
     embelProperties->updateMetadataTemplateList();
-    //qDebug() << "MW::tokenEditor" << "updateMetadataTemplateList did not crash";
 }
 
 void MW::exportEmbelFromAction(QAction *embelExportAction)
@@ -5137,7 +5133,14 @@ void MW::metadataChanged(QStandardItem* item)
     }
 
     // update shooting info
-    imageView->updateShootingInfo();
+    QModelIndex idx = dm->currentSfIdx;  //thumbView->currentIndex();
+    QString fPath = dm->currentFilePath;  //thumbView->getCurrentFilePath();
+    QString sel = infoString->getCurrentInfoTemplate();
+    QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
+                                        fPath, idx);
+    qDebug() << "MW::tokenEditor  info =" << info;
+    // imageView->updateShootingInfo(info);
+    imageView->setShootingInfo(info);
 }
 
 void MW::getSubfolders(QString fPath)

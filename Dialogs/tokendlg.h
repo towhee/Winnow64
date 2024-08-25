@@ -83,7 +83,7 @@ public:
                       int &index,
                       QString &currentKey,
                       QString title,
-                      bool showInLoupeView = false,
+                      // bool showInLoupeView = false,
                       QWidget *parent = nullptr);
     ~TokenDlg();
 
@@ -102,7 +102,6 @@ private slots:
     void on_newBtn_clicked();
     void on_renameBtn_clicked();
     void on_templatesCB_currentIndexChanged(int row);
-    void on_chkUseInLoupeView_checked(int state);
 
 private:
     Ui::TokenDlg *ui;

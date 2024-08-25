@@ -263,7 +263,7 @@ void EmbelProperties::initialize()
 
     tokenEditorAction = new QAction(tr("Token Editor"), this);
     addAction(tokenEditorAction);
-    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::tokenEditor);
+    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::changeInfoOverlay);
 
     manageTilesAction = new QAction(tr("Manage tiles"), this);
     addAction(manageTilesAction);

@@ -589,7 +589,7 @@ private slots:
     void setIconNumberVisibility();
     void setShootingInfoVisibility();
 //    void selectTokenString();
-    void tokenEditor();
+    void changeInfoOverlay();
 //    void toggleThumbWrap();
     void setIngested();
 //    QStringList getSelectionOrPicks();

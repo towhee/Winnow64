@@ -1383,10 +1383,7 @@ void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
-//    if (fromRootToBaseFolder.length() > 0) fromRootToBaseFolder += "/";
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
-    qDebug() << "IngestDlg::on_pathTemplatesCB_currentTextChanged"
-             << "pathTemplateSelected =" << pathTemplateSelected;
     updateFolderPaths();
     seqStart += getSequenceStart(folderPath);
     updateExistingSequence();
@@ -1425,9 +1422,9 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     int index_2 = ui->pathTemplatesCB_2->currentIndex();
     QString currentText = ui->pathTemplatesCB->currentText();
     QString currentText_2 = ui->pathTemplatesCB_2->currentText();
-    bool showInLoupeView = false;
+    // bool showInLoupeView = false;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, usingTokenMap,
-                                      index, currentText, title, showInLoupeView, this);
+                                      index, currentText, title, this);
 
     tokenDlg->exec();
 
@@ -1485,9 +1482,9 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     QMap<QString,QString> usingTokenMap;    // dummy
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
-    bool showInLoupeView = false;
+    // bool showInLoupeView = false;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, usingTokenMap,
-                                      index, currentKey, title, showInLoupeView, this);
+                                      index, currentKey, title, this);
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity

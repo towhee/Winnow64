@@ -5,17 +5,16 @@
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
-#include "Dialogs/tokendlg.h"
+#include <functional>
+#include "Dialogs/loupeinfodlg.h"
 #include "Embellish/Properties/embelproperties.h"
 
 class InfoString : public QWidget
 {
     Q_OBJECT
 public:
-    explicit InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
-                        EmbelProperties *embelProperties*/);
-    void editTemplates();
-//    void setCurrentInfoTemplate(QString &loupeInfoTemplate);
+    explicit InfoString(QWidget *parent, DataModel *dm, QSettings *setting);
+    void change(std::function<void()> updateInfoCallback = nullptr);
     QString getCurrentInfoTemplate();
     QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
     QString parseTokenString(QString &tokenString, QString &fPath);
@@ -25,14 +24,10 @@ public:
     QMap<QString, QString> infoTemplates;
     QString loupeInfoTemplate;
 
-//signals:
-//    void change();
-
 private:
     ImageMetadata m;
     DataModel *dm;
     QSettings *setting;
-//    EmbelProperties *embelProperties;
     QMap<QString,QString> exampleMap;
     QMap<QString,QString> item;
     QMap<QString,QString> usingTokenMap;

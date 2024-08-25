@@ -619,9 +619,8 @@ void RenameFileDlg::on_filenameTemplatesBtn_clicked()
     QMap<QString,QString> usingTokenMap;    // dummy
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
-    bool showInLoupeView = false;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, usingTokenMap,
-                                      index, currentKey, title, showInLoupeView, this);
+                                      index, currentKey, title, this);
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity

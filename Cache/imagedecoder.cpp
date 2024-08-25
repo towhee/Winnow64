@@ -125,22 +125,9 @@ bool ImageDecoder::load()
         return false;
     }
 
-    // if no metadata may still be able to load image using Qt (except raw files)
-//    if (!n.metadataLoaded && !metadata->hasJpg.contains(ext)) {
-//        if (image.load(fPath)) {
-//            imFile.close();
-//            return true;
-//        }
-
-//        imFile.close();
-//        errMsg = "IMetadata not loaded.";
-//        G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
-//        status = Status::NoMetadata;
-//        return false;
-//    }
-
     decoderToUse = QtImage;  // default unless overridden
 
+    // Embedded jpg?
     bool isEmbeddedJpg = false;
     // raw file or jpg
     if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
@@ -148,7 +135,6 @@ bool ImageDecoder::load()
     }
     // heic saved as a jpg
     if (metadata->hasHeic.contains(ext) && n.lengthFull) {
-        // qDebug() << "ImageDeecoder::load  heic saved as a jpg";
         isEmbeddedJpg = true;
     }
 
@@ -156,18 +142,18 @@ bool ImageDecoder::load()
     if (isEmbeddedJpg) {
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
-            imFile.close();
             errMsg = "Could not read embedded JPG because length = 0.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            imFile.close();
             status = Status::Invalid;
             return false;
         }
 
         // try to read the data
         if (!imFile.seek(n.offsetFull)) {
-            imFile.close();
             errMsg = "Could not read embedded JPG because offset is invalid.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            imFile.close();
             status = Status::Invalid;
             return false;
         }
@@ -189,38 +175,16 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        // uncomment decoder to use
-        // decoderToUse = QtImage;
-        decoderToUse = TurboJpg;
-        // decoderToUse = Rory;
-
-        /* This is fixed in JpegTurbo
-        // check if early nikon (TurboJpg does not work)
-        if (decoderToUse != QtImage && ext == "nef") {
-            QString cameraModel = dm->sf->index(n.key, G::CameraModelColumn).data().toString();
-            if (metadata->earlyNikons.contains(cameraModel)) {
-                // qDebug() << "ImageDecoder::load early nikon";
-                decoderToUse = QtImage;
-            }
-        }
-
-        // TurboJpg does not work for all dng embedded jpeg
-        if (decoderToUse != QtImage && ext == "dng") {
-            decoderToUse = QtImage;
-        }
-
-        qDebug() << "ImageDecoder::load"
-                 << "ext =" << ext
-                 << "cameraModel =" << dm->sf->index(n.key, G::CameraModelColumn).data().toString()
-                 << "n.offsetFull =" << n.offsetFull
-                 << "n.lengthFull =" << n.lengthFull
-                 << fPath
-            ;
-        //*/
-
+        decoderToUse = TurboJpg;            // QtImage or TurboJpg or Rory
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(buf);
+            if (image.isNull()) {
+                errMsg = "Could not read JPG because JpegTurbo::decode failed.";
+                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                // try Qt decoder
+                decoderToUse = QtImage;
+            }
         }
         #endif
 
@@ -233,7 +197,6 @@ bool ImageDecoder::load()
                 return false;
             }
         }
-        imFile.close();
     }
 
     // HEIC format
@@ -280,40 +243,36 @@ bool ImageDecoder::load()
     // TIFF format
     else if (ext == "tif") {
 
-        // decoderToUse = QtImage;      // use QImage::load
-        decoderToUse = QtTiff;          //
-        // decoderToUse = LibTiff;      // use libtiff library directly
-        // decoderToUse = Rory;         // use Rory decoder
+        /* decoder options:
+           QtImage      use QImage::load
+           QtTiff       use QTiffHandler code override
+           LibTiff      use libtiff library directly
+           Rory         use Rory decoder
+        */
+        decoderToUse = QtTiff;
 
         #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {
-            // Tiff tiff("ImageDecoder::load");
-            // qDebug() << "ImageDecoder::load using libtiff:" << fPath;
-            // image = tiff.testLibtiff(fPath, n.key + 1);
-            // image = tiff.readTiffToQImage(fPath);
             class LibTiff libTiff;
             image = libTiff.readTiffToQImage(fPath);
-            // image = libTiff.testLibtiff(fPath, n.key + 1);
         }
         #endif
 
         if (decoderToUse == Rory) {
             // check for sampling format we cannot read
             if (n.samplesPerPixel > 3) {
-                 imFile.close();
                  errMsg = "TIFF samplesPerPixel more than 3.";
                  G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
+                 imFile.close();
                  status = Status::Invalid;
                  return false;
             }
 
             // try Winnow decoder
             Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
-            qDebug() << "ImageDecoder::load" << fPath;
             if (!tiff.decode(fPath, n.offsetFull, image)) {
-                imFile.close();
                 decoderToUse = QtImage;
-                // /*
+                /*
                 qDebug() << "ImageDecoder::load "
                          << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
                             "Trying Qt tiff library to decode " + fPath + ". ";  //*/
@@ -323,9 +282,9 @@ bool ImageDecoder::load()
         if (decoderToUse == QtImage) {
             // use Qt tiff decoder
             if (!image.load(fPath)) {
-                imFile.close();
                 errMsg = "Could not read because Qt tiff decoder failed.";
                 G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+                imFile.close();
                 status = Status::Invalid;
                 return false;
             }
@@ -336,59 +295,61 @@ bool ImageDecoder::load()
             Tiff tiff("ImageDecoder::load");
             // qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
             if (!tiff.read(fPath, &image)) {
-                imFile.close();
                 errMsg = "Could not read because QTiff decoder failed.";
                 G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+                imFile.close();
+                status = Status::Invalid;
+                return false;
+            }
+        }
+    }
+
+    // JPEG format
+    else if (ext == "jpg" || ext == "jpeg") {
+        #ifdef Q_OS_WIN
+        decoderToUse = QtImage;
+        #endif
+        #ifdef Q_OS_MAC
+        decoderToUse = TurboJpg;            // QtImage or TurboJpg or Rory
+        if (decoderToUse == TurboJpg) {
+            JpegTurbo jpegTurbo;
+            image = jpegTurbo.decode(fPath);
+            if (image.isNull()) {
+                errMsg = "Could not read because TurboJpg decoder failed.";
+                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                // try using QImage
+                decoderToUse = QtImage;
+            }
+        }
+        #endif
+
+        if (decoderToUse == Rory) {
+            Jpeg jpeg;
+            jpeg.decodeScan(imFile, image);
+            if (image.isNull()) {
+                errMsg = "Could not read because Rory decoder failed.";
+                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                imFile.close();
                 status = Status::Invalid;
                 return false;
             }
         }
 
-        imFile.close();
-    }
-
-    // JPEG format
-    else if (ext == "jpg" || ext == "jpeg") {
-        // decoderToUse = Rory;
-        #ifdef Q_OS_WIN
-        decoderToUse = QtImage;
-        #endif
-        #ifdef Q_OS_MAC
-        // decoderToUse = TurboJpg;
-        decoderToUse = QtImage;
-        #endif
-
-        if (decoderToUse == Rory) {
-            Jpeg jpeg;
-            // Jpeg2 jpeg;
-            jpeg.decodeScan(imFile, image);
-        }
-
-        #ifdef Q_OS_MAC
-        if (decoderToUse == TurboJpg) {
-            JpegTurbo jpegTurbo;
-            image = jpegTurbo.decode(fPath);
-        }
-        #endif
-
         if (decoderToUse == QtImage) {
             image.load(fPath);
+            if (image.isNull()) {
+                errMsg = "Could not read because Qt decoder failed.";
+                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                imFile.close();
+                status = Status::Invalid;
+                return false;
+            }
         }
     }
 
     // All other formats
     else {
         // try to decode
-        ImageMetadata m;
-        /*
-        qDebug() << "ImageDecoder::load"
-                 << "USEQT: "
-                 << "Id =" << threadId
-                 << "decoder->fPath =" << fPath
-                    ;
-                    //*/
-
-        // */
         if (!image.load(fPath)) {
             imFile.close();
             errMsg = "Could not read because decoder failed.";
@@ -396,8 +357,6 @@ bool ImageDecoder::load()
             status = Status::Invalid;
             return false;
         }
-
-        imFile.close();
     }
 
     // image loaded, check for null image
@@ -407,6 +366,7 @@ bool ImageDecoder::load()
     }
 
     status = Status::Success;
+    imFile.close();
     return true;
 }
 

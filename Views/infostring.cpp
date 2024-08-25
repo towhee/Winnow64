@@ -23,8 +23,7 @@ extern MW *mw4;
 MW *mw4;
 #define ep mw4->embelProperties
 
-InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
-                       EmbelProperties *embelProperties*/) :
+InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting) :
                        QWidget(parent)
 {
     if (G::isLogger) G::log("InfoString::InfoString");
@@ -34,6 +33,8 @@ InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
     initTokenList();
     initExampleMap();
     infoTemplates["Default info"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+
+    // connect(this, &InfoString::updateInfo, imageView, &ImageView::updateShootingInfo);
 }
 
 void InfoString::usingToken()
@@ -109,18 +110,17 @@ void InfoString::add(QMap<QString, QVariant> items)
     }
 }
 
-void InfoString::editTemplates()
+void InfoString::change(std::function<void ()> updateInfoCallback)
 {
     usingToken();
     int index = getCurrentInfoTemplateIndex();
     bool showInLoupeView = true;
     QString title = "Loupe View Info Token Editor";
-    TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, usingTokenMap, index,
-                      loupeInfoTemplate, title, showInLoupeView, this);
-    connect(&tokenDlg, &TokenDlg::rename, ep, &EmbelProperties::renameMetadataTemplateList);
-    tokenDlg.exec();
+    LoupeInfoDlg loupeInfoDlg(tokens, exampleMap, infoTemplates, usingTokenMap,
+                              index, loupeInfoTemplate, updateInfoCallback, this);
+    loupeInfoDlg.exec();
 
-    // save any edits to QSettings
+    // save any edits to settings
     setting->beginGroup("InfoTemplates");
         setting->remove("");
         QMapIterator<QString, QString> infoIter(infoTemplates);

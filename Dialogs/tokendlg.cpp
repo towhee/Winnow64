@@ -278,7 +278,7 @@ TokenDlg::TokenDlg(QStringList &tokens,
                    int &index,
                    QString &currentKey,
                    QString title,
-                   bool showInLoupeView,
+                   // bool showInLoupeView,
                    QWidget *parent) :
 
                    QDialog(parent),
@@ -344,8 +344,8 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->tokenEdit->exampleMap = exampleMap;
     ui->uniqueWarningLabel->setVisible(false);
 
-    qDebug() << "showInLoupeView =" << showInLoupeView;
-    ui->chkUseInLoupeView->setVisible(showInLoupeView);
+    // qDebug() << "showInLoupeView =" << showInLoupeView;
+    // ui->chkUseInLoupeView->setVisible(showInLoupeView);
 
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);
@@ -357,8 +357,6 @@ TokenDlg::TokenDlg(QStringList &tokens,
             this, SLOT(updateUniqueFileNameWarning(bool)));
     connect(ui->tokenEdit, SIGNAL(textChanged()),
             this, SLOT(updateTemplate()));
-    connect(ui->chkUseInLoupeView, &QCheckBox::stateChanged, this,
-            &TokenDlg::on_chkUseInLoupeView_checked);
 }
 
 TokenDlg::~TokenDlg()
@@ -390,16 +388,16 @@ void TokenDlg::updateTemplate()
     QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
 
     if (!templatesMap.contains(key)) {
-        qDebug() << "TokenDlg::updateTemplate   templatesMap does not contain" << key;
         return;
     }
 
     QString value = ui->tokenEdit->toPlainText();
+    /*
     qDebug() << "TokenDlg::updateTemplate"
              << "key =" << key
              << "ui->templatesCB->currentText() =" << ui->templatesCB->currentText()
              << "value =" << value
-                ;
+                ; //*/
     templatesMap[key] = value;
 }
 
@@ -426,12 +424,6 @@ void TokenDlg::on_okBtn_clicked()
 void TokenDlg::on_deleteBtn_clicked()
 {
     QString key = ui->templatesCB->currentText();
-    // QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
-    qDebug() << "TokenDlg::on_deleteBtn_clicked"
-             << "key =" << key
-             << "ui->templatesCB->currentText() =" << ui->templatesCB->currentText()
-        ;
-    // return;
 
     // check to see if the token template is being used
     QString msg = "";
@@ -448,6 +440,7 @@ void TokenDlg::on_deleteBtn_clicked()
         QMessageBox::warning(this, "Delete token template", msg, QMessageBox::Ok);
         return;
     }
+
     // okay to delete
     ui->templatesCB->removeItem(ui->templatesCB->currentIndex());
     templatesMap.remove(key);
@@ -473,12 +466,8 @@ void TokenDlg::on_newBtn_clicked()
     RenameDlg *nameDlg = new RenameDlg(newTemplate, existing,
              "New Template", "Enter new template name:", this);
     if (!nameDlg->exec()) {
-        // delete nameDlg;
         return;
     }
-    // delete nameDlg;
-
-    //qDebug() << "TokenDlg::on_newBtn_clicked" << newTemplate << existing;
 
     ui->templatesCB->addItem(newTemplate);
     int i = ui->templatesCB->findText(newTemplate);
@@ -575,32 +564,9 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
     indexJustChanged = true;
     if (templatesMap.contains(key)) {
         ui->tokenEdit->setText(templatesMap.value(key));
-        if (key == currentKey) {
-            ui->chkUseInLoupeView->setChecked(true);
-        }
-        else {
-            ui->chkUseInLoupeView->setChecked(false);
-        }
     }
     indexJustChanged = false;
 
-}
-
-void TokenDlg::on_chkUseInLoupeView_checked(int state)
-{
-    qDebug() << "TokenDlg::on_chkUseInLoupeView_checked" << "state +" << state;
-    if (!indexJustChanged) {
-        if (ui->chkUseInLoupeView->isChecked()) {
-            currentKey = ui->templatesCB->currentText();
-        }
-        else {
-            ui->chkUseInLoupeView->setChecked(true);
-            QString msg = "Select another template and then click checkbox to make it<br>"
-                          "the one used for the loupe view overlay info.<p>Press ESC to<br>"
-                          "close this message.";
-            G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
-        }
-    }
 }
 
 void TokenDlg::reject()

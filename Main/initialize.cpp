@@ -755,7 +755,7 @@ void MW::createInfoString()
     dependent on template data stored in QSettings
 */
     if (G::isLogger) G::log("MW::createInfoString");
-    infoString = new InfoString(this, dm, settings/*, embelProperties*/);
+    infoString = new InfoString(this, dm, settings);
 
 }
 
@@ -1533,7 +1533,6 @@ void MW::createMessageView()
 void MW::createPreferences()
 {
     if (G::isLogger) G::log("MW::createPreferences");
-    qDebug() << "MW::createPreferences";
     pref = new Preferences(this);
 }
 
