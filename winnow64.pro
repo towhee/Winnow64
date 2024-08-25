@@ -62,7 +62,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Dialogs/loupeinfodlg.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -218,7 +219,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Dialogs/loupeinfodlg.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -433,7 +435,8 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/loupeinfodlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui

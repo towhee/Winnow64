@@ -166,13 +166,6 @@
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QCheckBox" name="chkUseInLoupeView">
-           <property name="text">
-            <string>Use selected template for info in loupe view</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </widget>
       </item>

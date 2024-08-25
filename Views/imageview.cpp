@@ -119,13 +119,13 @@ ImageView::ImageView(QWidget *parent,
     // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
     mouseMovementElapsedTimer = new QElapsedTimer;
-//    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
+    // connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
     // mouse wheel is spinning
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &ImageView::wheelStopped);
 
-//    mouseZoomFit = true;
+    // mouseZoomFit = true;
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
@@ -308,7 +308,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 void ImageView::clear()
 {
     if (G::isLogger) G::log("ImageView::clear");
-    shootingInfo = "";
+    infoText = "";
     infoOverlay->setText("");
     QPixmap nullPm;
     pmItem->setPixmap(nullPm);
@@ -374,7 +374,7 @@ void ImageView::scale()
     }
 
     placeClassificationBadge();
-    setShootingInfo(shootingInfo);
+    setShootingInfo(infoText);
     emit updateStatus(true, "", "ImageView::scale");
 
     isMouseDoubleClick = false;
@@ -546,7 +546,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
         scale();
     }
     placeClassificationBadge();
-    setShootingInfo(shootingInfo);
+    setShootingInfo(infoText);
 }
 
 void ImageView::thumbClick(float xPct, float yPct)
@@ -873,21 +873,24 @@ bool ImageView::isNullImage()
     return pmItem->pixmap().isNull();
 }
 
-void ImageView::updateShootingInfo()
+void ImageView::changeInfoOverlay()
 {
-    if (G::isLogger) G::log("ImageView::sceneGeometry");
-    QModelIndex idx = thumbView->currentIndex();
-    QString current = infoString->getCurrentInfoTemplate();
-    shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
-                                                currentImagePath, idx);
-    qDebug() << "ImageView::updateShootingInfo"
-             << "shootingInfo =" << shootingInfo;
-    infoOverlay->setText(shootingInfo);
-//    moveShootingInfo(shootingInfo);
-//    qDebug() << "ImageView::sceneGeometry" << shootingInfo;
+    if (G::isLogger) G::log("ImageView::changeInfoOverlay");
+    // callback setShootingInfo() to resize infoOverlay if necessary
+    infoString->change([this]() { this->setShootingInfo(); });
 }
 
-void ImageView::setShootingInfo(QString infoString)
+void ImageView::updateShootingInfo()
+{
+    if (G::isLogger) G::log("ImageView::updateShootingInfo");
+    QModelIndex idx = thumbView->currentIndex();
+    QString current = infoString->getCurrentInfoTemplate();
+    infoText = infoString->parseTokenString(infoString->infoTemplates[current],
+                                                currentImagePath, idx);
+    infoOverlay->setText(infoText);
+}
+
+void ImageView::setShootingInfo(QString infoText)
 {
 /*
     Locate and format the info label, which currently displays the shooting
@@ -897,6 +900,12 @@ void ImageView::setShootingInfo(QString infoString)
     window (w) and view (v) sizes are updated during resize
 */
     if (G::isLogger) G::log("ImageView::setShootingInfo");
+
+    if (infoText == "") {
+        QModelIndex idx = thumbView->currentIndex();
+        QString current = infoString->getCurrentInfoTemplate();
+        infoText = infoString->parseTokenString(infoString->infoTemplates[current],
+                                                    currentImagePath, idx);    }
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
@@ -916,7 +925,7 @@ void ImageView::setShootingInfo(QString infoString)
     font.setKerning(true);
     infoOverlay->setFont(font);      // not working
     infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
-    infoOverlay->setText(infoString);
+    infoOverlay->setText(infoText);
     infoOverlay->adjustSize();
     // make a little wider to account for the drop shadow
     infoOverlay->resize(infoOverlay->width()+10, infoOverlay->height()+10);
@@ -1340,7 +1349,7 @@ QString ImageView::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
     rpt << "\n";
     rpt << "\n" << "isBusy = " << G::s(isBusy);
-    rpt << "\n" << "shootingInfo = " << G::s(shootingInfo);
+    rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
     rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewFolder);
