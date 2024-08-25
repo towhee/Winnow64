@@ -310,9 +310,9 @@ void IconView::refreshThumb(QModelIndex idx, int role)
     if (isDebug) G::log("IconView::refreshThumb", objectName());
     if (!idx.isValid()) {
         qDebug() << "WARNING" << "WARNING"
-                   << "IconView::refreshThumb"
-                   << "idx =" << idx
-                   << "is invalid";
+                 << "IconView::refreshThumb"
+                 << "idx =" << idx
+                 << "is invalid";
         QString msg = "Inalid index.";
         G::issue("Warning", msg, "IconView::refreshThumb");
         return;
@@ -332,7 +332,7 @@ void IconView::refreshThumbs() {
 
 void IconView::setThumbParameters()
 {
-/*
+    /*
     When thumb parameters (height, width, padding, fontsize, showLabels) are
     changed this function is called from:
 
@@ -397,7 +397,7 @@ QSize IconView::getCellSize()
 
 void IconView::updateVisible(QString src)
 {
-/*
+    /*
     The datamodel sort/filter rows visible (cells) are updated:
         firstVisibleCell
         midVisibleCell
@@ -437,21 +437,21 @@ void IconView::updateVisible(QString src)
     isFirstCellPartial = !viewport()->rect().contains(visualRect(tlIdx));
     isLastCellPartial = !viewport()->rect().contains(visualRect(brIdx));
     if (isDebug)
-    qDebug() << "IconView::updateVisible"
-             << objectName()
-             << "cellsPerRow" << cellsPerRow
-             << "cellsPerPageRow" << cellsPerPageRow
-             << "rowsPerVP" << rowsPerVP
-             << "rowsPerPage" << rowsPerPage
-             << "cellsPerVP" << cellsPerVP
-             << "cellsPerPage" << cellsPerPage
-             << "visibleCellCount =" << visibleCellCount
-             << "firstVisibleCell =" << firstVisibleCell
-             << "lastVisibleCell =" << lastVisibleCell
-             << "midVisibleCell =" << midVisibleCell
-             << "isFirstCellPartial =" << isFirstCellPartial
-             << "isLastCellPartial =" << isLastCellPartial
-        ;
+        qDebug() << "IconView::updateVisible"
+                 << objectName()
+                 << "cellsPerRow" << cellsPerRow
+                 << "cellsPerPageRow" << cellsPerPageRow
+                 << "rowsPerVP" << rowsPerVP
+                 << "rowsPerPage" << rowsPerPage
+                 << "cellsPerVP" << cellsPerVP
+                 << "cellsPerPage" << cellsPerPage
+                 << "visibleCellCount =" << visibleCellCount
+                 << "firstVisibleCell =" << firstVisibleCell
+                 << "lastVisibleCell =" << lastVisibleCell
+                 << "midVisibleCell =" << midVisibleCell
+                 << "isFirstCellPartial =" << isFirstCellPartial
+                 << "isLastCellPartial =" << isLastCellPartial
+            ;
     return;
 }
 
@@ -499,11 +499,6 @@ QModelIndex IconView::pageDownIndex(int fromRow)
     int pageUpCell = fromRow + cellsPerPage;
     if (pageUpCell > max) pageUpCell = fromRow;
     scrollToRow(pageUpCell, "IconView::pageDownIndex");
-    qDebug() << "IconView::pageDownIndex  scrollToRow"
-             << "fromRow =" << fromRow
-             << "cellsPerPage =" << cellsPerPage
-             << "pageUpCell =" << pageUpCell
-        ;
     return dm->sf->index(pageUpCell, 0);
     //return moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier);
 }
@@ -531,11 +526,11 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 
 void IconView::setThumbSize()
 {
-/*
+    /*
 
 */
     // if (isDebug)
-        qDebug() << "IconView::setThumbSize" << objectName();
+    qDebug() << "IconView::setThumbSize" << objectName();
     QString src = "IconView::setThumbSize";
 
     setThumbParameters();
@@ -561,7 +556,7 @@ void IconView::setThumbSize()
 
 void IconView::thumbsEnlarge()
 {
-/*
+    /*
    This function enlarges the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
@@ -585,7 +580,7 @@ void IconView::thumbsEnlarge()
 
 void IconView::thumbsShrink()
 {
-/*
+    /*
    This function reduces the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
@@ -606,7 +601,7 @@ void IconView::thumbsShrink()
 
 int IconView::justifyMargin()
 {
-/*
+    /*
     The ListView can hold x amount of icons in a row before it wraps to the next row.
     There will be a right margin where there was not enough room for another icon. This
     function returns the right margin amount. It is used in MW::gridDisplay to determine
@@ -622,7 +617,7 @@ int IconView::justifyMargin()
 
 void IconView::rejustify()
 {
-/*
+    /*
     This function controls the resizing behavior of the thumbnails in gridview
     and thumbview when wrapping = true and the window is resized or the
     gridview preferences are edited. The grid cells sizes are maintained while
@@ -673,7 +668,7 @@ void IconView::rejustify()
 
 void IconView::justify(JustifyAction action)
 {
-/*
+    /*
    This function enlarges or shrinks the grid cells while keeping the right hand side margin
    minimized. To make this work it is critical to assign the correct value to the row width:
    wRow. The superclass QListView, uses a width that assumes there will always be a scrollbar
@@ -723,7 +718,7 @@ void IconView::justify(JustifyAction action)
 
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 {
-/*
+    /*
     IconViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot.
 */
@@ -734,7 +729,7 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 
 void IconView::resizeEvent(QResizeEvent *)
 {
-/*
+    /*
     The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth)
     that requires justification; by a change in the thumbDock splitter; or a resize of
     the application window.
@@ -807,7 +802,7 @@ void IconView::resizeEvent(QResizeEvent *)
 
 void IconView::thumbsFitTopOrBottom(QString src)
 {
-/*
+    /*
     The thumbnail size is adjusted to fit the thumbDock height and scrolled to
     keep the midVisibleThumb in the middle. Other objects visible (docks and
     central widget) are resized.
@@ -874,7 +869,7 @@ void IconView::thumbsFitTopOrBottom(QString src)
              << "hMax =" << hMax
              << "hMin =" << hMin
              << "G::maxIconSize =" << G::maxIconSize
-                ;
+        ;
     //    */
 
     setThumbSize();
@@ -887,7 +882,7 @@ void IconView::repaintView()
 
 void IconView::updateView()
 {
-/*
+    /*
     Force the view delegate to update.
 */
     if (isDebug) G::log("IconView::updateView", objectName());
@@ -901,7 +896,7 @@ void IconView::updateView()
 
 int IconView::scrollPosition()
 {
-/*
+    /*
     Return the position of the scrollbar.  This will be the vertical scrollbar if
     isWrapping and the horizontal scrollbar otherwise.  This is used in the determine
     if there is a need to scroll to render the current index visible in a filter
@@ -957,7 +952,7 @@ void IconView::scrollPageUp(int /*step*/)
 
 void IconView::scrollToRow(int row, QString source)
 {
-/*
+    /*
     This is called to scroll to the current image or to sync the other views (thumbView,
     gridView and tableView). When the user switches views (loupe, grid and table) the
     thumbView, gridView or tableView is made visible. Hidden widgets cannot be updated. It
@@ -1072,7 +1067,7 @@ void IconView::wheelStopped()
 }
 
 bool IconView::event(QEvent *event) {
-/*
+    /*
      Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
     if (isDebug) G::log("IconView::event");
@@ -1100,7 +1095,7 @@ bool IconView::event(QEvent *event) {
                     ;
         //*/
         if (idx.isValid()) {
-             m2->togglePickMouseOverItem(idx);
+            m2->togglePickMouseOverItem(idx);
         }
     }
 
@@ -1144,7 +1139,7 @@ void IconView::keyPressEvent(QKeyEvent *event){
 
 void IconView::mousePressEvent(QMouseEvent *event)
 {
-/*
+    /*
     Captures the position of the mouse click within the thumbnail. This is sent
     to imageView, which pans to the same center in zoom view. This is handy
     when the user wants to view a specific part of another image that is in a
@@ -1287,7 +1282,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 
 void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-/*
+    /*
     Show the image in loupe view.  Scroll the thumbView or gridView to position at
     center.
 */
@@ -1319,7 +1314,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
 {
-/*
+    /*
     Turns the cursor into a frame showing the cropped ImageView zoom window in the
     thumbnail. This is handy for the user to see where a click on thumbnail to instantly
     pan to in same spot in the imageView zoomed window.
@@ -1358,7 +1353,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "Key modifier pressed";
     }
 
-//    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
+    //    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
     if (!showZoomFrame) failReason = "!showZoomFrame";
     if (!idx.isValid()) failReason = "!idx.isValid()";
     if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
@@ -1502,10 +1497,10 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     // check if mac Accessibility has scaled pointer size
     float scale = 1.0;
-    #ifdef Q_OS_MAC
-        scale = Mac::getMouseCursorMagnification();
-        if (scale == 0) scale = 1;
-    #endif
+#ifdef Q_OS_MAC
+    scale = Mac::getMouseCursorMagnification();
+    if (scale == 0) scale = 1;
+#endif
     w /= scale;
     h /= scale;
 
@@ -1537,7 +1532,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
 void IconView::startDrag(Qt::DropActions)
 {
-/*
+    /*
     Drag and drop thumbs to another program.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
