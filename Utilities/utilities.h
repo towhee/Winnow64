@@ -95,6 +95,9 @@ public:
 
 public slots:
     static void hideCursor();
+
+private:
+    static const Qt::KeyboardModifiers modifiersMask;
 };
 
 #endif // UTILITIES_H
