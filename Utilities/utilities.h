@@ -33,6 +33,8 @@ public:
     static void uniqueFilePath(QString &path, QString delimiter = "_");
     static void uniqueInList(QString &name, const QStringList &list, QString delimiter = "_");
 
+    static bool modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val);
+
     static void backup(QString fPath, QString subfolderName);
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
@@ -90,6 +92,10 @@ public:
 
 public slots:
     static void hideCursor();
+
+private:
+    static const Qt::KeyboardModifiers modifiersMask;
+
 };
 
 #endif // UTILITIES_H

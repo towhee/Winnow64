@@ -213,6 +213,22 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     } while (fileAlreadyExists);
 }
 
+const Qt::KeyboardModifiers Utilities::modifiersMask = Qt::ShiftModifier |
+                                                       Qt::ControlModifier |
+                                                       Qt::AltModifier |
+                                                       Qt::MetaModifier;
+
+bool Utilities::modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val)
+{
+    /*
+    modifiers = current system keyboard modifiers, which could include modifiers other than
+    control, alt, shift and meta (ie keyboard etc).  We want to make sure that we only
+    compare val (the comparitor) to the first 4 modifiers.
+*/
+    Qt::KeyboardModifiers masked = modifiers &= modifiersMask;
+    return val == masked;
+}
+
 void Utilities::backup(QString fPath, QString subfolderName)
 {
     QString fName = QFileInfo(fPath).fileName();
