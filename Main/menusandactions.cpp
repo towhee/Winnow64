@@ -604,15 +604,16 @@ void MW::createGoActions()
 {
     // Go menu
 
-    keyRightAction = new QAction(tr("Next"), this);
+    // show dummy shortcut for right
+    keyRightAction = new QAction("Next\tRight Arrow", this);
     keyRightAction->setObjectName("nextImage");
     keyRightAction->setShortcutVisibleInContextMenu(true);
-    keyRightAction->setEnabled(true);
     addAction(keyRightAction);
     connect(keyRightAction, &QAction::triggered, this, &MW::keyRight);
     // connect(keyRightAction, &QAction::triggered, this, [this](){ keyRight(Qt::NoModifier); });
 
-    keyLeftAction = new QAction(tr("Previous"), this);
+    // show dummy shortcut for left
+    keyLeftAction = new QAction(tr("Previous\tLeft Arrow"), this);
     keyLeftAction->setObjectName("prevImage");
     keyLeftAction->setShortcutVisibleInContextMenu(true);
     addAction(keyLeftAction);
@@ -2535,8 +2536,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
                                  .arg(shortcuts.at(1).toString(QKeySequence::NativeText));
         jumpAction->setText(actionText);
 
-        keyRightAction->setShortcut(QKeySequence("Right"));
-        keyLeftAction->setShortcut(QKeySequence("Left"));
+        // do not setShortcut for left/right - slower than using eventFilter
+        // keyRightAction->setShortcut(QKeySequence("Right"));
+        // keyLeftAction->setShortcut(QKeySequence("Left"));
+
         keyDownAction->setShortcut(QKeySequence("Down"));
         keyUpAction->setShortcut(QKeySequence("Up"));
         keyPageUpAction->setShortcut(QKeySequence("PgUp"));

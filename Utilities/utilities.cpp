@@ -332,6 +332,8 @@ bool Utilities::isScreenValid(const QScreen *screen)
     return false;
 }
 
+const Qt::KeyboardModifiers Utilities::modifiersMask = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+
 bool Utilities::modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val)
 {
 /*
@@ -339,8 +341,7 @@ bool Utilities::modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers
     control, alt, shift and meta (ie keyboard etc).  We want to make sure that we only
     compare val (the comparitor) to the first 4 modifiers.
 */
-    Qt::KeyboardModifiers mask = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
-    Qt::KeyboardModifiers masked = modifiers &= mask;
+    Qt::KeyboardModifiers masked = modifiers &= modifiersMask;
     return val == masked;
 }
 

@@ -45,11 +45,11 @@ void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
 
-    if (G::mode == "Compare") {
-        sel->select(compareImages->go("Right"), Qt::NoModifier, "MW::keyRight");
-    }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->next(qApp->keyboardModifiers());
+    }
+    if (G::mode == "Compare") {
+        sel->select(compareImages->go("Right"), Qt::NoModifier, "MW::keyRight");
     }
 }
 

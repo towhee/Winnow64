@@ -825,6 +825,7 @@ void MW::changeEvent(QEvent *event) {
 void MW::keyPressEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyPressEvent");
+    qDebug() << "MW::keyPressEvent" << event;
 
     if (event->key() == Qt::Key_Return) {
         qDebug() << "MW::keyPressEvent Key_Return";
@@ -843,7 +844,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    //qDebug() << "MW::keyReleaseEvent" << event;
+    qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -1078,7 +1079,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              Qt::KeyboardModifiers k = e->modifiers();
 
             if (obj->objectName() == "MWWindow") {
-                /*
+                // /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
                          << "key =" << e->key()
@@ -1088,8 +1089,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
 
                 // see menu shortcuts instead of this
-                // if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
-                // if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
+                if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
+                if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
                 // if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
                 // if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
                 // if (e->key() == Qt::Key_Home) sel->first(e->modifiers());
