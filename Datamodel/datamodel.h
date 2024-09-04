@@ -201,7 +201,6 @@ private:
         QString fPath;
     };
 
-//    QMutex mutex;
     bool mLock;
 
     QDir *dir;

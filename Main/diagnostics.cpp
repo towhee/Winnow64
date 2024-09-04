@@ -262,24 +262,23 @@ QString MW::diagnostics()
     return reportString;
 }
 
-void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics());}
-void MW::diagnosticsWorkspaces() {diagnosticsReport(this->reportWorkspaces());}
-void MW::diagnosticsGridView() {diagnosticsReport(gridView->diagnostics());}
-void MW::diagnosticsThumbView() {diagnosticsReport(thumbView->diagnostics());}
-void MW::diagnosticsImageView() {diagnosticsReport(imageView->diagnostics());}
+void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics(), "Winnow Diagnostics: MainWindow");}
+void MW::diagnosticsWorkspaces() {diagnosticsReport(this->reportWorkspaces(), "Winnow Diagnostics: WorkSpaces");}
+void MW::diagnosticsGridView() {diagnosticsReport(gridView->diagnostics(), "Winnow Diagnostics: GridView");}
+void MW::diagnosticsThumbView() {diagnosticsReport(thumbView->diagnostics(), "Winnow Diagnostics: ThumbView");}
+void MW::diagnosticsImageView() {diagnosticsReport(imageView->diagnostics(), "Winnow Diagnostics: ImageView");}
 void MW::diagnosticsInfoView() {} // dummy for now
 void MW::diagnosticsTableView() {} // dummy for now
 void MW::diagnosticsCompareView() {} // dummy for now
-void MW::diagnosticsMetadata() // dummy for now
-{
+void MW::diagnosticsMetadata() {
     dm->imMetadata(dm->currentFilePath, true);
-    diagnosticsReport(metadata->diagnostics(dm->currentFilePath));
+    diagnosticsReport(metadata->diagnostics(dm->currentFilePath), "Winnow Diagnostics: Metadata");
 }
 void MW::diagnosticsXMP() {} // dummy for now
-void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics());}
-void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
-void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
-void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
+void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics(), "Winnow Diagnostics: MetaRead2");}
+void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics(), "Winnow Diagnostics: ImageCache");}
+void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
+void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
 void MW::diagnosticsFilters() {} // dummy for now
 void MW::diagnosticsFileTree() {} // dummy for now
 void MW::diagnosticsBookmarks() {} // dummy for now
@@ -288,7 +287,7 @@ void MW::diagnosticsThumb() {} // dummy for now
 void MW::diagnosticsIngest() {} // dummy for now
 void MW::diagnosticsZoom() {} // dummy for now
 
-void MW::diagnosticsReport(QString reportString)
+void MW::diagnosticsReport(QString reportString, QString title)
 {
     if (G::isLogger) G::log("MW::diagnosticsReport");
     QDialog *dlg = new QDialog;
@@ -306,6 +305,7 @@ void MW::diagnosticsReport(QString reportString)
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+    dlg->setWindowTitle(title);
     dlg->show();
     //std::cout << reportString.toStdString() << std::flush;
 }

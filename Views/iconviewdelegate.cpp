@@ -110,7 +110,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     pickColor = QColor(Qt::green);
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
-    cacheColor = QColor(100,0,0);
+    cacheColor = QColor(200,0,0);
     cacheBorderColor = QColor(l20,l20,l20);
     missingThumbColor = QColor(Qt::yellow);
     ratingBackgoundColor = QColor(b,b,b,50);
@@ -597,7 +597,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
 
     // draw the cache circle
-    if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
+    if ((!isCached /*&& !isVideo && metaLoaded && !G::isSlideShow*/) || showAllSymbols) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

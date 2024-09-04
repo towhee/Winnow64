@@ -4578,7 +4578,7 @@ void MW::ingest()
     1.  MW::ingest()
 
         This function keeps track of the prevSourceFolder and baseFolderDescription during
-        subsequent calls.  It uses this to effect the behavior of the IngestDlg, which is
+        subsequent calls.  It uses this to control the behavior of the IngestDlg when it is
         called.  When IngestDlg closes persistent ingest data is saved in settings.  If the
         isBackgroundIngest flag == true then a backgroundIngest instantiation of Ingest is
         created and run.

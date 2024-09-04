@@ -127,8 +127,16 @@ bool Reader::readMetadata()
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
     }
 
+    if (isDebug)
+    {
+        qDebug().noquote()
+            << "Reader::readMetadata emit addToImageCache   "
+            << "id =" << QString::number(threadId).leftJustified(2, ' ')
+            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << fPath
+            ;
+    }
     if (!abort) emit addToImageCache(metadata->m, instance);
-    //if (abort) quit();
 
     return isMetaLoaded;
 }

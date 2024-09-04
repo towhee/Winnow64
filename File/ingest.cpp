@@ -352,6 +352,9 @@ void Ingest::run()
         QString sourceBaseName = fileInfo.baseName();
         QString sourceSidecarPath = sourceFolderPath + "/" + sourceBaseName + ".xmp";
 
+        // thumb # for user
+        QString thumbNum = " Thumbnail " + QString::number(dm->proxyRowFromPath(sourcePath) + 1) + ": ";
+
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
         if (i > 0 && pickList.at(i).baseName() != pickList.at(i-1).baseName())
@@ -398,31 +401,32 @@ void Ingest::run()
         bool copyOk = QFile::copy(sourcePath, destinationPath);
 
         /* for demonstration:
-        failedToCopy << sourcePath + " to " + destinationPath;
-        integrityFailure << sourcePath + " not same as " + destinationPath;
+        failedToCopy << thumbNum + sourcePath + " to " + destinationPath;
+        integrityFailure << thumbNum + sourcePath + " not same as " + destinationPath;
         // */
+
         if (!copyOk) {
             qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << destinationPath;
-            failedToCopy << sourcePath + " to " + destinationPath;
+            failedToCopy << thumbNum + sourcePath + " to " + destinationPath;
         }
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
                 qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << destinationPath;
-                integrityFailure << sourcePath + " not same as " + destinationPath;
+                integrityFailure << thumbNum + sourcePath + " not same as " + destinationPath;
             }
         }
 
         // copy source image to backup
-        if(isBackup) {
+        if (isBackup) {
             bool backupCopyOk = QFile::copy(sourcePath, backupPath);
             if (!backupCopyOk) {
                 qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << backupPath;
-                failedToCopy << sourcePath + " to " + backupPath;
+                failedToCopy << thumbNum + sourcePath + " to " + backupPath;
             }
             if (backupCopyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourcePath, backupPath)) {
                     qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << backupPath;
-                    integrityFailure << sourcePath + " not same as " + backupPath;
+                    integrityFailure << thumbNum + sourcePath + " not same as " + backupPath;
                 }
             }
         }
@@ -434,7 +438,7 @@ void Ingest::run()
             if (!sidecarOk) {
                 QString msg = "Failer to copy " + sourceSidecarPath + " to " + destSidecarPath + ".";
                 G::issue("Warning", msg, "Ingest::ingest");
-                failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
+                failedToCopy << thumbNum + sourceSidecarPath + " to " + destSidecarPath;
             }
 
         }
@@ -444,7 +448,7 @@ void Ingest::run()
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
                 QString msg = "Integrity failure, " + sourceSidecarPath + " not same as " + destSidecarPath + ".";
                 G::issue("Warning", msg, "Ingest::ingest");
-                integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
+                integrityFailure << thumbNum + sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
 
@@ -454,13 +458,13 @@ void Ingest::run()
             if (!backupSidecarCopyOk) {
                 QString msg = "Failed to copy " + destSidecarPath + " to " + backupSidecarPath + ".";
                 G::issue("Warning", msg, "Ingest::ingest");
-                failedToCopy << destSidecarPath + " to " + backupSidecarPath;
+                failedToCopy << thumbNum + destSidecarPath + " to " + backupSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
                     QString msg = "Integrity failure, " + destSidecarPath + " not same as " + backupSidecarPath + ".";
                     G::issue("Warning", msg, "Ingest::ingest");
-                    integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
+                    integrityFailure << thumbNum + destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }
         }
