@@ -21,7 +21,7 @@ public:
     explicit IngestErrors(const QStringList &failedToCopy,
                           const QStringList &integrityFailure,
                           QWidget *parent = nullptr);
-    ~IngestErrors();
+    ~IngestErrors() override;
 
 private:
     Ui::IngestErrors *ui;

@@ -1370,7 +1370,7 @@ private:
     void diagnosticsThumb();
     void diagnosticsIngest();
     void diagnosticsZoom();
-    void diagnosticsReport(QString reportString);
+    void diagnosticsReport(QString reportString, QString title = "Winnow Diagnostics");
     void allIssuesReport();
     void SessionIssuesReport();
 
