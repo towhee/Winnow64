@@ -225,7 +225,7 @@ isCacheItemListComplete = cacheItemListCompleted();
     }
 
     // Mutex req'd (do not remove 2023-11-13)
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);        // can crash
     icd->cache.key = dm->currentSfRow;
     setDirection();
     icd->cache.currMB = getImCacheSize();
@@ -242,6 +242,8 @@ void ImageCache::resetCachingFlags()
     range.
 */
     log("resetCachingFlags");
+
+    QMutexLocker locker(&gMutex);
 
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
         if (abort) break;
@@ -806,7 +808,11 @@ bool ImageCache::cacheUpToDate()
         int id = icd->cacheItemList.at(i).decoderId;
         bool isCached = icd->cacheItemList.at(i).isCached;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
+        // gMutex.lock();
+        icd->mutex.lock();
         bool inCache = icd->imCache.contains(icd->cacheItemList.at(i).fPath);
+        icd->mutex.unlock();
+        // gMutex.unlock();
 
         // the cache contains the image
         if (inCache) continue;
@@ -1611,6 +1617,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
 
     if (debugCaching) qDebug() << "ImageCache::initImageCache  dm->instance =" << dm->instance;
 
+    QMutexLocker locker(&gMutex);
     abort = false;
 
     // reset the image cache
@@ -1822,10 +1829,11 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         }
     }
 
-    if (useMutex) gMutex.lock();
+    QMutexLocker locker(&gMutex);
+    // gMutex.lock();
     currentPath = fPath;
     icd->cache.key = dm->currentSfRow;
-    if (useMutex) gMutex.unlock();
+    // gMutex.unlock();
 
     // image not cached and not video
     bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;
@@ -1872,7 +1880,7 @@ void ImageCache::decodeNextImage(int id)
 */
     log ("decodeNextImage");
     int row = icd->cache.toCacheKey;
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);            // can crash
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].decoderId = id;
     icd->cacheItemList[row].attempts += 1;
@@ -2209,9 +2217,9 @@ void ImageCache::fillCache(int id)
                                    << "cacheUpToDate = false  restart ImageCache";
                 }
 
-                stop();
-                start();
-                // launchDecoders("FinalCheck");
+                // stop();
+                // start();
+                // // launchDecoders("FinalCheck");
             }
         }
 
