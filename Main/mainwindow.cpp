@@ -593,9 +593,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             }
         }
     }
-
+    return;
     // recover from prior crash
-    if (settings->value("hasCrashed").toBool()) {
+    if (settings->value("hasCrashed").toBool() && !isShiftOnOpen) {
         int picks = pickLogCount();
         int ratings = ratingLogCount();
         int colors = colorClassLogCount();
