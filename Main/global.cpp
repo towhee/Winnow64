@@ -6,10 +6,10 @@ namespace G
 QSettings *settings;
 
 // system messaging
-bool isTestLogger = false;
 bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
+bool isTestLogger = false;
 bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
 bool isErrorLogger = false;         // Writes error log messages to file or console
