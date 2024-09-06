@@ -377,11 +377,10 @@ void ImageDecoder::setReady()
 
 void ImageDecoder::rotate()
 {
-    if (G::isLogger) G::log("ImageDecoder::rotate", "row = " + QString::number(cacheKey));
-    if (isDebug) {
-        mutex.lock();
-        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
-        mutex.unlock();
+    if (G::isLogger || isDebug) {
+        QString msg = "Id " + QString::number(threadId) +
+                      " row = " + QString::number(cacheKey);
+        G::log("ImageDecoder::rotate", msg);
     }
     QTransform trans;
     int degrees = 0;
@@ -423,11 +422,10 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
-    if (isDebug) {
-        mutex.lock();
-        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
-        mutex.unlock();
+    if (G::isLogger || isDebug) {
+        QString msg = "Id " + QString::number(threadId) +
+                      " row = " + QString::number(cacheKey);
+        G::log("ImageDecoder::colorManage", msg);
     }
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(n.iccBuf, image);
@@ -483,9 +481,10 @@ void ImageDecoder::run()
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
         mutex.unlock();
     }
-    /* debug
-        qDebug() << "ImageDecoder::run"
+    // /* debug
+        qDebug() << "ImageDecoder::run completed"
                  << "Id =" << threadId
+                 << "row =" <<  QString::number(cacheKey).leftJustified(4)
                  << "decoder->fPath =" << fPath
                     ; //*/
     emit done(threadId);
