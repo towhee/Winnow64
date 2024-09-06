@@ -844,7 +844,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    // qDebug() << "MW::keyReleaseEvent" << event;
+    qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -1079,7 +1079,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              Qt::KeyboardModifiers k = e->modifiers();
 
             if (obj->objectName() == "MWWindow") {
-                /*
+                // /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
                          << "key =" << e->key()
