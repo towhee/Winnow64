@@ -102,7 +102,6 @@ public slots:
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
 
 private:
-    bool useMutex = false;
     QMutex gMutex;
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load

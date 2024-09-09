@@ -478,7 +478,7 @@ void FindDuplicatesDlg::pixelCompare()
 
             counter++;
             ui->progressBar->setValue(1.0 * counter / totIterations * 100);
-            qApp->processEvents();
+            if (G::useProcessEvents) qApp->processEvents();
         }
     }
 
@@ -631,7 +631,7 @@ void FindDuplicatesDlg::getMetadataBItems()
         int pctProgress = 1.0 * counter / totIterations * 100;
         ui->progressLbl->setText(s);
         ui->progressBar->setValue(pctProgress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
 
         QString fPath = bItems.at(b).fPath;
 
@@ -890,7 +890,7 @@ void FindDuplicatesDlg::findMatches()
         matchCount = 0;
         int pctProgress = 1.0 * (a+1) / aCount * 100;
         ui->progressBar->setValue(pctProgress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         for (int b = 0; b < bCount; b++) {
             QString s = "a = " + QString::number(a+1) + " of " + QString::number(aCount) + "   " +
                         "b = " + QString::number(b+1) + " of " + QString::number(bCount);
@@ -1301,7 +1301,7 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     ui->matchLbl->setPixmap(pmNull);
     ui->matchLbl->setText("Loading image...");
     ui->matchLbl->repaint();
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
 
     currentMatch = 0;
     // // larger A image (candidate)
@@ -1432,7 +1432,7 @@ The delta or difference in pixels between two images is determined by taking the
 void FindDuplicatesDlg::progressMsg(QString msg)
 {
     ui->progressLbl->setText(msg);
-    QApplication::processEvents();
+    if (G::useProcessEvents) QApplication::processEvents();
 }
 
 void FindDuplicatesDlg::on_toggleTvHideChecked_clicked()

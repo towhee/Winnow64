@@ -6,7 +6,7 @@ void MW::setCentralMessage(QString message)
     centralLayout->setCurrentIndex(BlankTab);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
-    //qApp->processEvents();
+    // if (G::useProcessEvents) qApp->processEvents();
 }
 
 /**********************************************************************************************

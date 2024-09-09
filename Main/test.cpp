@@ -50,10 +50,10 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
-        //qApp->processEvents();
-//        if (dm->sf->rowCount() < 2) return;
-//        QString status = " Stress test: " + QString::number(slideCount) + " images.";
-//        updateStatus(true, status, "StressTest");
+        // if (G::useProcessEvents) qApp->processEvents();
+        // if (dm->sf->rowCount() < 2) return;
+        // QString status = " Stress test: " + QString::number(slideCount) + " images.";
+        // updateStatus(true, status, "StressTest");
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
@@ -183,9 +183,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    foreach (const QString &key, pathTemplates.keys()) {
-        qDebug() << "Key:" << key << ", Value:" << pathTemplates.value(key);
-    }
+    traverseFolderStressTest(50, 00, true);
 
 }
 /*

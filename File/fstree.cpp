@@ -703,7 +703,7 @@ void FSTree::dropEvent(QDropEvent *event)
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-        qApp->processEvents();        // processEvents is necessary
+        if (G::useProcessEvents) qApp->processEvents();        // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }

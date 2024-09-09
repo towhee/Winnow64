@@ -564,7 +564,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::newPopUp(this, centralWidget);
 
     if (isStartupArgs) {
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         handleStartupArgs(args);
         return;
     }
@@ -593,7 +593,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             }
         }
     }
-    return;
+
+    // return;  // ignore recover from crash when debugging
+
     // recover from prior crash
     if (settings->value("hasCrashed").toBool() && !isShiftOnOpen) {
         int picks = pickLogCount();
@@ -844,7 +846,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    qDebug() << "MW::keyReleaseEvent" << event;
+    // qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -1079,7 +1081,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              Qt::KeyboardModifiers k = e->modifiers();
 
             if (obj->objectName() == "MWWindow") {
-                // /*
+                /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
                          << "key =" << e->key()
@@ -1650,7 +1652,7 @@ I hope this helps! Let me know if you have any questions.
     {
         QString msg = "No updates available";
         if(!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         return;
     }
 
@@ -2504,7 +2506,7 @@ bool MW::stop(QString src)
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted for\n" + oldFolder);
-        //qApp->processEvents(); //rgh_ProcessEvents
+        // if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
     }
 
     dm->abortLoad();
@@ -3177,7 +3179,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     if (G::isLogger) qDebug() << "MW::bookmarkClicked";
     const QString dPath = item->toolTip(col);
     setCentralMessage("Loading " + dPath);
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
     isCurrentFolderOkay = isFolderValid(dPath, true, false);
 
     if (isCurrentFolderOkay) {
