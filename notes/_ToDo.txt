@@ -10,6 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- Change cache size is hanging (from 16 to 4 GB)
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification

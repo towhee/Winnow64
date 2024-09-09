@@ -29,7 +29,7 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     ui->progressMsg->setVisible(false);
     ui->progressBar->setVisible(false);
     ui->progressBar->setTextVisible(false);
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
 
     // Index list to avoid unique name issues while renaming
     for (int i = 0; i < selection.size(); i++) {

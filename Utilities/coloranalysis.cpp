@@ -34,7 +34,7 @@ void ColorAnalysis::process(QStringList &fPathList)
         }
         effects.hueCount(img, hues);
         G::popUp->setProgress(f+1);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         if (abort) return;
         for (int i = 0; i < hues.size(); i++) {
             rpt << QString::number(i).rightJustified(3);
@@ -72,5 +72,5 @@ void ColorAnalysis::abortHueReport()
     G::popUp->reset();
     G::popUp->showPopup("Hue report has been aborted.");
     qDebug() << "ColorAnalysis::abortHueReport" << abort;
-//    qApp->processEvents();
+    // if (G::useProcessEvents) qApp->processEvents();
 }

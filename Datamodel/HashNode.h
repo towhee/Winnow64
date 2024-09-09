@@ -1,226 +1,227 @@
-// #ifndef HASHNODE_H
-// #define HASHNODE_H
+#ifndef HASHNODE_H
+#define HASHNODE_H
 
 
-// #include <shared_mutex>
-// #include <QVector>
-// #include <QDebug>
+#include <shared_mutex>
+#include <QVector>
+#include <QDebug>
 
-// // Source: https://github.com/kshk123/hashMap
+// Source: https://github.com/kshk123/hashMap
 
-// namespace CTSL  // Concurrent Thread Safe Library
-// {
+namespace CTSL  // Concurrent Thread Safe Library
+{
 
-// template <typename K, typename V>
-// class HashNode
-// /*
+template <typename K, typename V>
+class HashNode
+
 // Class representing a templatized hash node
-// */
-// {
-//     public:
-//         HashNode() : next(nullptr)
-//         {}
-//         HashNode(K key_, V value_) : next(nullptr), key(key_), value(value_)
-//         {}
-//         ~HashNode()
-//         {
-//             next = nullptr;
-//         }
 
-//         void setKey(K key_) {key = key_;}
-//         const K& getKey() const {return key;}
-//         void setValue(V value_) {value = value_;}
-//         const V& getValue() const {return value;}
+{
+    public:
+        HashNode() : next(nullptr)
+        {}
+        HashNode(K key_, V value_) : next(nullptr), key(key_), value(value_)
+        {}
+        ~HashNode()
+        {
+            next = nullptr;
+        }
 
-//         HashNode *next;             // Pointer to the next node in the same bucket
+        void setKey(K key_) {key = key_;}
+        const K& getKey() const {return key;}
+        void setValue(V value_) {value = value_;}
+        const V& getValue() const {return value;}
 
-//     private:
-//         K key;                      // the hash key
-//         V value;                    // the value corresponding to the key
+        HashNode *next;             // Pointer to the next node in the same bucket
 
-// }; // end class HashNode
+    private:
+        K key;                      // the hash key
+        V value;                    // the value corresponding to the key
 
-// template <typename K, typename V>
-// class HashBucket
-// /*
-// Class representing a hash bucket. The bucket is implemented as a singly linked list. A
-// bucket is always constructed with a dummy head node
-// */
-// {
-//     public:
-//         HashBucket() : head(nullptr)
-//         {}
+}; // end class HashNode
 
-//         ~HashBucket() //delete the bucket
-//         {
-//             clear();
-//         }
+template <typename K, typename V>
+class HashBucket
+/*
+Class representing a hash bucket. The bucket is implemented as a singly linked list. A
+bucket is always constructed with a dummy head node
+*/
+{
+    public:
+        HashBucket() : head(nullptr)
+        {}
 
-//         int count()
-//         /*
-//         Return number of keys in the bucket
-//         */
-//         {
-//             // A shared mutex is used to enable multiple concurrent reads
-//             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * node = head;
-//             int n = 0;
-//             while (node != nullptr) {
-//                 n++;
-//                 node = node->next;
-//             }
-//             return n;
-//         }
+        ~HashBucket() //delete the bucket
+        {
+            clear();
+        }
 
-//         void getKeys(QVector<K> &keys)
-//         /*
-//         Return all the keys in the bucket
-//         */
-//         {
-//             // A shared mutex is used to enable mutiple concurrent reads
-//             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * node = head;
+        int count()
+        /*
+        Return number of keys in the bucket
+        */
+        {
+            // A shared mutex is used to enable multiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
+            int n = 0;
+            while (node != nullptr) {
+                n++;
+                node = node->next;
+            }
+            return n;
+        }
 
-//             while (node != nullptr) {
-//                 keys.append(node->getKey());
-//                 node = node->next;
-//             }
-//         }
+        void getKeys(QVector<K> &keys)
+        /*
+        Return all the keys in the bucket
+        */
+        {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
 
-//         bool contains(const K &key) const
-//         /*
-//         Function to find an entry in the bucket matching the key. If key is found the
-//         function returns true. If key is not found, function returns false
-//         */
-//         {
-//             // A shared mutex is used to enable multiple concurrent reads
-//             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * node = head;
+            while (node != nullptr) {
+                keys.append(node->getKey());
+                node = node->next;
+            }
+        }
 
-//             while (node != nullptr) {
-//                 if (node->getKey() == key) {
-//                     return true;
-//                 }
-//                 node = node->next;
-//             }
-//             return false;
-//         }
+        bool contains(const K &key) const
+        /*
+        Function to find an entry in the bucket matching the key. If key is found the
+        function returns true. If key is not found, function returns false
+        */
+        {
+            // A shared mutex is used to enable multiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
 
-//         bool find(const K &key, V &value) const
-//         /*
-//         Function to find an entry in the bucket matching the key. If key is found, the
-//         corresponding value is copied into the parameter "value" and function returns
-//         true. If key is not found, function returns false.
-//         */
-//         {
-//             // A shared mutex is used to enable mutiple concurrent reads
-//             std::shared_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * node = head;
+            while (node != nullptr) {
+                if (node->getKey() == key) {
+                    return true;
+                }
+                node = node->next;
+            }
+            return false;
+        }
 
-//             while (node != nullptr) {
-//                 if (node->getKey() == key) {
-//                     value = node->getValue();
-//                     return true;
-//                 }
-//                 node = node->next;
-//             }
-//             return false;
-//         }
+        bool find(const K &key, V &value) const
+        /*
+        Function to find an entry in the bucket matching the key. If key is found, the
+        corresponding value is copied into the parameter "value" and function returns
+        true. If key is not found, function returns false.
+        */
+        {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
 
-//         void insert(const K &key, const V &value)
-//         /*
-//         Function to insert into the bucket. If key already exists, update the value, else
-//         insert a new node in the bucket with the <key, value> pair.
-//         */
-//         {
-//             //Exclusive lock to enable single write in the bucket
-//             std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * prev = nullptr;
-//             HashNode<K, V> * node = head;
+            while (node != nullptr) {
+                if (node->getKey() == key) {
+                    value = node->getValue();
+                    return true;
+                }
+                node = node->next;
+            }
+            return false;
+        }
 
-//             while (node != nullptr && node->getKey() != key) {
-//                 prev = node;
-//                 node = node->next;
-//             }
+        void insert(const K &key, const V &value)
+        /*
+        Function to insert into the bucket. If key already exists, update the value, else
+        insert a new node in the bucket with the <key, value> pair.
+        */
+        {
+            //Exclusive lock to enable single write in the bucket
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * prev = nullptr;
+            HashNode<K, V> * node = head;
 
-//             // New entry, create a node and add to bucket
-//             if (nullptr == node)
-//             {
-//                 if (nullptr == head) {
-//                     head = new HashNode<K, V>(key, value);
-//                 }
-//                 else {
-//                     prev->next = new HashNode<K, V>(key, value);
-//                 }
-//             }
-//             else {
-//                 node->setValue(value); // Key found in bucket, update the value
-//             }
+            while (node != nullptr && node->getKey() != key) {
+                prev = node;
+                node = node->next;
+            }
 
-//         }
+            // New entry, create a node and add to bucket
+            if (nullptr == node)
+            {
+                if (nullptr == head) {
+                    head = new HashNode<K, V>(key, value);
+                }
+                else {
+                    prev->next = new HashNode<K, V>(key, value);
+                }
+            }
+            else {
+                node->setValue(value); // Key found in bucket, update the value
+            }
 
-//         void remove(const K &key)
-//         /*
-//         Function to remove an entry from the bucket, if found.
-//         */
-//         {
-//             //Exclusive lock to enable single write in the bucket
-//             std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> *prev  = nullptr;
-//             HashNode<K, V> * node = head;
+        }
 
-//             while (node != nullptr && node->getKey() != key) {
-//                 prev = node;
-//                 node = node->next;
-//             }
+        void remove(const K &key)
+        /*
+        Function to remove an entry from the bucket, if found.
+        */
+        {
+            //Exclusive lock to enable single write in the bucket
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> *prev  = nullptr;
+            HashNode<K, V> * node = head;
 
-//             // Key not found, nothing to be done
-//             if (nullptr == node) {
-//                 return;
-//             }
+            while (node != nullptr && node->getKey() != key) {
+                prev = node;
+                node = node->next;
+            }
 
-//             // Remove the node from the bucket
-//             else {
-//                 if (head == node) {
-//                     head = node->next;
-//                 }
-//                 else {
-//                     prev->next = node->next;
-//                 }
-//                 delete node; //Free up the memory
-//             }
-//         }
+            // Key not found, nothing to be done
+            if (nullptr == node) {
+                return;
+            }
 
-//         void clear()
-//         /*
-//         clear the bucket
-//         */
-//         {
-//             //Exclusive lock to enable single write in the bucket
-//             std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-//             HashNode<K, V> * prev = nullptr;
-//             HashNode<K, V> * node = head;
-//             while (node != nullptr) {
-//                 prev = node;
-//                 node = node->next;
-//                 delete prev;
-//             }
-//             head = nullptr;
-//         }
+            // Remove the node from the bucket
+            else {
+                if (head == node) {
+                    head = node->next;
+                }
+                else {
+                    prev->next = node->next;
+                }
+                delete node; //Free up the memory
+            }
+        }
 
-//     private:
-//         // The head node of the bucket
-//         HashNode<K, V> * head;
-//         // The mutex for this bucket
-//         mutable std::shared_timed_mutex mutex_;
+        void clear()
+        /*
+        clear the bucket
+        */
+        {
+            //Exclusive lock to enable single write in the bucket
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * prev = nullptr;
+            HashNode<K, V> * node = head;
+            while (node != nullptr) {
+                prev = node;
+                node = node->next;
+                delete prev;
+            }
+            head = nullptr;
+        }
 
-// }; // end class HashBucket
-// } // end namespace CTSL
+    private:
+        // The head node of the bucket
+        HashNode<K, V> * head;
+        // The mutex for this bucket
+        mutable std::shared_timed_mutex mutex_;
 
-// #endif // HASHNODE_H
+}; // end class HashBucket
+}  // end namespace CTSL
 
-// CHATGPT VERSION *************************************************************************
+#endif // HASHNODE_H
 
+
+
+// // CHATGPT VERSION *************************************************************************
 // #ifndef HASHNODE_H
 // #define HASHNODE_H
 
@@ -420,12 +421,13 @@
 
 // #endif // HASHNO
 
+
 // CHATGPT VERSION 2 ***********************************************************************
 // No changes
 
 // CHATGPT VERSION 3 ***********************************************************************
 
-/*
+/*  C
 1.	Improve Thread Safety with Rehashing and Load Factor Control:
         •	Implemented rehash() method in HashMap to handle resizing when the load factor exceeds a threshold.
         •	Used LOAD_FACTOR_THRESHOLD to trigger rehashing.
@@ -440,6 +442,7 @@
         •	Ensured that all operations are performed with appropriate locks.
 */
 
+/*
 #ifndef HASHNODE_H
 #define HASHNODE_H
 
@@ -502,7 +505,7 @@ public:
 
     bool contains(const K& key) const
     {
-        std::shared_lock<std::shared_mutex> lock(mutex_);
+        // std::shared_lock<std::shared_mutex> lock(mutex_);
         auto node = head.get();
         while (node != nullptr)
         {
@@ -601,3 +604,5 @@ private:
 } // end namespace CTSL
 
 #endif // HASHNODE_H
+
+*/

@@ -65,7 +65,7 @@ void SaveAsDlg::on_saveBtn_clicked()
     for (int i = 0; i < selection.count(); ++i) {
         int progress = (i + 1) * 100 / (selection.count() + 1);
         ui->progressBar->setValue(progress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         QString fPath = selection.at(i).data(G::PathRole).toString();
         QFileInfo info(fPath);
         QString path =  ui->folderPath->text() + "/";

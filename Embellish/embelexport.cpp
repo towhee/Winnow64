@@ -267,7 +267,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image
@@ -407,7 +407,7 @@ bool EmbelExport::exportImage(const QString &fPath)
 
 void EmbelExport::abortEmbelExport()
 {
-//    qApp->processEvents();
+    // if (G::useProcessEvents) qApp->processEvents();
     G::isProcessingExportedImages = false;
     G::popUp->showPopup("Export has been aborted", 1500);
     qDebug() << "EmbelExport::" << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
