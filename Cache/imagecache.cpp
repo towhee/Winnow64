@@ -92,12 +92,12 @@ ImageCache::ImageCache(QObject *parent,
 
 ImageCache::~ImageCache()
 {
-    // gMutex.lock();
+    gMutex.lock();
     //if (debugCaching) qDebug() << "ImageCache::~ImageCache";
     log("~ImageCache");
     abort = true;
     condition.wakeOne();
-    // gMutex.unlock();
+    gMutex.unlock();
     wait();
 }
 
@@ -226,6 +226,10 @@ isCacheItemListComplete = cacheItemListCompleted();
 
     }
 
+    // Mutex req'd (do not remove 2023-11-13)
+    // deadlock can happen
+    QMutexLocker locker(&gMutex);
+
     icd->cache.key = dm->currentSfRow;
     setDirection();
     icd->cache.currMB = getImCacheSize();
@@ -252,17 +256,17 @@ void ImageCache::resetCachingFlags()
         if (!icd->cacheItemList.at(i).isUpdated) break;
         // isCaching
         if (icd->cacheItemList.at(i).isCaching) {
-            gMutex.lock();
+            // gMutex.lock();
             icd->cacheItemList[i].isCaching = false;
-            gMutex.unlock();
+            // gMutex.unlock();
         }
         // isCached and not in imCache
         if (icd->cacheItemList.at(i).isCached &&
             !icd->imCache.contains(icd->cacheItemList.at(i).fPath))
         {
-            gMutex.lock();
+            // gMutex.lock();
             icd->cacheItemList[i].isCached = false;
-            gMutex.unlock();
+            // gMutex.unlock();
         }
     }
 }
@@ -369,7 +373,7 @@ void ImageCache::setPriorities(int key)
     int aheadPos;
     int behindPos;
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     // update priorities
     if (key < icd->cacheItemList.length()) {
@@ -447,7 +451,7 @@ void ImageCache::setTargetRange()
     if (debugCaching)
         qDebug() << "ImageCache::setTargetRange";
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -602,7 +606,7 @@ bool ImageCache::nextToCache(int id)
         return false;
     }
 
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
     if (priorityList.size() > icd->cacheItemList.size()) {
         if (debugCaching || debugThis) {
@@ -761,9 +765,9 @@ bool ImageCache::nextToCache(int id)
         }  //*/
 
         // next item to cache
-        gMutex.lock();
+        // gMutex.lock();
         icd->cache.toCacheKey = i;
-        gMutex.unlock();
+        // gMutex.unlock();
         // reason = "Success.  Next key = " + QString::number(i);
         if (debugCaching || debugThis)
         {
@@ -791,9 +795,9 @@ bool ImageCache::nextToCache(int id)
     }
 
     // nothing found to cache
-    gMutex.lock();
+    // gMutex.lock();
     icd->cache.toCacheKey = -1;
-    gMutex.unlock();
+    // gMutex.unlock();
     if (debugCaching || debugThis)
     {
         qDebug() << "ImageCache::nextToCache = false                   "
@@ -857,11 +861,11 @@ bool ImageCache::cacheUpToDate()
                  << "isCaching =" << icd->cacheItemList.at(i).isCaching
                  << "attempts =" << icd->cacheItemList.at(i).attempts;
             }
-            gMutex.lock();
+            // gMutex.lock();
             icd->cacheItemList[i].isCached = false;
             icd->cacheItemList[i].isCaching = false;
             isCacheUpToDate = false;
-            gMutex.unlock();
+            // gMutex.unlock();
             break;
         }
 
@@ -1458,7 +1462,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m, int instance)
         return;
     }
 
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
     // row same as datamodel
     int row;
@@ -1562,7 +1566,7 @@ void ImageCache::buildImageCacheList()
     if (debugCaching)
         qDebug() << "ImageCache::buildImageCacheList";
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     icd->cacheItemList.clear();
     keyFromPath.clear();
@@ -1652,7 +1656,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     // just in case stopImageCache not called before this
     if (isRunning()) stop();
 
-    gMutex.lock();
+    // gMutex.lock();
 
     // update folder change instance
     instance = dm->instance;
@@ -1671,7 +1675,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     icd->cache.targetLast = 0;
     icd->cache.directionChangeThreshold = 3;
 
-    gMutex.unlock();
+    // gMutex.unlock();
 
     if (icd->cache.isShowCacheStatus) {
         updateStatus("Clear", "ImageCache::initImageCache");
@@ -1751,7 +1755,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     // remove surplus images in icd->imCache
     QVector<QString> keys;
-    gMutex.lock();
+    // gMutex.lock();
     icd->imCache.getKeys(keys);
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
@@ -1760,7 +1764,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
             icd->imCache.remove(keys.at(i));
         }
     }
-    gMutex.unlock();
+    // gMutex.unlock();
 
     // if the sort has been reversed
     if (source == "SortChange") icd->cache.isForward = !icd->cache.isForward;
@@ -1817,10 +1821,10 @@ void ImageCache::cacheSizeChange()
     log("cacheSizeChange");
     if (debugCaching)
         qDebug() << "ImageCache::cacheSizeChange";
-    // gMutex.lock();
+    gMutex.lock();
     cacheSizeHasChanged = true;
     isFinalCheckCompleted = false;
-    // gMutex.unlock();
+    gMutex.unlock();
     if (!isRunning()) {
         start(QThread::LowestPriority);
     }
@@ -1850,7 +1854,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         return;
     }
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     // reset decoders status if necessary
     for (int id = 0; id < decoderCount; ++id) {
@@ -1860,10 +1864,10 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         }
     }
 
-    // gMutex.lock();
+    gMutex.lock();
     currentPath = fPath;
     icd->cache.key = dm->currentSfRow;
-    // gMutex.unlock();
+    gMutex.unlock();
 
     // image not cached and not video
     bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;
@@ -1909,8 +1913,17 @@ void ImageCache::decodeNextImage(int id)
     back to fillCache.
 */
     log ("decodeNextImage");
+
+    QMutexLocker locker(&gMutex);
+
     int row = icd->cache.toCacheKey;
-    QMutexLocker locker(&gMutex);            // can crash
+    if (!isValidKey(row)) {
+        decoder[id]->status = ImageDecoder::Status::Ready;
+        // relaunch??
+        return;
+    }
+
+        // can crash
     // gMutex.lock();
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].decoderId = id;
@@ -2196,7 +2209,11 @@ void ImageCache::fillCache(int id)
     // gMutex.lock();
     bool isCacheUpToDate = cacheUpToDate();
     bool isNextToCache = nextToCache(id);
-    bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isValidKey(icd->cache.toCacheKey);
+    bool isCacheKeyOk = icd->cache.toCacheKey >= 0 && icd->cache.toCacheKey < icd->cacheItemList.size();
+    bool okDecodeNextImage = !abort
+                             && !isCacheUpToDate
+                             && isNextToCache
+                             && isValidKey(icd->cache.toCacheKey);
     // gMutex.unlock();
 
     if (debugCaching)
@@ -2225,6 +2242,75 @@ void ImageCache::fillCache(int id)
         }
         decodeNextImage(id);
     }
+    // // else caching available targets completed
+    // else {
+    //     decoder[id]->status = ImageDecoder::Status::Ready;
+    //     if (abort || decoder[id]->instance != dm->instance) return;
+
+    //     // did caching start before cacheItemList was completed?
+    //     if (!isCacheItemListComplete) updateTargets();
+
+    //     // is this the last active decoder?       make final check for orphans
+    //     bool allDecodersDone = true;
+    //     for (int d = 0; d < decoderCount; ++d) {
+    //         if (decoder[d]->status != ImageDecoder::Status::Ready) {
+    //             allDecodersDone = false;
+    //             break;
+    //         }
+    //     }
+
+    //     /* Both MetaRead2 and ImageCache are running at the same time, and sometimes ImageCache
+    //        catches up to MetaRead2 and the icd->cacheItemList has not been loaded/updated for the
+    //        next item to cache.  For MetaRead2 updates to be executed ImageCache must be stopped
+    //        as ImageCache is blocking the updates. */
+
+    //      // If this is the last active decoder, restart if cacheUpToDate == false
+    //      if (!abort && instance == dm->instance && allDecodersDone) {
+    //         if (debugCaching)
+    //         {
+    //         qDebug() << "ImageCache::fillCache make final check"
+    //                  << "ImageCache isRunning =" << isRunning()
+    //                  << "icd->cacheItemList.size() =" << icd->cacheItemList.size()
+    //                  << "cacheUpToDate() =" << cacheUpToDate()
+    //             ;
+    //         }
+    //         isFinalCheckCompleted = true;
+    //         resetCachingFlags();
+    //         if (!isCacheUpToDate) {
+    //             if (debugCaching)
+    //             {
+    //             qDebug().noquote() << "ImageCache::fillCache Final check allDecodersdone = true"
+    //                                << "cacheUpToDate = false  restart ImageCache";
+    //             }
+
+    //             if (isRunning()) launchDecoders("FinalCheck");
+    //             else start();
+    //             // stop();
+    //             // start();
+    //             // // launchDecoders("FinalCheck");
+    //         }
+    //     }
+
+    //     // Ok, now we are really done
+    //     resetCachingFlags();
+
+    //     // turn off caching activity lights on statusbar
+    //     emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+    //     // update cache progress in status bar
+    //     if (icd->cache.isShowCacheStatus) {
+    //         updateStatus("Update all rows", "ImageCache::fillCache after check cacheUpToDate");
+    //     }
+    //     if (debugCaching)
+    //     {
+    //     if (cacheKey != -1)
+    //         qDebug().noquote()
+    //             << "ImageCache::fillCache finished       "
+    //             << "decoder" <<  QString::number(id).leftJustified(2)
+    //             << "row =" << QString::number(cacheKey).leftJustified(4)
+    //             << "allDecodersDone =" << QVariant(allDecodersDone).toString()
+    //             << "cacheUpToDate = true: decoder set to Ready state";
+    //     }
+    // }
     // else caching available targets completed
     else {
         decoder[id]->status = ImageDecoder::Status::Ready;
@@ -2247,30 +2333,28 @@ void ImageCache::fillCache(int id)
            next item to cache.  For MetaRead2 updates to be executed ImageCache must be stopped
            as ImageCache is blocking the updates. */
 
-         // If this is the last active decoder, restart if cacheUpToDate == false
-         if (!abort && instance == dm->instance && allDecodersDone) {
+        // If this is the last active decoder, restart if cacheUpToDate == false
+        if (!abort && instance == dm->instance && allDecodersDone) {
             if (debugCaching)
             {
-            qDebug() << "ImageCache::fillCache make final check"
-                     << "ImageCache isRunning =" << isRunning()
-                     << "icd->cacheItemList.size() =" << icd->cacheItemList.size()
-                     << "cacheUpToDate() =" << cacheUpToDate()
-                ;
+                qDebug() << "ImageCache::fillCache make final check"
+                         << "ImageCache isRunning =" << isRunning()
+                         << "icd->cacheItemList.size() =" << icd->cacheItemList.size()
+                         << "cacheUpToDate() =" << cacheUpToDate()
+                    ;
             }
             isFinalCheckCompleted = true;
             resetCachingFlags();
-            if (!isCacheUpToDate) {
-                if (debugCaching)
+            if (!cacheUpToDate()) {
+                // if (debugCaching)
                 {
-                qDebug().noquote() << "ImageCache::fillCache Final check allDecodersdone = true"
-                                   << "cacheUpToDate = false  restart ImageCache";
+                    qDebug().noquote() << "ImageCache::fillCache Final check allDecodersdone = true"
+                                       << "cacheUpToDate = false  restart ImageCache";
                 }
 
-                if (isRunning()) launchDecoders("FinalCheck");
-                else start();
-                // stop();
-                // start();
-                // // launchDecoders("FinalCheck");
+                stop();
+                start();
+                // launchDecoders("FinalCheck");
             }
         }
 
@@ -2285,13 +2369,13 @@ void ImageCache::fillCache(int id)
         }
         if (debugCaching)
         {
-        if (cacheKey != -1)
-            qDebug().noquote()
-                << "ImageCache::fillCache finished       "
-                << "decoder" <<  QString::number(id).leftJustified(2)
-                << "row =" << QString::number(cacheKey).leftJustified(4)
-                << "allDecodersDone =" << QVariant(allDecodersDone).toString()
-                << "cacheUpToDate = true: decoder set to Ready state";
+            if (cacheKey != -1)
+                qDebug().noquote()
+                    << "ImageCache::fillCache finished       "
+                    << "decoder" <<  QString::number(id).leftJustified(2)
+                    << "row =" << QString::number(cacheKey).leftJustified(4)
+                    << "allDecodersDone =" << QVariant(allDecodersDone).toString()
+                    << "cacheUpToDate = true: decoder set to Ready state";
         }
     }
 }
