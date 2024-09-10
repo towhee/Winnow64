@@ -95,6 +95,8 @@ class HashMap
         else insert a new node in the bucket with the <key, value> pair.
         */
         {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex);
             size_t hashValue = hashFn(key) % hashSize;
             hashTable[hashValue].insert(key, value);
         }
@@ -104,6 +106,8 @@ class HashMap
         Remove a key/value node from its bucket.
         */
         {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex);
             size_t hashValue = hashFn(key) % hashSize;
             hashTable[hashValue].remove(key);
         }
@@ -113,6 +117,8 @@ class HashMap
         Remove all entries from the hash map.
         */
         {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex);
             for (size_t i = 0; i < hashSize; i++) {
                 (hashTable[i]).clear();
             }
@@ -124,6 +130,8 @@ class HashMap
         multiple keys
         */
         {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex);
             int n = 0;
             for (size_t i = 0; i < hashSize; ++i) {
                 n += hashTable[i].count();
@@ -137,6 +145,8 @@ class HashMap
         iterate through the hash map.
         */
         {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex);
             for (size_t i = 0; i < hashSize; ++i) {
                 hashTable[i].getKeys(keys);
             }
