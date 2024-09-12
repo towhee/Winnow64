@@ -55,12 +55,10 @@ public:
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCacheParameters();
     QString reportCacheDecoders();
-    QString reportWarnings();
     QString reportCache(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
-    QStringList warnings;
 
     int decoderCount = 1;
 
@@ -92,7 +90,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void syncToDatamodel();
     void addCacheItemImageMetadata(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
@@ -110,12 +107,10 @@ private:
     bool paused;
     bool cacheSizeHasChanged = false;
     bool filterOrSortHasChanged = false;
-    bool refreshCache;
     QString currentPath;
     int maxAttemptsToCacheImage = 10;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
-    bool isCacheItemListComplete = false;
     bool isFinalCheckCompleted = false;
     int fileIsOpen = ImageDecoder::Status::FileOpen;
     int inValidImage = ImageDecoder::Status::Invalid;
@@ -133,11 +128,9 @@ private:
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
     bool cacheItemListCompleted();
-    bool targetItemListCompleted();
     void updateTargets();
-    void resetCachingFlags();       // Set IsCaching = false within current target range
-    bool allDecodersReady();        // No decoders active
-    bool lastDecoderDone();         // No decoder is busy
+    void resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
+    bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead

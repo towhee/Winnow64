@@ -67,10 +67,12 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             base += spacer +" Selected: " + s;
             base += spacer + "Picked: " + getPicked();
         }
-        base += spacer + s;
-        base += spacer + "Workspace: " + ws.name;
+        // base += spacer + s;
+        // base += spacer + "Workspace: " + ws.name;
         // status = " " + base + s;
-        status = base;
+        QString preBase = "";
+        if (isStressTest) preBase = "<font color=\"red\"><b>PRESS ESC TO STOP STRESS TEST</b></font>    ";
+        status = preBase + base;
     }
 
     if (!keepBase) status = s;

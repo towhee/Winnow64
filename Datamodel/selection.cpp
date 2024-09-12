@@ -205,6 +205,7 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
 
     G::fileSelectionChangeSource = "Key_Right";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
+        qDebug() << "Only shift key pressed";
         while (sm->isSelected(shiftExtendIndex)) {
             int row = shiftExtendIndex.row();
             if (row == dm->sf->rowCount() - 1) break;

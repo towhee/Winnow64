@@ -827,7 +827,7 @@ void MW::changeEvent(QEvent *event) {
 void MW::keyPressEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyPressEvent");
-    qDebug() << "MW::keyPressEvent" << event;
+    // qDebug() << "MW::keyPressEvent" << event;
 
     if (event->key() == Qt::Key_Return) {
         qDebug() << "MW::keyPressEvent Key_Return";
@@ -3121,9 +3121,11 @@ void MW::updateImageCacheStatus(QString instruction,
     /*
    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
-             << "row =" << row
-             << "source =" << source;
-             //*/
+             << "row =" << cache.key
+             << "source =" << source
+             << "G::showProgress =" << G::showProgress
+             << "G::showProgress::ImageCache =" << G::ShowProgress::ImageCache
+                ; //*/
 
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
     QString cacheAmount = QString::number(double(cache.currMB)/1024,'f',1)

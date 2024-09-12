@@ -391,8 +391,6 @@ signals:
     //void startMetaRead(int sfRow, QString src);
     //void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
-    //void setImageCachePosition2(QString);
-    void refreshImageCache();   // not being used
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();        // not being used
     void aSyncGo(int);          // rgh req'd?
