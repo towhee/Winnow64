@@ -494,11 +494,6 @@ void MW::createImageCache()
 //    connect(infoView, &InfoView::addToImageCache,
 //            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
 
-    // signal ImageCache refresh
-    connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);
-//    connect(metaRead, &MetaRead::setImageCachePosition,
-//            imageCacheThread, &ImageCache::setCurrentPosition);
-
 }
 
 void MW::createThumbView()

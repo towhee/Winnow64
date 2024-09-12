@@ -27,6 +27,8 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     }
 
 //    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+    QString stopMsg = "Press ESC to stop stress test";
+    G::popUp->showPopup(stopMsg, 0);
     isStressTest = true;
     bool isForward = true;
     //slideCount = 0;
@@ -48,12 +50,8 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         G::wait(msPerImage);
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
-        if (isForward) keyRight();
-        else keyLeft();
-        // if (G::useProcessEvents) qApp->processEvents();
-        // if (dm->sf->rowCount() < 2) return;
-        // QString status = " Stress test: " + QString::number(slideCount) + " images.";
-        // updateStatus(true, status, "StressTest");
+        if (isForward) sel->next();
+        else sel->prev();
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
@@ -183,8 +181,11 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
-    traverseFolderStressTest(50, 00, true);
-
+    // traverseFolderStressTest(50, 00, true);
+    imageCacheThread->debugCaching = !imageCacheThread->debugCaching;
+    qDebug() << imageCacheThread->debugCaching;
+    // imageCacheThread->debugLog = !imageCacheThread->debugLog;
+    // qDebug() << imageCacheThread->debugLog;
 }
 /*
    Performance
