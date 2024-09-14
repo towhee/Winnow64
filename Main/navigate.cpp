@@ -116,6 +116,7 @@ void MW::keyEnd()
 /*
 
 */
+    qDebug() << "\nKEY END\n";
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("End");
