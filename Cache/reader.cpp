@@ -15,9 +15,10 @@ Reader::Reader(QObject *parent,
     thumb = new Thumb(dm, metadata, frameDecoder);
 
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    // connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::addCacheItemImageMetadata, Qt::BlockingQueuedConnection);
+    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::BlockingQueuedConnection);
 
     isDebug = false;
 }
@@ -136,6 +137,9 @@ bool Reader::readMetadata()
             << fPath
             ;
     }
+
+    // bool isConnected = QMetaObject::invokeMethod(this, "mySlot", Qt::QueuedConnection);
+
     if (!abort) emit addToImageCache(metadata->m, instance);
 
     return isMetaLoaded;

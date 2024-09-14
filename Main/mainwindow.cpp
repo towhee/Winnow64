@@ -2756,7 +2756,7 @@ void MW::loadConcurrentNewFolder()
     }
     if (reset(src + QString::number(count++))) return;
     // updateIconRange(false, fun);
-    if (reset(src + QString::number(count++))) return;
+    // if (reset(src + QString::number(count++))) return;
 
     // reset metadata progress
     if (G::showProgress == G::ShowProgress::MetaCache) {
@@ -2785,7 +2785,6 @@ void MW::loadConcurrentNewFolder()
     if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
 
     // set selection and current index, start metaReadThread
-    // testTime.restart();
     sel->setCurrentRow(targetRow);
 }
 

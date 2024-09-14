@@ -597,7 +597,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
 
     // draw the cache circle
-    if ((!isCached /*&& !isVideo && metaLoaded && !G::isSlideShow*/) || showAllSymbols) {
+    if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

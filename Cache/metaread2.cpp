@@ -42,7 +42,7 @@
 
     Are we done?
 
-        Determining if all the metadata and iconChungeRange have been loaded needs to
+        Determining if all the metadata and iconChunkRange have been loaded needs to
         consider if a read operation has failed or if the file has been read but the
         reader done signal has not been processed yet.
 

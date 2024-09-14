@@ -90,7 +90,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void addCacheItemImageMetadata(ImageMetadata m, int instance);
+    void updateImageMetadataFromReader(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -105,6 +105,7 @@ private:
     bool restart;
     bool abort;
     bool paused;
+    bool isInitializing;
     bool cacheSizeHasChanged = false;
     bool filterOrSortHasChanged = false;
     QString currentPath;
@@ -121,6 +122,7 @@ private:
     QVector<ImageDecoder*> decoder;     // all the decoders
     QHash<QString,int> keyFromPath;     // cache key for assigned path
     QHash<int,QString> pathFromKey;     // path
+    std::list<int> toBeUpdated;
     QList<int> priorityList;
 
     void launchDecoders(QString src);
@@ -146,11 +148,9 @@ private:
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
+    void addImageMetadata(int key);
+    bool updateImageMetadata(ImageMetadata m);
     void log(const QString function, const QString comment = "");
-
-    //    void updateImageCacheList();    //
-    //    void refreshImageCache();
-    //    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
 };

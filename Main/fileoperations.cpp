@@ -214,7 +214,7 @@ void MW::insertFiles(QStringList fPaths)
             insertedRows << dm->insert(fPath);
             ImageMetadata m = dm->imMetadata(fPath, false);
             // update ImageCache
-            imageCacheThread->addCacheItemImageMetadata(m, dm->instance);
+            imageCacheThread->updateImageMetadataFromReader(m, dm->instance);
         }
     }
 }
