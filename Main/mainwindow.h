@@ -472,6 +472,9 @@ private slots:
     void renameEjectUsbMenu(QString path);
     void renameRemoveBookmarkAction(QString path);
     void renamePasteFilesAction(QString folderName);
+    void renameDeleteFolderAction(QString folderName);
+    void renameCopyFolderPathAction(QString folderName);
+    void renameRevealFileAction(QString folderName);
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();

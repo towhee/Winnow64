@@ -78,6 +78,7 @@ public slots:
     void expand(const QModelIndex &);
 //    void expandAll(const QModelIndex &);
     void refreshModel();
+    void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
 
 private slots:
     void wheelStopped();
@@ -105,6 +106,9 @@ signals:
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
     void renamePasteContextAction(QString folderName);
+    void renameDeleteFolderAction(QString folderName);
+    void renameCopyFolderPathAction(QString folderName);
+    void renameRevealFileAction(QString folderName);
     void addBookmarkAction(QString folderName);
     void status(bool keepBase, QString msg, QString src);
 

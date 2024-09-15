@@ -1720,6 +1720,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
+    // if (dmIdx.row() > 8500)
+    //     qDebug() << "DataModel::setIcon" << dmIdx.row();
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)

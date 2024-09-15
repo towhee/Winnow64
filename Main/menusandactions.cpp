@@ -2257,6 +2257,47 @@ void MW::renamePasteFilesAction(QString folderName)
     }
 }
 
+void MW::renameCopyFolderPathAction(QString folderName)
+{
+    QString txt = "Copy folder " + Utilities::enquote(folderName) + " path";
+    copyFolderPathFromContextAction->setText(txt);
+}
+
+void MW::renameRevealFileAction(QString folderName)
+{
+    QString whatever;
+#ifdef Q_OS_WIN
+    whatever = "finder";
+#endif
+#ifdef Q_OS_MAC
+    whatever = "explorer";
+#endif
+    QString txt = "Reveal folder " + Utilities::enquote(folderName) + " in " + whatever;
+    revealFileActionFromContext->setText(txt);
+}
+
+void MW::renameDeleteFolderAction(QString folderName)
+{
+    QString whatever;
+#ifdef Q_OS_WIN
+    whatever = "recycle bin";
+#endif
+#ifdef Q_OS_MAC
+    whatever = "trash";
+#endif
+    QString txt = "Move folder " + Utilities::enquote(folderName) + " to " + whatever;
+    deleteFSTreeFolderAction->setText(txt);
+    // if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
+    //     QString txt = "Paste files into " + Utilities::enquote(folderName);
+    //     deleteFSTreeFolderAction->setText(txt);
+    //     deleteFSTreeFolderAction->setEnabled(true);
+    // }
+    // else {
+    //     deleteFSTreeFolderAction->setText("Paste files");
+    //     deleteFSTreeFolderAction->setEnabled(false);
+    // }
+}
+
 void MW::renameEraseMemCardFromContextMenu(QString path)
 {
     QString drive = "";
