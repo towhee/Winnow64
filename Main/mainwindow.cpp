@@ -2289,6 +2289,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         qDebug() << "MW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
+        // scroll first to insure icons are painted first when select a new image
+        thumbView->scrollToRow(current.row(), "Selection::setCurrentIndex");
 
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
@@ -2754,6 +2756,10 @@ void MW::loadConcurrentNewFolder()
         targetRow = 0;
         dm->currentSfRow = 0;
     }
+
+    // test sudden move to last
+    // targetRow = dm->sf->rowCount() - 1;
+
     if (reset(src + QString::number(count++))) return;
     // updateIconRange(false, fun);
     // if (reset(src + QString::number(count++))) return;
@@ -2812,7 +2818,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::loadConcurrent  sfRow =" << QVariant(sfRow).toString().leftJustified(5)

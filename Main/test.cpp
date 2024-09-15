@@ -182,10 +182,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
-    imageCacheThread->debugCaching = !imageCacheThread->debugCaching;
-    qDebug() << imageCacheThread->debugCaching;
-    // imageCacheThread->debugLog = !imageCacheThread->debugLog;
-    // qDebug() << imageCacheThread->debugLog;
+    thumbView->scrollToRow(7999, "test");
+    sel->select(7999);
 }
 /*
    Performance

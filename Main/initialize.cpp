@@ -86,6 +86,10 @@ void MW::initialize()
     #ifdef  Q_OS_WIN
     G::useMyTiff = true;
     #endif
+
+    // prevent some warnings from Qt
+    QLoggingCategory::setFilterRules(QStringLiteral("qt.gui.imageio.jpeg.debug=false\nqt.gui.imageio.jpeg.warning=false"));
+
 }
 
 void MW::setupPlatform()
@@ -915,11 +919,20 @@ void MW::createFSTree()
     // rename menu item "Erase mem card images" and enable/disable for context menu only
     connect(fsTree, &FSTree::renameEraseMemCardContextAction, this, &MW::renameEraseMemCardFromContextMenu);
 
+    // rename menu item "Copy folder path" and enable/disable for context menu only
+    connect(fsTree, &FSTree::renameCopyFolderPathAction, this, &MW::renameCopyFolderPathAction);
+
+    // rename menu item "Reveal in finder" and enable/disable for context menu only
+    connect(fsTree, &FSTree::renameRevealFileAction, this, &MW::renameRevealFileAction);
+
     // add menu item "Add Bookmark folder name"
     // connect(fsTree, &FSTree::addBookmarkAction, this, &MW::addBookmarkAction);
 
     // rename menu item "Paste files" and enable/disable for context menu only
     connect(fsTree, &FSTree::renamePasteContextAction, this, &MW::renamePasteFilesAction);
+
+    // rename menu item "Move folder to trash/recycle bin" and enable/disable for context menu only
+    connect(fsTree, &FSTree::renameDeleteFolderAction, this, &MW::renameDeleteFolderAction);
 
     // update status in status bar
     connect(fsTree, &FSTree::status, this, &MW::updateStatus);

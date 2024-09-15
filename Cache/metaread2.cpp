@@ -177,10 +177,16 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     This means that isRunning() == false while the dispatching is still running. Another
     flag, isDispatching, is used to track this.
     */
+
+    // if (isDebug)
+    {
+        qDebug() << "MetaRead2::setStartRow" << startRow << "src =" << src;
+    }
+
     if (isDispatching) {
         if (isDebug)
         {
-            qDebug() << "MetaRead2::setStartRow isNewStartRowWhileStillReading = true";
+            qDebug() << "MetaRead2::setStartRow isDispatching = true";
         }
         mutex.lock();
         isNewStartRowWhileStillReading = true;
@@ -462,6 +468,7 @@ bool MetaRead2::nextA()
         if (needToRead(i)) {
             nextRow = i;
             a = i + 1;
+            if (a == sfRowCount) aIsDone = true;
             if (!bIsDone) isAhead = false;
             return true;
         }
@@ -876,13 +883,15 @@ void MetaRead2::dispatch(int id)
         a = startRow;
         b = startRow - 1;
         isNewStartRowWhileStillReading = false;
-        if (isDebug)
+        // if (a == dm->sf->rowCount() - 1) isAhead = false;
+        // if (isDebug)
         {
             qDebug().noquote()
                 << "MetaRead2::dispatch isNewStartRowWhileStillReading"
                 << "startRow =" << QString::number(startRow).leftJustified(4, ' ')
                 << "a =" << QString::number(a).leftJustified(4, ' ')
                 << "b =" << QString::number(b).leftJustified(4, ' ')
+                << "isAhead =" << QVariant(isAhead).toString()
                 ;
         }
     }
@@ -893,7 +902,8 @@ void MetaRead2::dispatch(int id)
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = dmIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
-        if (isDebug)
+        // if (isDebug)
+        if (nextRow > 8540)
         {
             qDebug().noquote()
                 << "MetaRead2::dispatch     launch reader       "
@@ -908,7 +918,8 @@ void MetaRead2::dispatch(int id)
             qDebug().noquote()
                 << "MetaRead2::dispatch     launch reader       "
                 << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "row =" << QString::number(nextRow).leftJustified(4, ' ')
+                << "dmIdx.row() =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+                << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
                 << "isReadIcon =" << QVariant(okReadIcon).toString().leftJustified(5, ' ')
                 << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
                 << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
@@ -963,8 +974,6 @@ void MetaRead2::dispatch(int id)
         r->status = Reader::Status::Ready;
         return;
     }
-
-    // isDispatching = true;
 }
 
 void MetaRead2::dispatchReaders()

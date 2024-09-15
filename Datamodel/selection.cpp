@@ -67,6 +67,13 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
+    if (dm->loadingModel) {
+        QString msg = "Collecting image files in folder";
+        G::popUp->showPopup(msg);
+        return;
+
+    }
+
     if (!sfIdx.isValid()) {
         QString msg = "Invalid index.";
         G::issue("Warning", msg, "Selection::setCurrentIndex", sfIdx.row());
@@ -95,7 +102,12 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
              << "sfIdx.row() =" << sfIdx.row()
         ;
         //*/
-    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::currentIndex");
+
+    // scroll first to insure icons are painted first when select a new image
+    // thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
+
+    // select the new image, load in ImageCache
+    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");
 }
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)

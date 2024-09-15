@@ -335,6 +335,11 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
 
     connect(this, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expand(const QModelIndex&)));
+
+    // prevent select next folder when a folder is moved to trash/recycle
+    connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
+            this, &FSTree::onRowsAboutToBeRemoved);
+
 }
 
 void FSTree::createModel()
@@ -456,6 +461,33 @@ QModelIndex FSTree::getCurrentIndex()
         idx = selectedIndexes().first();
     else idx = fsModel->index(-1, -1, QModelIndex());
     return idx;
+}
+
+void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
+{
+    // Q_UNUSED(parent)
+    // Q_UNUSED(start)
+    // Q_UNUSED(end)
+
+    QString toBeRemoved = fsModel->index(start, 0, parent).data(G::PathRole).toString();
+
+    qDebug() << "FSTree::onRowsAboutToBeRemoved"
+             << "Current folder =" << G::currRootFolder
+             << "Current FSTree folder =" << this->currentIndex().data().toString()
+             << "parent =" << parent
+             << "start =" << start
+             << "end =" << end
+             << "To be deleted folder =" << toBeRemoved
+        ;
+
+    // Clear the selection to prevent automatic selection of the next folder
+    if (G::currRootFolder == toBeRemoved) {
+        qDebug() << "FSTree::onRowsAboutToBeRemoved clear selection";
+        clearSelection();
+    }
+    else {
+        // this->select(G::currRootFolder);
+    }
 }
 
 void FSTree::resizeColumns()
@@ -599,6 +631,9 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     emit renameEjectAction(path);
     emit renameEraseMemCardContextAction(path);
     emit renamePasteContextAction(folderName);
+    emit renameDeleteFolderAction(folderName);
+    emit renameCopyFolderPathAction(folderName);
+    emit renameRevealFileAction(folderName);
 
     if (event->button() == Qt::RightButton) {
         rightMouseClickPath = path;

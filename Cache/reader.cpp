@@ -15,7 +15,13 @@ Reader::Reader(QObject *parent,
     thumb = new Thumb(dm, metadata, frameDecoder);
 
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+
+    // Try QueuedConnection
     // connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
+    // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+    // connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::QueuedConnection);
+
+    // Try BlockingQueuedConnection
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::BlockingQueuedConnection);
@@ -120,7 +126,6 @@ bool Reader::readMetadata()
     metadata->m.metadataLoaded = isMetaLoaded;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-    //if (abort) quit();
 
     if (!dm->isMetadataLoaded(dmRow)) {
         status = Status::MetaFailed;
@@ -137,8 +142,6 @@ bool Reader::readMetadata()
             << fPath
             ;
     }
-
-    // bool isConnected = QMetaObject::invokeMethod(this, "mySlot", Qt::QueuedConnection);
 
     if (!abort) emit addToImageCache(metadata->m, instance);
 
@@ -188,9 +191,9 @@ void Reader::readIcon()
         return;
     }
 
+    // using BlockingQueuedConnection
+    // if (dmIdx.row() > 8500) qDebug() << "Reader::readIcon emit setIcon" << dmIdx.row();
     if (!abort) emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-    //if (abort) quit();
-
 
     if (!dm->iconLoaded(dmRow, instance)) {
         if (status == Status::MetaFailed) status = Status::MetaIconFailed;
@@ -201,6 +204,8 @@ void Reader::readIcon()
     else {
         loadedIcon = true;
     }
+
+    // loadedIcon = true;
 }
 
 void Reader::run()
