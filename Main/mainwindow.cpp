@@ -1163,41 +1163,104 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     {
 
         if (event->type() == QEvent::ContextMenu) {
-            addBookmarkAction->setEnabled(true);
-            revealFileActionFromContext->setEnabled(true);
+
+            // default enable
             copyFolderPathFromContextAction->setEnabled(true);
+            revealFileActionFromContext->setEnabled(true);
+            deleteFSTreeFolderAction->setEnabled(true);
+            eraseUsbActionFromContextMenu->setEnabled(true);
+            ejectAction->setEnabled(true);
+            ejectActionFromContextMenu->setEnabled(true);
+            addBookmarkAction->setEnabled(true);
+            addBookmarkActionFromContext->setEnabled(true);
+            pasteFilesAction->setEnabled(true);
+
+            QString folderName = "";
+            mouseOverFolderPath = "";
+
+            /*  Alternative ways to get folder and path
+                path = idx0.data(Qt::ToolTipRole).toString();
+                folder = idx0.data().toString();
+                folder = idx0.data(QFileSystemModel::FileNameRole).toString()
+                folder = QFileInfo(path).fileName()
+            */
+
+            // FSTree
             if (obj == fsTree->viewport()) {
                 QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
                 QModelIndex idx = fsTree->indexAt(e->pos());
-                mouseOverFolderPath = idx.data(QFileSystemModel::FilePathRole).toString();
-                //enableEjectUsbMenu(mouseOverFolderPath);
-                // in folders or bookmarks but not on folder item
-                if(mouseOverFolderPath == "") {
-                    addBookmarkAction->setEnabled(false);
-                    revealFileActionFromContext->setEnabled(false);
-                    copyFolderPathFromContextAction->setEnabled(false);
+                if (idx.isValid()) {
+                    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+                    folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
+                    mouseOverFolderPath = idx0.data(QFileSystemModel::FileNameRole).toString();
+                    qDebug() << "MW::eventFilter QEvent::ContextMenu"
+                             << "folderName =" << QFileInfo(mouseOverFolderPath).fileName()
+                             << "folderName2 =" << idx0.data().toString()
+                             << "folderName3 =" << idx.data(QFileSystemModel::FileNameRole).toString()
+                             << "event =" << event
+                             << "obj->objectName() =" << obj->objectName()
+                             // << " =" <<
+                                ;
                 }
+
+                // enableEjectUsbMenu(mouseOverFolderPath);
+                // in folders or bookmarks but not on folder item
+
             }
-            else if (obj == bookmarks->viewport()) {
+
+            // Bookmarks (favActions menu)
+            if (obj == bookmarks->viewport()) {
                 QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
                 QModelIndex idx = bookmarks->indexAt(e->pos());
-                mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
-                //enableEjectUsbMenu(mouseOverFolderPath);
-                // in folders or bookmarks but not on folder item
-                if (mouseOverFolderPath == "") {
-                    addBookmarkAction->setEnabled(false);
-                    revealFileActionFromContext->setEnabled(false);
-                    copyFolderPathFromContextAction->setEnabled(false);
+                // mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
+                if (idx.isValid()) {
+                    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+                    folderName = idx0.data().toString();
+                    // tooltip is set to path when bookmark is added
+                    mouseOverFolderPath = idx0.data(Qt::ToolTipRole).toString();
+                    qDebug() << "MW::eventFilter QEvent::ContextMenu"
+                             << "mouseOverFolderPath =" << mouseOverFolderPath
+                             << "folderName =" << folderName
+                             << "event =" << event
+                             << "obj->objectName() =" << obj->objectName()
+                                ;
                 }
+
             }
-            else {
-                //enableEjectUsbMenu(G::currRootFolder);
-                if (G::currRootFolder == "") {
-                    addBookmarkAction->setEnabled(false);
-                    revealFileActionFromContext->setEnabled(false);
-                    copyFolderPathFromContextAction->setEnabled(false);
-                }
+
+            //enableEjectUsbMenu(G::currRootFolder);
+            if (G::currRootFolder == "") {
+                addBookmarkAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+                copyFolderPathFromContextAction->setEnabled(false);
             }
+
+            // disable
+            if (mouseOverFolderPath == "") {
+                copyFolderPathFromContextAction->setEnabled(false);
+                revealFileActionFromContext->setEnabled(false);
+                deleteFSTreeFolderAction->setEnabled(false);
+                eraseUsbActionFromContextMenu->setEnabled(false);
+                ejectAction->setEnabled(false);
+                ejectActionFromContextMenu->setEnabled(false);
+                addBookmarkAction->setEnabled(false);
+                addBookmarkActionFromContext->setEnabled(false);
+                pasteFilesAction->setEnabled(false);
+            }
+
+            // rename
+            if (folderName.length()) {
+                renameCopyFolderPathAction(folderName);
+                renameRevealFileAction(folderName);
+                renameDeleteFolderAction(folderName);
+                renameEraseMemCardFromContextMenu(folderName);
+                renameEjectUsbMenu(folderName);
+                renamePasteFilesAction(folderName);
+                renameAddBookmarkAction(folderName);
+            }
+
+            // continue to open context menu
+            return false;
         }
     }
 
@@ -1908,7 +1971,7 @@ void MW::folderSelectionChange(QString dPath)
     G::t.restart();
     // block repeated clicks to folders or bookmarks while processing this one.
     QSignalBlocker bookmarkBlocker(bookmarks);
-    QSignalBlocker fsTreeBlocker(fsTree);
+    // QSignalBlocker fsTreeBlocker(fsTree);
 
 //    // might have selected subfolders usiing shift+command click
 //    if (G::includeSubfolders) subFoldersAction->setChecked(true);

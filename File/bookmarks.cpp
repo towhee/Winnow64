@@ -42,7 +42,8 @@ As an abbreviation in the program UI bookmarks are called favs.
 BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
                      bool &combineRawJpg)
                    : QTreeWidget(parent),
-                     combineRawJpg(combineRawJpg)
+                     combineRawJpg(combineRawJpg),
+                     delegate(new HoverDelegate(this))
 {
     if (G::isLogger) G::log("BookMarks::BookMarks");
     this->metadata = metadata;
@@ -58,6 +59,9 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
 
+    setItemDelegate(delegate);
+    // setItemDelegate(new BookDelegate(this));
+
     setAcceptDrops(true);
 	setDragEnabled(false);
 	setDragDropMode(QAbstractItemView::DropOnly);
@@ -69,7 +73,11 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
     setSortingEnabled(true);
     sortByColumn(0, Qt::AscendingOrder);
 
-    setItemDelegate(new BookDelegate(this));
+    setMouseTracking(true);
+
+    // Repaint when hover changes: Lambda function to call update
+    connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
+        this->viewport()->update();});
 }
 
 void BookMarks::reloadBookmarks()
@@ -247,6 +255,13 @@ void BookMarks::resizeEvent(QResizeEvent *event)
     QTreeWidget::resizeEvent(event);
 }
 
+void BookMarks::leaveEvent(QEvent *event)
+{
+    if (G::isLogger) G::log("BookMarks::leaveEvent");
+    delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
+    QTreeWidget::leaveEvent(event);
+}
+
 void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 {
     if (G::isLogger) G::log("BookMarks::mouseDoubleClickEvent");
@@ -259,7 +274,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 /*
     Checks if the application is busy: If the global G::stop flag is set, indicating that
     the application is busy, the function ignores the mouse press event, beeps, shows a
-    popup message, and returns immediately.  Note that MW::folderSelectionChage() employes
+    popup message, and returns immediately.  Note that MW::folderSelectionChange() employs
     a QSignalBlocker for BookMarks and FSTree which blocks this event.
 
     Checks if a background ingest is in progress: If the global
@@ -301,21 +316,19 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // update eject drive menu item if ejectable
+    // update path
     QModelIndex idx = indexAt(event->pos());
-    QString path = "";
-    QString folderName = "";
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
     if (idx.isValid()) {
-        path = idx.data(Qt::ToolTipRole).toString();
-        folderName = idx.data(Qt::DisplayRole).toString();
+        // path = idx.data(Qt::ToolTipRole).toString();
+        // folderName = idx.data(Qt::DisplayRole).toString();
         // change selection, does not trigger anything
-        setCurrentIndex(idx);
-        if (G::useProcessEvents) qApp->processEvents();
+        // setCurrentIndex(idx);
+        // if (G::useProcessEvents) qApp->processEvents();
     }
-    emit renameEjectAction(path);
-    emit renameEraseMemCardContextAction(path);
-    emit renameRemoveBookmarkAction(folderName);
 
+    // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
         rightClickItem = itemAt(event->pos());
         rightMouseClickPath = path;
@@ -330,6 +343,27 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     // trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
     // FSTree, which signals MW::folderSelectionChange
     QTreeWidget::mousePressEvent(event);
+}
+
+void BookMarks::mouseMoveEvent(QMouseEvent *event)
+{
+    QModelIndex idx = indexAt(event->pos());
+    // same row, column 0 (folder name)
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    // /*
+    qDebug() << "FSTree::mouseMoveEvent"
+             << "idx =" << idx
+             << "idx0 =" << idx0
+        ;
+    //*/
+    if (idx0.isValid()) {
+        hoverFolderName = idx0.data().toString();
+        delegate->setHoveredIndex(idx0);
+    } else {
+        hoverFolderName = "";
+        delegate->setHoveredIndex(QModelIndex());  // No row hovered
+    }
+    QTreeWidget::mouseMoveEvent(event);
 }
 
 void BookMarks::removeBookmark()

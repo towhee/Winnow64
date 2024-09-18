@@ -182,8 +182,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
-    thumbView->scrollToRow(7999, "test");
-    sel->select(7999);
+    // thumbView->scrollToRow(7999, "test");
+    // sel->select(7999);
+    fsTree->viewport()->update();
 }
 /*
    Performance

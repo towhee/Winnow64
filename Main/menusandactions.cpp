@@ -2239,6 +2239,12 @@ void MW::renameEjectUsbMenu(QString path)
     ejectActionFromContextMenu->setText(text);
 }
 
+void MW::renameAddBookmarkAction(QString folderName)
+{
+    addBookmarkAction->setText("Add Bookmark " +  Utilities::enquote(folderName));
+    addBookmarkActionFromContext->setText("Add Bookmark " +  Utilities::enquote(folderName));
+}
+
 void MW::renameRemoveBookmarkAction(QString folderName)
 {
     removeBookmarkAction->setText("Remove Bookmark " +  Utilities::enquote(folderName));
@@ -2247,7 +2253,7 @@ void MW::renameRemoveBookmarkAction(QString folderName)
 void MW::renamePasteFilesAction(QString folderName)
 {
     if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
-        QString txt = "Paste files into " + Utilities::enquote(folderName);
+        QString txt = "Paste file(s) into " + Utilities::enquote(folderName);
         pasteFilesAction->setText(txt);
         pasteFilesAction->setEnabled(true);
     }
@@ -2266,12 +2272,12 @@ void MW::renameCopyFolderPathAction(QString folderName)
 void MW::renameRevealFileAction(QString folderName)
 {
     QString whatever;
-#ifdef Q_OS_WIN
-    whatever = "finder";
-#endif
-#ifdef Q_OS_MAC
+    #ifdef Q_OS_WIN
     whatever = "explorer";
-#endif
+    #endif
+    #ifdef Q_OS_MAC
+    whatever = "finder";
+    #endif
     QString txt = "Reveal folder " + Utilities::enquote(folderName) + " in " + whatever;
     revealFileActionFromContext->setText(txt);
 }
@@ -2279,23 +2285,14 @@ void MW::renameRevealFileAction(QString folderName)
 void MW::renameDeleteFolderAction(QString folderName)
 {
     QString whatever;
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     whatever = "recycle bin";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     whatever = "trash";
-#endif
+    #endif
     QString txt = "Move folder " + Utilities::enquote(folderName) + " to " + whatever;
     deleteFSTreeFolderAction->setText(txt);
-    // if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
-    //     QString txt = "Paste files into " + Utilities::enquote(folderName);
-    //     deleteFSTreeFolderAction->setText(txt);
-    //     deleteFSTreeFolderAction->setEnabled(true);
-    // }
-    // else {
-    //     deleteFSTreeFolderAction->setText("Paste files");
-    //     deleteFSTreeFolderAction->setEnabled(false);
-    // }
 }
 
 void MW::renameEraseMemCardFromContextMenu(QString path)
@@ -2334,7 +2331,7 @@ void MW::enableSelectionDependentMenus()
     ingestAction->setEnabled(dmHasRows);
     revealFileAction->setEnabled(dmHasRows);
     revealFileActionFromContext->setEnabled(dmHasRows);
-    addBookmarkAction->setEnabled(dmHasRows);
+    // addBookmarkAction->setEnabled(dmHasRows);
     reportMetadataAction->setEnabled(dmHasRows);
     copyFolderPathFromContextAction->setEnabled(dmHasRows);
     copyImagePathFromContextAction->setEnabled(dmHasRows);

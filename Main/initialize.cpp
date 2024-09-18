@@ -996,6 +996,12 @@ void MW::createBookmarks()
     // rename menu item "Remove Bookmark folder name"
     connect(bookmarks, &BookMarks::renameRemoveBookmarkAction, this, &MW::renameRemoveBookmarkAction);
 
+    // rename menu item "Copy folder path" and enable/disable for context menu only
+    connect(bookmarks, &BookMarks::renameCopyFolderPathAction, this, &MW::renameCopyFolderPathAction);
+
+    // rename menu item "Reveal in finder" and enable/disable for context menu only
+    connect(bookmarks, &BookMarks::renameRevealFileAction, this, &MW::renameRevealFileAction);
+
     // update status in status bar
     connect(bookmarks, &BookMarks::status, this, &MW::updateStatus);
 }

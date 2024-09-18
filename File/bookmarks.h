@@ -5,6 +5,7 @@
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "File/fstree.h"
+#include "HoverDelegate.h"
 
 class BookMarks : public QTreeWidget
 {
@@ -22,6 +23,7 @@ public:
     bool showImageCount;
     bool &combineRawJpg;
     QString rightMouseClickPath;
+    QString hoverFolderName;
 
 public slots:
 	void removeBookmark();
@@ -33,6 +35,7 @@ private:
 
 	QModelIndex dndOrigSelection;
     Metadata *metadata;
+    HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
     int imageCountColumn = 2;
@@ -44,7 +47,9 @@ private:
 private slots:
 
 protected:
+    void leaveEvent(QEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
@@ -61,6 +66,8 @@ signals:
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
     void renameRemoveBookmarkAction(QString folderName);
+    void renameCopyFolderPathAction(QString folderName);
+    void renameRevealFileAction(QString folderName);
     void status(bool keepBase, QString msg = "", QString src = "");
 };
 
