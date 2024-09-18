@@ -470,6 +470,7 @@ private slots:
     void enableStatusBarBtns();
     void enableEjectUsbMenu(QString path);
     void renameEjectUsbMenu(QString path);
+    void renameAddBookmarkAction(QString path);
     void renameRemoveBookmarkAction(QString path);
     void renamePasteFilesAction(QString folderName);
     void renameDeleteFolderAction(QString folderName);

@@ -1,10 +1,9 @@
-
-
 #include <QtWidgets>
 #include <QHash>
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
+#include "HoverDelegate.h"
 
 #ifndef FSTREE_H
 #define FSTREE_H
@@ -70,6 +69,7 @@ public:
 
     bool combineRawJpg;
     QString rightMouseClickPath;
+    QString hoverFolderName;
 
     QFileSystemWatcher volumesWatcher;
 
@@ -91,6 +91,7 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
@@ -116,6 +117,7 @@ private:
 	QModelIndex dndOrigSelection;
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
+    HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
     QModelIndex rightClickIndex;

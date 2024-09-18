@@ -10,8 +10,8 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- FSTree context menu move to trash not working (folder does not exist)
 - Embellished removing metadata
-- After delete a folder do not highlight or select a folder
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification
@@ -121,6 +121,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- After delete a folder do not highlight or select a folder
+- Add folder name to context actions for folders: delete, copy and reveal
 - Change cache size is hanging (from 16 to 4 GB)
 - Ingest rename template is awkward
 - Fixed mouseDoubleClick on ThumbView while in Table mode behavior

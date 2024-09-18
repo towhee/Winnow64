@@ -292,7 +292,8 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
 CLASS FSTree subclassing QTreeView
 ------------------------------------------------------------------------------*/
 
-FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
+FSTree::FSTree(QWidget *parent, Metadata *metadata)
+        : QTreeView(parent), delegate(new HoverDelegate(this))
 {
     if (G::isLogger) G::log("FSTree::FSTree");
     this->metadata = metadata;
@@ -309,6 +310,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
         hideColumn(i);
     }
 
+    setItemDelegate(delegate);
+
     setRootIsDecorated(true);
     setSortingEnabled(false);
     setHeaderHidden(true);
@@ -316,6 +319,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     setIndentation(16);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    setMouseTracking(true);
 
     setAcceptDrops(true);
     setDragEnabled(true);
@@ -340,6 +345,9 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
             this, &FSTree::onRowsAboutToBeRemoved);
 
+    // Repaint when hover changes: Lambda function to call update
+    connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
+            this->viewport()->update();});
 }
 
 void FSTree::createModel()
@@ -585,8 +593,12 @@ void FSTree::wheelEvent(QWheelEvent *event)
 
 void FSTree::leaveEvent(QEvent *event)
 {
+    delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
     // not being used
     wheelSpinningOnEntry = false;
+
+    // req'd ?
+    QTreeView::leaveEvent(event);
 }
 
 void FSTree::wheelStopped()
@@ -598,10 +610,26 @@ void FSTree::wheelStopped()
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log("FSTree::mousePressEvent");
+    /*
+    static int count = 0;
+    count++;
 
-//    QTreeView::mousePressEvent(event);
-//    qApp->processEvents();
+    QModelIndex idx = indexAt(event->pos());
+    QString path = "";
+    QString folderName = "";
+    path = idx.data(Qt::ToolTipRole).toString();
+    folderName = QFileInfo(path).fileName();
+    qDebug() << "FSTree::mousePressEvent " << count
+             << "idx =" << idx
+             << "idx.isValid() =" << idx.isValid()
+             << "event->pos() =" << event->pos()
+             << "folderName =" << folderName
+        ;
+    QTreeView::mousePressEvent(event);
+    return;
+    */
+
+    if (G::isLogger) G::log("FSTree::mousePressEvent");
 
     if (G::stop) {
         G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
@@ -620,22 +648,14 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // update eject drive menu item if ejectable
+    // update path
     QModelIndex idx = indexAt(event->pos());
-    QString path = "";
-    QString folderName = "";
-    if (idx.isValid()) {
-        path = idx.data(Qt::ToolTipRole).toString();
-        folderName = QFileInfo(path).fileName();
-    }
-    emit renameEjectAction(path);
-    emit renameEraseMemCardContextAction(path);
-    emit renamePasteContextAction(folderName);
-    emit renameDeleteFolderAction(folderName);
-    emit renameCopyFolderPathAction(folderName);
-    emit renameRevealFileAction(folderName);
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
 
+    // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
+        // used in MW::deleteFolder
         rightMouseClickPath = path;
         return;
     }
@@ -651,24 +671,56 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log("FSTree::mouseReleaseEvent");
+
+    if (event->button() == Qt::RightButton) {
+        return;
+    }
     QTreeView::mouseReleaseEvent(event);
 }
 
 void FSTree::mouseMoveEvent(QMouseEvent *event)
 {
-    QTreeView::mouseMoveEvent(event);
     QModelIndex idx = indexAt(event->pos());
+    // same row, column 0 (folder name)
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    /*
+    qDebug() << "FSTree::mouseMoveEvent"
+             << "idx.row() =" << idx.row();
+    //*/
+    if (idx0.isValid()) {
+        hoverFolderName = idx0.data().toString();
+        delegate->setHoveredIndex(idx0);
+    } else {
+        hoverFolderName = "";
+        delegate->setHoveredIndex(QModelIndex());  // No row hovered
+    }
+    QTreeView::mouseMoveEvent(event);
+}
+
+void FSTree::contextMenuEvent(QContextMenuEvent *event)
+{
+    QModelIndex idx = indexAt(event->pos());
+    QString path = "";
+    QString folderName = "";
+    path = idx.data(Qt::ToolTipRole).toString();
+    folderName = QFileInfo(path).fileName();
+    qDebug() << "FSTree::contextMenuEvent"
+             << "idx =" << idx
+             << "idx.isValid() =" << idx.isValid()
+             << "event->pos() =" << event->pos()
+             << "folderName =" << folderName
+        ;
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("FSTree::dragEnterEvent");
-//    qDebug() << "FSTree::dragEnterEvent" << event-> dropAction() << event->modifiers();
+    //    qDebug() << "FSTree::dragEnterEvent" << event-> dropAction() << event->modifiers();
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
-	if (selectedDirs.size() > 0) {
-		dndOrigSelection = selectedDirs[0];
-	}
+    if (selectedDirs.size() > 0) {
+        dndOrigSelection = selectedDirs[0];
+    }
     event->acceptProposedAction();
 }
 

@@ -1,42 +1,9 @@
-
-readFrameHeader         µs = 1261
-readStartOfScan         µs = 12160
-decodeHuffmanData       µs = 94453
-decode additional scans µs = 0
-readScans               µs = 0
-readJPG                 µs = 10
-finish prep             µs = 0
-dequantize              µs = 3733
-inverseDCT              µs = 13683
-YCbCrToRGB              µs = 20624
-
-inline uint BitReader::readBits(const uint length)
-
-readFrameHeader         µs = 467
-readStartOfScan         µs = 11933
-decodeHuffmanData       µs = 95065
-decode additional scans µs = 0
-readScans               µs = 0
-readJPG                 µs = 9
-finish prep             µs = 0
-dequantize              µs = 3956
-inverseDCT              µs = 13654
-YCbCrToRGB              µs = 20556
-
-uint BitReader::readBit broke program logic so cancelled
-
-readFrameHeader         µs = 212
-readStartOfScan         µs = 10555
-decodeHuffmanData       µs = 93529
-decode additional scans µs = 0
-readScans               µs = 0
-readJPG                 µs = 9
-finish prep             µs = 0
-dequantize              µs = 3947
-inverseDCT              µs = 13645
-YCbCrToRGB              µs = 20612
-
-inline uint BitReader::readBit
-
-
-
+RENAME                              ACTION(S)                           MENU
+renameRemoveBookmarkAction          removeBookmarkAction                favActions
+renamePasteFilesAction              pasteFilesAction                    fsTreeActions, favActions
+renameCopyFolderPathAction          copyFolderPathFromContextAction     fsTreeActions, favActions
+renameRevealFileAction              revealFileActionFromContext         fsTreeActions, favActions
+renameDeleteFolderAction            deleteFSTreeFolderAction            fsTreeActions
+renameEraseMemCardFromContextMenu   eraseUsbActionFromContextMenu       fsTreeActions, favActions
+renameEjectUsbMenu                  renameEjectUsbMenu                  fsTreeActions, favActions
+renamePasteFilesAction              pasteFilesAction                    fsTreeActions, favActions
