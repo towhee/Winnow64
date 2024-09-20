@@ -655,8 +655,6 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
-        // used in MW::deleteFolder
-        rightMouseClickPath = path;
         return;
     }
 

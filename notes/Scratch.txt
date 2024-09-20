@@ -7,3 +7,4 @@ renameDeleteFolderAction            deleteFSTreeFolderAction            fsTreeAc
 renameEraseMemCardFromContextMenu   eraseUsbActionFromContextMenu       fsTreeActions, favActions
 renameEjectUsbMenu                  renameEjectUsbMenu                  fsTreeActions, favActions
 renamePasteFilesAction              pasteFilesAction                    fsTreeActions, favActions
+

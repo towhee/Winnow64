@@ -24,7 +24,7 @@ Reader::Reader(QObject *parent,
     // Try BlockingQueuedConnection
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::BlockingQueuedConnection);
+    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateCacheItemMetadataFromReader, Qt::BlockingQueuedConnection);
 
     isDebug = false;
 }
@@ -143,7 +143,8 @@ bool Reader::readMetadata()
             ;
     }
 
-    if (!abort) emit addToImageCache(metadata->m, instance);
+    if (!abort) emit addToImageCache(dmIdx.row(), instance);
+    // if (!abort) emit addToImageCache(metadata->m, instance);
 
     return isMetaLoaded;
 }

@@ -370,11 +370,6 @@ void MW::createEditActions()
     addAction(pickAction);
     connect(pickAction, &QAction::triggered, this, &MW::togglePick);
 
-    pick1Action = new QAction(tr("Pick"), this);  // added for shortcut "P"
-    pick1Action->setShortcutVisibleInContextMenu(true);
-    addAction(pick1Action);
-    connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
-
     pickMouseOverAction = new QAction(tr("Pick"), this);  // IconView context menu
     pickMouseOverAction->setObjectName("toggleMouseOverPick");
     pickAction->setShortcutVisibleInContextMenu(true);
@@ -1735,7 +1730,6 @@ void MW::createEditMenu()
     editMenu->addAction(deleteActiveFolderAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
-    editMenu->addAction(pick1Action);
     editMenu->addAction(rejectAction);
     editMenu->addAction(pickUnlessRejectedAction);
     //    editMenu->addAction(filterPickAction);
@@ -2021,6 +2015,8 @@ void MW::createFSTreeContextMenu()
     separatorAction2->setSeparator(true);
     QAction *separatorAction3 = new QAction(this);
     separatorAction3->setSeparator(true);
+    QAction *separatorAction4 = new QAction(this);
+    separatorAction4->setSeparator(true);
     fsTreeActions = new QList<QAction *>;
     //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshCurrentAction);
@@ -2033,10 +2029,11 @@ void MW::createFSTreeContextMenu()
     //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(copyFolderPathFromContextAction);
-    fsTreeActions->append(deleteFSTreeFolderAction);
     fsTreeActions->append(separatorAction2);
-    fsTreeActions->append(pasteFilesAction);
+    fsTreeActions->append(deleteFSTreeFolderAction);
     fsTreeActions->append(separatorAction3);
+    fsTreeActions->append(pasteFilesAction);
+    fsTreeActions->append(separatorAction4);
     fsTreeActions->append(addBookmarkActionFromContext);
     // docking panels context menus
     fsTree->addActions(*fsTreeActions);
@@ -2265,20 +2262,20 @@ void MW::renamePasteFilesAction(QString folderName)
 
 void MW::renameCopyFolderPathAction(QString folderName)
 {
-    QString txt = "Copy folder " + Utilities::enquote(folderName) + " path";
+    QString txt = "Copy path for folder " + Utilities::enquote(folderName) ;
     copyFolderPathFromContextAction->setText(txt);
 }
 
 void MW::renameRevealFileAction(QString folderName)
 {
-    QString whatever;
+    QString app;
     #ifdef Q_OS_WIN
-    whatever = "explorer";
+    whatever = "Explorer";
     #endif
     #ifdef Q_OS_MAC
-    whatever = "finder";
+    app = "Finder";
     #endif
-    QString txt = "Reveal folder " + Utilities::enquote(folderName) + " in " + whatever;
+    QString txt = "Reveal in " + app + " folder " + Utilities::enquote(folderName) ;
     revealFileActionFromContext->setText(txt);
 }
 
@@ -2286,12 +2283,12 @@ void MW::renameDeleteFolderAction(QString folderName)
 {
     QString whatever;
     #ifdef Q_OS_WIN
-    whatever = "recycle bin";
+    whatever = "Recycle Bin";
     #endif
     #ifdef Q_OS_MAC
-    whatever = "trash";
+    whatever = "Trash";
     #endif
-    QString txt = "Move folder " + Utilities::enquote(folderName) + " to " + whatever;
+    QString txt = "Move to " + whatever + ": folder " + Utilities::enquote(folderName);
     deleteFSTreeFolderAction->setText(txt);
 }
 
@@ -2541,9 +2538,17 @@ void MW::loadShortcuts(bool defaultShortcuts)
         selectAllAction->setShortcut(QKeySequence("Ctrl+A"));
         invertSelectionAction->setShortcut(QKeySequence("Shift+Ctrl+A"));
         rejectAction->setShortcut(QKeySequence("X"));
-        pickAction->setShortcut(QKeySequence("`"));
+
+        // pickAction->setShortcut(QKeySequence("`"));
+        shortcuts.clear();
+        shortcuts << QKeySequence("`") << QKeySequence("P");
+        pickAction->setShortcuts(shortcuts);
+        QString pickActionText = QString("Pick\t%1, %2")
+                                     .arg(shortcuts.at(0).toString(QKeySequence::NativeText))
+                                     .arg(shortcuts.at(1).toString(QKeySequence::NativeText));
+        pickAction->setText(pickActionText);
+
         pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
-        pick1Action->setShortcut(QKeySequence("P"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
 
         searchTextEditAction->setShortcut(QKeySequence("F2"));
@@ -2569,10 +2574,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
         shortcuts.clear();
         shortcuts << QKeySequence("J") << QKeySequence("=");
         jumpAction->setShortcuts(shortcuts);
-        QString actionText = QString("Jump to Row\t%1, %2")
+        QString jumpActionText = QString("Jump to Row\t%1, %2")
                                  .arg(shortcuts.at(0).toString(QKeySequence::NativeText))
                                  .arg(shortcuts.at(1).toString(QKeySequence::NativeText));
-        jumpAction->setText(actionText);
+        jumpAction->setText(jumpActionText);
 
         // do not setShortcut for left/right - slower than using eventFilter
         // keyRightAction->setShortcut(QKeySequence("Right"));

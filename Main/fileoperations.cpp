@@ -214,7 +214,9 @@ void MW::insertFiles(QStringList fPaths)
             insertedRows << dm->insert(fPath);
             ImageMetadata m = dm->imMetadata(fPath, false);
             // update ImageCache
-            imageCacheThread->updateImageMetadataFromReader(m, dm->instance);
+            int sfRow = dm->proxyRowFromPath(fPath);
+            imageCacheThread->updateCacheItemMetadataFromReader(sfRow, dm->instance);
+            // imageCacheThread->updateCacheItemMetadataFromReader(m, dm->instance);
         }
     }
 }
@@ -411,7 +413,7 @@ void MW::deleteFolder()
         dirToDelete = G::currRootFolder;
     }
     else if (senderObject == "deleteFSTreeFolder") {
-        dirToDelete = fsTree->rightMouseClickPath;
+        dirToDelete = mouseOverFolderPath;
     }
 
     if (!QFile(dirToDelete).exists()) {
@@ -456,13 +458,14 @@ void MW::deleteFolder()
 
     // okay to delete
     QFile(dirToDelete).moveToTrash();
-    //    QDir dir(dirToDelete);
-    //    dir.removeRecursively();
 
     if (bookmarks->bookmarkPaths.contains(dirToDelete)) {
         bookmarks->bookmarkPaths.remove(dirToDelete);
         bookmarks->reloadBookmarks();
     }
+
+    // do not highlight next folder
+    fsTree->setCurrentIndex(QModelIndex());
 }
 
 void MW::deleteAllImageMemCard(QString rootPath, QString name)

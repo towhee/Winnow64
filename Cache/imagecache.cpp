@@ -69,7 +69,7 @@ ImageCache::ImageCache(QObject *parent,
                        Metadata *metadata*/)
     : QThread(parent)
 {
-    // if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::ImageCache";
     log("ImageCache");
 
@@ -264,8 +264,8 @@ bool ImageCache::cacheItemListCompleted()
     if (n < dm->sf->rowCount()) return false;
 
     foreach (int row, toBeUpdated) {
-        ImageMetadata m = dm->imMetadata(icd->cacheItemList.at(row).fPath);
-        if (!updateImageMetadata(m)) {
+        // ImageMetadata m = dm->imMetadata(icd->cacheItemList.at(row).fPath);
+        if (!updateCacheItemMetadata(row)) {
             return false;
         }
     }
@@ -571,11 +571,11 @@ bool ImageCache::nextToCache(int id)
 */
     auto sDebug = [](const QString& sId, const QString& msg) {
         QString s = "";
-        // qDebug() << "ImageCache::nextToCache" << sId << msg;
+        qDebug() << "ImageCache::nextToCache" << sId << msg;
     };
 
     //log("nextToCache", "CacheUpToDate = " + QVariant(cacheUpToDate()).toString());
-    bool debugThis = true;
+    bool debugThis = false;
     QString msg;
     QString sId = "id = " + QString::number(id).leftJustified(2);
 
@@ -598,7 +598,6 @@ bool ImageCache::nextToCache(int id)
             QString inst = QString::number(instance);
             msg = "priorityList is out of date.  dmInstance: " + dmInst + " instance: " + inst + ".";
             if (debugThis) sDebug(sId, msg);
-            // if (debugThis) qDebug().noquote() << "ImageCache::nextToCache" << sId << msg;
             G::issue("Warning", msg, "ImageCache::nextToCache");
         }
         return false;
@@ -624,21 +623,19 @@ bool ImageCache::nextToCache(int id)
         // icd->cacheItemList row i
         int i = priorityList.at(p);
         QString sRow = QString::number(i).leftJustified(4);
-        bool target = false;
-        // bool target = i == dm->sf->rowCount() - 1;
 
         // out of range
         if (i >= icd->cacheItemList.size()) {
             msg = "i = " + sRow + " >= icd->cacheItemList.size()";
             if (debugThis) sDebug(sId, msg);
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             return false;
         }
 
         // make sure metadata has been loaded
         if (!icd->cacheItemList.at(i).isUpdated) {
             msg = "row " + sRow + " not updated";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
@@ -652,35 +649,35 @@ bool ImageCache::nextToCache(int id)
         // already in imCache
         if (icd->imCache.contains(icd->cacheItemList.at(i).fPath)) {
             msg = "row " + sRow + " already in imCache";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
         // already cached
         if (icd->cacheItemList.at(i).isCached) {
             msg = "row " + sRow + " isCached == true";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
         // invalid image
         if (icd->cacheItemList.at(i).status == inValidImage) {
             msg = "row " + sRow + " inValidImage";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
         // max attempts exceeded
         if (icd->cacheItemList.at(i).attempts > maxAttemptsToCacheImage) {
             msg = "row " + sRow + " maxAttemptsToCacheImage exceeded";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
         // isCaching and not the same decoder
         if (icd->cacheItemList.at(i).isCaching && (id != icd->cacheItemList.at(i).decoderId)) {
             msg = "row " + sRow + " isCaching and not the same decoder";
-            if (target) sDebug(sId, msg);
+            if (debugThis) sDebug(sId, msg);
             continue;
         }
 
@@ -720,7 +717,11 @@ bool ImageCache::cacheUpToDate()
         int id = icd->cacheItemList.at(i).decoderId;
         bool isCached = icd->cacheItemList.at(i).isCached;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
-        bool inCache = icd->imCache.contains(icd->cacheItemList.at(i).fPath);
+
+        // bool inCache = icd->imCache.contains(fPath);  // random crash 2024-09-19
+        QStringList imagePaths;
+        icd->imCache.getKeys(imagePaths);
+        bool inCache = imagePaths.contains(icd->cacheItemList.at(i).fPath);
 
         // the cache contains the image
         if (inCache) continue;
@@ -1314,7 +1315,7 @@ void ImageCache::reportRunStatus()
     then ImageCache is initialized and buildImageCacheList() is called.
 
         buildImageCacheList
-            addImageMetadata        // add row to imageCacheList with basic file info
+            addCacheItem        // add row to imageCacheList with basic file info
             // if all metadata has been read in datamodel
             updateImageMetadata     // update metadata after image metadata has been read
 
@@ -1329,7 +1330,7 @@ void ImageCache::reportRunStatus()
     they must also be inserted into imageCacheList to mirror dm->sf.
 
         updateImageMetadataFromReader
-            addImageMetadata
+            addCacheItem
             updateImageMetadata
 
     So, there are two algoriths:
@@ -1338,7 +1339,7 @@ void ImageCache::reportRunStatus()
 
         buildImageCacheList() {
             iterate dm->sf {
-                addImageMetadata()
+                addCacheItem()
                     add file info to a cache item
                     append the item to imageCacheList
                 if all metadata has been read into datamodel
@@ -1352,7 +1353,7 @@ void ImageCache::reportRunStatus()
         signal from Reader
         updateImageMetadataFromReader() {
             if not in imageCacheList
-                addImageMetadata()
+                addCacheItem()
                     add file info to a cache item
                     insert the item into imageCacheList
             updateImageMetadata()
@@ -1361,13 +1362,13 @@ void ImageCache::reportRunStatus()
 */
 
 
-void ImageCache::addImageMetadata(int key)
+void ImageCache::addCacheItem(int key)
 {
 /*
     Add or append basic info to cacheItemList.
 */
     int n = dm->sf->rowCount();
-    if (toBeUpdated.size() < n) toBeUpdated.resize(n);
+    // if (toBeUpdated.size() < n) toBeUpdated.resize(n);
     int row = key;
 
     QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
@@ -1375,18 +1376,18 @@ void ImageCache::addImageMetadata(int key)
     pathFromKey[row] = fPath;
     toBeUpdated.push_back(row);
 
-    icd->cacheItem.isUpdated = false;
     icd->cacheItem.key = row;              // need to be able to sync with imageList
     icd->cacheItem.fPath = fPath;
     icd->cacheItem.ext = fPath.section('.', -1).toLower();
     icd->cacheItem.status = 0;
     icd->cacheItem.isCaching = false;
+    icd->cacheItem.isCached = false;
     icd->cacheItem.attempts = 0;
     icd->cacheItem.decoderId = -1;
-    icd->cacheItem.isCached = false;
     icd->cacheItem.isTarget = false;
     icd->cacheItem.priority = row;
     icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
+    icd->cacheItem.isUpdated = false;
 
     // insert new row
     if (row < icd->cacheItemList.size()) {
@@ -1396,16 +1397,24 @@ void ImageCache::addImageMetadata(int key)
     else {
         icd->cacheItemList.append(icd->cacheItem);
     }
-    // keyFromPath[fPath] = row;
 
     // increment key for rest of list
     for (int i = row + 1; i < icd->cacheItemList.size(); i++) {
         icd->cacheItemList[i].key = i;
     }
-    // icd->cacheItemList.append(icd->cacheItem);
+
+    if (debugCaching)
+    {
+        qDebug() << "ImageCache::addImageMetadata"
+                 << "row =" << row
+                 << "isUpdated =" << icd->cacheItem.isUpdated
+                 << "path =" << fPath
+            ;
+    }
 }
 
-bool ImageCache::updateImageMetadata(ImageMetadata m)
+// bool ImageCache::updateCacheItemMetadata(ImageMetadata m)
+bool ImageCache::updateCacheItemMetadata(int row)
 /*
     Called by cacheItemListCompleted if the list items is complete but an item has not been
     loaded.
@@ -1418,22 +1427,23 @@ bool ImageCache::updateImageMetadata(ImageMetadata m)
     See Managing imageCacheList section for details.
 */
 {
-    log("loadCacheItemFromDatamodel", "Row = " + QString::number(m.row));
+    log("updateImageMetadata", "Row = " + QString::number(row));
     if (G::stop) {
         return false;
     }
 
-    int row = m.row;
+    // int row = m.row;
+    SortFilter *d = dm->sf;
 
-    // qDebug() << "loadCacheItemFromDatamodel  row =" << row;
+    qDebug() << "updateImageMetadata  row =" << row;
 
     // range check
     if (row >= icd->cacheItemList.size()) return false;
 
-    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
-    icd->cacheItemList[row].isVideo = m.video;
+    icd->cacheItemList[row].metadataLoaded = d->index(row, G::MetadataLoadedColumn).data().toBool();
+    icd->cacheItemList[row].isVideo = d->index(row, G::VideoColumn).data().toInt();
 
-    if (m.video) {
+    if (icd->cacheItemList[row].isVideo) {
         icd->cacheItemList[row].sizeMB = 0;
         icd->cacheItemList[row].estSizeMB = false;
         icd->cacheItemList[row].offsetFull = 0;
@@ -1443,9 +1453,15 @@ bool ImageCache::updateImageMetadata(ImageMetadata m)
     else {
         // cacheItemList is a list of cacheItem used to track the current cache status and
         // make future caching decisions for each image.
-        int w, h;
-        m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
-        m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+        int w, h, width, height, widthPreview, heightPreview, size;
+        width = d->index(row, G::WidthColumn).data().toInt();
+        height = d->index(row, G::HeightColumn).data().toInt();
+        widthPreview = d->index(row, G::WidthPreviewColumn).data().toInt();
+        heightPreview = d->index(row, G::HeightPreviewColumn).data().toInt();
+        widthPreview > 0 ? w = widthPreview : w = width;
+        heightPreview > 0 ? h = heightPreview : h = height;
+
+        size = d->index(row, G::SizeColumn).data().toInt();
 
         // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
         float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
@@ -1454,26 +1470,73 @@ bool ImageCache::updateImageMetadata(ImageMetadata m)
             icd->cacheItemList[row].estSizeMB = false;
         }
         else {
-            icd->cacheItemList[row].sizeMB = m.size * 1.0 / 1000000;
+            icd->cacheItemList[row].sizeMB = size * 1.0 / 1000000;
             icd->cacheItemList[row].estSizeMB = true;
         }
         // decoder parameters
-        icd->cacheItemList[row].orientation = m.orientation;
-        icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
-        icd->cacheItemList[row].offsetFull = m.offsetFull;
-        icd->cacheItemList[row].lengthFull = m.lengthFull;
-        icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
-        icd->cacheItemList[row].iccBuf = m.iccBuf;
+        icd->cacheItemList[row].orientation = d->index(row, G::OrientationColumn).data().toInt();
+        icd->cacheItemList[row].rotationDegrees = d->index(row, G::RotationColumn).data().toInt();
+        icd->cacheItemList[row].offsetFull = d->index(row, G::OffsetFullColumn).data().toUInt();
+        icd->cacheItemList[row].lengthFull = d->index(row, G::LengthFullColumn).data().toUInt();
+        icd->cacheItemList[row].samplesPerPixel = d->index(row, G::samplesPerPixelColumn).data().toInt();
+        icd->cacheItemList[row].iccBuf = d->index(row, G::ICCBufColumn).data().toByteArray();
     }
+    // icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+    // icd->cacheItemList[row].isVideo = m.video;
+
+    // if (m.video) {
+    //     icd->cacheItemList[row].sizeMB = 0;
+    //     icd->cacheItemList[row].estSizeMB = false;
+    //     icd->cacheItemList[row].offsetFull = 0;
+    //     icd->cacheItemList[row].lengthFull = 0;
+    //     icd->cacheItemList[row].status = ImageDecoder::Status::Video;
+    // }
+    // else {
+    //     // cacheItemList is a list of cacheItem used to track the current cache status and
+    //     // make future caching decisions for each image.
+    //     int w, h;
+    //     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
+    //     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+
+    //     // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+    //     float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
+    //     if (sizeMB > 0) {
+    //         icd->cacheItemList[row].sizeMB = sizeMB;
+    //         icd->cacheItemList[row].estSizeMB = false;
+    //     }
+    //     else {
+    //         icd->cacheItemList[row].sizeMB = m.size * 1.0 / 1000000;
+    //         icd->cacheItemList[row].estSizeMB = true;
+    //     }
+    //     // decoder parameters
+    //     icd->cacheItemList[row].orientation = m.orientation;
+    //     icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
+    //     icd->cacheItemList[row].offsetFull = m.offsetFull;
+    //     icd->cacheItemList[row].lengthFull = m.lengthFull;
+    //     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
+    //     icd->cacheItemList[row].iccBuf = m.iccBuf;
+    // }
 
     // item has been updated
     icd->cacheItemList[row].isUpdated = true;
     toBeUpdated.remove(row);
 
+    // delete d;
+
+    if (debugCaching)
+    {
+        qDebug() << "ImageCache::updateImageMetadata"
+                 << "row =" << row
+                 << "isUpdated =" << icd->cacheItem.isUpdated
+                 // << "path =" << fPath
+            ;
+    }
+
     return true;
 }
 
-void ImageCache::updateImageMetadataFromReader(ImageMetadata m, int instance)
+// void ImageCache::updateCacheItemMetadataFromReader(ImageMetadata m, int instance)
+void ImageCache::updateCacheItemMetadataFromReader(int row, int instance)
 {
 /*
     The imageCacheList metadata information is updated for the row, triggered by signal
@@ -1481,19 +1544,20 @@ void ImageCache::updateImageMetadataFromReader(ImageMetadata m, int instance)
 
     See Managing imageCacheList section for details.
 */
-    log("addCacheItemImageMetadata", "Row = " + QString::number(m.row));
+    log("addCacheItemImageMetadata", "Row = " + QString::number(row));
     if (debugCaching)
-    // if (m.row == 8556)
     {
         qDebug() << "ImageCache::addCacheItemImageMetadata"
-                 << "row =" << m.row
+                 << "row =" << row
                     ;
     }
+
+    QString fPath = dm->pathFromProxyRow(row);
 
     if (instance != dm->instance) {
         if (debugCaching) {
             QString msg = "Instance clash.";
-            G::issue("Comment", msg, "ImageCache::addCacheItemImageMetadata", m.row, m.fPath);
+            G::issue("Comment", msg, "ImageCache::addCacheItemImageMetadata", row, fPath);
         }
         return;
     }
@@ -1506,10 +1570,10 @@ void ImageCache::updateImageMetadataFromReader(ImageMetadata m, int instance)
 
     QMutexLocker locker(&gMutex);
 
-    if (!keyFromPath.contains(m.fPath)) {
-        addImageMetadata(m.row);
+    if (!keyFromPath.contains(fPath)) {
+        addCacheItem(row);
     }
-    updateImageMetadata(m);
+    updateCacheItemMetadata(row);
     return;
 }
 
@@ -1520,7 +1584,9 @@ void ImageCache::buildImageCacheList()
 */
     log("buildImageCacheList");
     if (debugCaching)
+    {
         qDebug() << "ImageCache::buildImageCacheList";
+    }
 
     icd->cacheItemList.clear();
     keyFromPath.clear();
@@ -1531,12 +1597,14 @@ void ImageCache::buildImageCacheList()
     toBeUpdated.resize(n);
 
     for (int i = 0; i < n; ++i) {
-        addImageMetadata(i);
-        if ((G::allMetadataLoaded)) {
+        addCacheItem(i);
+        if (G::allMetadataLoaded) {
             // qDebug() << "ImageCache::buildImageCacheList  UPDATE";
-            QString fPath = dm->sf->index(1, G::PathColumn).data(G::PathRole).toString();
-            ImageMetadata m = dm->imMetadata(fPath);
-            updateImageMetadata(m);
+            // QString fPath = dm->sf->index(i, G::PathColumn).data(G::PathRole).toString();
+            // QString fPath = icd->cacheItemList.at(i).fPath;
+            // ImageMetadata m = dm->imMetadata(fPath);
+            // ImageMetadata m = dm->imMetadata(fPath);
+            updateCacheItemMetadata(i);
         }
     } // next row
 }
@@ -1619,9 +1687,11 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     The image cache is now ready to run by calling setCachePosition().
 */
     log("rebuildImageCacheParameters");
-    // if (debugCaching)
+    if (debugCaching)
     {
-        qDebug() << "ImageCache::rebuildImageCacheParameters";
+        qDebug() << "ImageCache::rebuildImageCacheParameters"
+                 << "dm->sf->rowCount() =" << dm->sf->rowCount()
+            ;
     }
     if (dm->sf->rowCount() == 0) return;
 
@@ -1660,7 +1730,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     // remove surplus images in icd->imCache
     QVector<QString> keys;
-    // gMutex.lock();
     icd->imCache.getKeys(keys);
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
@@ -2027,6 +2096,13 @@ void ImageCache::fillCache(int id)
     }
     // returning instance clash
     else if (decoder[id]->status == ImageDecoder::Status::InstanceClash) {
+        if (debugCaching)
+        {
+            qDebug().noquote() << "ImageCache::fillCache"
+                               << "     returning decoder" << id
+                               << "instance clash"
+                ;
+        }
             cacheKey = -1;
     }
     // returning decoder

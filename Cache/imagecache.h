@@ -90,7 +90,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void updateImageMetadataFromReader(ImageMetadata m, int instance);
+    void updateCacheItemMetadataFromReader(int row, int instance);
+    // void updateImageMetadataFromReader(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -148,8 +149,9 @@ private:
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
-    void addImageMetadata(int key);
-    bool updateImageMetadata(ImageMetadata m);
+    void addCacheItem(int key);
+    bool updateCacheItemMetadata(int key);
+    // bool updateCacheItemMetadata(ImageMetadata m);
     void log(const QString function, const QString comment = "");
 
     QElapsedTimer t;

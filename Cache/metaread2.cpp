@@ -178,7 +178,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     flag, isDispatching, is used to track this.
     */
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "MetaRead2::setStartRow" << startRow << "src =" << src;
     }

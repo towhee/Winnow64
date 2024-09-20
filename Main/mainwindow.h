@@ -795,8 +795,7 @@ private:
     QAction *deleteFSTreeFolderAction;
     QAction *shareFilesAction;
     QAction *rejectAction;
-    QAction *pickAction;                // shortcut "`"
-    QAction *pick1Action;               // added for shortcut "P"
+    QAction *pickAction;                // shortcut "`" or "P"
     QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
@@ -1382,7 +1381,7 @@ private:
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
-    void traverseFolderStressTest(int msPerImage = 0, int secPerFolder = 0, bool uturn = false);
+    void traverseFolderStressTest(int msPerImage = 0, int secPerFolder = 0, bool uturn = true);
     void bounceFoldersStressTestFromMenu();
     void bounceFoldersStressTest(int msPerImage = 0, int secPerFolder = -1);
     template<typename T> void test2(T& io, int x);
