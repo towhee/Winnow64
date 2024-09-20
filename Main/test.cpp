@@ -3,7 +3,7 @@
 void MW::traverseFolderStressTestFromMenu()
 {
     qDebug() << "MW::traverseFolderStressTestFromMenu";
-    traverseFolderStressTest();
+    traverseFolderStressTest(100);
 }
 
 void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
@@ -33,14 +33,16 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     bool isForward = true;
     //slideCount = 0;
     int uturnCounter = 0;
-    int uturnAmount = QRandomGenerator::global()->bounded(1, 301);
+    int uturnMax;
+    dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
+    int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
         if (msPerFolder && t.elapsed() > msPerFolder) return;
         if (uturn && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
-            uturnAmount = QRandomGenerator::global()->bounded(1, 301);
+            uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
             uturnCounter = 0;
         }
         ++slideCount;

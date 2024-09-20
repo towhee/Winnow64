@@ -782,7 +782,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int row = fPathRow[fPath];
+    int row = proxyRowFromPath(fPath);
+    // int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance

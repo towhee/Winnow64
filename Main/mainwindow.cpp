@@ -1154,7 +1154,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     /* CONTEXT MENU
-        - Intercept context menu to enable/disable:
+        - Intercept context menu to enable/disable and rename based on folder:
             - eject usb drive menu item
             - add bookmarks menu item
         - mouseOverFolder is used in folder related context menu actions instead of
@@ -1192,20 +1192,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (idx.isValid()) {
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
-                    mouseOverFolderPath = idx0.data(QFileSystemModel::FileNameRole).toString();
+                    mouseOverFolderPath = idx0.data(QFileSystemModel::FilePathRole).toString();
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
-                             << "folderName =" << QFileInfo(mouseOverFolderPath).fileName()
-                             << "folderName2 =" << idx0.data().toString()
-                             << "folderName3 =" << idx.data(QFileSystemModel::FileNameRole).toString()
-                             << "event =" << event
-                             << "obj->objectName() =" << obj->objectName()
+                             << "folderName =" << folderName
+                             << "mouseOverFolderPath =" << mouseOverFolderPath
+                             // << "event =" << event
+                             // << "obj->objectName() =" << obj->objectName()
                              // << " =" <<
                                 ;
                 }
-
-                // enableEjectUsbMenu(mouseOverFolderPath);
-                // in folders or bookmarks but not on folder item
-
             }
 
             // Bookmarks (favActions menu)
@@ -1218,14 +1213,14 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     folderName = idx0.data().toString();
                     // tooltip is set to path when bookmark is added
                     mouseOverFolderPath = idx0.data(Qt::ToolTipRole).toString();
+                    /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "mouseOverFolderPath =" << mouseOverFolderPath
                              << "folderName =" << folderName
                              << "event =" << event
                              << "obj->objectName() =" << obj->objectName()
-                                ;
+                                ; //*/
                 }
-
             }
 
             //enableEjectUsbMenu(G::currRootFolder);
@@ -1235,7 +1230,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 copyFolderPathFromContextAction->setEnabled(false);
             }
 
-            // disable
+            // disable if not click on folder
             if (mouseOverFolderPath == "") {
                 copyFolderPathFromContextAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
@@ -1257,6 +1252,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 renameEjectUsbMenu(folderName);
                 renamePasteFilesAction(folderName);
                 renameAddBookmarkAction(folderName);
+                renameRemoveBookmarkAction(folderName);
             }
 
             // continue to open context menu
@@ -1969,9 +1965,10 @@ void MW::folderSelectionChange(QString dPath)
     if (!stop("MW::folderSelectionChange()")) return;
 
     G::t.restart();
+
     // block repeated clicks to folders or bookmarks while processing this one.
     QSignalBlocker bookmarkBlocker(bookmarks);
-    // QSignalBlocker fsTreeBlocker(fsTree);
+    QSignalBlocker fsTreeBlocker(fsTree);
 
 //    // might have selected subfolders usiing shift+command click
 //    if (G::includeSubfolders) subFoldersAction->setChecked(true);
@@ -2881,7 +2878,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    // /*
+    /*
     {
         qDebug().noquote()
                  << "MW::loadConcurrent  sfRow =" << QVariant(sfRow).toString().leftJustified(5)

@@ -156,6 +156,9 @@ void MW::filterChange(QString source)
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
+    // int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
+    // imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
+    //                                  isShowCacheProgressBar, cacheWtAhead);
 
     // select after filtration
     if (newSelectReqd) {

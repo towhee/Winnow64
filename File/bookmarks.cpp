@@ -316,22 +316,12 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // update path
-    QModelIndex idx = indexAt(event->pos());
-    QModelIndex idx0 = idx.sibling(idx.row(), 0);
-    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
-    if (idx.isValid()) {
-        // path = idx.data(Qt::ToolTipRole).toString();
-        // folderName = idx.data(Qt::DisplayRole).toString();
-        // change selection, does not trigger anything
-        // setCurrentIndex(idx);
-        // if (G::useProcessEvents) qApp->processEvents();
-    }
-
     // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
+        QModelIndex idx = indexAt(event->pos());
+        QModelIndex idx0 = idx.sibling(idx.row(), 0);
         rightClickItem = itemAt(event->pos());
-        rightMouseClickPath = path;
+        rightMouseClickPath = idx0.data(Qt::ToolTipRole).toString();
         return;
     }
 

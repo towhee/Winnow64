@@ -68,7 +68,6 @@ public:
     void scrollToCurrent();
 
     bool combineRawJpg;
-    QString rightMouseClickPath;
     QString hoverFolderName;
 
     QFileSystemWatcher volumesWatcher;
