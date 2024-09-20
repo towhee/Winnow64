@@ -72,6 +72,7 @@
 #include "progressbar.h"
 
 #include "Utilities/coloranalysis.h"
+#include "Utilities/dirwatcher.h"
 #include "Image/stack.h"
 #include <QSoundEffect>
 
@@ -417,6 +418,7 @@ public slots:
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void tryLoadImageAgain(QString fPath);
+    void currentFolderDeletedExternally(QString path);
     bool reset(QString src = "");
     void nullFiltration();
     void filterLastDay();
@@ -990,6 +992,10 @@ private:
     // Testing Menu (under Help Diagnostics Menu)
     QAction *traverseFolderStressTestAction;
     QAction *bounceFoldersStressTestAction;
+
+    // watch current folder in case it is deleted externally
+    DirWatcher folderWatcher;
+    QString lastFolderDeletedByWinnow = "";
 
     // Group actions
     QAction *fileGroupAct;

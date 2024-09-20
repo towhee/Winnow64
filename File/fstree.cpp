@@ -492,9 +492,7 @@ void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int en
     if (G::currRootFolder == toBeRemoved) {
         qDebug() << "FSTree::onRowsAboutToBeRemoved clear selection";
         clearSelection();
-    }
-    else {
-        // this->select(G::currRootFolder);
+        setCurrentIndex(QModelIndex());
     }
 }
 

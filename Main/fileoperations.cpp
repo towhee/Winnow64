@@ -405,8 +405,28 @@ void MW::deleteFiles(QStringList paths)
     bookmarks->updateBookmarks();
 }
 
+void MW::currentFolderDeletedExternally(QString path)
+{
+    if (G::isLogger) G::log("MW::currentFolderDeletedExternally");
+    qDebug() << "MW::currentFolderDeletedExternally" << path;
+
+    bool isExternalDeletion = path != lastFolderDeletedByWinnow;
+    stop();
+
+    // do not highlight next folder
+    // fsTree->setCurrentIndex(QModelIndex());
+
+    if (isExternalDeletion) {
+        setCentralMessage("The current folder was deleted by an external event.");
+    }
+
+    // do not highlight next folder
+    fsTree->setCurrentIndex(QModelIndex());
+}
+
 void MW::deleteFolder()
 {
+    if (G::isLogger) G::log("MW::deleteFolder");
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
     if (senderObject == "deleteActiveFolder") {
@@ -452,6 +472,8 @@ void MW::deleteFolder()
         if (ret == QMessageBox::Cancel) return;
     }
 
+    QModelIndex currIdx = fsTree->currentIndex();
+
     if (G::currRootFolder == dirToDelete) {
         stop("deleteFolder");
     }
@@ -459,13 +481,18 @@ void MW::deleteFolder()
     // okay to delete
     QFile(dirToDelete).moveToTrash();
 
+    // currentFolderDeletedExternally can check if internal folder deletion
+    lastFolderDeletedByWinnow = dirToDelete;
+
     if (bookmarks->bookmarkPaths.contains(dirToDelete)) {
         bookmarks->bookmarkPaths.remove(dirToDelete);
         bookmarks->reloadBookmarks();
     }
 
     // do not highlight next folder
-    fsTree->setCurrentIndex(QModelIndex());
+    if (G::currRootFolder == dirToDelete) fsTree->setCurrentIndex(QModelIndex());
+    else fsTree->setCurrentIndex(currIdx);
+
 }
 
 void MW::deleteAllImageMemCard(QString rootPath, QString name)
