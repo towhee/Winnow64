@@ -1980,6 +1980,9 @@ void MW::folderSelectionChange(QString dPath)
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
 
+    // watch current folder in case it is deleted externally
+    folderWatcher.startWatching(G::currRootFolder, 1000);
+
     // building filters msg
     filters->filtersBuilt = false;
     filters->loadingDataModel(false);

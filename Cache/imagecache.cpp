@@ -1435,7 +1435,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
     // int row = m.row;
     SortFilter *d = dm->sf;
 
-    qDebug() << "updateImageMetadata  row =" << row;
+    // qDebug() << "updateImageMetadata  row =" << row;
 
     // range check
     if (row >= icd->cacheItemList.size()) return false;

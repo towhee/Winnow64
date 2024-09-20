@@ -898,6 +898,9 @@ void MW::createFSTree()
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
 
+    // watch folders for external deletion
+    connect(&folderWatcher, &DirWatcher::folderDeleted, this, &MW::currentFolderDeletedExternally);
+
     // watch volumes for ejection / mounting
     #ifdef Q_OS_WIN
     WinNativeEventFilter *wnef = new WinNativeEventFilter(this);
