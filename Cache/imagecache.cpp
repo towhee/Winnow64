@@ -241,7 +241,7 @@ void ImageCache::resetCacheStateInTargetRange()
         if (abort) break;
         if (i >= icd->cacheItemList.size()) break;
         // imageCacheList build not finished
-        if (!icd->cacheItemList.at(i).isUpdated) break;
+        // if (!icd->cacheItemList.at(i).isUpdated) break;
         // isCaching
         if (icd->cacheItemList.at(i).isCaching) {
             icd->cacheItemList[i].isCaching = false;
