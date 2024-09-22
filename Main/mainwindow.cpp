@@ -3615,6 +3615,8 @@ void MW::thumbsShrink()
 void MW::addRecentFolder(QString fPath)
 {
     if (G::isLogger) G::log("MW::addRecentFolder");
+    if (G::stop) return;
+
     if (recentFolders->contains(fPath) || fPath == "") return; // EXC_BAD_ACCESS (SIGSEGV)
     recentFolders->prepend(fPath);
     int n = recentFolders->count();
