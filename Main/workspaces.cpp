@@ -174,14 +174,19 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     // ImageView
     infoVisibleAction->setChecked(w.isImageInfoVisible);
     // Processes
-    if (w.isColorManage) toggleColorManage(Tog::on);
-    else toggleColorManage(Tog::off);
+    if (w.isColorManage != G::colorManage) {
+        if (w.isColorManage) toggleColorManage(Tog::on);
+        else toggleColorManage(Tog::off);
+    }
     cacheSizeStrategy = w.cacheSizeMethod;
-    sortColumn = w.sortColumn;
-    updateSortColumn(sortColumn);
-    if (w.isReverseSort) toggleSortDirection(Tog::on);
-    else toggleSortDirection(Tog::off);
-
+    if (sortColumn != w.sortColumn) {
+        sortColumn = w.sortColumn;
+        updateSortColumn(sortColumn);
+    }
+    if (w.isReverseSort != isReverseSort) {
+        if (w.isReverseSort) toggleSortDirection(Tog::on);
+        else toggleSortDirection(Tog::off);
+    }
     updateState();
     workspaceChanged = true;
     sortChange("MW::invokeWorkspace");

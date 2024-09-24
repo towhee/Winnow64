@@ -282,7 +282,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             // add thumbnail to dst
             et.addThumb(dstThumb, dst);
 
-            //qDebug() << "EmbelExport::exportImages" << i << dst;
+            qDebug() << "EmbelExport::exportImages" << i << dst;
             dstPaths << dst;
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";

@@ -88,9 +88,9 @@ QString ExifTool::readTag(QString src, QString tag)
 {
     // Prepare the arguments
     QStringList args;
-    args += "-T";
-    args += "-" + tag;            // tag
-    args += src;                    // src file
+    // args += "-T";
+    // args += "-" + tag;            // tag
+    // args += src;                    // src file
     execute(args);
     process.waitForFinished(1);
     QString output = process.readAllStandardOutput();
