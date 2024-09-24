@@ -175,7 +175,7 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        decoderToUse = TurboJpg;            // QtImage or TurboJpg or Rory
+        decoderToUse = QtImage;            // QtImage or TurboJpg or Rory
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(buf);
@@ -310,7 +310,7 @@ bool ImageDecoder::load()
         decoderToUse = QtImage;
         #endif
         #ifdef Q_OS_MAC
-        decoderToUse = TurboJpg;            // QtImage or TurboJpg or Rory
+        decoderToUse = QtImage;            // QtImage or TurboJpg or Rory
         if (decoderToUse == TurboJpg) {
             JpegTurbo jpegTurbo;
             image = jpegTurbo.decode(fPath);

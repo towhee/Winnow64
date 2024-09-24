@@ -3,69 +3,7 @@
 #import <Social/Social.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <AppKit/NSSharingService.h>
-
 #import <Cocoa/Cocoa.h>
-
-/*
-First, you need to create an Objective-C++ source file (with the .mm extension) to
-implement your NSApplicationDelegate. In this file, you can import both Qt and Cocoa
-headers:
-
-#import <Cocoa/Cocoa.h>
-#include <QApplication>
-
-@interface MyApplicationDelegate : NSObject <NSApplicationDelegate>
-{
-    QApplication *qtApplication;
-}
-@end
-
-@implementation MyApplicationDelegate
-
-- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
-    return YES;
-}
-
-// ... other delegate methods ...
-
-@end
-
-In your main.cpp file, you can create an instance of MyApplicationDelegate and set it as
-the delegate of the NSApplication:
-
-#include <QApplication>
-#include <QMainWindow>
-
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
-
-    // ... setup your Qt application ...
-
-    MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
-    [NSApp setDelegate:delegate];
-
-    return app.exec();
-}
-
-This will set your custom delegate as the delegate of the NSApplication, and the applicationSupportsSecureRestorableState: method will be called by the system when it needs to know if your application supports secure restorable state.
-
-Please note that mixing Qt and Cocoa in the same application can be complex and might lead to unexpected issues, so it’s important to thoroughly test your application on all supported macOS versions. Also, keep in mind that you need to follow the memory management rules of both C++ and Objective-C when using Objective-C++.
-*/
-
-//@interface MyApplicationDelegate : NSObject <NSApplicationDelegate>
-//{
-//    QApplication *qtApplication;
-//}
-//@end
-
-//@implementation MyApplicationDelegate
-
-//- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
-//    return YES;
-//}
-//@end
-
-// code below before version 1.37.5
 
 @interface SharingDelegate : NSObject<NSSharingServicePickerDelegate>
 @end
@@ -186,7 +124,7 @@ QString Mac::getDisplayProfileURL()
         CFRelease(data.url);  // wakeup crash here - data.url == 0 null pointer argument
         return QString::fromCFString(urlstr);
     }
-//    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
+    // qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return "";
 }
 
@@ -218,28 +156,3 @@ void Mac::share(QList<QUrl> &urls, WId wId)
     [picker setDelegate:delegate];
     [picker showRelativeToRect:rect ofView:view preferredEdge:NSMaxYEdge];
 }
-
-//void Mac::spaces()
-//{
-//    QStringList sL;
-//    CFArrayRef spaces = CGSCopySpaces(CGSDefaultConnection, kCGSSpaceAll);
-
-//    qDebug() << "spaces: " << spaces;
-
-//    int i;
-
-//    for(i = 0; i < CFArrayGetCount(spaces); i++) {
-//        CGSSpace space = (CGSSpace)CFArrayGetValueAtIndex(spaces, i);
-
-//        CFShow(CGSSpaceCopyName(CGSDefaultConnection, space));
-//        printf("i: %i", i);
-//        printf("Space ID: %lld\n", space);
-//        printf("Absolute level: %d\n", CGSSpaceGetAbsoluteLevel(CGSDefaultConnection, space));
-//        printf("Compat ID: %d\n", CGSSpaceGetCompatID(CGSDefaultConnection, space));
-//        printf("Type: %d\n", CGSSpaceGetType(CGSDefaultConnection, space));
-//        printf("\n");
-
-//        sL.push_back(QString::number(space));
-//    }
-
-//}

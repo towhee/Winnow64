@@ -85,7 +85,7 @@ void MW::runExternalApp()
     QStringList arguments;
     QStringList files;
     for (int i = 0; i < externalApps.length(); ++i) {
-        if(externalApps.at(i).name == appName) {
+        if (externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
             if (externalApps.at(i).args.length() > 0)
                 arguments << externalApps.at(i).args.split(" ");
@@ -137,6 +137,30 @@ void MW::runExternalApp()
     arguments.replaceInStrings("/", "\\");
     #endif
 
+    // ChatGPT
+    /*
+    QProcess *process = new QProcess();
+    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
+            this, SLOT(cleanupSender()));
+    connect(process, SIGNAL(error(QProcess::ProcessError)),
+            this, SLOT(externalAppError(QProcess::ProcessError)));
+
+    // Build the file path argument string
+    QString fileArgs;
+    for (const QString& filePath : arguments) {
+        fileArgs += QString("\"%1\" ").arg(filePath);
+    }
+
+    // Construct the full command as a single string
+    QString command = QString("open %1 -a \"%2\"").arg(fileArgs.trimmed(), appName);
+
+    // Run the command using the shell
+    process->start("bash", QStringList() << "-c" << command);
+
+    */
+    // END ChatGPT
+
+
     QProcess *process = new QProcess();
     connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
             this, SLOT(cleanupSender()));
@@ -157,5 +181,6 @@ void MW::runExternalApp()
     /*
         this works in terminal"
         open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
+        open "/Volumes/OM SYSTEM/DCIM/100OMSYS/_5020536.ORF" -a "Adobe Photoshop 2024"
     */
 }

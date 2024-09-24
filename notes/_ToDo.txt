@@ -10,7 +10,8 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Embellished removing metadata EmbelExport::exportImages: 265 not working?
+- Rebuilding ImageCache when change workspace
+- Maybe integrate apple sf symbols as svg
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification
