@@ -132,6 +132,12 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     ws = w;     // current workspace ws
 
+    /* Save current selection.  Since multiple saves occur in view mode and sortChange,
+       make a separate copy here to recover later.  */
+    sel->save("MW::invokeWorkspace");
+    QModelIndexList selectedRows;
+    foreach (QModelIndex dmIdx, sel->dmSelectedRows) selectedRows << dmIdx;
+
     /* Fullscreen was on different screen from new workspace.  Set flag, showNormal and return.
        In the QEvent::WindowStateChange override (MW::eventFilter) invokeWorkspace will be called
        again after the normal window has been completed,*/
@@ -202,6 +208,16 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     // second restoreState req'd for going from docked to floating docks
     restoreGeometry(w.geometry);
     restoreState(w.state);
+
+    // recover selection
+    QItemSelection selection;
+    foreach (QModelIndex dmIdx, selectedRows) {
+        QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
+        selection.select(sfIdx, sfIdx);
+    }
+    sel->sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+
+    thumbView->scrollToCurrent("MW::invokeWorkSpace");
 
     if (w.isMaximised) showMaximized();
 }

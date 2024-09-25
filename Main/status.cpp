@@ -71,7 +71,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         // base += spacer + "Workspace: " + ws.name;
         // status = " " + base + s;
         QString preBase = "";
-        if (isStressTest) preBase = "<font color=\"red\"><b>PRESS ESC TO STOP STRESS TEST</b></font>    ";
+        if (isStressTest) {
+            preBase = "<font color=\"red\"><b>PRESS ESC TO STOP STRESS TEST</b></font>  ";
+            preBase += QString::number(stressSecToGoInFolder) + " seconds.        ";
+        }
         status = preBase + base;
     }
 

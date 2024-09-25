@@ -884,7 +884,7 @@ void MetaRead2::dispatch(int id)
         b = startRow - 1;
         isNewStartRowWhileStillReading = false;
         // if (a == dm->sf->rowCount() - 1) isAhead = false;
-        // if (isDebug)
+        if (isDebug)
         {
             qDebug().noquote()
                 << "MetaRead2::dispatch isNewStartRowWhileStillReading"

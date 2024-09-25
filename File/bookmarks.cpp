@@ -340,8 +340,8 @@ void BookMarks::mouseMoveEvent(QMouseEvent *event)
     QModelIndex idx = indexAt(event->pos());
     // same row, column 0 (folder name)
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
-    // /*
-    qDebug() << "FSTree::mouseMoveEvent"
+    /*
+    qDebug() << "Bookmarks::mouseMoveEvent"
              << "idx =" << idx
              << "idx0 =" << idx0
         ;

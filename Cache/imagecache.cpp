@@ -240,17 +240,24 @@ void ImageCache::resetCacheStateInTargetRange()
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
         if (abort) break;
         if (i >= icd->cacheItemList.size()) break;
-        // imageCacheList build not finished
-        // if (!icd->cacheItemList.at(i).isUpdated) break;
+
         // isCaching
         if (icd->cacheItemList.at(i).isCaching) {
             icd->cacheItemList[i].isCaching = false;
+            icd->cacheItemList[i].decoderId = -1;
         }
-        // isCached and not in imCache
-        if (icd->cacheItemList.at(i).isCached &&
-            !icd->imCache.contains(icd->cacheItemList.at(i).fPath))
-        {
+
+        // in imCache
+        if (icd->imCache.contains(icd->cacheItemList.at(i).fPath)) {
+            icd->cacheItemList[i].isCached = true;
+            continue;
+        }
+
+        // not in imCache
+        else {
             icd->cacheItemList[i].isCached = false;
+            icd->cacheItemList[i].decoderId = -1;
+            icd->cacheItemList[i].status = ImageDecoder::Status::Ready;
         }
     }
 }

@@ -16,6 +16,9 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     if (G::isLogger) G::log("MW::traverseFolderStressTest");
     G::popUp->reset();
 
+    // if no images in folder then return
+    if (dm->sf->rowCount() == 0) return;
+
     int msPerFolder = secPerFolder * 1000;
     //qDebug() << "MW::traverseFolderStressTest" << msPerImage << msPerFolder;
 
@@ -50,6 +53,9 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
             return;
         }
         G::wait(msPerImage);
+        qint64 msElapsed = t.elapsed();
+        double seconds = msElapsed * 0.001;
+        stressSecToGoInFolder = secPerFolder - seconds;
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) sel->next();
@@ -57,9 +63,12 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
+    stressSecToGoInFolder = secPerFolder - seconds;
     double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
     QString msg = "" + QString::number(slideCount) + " images.<br>" +
+                  QString::number(secPerFolder) + " secPerFolder.<br>" +
+                  QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
                   QString::number(msElapsed) + " ms elapsed.<br>" +
                   QString::number(elapsedMsPerImage) + " ms delay.<br>" +
                   QString::number(imagePerSec) + " images per second.<br>" +
@@ -104,7 +113,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
     if (secPerFolder < 0) {
         secPerFolder = QInputDialog::getInt(this,
                                             "Enter seconds per folder tested",
-                                            "Duration (0 - 1000 sec)  -1 sec = random 1 - 20 sec",
+                                            "Duration (0 - 1000 sec)  -1 sec = random 1 - 300 sec",
                                             -1, -1, 1000);
     }
     bool isRandomSecPerFolder = secPerFolder == -1;
@@ -116,7 +125,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
     while (isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
         if (isRandomSecPerFolder)
-            secPerFolder = QRandomGenerator::global()->bounded(1, 21);
+            secPerFolder = QRandomGenerator::global()->bounded(1, 301);
         QString path = bookMarkPaths.at(randomIdx);
         qDebug() << "MW::bounceFoldersStressTest"
             << "secInFolder =" << secPerFolder << path;
@@ -184,9 +193,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
-    // thumbView->scrollToRow(7999, "test");
-    // sel->select(7999);
-    fsTree->viewport()->update();
+    gridView->scrollToCurrent();
 }
 /*
    Performance

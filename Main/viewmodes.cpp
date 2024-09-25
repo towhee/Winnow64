@@ -29,18 +29,18 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    // /*
+    /*
     if (!G::isInitializing && G::isLogger)
         qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
                  << QVariant(wasThumbDockVisible).toString()
             ; //*/
-
+    if (G::isLogger || G::isFlowLogger) G::log(" MW::loupeDisplay");
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", "MW::loupeDisplay");
 
     // save selection as tableView is hidden and not synced
-    sel->save();
+    sel->save("MW::loupeDisplay");
 
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
@@ -74,7 +74,7 @@ void MW::loupeDisplay()
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    sel->recover();
+    sel->recover("MW::loupeDisplay");
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -112,7 +112,8 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::gridDisplay";
+    if (G::isLogger || G::isFlowLogger) G::log(" MW::gridDisplay");
+
 
     if (embelProperties->templateId > 0) {
         QString msg = "Only loupe mode is available while the Embellish Editor is active.";
@@ -125,7 +126,7 @@ void MW::gridDisplay()
     updateStatus(true, "", "MW::gridDisplay");
 
     // save selection as gridView is hidden and not synced
-    sel->save();
+    sel->save("MW::gridisplay");
 
 //    bool wasVisible = thumbDock->isVisible();
     thumbDock->setVisible(false);
@@ -153,7 +154,7 @@ void MW::gridDisplay()
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    sel->recover();
+    sel->recover("MW::gridDisplay");
 
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
@@ -189,6 +190,7 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
+    if (G::isLogger || G::isFlowLogger) G::log(" MW::tableDisplay");
     // if (G::isLogger || G::isFlowLogger)
         // qDebug() << "MW::tableDisplay";
 
@@ -204,7 +206,7 @@ void MW::tableDisplay()
     updateStatus(true, "", "MW::tableDisplay");
 
     // save selection as tableView is hidden and not synced
-    sel->save();
+    sel->save("MW::tableDisplay");
 
     // change to the table view
     centralLayout->setCurrentIndex(TableTab);
@@ -247,7 +249,7 @@ void MW::tableDisplay()
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    sel->recover();
+    sel->recover("MW::tableDisplay");
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -321,9 +323,9 @@ void MW::compareDisplay()
 
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
-    sel->save();
+    sel->save("MW::compareDisplay");
     centralLayout->setCurrentIndex(CompareTab);
-    sel->recover();
+    sel->recover("MW::compareDisplay");
     prevCentralView = CompareTab;
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, dm->selectionModel);
 

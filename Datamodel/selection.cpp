@@ -493,7 +493,7 @@ int Selection::count()
     return sm->selectedRows().count();
 }
 
-void Selection::save()
+void Selection::save(QString src)
 {
 /*
     This function saves the current selection. This is required, even though the three views
@@ -519,13 +519,14 @@ void Selection::save()
     }
     dmCurrentIndex = dm->sf->mapToSource(sm->currentIndex());
 
-    /*qDebug() << "Selection::saved";
-    foreach (QModelIndex dmIdx, dmSelectedRows)
-        qDebug() << "dmSelectedRow =" << dmIdx.row();
+    /*
+    qDebug() << "Selection::saved" << src << dmSelectedRows;
+    // foreach (QModelIndex dmIdx, dmSelectedRows)
+    //     qDebug() << "dmSelectedRow =" << dmIdx.row();
     //*/
 }
 
-void Selection::recover()
+void Selection::recover(QString src)
 {
 /*
     The selection is saved in source (datamodel) indexes.  QItemSelectionModel uses proxy
@@ -551,6 +552,8 @@ void Selection::recover()
     sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     dm->currentSfIdx = dm->sf->mapFromSource(dmCurrentIndex);
     sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::NoUpdate);
+
+    // qDebug() << "Selection::recovered" << src << dmSelectedRows;
 }
 
 void Selection::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

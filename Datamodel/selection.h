@@ -34,8 +34,8 @@ public:
     int endSelectionBlock(int rowInBlock);
     void clear();
     int count();
-    void save();
-    void recover();
+    void save(QString src = "");
+    void recover(QString src = "");
     //void report();
 
     QModelIndexList selectedRows;
