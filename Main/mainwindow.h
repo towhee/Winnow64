@@ -1170,6 +1170,7 @@ private:
     bool simulateJustInstalled;
     bool isSettings = false;
     bool isStressTest;
+    int stressSecToGoInFolder;
     bool hasGridBeenActivated;
 //    bool isSlideshowPaused;
     bool isSlideShowHelpVisible;

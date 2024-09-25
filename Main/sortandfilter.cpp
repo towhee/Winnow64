@@ -442,9 +442,9 @@ void MW::sortChange(QString source)
     }
 
     // save selection prior to sorting
-    sel->save();
+    sel->save("MW::sortChange");
     thumbView->sortThumbs(sortColumn, isReverseSort);
-    sel->recover();
+    sel->recover("MW::sortChange");
 
     // get the current selected item
     if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();

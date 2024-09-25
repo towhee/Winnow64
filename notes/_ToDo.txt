@@ -10,7 +10,6 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Rebuilding ImageCache when change workspace
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
@@ -120,6 +119,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Recover selection when invokeWorkspace
+- Rebuilding ImageCache when change workspace
 - After delete a folder do not highlight or select a folder
 - Add folder name to context actions for folders: delete, copy and reveal
 - Change cache size is hanging (from 16 to 4 GB)

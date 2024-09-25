@@ -990,13 +990,14 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
+    if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
-        << "source =" << source
-        << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+             << "source =" << source
+             << "objectName() =" << objectName()
+             << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
            ;
     // */
-    if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
     scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
@@ -1137,10 +1138,12 @@ void IconView::paintEvent(QPaintEvent *event)
 }
 
 void IconView::keyPressEvent(QKeyEvent *event){
+    if (G::isLogger) G::log("IconView::keyPressEvent", event->text());
     // navigation keys are executed in MW::eventFilter to make sure they work no matter
     // what has the focus
+    // qDebug() << "IconView::keyPressEvent" << event << objectName();
     if (objectName() == "Grid") {
-        if (event->key() == Qt::Key_Return) m2->loupeDisplay();
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) m2->loupeDisplay();
     }
 }
 
@@ -1297,7 +1300,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
         QString row = "row = " + QString::number(indexAt(event->pos()).row()) + " ";
         G::log("IconView::mouseDoubleClickEvent", row + objectName());
     }
-    /*
+    // /*
     qDebug() << "IconView::mouseDoubleClickEvent"
              << event
              << "btn =" << event->button()

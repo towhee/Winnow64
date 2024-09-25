@@ -1081,7 +1081,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              Qt::KeyboardModifiers k = e->modifiers();
 
             if (obj->objectName() == "MWWindow") {
-                /*
+                // /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
                          << "key =" << e->key()
@@ -2096,16 +2096,11 @@ void MW::folderSelectionChange(QString dPath)
             QString fileType = info.suffix().toLower();
             if (metadata->supportedFormats.contains(fileType)) {
                 sel->setCurrentPath(dragDropFilePath);
-//                dm->select(dragDropFilePath);
                 dragFileSelected = true;
             }
         }
         isDragDrop = false;
     }
-
-//    if (!dragFileSelected) {
-//        dm->selectThumb(0);
-//    }
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -2129,8 +2124,8 @@ void MW::folderSelectionChange(QString dPath)
     250 is the default.
     */
 
-//    bookmarkBlocker.unblock();
-//    fsTreeBlocker.unblock();
+    bookmarkBlocker.unblock();
+    fsTreeBlocker.unblock();
 
     if (G::isLogger || G::isFlowLogger)
     {
@@ -2167,7 +2162,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // if starting program, return
     if (current.row() == -1) {
         if (G::isLogger || G::isFlowLogger)
-            qDebug() << "MW::fileSelectionChange  Invalid row, select row 0 so exit";
+            qDebug() << "MW::fileSelectionChange  Invalid row -1";
         return;
     }
 
@@ -2175,20 +2170,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (G::isLogger || G::isFlowLogger)
     {
-
         G::log("MW::fileSelectionChange",
                "row = " + QString::number(current.row()) + " Src = " + src);
-        /*
-        qDebug() << "MW::fileSelectionChange"
-                 << "src =" << src
-                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
-                 << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
-                 << current.data(G::PathRole).toString()
-                    ; //*/
-    }
-
-    if (G::isFlowLogger)
         G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
+    }
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger)
@@ -2202,6 +2187,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
              // << "current =" << current
+             // << current.data(G::PathRole).toString()
              << "row =" << current.row()
              // << "dm->currentDmIdx =" << dm->currentDmIdx
              // << "G::isInitializing =" << G::isInitializing
@@ -2215,17 +2201,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 //*/
 
     if (!rememberLastDir) {
-        if (!isCurrentFolderOkay
-            || G::isInitializing
-            || isFilterChange)
-        {
-            if (G::isLogger || G::isFlowLogger)
-                qDebug() << "MW::fileSelectionChange  Initializing or invalid row so exit";
-            //qDebug() << "MW::fileSelectionChange  current.row() == -1  so return";
+        if (!isCurrentFolderOkay || G::isInitializing || isFilterChange) {
             return;
         }
     }
 
+    // folder does not exist
     if (!currRootDir.exists()) {
         if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
             "Folder does not exist so exit");
@@ -2245,43 +2226,31 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
-    // QString fPath = current.data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
 
-    /* debug
-    qDebug() << "MW::fileSelectionChange"
-             << "src =" << src
-             << "fPath =" << fPath
-             << "dm->currentFilePath =" << dm->currentFilePath
-                ;
-                //*/
-
-    // don't scroll if mouse click source (screws up double clicks and disorients users)
+    /* SCROLL CONTROL
+       don't scroll if mouse click source (screws up double clicks and disorients users)
+       */
     G::ignoreScrollSignal = true;
+    QString source = "MW::fileSelectionChange";
+    bool changeSourceWasAKey = G::fileSelectionChangeSource.left(3) == "Key";
+    // req'd, otherwise gridView->scrollToCurrent() does not work.
+    thumbView->scrollToCurrent(source);
+
     if (G::fileSelectionChangeSource == "TableMouseClick") {
-        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
     }
     else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         if (gridView->isVisible()) gridView->scrollToCurrent();
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
     else if (G::fileSelectionChangeSource == "GridMouseClick") {
-        if (thumbView->isVisible()) thumbView->scrollToCurrent();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
     }
     else {
-        /*
-        qDebug() << "MW::fileSelectionChange scrollToCurrent"
-                 << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
-                    ;
-                    //*/
-        if (gridView->isVisible()) gridView->scrollToCurrent();
-        if (thumbView->isVisible())  thumbView->scrollToCurrent();
+        if (gridView->isVisible()) gridView->scrollToCurrent(source);
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
-    // G::ignoreScrollSignal = false;
-    // G::fileSelectionChangeSource = "";
-
-    // if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2306,7 +2275,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-                    centralLayout->setCurrentIndex(LoupeTab);
+                    // centralLayout->setCurrentIndex(LoupeTab);
+                    loupeDisplay();
                 }
             }
             else {
@@ -2322,14 +2292,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     G::ignoreScrollSignal = false;
     G::fileSelectionChangeSource = "";
 
-    // update caching
-    //fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-
-    Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
-
-    /* Do not image cache if there is an active random slide show or a modifier key
-    is pressed. (turn off image caching for testing with G::useImageCache = false. set in
-    global.cpp) */
+    // update ImageCache
+    /* Do not image cache if there is an active random slide show
+       (turn off image caching for testing with G::useImageCache = false. Set in
+       global.cpp) */
 
     /*
     qDebug() << "MW::fileSelectionChange" << "IMAGECACHE"
@@ -2341,7 +2307,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 ;
     //*/
     if (!(G::isSlideShow && isSlideShowRandom)
-        //&& (key == Qt::NoModifier || key == Qt::KeypadModifier)
         && !isVideo
         && (!workspaceChanged)
         && (G::mode != "Compare")
@@ -2353,8 +2318,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                  << dm->currentFilePath
                     ; //*/
         // scroll first to insure icons are painted first when select a new image
-        thumbView->scrollToRow(current.row(), "Selection::setCurrentIndex");
-
+        thumbView->scrollToRow(current.row(), "MW::fileSelectionChange");
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
@@ -3074,8 +3038,8 @@ void MW::gridHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::gridHasScrolled", "isVisible = " + QVariant(gridView->isVisible()).toString());
-        // qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
-        //          << QVariant(gridView->isVisible()).toString();
+        qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
+                 << QVariant(gridView->isVisible()).toString();
     }
     if (G::isInitializing) return;
 
