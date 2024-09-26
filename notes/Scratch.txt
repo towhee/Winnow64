@@ -8,3 +8,279 @@ renameEraseMemCardFromContextMenu   eraseUsbActionFromContextMenu       fsTreeAc
 renameEjectUsbMenu                  renameEjectUsbMenu                  fsTreeActions, favActions
 renamePasteFilesAction              pasteFilesAction                    fsTreeActions, favActions
 
+2 MW::eventFilter keyRight
+0 Selection::select(row)                             row = 36
+406 Selection::select(QModelIndex)                     row = 36 src =
+0
+0 Selection::setCurrentIndex                         row = 36 clearSelection = true
+261 Selection::updateCurrentIndex                      row = 36
+0 MW::loadConcurrent                                 row = 36 isFileSelectionChange = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
+0 MW::fileSelectionChange                            row = 36 Src = MW::loadConcurrent
+316 MW::fileSelectionChange                            Source: MW::loadConcurrent /Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-01_0186 Focus Stack_Zen2048.JPG
+671 MW::thumbasScrolled                                G::ignoreScrollSignal = true
+10 VideoView::stop
+527 ImageView::loadImage                               row = 36 Src:MW::fileSelectionChange /Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-01_0186 Focus Stack_Zen2048.JPG
+239  MW::loupeDisplay
+1 MW::thumbasScrolled                                G::ignoreScrollSignal = false
+0 MW::updateIconRange                                src = MW::thumbHasScrolled
+111 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+11 MW::loadConcurrent                                 row = 4 isFileSelectionChange = false G::iconChunkLoaded = true src = MW::thumbHasScrolled
+0 MW::thumbasScrolled                                G::ignoreScrollSignal = false
+0 MW::updateIconRange                                src = MW::thumbHasScrolled
+57 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+3 MW::loadConcurrent                                 row = 36 isFileSelectionChange = false G::iconChunkLoaded = true src = MW::thumbHasScrolled
+80 ImageCache::setCurrentPosition                     row = 36
+13 ImageCache::memChk
+0 ImageCache::updateTargets
+0 ImageCache::setDirection
+3 ImageCache::getImCacheSize
+2 ImageCache::setPriorities                          key = 36
+116 ImageCache::setTargetRange
+21,847 ImageCache::resetCacheStateInTargetRange
+27,551 ImageCache::decodeNextImage
+21,567 ImageCache::decodeNextImage
+2,826 ImageCache::decodeNextImage
+21,969 ImageCache::decodeNextImage
+16,313 ImageCache::decodeNextImage
+2,795 ImageCache::decodeNextImage
+19,177 ImageCache::decodeNextImage
+28,197 ImageCache::decodeNextImage
+28 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 2  row = 520  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-05_0041_Zen2048.JPG
+23,067 ImageCache::getImCacheSize
+19,330 ImageCache::decodeNextImage
+25,349 ImageCache::decodeNextImage
+26 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 5  row = 516  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-05_0037_Zen2048.JPG
+29,924 ImageCache::getImCacheSize
+30 ImageCache::decodeNextImage
+2 ImageCache::cacheImage                             decoder 0  row = 537  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0039_Zen2048.JPG
+19,530 ImageCache::getImCacheSize
+19,566 ImageCache::decodeNextImage
+17 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 15 row = 527  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0006_Zen2048.JPG
+28,541 ImageCache::getImCacheSize
+14,844 ImageCache::decodeNextImage
+13,273 ImageCache::decodeNextImage
+3 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 3  row = 533  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0031_Zen2048.JPG
+23,542 ImageCache::getImCacheSize
+27 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 4  row = 535  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0034_Zen2048.JPG
+21,061 ImageCache::getImCacheSize
+4,609 ImageCache::decodeNextImage
+24 ImageCache::decodeNextImage
+0 ImageCache::cacheImage                             decoder 6  row = 525  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0001_Zen2048.JPG
+20,058 ImageCache::getImCacheSize
+33 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 9  row = 528  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0008_Zen2048.JPG
+22,647 ImageCache::getImCacheSize
+10,743 ImageCache::decodeNextImage
+23,846 ImageCache::decodeNextImage
+4 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 0  row = 530  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0018_Zen2048.JPG
+23,126 ImageCache::getImCacheSize
+34 ImageCache::decodeNextImage
+2 ImageCache::cacheImage                             decoder 7  row = 536  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0035_Zen2048.JPG
+24,323 ImageCache::getImCacheSize
+34 ImageCache::decodeNextImage
+6 ImageCache::cacheImage                             decoder 11 row = 533  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0031_Zen2048.JPG
+20,226 ImageCache::getImCacheSize
+28 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 5  row = 529  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0011_Zen2048.JPG
+29,202 ImageCache::getImCacheSize
+35 ImageCache::decodeNextImage
+10 ImageCache::cacheImage                             decoder 8  row = 509  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-05_0001_Zen2048.JPG
+21,272 ImageCache::getImCacheSize
+128 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 1  row = 515  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-05_0035_Zen2048.JPG
+13,748 ImageCache::getImCacheSize
+80 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 2  row = 526  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0005_Zen2048.JPG
+13,621 ImageCache::getImCacheSize
+13,305 ImageCache::cacheItemListCompleted
+3 ImageCache::cacheItemListCompleted
+12,051 ImageCache::resetCacheStateInTargetRange
+98 ImageCache::stop                                   isRunning = false
+1 ImageCache::cacheImage                             decoder 10 row = 507  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-04_0136_Zen2048.JPG
+6 ImageCache::getImCacheSize
+12 ImageCache::memChk
+0 ImageCache::updateTargets
+0 ImageCache::setDirection
+1 ImageCache::getImCacheSize
+1 ImageCache::setPriorities                          key = 36
+96 ImageCache::setTargetRange
+18,924 ImageCache::resetCacheStateInTargetRange
+26 ImageCache::decodeNextImage
+9 ImageCache::cacheImage                             decoder 12 row = 536  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0035_Zen2048.JPG
+26,865 ImageCache::getImCacheSize
+7,012 ImageCache::decodeNextImage
+2 ImageCache::cacheImage                             decoder 3  row = 534  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0033_Zen2048.JPG
+9,039 ImageCache::getImCacheSize
+10,611 ImageCache::decodeNextImage
+112 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 14 row = 534  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0033_Zen2048.JPG
+27,426 ImageCache::getImCacheSize
+36 ImageCache::decodeNextImage
+0 ImageCache::cacheImage                             decoder 4  row = 538  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0048_Zen2048.JPG
+9,036 ImageCache::getImCacheSize
+11,046 ImageCache::decodeNextImage
+21 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 7  row = 543  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0061_Zen2048.JPG
+20,243 ImageCache::getImCacheSize
+21 ImageCache::decodeNextImage
+1 ImageCache::cacheImage                             decoder 0  row = 542  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0059_Zen2048.JPG
+20,398 ImageCache::getImCacheSize
+28 ImageCache::decodeNextImage
+3 ImageCache::cacheImage                             decoder 10 row = 521  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-07_0021-Enhanced-NR_Zen2048.JPG
+16,537 ImageCache::getImCacheSize
+13,771 ImageCache::cacheItemListCompleted
+60 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 1  row = 531  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0021_Zen2048.JPG
+13,736 ImageCache::getImCacheSize
+63 ImageCache::cacheItemListCompleted
+2 ImageCache::cacheImage                             decoder 5  row = 545  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-24_0004_Zen2048.JPG
+13,512 ImageCache::getImCacheSize
+52 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 18 row = 521  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-07_0021-Enhanced-NR_Zen2048.JPG
+13,268 ImageCache::getImCacheSize
+1 ImageCache::cacheItemListCompleted
+12,416 ImageCache::resetCacheStateInTargetRange
+121 ImageCache::stop                                   isRunning = false
+3 ImageCache::cacheImage                             decoder 2  row = 539  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0052_Zen2048.JPG
+4 ImageCache::getImCacheSize
+10 ImageCache::memChk
+0 ImageCache::updateTargets
+0 ImageCache::setDirection
+1 ImageCache::getImCacheSize
+1 ImageCache::setPriorities                          key = 36
+101 ImageCache::setTargetRange
+19,192 ImageCache::resetCacheStateInTargetRange
+32 ImageCache::decodeNextImage
+2 ImageCache::cacheImage                             decoder 16 row = 522  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-07_0027_Zen2048.JPG
+19,785 ImageCache::getImCacheSize
+26 ImageCache::decodeNextImage
+2 ImageCache::cacheImage                             decoder 6  row = 539  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0052_Zen2048.JPG
+19,623 ImageCache::getImCacheSize
+452 ImageCache::decodeNextImage
+17 ImageCache::decodeNextImage
+0 ImageCache::cacheImage                             decoder 2  row = 522  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-07_0027_Zen2048.JPG
+20,311 ImageCache::getImCacheSize
+29 ImageCache::decodeNextImage
+7 ImageCache::cacheImage                             decoder 15 row = 532  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0024_Zen2048.JPG
+27,471 ImageCache::getImCacheSize
+122 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 9  row = 541  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0058_Zen2048.JPG
+13,967 ImageCache::getImCacheSize
+13,708 ImageCache::cacheItemListCompleted
+59 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 0  row = 544  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-24_0002_Zen2048.JPG
+13,441 ImageCache::getImCacheSize
+2 ImageCache::cacheItemListCompleted
+12,988 ImageCache::resetCacheStateInTargetRange
+112 ImageCache::stop                                   isRunning = false
+7 ImageCache::cacheImage                             decoder 17 row = 531  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0021_Zen2048.JPG
+13 ImageCache::memChk
+6 ImageCache::getImCacheSize
+0 ImageCache::updateTargets
+0 ImageCache::setDirection
+1 ImageCache::getImCacheSize
+1 ImageCache::setPriorities                          key = 36
+98 ImageCache::setTargetRange
+19,985 ImageCache::resetCacheStateInTargetRange
+20,658 ImageCache::decodeNextImage
+171 ImageCache::cacheItemListCompleted
+103 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 11 row = 544  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-24_0002_Zen2048.JPG
+20,204 ImageCache::getImCacheSize
+46 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 3  row = 532  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0024_Zen2048.JPG
+13,748 ImageCache::getImCacheSize
+72 ImageCache::cacheItemListCompleted
+1 ImageCache::cacheImage                             decoder 4  row = 540  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0054_Zen2048.JPG
+13,392 ImageCache::getImCacheSize
+1 ImageCache::cacheItemListCompleted
+13,173 ImageCache::resetCacheStateInTargetRange
+10 ImageCache::cacheImage                             decoder 12 row = 522  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-07_0027_Zen2048.JPG
+13,124 ImageCache::getImCacheSize
+0 ImageCache::cacheItemListCompleted
+13,087 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheImage                             decoder 6  row = 541  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0058_Zen2048.JPG
+13,167 ImageCache::getImCacheSize
+0 ImageCache::cacheItemListCompleted
+13,079 ImageCache::resetCacheStateInTargetRange
+2 ImageCache::cacheImage                             decoder 13 row = 540  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0054_Zen2048.JPG
+13,096 ImageCache::getImCacheSize
+0 ImageCache::cacheItemListCompleted
+26,363 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,233 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+13,067 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheImage                             decoder 7  row = 541  decoder[id]->fPath =/Users/roryhill/Pictures/Zen2048/pbase2048/2024-08-09_0058_Zen2048.JPG
+13,146 ImageCache::getImCacheSize
+0 ImageCache::cacheItemListCompleted
+26,343 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,174 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+18,244 ImageCache::resetCacheStateInTargetRange
+1 MW::eventFilter keyRight
+0 Selection::select(row)                             row = 37
+418 Selection::select(QModelIndex)                     row = 37 src =
+0
+0 Selection::setCurrentIndex                         row = 37 clearSelection = true
+244 Selection::updateCurrentIndex                      row = 37
+0 MW::loadConcurrent                                 row = 37 isFileSelectionChange = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
+0 MW::fileSelectionChange                            row = 37 Src = MW::loadConcurrent
+269 MW::fileSelectionChange                            Source: MW::loadConcurrent /Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-01_0265 Focus Stack_Zen2048.JPG
+542 MW::thumbasScrolled                                G::ignoreScrollSignal = true
+8 VideoView::stop
+481 ImageView::loadImage                               row = 37 Src:MW::fileSelectionChange /Users/roryhill/Pictures/Zen2048/pbase2048/2023-11-01_0265 Focus Stack_Zen2048.JPG
+227  MW::loupeDisplay
+0 MW::thumbasScrolled                                G::ignoreScrollSignal = false
+0 MW::updateIconRange                                src = MW::thumbHasScrolled
+102 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+12 MW::loadConcurrent                                 row = 4 isFileSelectionChange = false G::iconChunkLoaded = true src = MW::thumbHasScrolled
+0 MW::thumbasScrolled                                G::ignoreScrollSignal = false
+0 MW::updateIconRange                                src = MW::thumbHasScrolled
+55 IconView::updateVisible                            Thumbnailssrc = MW::updateIconRange
+2 MW::loadConcurrent                                 row = 37 isFileSelectionChange = false G::iconChunkLoaded = true src = MW::thumbHasScrolled
+87 ImageCache::setCurrentPosition                     row = 37
+13 ImageCache::memChk
+0 ImageCache::updateTargets
+0 ImageCache::setDirection
+1 ImageCache::getImCacheSize
+1 ImageCache::setPriorities                          key = 37
+125 ImageCache::setTargetRange
+24,969 ImageCache::resetCacheStateInTargetRange
+2 ImageCache::cacheItemListCompleted
+26,299 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,149 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,150 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,438 ImageCache::resetCacheStateInTargetRange
+1 ImageCache::cacheItemListCompleted
+26,186 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,957 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,817 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,816 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,837 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,866 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,830 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+25,823 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+26,124 ImageCache::resetCacheStateInTargetRange
+0 ImageCache::cacheItemListCompleted
+27,208 ImageCache::resetCacheStateInTargetRange
+1 ImageCache::cacheItemListCompleted
+28,067 ImageCache::resetCacheStateInTargetRange
