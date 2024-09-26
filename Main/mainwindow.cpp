@@ -1081,7 +1081,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
              Qt::KeyboardModifiers k = e->modifiers();
 
             if (obj->objectName() == "MWWindow") {
-                // /*
+                /*
                 qDebug() << "MW::eventFilter"
                          << "obj->objectName:" << obj->objectName().leftJustified(25)
                          << "key =" << e->key()
@@ -1090,9 +1090,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
                 if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
 
-                // see menu shortcuts instead of this
-                if (e->key() == Qt::Key_Right) sel->next(e->modifiers());
-                if (e->key() == Qt::Key_Left) sel->prev(e->modifiers());
+                // faster than using menu shortcuts
+                if (e->key() == Qt::Key_Right) {
+                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter keyRight");
+                    sel->next(e->modifiers());
+                }
+                if (e->key() == Qt::Key_Left) {
+                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter keyLeft");
+                    sel->prev(e->modifiers());
+                }
                 // if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
                 // if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
                 // if (e->key() == Qt::Key_Home) sel->first(e->modifiers());

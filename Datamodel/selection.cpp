@@ -81,6 +81,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     }
 
     if (G::isFlowLogger || isDebug)
+        G::log("");
         G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()) +
                " clearSelection = " + QVariant(clearSelection).toString());
     /*

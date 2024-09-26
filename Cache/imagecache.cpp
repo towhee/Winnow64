@@ -173,6 +173,7 @@ float ImageCache::getImCacheSize()
 
     float cacheMB = 0;
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
+        if (abort) break;
         if (icd->cacheItemList.at(i).isCached) {
             cacheMB += icd->cacheItemList.at(i).sizeMB;
         }
@@ -225,7 +226,6 @@ void ImageCache::updateTargets()
     icd->cache.currMB = getImCacheSize();
     setPriorities(icd->cache.key);
     setTargetRange();
-    resetCacheStateInTargetRange();
 }
 
 void ImageCache::resetCacheStateInTargetRange()
@@ -235,7 +235,7 @@ void ImageCache::resetCacheStateInTargetRange()
     isCaching and cached states orphaned.  Reset orphan cached state to false in
     the target range.
 */
-    log("resetCachingFlags");
+    log("resetCacheStateInTargetRange");
 
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast; ++i) {
         if (abort) break;
@@ -379,6 +379,7 @@ void ImageCache::setPriorities(int key)
         aheadPos = key + 1;
         behindPos = key - 1;
         while (i < icd->cacheItemList.length()) {
+            if (abort) break;
             for (int b = behindPos; b > behindPos - behindAmount; --b) {
                 for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
                     if (a >= icd->cacheItemList.length()) break;
@@ -398,6 +399,7 @@ void ImageCache::setPriorities(int key)
         aheadPos = key - 1;
         behindPos = key + 1;
         while (i < icd->cacheItemList.length()) {
+            if (abort) break;
             for (int b = behindPos; b < behindPos + behindAmount; ++b) {
                 for (int a = aheadPos; a > aheadPos - aheadAmount; --a) {
                     if (a < 0) break;
@@ -443,6 +445,8 @@ void ImageCache::setTargetRange()
     float prevMB = 0;
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (abort) break;
+
         if (icd->cacheItemList.at(i).isVideo) {
             icd->cacheItemList[i].isTarget = false;
             continue;
@@ -455,12 +459,34 @@ void ImageCache::setTargetRange()
 
         sumMB += icd->cacheItemList.at(i).sizeMB;
         prevMB = icd->cacheItemList.at(i).sizeMB;
+
+        // Add to target range
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
-            // reset attempts in case already exceeds max and want to try again.
-            if (!icd->cacheItemList[i].isCached) icd->cacheItemList[i].attempts = 0;
+            // reset isCaching
+            if (icd->cacheItemList.at(i).isCaching) {
+                icd->cacheItemList[i].isCaching = false;
+                icd->cacheItemList[i].decoderId = -1;
+            }
+            // Already in imCache
+            if (icd->imCache.contains(icd->cacheItemList.at(i).fPath)) {
+                icd->cacheItemList[i].isCached = true;
+            }
+            // Not in imCache
+            else {
+                icd->cacheItemList[i].isCached = false;
+                icd->cacheItemList[i].decoderId = -1;
+                icd->cacheItemList[i].status = ImageDecoder::Status::Ready;
+            }
+
+            // Reset attempts in case already exceeds max and want to try again.
+            if (!icd->cacheItemList.at(i).isCached) icd->cacheItemList[i].attempts = 0;
+
+            // Add to priority list
             priorityList.append(icd->cacheItemList.at(i).key);
         }
+
+        // Outside target range
         else {
             icd->cacheItemList[i].isTarget = false;
         }
@@ -472,6 +498,7 @@ void ImageCache::setTargetRange()
     // targetFirst, targetLast
     int i;
     for (i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (abort) break;
         if (icd->cacheItemList[i].isVideo) continue;
         if (icd->cacheItemList.at(i).isTarget) {
             icd->cache.targetFirst = i;
@@ -479,6 +506,7 @@ void ImageCache::setTargetRange()
         }
     }
     for (int j = i; j < icd->cacheItemList.length(); ++j) {
+        if (abort) break;
         if (icd->cacheItemList[j].isVideo) continue;
         if (!icd->cacheItemList.at(j).isTarget) {
             icd->cache.targetLast = j - 1;
@@ -500,8 +528,9 @@ void ImageCache::setTargetRange()
     icd->imCache.getKeys(keys);
     // iterate imCache
     for (int key = 0; key < keys.size(); key++) {
+        if (abort) break;
         QString fPath = keys.at(key);
-        // i = cacheKey
+
         // could be issue when deleting an image
         if (!keyFromPath.contains(fPath)) continue; // filter crash
 
