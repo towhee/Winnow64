@@ -153,6 +153,7 @@ public:
     QString hdr;
     QString xmpString;
     bool inclNonEssential;
+    QElapsedTimer t;
 };
 //Q_DECLARE_METATYPE(MetadataParameters)
 

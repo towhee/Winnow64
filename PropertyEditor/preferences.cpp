@@ -174,7 +174,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->cacheBarProgressWidth = v.toInt();
         mw->updateProgressBarWidth();
         mw->progressWidthBeforeResizeWindow = mw->cacheBarProgressWidth;
-        mw->setImageCacheParameters();
+        // mw->setImageCacheParameters();
     }
 
     if (source == "iconChunkSize") {

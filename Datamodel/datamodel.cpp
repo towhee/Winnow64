@@ -586,7 +586,12 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     }
     if (abortLoadingModel || !imageCount) return endLoad(false);
 
-    // if images were found and added to data model
+    // huge image count
+    if (imageCount > hugeThreshold) {
+        iconChunkSize = 100;
+    }
+
+    // images were found and added to data model
     return endLoad(addFileData());
 }
 

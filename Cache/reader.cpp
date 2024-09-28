@@ -119,13 +119,14 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
-
+    t2 = t.restart();
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
     metadata->m.metadataAttempted = true;
     metadata->m.metadataLoaded = isMetaLoaded;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    t3 = t.restart();
 
     if (!dm->isMetadataLoaded(dmRow)) {
         status = Status::MetaFailed;
@@ -145,6 +146,7 @@ bool Reader::readMetadata()
 
     if (!abort) emit addToImageCache(dmIdx.row(), instance);
     // if (!abort) emit addToImageCache(metadata->m, instance);
+    t4 = t.restart();
 
     return isMetaLoaded;
 }
@@ -211,6 +213,7 @@ void Reader::readIcon()
 
 void Reader::run()
 {
+    t1 = t.restart();
     if (!abort && !G::allMetadataLoaded && !dm->isMetadataLoaded(dmIdx.row()) && instanceOk())
         readMetadata();
     if (!abort && isReadIcon && instanceOk())
@@ -224,7 +227,23 @@ void Reader::run()
             << "status =" << statusText.at(status)
             ;
     }
-    msToRead = t.elapsed();
+    // /*
+    t5 = t.elapsed();
+    msToRead = t1 + t2 + t3 + t4 + t5;
+    // msToRead = t.elapsed();
+    int delay = 1500;
+    if (t3 > delay || t4 > delay)
+    qDebug().noquote()
+             << "Reader::run row:" << QString::number(dmIdx.row()).rightJustified(5, ' ')
+             << "start ms:" << QString::number(t1).leftJustified(5, ' ')
+             << "metadata ms:" << QString::number(t2).leftJustified(5, ' ')
+             << "datamodel ms:" << QString::number(t3).leftJustified(5, ' ')
+             << "imagecache ms:" << QString::number(t4).leftJustified(5, ' ')
+             << "total ms:" << QString::number(msToRead).rightJustified(5, ' ')
+             << "type:" << metadata->m.type.leftJustified(5)
+             << "isReadIcon =" << isReadIcon
+        ;  //*/
+
     if (!abort && instanceOk()) emit done(threadId);
     //if (abort) qDebug() << "Reader::run aborted";
 }
