@@ -80,6 +80,7 @@ void MW::runExternalApp()
 
     QString appPath = "";
     QString appName = (static_cast<QAction*>(sender()))->text();
+    qDebug() << "MW::runExternalApp" << appName;
 
     // append any app command arguments (before add file paths)
     QStringList arguments;
@@ -137,35 +138,33 @@ void MW::runExternalApp()
     arguments.replaceInStrings("/", "\\");
     #endif
 
-    // ChatGPT
-    /*
     QProcess *process = new QProcess();
     connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
             this, SLOT(cleanupSender()));
     connect(process, SIGNAL(error(QProcess::ProcessError)),
             this, SLOT(externalAppError(QProcess::ProcessError)));
 
-    // Build the file path argument string
-    QString fileArgs;
-    for (const QString& filePath : arguments) {
-        fileArgs += QString("\"%1\" ").arg(filePath);
+    // Photoshop exception on macOS
+    #ifdef Q_OS_MAC
+    if (appName.contains("Photoshop")) {
+        // based on this working in terminal
+        // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
+
+        // Build the file path argument string
+        QString fileArgs;
+        for (const QString& filePath : arguments) {
+            fileArgs += QString("\"%1\" ").arg(filePath);
+        }
+
+        // Construct the full command as a single string
+        QString command = QString("open %1 -a \"%2\"").arg(fileArgs.trimmed(), appName);
+
+        // Run the command using the shell
+        process->start("bash", QStringList() << "-c" << command);
+
+        return;
     }
-
-    // Construct the full command as a single string
-    QString command = QString("open %1 -a \"%2\"").arg(fileArgs.trimmed(), appName);
-
-    // Run the command using the shell
-    process->start("bash", QStringList() << "-c" << command);
-
-    */
-    // END ChatGPT
-
-
-    QProcess *process = new QProcess();
-    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
-            this, SLOT(cleanupSender()));
-    connect(process, SIGNAL(error(QProcess::ProcessError)),
-            this, SLOT(externalAppError(QProcess::ProcessError)));
+    #endif
 
     /*
     qDebug() << "MW::runExternalApp"
@@ -178,9 +177,4 @@ void MW::runExternalApp()
     process->setProgram(appPath);
     process->setWorkingDirectory(folderPath);
     process->start();
-    /*
-        this works in terminal"
-        open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-        open "/Volumes/OM SYSTEM/DCIM/100OMSYS/_5020536.ORF" -a "Adobe Photoshop 2024"
-    */
 }

@@ -320,6 +320,11 @@ QString MetaRead2::diagnostics()
     rpt << "\n" << "defaultIconChunkSize:       " << dm->defaultIconChunkSize;
     rpt << "\n" << "iconChunkSize:              " << dm->iconChunkSize;
     rpt << "\n" << "iconLimit:                  " << iconLimit;
+    rpt << "\n";
+    rpt << "\n" << "firstVisibleIcon:           " << dm->firstVisibleIcon;
+    rpt << "\n" << "lastVisibleIcon:            " << dm->lastVisibleIcon;
+    rpt << "\n" << "visibleIcons:               " << dm->visibleIcons;
+    rpt << "\n";
     rpt << "\n" << "firstIconRow:               " << firstIconRow;
     rpt << "\n" << "lastIconRow:                " << lastIconRow;
     rpt << "\n" << "dm->startIconRange:         " << dm->startIconRange;
@@ -590,6 +595,21 @@ void MetaRead2::redo()
     dispatchReaders();
 }
 
+// void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx,
+//                                                const QModelIndex &idx2,
+//                                                bool clearSelection,
+//                                                const QString &src) {
+void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay)
+{
+    // Emit the signal after a delay using QTimer::singleShot and a lambda
+    QModelIndex idx2 = QModelIndex();
+    bool clearSelection = false;
+    QString src = "MetaRead2::dispatch";
+    QTimer::singleShot(msDelay, this, [this, sfIdx, idx2, clearSelection, src]() {
+        emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
+    });
+}
+
 void MetaRead2::dispatch(int id)
 {
 /*
@@ -768,8 +788,11 @@ void MetaRead2::dispatch(int id)
                     << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
                     << r->fPath;
             }
-            if (!abort) emit fileSelectionChange(r->dmIdx);
-            // if (!abort) emit fileSelectionChange(sfIdx);
+            if (!abort) {
+                // emit fileSelectionChange(r->dmIdx);
+                int msDelay = 500;
+                emitFileSelectionChangeWithDelay(r->dmIdx, msDelay);
+            }
         }
 
         if (isDebug)  // returning reader, row has been processed by reader
@@ -902,7 +925,7 @@ void MetaRead2::dispatch(int id)
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = dmIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
-        // if (isDebug)
+        if (isDebug)
         if (nextRow > 8540)
         {
             qDebug().noquote()

@@ -82,6 +82,11 @@ private:
     bool nextA();
     bool nextB();
     bool nextRowToRead();
+    void emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay);
+    // void emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx,
+    //                                       const QModelIndex &idx2 = QModelIndex(),
+    //                                       bool clearSelection = false,
+    //                                       const QString &src = "MetaRead2::dispatch");
 
     QMutex mutex;
     QWaitCondition condition;

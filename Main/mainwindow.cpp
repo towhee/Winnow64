@@ -2714,6 +2714,11 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // Set icon range and G::iconChunkLoaded
     dm->setIconRange(dm->currentSfRow);
 
+    // Update datamodel visible icons for reporting
+    dm->firstVisibleIcon = firstVisible;
+    dm->lastVisibleIcon = lastVisible;
+    dm->visibleIcons = visibleIcons;
+
     /* debug
     qDebug()
          << "MW::updateIconRange" << "row =" << dm->currentSfRow << "src =" << src

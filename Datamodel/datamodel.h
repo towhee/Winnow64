@@ -122,6 +122,10 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
+    int hugeThreshold = 20000;
+    int firstVisibleIcon;
+    int lastVisibleIcon;
+    int visibleIcons;
     int startIconRange;
     int endIconRange;
     int iconChunkSize;                  // max suggested number of icons to cache

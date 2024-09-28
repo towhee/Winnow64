@@ -195,7 +195,7 @@ void Metadata::initSupportedFiles()
                         << "m2v"
                         << "m4v"
                         << "mkv"
-                        << "mov"
+                        << "mov"    // createDate
                         << "mp2"
                         << "mp4"
                         << "mpg"
@@ -1019,13 +1019,13 @@ void Metadata::testNewFileFormat(const QString &path)
     p.file.setFileName(path);
     if (p.file.isOpen()) {
         return;
-//        qDebug() << "Metadata::testNewFileFormat" << "Close" << p.file.fileName();
     }
-//    qDebug() << "Metadata::testNewFileFormat" << "Open " << p.file.fileName();
+    qDebug() << "Metadata::testNewFileFormat" << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
-    parseDNG();
+
+
     p.file.close();
 //    qDebug() << "Metadata::testNewFileFormat" << "Close" << p.file.fileName();
 //    reportMetadata();
@@ -1196,9 +1196,15 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     if (!hasMetadataFormats.contains(ext)) {
         bool parsedSidcar = false;
-        // get exif image created for image formats not included in Winnow
-        QString createdDate = readExifToolTag(m.fPath, "createdate");
-        m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
+
+        // get date created
+        if (ext == "mov") m.createdDate = MOV::createDate(fPath);
+        if (ext == "mp4") m.createdDate = MOV::createDate(fPath);
+        if (ext == "m4v") m.createdDate = MOV::createDate(fPath);
+        if (!m.createdDate.isValid()) {
+            // QString createdDate = readExifToolTag(m.fPath, "createdate");
+            // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
+        }
         m.metadataLoaded = true;
         if (G::useSidecar) {
             p.file.setFileName(fPath);

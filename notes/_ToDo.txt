@@ -10,6 +10,8 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
+- Add folders to filters
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
@@ -120,7 +122,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
 - Recover selection when invokeWorkspace
-- Rebuilding ImageCache when change workspace
+- Do not rebuild ImageCache when change workspace
 - After delete a folder do not highlight or select a folder
 - Add folder name to context actions for folders: delete, copy and reveal
 - Change cache size is hanging (from 16 to 4 GB)

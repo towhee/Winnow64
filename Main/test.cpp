@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "ImageFormats/Video/mov.h"
 
 void MW::traverseFolderStressTestFromMenu()
 {
@@ -173,19 +174,8 @@ void listChildren(const QObject *parent, int depth = 0) {
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    showNormal(); return;
-    {
-    sel->recover();
-    return;
-
-    bounceFoldersStressTest(100, 1);
-
-    setCursor(QCursor(Qt::BlankCursor));
-    return;
-    QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
+    QString fPath = dm->currentFilePath;
     metadata->testNewFileFormat(fPath);
-    if (G::isFlowLogger2) qDebug() << "";
-    }
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
@@ -193,7 +183,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
-    gridView->scrollToCurrent();
+    // qDebug() << dm->iconChunkSize;
+
+    MOV::walkAtomTree(dm->currentFilePath);
+
 }
 /*
    Performance

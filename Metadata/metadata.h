@@ -43,6 +43,8 @@
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
 #include "ImageFormats/Tiff/tiff.h"
+#include "ImageFormats/Video/mov.h"
+#include "ImageFormats/Video/mp4.h"
 
 class Metadata : public QObject
 {
