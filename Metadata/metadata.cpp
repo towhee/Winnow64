@@ -1201,6 +1201,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         if (ext == "mov") m.createdDate = MOV::createDate(fPath);
         if (ext == "mp4") m.createdDate = MOV::createDate(fPath);
         if (ext == "m4v") m.createdDate = MOV::createDate(fPath);
+        if (ext == "png") m.createdDate = PNG::createDate(fPath);
         if (!m.createdDate.isValid()) {
             // QString createdDate = readExifToolTag(m.fPath, "createdate");
             // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
