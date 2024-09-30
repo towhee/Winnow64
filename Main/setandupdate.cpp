@@ -3,10 +3,8 @@
 void MW::setCentralMessage(QString message)
 {
     if (G::isLogger) G::log("MW::setCentralMessage", message);
-    centralLayout->setCurrentIndex(BlankTab);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
-    // if (G::useProcessEvents) qApp->processEvents();
 }
 
 /**********************************************************************************************

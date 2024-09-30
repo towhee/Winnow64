@@ -894,11 +894,6 @@ void IconView::updateView()
 */
     if (isDebug) G::log("IconView::updateView", objectName());
     update();
-    /* deprecated updateLayout code
-    QEvent event{QEvent::LayoutRequest};
-    QListView::updateGeometries();
-    QListView::event(&event);
-    //*/
 }
 
 int IconView::scrollPosition()
@@ -970,10 +965,10 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-    /*
+    // /*
     qDebug() << "IconView::scrollToRow" << objectName()
              << "row =" << row
-             << "requested by" << source;
+             << "source =" << source;
                 // */
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
@@ -990,16 +985,17 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
-    if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
-    /*
+    // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
+    // /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
              << "source =" << source
              << "objectName() =" << objectName()
              << "G::ignoreScrollSignal =" << G::ignoreScrollSignal
+             << "dm->currentSfIdx =" << dm->currentSfIdx
            ;
     // */
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
-    scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
+    // scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
 
 void IconView::enterEvent(QEnterEvent *event)

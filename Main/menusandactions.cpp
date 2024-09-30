@@ -1202,7 +1202,9 @@ void MW::createViewActions()
     //                                  || setting->value("isEmbelDisplay").toBool()
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
-    connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
+    // connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
+    connect(asLoupeAction, &QAction::triggered, this,
+            [this](){this->loupeDisplay("asLoupeAction");});
 
     asGridAction = new QAction(tr("Grid"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
@@ -1210,7 +1212,8 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
-    connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
+    connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay
+            );
 
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);

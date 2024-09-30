@@ -48,18 +48,17 @@ QDateTime PNG::createDate(const QString &filePath) {
         }
 
         QString chunkTypeStr = QString::fromLatin1(chunkType, 4);
-        qDebug() << "PNG::createDate found chunk:" << chunkTypeStr;
+        // qDebug() << "PNG::createDate found chunk:" << chunkTypeStr;
 
         // Check for tEXt or iTXt chunks
         if (chunkTypeStr == "tEXt" || chunkTypeStr == "iTXt") {
             QByteArray chunkData = readChunkData(file, chunkSize);
             QList<QByteArray> fields = chunkData.split('\0');  // Split the key-value pair
-            // if (fields.size() == 2 && fields[0] == "Creation Time") {
             if (fields.size() == 2 && fields[0] == "date:create") {
                 QString dateStr = QString::fromLatin1(fields[1]);
                 QDateTime createDate = QDateTime::fromString(dateStr, Qt::ISODate);
                 if (createDate.isValid()) {
-                    qDebug() << "PNG::creationDate found creation time:" << createDate;
+                    // qDebug() << "PNG::creationDate found creation time:" << createDate;
                     return createDate;
                 }
             }
@@ -69,6 +68,6 @@ QDateTime PNG::createDate(const QString &filePath) {
         }
     }
 
-    qWarning() << "Creation time not found in PNG file!";
+    // qWarning() << "Creation time not found in PNG file!";
     return QDateTime();
 }

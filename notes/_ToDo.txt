@@ -10,6 +10,10 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- Loupe view, mouse click on thumbView scrolling to center when it shouldn't
+- Label colors not getting into LR during ingest
+- Ingesting to wrong dated folder
+- Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
 - Add folders to filters
 - Maybe integrate apple sf symbols as svg

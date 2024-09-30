@@ -4,7 +4,7 @@ void MW::setCentralView()
 {
     if (G::isLogger) G::log("MW::setCentralView");
     if (!isSettings) return;
-    if (asLoupeAction->isChecked()) loupeDisplay();
+    if (asLoupeAction->isChecked()) loupeDisplay("MW::setCentralView");
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
@@ -16,7 +16,7 @@ void MW::setCentralView()
     enableSelectionDependentMenus();
 }
 
-void MW::loupeDisplay()
+void MW::loupeDisplay(const QString src)
 {
 /*
     In the central widget show a loupe view of the image pointed to by the thumbView
@@ -29,11 +29,13 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    /*
-    if (!G::isInitializing && G::isLogger)
-        qDebug() << "MW::loupeDisplay  wasThumbDockVisible ="
-                 << QVariant(wasThumbDockVisible).toString()
-            ; //*/
+    // /*
+    // if (!G::isInitializing && G::isLogger)
+        qDebug() << "MW::loupeDisplay"
+                 << "src =" << src
+                 << "wasThumbDockVisible =" << QVariant(wasThumbDockVisible).toString()
+                 << "G::isInitializing =" << G::isInitializing
+                    ; //*/
     if (G::isLogger || G::isFlowLogger) G::log(" MW::loupeDisplay");
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
@@ -65,7 +67,7 @@ void MW::loupeDisplay()
     else imageView->setFocus();
 
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-    thumbView->setCurrentIndex(idx);
+    // thumbView->setCurrentIndex(idx);
 
     // do not show classification badge if no folder or nothing selected
     updateClassification();
@@ -92,7 +94,7 @@ void MW::loupeDisplay()
         scrollRow = dm->currentSfRow;
     }
     G::ignoreScrollSignal = false;
-    thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
+    // thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
