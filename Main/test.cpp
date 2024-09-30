@@ -185,7 +185,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    thumbView->scrollToRow(10, "Test");
+    asLoupeAction->setEnabled(false);
 
 }
 /*

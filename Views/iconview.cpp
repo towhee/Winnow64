@@ -996,6 +996,7 @@ void IconView::scrollToCurrent(QString source)
     // */
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
     // scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
+
 }
 
 void IconView::enterEvent(QEnterEvent *event)
