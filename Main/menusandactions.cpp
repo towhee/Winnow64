@@ -1212,8 +1212,7 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
-    connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay
-            );
+    connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
 
     asTableAction = new QAction(tr("Table"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);

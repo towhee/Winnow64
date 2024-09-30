@@ -192,6 +192,7 @@ void DataModel::setModelProperties()
 
     // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Read ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
@@ -721,6 +722,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString search = fPath;
 
     QMutexLocker locker(&mutex);
+    setData(index(row, G::RowNumberColumn), row + 1);
+    setData(index(row, G::RowNumberColumn), int(Qt::AlignRight), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
     QString tip = fPath;  //fileInfo.absoluteFilePath();
     if (showThumbNailSymbolHelp) tip += thumbnailHelp;

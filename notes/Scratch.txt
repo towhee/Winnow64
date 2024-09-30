@@ -284,3 +284,8 @@ renamePasteFilesAction              pasteFilesAction                    fsTreeAc
 27,208 ImageCache::resetCacheStateInTargetRange
 1 ImageCache::cacheItemListCompleted
 28,067 ImageCache::resetCacheStateInTargetRange
+
+
+MW::embelDockActivated
+MW::embelDockVisibilityChange
+

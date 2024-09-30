@@ -140,6 +140,7 @@ int TableView::defaultColumnWidth(int column)
 {
     QFontMetrics fm(this->font());
     if (column == G::PathColumn) return fm.boundingRect("-Icon-").width();
+    if (column == G::RowNumberColumn) return fm.boundingRect("-999999-").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::MSToReadColumn) return fm.boundingRect("=Read ms=").width();
     if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();

@@ -55,6 +55,7 @@ namespace G
         // items available for TableView in order
         // items read when new folder (core fields)
         PathColumn,
+        RowNumberColumn,
         NameColumn,
         MSToReadColumn,
         PickColumn,

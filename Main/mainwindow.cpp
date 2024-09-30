@@ -2238,23 +2238,37 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     /* SCROLL CONTROL
        don't scroll if mouse click source (screws up double clicks and disorients users)
        */
-    G::ignoreScrollSignal = true;
     QString source = "MW::fileSelectionChange";
     bool changeSourceWasAKey = G::fileSelectionChangeSource.left(3) == "Key";
+    // bool changeSourceWasAClick = G::fileSelectionChangeSource.left(5) == "Click";
     // req'd, otherwise gridView->scrollToCurrent() does not work.
-    // if (changeSourceWasAKey) thumbView->scrollToCurrent(source);
-    if (changeSourceWasAKey) thumbView->scrollToRow(current.row(), source);
+    if (changeSourceWasAKey) {
+        G::ignoreScrollSignal = true;
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+        G::ignoreScrollSignal = true;
+        if (gridView->isVisible()) gridView->scrollToCurrent(source);
+        G::ignoreScrollSignal = true;
+        if (tableView->isVisible()) tableView->scrollToCurrent();
+    }
+    if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (gridView->isVisible()) gridView->scrollToCurrent(source);
+        G::ignoreScrollSignal = true;
+        if (tableView->isVisible()) tableView->scrollToCurrent();
+    }
 
-    // if (G::fileSelectionChangeSource == "TableMouseClick") {
-    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    // }
+    if (G::fileSelectionChangeSource == "TableMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+    }
     // else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
     //     if (gridView->isVisible()) gridView->scrollToCurrent();
     //     if (tableView->isVisible()) tableView->scrollToCurrent();
     // }
-    // else if (G::fileSelectionChangeSource == "GridMouseClick") {
-    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    // }
+    if (G::fileSelectionChangeSource == "GridMouseClick") {
+        G::ignoreScrollSignal = true;
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+    }
     // else {
     //     if (gridView->isVisible()) gridView->scrollToCurrent(source);
     //     if (tableView->isVisible()) tableView->scrollToCurrent();
@@ -3375,7 +3389,7 @@ void MW::embelDockVisibilityChange()
 {
     if (G::isLogger) G::log("MW::embelDockVisibilityChange");
 
-    loupeDisplay("MW::embelDockVisibilityChange");
+    // loupeDisplay("MW::embelDockVisibilityChange");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 }
 
@@ -3388,6 +3402,7 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
     QList<QTabBar*> tabList = findChildren<QTabBar*>();
     QTabBar* widgetTabBar = tabList.at(0);
     widgetTabBar->setCurrentIndex(4);
+    loupeDisplay("MW::embelDockActivated");
 //    qDebug() << "MW::embelDockActivated" << dockWidget->objectName() << widgetTabBar->currentIndex();
 
 }
