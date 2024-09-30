@@ -185,7 +185,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    MOV::walkAtomTree(dm->currentFilePath);
+    thumbView->scrollToRow(10, "Test");
 
 }
 /*

@@ -486,6 +486,33 @@ bool DataModel::endLoad(bool success)
     }
 }
 
+void DataModel::updateLoadStatus()
+{
+    QString step = "Searching for eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
+    QString root;
+    if (dir->isRoot()) root = "Drive ";
+    else root = "Folder ";
+    QString folder;
+    folderCount > 1 ? folder = " folders " : folder = " folder ";
+    QString imageCountStr = QString::number(imageCount).leftJustified(6);
+    QString folderCountStr = QString::number(folderCount).leftJustified(5);
+
+    QString s = step +
+                imageCountStr + " found so far in " +
+                folderCountStr + folder +
+                escapeClause;
+
+    emit centralMsg(s);        // rghmsg
+    qApp->processEvents();
+    qDebug() << "DataModel::updateLoadStatus"
+             << "imageCount =" << imageCount
+             << "G::stop =" << G::stop
+             << "abortLoadingModel =" << abortLoadingModel
+             << "thread =" << QThread::currentThreadId()
+        ;
+}
+
 bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 {
 /*
@@ -513,9 +540,12 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     if (isDebug)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
 
+    abortLoadingModel = false;
     currentFolderPath = folderPath;
     loadingModel = true;
     subFolderImagesLoaded = false;
+
+    // emit centralMsg("Building image file list.");
 
     // do some initializing
     fileFilters->clear();
@@ -530,32 +560,21 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     imageCount = 0;
     countInterval = 100;
 
-    QString step = "Searching for eligible images.\n\n";
-    QString escapeClause = "\n\nPress \"Esc\" to stop.";
-    QString root;
-    if (dir->isRoot()) root = "Drive ";
-    else root = "Folder ";
-
     // load file list for the current folder
     int folderImageCount = dir->entryInfoList().size();
+    // emit centralMsg("Building image file list.\n" + QString::number(imageCount) + " found.");
 
     // bail if no images and not including subfolders
     if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
 
     // add supported images in folder to image list
-    int folderCount = 1;
+    folderCount = 1;
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
-        if (imageCount % countInterval == 0 && imageCount > 0) {
-            QString s = step +
-                        QString::number(imageCount) + " found so far in " +
-                        QString::number(folderCount) + " folders" +
-                        escapeClause;
-            emit centralMsg(s);        // rghmsg
-            if (G::useProcessEvents) qApp->processEvents();
-        }
+        if (imageCount % countInterval == 0 && imageCount > 0) updateLoadStatus();
         if (abortLoadingModel) return endLoad(false);
+        if (G::stop) return endLoad(false);
     }
 
     if (!includeSubfoldersFlag) {
@@ -567,7 +586,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     includeSubfolders = true;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
-        if (abortLoadingModel) break;
+        if (abortLoadingModel) return endLoad(false);
         it.next();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
             folderCount++;
@@ -582,6 +601,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
             }
+            updateLoadStatus();
         }
     }
     if (abortLoadingModel || !imageCount) return endLoad(false);

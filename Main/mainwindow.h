@@ -529,7 +529,7 @@ private slots:
     void externalAppManager();
     void toggleFullScreen();
     void escapeFullScreen();
-    void loupeDisplay();
+    void loupeDisplay(QString src = "");
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();

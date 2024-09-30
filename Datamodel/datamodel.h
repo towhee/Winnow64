@@ -221,7 +221,9 @@ private:
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
+    void updateLoadStatus();
     int imageCount;
+    int folderCount;
     int countInterval = 0;
     // QString buildMsg = "Building filters.  This could take a while to complete.<p>"
     //                    "Press \"Esc\" to stop<p>";

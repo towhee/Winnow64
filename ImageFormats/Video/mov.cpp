@@ -74,7 +74,7 @@ bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize) {
     char type[4];
     quint32 size;
     while (readAtomHeader(file, size, type)) {
-        qDebug() << "Mov::findAtom  type:" << type;
+        // qDebug() << "Mov::findAtom  type:" << type;
         if (strncmp(type, targetAtomType, 4) == 0) {
             atomSize = size;
             return true;
@@ -114,7 +114,7 @@ QDateTime MOV::createDate(const QString &filePath) {
     QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
     QDateTime createDate = baseDate.addSecs(creationTime);
 
-    qDebug() << "Mov::extractCreateDate" << createDate;
+    // qDebug() << "Mov::extractCreateDate" << createDate;
 
     return createDate;
 }

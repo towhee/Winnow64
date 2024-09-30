@@ -327,7 +327,7 @@ void TableView::paintEvent(QPaintEvent *event)
 void TableView::keyPressEvent(QKeyEvent *event){
     // navigation keys are executed in MW::eventFilter to make sure they work no matter
     // what has the focus
-    if (event->key() == Qt::Key_Return) emit displayLoupe();
+    if (event->key() == Qt::Key_Return) emit displayLoupe("TableView::keyPressEvent Key_Return");
 }
 
 void TableView::mousePressEvent(QMouseEvent *event)
@@ -360,7 +360,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* event)
         G::fileSelectionChangeSource = "TableMouseClick";
         m5->sel->select(sfIdx, event->modifiers(), "TableView::mouseDoubleClickEvent");
         qDebug() << "TableView::mouseDoubleClickEvent row =" << sfIdx.row();
-        emit displayLoupe();
+        emit displayLoupe("TableView::mouseDoubleClickEvent");
         // thumbView->scrollToRow(idx.row(), "TableView::mouseDoubleClickEvent");
     }
 }

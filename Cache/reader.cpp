@@ -119,14 +119,14 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
-    t2 = t.restart();
+    // t2 = t.restart();
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
     metadata->m.metadataAttempted = true;
     metadata->m.metadataLoaded = isMetaLoaded;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-    t3 = t.restart();
+    // t3 = t.restart();
 
     if (!dm->isMetadataLoaded(dmRow)) {
         status = Status::MetaFailed;
@@ -146,7 +146,7 @@ bool Reader::readMetadata()
 
     if (!abort) emit addToImageCache(dmIdx.row(), instance);
     // if (!abort) emit addToImageCache(metadata->m, instance);
-    t4 = t.restart();
+    // t4 = t.restart();
 
     return isMetaLoaded;
 }
@@ -213,7 +213,7 @@ void Reader::readIcon()
 
 void Reader::run()
 {
-    t1 = t.restart();
+    // t1 = t.restart();
     if (!abort && !G::allMetadataLoaded && !dm->isMetadataLoaded(dmIdx.row()) && instanceOk())
         readMetadata();
     if (!abort && isReadIcon && instanceOk())
@@ -227,7 +227,7 @@ void Reader::run()
             << "status =" << statusText.at(status)
             ;
     }
-    // /*
+    /*
     t5 = t.elapsed();
     msToRead = t1 + t2 + t3 + t4 + t5;
     // msToRead = t.elapsed();

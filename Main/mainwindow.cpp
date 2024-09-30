@@ -837,7 +837,7 @@ void MW::keyPressEvent(QKeyEvent *event)
             }
         }
         else {
-            loupeDisplay();
+            loupeDisplay("MW::keyPressEvent");
         }
     }
 }
@@ -1088,15 +1088,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                          << k
                             ; //*/
 
-                if (e->key() == Qt::Key_Return) loupeDisplay();  // search filter not mix with sel->save/recover
+                if (e->key() == Qt::Key_Return) loupeDisplay("MW::eventFilter Key_Return");  // search filter not mix with sel->save/recover
 
                 // faster than using menu shortcuts
                 if (e->key() == Qt::Key_Right) {
-                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter keyRight");
+                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Right");
                     sel->next(e->modifiers());
                 }
                 if (e->key() == Qt::Key_Left) {
-                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter keyLeft");
+                    if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Left");
                     sel->prev(e->modifiers());
                 }
                 // if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
@@ -1972,6 +1972,8 @@ void MW::folderSelectionChange(QString dPath)
 
     G::t.restart();
 
+    setCentralMessage("");
+
     // block repeated clicks to folders or bookmarks while processing this one.
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
@@ -1979,7 +1981,6 @@ void MW::folderSelectionChange(QString dPath)
 //    // might have selected subfolders usiing shift+command click
 //    if (G::includeSubfolders) subFoldersAction->setChecked(true);
 
-    dm->abortLoadingModel = false;
     if (dPath.length()) G::currRootFolder = dPath;
     else G::currRootFolder = getSelectedPath();
     settings->setValue("lastDir", G::currRootFolder);
@@ -2081,6 +2082,8 @@ void MW::folderSelectionChange(QString dPath)
         return;
     }
 
+    if (G::stop) return;
+
     // turn off include subfolders to prevent accidental loading a humungous number of files
     G::includeSubfolders = false;
     subFoldersAction->setChecked(false);
@@ -2172,8 +2175,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    G::t.restart();
-
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::fileSelectionChange",
@@ -2241,22 +2242,23 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString source = "MW::fileSelectionChange";
     bool changeSourceWasAKey = G::fileSelectionChangeSource.left(3) == "Key";
     // req'd, otherwise gridView->scrollToCurrent() does not work.
-    thumbView->scrollToCurrent(source);
+    // if (changeSourceWasAKey) thumbView->scrollToCurrent(source);
+    if (changeSourceWasAKey) thumbView->scrollToRow(current.row(), source);
 
-    if (G::fileSelectionChangeSource == "TableMouseClick") {
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    }
-    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-        if (gridView->isVisible()) gridView->scrollToCurrent();
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
-    else if (G::fileSelectionChangeSource == "GridMouseClick") {
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    }
-    else {
-        if (gridView->isVisible()) gridView->scrollToCurrent(source);
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
+    // if (G::fileSelectionChangeSource == "TableMouseClick") {
+    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+    // }
+    // else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+    //     if (gridView->isVisible()) gridView->scrollToCurrent();
+    //     if (tableView->isVisible()) tableView->scrollToCurrent();
+    // }
+    // else if (G::fileSelectionChangeSource == "GridMouseClick") {
+    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+    // }
+    // else {
+    //     if (gridView->isVisible()) gridView->scrollToCurrent(source);
+    //     if (tableView->isVisible()) tableView->scrollToCurrent();
+    // }
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2282,7 +2284,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     // centralLayout->setCurrentIndex(LoupeTab);
-                    loupeDisplay();
+                    loupeDisplay("MW::fileSelectionChange");
                 }
             }
             else {
@@ -2324,7 +2326,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                  << dm->currentFilePath
                     ; //*/
         // scroll first to insure icons are painted first when select a new image
-        thumbView->scrollToRow(current.row(), "MW::fileSelectionChange");
+        // if (changeSourceWasAKey) thumbView->scrollToRow(current.row(), "MW::fileSelectionChange");
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
@@ -2449,7 +2451,7 @@ bool MW::stop(QString src)
 */
     // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
-    /*
+    // /*
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
@@ -2459,12 +2461,18 @@ bool MW::stop(QString src)
     // ignore if already stopping
     if (G::stop) return false;
 
-    if (G::useProcessEvents) qApp->processEvents();
 
     // stop flags
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
+    /*if (G::useProcessEvents) */qApp->processEvents();
+    qDebug() << "MW::stop"
+             << "src =" << src
+             << "G::stop =" << G::stop
+             << "dm->abortLoadingModel =" << dm->abortLoadingModel
+             << "thread =" << QThread::currentThreadId()
+             << "G::currRootFolder =" << G::currRootFolder;
     dm->newInstance();
     QString oldFolder = G::currRootFolder;
 
@@ -2556,6 +2564,8 @@ bool MW::stop(QString src)
         qDebug() << "MW::stop" << "Stop DONE";
     }
 
+    setCentralMessage("");
+
     return true;
 }
 
@@ -2611,7 +2621,6 @@ bool MW::reset(QString src)
     imageView->isFit = true;                // req'd for initial zoom cursor condition
     dm->currentSfRow = 0;
     dm->clearDataModel();
-    dm->abortLoadingModel = false;
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
@@ -2837,7 +2846,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
     Starts or redirects MetaRead metadata and thumb loading at sfRow.  If all
     metadata and icons have been read then fileSelectionChange is called.
 
-    Called after a scroll event in IconView or TableView by thumbHeasScrolled,
+    Called after a scroll event in IconView or TableView by thumbHasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
 
     Signaled by Selection::currentIndex when a file selection change occurs.
@@ -2991,7 +3000,7 @@ void MW::thumbHasScrolled()
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
-    metadataCacheThread (Linear) or metaReadThread (Concurrent).
+    metaReadThread (Concurrent).
 
     The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
@@ -3000,10 +3009,8 @@ void MW::thumbHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::thumbasScrolled", "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString());
-//    if (G::isLogger)
-//        qDebug() << "MW::thumbHasScrolled" << "G::ignoreScrollSignal =" << G::ignoreScrollSignal;
 
-//    if (G::isInitializing || (G::isLoadLinear && !G::isLinearLoadDone)) return;
+    if (G::isInitializing) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -3040,7 +3047,7 @@ void MW::gridHasScrolled()
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
-    metadataCacheThread (Linear) or metaReadThread (Concurrent).
+    metaReadThread (Concurrent).
 
     The thumbView and tableView, if visible, are scrolled to sync with gridView.
 
@@ -3082,7 +3089,7 @@ void MW::tableHasScrolled()
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
-    metadataCacheThread (Linear) or metaReadThread (Concurrent).
+    metaReadThread (Concurrent).
 
     The gridView and thumbView, if visible, are scrolled to sync with tableView.
 
@@ -3367,7 +3374,8 @@ void MW::folderDockVisibilityChange()
 void MW::embelDockVisibilityChange()
 {
     if (G::isLogger) G::log("MW::embelDockVisibilityChange");
-    loupeDisplay();
+
+    loupeDisplay("MW::embelDockVisibilityChange");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 }
 
@@ -3397,7 +3405,7 @@ void MW::embelTemplateChange(int id)
     }
     else {
         if (dm->rowCount()) {
-            loupeDisplay();
+            loupeDisplay("MW::embelTemplateChange");
             embelRunBtn->setVisible(true);
             isRatingBadgeVisible = false;
             thumbView->refreshThumbs();
@@ -4550,7 +4558,7 @@ void MW::newEmbelTemplate()
     embelDock->raise();
     embelDockVisibleAction->setChecked(true);
     embelProperties->newTemplate();
-    loupeDisplay();
+    loupeDisplay("MW::newEmbelTemplate");
 }
 
 void MW::changeInfoOverlay()

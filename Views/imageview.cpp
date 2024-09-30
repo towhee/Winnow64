@@ -883,7 +883,8 @@ void ImageView::changeInfoOverlay()
 void ImageView::updateShootingInfo()
 {
     if (G::isLogger) G::log("ImageView::updateShootingInfo");
-    QModelIndex idx = thumbView->currentIndex();
+    QModelIndex idx = dm->currentSfIdx;
+    // QModelIndex idx = thumbView->currentIndex();
     QString current = infoString->getCurrentInfoTemplate();
     infoText = infoString->parseTokenString(infoString->infoTemplates[current],
                                                 currentImagePath, idx);

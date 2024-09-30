@@ -532,7 +532,7 @@ void MW::createThumbView()
 
     // double mouse click fires displayLoupe
     // connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
-    connect(thumbView, &IconView::displayLoupe, this, &MW::loupeDisplay);
+    // connect(thumbView, &IconView::displayLoupe, this, &MW::loupeDisplay);
 
     // back and forward mouse buttons toggle pick
 //    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
@@ -572,8 +572,8 @@ void MW::createGridView()
         gridView->iconNumberSize = iconNumberSize;
     }
 
-    // double mouse click fires displayLoupe
-    connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
+    // double mouse click fires displayLoupe (signal not req'd)
+    // connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
     // update metadata and icons if not loaded for new images when scroll
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::gridHasScrolled);

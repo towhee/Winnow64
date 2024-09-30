@@ -54,7 +54,7 @@ private:
     int defaultColumnWidth(int column);
 
 signals:
-    void displayLoupe();
+    void displayLoupe(QString src);
 };
 
 #include <QStyledItemDelegate>
