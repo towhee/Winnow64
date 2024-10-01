@@ -94,7 +94,9 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     updateCurrentIndex(sfIdx);
 
     if (clearSelection) {
+        sm->blockSignals(true);
         sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        sm->blockSignals(false);
     }
 
     bool isFileSelectionChange = true;
@@ -175,7 +177,9 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         return;
     }
 
+    sm->blockSignals(true);
     sm->clear();
+    sm->blockSignals(false);
     setCurrentIndex(sfIdx);
 }
 

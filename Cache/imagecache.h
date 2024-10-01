@@ -123,7 +123,8 @@ private:
     QVector<ImageDecoder*> decoder;     // all the decoders
     QHash<QString,int> keyFromPath;     // cache key for assigned path
     QHash<int,QString> pathFromKey;     // path
-    std::list<int> toBeUpdated;
+    QSet<int> toBeUpdated;
+    // std::list<int> toBeUpdated;
     QList<int> priorityList;
 
     void launchDecoders(QString src);

@@ -10,10 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Do not permit thumbView when gridView window is visible
-- Loupe view, mouse click on thumbView scrolling to center when it shouldn't
 - Label colors not getting into LR during ingest
-- Ingesting to wrong dated folder
 - Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
 - Add folders to filters
@@ -126,6 +123,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Loupe view, mouse click on thumbView scrolling to center when it shouldn't
+- Do not permit thumbView when gridView window is visible
 - Recover selection when invokeWorkspace
 - Do not rebuild ImageCache when change workspace
 - After delete a folder do not highlight or select a folder

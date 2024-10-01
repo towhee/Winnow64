@@ -506,12 +506,13 @@ void DataModel::updateLoadStatus()
 
     emit centralMsg(s);        // rghmsg
     qApp->processEvents();
+    /*
     qDebug() << "DataModel::updateLoadStatus"
              << "imageCount =" << imageCount
              << "G::stop =" << G::stop
              << "abortLoadingModel =" << abortLoadingModel
              << "thread =" << QThread::currentThreadId()
-        ;
+        ;//*/
 }
 
 bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
