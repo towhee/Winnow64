@@ -757,6 +757,8 @@ bool ImageCache::cacheUpToDate()
         // bool inCache = icd->imCache.contains(fPath);  // random crash 2024-09-19
         QStringList imagePaths;
         icd->imCache.getKeys(imagePaths);
+
+        // EXC_CRASH (SIGABRT) crash when 110,000 images in datamodel
         bool inCache = imagePaths.contains(icd->cacheItemList.at(i).fPath);
 
         // the cache contains the image
@@ -1410,7 +1412,7 @@ void ImageCache::addCacheItem(int key)
     QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
     keyFromPath[fPath] = row;
     pathFromKey[row] = fPath;
-    toBeUpdated.push_back(row);
+    toBeUpdated.insert(row);
 
     icd->cacheItem.key = row;              // need to be able to sync with imageList
     icd->cacheItem.fPath = fPath;
@@ -1556,6 +1558,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
     // item has been updated
     icd->cacheItemList[row].isUpdated = true;
     toBeUpdated.remove(row);
+    // toBeUpdated.remove(row);
 
     // delete d;
 
@@ -1630,7 +1633,7 @@ void ImageCache::buildImageCacheList()
     toBeUpdated.clear();
 
     int n = dm->sf->rowCount();
-    toBeUpdated.resize(n);
+    // toBeUpdated.resize(n);
 
     for (int i = 0; i < n; ++i) {
         addCacheItem(i);

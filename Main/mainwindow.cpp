@@ -2235,14 +2235,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
 
-    /* SCROLL CONTROL
-       don't scroll if mouse click source (screws up double clicks and disorients users)
-       */
+    /* SCROLL CONTROL: don't scroll if mouse click source
+                       (screws up double clicks and disorients users)  */
     QString source = "MW::fileSelectionChange";
-    bool changeSourceWasAKey = G::fileSelectionChangeSource.left(3) == "Key";
-    // bool changeSourceWasAClick = G::fileSelectionChangeSource.left(5) == "Click";
-    // req'd, otherwise gridView->scrollToCurrent() does not work.
-    if (changeSourceWasAKey) {
+    if (G::fileSelectionChangeSource.left(3) == "Key") {
         G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
         G::ignoreScrollSignal = true;
@@ -2250,6 +2246,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         G::ignoreScrollSignal = true;
         if (tableView->isVisible()) tableView->scrollToCurrent();
     }
+
     if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToCurrent(source);
@@ -2261,18 +2258,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
     }
-    // else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-    //     if (gridView->isVisible()) gridView->scrollToCurrent();
-    //     if (tableView->isVisible()) tableView->scrollToCurrent();
-    // }
+
     if (G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
     }
-    // else {
-    //     if (gridView->isVisible()) gridView->scrollToCurrent(source);
-    //     if (tableView->isVisible()) tableView->scrollToCurrent();
-    // }
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2315,9 +2305,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     G::fileSelectionChangeSource = "";
 
     // update ImageCache
-    /* Do not image cache if there is an active random slide show
-       (turn off image caching for testing with G::useImageCache = false. Set in
-       global.cpp) */
 
     /*
     qDebug() << "MW::fileSelectionChange" << "IMAGECACHE"
@@ -2339,9 +2326,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         qDebug() << "MW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
-        // scroll first to insure icons are painted first when select a new image
-        // if (changeSourceWasAKey) thumbView->scrollToRow(current.row(), "MW::fileSelectionChange");
-        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+       emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
