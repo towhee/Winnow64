@@ -122,7 +122,7 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
-    int hugeThreshold = 20000;
+    int hugeThreshold = G::maxIconChunk;
     int firstVisibleIcon;
     int lastVisibleIcon;
     int visibleIcons;
@@ -154,6 +154,7 @@ public:
 
     bool showThumbNailSymbolHelp = true;
     void setShowThumbNailSymbolHelp(bool showHelp);
+    bool okManyImagesWarning();
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
@@ -222,13 +223,11 @@ private:
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
     void updateLoadStatus();
+    // bool tooManyImagesWarning();
+
     int imageCount;
     int folderCount;
     int countInterval = 0;
-    // QString buildMsg = "Building filters.  This could take a while to complete.<p>"
-    //                    "Press \"Esc\" to stop<p>";
-    // QString buildSteps = "3";
-    // int step;
 
     bool isDebug = false;
     ImageMetadata mCopy;

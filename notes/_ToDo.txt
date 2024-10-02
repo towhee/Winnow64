@@ -10,6 +10,9 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- When select a video in thumbView it is not shown as selected
+- When select folder using include subfolders make sure it is and remains selected in FSTree
+- ImCache try QHash instead of CTSL::HashMap<QString, QImage>
 - Label colors not getting into LR during ingest
 - Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)

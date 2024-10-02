@@ -2084,6 +2084,13 @@ void MW::folderSelectionChange(QString dPath)
 
     if (G::stop) return;
 
+    // Load folder progress
+    QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
+    if (subFoldersAction->isChecked()) msg += " and all subfolders";
+    setCentralMessage(msg);
+    updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
+    qApp->processEvents();
+
     // turn off include subfolders to prevent accidental loading a humungous number of files
     G::includeSubfolders = false;
     subFoldersAction->setChecked(false);
@@ -2116,10 +2123,10 @@ void MW::folderSelectionChange(QString dPath)
     updateStatus(true, "", "MW::folderSelectionChange");
 
     // Load folder progress
-    QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
-    if (subFoldersAction->isChecked()) msg += " and all subfolders";
-    setCentralMessage(msg);
-    updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
+    // QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
+    // if (subFoldersAction->isChecked()) msg += " and all subfolders";
+    // setCentralMessage(msg);
+    // updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
 
     /*
     Must load metadata first, as it contains the file offsets and lengths for
@@ -4439,7 +4446,10 @@ void MW::setRotation(int degrees)
         // rotate selected cached full size images
         QString fPath = thumbIdx.data(G::PathRole).toString();
         QImage image;
-        if (icd->imCache.find(fPath, image)) {
+        // CTSL::HashMap<QString, QImage> imCache
+        // if (icd->imCache.find(fPath, image)) {
+        // QHash<QString, QImage> imCache
+        if (icd->imCache.contains(fPath)) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->imCache.insert(fPath, image);
         }
@@ -5705,7 +5715,7 @@ void MW::rory()
     else {
         isShowCacheProgressBar = false;
         setImageCacheParameters();
-        updateDefaultIconChunkSize(20000);
+        updateDefaultIconChunkSize(G::maxIconChunk);
     }
 
     qDebug() << "MW::rory" << G::isRory;

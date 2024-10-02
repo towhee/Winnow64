@@ -62,8 +62,17 @@ bool EmbelExport::loadImage(QString fPath)
     int dmRow = dm->rowFromPath(fPath);
 
     if (!embellish->isRemote) {
-        if (icd->imCache.find(fPath, image)) {
-            pmItem->setPixmap(QPixmap::fromImage(image));
+        // CTSL::HashMap<QString, QImage> imCache
+        // if (icd->imCache.find(fPath, image)) {
+        // if (icd->imCache.contains(fPath)) {  // QHash<QString, QImage> imCache
+        //     pmItem->setPixmap(QPixmap::fromImage(image));
+        //     return true;
+        // }
+        // QHash<QString, QImage> imCache
+        if (icd->imCache.contains(fPath)) {
+            // image = icd->imCache.value(fPath);
+            // pmItem->setPixmap(QPixmap::fromImage(image));
+            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
             return true;
         }
         // check metadata loaded for image

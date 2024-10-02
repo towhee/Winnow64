@@ -473,7 +473,6 @@ bool DataModel::endLoad(bool success)
                           << "success =" << success;
 
     loadingModel = false;
-    // abortLoadingModel = false;
     if (success) {
         G::dmEmpty = false;
         checkChunkSize = iconChunkSize > rowCount();
@@ -485,6 +484,34 @@ bool DataModel::endLoad(bool success)
         filters->loadingDataModelFailed();
         return false;
     }
+}
+
+bool DataModel::okManyImagesWarning()
+{
+    if (G::isLogger) G::log("DataModel::tooManyImagesWarning");
+    QString title = "Too Many Images";
+    QString max = QString::number(G::maxIconChunk);
+    QString folders;
+    G::includeSubfolders ? folders = "folder" : folders = "folders";
+    QString msg =
+        "There are more than " + max + " images in the " + folders + ".  If you choose " +
+        "to continue you may experience sluggish responses or system hangs.\n\n" +
+        "Do you wish to continue?"
+        ;
+
+    QMessageBox msgBox;
+    msgBox.setWindowTitle(title);
+    msgBox.setText(msg);
+    msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
+    msgBox.setDefaultButton(QMessageBox::No);
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setStyleSheet(G::css);
+    // prevent MacOS enforcing certain UI conventions
+    msgBox.setWindowModality(Qt::WindowModal);
+    int ret = msgBox.exec();
+    // qDebug() << "ret =" << ret;
+    if (ret == QMessageBox::Yes) return true;
+    return false;
 }
 
 void DataModel::updateLoadStatus()
@@ -602,6 +629,13 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                 if (abortLoadingModel) break;
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
+                if (imageCount == G::maxIconChunk) {
+                    if (!okManyImagesWarning()) {
+                        abortLoadingModel = true;
+                        G::includeSubfolders = false;
+                        return endLoad(false);
+                    }
+                }
             }
             updateLoadStatus();
         }
@@ -2279,9 +2313,6 @@ bool DataModel::getSelection(QStringList &list)
 
     // nothing picked or selected
     if (isPick() && selectionModel->selectedRows().size() == 0) {
-//        QMessageBox::information(mw, "Oops",
-//           "There are no picks or selected images to report.    ",
-//           QMessageBox::Ok);
         G::popUp->showPopup("Oops.  There are no picks or selected images.", 2000);
         return false;
     }
