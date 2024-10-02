@@ -1090,7 +1090,7 @@ void Preferences::addItems()
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 10;
-    i.max = 20000;
+    i.max = G::maxIconChunk;
     i.fixedWidth = 50;
     addItem(i);
 

@@ -142,7 +142,10 @@ or loads the file otherwise.
     }
     */
     QImage image;
-    if (icd->imCache.find(fPath, image)) {
+    // CTSL::HashMap<QString, QImage> imCache
+    // if (icd->imCache.find(fPath, image)) {
+    // QHash<QString, QImage> imCache
+    if (icd->imCache.contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
         isLoaded = true;
     }

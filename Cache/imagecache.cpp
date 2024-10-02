@@ -524,8 +524,14 @@ void ImageCache::setTargetRange()
     }
 
     // remove cached images outside target range
-    QVector<QString> keys;
-    icd->imCache.getKeys(keys);
+
+    // CTSL::HashMap<QString, QImage> imCache
+    // QVector<QString> keys;
+    // icd->imCache.getKeys(keys);
+
+    // QHash<QString, QImage> imCache
+    QStringList keys = icd->imCache.keys();
+
     // iterate imCache
     for (int key = 0; key < keys.size(); key++) {
         if (abort) break;
@@ -754,15 +760,21 @@ bool ImageCache::cacheUpToDate()
         bool isCached = icd->cacheItemList.at(i).isCached;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
 
-        // bool inCache = icd->imCache.contains(fPath);  // random crash 2024-09-19
-        QStringList imagePaths;
-        icd->imCache.getKeys(imagePaths);
+        // imCache contains image
 
-        // EXC_CRASH (SIGABRT) crash when 110,000 images in datamodel
-        bool inCache = imagePaths.contains(icd->cacheItemList.at(i).fPath);
+        // CTSL::HashMap<QString, QImage> imCache
+        // // bool inCache = icd->imCache.contains(fPath);  // random crash 2024-09-19
+        // QStringList imagePaths;
+        // icd->imCache.getKeys(imagePaths);
+        // // EXC_CRASH (SIGABRT) crash when 110,000 images in datamodel
+        // bool inCache = imagePaths.contains(icd->cacheItemList.at(i).fPath);
+        // // the cache contains the image
+        // if (inCache) continue;
 
-        // the cache contains the image
-        if (inCache) continue;
+        // QHash<QString, QImage> imCache
+        // QStringList keys = icd->imCache.keys();
+        // if (keys.contains(icd->cacheItemList.at(i).fPath)) continue; // crash
+        // if (icd->imCache.contains(icd->cacheItemList.at(i).fPath)) continue; // crash
 
         // isCached is true but no associated decoder
         if (isCached && id == -1) {
@@ -921,7 +933,12 @@ void ImageCache::rename(QString oldPath, QString newPath)
 {
     log("rename");
     if (icd->imCache.contains(oldPath)) {
-        icd->imCache.rename(oldPath, newPath);
+        // CTSL::HashMap<QString, QImage> imCache
+        // icd->imCache.rename(oldPath, newPath);
+
+        // QHash<QString, QImage> imCache
+        QImage image = icd->imCache.take(oldPath);  // Remove the old key-value pair
+        icd->imCache.insert(newPath, image);
     }
     int i = keyFromPath[oldPath];
     icd->cacheItemList[i].fPath = newPath;
@@ -1189,11 +1206,20 @@ QString ImageCache::reportImCache()
     reportString = "";
     rpt.setString(&reportString);
 
-    QVector<QString> keys;
     // check when imCache is empty
     QImage image;
     int mem = 0;
-    icd->imCache.getKeys(keys);
+
+    // CTSL::HashMap<QString, QImage> imCache
+    // QVector<QString> keys;
+    // icd->imCache.getKeys(keys);
+    // if (keys.size() == 0) {
+    //     rpt << "\nicd->imCache is empty";
+    //     return reportString;
+    // }
+
+    // QHash<QString, QImage> imCache
+    QStringList keys = icd->imCache.keys();
     if (keys.size() == 0) {
         rpt << "\nicd->imCache is empty";
         return reportString;
@@ -1221,7 +1247,8 @@ QString ImageCache::reportImCache()
                 break;
             }
         }
-        icd->imCache.find(keys.at(i), image);
+        // icd->imCache.find(keys.at(i), image);   // CTSL::HashMap<QString, QImage> imCache
+        image = icd->imCache.value(keys.at(i));    // QHash<QString, QImage> imCache
         imRptItem.w = image.width();
         imRptItem.h = image.height();
         imRptItem.mb = static_cast<int>(imRptItem.w * imRptItem.h * 1.0 / 262144);
@@ -1768,8 +1795,13 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     }
 
     // remove surplus images in icd->imCache
-    QVector<QString> keys;
-    icd->imCache.getKeys(keys);
+    // CTSL::HashMap<QString, QImage> imCache
+    // QVector<QString> keys;
+    // icd->imCache.getKeys(keys);
+
+    // QHash<QString, QImage> imCache
+    QStringList keys = icd->imCache.keys();
+
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
             //            qDebug() << "ImageCache::rebuildImageCacheParameters"

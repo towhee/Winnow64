@@ -341,7 +341,7 @@ void MW::createMDCache()
    }
 
     // dm->defaultIconChunkSize = 200;
-    // dm->defaultIconChunkSize = 20000;
+    // dm->defaultIconChunkSize = G::maxIconChunk;
 
     dm->setChunkSize(dm->defaultIconChunkSize);
 

@@ -190,6 +190,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     bool isLoaded = false;
     pmItem->setVisible(true);
 
+    // SLIDESHOW
     if (G::isSlideShow) {
         // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
@@ -230,7 +231,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     if (sfRow == -1) return false;
     bool isCached = false;
     if (icd->cacheItemList.size() > sfRow) {
-        isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
+        isCached = src == "ImageCache::cacheImage" || icd->cacheItemList.at(sfRow).isCached;
     }
     /* try again
     if (!isCached) {
@@ -245,9 +246,14 @@ bool ImageView::loadImage(QString fPath, QString src)
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
         //qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
-        bool imageAvailable = icd->imCache.find(fPath, image);
+
+        // CTSL::HashMap<QString, QImage> imCache
+        // bool imageAvailable = icd->imCache.find(fPath, image);
+
+        // QHash<QString, QImage> imCache
+        bool imageAvailable = icd->imCache.contains(fPath);
         if (imageAvailable) {
-            pmItem->setPixmap(QPixmap::fromImage(image));
+            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
             isLoaded = true;
         }
        else { // not available
@@ -1398,9 +1404,14 @@ void ImageView::copyImage()
     qDebug() << "ImageView::copyImage";
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
-        QImage image;
-        if (icd->imCache.find(dm->currentFilePath, image)) {
-            pm = QPixmap::fromImage(image);
+        // CTSL::HashMap<QString, QImage> imCache
+        // QImage image;
+        // if (icd->imCache.find(dm->currentFilePath, image)) {
+        //     pm = QPixmap::fromImage(image);
+        // }
+        // QHash<QString, QImage> imCache;
+        if (icd->imCache.contains(dm->currentFilePath)) {
+            pm = QPixmap::fromImage(icd->imCache.value(dm->currentFilePath));
         }
         else {
             QString msg = "Could not copy the current image to the clipboard";

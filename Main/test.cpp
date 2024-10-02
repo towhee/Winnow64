@@ -43,20 +43,31 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
-        if (msPerFolder && t.elapsed() > msPerFolder) return;
+        // countdown time limit reached
+        if (secPerFolder && t.elapsed() > msPerFolder) return;
+
+        // uturn
         if (uturn && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
             uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
             uturnCounter = 0;
         }
+
+        // no uturn and end of images in folder
         ++slideCount;
-        if (!uturn && slideCount >= dm->sf->rowCount()) {
-            return;
-        }
+        if (!uturn && slideCount >= dm->sf->rowCount()) return;
+
+        // pause
         G::wait(msPerImage);
         qint64 msElapsed = t.elapsed();
         double seconds = msElapsed * 0.001;
-        stressSecToGoInFolder = secPerFolder - seconds;
+
+        // report countdown time left in this folder
+        if (secPerFolder) stressSecToGoInFolder = secPerFolder - seconds;
+        // report number of images traversed
+        if (secPerFolder) stressSecToGoInFolder = slideCount;
+
+        // next image
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) sel->next();
@@ -185,7 +196,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    asLoupeAction->setEnabled(false);
+    dm->okManyImagesWarning();
 
 }
 /*

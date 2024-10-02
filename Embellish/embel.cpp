@@ -580,11 +580,20 @@ void Embel::addImageToScene()
     if (G::isLogger) G::log("Embel::addImageToScene");
     // scale the image to fit inside the borders
     QPixmap pm;
-    QImage im;
-    if (icd->imCache.find(fPath, im))
-        pm = QPixmap::fromImage(im).scaledToWidth(image.w);
-    else
+
+    // CTSL::HashMap<QString, QImage> imCache
+    // QImage im;
+    // if (icd->imCache.find(fPath, im)) {
+    //     pm = QPixmap::fromImage(im).scaledToWidth(image.w);
+    // }
+
+    // QHash<QString, QImage> imCache
+    if (icd->imCache.contains(fPath)) {
+        pm = QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w);
+    }
+    else {
         pm = pmItem->pixmap().scaledToWidth(image.w);
+    }
     // add the image to the scene
     pmItem->setPixmap(pm);
     // move the image to center in the borders
@@ -819,10 +828,17 @@ void Embel::updateImage()       // all effects bundled in style
     // graphics effects
     if (hasStyle && legalStyle && isEffects) {
         // start with a fresh image from the ImageCache
-        QImage im;
-        if (icd->imCache.find(fPath, im)) {
-            //qDebug() << "Embel::updateImage  image.w =" << image.w;
-            pmItem->setPixmap(QPixmap::fromImage(im).scaledToWidth(image.w));
+
+        // CTSL::HashMap<QString, QImage> imCache
+        // QImage im;
+        // if (icd->imCache.find(fPath, im)) {
+        //     //qDebug() << "Embel::updateImage  image.w =" << image.w;
+        //     pmItem->setPixmap(QPixmap::fromImage(im).scaledToWidth(image.w));
+        // }
+
+        // QHash<QString, QImage> imCache
+        if (icd->imCache.contains(fPath)) {
+            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w));
         }
 
         GraphicsEffect *imageEffect = new GraphicsEffect(src);
