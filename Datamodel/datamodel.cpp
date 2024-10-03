@@ -1840,15 +1840,20 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
     for (int row = first; row <= last; ++row) {
         QModelIndex sfIdx = sf->index(row, 0);
         if (!sfIdx.isValid()) {
-            qDebug() << "DataModel::isAllIconChunkLoaded invalic index!"
+            /*
+            qDebug() << "DataModel::isAllIconChunkLoaded invalid index!"
                      << "row =" << row
                      << "first =" << first
                      << "last =" << last
-                ;
+                ; //*/
             return false;
         }
         if (sfIdx.data(Qt::DecorationRole).isNull()) {
-            //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
+            /*
+            qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row
+                     << "first =" << first
+                     << "last =" << last
+                        ; //*/
             return false;
         }
         // if (itemFromIndex(sf->index(row, 0))->icon().isNull()) {
@@ -1856,11 +1861,19 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
         //     return false;
         // }
     }
+    // qDebug() << "DataModel::allIconChunkLoaded = true";
     return true;
 
 }
 
 bool DataModel::isIconRangeLoaded()
+/*
+    Called by MetaRead2::dispatch when aIsDone && bIsDone (readers have been dispatched
+    for all rows) to determine if a redo is required because a metadata or icon read has
+    failed.
+
+    Called locally by setIconRange.
+*/
 {
     for (int row = startIconRange; row <= endIconRange; row++) {
         if (sf->index(row,0).data(Qt::DecorationRole).isNull()) return false;
@@ -1869,6 +1882,9 @@ bool DataModel::isIconRangeLoaded()
 }
 
 void DataModel::setIconRange(int sfRow)
+/*
+    Called by MW::loadConcurrent and MW::updateIconRange.
+*/
 {
     // if (iconChunkSize >= rowCount()) {
     //     G::iconChunkLoaded = true;

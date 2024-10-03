@@ -10,9 +10,9 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- When select a video in thumbView it is not shown as selected
 - When select folder using include subfolders make sure it is and remains selected in FSTree
-- ImCache try QHash instead of CTSL::HashMap<QString, QImage>
+- FSTree/Bookmarks folder not always highlighted ie select plus subfolders
+- FS and Bookmarks show unselected row highlighted sometimes
 - Label colors not getting into LR during ingest
 - Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
@@ -23,10 +23,8 @@ BUGS / TO DO
 - Add rotation to image modification
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - Why "SliderEditor::change, emit editorValueChanged 100" when export from LR
-- FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
-- FS and Bookmarks show unselected row highlighted sometimes
 - "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads
@@ -126,6 +124,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImCache QHash instead of CTSL::HashMap<QString, QImage>
 - Loupe view, mouse click on thumbView scrolling to center when it shouldn't
 - Do not permit thumbView when gridView window is visible
 - Recover selection when invokeWorkspace

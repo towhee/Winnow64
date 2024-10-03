@@ -986,7 +986,7 @@ void IconView::scrollToCurrent(QString source)
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
-    /*
+    // /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
              << "source =" << source
              << "objectName() =" << objectName()

@@ -285,6 +285,7 @@ void MetaRead2::initialize()
     success = false;
     quitAfterTimeoutInitiated = false;
     redoCount = 0;
+    redoMax = 5;
     err.clear();
 
     /* // to be removed
@@ -337,6 +338,7 @@ QString MetaRead2::diagnostics()
     if (s.size()) rpt << "  Rows not loaded: " << s.join(",");
     rpt << "\n" << "G::allMetadataLoaded:       " << QVariant(G::allMetadataLoaded).toString();
     rpt << "\n" << "G::iconChunkLoaded:         " << QVariant(G::iconChunkLoaded).toString();
+    rpt << "\n" << "G::maxIconChunk:            " << QVariant(G::maxIconChunk).toString();
     rpt << "\n";
     rpt << "\n" << "isDone:                     " << QVariant(isDone).toString();
     rpt << "\n" << "aIsDone && bIsDone:         " << QVariant(aIsDone && bIsDone).toString();
@@ -432,23 +434,37 @@ void MetaRead2::cleanupIcons()
     the current datamodel row dm->currentSfRow.
 */
     if (G::isLogger) G::log("MetaRead2::cleanupIcons");
-    if (isDebug) qDebug() << "MetaRead2::cleanupIcons";
+    // if (isDebug)
+        qDebug() << "MetaRead2::cleanupIcons"
+                 << "firstIconRow =" << firstIconRow
+                 << "lastIconRow =" << lastIconRow
+            ;
 
     // check if datamodel size is less than assigned icon cache chunk size
     if (dm->iconChunkSize >= sfRowCount) {
         return;
     }
 
-    for (int i = 0; i < firstIconRow; i++) {
+    for (int i = 0; i < dm->startIconRange; i++) {
         if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
             dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
         }
     }
-    for (int i = lastIconRow + 1; i < sfRowCount; i++) {
+    for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
         if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
             dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
         }
     }
+    // for (int i = 0; i < firstIconRow; i++) {
+    //     if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
+    //         dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
+    //     }
+    // }
+    // for (int i = lastIconRow + 1; i < sfRowCount; i++) {
+    //     if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
+    //         dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
+    //     }
+    // }
 }
 
 inline bool MetaRead2::needToRead(int row)
@@ -830,7 +846,7 @@ void MetaRead2::dispatch(int id)
 
             // all metadata and icons been loaded into datamodel?
             // should it be dm->isAllMetadataLoaded()
-             bool allAttempted = dm->isAllMetadataAttempted() &&
+            bool allAttempted = dm->isAllMetadataAttempted() &&
                                 dm->isAllIconChunkLoaded(dm->startIconRange, dm->endIconRange);
 
             if (isDebug)  // dispatch for all rows completed
@@ -867,9 +883,13 @@ void MetaRead2::dispatch(int id)
                                 ;
                         }
                         // try to read again
+                        wait(100);
                         if (!abort) {
                             redo();
                         }
+                    }
+                    else {
+                        qWarning() << "REDO MAXED OUT";
                     }
                 }
             }
@@ -1071,10 +1091,12 @@ void::MetaRead2::quitAfterTimeout()
 void MetaRead2::dispatchFinished(QString src)
 {
     if (G::isLogger || G::isFlowLogger)  G::log("MetaRead2::dispatchFinished", src);
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "MetaRead2::dispatchFinished" << src
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
+             // << "instanceClash =" << instanceClash
             ;
+
     bool running = false;
     bool show = true;
     success = allMetaIconLoaded();
