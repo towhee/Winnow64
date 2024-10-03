@@ -238,6 +238,7 @@ void MW::jump()
     bool ok;
     int sfRow = srow.toInt(&ok);
     if (ok) {
+        G::fileSelectionChangeSource = "Key_Jump";
         sfRow--;        // IconView is 1 to rowCount
         if (sfRow >= dm->sf->rowCount()) sfRow = dm->sf->rowCount() - 1;
         if (sfRow < 0) sfRow = 0;

@@ -2195,7 +2195,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2457,7 +2457,7 @@ bool MW::stop(QString src)
 */
     // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
-    // /*
+    /*
     if (G::isLogger || G::isFlowLogger)
         qDebug() << "MW::stop"
                  << "src =" << src
@@ -2472,13 +2472,15 @@ bool MW::stop(QString src)
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
-    /*if (G::useProcessEvents) */qApp->processEvents();
+    qApp->processEvents();  // rgh req'd?
+    /*
     qDebug() << "MW::stop"
              << "src =" << src
              << "G::stop =" << G::stop
              << "dm->abortLoadingModel =" << dm->abortLoadingModel
              << "thread =" << QThread::currentThreadId()
              << "G::currRootFolder =" << G::currRootFolder;
+    //*/
     dm->newInstance();
     QString oldFolder = G::currRootFolder;
 
@@ -2871,7 +2873,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::loadConcurrent  sfRow =" << QVariant(sfRow).toString().leftJustified(5)

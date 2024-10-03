@@ -643,7 +643,6 @@ void IconViewDelegate::paint(QPainter *painter,
         QPoint numberTopLeft(frameRect.left(), frameRect.top());
         QPoint numberBottomRight(frameRect.left() + numberWidth + 4, frameRect.top() + iconNumberSize);
         QRect numberRect(numberTopLeft, numberBottomRight);
-//        painter->setPen(border);
         painter->setPen(Qt::transparent);
         painter->drawRoundedRect(numberRect, 8, 8);
         QPen numberPen(numberTextColor);
