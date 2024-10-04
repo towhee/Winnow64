@@ -263,7 +263,8 @@ bool ImageView::loadImage(QString fPath, QString src)
     else {
         // report why no image cached (chk range in case filtering has just occurred)
         if (icd->cacheItemList.count() > dmRow) {
-            emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
+            if (G::mode == "Loupe")
+                emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
         }
     }
 

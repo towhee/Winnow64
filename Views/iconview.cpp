@@ -1297,7 +1297,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
         QString row = "row = " + QString::number(indexAt(event->pos()).row()) + " ";
         G::log("IconView::mouseDoubleClickEvent", row + objectName());
     }
-    // /*
+    /*
     qDebug() << "IconView::mouseDoubleClickEvent"
              << event
              << "btn =" << event->button()
@@ -1315,7 +1315,15 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     // show/play when not in loupe mode
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         G::fileSelectionChangeSource = "IconMouseDoubleClick";
+        m2->loupeDisplay("IconView::mouseDoubleClickEvent");
         G::mode = "Loupe";
+        // /*
+        qDebug() << "IconView::mouseDoubleClickEvent"
+                 << event
+                 << "btn =" << event->button()
+                 << "modifiers =" << event->modifiers()
+                 << "G::mode =" << G::mode
+            ; //*/
     }
 }
 
