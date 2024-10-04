@@ -196,7 +196,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    dm->isAllIconChunkLoaded(dm->firstVisibleIcon, dm->lastVisibleIcon);
+    qDebug() << centralLayout->currentIndex();
 
 }
 /*

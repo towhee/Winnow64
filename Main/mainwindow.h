@@ -554,7 +554,7 @@ private slots:
     void keyScrollPageUp();
     void keyScrollHome();
     void keyScrollEnd();
-    void scrollToCurrentRow();
+    void scrollToCurrentRowIfNotVisible();
     void jump();
     void zoomToggle();
     // status functions

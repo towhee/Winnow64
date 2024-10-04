@@ -100,8 +100,8 @@ void MW::filterChange(QString source)
     isFilterChange = true;
 
     // record scroll position before change
-    int oldThumbScrollPos = thumbView->scrollPosition();
-    int oldGridScrollPos = gridView->scrollPosition();
+    // int oldThumbScrollPos = thumbView->scrollPosition();
+    // int oldGridScrollPos = gridView->scrollPosition();
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
@@ -132,9 +132,9 @@ void MW::filterChange(QString source)
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    int newThumbScrollPos = thumbView->scrollPosition();
-    int newGridScrollPos = gridView->scrollPosition();
-    bool scrollChange = oldThumbScrollPos != newThumbScrollPos || oldGridScrollPos != newGridScrollPos;
+    // int newThumbScrollPos = thumbView->scrollPosition();
+    // int newGridScrollPos = gridView->scrollPosition();
+    // bool scrollChange = oldThumbScrollPos != newThumbScrollPos || oldGridScrollPos != newGridScrollPos;
 
     // sync the datamodel instance
     metaReadThread->initialize();
@@ -165,11 +165,14 @@ void MW::filterChange(QString source)
         sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
     else {
-        sel->updateCurrentIndex(newSfIdx);
+        dm->setCurrentSF(newSfIdx, dm->instance);
     }
 
     // only scroll if filtration has changed visible cells in thumbView
-    if (scrollChange) thumbView->scrollToCurrent("MW::filterChange");
+    scrollToCurrentRowIfNotVisible();
+
+    // update ImageCache if priority queue has changed
+    emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
     G::popUp->reset();
@@ -472,7 +475,7 @@ void MW::sortChange(QString source)
        Therefore we call it here to force the update to caching and icons */
 //    sel->select(idx);
 
-    scrollToCurrentRow();
+    scrollToCurrentRowIfNotVisible();
     G::popUp->reset();
 
 }
@@ -498,7 +501,7 @@ void MW::sortReverse()
     dm->currentFilePath = fPath;
     sel->select(idx, Qt::NoModifier,"MW::sortReverse");
 
-    scrollToCurrentRow();
+    scrollToCurrentRowIfNotVisible();
 }
 
 void MW::updateSortColumn(int sortColumn)

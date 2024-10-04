@@ -845,8 +845,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int row = proxyRowFromPath(fPath);
-    // int row = fPathRow[fPath];
+    int sfRow = proxyRowFromPath(fPath);
+    int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
@@ -857,7 +857,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     metadata->m.row = row;  // req'd?
 
     // file info (calling Metadata not required)
-    m.row = row;
+    m.row = sfRow;
     m.currRootFolder = G::currRootFolder;
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
@@ -1612,7 +1612,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
     setData(sfIdx, align, Qt::TextAlignmentRole);
 }
 
-void DataModel::setCurrent(QModelIndex sfIdx, int instance)
+void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
         errMsg = "Instance clash.";
@@ -1625,6 +1625,34 @@ void DataModel::setCurrent(QModelIndex sfIdx, int instance)
     currentSfIdx = sfIdx;
     currentSfRow = sfIdx.row();
     currentDmIdx = sf->mapToSource(currentSfIdx);
+    currentDmRow = currentDmIdx.row();
+    currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
+    if (isDebug)
+    {
+        qDebug() << "DataModel::setCurrent"
+                 << "currentSfIdx =" << currentSfIdx
+                 << "currentSfRow =" << currentSfRow
+                 << "currentDmIdx =" << currentDmIdx
+                 << "currentDmRow =" << currentDmRow
+                 << "currentFilePath =" << currentFilePath
+            ;
+    }
+}
+
+void DataModel::setCurrent(QModelIndex dmIdx, int instance)
+{
+    if (instance != this->instance) {
+        errMsg = "Instance clash.";
+        G::issue("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
+        return;
+    }
+
+    // update current index parameters
+    QMutexLocker locker(&mutex);
+    QModelIndex sfIdx = sf->mapFromSource(dmIdx);
+    currentSfIdx = sfIdx;
+    currentSfRow = sfIdx.row();
+    currentDmIdx = dmIdx;
     currentDmRow = currentDmIdx.row();
     currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
     if (isDebug)

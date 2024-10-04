@@ -396,7 +396,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
-    scrollToCurrentRow();
+    scrollToCurrentRowIfNotVisible();
 
     resortImageCache();
 }

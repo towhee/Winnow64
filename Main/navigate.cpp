@@ -167,21 +167,28 @@ void MW::keyScrollEnd()
     if (thumbView->isVisible()) thumbView->scrollToRow(last, "MW::keyScrollEnd");
 }
 
-void MW::scrollToCurrentRow()
+void MW::scrollToCurrentRowIfNotVisible()
 {
 /*
-    Called after a sort or when thumbs shrink/enlarge. The current image may no longer be
-    visible hence need to scroll to the current row.
+    Called after a sort, when thumbs shrink/enlarge, or a filter change.
+
+    The current image may no longer be visible hence need to scroll to
+    the current row.
+
 */
     if (G::isLogger) G::log("MW::scrollToCurrentRow");
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    int sfRow = dm->currentSfRow;
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     G::wait(100);
 
     G::ignoreScrollSignal = true;
-    if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (gridView->isVisible()) gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (tableView->isVisible()) tableView->scrollTo(idx,
+    if (thumbView->isVisible() && !thumbView->isCellVisible(sfRow))
+        thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+    if (gridView->isVisible() && !gridView->isCellVisible(sfRow))
+        gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+    if (tableView->isVisible() && !tableView->isRowVisible(sfRow))
+        tableView->scrollTo(idx,
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 

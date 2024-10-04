@@ -176,7 +176,8 @@ public slots:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
-    void setCurrent(QModelIndex sfIdx, int instance);
+    void setCurrent(QModelIndex dmIdx, int instance);
+    void setCurrentSF(QModelIndex sfIdx, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
     // void errDM(Issue issue);

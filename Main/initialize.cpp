@@ -627,7 +627,7 @@ void MW::createSelection()
     connect(sel, &Selection::loadConcurrent, this, &MW::loadConcurrent);
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
-    connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrent);
+    connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
 }
 
 void MW::createVideoView()

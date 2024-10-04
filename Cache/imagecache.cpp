@@ -1922,7 +1922,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     // not in cache, maybe loading
     if (!icd->imCache.contains(fPath) && !isVideo) {
-        emit centralMsg("Loading Image...");
+        if (G::mode == "Loupe") emit centralMsg("Loading Image...");
         if (dm->currentSfRow > 0) {
             QString msg = "Not in imCache, might be loading.";
             G::issue("Warning", msg, "ImageCache::setCurrentPosition", sfRow, fPath);
@@ -2016,6 +2016,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
         qDebug().noquote() << "ImageCache::cacheImage                       "
                            << "     decoder" << id
                            << "row =" << k
+                           << "G::mode =" << G::mode
                            << "errMsg =" << decoder[id]->errMsg
                            << "decoder[id]->fPath =" << decoder[id]->fPath
                            //<< "dm->currentFilePath =" << dm->currentFilePath
@@ -2066,18 +2067,20 @@ void ImageCache::cacheImage(int id, int cacheKey)
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
-            /*
-            qDebug().noquote() << "ImageCache::cacheImage"
-                              << "     decoder" << id
-                              << "decoder[id]->fPath =" << decoder[id]->fPath
-                              << "dm->currentFilePath =" << dm->currentFilePath
-               ; //*/
-            // clear "Loading Image..." central msg
-            emit centralMsg("");
-            // load in ImageView
-            emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
-            // revert central view
-            emit imageCachePrevCentralView();
+            // if (G::mode == "Loupe") {
+                /*
+                qDebug().noquote() << "ImageCache::cacheImage"
+                                  << "     decoder" << id
+                                  << "decoder[id]->fPath =" << decoder[id]->fPath
+                                  << "dm->currentFilePath =" << dm->currentFilePath
+                   ; //*/
+                // clear "Loading Image..." central msg
+                emit centralMsg("");
+                // load in ImageView
+                emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+                // revert central view
+                emit imageCachePrevCentralView();
+            // }
         }
     }
     updateStatus("Update all rows", "ImageCache::cacheImage");

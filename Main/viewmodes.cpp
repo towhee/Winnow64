@@ -59,7 +59,7 @@ void MW::loupeDisplay(const QString src)
 
     /* recover thumbdock if it was visible before as gridView and full screen can
        hide the thumbdock */
-    if (!isFullScreen() && wasThumbDockVisible) {
+    if (!isFullScreen() /*&& wasThumbDockVisible*/) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
     }
@@ -82,20 +82,20 @@ void MW::loupeDisplay(const QString src)
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-    // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Table") {
-        if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = tableView->midVisibleRow;
-    }
-    if (prevMode == "Grid") {
-        if(gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = gridView->midVisibleCell;
-    }
-    if (prevMode == "Compare") {
-        scrollRow = dm->currentSfRow;
-    }
-    G::ignoreScrollSignal = false;
-    // thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
+    // // sync scrolling between modes (loupe, grid and table)
+    // if (prevMode == "Table") {
+    //     if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = tableView->midVisibleRow;
+    // }
+    // if (prevMode == "Grid") {
+    //     if(gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = gridView->midVisibleCell;
+    // }
+    // if (prevMode == "Compare") {
+    //     scrollRow = dm->currentSfRow;
+    // }
+    // G::ignoreScrollSignal = false;
+    // // thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);

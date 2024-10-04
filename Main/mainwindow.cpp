@@ -2243,7 +2243,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     settings->setValue("lastFileSelection", fPath);
 
     /* SCROLL CONTROL: don't scroll if mouse click source
-                       (screws up double clicks and disorients users)  */
+                       (screws up double clicks and disorients users)
+       G::ignoreScrollSignal = true must be executed before every scroll because the
+       scroll event triggers thumbHasScrolled, gridHasScrolled or tableHasScrolled
+       which sets G::ignoreScrollSignal = false */
     QString source = "MW::fileSelectionChange";
     if (G::fileSelectionChangeSource.left(3) == "Key") {
         G::ignoreScrollSignal = true;
@@ -2266,10 +2269,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
     }
 
-    if (G::fileSelectionChangeSource == "GridMouseClick") {
+    if (G::fileSelectionChangeSource == "IconMouseDoubleClick") {
         G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+        /*if (thumbView->isVisible())*/ thumbView->scrollToCurrent(source);
     }
+
+    // thumbView cannot be visible with gridView
+    // if (G::fileSelectionChangeSource == "GridMouseClick") {
+    //     G::ignoreScrollSignal = true;
+    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+    // }
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2683,11 +2692,12 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
 
-    /*
+    // /*
     qDebug() << "   MW::updateIconRange  src =" << src
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "dm->currentSfRow =" << dm->currentSfRow
             << "G::isInitializing =" << G::isInitializing
+            << "G::mode =" << G::mode
                ; //*/
 
     // the chunk range floats within the DataModel range so recalc
@@ -2873,7 +2883,7 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    // /*
+    /*
     {
         qDebug().noquote()
                  << "MW::loadConcurrent  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -3593,7 +3603,7 @@ void MW::thumbsShrink()
         else thumbView->thumbsShrink();
     }
     return;
-    scrollToCurrentRow();
+    scrollToCurrentRowIfNotVisible();
 
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
     if (thumbView->isVisible())  {
@@ -4792,8 +4802,6 @@ void MW::ingest()
         settings->setValue("gotoIngestFolder", gotoIngestFolder);
         settings->setValue("ingestRootFolder", ingestRootFolder);
         settings->setValue("ingestRootFolder2", ingestRootFolder2);
-        qDebug() << "MW::ingest"
-                 << "pathTemplateSelected =" << pathTemplateSelected;
         settings->setValue("pathTemplateSelected", pathTemplateSelected);
         settings->setValue("pathTemplateSelected2", pathTemplateSelected2);
         settings->setValue("manualFolderPath", manualFolderPath);
