@@ -1819,7 +1819,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
 
-    //setCurrentPosition(currentPath, "ImageCache::rebuildImageCacheParameters");
+    setCurrentPosition(currentPath, "ImageCache::rebuildImageCacheParameters");
 }
 
 void ImageCache::refreshImageCache()
