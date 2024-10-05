@@ -99,10 +99,6 @@ void MW::filterChange(QString source)
      // prevent unwanted fileSelectionChange()
     isFilterChange = true;
 
-    // record scroll position before change
-    // int oldThumbScrollPos = thumbView->scrollPosition();
-    // int oldGridScrollPos = gridView->scrollPosition();
-
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
     dm->sf->suspend(false);
@@ -131,10 +127,6 @@ void MW::filterChange(QString source)
 
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
-
-    // int newThumbScrollPos = thumbView->scrollPosition();
-    // int newGridScrollPos = gridView->scrollPosition();
-    // bool scrollChange = oldThumbScrollPos != newThumbScrollPos || oldGridScrollPos != newGridScrollPos;
 
     // sync the datamodel instance
     metaReadThread->initialize();
