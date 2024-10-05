@@ -116,9 +116,9 @@ CompareView::CompareView(QWidget *parent,
 bool CompareView::loadImage(QModelIndex idx, QString fPath)
 {
 /*
-This function is called from CompareImages for each image in the comparison
-selection.  As in ImageView, each pixmap is loaded from the cache if available,
-or loads the file otherwise.
+    This function is called from CompareImages for each image in the comparison
+    selection.  As in ImageView, each pixmap is loaded from the cache if available,
+    or loads the file otherwise.
 */
     if (G::isLogger) G::log("CompareView::loadImage");
 
@@ -146,7 +146,7 @@ or loads the file otherwise.
     // if (icd->imCache.find(fPath, image)) {
     // QHash<QString, QImage> imCache
     if (icd->imCache.contains(fPath)) {
-        pmItem->setPixmap(QPixmap::fromImage(image));
+        pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
     }
     else {
