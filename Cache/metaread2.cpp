@@ -434,7 +434,7 @@ void MetaRead2::cleanupIcons()
     the current datamodel row dm->currentSfRow.
 */
     if (G::isLogger) G::log("MetaRead2::cleanupIcons");
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "MetaRead2::cleanupIcons"
                  << "firstIconRow =" << firstIconRow
                  << "lastIconRow =" << lastIconRow
@@ -1091,7 +1091,7 @@ void::MetaRead2::quitAfterTimeout()
 void MetaRead2::dispatchFinished(QString src)
 {
     if (G::isLogger || G::isFlowLogger)  G::log("MetaRead2::dispatchFinished", src);
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "MetaRead2::dispatchFinished" << src
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
              // << "instanceClash =" << instanceClash

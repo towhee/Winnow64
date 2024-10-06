@@ -538,7 +538,7 @@ void MW::createEditActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
-    embedThumbnailsAction = new QAction(tr("Embed missing thumbnails  "), this);
+    embedThumbnailsAction = new QAction(tr("Embed missing thumbnails"), this);
     embedThumbnailsAction->setObjectName("embedThumbnails");
     embedThumbnailsAction->setShortcutVisibleInContextMenu(true);
     addAction(embedThumbnailsAction);
@@ -2315,6 +2315,49 @@ void MW::renameEraseMemCardFromContextMenu(QString path)
     eraseUsbActionFromContextMenu->setText(text);
 }
 
+void MW::renameEmbedThumbsContextMenu()
+{
+    QString embed = "Embed ";
+    if (G::backupBeforeModifying) embed = "Backup, then embed ";
+    if (!G::modifySourceFiles) {
+        QString txt = embed + "missing thumbnails";
+        embedThumbnailsAction->setText(txt);
+        embedThumbnailsAction->setEnabled(false);
+        return;
+    }
+
+    QModelIndexList selection = dm->selectionModel->selectedRows();
+    int missingCount = 0;
+    if (!selection.isEmpty()) {
+        for (int i = 0; i < selection.size(); i++) {
+            int sfRow = selection.at(i).row();
+            bool isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
+            if (isMissing) {
+                missingCount++;
+            }
+            /*
+            qDebug() << "MW::renameEmbedThumbsContextMenu"
+                     << "selection size =" << selection.size()
+                     << "row =" << sfRow
+                     << "missing count =" << missingCount
+                ; // */
+        }
+    }
+    if (missingCount) {
+        QString images = " images";
+        QString thumbnails = " thumbnails ";
+        QString count = QString::number(missingCount);
+        if (missingCount == 1) {
+            images = " image";
+            thumbnails = " thumbnail ";
+        }
+        QString txt = embed + "missing" + thumbnails + "for " + count + images;
+        embedThumbnailsAction->setText(txt);
+        embedThumbnailsAction->setEnabled(true);
+    }
+    else embedThumbnailsAction->setEnabled(false);
+}
+
 void MW::enableSelectionDependentMenus()
 {
 /*
@@ -2407,17 +2450,8 @@ void MW::enableSelectionDependentMenus()
     diagnosticsImageCacheAction->setEnabled(dmHasRows);
     diagnosticsEmbellishAction->setEnabled(dmHasRows);
 
-    // Missing thumbnails
-    bool isMissing = false;
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (!selection.isEmpty()) {
-        for (int i = 0; i < selection.size(); i++) {
-            int sfRow = selection.at(i).row();
-            isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
-            if (isMissing) break;
-        }
-    }
-    embedThumbnailsAction->setEnabled(isMissing);
+    // Missing thumbnails: rename and set enabled state
+    renameEmbedThumbsContextMenu();
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)

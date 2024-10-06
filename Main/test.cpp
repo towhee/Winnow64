@@ -65,7 +65,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         // report countdown time left in this folder
         if (secPerFolder) stressSecToGoInFolder = secPerFolder - seconds;
         // report number of images traversed
-        if (secPerFolder) stressSecToGoInFolder = slideCount;
+        // if (secPerFolder) stressSecToGoInFolder = slideCount;
 
         // next image
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
@@ -196,7 +196,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    qDebug() << centralLayout->currentIndex();
+    filterChange();
 
 }
 /*

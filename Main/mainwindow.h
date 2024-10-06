@@ -482,6 +482,7 @@ private slots:
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
+    void renameEmbedThumbsContextMenu();
     void updateCachedStatus(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
 //    void searchTextEdit();

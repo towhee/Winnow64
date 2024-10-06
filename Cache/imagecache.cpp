@@ -267,7 +267,7 @@ bool ImageCache::cacheItemListCompleted()
     log("cacheItemListCompleted");
 
     // range check
-    int n = icd->cacheItemList.size();
+    int n = static_cast<int>(icd->cacheItemList.size());
     if (n < dm->sf->rowCount()) return false;
 
     foreach (int row, toBeUpdated) {
@@ -499,7 +499,7 @@ void ImageCache::setTargetRange()
     int i;
     for (i = 0; i < icd->cacheItemList.length(); ++i) {
         if (abort) break;
-        if (icd->cacheItemList[i].isVideo) continue;
+        if (icd->cacheItemList.at(i).isVideo) continue;
         if (icd->cacheItemList.at(i).isTarget) {
             icd->cache.targetFirst = i;
             break;
@@ -507,7 +507,7 @@ void ImageCache::setTargetRange()
     }
     for (int j = i; j < icd->cacheItemList.length(); ++j) {
         if (abort) break;
-        if (icd->cacheItemList[j].isVideo) continue;
+        if (icd->cacheItemList.at(j).isVideo) continue;
         if (!icd->cacheItemList.at(j).isTarget) {
             icd->cache.targetLast = j - 1;
             break;
@@ -748,9 +748,19 @@ bool ImageCache::cacheUpToDate()
     Determine if all images in the target range are cached or being cached.
 */
     //log("cacheUpToDate", "Start");
-    bool debugThis = false;
 
     isCacheUpToDate = true;
+    for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
+        if (i >= icd->cacheItemList.count()) break;
+        if (icd->cacheItemList.at(i).isVideo) continue;
+        if (!icd->cacheItemList.at(i).isCached && !icd->cacheItemList.at(i).isCaching) {
+            isCacheUpToDate = false;
+            break;
+        }
+    }
+    return isCacheUpToDate;
+
+    bool debugThis = false;
     for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
         if (i >= icd->cacheItemList.count()) break;
         // skip videos
@@ -777,30 +787,31 @@ bool ImageCache::cacheUpToDate()
         // if (icd->imCache.contains(icd->cacheItemList.at(i).fPath)) continue; // crash
 
         // isCached is true but no associated decoder
-        if (isCached && id == -1) {
-            /*
-            log("cacheUpToDate passover",
-                    "row = " + QString::number(i).leftJustified(5) +
-                    "row decoder = " + QString::number(icd->cacheItemList.at(i).decoderId).leftJustified(3) +
-                    "isCached = " + QVariant(icd->cacheItemList.at(i).isCached).toString().leftJustified(6) +
-                    "isCaching = " + QVariant(icd->cacheItemList.at(i).isCaching).toString().leftJustified(6) +
-                    "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
-                );
-            //*/
-            if (debugThis) {
-            qDebug().noquote()
-                 << "ImageCache::cacheUpToDate isCached is true but no associated decoder"
-                 << "row = " << i
-                 << "decoder =" << icd->cacheItemList.at(i).decoderId
-                 << "isCached =" << icd->cacheItemList.at(i).isCached
-                 << "isCaching =" << icd->cacheItemList.at(i).isCaching
-                 << "attempts =" << icd->cacheItemList.at(i).attempts;
-            }
-            icd->cacheItemList[i].isCached = false;
-            icd->cacheItemList[i].isCaching = false;
-            isCacheUpToDate = false;
-            break;
-        }
+        // if (isCached && id == -1) {
+        //     /*
+        //     log("cacheUpToDate passover",
+        //             "row = " + QString::number(i).leftJustified(5) +
+        //             "row decoder = " + QString::number(icd->cacheItemList.at(i).decoderId).leftJustified(3) +
+        //             "isCached = " + QVariant(icd->cacheItemList.at(i).isCached).toString().leftJustified(6) +
+        //             "isCaching = " + QVariant(icd->cacheItemList.at(i).isCaching).toString().leftJustified(6) +
+        //             "attempt = " + QString::number(icd->cacheItemList.at(i).attempts).leftJustified(3)
+        //         );
+        //     // */
+        //     // if (debugThis)
+        //     {
+        //     qDebug().noquote()
+        //          << "ImageCache::cacheUpToDate isCached is true but no associated decoder"
+        //          << "row = " << i
+        //          << "decoder =" << icd->cacheItemList.at(i).decoderId
+        //          << "isCached =" << icd->cacheItemList.at(i).isCached
+        //          << "isCaching =" << icd->cacheItemList.at(i).isCaching
+        //          << "attempts =" << icd->cacheItemList.at(i).attempts;
+        //     }
+        //     icd->cacheItemList[i].isCached = false;
+        //     icd->cacheItemList[i].isCaching = false;
+        //     isCacheUpToDate = false;
+        //     break;
+        // }
 
         // check if caching image is in progress
         if (!isCached && !isCaching) {
@@ -1793,7 +1804,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
                     ;
         //*/
     }
-
     // remove surplus images in icd->imCache
     // CTSL::HashMap<QString, QImage> imCache
     // QVector<QString> keys;
@@ -1804,8 +1814,8 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
-            //            qDebug() << "ImageCache::rebuildImageCacheParameters"
-            //                     << "remove image =" << keys.at(i);
+            // qDebug() << "ImageCache::rebuildImageCacheParameters"
+            //          << "remove image =" << keys.at(i);
             icd->imCache.remove(keys.at(i));
         }
     }

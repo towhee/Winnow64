@@ -2195,7 +2195,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2692,8 +2692,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
 
-    // /*
-    qDebug() << "   MW::updateIconRange  src =" << src
+    /*
+    qDebug() << "MW::updateIconRange  src =" << src
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "dm->currentSfRow =" << dm->currentSfRow
             << "G::isInitializing =" << G::isInitializing
@@ -5061,7 +5061,7 @@ QString MW::embedThumbnails()
         exiftool -ifd1:all= -ext jpg Filename.jpg
 
 */
-    if (G::isLogger) G::log("MW::insertThumbnails");
+    if (G::isLogger) G::log("MW::embedThumbnails");
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return "Nothing selected";
@@ -5072,6 +5072,7 @@ QString MW::embedThumbnails()
     G::popUp->setProgressVisible(true);
     G::popUp->showPopup(txt, 0, true, 1);
     if (G::useProcessEvents) qApp->processEvents();
+    qDebug() << "MW::embedThumbnails" << txt;
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
@@ -5100,9 +5101,6 @@ QString MW::embedThumbnails()
         bool isReadWrite = dm->sf->index(sfRow, G::ReadWriteColumn).data().toBool();
         if (!isReadWrite) lockEncountered = true;
         if (isMissing && isReadWrite) {
-            if (G::backupBeforeModifying) {
-                Utilities::backup(fPath, "backup");
-            }
             // Add a thumbnail
             if (fileType == "tif") {
                 // call tif->parse which calls tif->encodeThumbnail
@@ -5112,12 +5110,10 @@ QString MW::embedThumbnails()
                 // must be a jpeg
                 Jpeg jpeg;
                 if (jpeg.embedThumbnail(fPath)) {
-                    dm->refreshMetadataForItem(sfRow, dm->instance);
-                    // QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
-                    // dm->setValueSf(sfIdx, true, dm->instance, "MW::embedthumbnails");
+                    QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
+                    dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
                 }
             }
-            thumbView->refreshThumbs();
             embeddingHappened = true;
         }
     }

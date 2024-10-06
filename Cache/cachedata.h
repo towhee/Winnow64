@@ -51,7 +51,7 @@ public:
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
         bool isVideo;               // videos are not cached
-        float sizeMB;               // memory req'd to cache image
+        int sizeMB;                 // memory req'd to cache image
         bool estSizeMB;             // no meta for width/height, so sizeMB default used initially
         // below reqd for decoding to avoid using DataModel in another thread
         bool metadataLoaded;
