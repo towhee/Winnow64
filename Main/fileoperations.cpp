@@ -260,13 +260,14 @@ void MW::deleteSelectedFiles()
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         msgBox.show();
         QPoint pos = geometry().center() + QPoint(0, 300);
+        /*
         qDebug() << "MW::deleteSelectedFiles before move"
                  << "msgBox =" << msgBox.pos()
                  << "geometry().topLeft() =" << geometry().topLeft()
                  << "geometry().center() =" << geometry().center()
                  << "geometry() =" << geometry()
                  << "pos =" << pos
-            ;
+            ; //*/
         msgBox.move(geometry().center());
 //        msgBox.move(QPoint(0,0));
         int ret = msgBox.exec();
@@ -408,7 +409,7 @@ void MW::deleteFiles(QStringList paths)
 void MW::currentFolderDeletedExternally(QString path)
 {
     if (G::isLogger) G::log("MW::currentFolderDeletedExternally");
-    qDebug() << "MW::currentFolderDeletedExternally" << path;
+    // qDebug() << "MW::currentFolderDeletedExternally" << path;
 
     bool isExternalDeletion = path != lastFolderDeletedByWinnow;
     stop();

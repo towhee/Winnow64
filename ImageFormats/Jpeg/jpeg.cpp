@@ -1334,7 +1334,9 @@ void Jpeg::rptRGB(int col, int row)
 bool Jpeg::embedThumbnail(QString fPath)
 {
     if (G::isLogger) G::log("Jpeg::embedThumbnail", fPath);
-
+    qDebug() << "Jpeg::embedThumbnail"
+             << "G::backupBeforeModifying =" << G::backupBeforeModifying
+             << fPath;
     if (G::backupBeforeModifying) Utilities::backup(fPath, "backup");
 
     ExifTool et;

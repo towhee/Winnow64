@@ -98,7 +98,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     }
 
     bool isFileSelectionChange = true;
-    // /*
+    /*
     qDebug() << "Selection::setCurrentIndex about to emit loadConcurrent"
              << "isFileSelectionChange =" << isFileSelectionChange
              << "sfIdx.row() =" << sfIdx.row()
@@ -167,7 +167,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
     }
 
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
-        qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
+        // qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
         shiftExtendIndex = sfIdx;
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
@@ -562,4 +562,5 @@ void Selection::selectionChanged(const QItemSelection &selected, const QItemSele
 {
     // update number selected on status bar
     emit updateStatus(true, "", "Selection::selectionChanged");
+    emit updateMissingThumbnails();
 }

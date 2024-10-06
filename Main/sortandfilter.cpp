@@ -148,9 +148,6 @@ void MW::filterChange(QString source)
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
-    // int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-    // imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
-    //                                  isShowCacheProgressBar, cacheWtAhead);
 
     // select after filtration
     if (newSelectReqd) {
@@ -164,7 +161,7 @@ void MW::filterChange(QString source)
     scrollToCurrentRowIfNotVisible();
 
     // update ImageCache if priority queue has changed
-    emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
+    // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
     G::popUp->reset();

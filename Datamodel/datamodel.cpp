@@ -1117,7 +1117,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
 bool DataModel::refreshMetadataForItem(int sfRow, int instance)
 {
 /*
-    Reads the image metadata into the datamodel for the row.  rgh change to sfRow
+    Reads the image metadata into the datamodel for the proxy row.
 */
     QString fun = "DataModel::refreshMetadataForItem";
     if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::PathRole).toString());

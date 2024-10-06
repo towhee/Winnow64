@@ -59,13 +59,13 @@ void MW::loupeDisplay(const QString src)
 
     /* recover thumbdock if it was visible before as gridView and full screen can
        hide the thumbdock */
-    if (!isFullScreen() /*&& wasThumbDockVisible*/) {
+    if (!isFullScreen() && wasThumbDockVisible) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
     }
 
-    if (thumbView->isVisible()) thumbView->setFocus();
-    else imageView->setFocus();
+    // if (thumbView->isVisible()) thumbView->setFocus();
+    // else imageView->setFocus();
 
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     // thumbView->setCurrentIndex(idx);
@@ -81,21 +81,6 @@ void MW::loupeDisplay(const QString src)
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
-
-    // // sync scrolling between modes (loupe, grid and table)
-    // if (prevMode == "Table") {
-    //     if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-    //     else scrollRow = tableView->midVisibleRow;
-    // }
-    // if (prevMode == "Grid") {
-    //     if(gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-    //     else scrollRow = gridView->midVisibleCell;
-    // }
-    // if (prevMode == "Compare") {
-    //     scrollRow = dm->currentSfRow;
-    // }
-    // G::ignoreScrollSignal = false;
-    // // thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -237,12 +222,12 @@ void MW::tableDisplay()
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
     if (!isFullScreen()){
-        if(wasThumbDockVisible && !thumbDock->isVisible()) {
+        if (wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
             sel->setCurrentRow(dm->currentSfRow);
         }
-        if(!wasThumbDockVisible && thumbDock->isVisible()) {
+        if (!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
         }

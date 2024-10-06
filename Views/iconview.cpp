@@ -986,7 +986,7 @@ void IconView::scrollToCurrent(QString source)
 {
     if (isDebug) G::log("IconView::scrollToCurrent", objectName());
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
-    // /*
+    /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
              << "source =" << source
              << "objectName() =" << objectName()
@@ -996,7 +996,6 @@ void IconView::scrollToCurrent(QString source)
     // */
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
     // scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
-
 }
 
 void IconView::enterEvent(QEnterEvent *event)

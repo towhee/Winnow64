@@ -53,6 +53,7 @@ signals:
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
     void updateStatus(bool, QString, QString);
     void updateCurrent(QModelIndex sfIdx, int instance);
+    void updateMissingThumbnails();
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);

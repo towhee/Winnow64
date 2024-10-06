@@ -628,6 +628,7 @@ void MW::createSelection()
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
+    connect(sel, &Selection::updateMissingThumbnails, this, &MW::renameEmbedThumbsContextMenu);
 }
 
 void MW::createVideoView()
