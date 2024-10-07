@@ -159,6 +159,24 @@ Tiff::Tiff(QString src)
     isDebug = false;
 }
 
+bool Tiff::parse(ImageMetadata &m, QString fPath)
+{
+/*
+    Called from MW::embedThumbnails
+*/
+    MetadataParameters p;
+    p.file.setFileName(fPath);
+    if (p.file.open(QIODevice::ReadOnly)) {
+        IFD *ifd = new IFD;
+        IRB *irb = new IRB;
+        IPTC *iptc = new IPTC;
+        Exif *exif = new Exif;
+        GPS *gps = new GPS;
+        return parse(p, m, ifd,irb, iptc, exif, gps);
+    }
+    return false;
+}
+
 bool Tiff::parse(MetadataParameters &p,
            ImageMetadata &m,
            IFD *ifd,
@@ -168,6 +186,8 @@ bool Tiff::parse(MetadataParameters &p,
            GPS *gps)
 {
 /*
+    Called from Metadata.
+
     This function reads the metadata from a tiff file. If the tiff file does not contain
     a thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail
     will be added at the end of file.
@@ -437,7 +457,8 @@ bool Tiff::parse(MetadataParameters &p,
 
     if (G::modifySourceFiles &&
         G::autoAddMissingThumbnails &&
-        m.offsetThumb == m.offsetFull && thumbLongside > 512)
+        m.offsetThumb == m.offsetFull &&
+        thumbLongside > 512)
     {
         p.offset = m.offsetThumb;        // Smallest preview to use
         encodeThumbnail(p, m, ifd);
@@ -1239,6 +1260,8 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (!parseForDecoding(p, ifd)) {
         return false;
     }
+
+    qDebug() << "Tiff::encodeThumbnail" << p.fPath;
 
     // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
     p.file.close();

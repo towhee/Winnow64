@@ -43,6 +43,7 @@ public:
                IPTC *iptc,
                Exif *exif,
                GPS *gps);
+    bool parse(ImageMetadata &m, QString fPath);
     bool parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd);
 
     // decode from cache decoder
