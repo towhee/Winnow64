@@ -186,7 +186,7 @@ bool Tiff::parse(MetadataParameters &p,
            GPS *gps)
 {
 /*
-    Called from Metadata.
+    Called from Metadata::readMetadata.
 
     This function reads the metadata from a tiff file. If the tiff file does not contain
     a thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail
@@ -1260,8 +1260,6 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (!parseForDecoding(p, ifd)) {
         return false;
     }
-
-    qDebug() << "Tiff::encodeThumbnail" << p.fPath;
 
     // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
     p.file.close();
