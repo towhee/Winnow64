@@ -362,6 +362,7 @@ void MW::deleteFiles(QStringList paths)
 
     // if all images in folder were deleted
     if (sldm.count() == dm->sf->rowCount()) {
+        bookmarks->updateBookmarks();
         stop("deleteFiles");
         folderSelectionChange();
         return;

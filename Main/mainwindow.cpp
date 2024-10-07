@@ -5111,7 +5111,6 @@ QString MW::embedThumbnails()
                     QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
                     dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
                 }
-                // dm->refreshMetadataForItem(sfRow, dm->instance);
             }
             else {
                 // must be a jpeg
