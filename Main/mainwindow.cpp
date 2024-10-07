@@ -5104,7 +5104,14 @@ QString MW::embedThumbnails()
             // Add a thumbnail
             if (fileType == "tif") {
                 // call tif->parse which calls tif->encodeThumbnail
-                dm->refreshMetadataForItem(sfRow, dm->instance);
+                Tiff tiff;
+                ImageMetadata m;
+                tiff.parse(m, fPath);
+                if (!m.isEmbeddedThumbMissing) {
+                    QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
+                    dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
+                }
+                // dm->refreshMetadataForItem(sfRow, dm->instance);
             }
             else {
                 // must be a jpeg
@@ -5122,12 +5129,6 @@ QString MW::embedThumbnails()
 
     // enable/disable menu
     enableSelectionDependentMenus();
-    // if (dm->missingThumbnails()) {
-    //     embedThumbnailsAction->setEnabled(true);
-    // }
-    // else {
-    //     embedThumbnailsAction->setEnabled(false);
-    // }
 
     refreshBookmarks();     // rgh req'd?
 
