@@ -223,6 +223,13 @@ bool Utilities::comboBoxContainsText(QComboBox* comboBox, const QString& text)
     return false;
 }
 
+bool Utilities::clipboardHasUrls()
+{
+    const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
+    if (mimeData->urls().count()) return true;
+    return false;
+}
+
 void Utilities::backup(QString fPath, QString subfolderName)
 {
     QString fName = QFileInfo(fPath).fileName();

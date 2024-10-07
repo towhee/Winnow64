@@ -40,10 +40,18 @@ void MW::copyFiles()
     G::popUp->showPopup(msg, 2000);
 }
 
-void MW::pasteFiles()
+void MW::pasteFiles(QString folderPath)
 {
     if (G::isLogger) G::log("MW::pasteFiles");
-    //QClipboard *clipboard = QGuiApplication::clipboard();
+
+    // are there any files to paste?
+    if (!Utilities::clipboardHasUrls()) {
+        QString msg = "There are no files in the clipboard.";
+        G::popUp->showPopup(msg, 2000);
+        return;
+    }
+
+    if (folderPath == "") folderPath = G::currRootFolder;
     const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
     QList<QUrl> urls;
     QStringList newPaths;
@@ -52,7 +60,7 @@ void MW::pasteFiles()
         QString srcPath = url.path();
         QFileInfo fi(url.path());
         if (QFile(srcPath).exists()) {
-            QString destPath = G::currRootFolder + "/" + fi.fileName();
+            QString destPath = folderPath + "/" + fi.fileName();
             QFile::copy(url.path(), destPath);
             newPaths << destPath;
         }
@@ -70,6 +78,13 @@ void MW::pasteFiles()
     }
     // update filter counts
     buildFilters->recount();
+
+    // update folder counts
+    fsTree->fsModel->refresh(folderPath);
+    bookmarks->updateCount();
+
+    // refresh folder to show pasted images
+    if (folderPath == G::currRootFolder) folderAndFileSelectionChange(dm->currentFilePath, "pasteFiles");;
 
     // popup msg
     QString mImages;
