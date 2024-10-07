@@ -1620,7 +1620,9 @@ void MW::createMiscActions()
     pasteFilesAction->setShortcutVisibleInContextMenu(true);
     pasteFilesAction->setShortcut(QKeySequence("Ctrl+V"));
     addAction(pasteFilesAction);
-    connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
+    // connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
+    connect(pasteFilesAction, &QAction::triggered, this,
+           [this](){pasteFiles(mouseOverFolderPath);});
 
     // initially enable/disable actions
     embedThumbnailsAction->setEnabled(G::modifySourceFiles);
@@ -2254,12 +2256,11 @@ void MW::renamePasteFilesAction(QString folderName)
     if (QGuiApplication::clipboard()->mimeData()->hasUrls()) {
         QString txt = "Paste file(s) into " + Utilities::enquote(folderName);
         pasteFilesAction->setText(txt);
-        pasteFilesAction->setEnabled(true);
     }
     else {
         pasteFilesAction->setText("Paste files");
-        pasteFilesAction->setEnabled(false);
     }
+    pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
 }
 
 void MW::renameCopyFolderPathAction(QString folderName)
@@ -2388,6 +2389,8 @@ void MW::enableSelectionDependentMenus()
     copyFilesAction->setEnabled(dmHasRows);
     copyImageAction->setEnabled(dmHasRows);
     copyImagePathFromContextAction->setEnabled(dmHasRows);
+    pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
+
     deleteImagesAction->setEnabled(dmHasRows);
     pickAction->setEnabled(dmHasRows);
     rejectAction->setEnabled(dmHasRows);

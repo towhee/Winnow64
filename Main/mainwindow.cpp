@@ -963,7 +963,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* ALL EVENTS (G::showAllEvents) */
     {
-        if (G::showAllEvents) {
+        if (G::showAllEvents)
+        {
             if (event->type()
                                      != QEvent::Paint
                     && event->type() != QEvent::UpdateRequest
@@ -1179,7 +1180,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             ejectActionFromContextMenu->setEnabled(true);
             addBookmarkAction->setEnabled(true);
             addBookmarkActionFromContext->setEnabled(true);
-            pasteFilesAction->setEnabled(true);
+            pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
 
             QString folderName = "";
             mouseOverFolderPath = "";
@@ -1246,7 +1247,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 ejectActionFromContextMenu->setEnabled(false);
                 addBookmarkAction->setEnabled(false);
                 addBookmarkActionFromContext->setEnabled(false);
-                pasteFilesAction->setEnabled(false);
+                // pasteFilesAction->setEnabled(false);
             }
 
             // rename

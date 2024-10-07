@@ -1318,7 +1318,7 @@ private:
 
     // located in fileoperations.cpp
     void copyFiles();
-    void pasteFiles();
+    void pasteFiles(QString folderPath = "");
     void shareFiles();
     void copyFolderPathFromContext();
     void copyImagePathFromContext();

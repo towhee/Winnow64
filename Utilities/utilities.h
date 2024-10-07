@@ -34,6 +34,7 @@ public:
     static void uniqueInList(QString &name, const QStringList &list, QString delimiter = "_");
 
     static bool comboBoxContainsText(QComboBox* comboBox, const QString& text);
+    static bool clipboardHasUrls();
 
     static void backup(QString fPath, QString subfolderName);
     static QString inputText(QString title, QString description,
