@@ -2273,7 +2273,7 @@ void MW::renameRevealFileAction(QString folderName)
 {
     QString app;
     #ifdef Q_OS_WIN
-    whatever = "Explorer";
+    app = "Explorer";
     #endif
     #ifdef Q_OS_MAC
     app = "Finder";
