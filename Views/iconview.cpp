@@ -965,7 +965,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-    // /*
+    /*
     qDebug() << "IconView::scrollToRow" << objectName()
              << "row =" << row
              << "source =" << source;
@@ -994,8 +994,8 @@ void IconView::scrollToCurrent(QString source)
              << "dm->currentSfIdx =" << dm->currentSfIdx
            ;
     // */
+    G::ignoreScrollSignal = true;
     scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
-    // scrollTo(dm->currentSfIdx, ScrollHint::EnsureVisible);
 }
 
 void IconView::enterEvent(QEnterEvent *event)
@@ -1296,7 +1296,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
         QString row = "row = " + QString::number(indexAt(event->pos()).row()) + " ";
         G::log("IconView::mouseDoubleClickEvent", row + objectName());
     }
-    /*
+    // /*
     qDebug() << "IconView::mouseDoubleClickEvent"
              << event
              << "btn =" << event->button()
@@ -1307,12 +1307,24 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
     // required to rapidly toggle ctrl click select/deselect without a delay
     if (event->modifiers() & Qt::ControlModifier) {
+        qDebug() << "IconView::mouseDoubleClickEvent ControlModifier"
+                 << event
+                 << "btn =" << event->button()
+                 << "modifiers =" << event->modifiers()
+                 << "G::mode =" << G::mode
+            ; //*/
         QListView::mouseDoubleClickEvent(event);
         return;
     }
 
     // show/play when not in loupe mode
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
+        qDebug() << "IconView::mouseDoubleClickEvent mode != Loupe"
+                 << event
+                 << "btn =" << event->button()
+                 << "modifiers =" << event->modifiers()
+                 << "G::mode =" << G::mode
+            ; //*/
         G::fileSelectionChangeSource = "IconMouseDoubleClick";
         m2->loupeDisplay("IconView::mouseDoubleClickEvent");
     }

@@ -539,7 +539,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setupPlatform();
 
     // enable / disable rory functions
-    //rory();
+    // rory();
+
     setImageCacheParameters();
 
     // recall previous thumbDock state in case last closed in Grid mode
@@ -574,10 +575,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             centralLayout->setCurrentIndex(StartTab);
         }
         else {
+            // default to loupe display at start
+            loupeDisplay("Opening app");
             // process the persistant folder if available
             if (rememberLastDir && !isShiftOnOpen) {
                 if (isFolderValid(lastDir, true, true)) {
-                    G::isInitializing = false;
                     centralLayout->setCurrentIndex(LoupeTab);
                     fsTree->select(lastDir);
                     folderSelectionChange();
@@ -669,7 +671,7 @@ void MW::showEvent(QShowEvent *event)
 /*
 
 */
-    if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 
     // exit if already initialized (ie when moving window)
     if (!G::isInitializing) {
@@ -2186,7 +2188,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::fileSelectionChange",
-               "row = " + QString::number(current.row()) + " Src = " + src);
+               "row = " + QString::number(current.row()) + " Src = " + src
+               + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
         G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
     }
 
@@ -2196,7 +2199,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2243,43 +2246,39 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
 
-    /* SCROLL CONTROL: don't scroll if mouse click source
-                       (screws up double clicks and disorients users)
-       G::ignoreScrollSignal = true must be executed before every scroll because the
-       scroll event triggers thumbHasScrolled, gridHasScrolled or tableHasScrolled
-       which sets G::ignoreScrollSignal = false */
+    /* SCROLL CONTROL:
+
+       When an item (icon or row) is selected the default behavior is to scroll the item
+       to the center of the view (thumbView, gridView or tableView) so the user does not
+       have to scroll as they move through the images. However, when the user mouse
+       clicks on an item scrolling to center is disorienting so we do not scroll.
+    */
+
     QString source = "MW::fileSelectionChange";
-    if (G::fileSelectionChangeSource.left(3) == "Key") {
-        G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-        G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCurrent(source);
-        G::ignoreScrollSignal = true;
-        if (tableView->isVisible()) tableView->scrollToCurrent();
+    // Mouse clicks on a view item
+    if (G::fileSelectionChangeSource.right(5) == "Click") {
+        // if source is thumbView then only tableView could be visible
+        if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+            tableView->scrollToCurrent();
+        }
+        // if source is tableView then only thumbView could be visible
+        else if (G::fileSelectionChangeSource == "TableMouseClick") {
+            thumbView->scrollToCurrent(source);
+        }
+        // is source is doubleMouseClick then only thumbView will be visible
+        else if (G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+            thumbView->scrollToCurrent(source);
+        }
+    }
+    // other selection methods (keyboard, folderAndFileSelectionChange, handleStartupArgs...
+    else {
+        thumbView->scrollToCurrent(source);
+        gridView->scrollToCurrent(source);
+        tableView->scrollToCurrent();
     }
 
-    if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToCurrent(source);
-        G::ignoreScrollSignal = true;
-        if (tableView->isVisible()) tableView->scrollToCurrent();
-    }
-
-    if (G::fileSelectionChangeSource == "TableMouseClick") {
-        G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    }
-
-    if (G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-        G::ignoreScrollSignal = true;
-        /*if (thumbView->isVisible())*/ thumbView->scrollToCurrent(source);
-    }
-
-    // thumbView cannot be visible with gridView
-    // if (G::fileSelectionChangeSource == "GridMouseClick") {
-    //     G::ignoreScrollSignal = true;
-    //     if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-    // }
+    // G::ignoreScrollSignal = false;
+    // G::fileSelectionChangeSource = "";
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2304,7 +2303,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-                    // centralLayout->setCurrentIndex(LoupeTab);
                     loupeDisplay("MW::fileSelectionChange");
                 }
             }
@@ -2318,7 +2316,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         }
     }
 
-    G::ignoreScrollSignal = false;
+    // G::ignoreScrollSignal = false;
     G::fileSelectionChangeSource = "";
 
     // update ImageCache
@@ -2398,7 +2396,11 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     selected.
 */
     if (G::isLogger) G::log("MW::folderAndFileSelectionChange", fPath);
+
     setCentralMessage("Loading " + fPath + " ...");
+
+    // used by scrolling in MW::fileSelectionChange
+    G::fileSelectionChangeSource = "folderAndFileSelectionChange";
 
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
@@ -2798,10 +2800,6 @@ void MW::loadConcurrentNewFolder()
 
     QString src = "MW::loadConcurrentNewFolder ";
     int count = 0;
-
-    // reset for bestAspect thumbnail calc
-//    G::iconWMax = G::minIconSize;
-//    G::iconHMax = G::minIconSize;
 
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and

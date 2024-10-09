@@ -10,7 +10,6 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Paste images to root folder selected
 - When select folder using include subfolders make sure it is and remains selected in FSTree
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - FS and Bookmarks show unselected row highlighted sometimes
@@ -123,6 +122,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Paste images to root folder selected
 - Bookmarks folder count not refreshing after delete all files in folder
 - When change filter, scroll to current index
 - DataModel::imMetadata using proxy

@@ -29,8 +29,8 @@ void MW::loupeDisplay(const QString src)
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    /*
-    if (!G::isInitializing && G::isLogger)
+    // /*
+    // if (!G::isInitializing && G::isLogger)
         qDebug() << "MW::loupeDisplay"
                  << "src =" << src
                  << "wasThumbDockVisible =" << QVariant(wasThumbDockVisible).toString()
