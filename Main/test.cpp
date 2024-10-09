@@ -196,8 +196,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    filterChange();
-
+    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2024-09-01_0169_Zen2048.JPG");
 }
 /*
    Performance

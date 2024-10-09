@@ -133,6 +133,7 @@ void TableView::scrollToCurrent()
 {
     if (G::isLogger) G::log("TableView::scrollToCurrent");
     QModelIndex sfIdx = dm->sf->index(currentIndex().row(), 1);
+    G::ignoreScrollSignal = true;
     scrollTo(sfIdx, ScrollHint::PositionAtCenter);
 }
 

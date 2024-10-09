@@ -16,6 +16,19 @@ void MW::writeSettings()
 */
     if (G::isLogger) G::log("MW::writeSettings");
 
+    // state
+    settings->setValue("Geometry", saveGeometry());
+    settings->setValue("WindowState", saveState());
+    settings->setValue("isFullScreen", isFullScreen());
+
+    // full screen
+    settings->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
+    settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
+    settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
+    settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
+    settings->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
+    settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
+
     // general
     settings->setValue("lastPrefPage", lastPrefPage);
     //setting->setValue("mouseClickScroll", mouseClickScroll);
@@ -90,19 +103,6 @@ void MW::writeSettings()
     settings->setValue("isCachePreview", isCachePreview);
     settings->setValue("cachePreviewWidth", cachePreviewWidth);
     settings->setValue("cachePreviewHeight", cachePreviewHeight);
-
-    // full screen
-    settings->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
-    settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
-    settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
-    settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
-    settings->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
-    settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
-
-    // state
-    settings->setValue("Geometry", saveGeometry());
-    settings->setValue("WindowState", saveState());
-    settings->setValue("isFullScreen", isFullScreen());
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
