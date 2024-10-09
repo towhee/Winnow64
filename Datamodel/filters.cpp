@@ -126,6 +126,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catRating] = G::RatingColumn;
     filterCategoryToDmColumn[catLabel] = G::LabelColumn;
     filterCategoryToDmColumn[catType] = G::TypeColumn;
+    filterCategoryToDmColumn[catFolder] = G::FolderNameColumn;
     filterCategoryToDmColumn[catYear] = G::YearColumn;
     filterCategoryToDmColumn[catDay] = G::DayColumn;
     filterCategoryToDmColumn[catModel] = G::CameraModelColumn;
@@ -228,6 +229,7 @@ void Filters::createDynamicFilters()
     ratings = new QTreeWidgetItem(this);
     labels = new QTreeWidgetItem(this);
     types = new QTreeWidgetItem(this);
+    folders = new QTreeWidgetItem(this);
     years = new QTreeWidgetItem(this);
     days = new QTreeWidgetItem(this);
     models = new QTreeWidgetItem(this);
@@ -243,6 +245,7 @@ void Filters::createDynamicFilters()
     createFilter(ratings, catRating);
     createFilter(labels, catLabel);
     createFilter(types, catType);
+    createFilter(folders, catFolder);
     createFilter(years, catYear);
     createFilter(days, catDay);
     createFilter(models, catModel);
@@ -286,6 +289,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(ratings);
     setCategoryBackground(labels);
     setCategoryBackground(types);
+    setCategoryBackground(folders);
     setCategoryBackground(years);
     setCategoryBackground(days);
     setCategoryBackground(models);
@@ -313,6 +317,7 @@ void Filters::removeChildrenDynamicFilters()
     ratings->takeChildren();
     labels->takeChildren();
     types->takeChildren();
+    folders->takeChildren();
     years->takeChildren();
     days->takeChildren();
     models->takeChildren();
@@ -1058,6 +1063,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(ratings));
     collapse(indexFromItem(labels));
     collapse(indexFromItem(types));
+    collapse(indexFromItem(folders));
     collapse(indexFromItem(years));
     collapse(indexFromItem(days));
     collapse(indexFromItem(models));

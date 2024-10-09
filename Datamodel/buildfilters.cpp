@@ -372,6 +372,11 @@ void BuildFilters::updateUnfilteredCounts()
     map.clear();
 
     for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    filters->updateUnfilteredCountPerItem(map, filters->folders);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
     filters->updateUnfilteredCountPerItem(map, filters->years);
     map.clear();
@@ -468,6 +473,11 @@ void BuildFilters::updateFilteredCounts()
     for (int row = 0; row < rows; row++)
         map[dm->sf->index(row, G::TypeColumn).data().toString().trimmed()]++;
     filters->updateFilteredCountPerItem(map, filters->types);
+    map.clear();
+
+    for (int row = 0; row < rows; row++)
+        map[dm->sf->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    filters->updateFilteredCountPerItem(map, filters->folders);
     map.clear();
 
     for (int row = 0; row < rows; row++)
@@ -711,6 +721,14 @@ void BuildFilters::appendUniqueItems()
         map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
     filters->addCategoryItems(map, filters->types);
     time("Initialize types");
+    emit updateProgress(progress += progressInc);
+    map.clear();
+
+    // folders
+    for (int row = 0; row < rows; row++)
+        map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    filters->addCategoryItems(map, filters->folders);
+    time("Initialize folders");
     emit updateProgress(progress += progressInc);
     map.clear();
 

@@ -194,6 +194,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Read ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
@@ -748,6 +749,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
                              ;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
+    QString folderName = fileInfo.dir().dirName();
 //    qDebug() << "DataModel::addFileDataForRow" << row << fPath;
     QString ext = fileInfo.suffix().toLower();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
@@ -768,6 +770,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
+    setData(index(row, G::FolderNameColumn), folderName);
     setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
     QString s = fileInfo.suffix().toUpper();
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));

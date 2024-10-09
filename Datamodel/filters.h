@@ -19,6 +19,7 @@ public:
     QTreeWidgetItem *ratings;
     QTreeWidgetItem *labels;
     QTreeWidgetItem *types;
+    QTreeWidgetItem *folders;
     QTreeWidgetItem *models;
     QTreeWidgetItem *titles;
     QTreeWidgetItem *lenses;
@@ -37,6 +38,7 @@ public:
     QString catRating = "Ratings";
     QString catLabel = "Color classes";
     QString catType = "File types";
+    QString catFolder = "Folders";
     QString catYear = "Years";
     QString catDay = "Days";
     QString catModel = "Camera models";
