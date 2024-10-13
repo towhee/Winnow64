@@ -24,7 +24,7 @@ NORMAL DEPLOYMENT
         - Confirm is universal:
           lipo -archs /Users/roryhill/Projects/build-winnow64-Qt_6_6_0_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow
           or
-          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.37.app/Contents/MacOS/Winnow
+          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.40.app/Contents/MacOS/Winnow
           result: x86_64 arm64
         - In Disk Utility.app: File > New Image > Image from Folder...
             - select /Users/roryhill/Projects/WinnowInstall/Winnow.

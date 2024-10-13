@@ -19,7 +19,14 @@ WINDOWS
 
 MACOS
 
+Homebrew vs cmake in app:
+
+    Homebrew is easy and available to all apps while cmake installing in the app project is portable,
+    as it is integrated into the app.
+
+
 Using Homebrew:
+---------------
     - Install Homebrew if necessary in terminal
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
@@ -29,7 +36,8 @@ Using Homebrew:
     - Install library (ie libtiff)
       brew install libtiff
 
-From ChatGPT: "Install GitHub Library MacOS"
+INSTALL LIBRARY IN /Users/roryhill/Projects/Winnow64/Lib
+--------------------------------------------------------
 
 1. Clone the Repository
    - Open Terminal.
@@ -39,9 +47,9 @@ From ChatGPT: "Install GitHub Library MacOS"
    - Replace https://github.com/username/repository.git with the actual URL of the GitHub repository.
 
 2. Install Dependencies
-   - The library might have dependencies that need to be installed. Check the repository's README.md or INSTALL.md files for any required dependencies.
-   - You can install these using a package manager like Homebrew:
-     brew install dependency_name
+   - The library might have dependencies that need to be installed. Check the repository's README.md or INSTALL.md files
+     for any required dependencies.
+   - You can install these using a package manager like Homebrew: brew install dependency_name
 
 3. Build the Library
    - Navigate to the cloned repository’s directory:
@@ -59,13 +67,42 @@ From ChatGPT: "Install GitHub Library MacOS"
      make
      sudo make install
 
-4. Link the Library to Your Qt Project
-   - In your Qt project’s .pro file, add the library’s include path and the library itself:
-     INCLUDEPATH += /path/to/library/include
-     LIBS += -L/path/to/library/lib -llibrary_name
-   - Replace /path/to/library/include with the actual path to the library’s header files.
-   - Replace /path/to/library/lib with the path to the compiled library files.
-   - Replace -llibrary_name with the actual name of the library.
+4. Make a universal build
+
+Universal builds:
+
+   - Replace the build folder with 3 build folders:
+
+     build-arm64
+     build-x86_64
+     build-universal
+
+   - Build library for arm64 and x86_64 in their build folders (example libtiff)
+
+     cd /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
+     cmake .. -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
+     cmake .. -G"Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
+     make -j$(sysctl -n hw.ncpu)
+     make install
+     cd /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64
+     cmake .. -G"Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64
+     make -j$(sysctl -n hw.ncpu)
+     make install
+
+   - Combine arm64 and x86_64 into univeersal library in build-universal (example libtiff)
+
+     lipo -create /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64/lib/libtiff.dylib /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64/lib/libtiff.dylib -output /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-universal/libtiff.dylib
+
+   - copy include folder to build-universal
+
+   - make symbolic links to deal with versions (use absolute references)
+
+     ln -s ln -s /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-universal/libtiff.6.dylib /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-universal/libtiff.dylib
+
+5. Link the Library to Your Qt Project
+    macx:LIBS += -L$$PWD/Lib/libtiff/build-universal -ltiff
+    macx:INCLUDEPATH += $$PWD/Lib/libtiff/build-universal/include
+    macx:QMAKE_RPATHDIR += $$PWD/Lib/libtiff/build-universal
 
 5. Update and Build Your Project
    - Run qmake to update your project files:
@@ -86,9 +123,57 @@ From ChatGPT: "Install GitHub Library MacOS"
 
 8. Copy compiled library to winnow executable and add this step to Deploy process
 
+---------------------
+
 Notes:
-Ensure that the library is compatible with your macOS version and Qt setup.
 If the library includes a .framework file (common for macOS), you might need to link it differently in your .pro file:
 qmake
 Copy code
 LIBS += -F/path/to/framework -framework FrameworkName
+
+---------------------
+
+Why are some libraries at /usr/local/lib and others at /opt/homebrew/Cellar?
+
+The difference in library locations (/usr/local/lib and /opt/homebrew/Cellar) relates
+to how Homebrew has evolved and the underlying architecture of your macOS system:
+
+1. Homebrew Transition to /opt/homebrew:
+
+   • For macOS systems running on Apple Silicon (M1/M2 chips), Homebrew installs itself
+     in the /opt/homebrew directory by default.
+
+   • This change was made to distinguish between Intel (x86_64) and Apple Silicon (ARM64)
+     architectures and to avoid conflicts with older software or other package managers
+     that might use /usr/local.
+
+   • On older Intel-based Macs, Homebrew traditionally used /usr/local as its default
+     installation prefix, which is why you might still see some libraries there.
+
+2. Homebrew’s Directory Structure:
+
+   • When you install libraries using Homebrew, they are stored in /opt/homebrew/Cellar on Apple Silicon or /usr/local/Cellar on Intel. The Cellar is where the actual versions of the software packages are kept.
+
+   • Homebrew then creates symbolic links to the latest versions of these libraries in /opt/homebrew/lib or /usr/local/lib, making them easier to find for system compilers and linkers.
+
+3. Mixing Intel and Apple Silicon Software:
+
+   • If you’re running on a newer macOS system with Apple Silicon but have some Intel-based software installed, you might still have libraries in /usr/local/lib because those were installed before the transition or because they were installed using the Intel version of Homebrew.
+
+   • Homebrew supports running in “Rosetta 2” (an x86_64 emulation mode) on Apple Silicon, which uses /usr/local as its prefix, while the native ARM version uses /opt/homebrew.
+
+4. Compatibility and Migration:
+
+   • It’s generally recommended to migrate all your Homebrew installations to use /opt/homebrew if you’re on Apple Silicon to ensure compatibility and make use of native binaries.
+
+   • If you have existing libraries in /usr/local/lib and they’re still required by your project or other Intel-based software, you can leave them there. However, for new projects, it’s best to prioritize using libraries from /opt/homebrew.
+
+What You Should Do:
+
+   • Check Your System Architecture: If you are on an Apple Silicon Mac, it’s best to use the /opt/homebrew path for all new installations to ensure you’re using native ARM64 binaries.
+
+   • Use brew doctor: Running this command can help identify any issues with mixed installations or outdated libraries.
+
+   • Migrate if Necessary: If you have libraries in /usr/local that can be reinstalled under /opt/homebrew, consider doing so to streamline your setup.
+
+This structure helps keep software organized based on the architecture and avoids conflicts between different versions of the same libraries.

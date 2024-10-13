@@ -16,7 +16,6 @@ BUGS / TO DO
 - Label colors not getting into LR during ingest
 - Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
-- Add folders to filters
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
 - Change msg for x files to x images and y xmp sidecars
@@ -122,6 +121,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Add folders to filters
 - Paste images to root folder selected
 - Bookmarks folder count not refreshing after delete all files in folder
 - When change filter, scroll to current index

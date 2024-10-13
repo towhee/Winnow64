@@ -1,0 +1,104 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 .SFNS-Regular;\f1\fnil\fcharset0 .AppleSystemUIFontMonospaced-Regular;\f2\froman\fcharset0 TimesNewRomanPSMT;
+\f3\fnil\fcharset0 .SFNS-Bold;}
+{\colortbl;\red255\green255\blue255;\red14\green14\blue14;}
+{\*\expandedcolortbl;;\cssrgb\c6700\c6700\c6700;}
+\margl1440\margr1440\vieww27400\viewh27380\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs42 \cf2 The difference in library locations (
+\f1 /usr/local/lib
+\f0  and 
+\f1 /opt/homebrew/Cellar
+\f0 ) relates to how Homebrew has evolved and the underlying architecture of your macOS system:\
+\
+\pard\tqr\tx260\tx420\li420\fi-420\sl324\slmult1\partightenfactor0
+
+\f2\fs36 \cf2 	1.	
+\f3\b\fs42 Homebrew Transition to 
+\f1\b0 /opt/homebrew
+\f0 :\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	For macOS systems running on Apple Silicon (M1/M2 chips), Homebrew installs itself in the 
+\f1 /opt/homebrew
+\f0  directory by default.\
+	\'95	This change was made to distinguish between Intel (x86_64) and Apple Silicon (ARM64) architectures and to avoid conflicts with older software or other package managers that might use 
+\f1 /usr/local
+\f0 .\
+	\'95	On older Intel-based Macs, Homebrew traditionally used 
+\f1 /usr/local
+\f0  as its default installation prefix, which is why you might still see some libraries there.\
+\pard\tqr\tx260\tx420\li420\fi-420\sl324\slmult1\partightenfactor0
+
+\f2\fs36 \cf2 	2.	
+\f3\b\fs42 Homebrew\'92s Directory Structure
+\f0\b0 :\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	When you install libraries using Homebrew, they are stored in 
+\f1 /opt/homebrew/Cellar
+\f0  on Apple Silicon or 
+\f1 /usr/local/Cellar
+\f0  on Intel. The 
+\f1 Cellar
+\f0  is where the actual versions of the software packages are kept.\
+	\'95	Homebrew then creates symbolic links to the latest versions of these libraries in 
+\f1 /opt/homebrew/lib
+\f0  or 
+\f1 /usr/local/lib
+\f0 , making them easier to find for system compilers and linkers.\
+\pard\tqr\tx260\tx420\li420\fi-420\sl324\slmult1\partightenfactor0
+
+\f2\fs36 \cf2 	3.	
+\f3\b\fs42 Mixing Intel and Apple Silicon Software
+\f0\b0 :\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	If you\'92re running on a newer macOS system with Apple Silicon but have some Intel-based software installed, you might still have libraries in 
+\f1 /usr/local/lib
+\f0  because those were installed before the transition or because they were installed using the Intel version of Homebrew.\
+	\'95	Homebrew supports running in \'93Rosetta 2\'94 (an x86_64 emulation mode) on Apple Silicon, which uses 
+\f1 /usr/local
+\f0  as its prefix, while the native ARM version uses 
+\f1 /opt/homebrew
+\f0 .\
+\pard\tqr\tx260\tx420\li420\fi-420\sl324\slmult1\partightenfactor0
+
+\f2\fs28 \cf2 	
+\fs36 4.	
+\f3\b\fs42 Compatibility and Migration
+\f0\b0 :\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	It\'92s generally recommended to migrate all your Homebrew installations to use 
+\f1 /opt/homebrew
+\f0  if you\'92re on Apple Silicon to ensure compatibility and make use of native binaries.\
+	\'95	If you have existing libraries in 
+\f1 /usr/local/lib
+\f0  and they\'92re still required by your project or other Intel-based software, you can leave them there. However, for new projects, it\'92s best to prioritize using libraries from 
+\f1 /opt/homebrew
+\f0 .\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f3\b\fs44 \cf2 What You Should Do:
+\f0\b0\fs42 \
+\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	
+\f3\b Check Your System Architecture
+\f0\b0 : If you are on an Apple Silicon Mac, it\'92s best to use the 
+\f1 /opt/homebrew
+\f0  path for all new installations to ensure you\'92re using native ARM64 binaries.\
+	\'95	
+\f3\b Use 
+\f1\b0 brew doctor
+\f0 : Running this command can help identify any issues with mixed installations or outdated libraries.\
+	\'95	
+\f3\b Migrate if Necessary
+\f0\b0 : If you have libraries in 
+\f1 /usr/local
+\f0  that can be reinstalled under 
+\f1 /opt/homebrew
+\f0 , consider doing so to streamline your setup.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 \
+This structure helps keep software organized based on the architecture and avoids conflicts between different versions of the same libraries.}
