@@ -28,8 +28,8 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 # - Arguments: +x /path/to.winnow.exe
 
 # MacOS universal binaries
-#QMAKE_APPLE_DEVICE_ARCHS = arm64
-#QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
+# QMAKE_APPLE_DEVICE_ARCHS = arm64
+# QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
 
 CONFIG += c++17
 win32:QMAKE_CXXFLAGS += /std:c++17
@@ -562,16 +562,24 @@ win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 # libtiff
 win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
 #win32: CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
-
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
 win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
-macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
-macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+# macx arm64 only using homebrew installation
+# macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
+# macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+
+macx:LIBS += -L$$PWD/Lib/libtiff/build-universal -ltiff
+macx:INCLUDEPATH += $$PWD/Lib/libtiff/build-universal/include
+macx:QMAKE_RPATHDIR += $$PWD/Lib/libtiff/build-universal
 
 # libjpeg-turbo
-macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build -lturbojpeg
-macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo
-macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build
+# macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build-arm64 -lturbojpeg
+# macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo
+# macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-arm64
 # Ensure rpath is set correctly
-macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build
+# macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-arm64
+
+macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build-universal -lturbojpeg
+macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-universal/include
+macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-universal
