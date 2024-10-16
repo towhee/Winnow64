@@ -245,11 +245,11 @@ bool ImageDecoder::load()
 
         /* decoder options:
            QtImage      use QImage::load
-           QtTiff       use QTiffHandler code override
+           QtTiff       use QTiffHandler override - overall best results
            LibTiff      use libtiff library directly
            Rory         use Rory decoder
         */
-        decoderToUse = QtTiff;
+        decoderToUse = Rory;
 
         #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {
@@ -271,7 +271,7 @@ bool ImageDecoder::load()
             // try Winnow decoder
             Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
             if (!tiff.decode(fPath, n.offsetFull, image)) {
-                decoderToUse = QtImage;
+                decoderToUse = QtImage;     // maybe change to QtTiff?
                 /*
                 qDebug() << "ImageDecoder::load "
                          << "Could not decode using Winnow Tiff decoder.  row =" << n.key <<
@@ -291,7 +291,7 @@ bool ImageDecoder::load()
         }
 
         if (decoderToUse == QtTiff) {
-            // use QTiffHandler code override
+            // override QTiffHandler code
             Tiff tiff("ImageDecoder::load");
             // qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
             if (!tiff.read(fPath, &image)) {
