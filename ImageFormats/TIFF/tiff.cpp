@@ -2394,7 +2394,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 {
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
-        qDebug() << "Tiff::read Failed to open TIFF file." << filePath;
+        qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
         return false;
     }
 
@@ -2411,19 +2411,30 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     bool floatingPoint;
 
     if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
-        qDebug() << "Tiff::read Failed to read headers." << filePath;
+        qDebug() << "Tiff::read Failed to read headers." << fPath;
         return false;
     }
+
+    /*
+    qDebug() << "Tiff::read"
+             << "format =" << format
+             << "photometric =" << photometric
+             << "grayscale =" << grayscale
+             << "floatingPoint =" << floatingPoint
+             << "transformation =" << transformation
+             << fPath
+        ; //*/
 
     if (!QImageIOHandler::allocateImage(size, format, image)) {
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::read Failed to QImageIOHandler::allocateImage." << filePath;
+        qDebug() << "Tiff::read Failed to QImageIOHandler::allocateImage." << fPath;
         return false;
     }
 
-    if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(image->sizeInBytes())) {// Corrupt image
+    if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(image->sizeInBytes())) {
+        // Corrupt image
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::read Corrupt image." << filePath;
+        qDebug() << "Tiff::read Corrupt image." << fPath;
         return false;
     }
 
@@ -2452,9 +2463,9 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
                 }
             } else {
                 // create the color table
-                uint16_t *redTable = 0;
-                uint16_t *greenTable = 0;
-                uint16_t *blueTable = 0;
+                uint16_t *redTable = nullptr;
+                uint16_t *greenTable = nullptr;
+                uint16_t *blueTable = nullptr;
                 if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
                     TIFFClose(tiff); tiff = nullptr;
                     qDebug() << "Tiff::read Failed to get field TIFFTAG_COLORMAP." << filePath;
@@ -2465,7 +2476,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
                     return false;
                 }
 
-                for (int i = 0; i<tableSize ;++i) {
+                for (int i = 0; i < tableSize ;++i) {
                     // emulate libtiff behavior for 16->8 bit color map conversion: just ignore the lower 8 bits
                     const int red = redTable[i] >> 8;
                     const int green = greenTable[i] >> 8;
@@ -2531,7 +2542,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
                 TIFFClose(tiff); tiff = nullptr;
                 return false;
             }
-            for (uint32_t y=0; y<height; ++y) {
+            for (uint32_t y = 0; y < height; ++y) {
                 if (TIFFReadScanline(tiff, image->scanLine(y), y, 0) < 0) {
                     TIFFClose(tiff); tiff = nullptr;
                     return false;
@@ -2541,23 +2552,27 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
         if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4) {
             if (photometric == PHOTOMETRIC_RGB)
                 rgb48fixup(image, floatingPoint);
-            else if (floatingPoint)
+            else if (floatingPoint) {
                 rgbFixup(image);
-        } else if (format == QImage::Format_RGBX32FPx4) {
+            }
+        }
+        else if (format == QImage::Format_RGBX32FPx4) {
             if (photometric == PHOTOMETRIC_RGB)
                 rgb96fixup(image);
-            else if (floatingPoint)
+            else if (floatingPoint) {
                 rgbFixup(image);
+            }
         }
-    } else {
+    }
+    else {
         const int stopOnError = 1;
         if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(image->bits()), qt2Exif(transformation), stopOnError)) {
             for (uint32_t y=0; y<height; ++y)
                 convert32BitOrder(image->scanLine(y), width);
-            // qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << filePath;
+            // qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << fPath;
         } else {
             TIFFClose(tiff); tiff = nullptr;
-            // qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << filePath;
+            // qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << fPath;
             return false;
         }
     }
@@ -2567,6 +2582,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     float resY = 0;
     uint16_t resUnit;
     if (!TIFFGetField(tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
+        // here
         resUnit = RESUNIT_INCH;
 
     if (TIFFGetField(tiff, TIFFTAG_XRESOLUTION, &resX)
@@ -2574,6 +2590,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
         switch(resUnit) {
         case RESUNIT_CENTIMETER:
+            // here
             image->setDotsPerMeterX(qRound(resX * 100));
             image->setDotsPerMeterY(qRound(resY * 100));
             break;
