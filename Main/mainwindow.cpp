@@ -1962,7 +1962,7 @@ void MW::folderSelectionChangeNoParam()
     folderSelectionChange("");
 }
 
-void MW::folderSelectionChange(QString dPath)
+void MW::folderSelectionChange(QString dPath/*, bool clear, bool includeSubFolders*/)
 {
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
@@ -2199,7 +2199,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -3252,12 +3252,12 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     isCurrentFolderOkay = isFolderValid(dPath, true, false);
 
     if (isCurrentFolderOkay) {
-        folderSelectionChange(dPath);
+        // folderSelectionChange(dPath);
         QModelIndex idx = fsTree->fsModel->index(dPath);
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-        fsTree->setCurrentIndex(filterIdx);
+        // fsTree->setCurrentIndex(filterIdx);
         fsTree->select(dPath);
-        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+        // fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         // must have focus to show selection in blue instead of gray
         fsTree->setFocus();
     }

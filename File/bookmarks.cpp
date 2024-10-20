@@ -326,7 +326,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     }
 
     // include subfolders images
-    if ((event->modifiers() & Qt::ControlModifier) && (event->modifiers() & Qt::ShiftModifier)) {
+    if (event->modifiers() & Qt::AltModifier) {
         G::includeSubfolders = true;
     }
 

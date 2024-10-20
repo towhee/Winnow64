@@ -249,7 +249,7 @@ bool ImageDecoder::load()
            LibTiff      use libtiff library directly
            Rory         use Rory decoder
         */
-        decoderToUse = Rory;
+        decoderToUse = QtImage;
 
         #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {

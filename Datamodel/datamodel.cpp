@@ -176,7 +176,13 @@ DataModel::DataModel(QObject *parent,
 
     // root folder containing images to be added to the data model
     dir = new QDir();
-    fileFilters = new QStringList;          // eligible image file types
+
+    // eligible image file types
+    fileFilters = new QStringList;
+    foreach (const QString &str, metadata->supportedFormats) {
+        fileFilters->append("*." + str);
+    }
+
     emptyImg.load(":/images/no_image.png");
     setThumbnailLegend();
 
@@ -344,8 +350,8 @@ int DataModel::insert(QString fPath)
                  << "fPath =" << fPath;
     }
 
-    QFileInfo insertFile(fPath);
-    QString insertFileName = insertFile.fileName().toLower();
+    QFileInfo insertFileInfo(fPath);
+    QString insertFileName = insertFileInfo.fileName().toLower();
 
     // find row greater than insert file absolute path
     int dmRow;
@@ -357,7 +363,6 @@ int DataModel::insert(QString fPath)
             break;
         }
     }
-    // if (dmRow >= rowCount()) dmRow = rowCount() - 1;
 
     // insert new row
     insertRow(dmRow);
@@ -370,8 +375,7 @@ int DataModel::insert(QString fPath)
 
     // rebuild fileInfoList
     fileInfoList.clear();
-    int i;
-    for (i = 0; i < rowCount(); ++i) {
+    for (int i = 0; i < rowCount(); ++i) {
         QString path = index(i, G::PathColumn).data(G::PathRole).toString();
         fileInfoList.append(QFileInfo(path));
     }
@@ -383,7 +387,7 @@ int DataModel::insert(QString fPath)
     imageCount = rowCount();
 
     // add the file data to datamodel
-    addFileDataForRow(dmRow, insertFile);
+    addFileDataForRow(dmRow, insertFileInfo);
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataLoaded = false;
@@ -427,6 +431,111 @@ void DataModel::remove(QString fPath)
     // update imageCount
     imageCount = rowCount();
 }
+
+// MULTI-SELECT FOLDERS
+
+void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding) {
+
+    QMutexLocker locker(&queueMutex);
+    folderQueue.enqueue(qMakePair(folderPath, isAdding));
+
+    qDebug() << "DataModel::enqueueFolderSelection"
+             << "isAdding =" << isAdding
+             << "folder =" << folderPath
+             << "folderQueue =" << folderQueue
+        ;
+
+    // If not already processing, start the processing
+    if (!isProcessing) {
+        isProcessing = true;
+        processNextFolder();
+    }
+}
+
+void DataModel::processNextFolder() {
+
+    qDebug() << "DataModel::processNextFolder";
+
+    // QMutexLocker locker(&queueMutex);
+    if (folderQueue.isEmpty()) {
+        qDebug() << "DataModel::processNextFolder Queue is empty";
+        isProcessing = false;
+        return;
+    }
+
+    QPair<QString, bool> folderOperation = folderQueue.dequeue();
+    // locker.unlock(); // Unlock the queue while processing
+
+    qDebug() << "DataModel::processNextFolder"
+             << "folderOperation.first =" << folderOperation.first
+             << "folderOperation.second =" << folderOperation.second
+                ;
+
+    // Process the folder asynchronously using QtConcurrent
+    QtConcurrent::run([this, folderOperation]() {
+        if (folderOperation.second) {
+            addFolder(folderOperation.first);
+        } else {
+            removeFolder(folderOperation.first);
+        }
+
+        // Continue with the next folder operation
+        QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
+    });
+}
+
+void DataModel::addFolder(const QString &folderPath)
+{
+
+    qDebug() << "DataModel::addFolder"
+             << "folder =" << folderPath
+                ;
+
+    // control
+    abortLoadingModel = false;
+    currentFolderPath = folderPath;
+    loadingModel = true;
+
+    // folder fileInfo list
+    QDir dir(folderPath);
+    dir.setNameFilters(*fileFilters);
+    dir.setFilter(QDir::Files);
+    QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+    std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+
+    // datamodel size
+    int row = rowCount();
+    setRowCount(rowCount() + folderFileInfoList.count());
+
+    for (const QFileInfo &fileInfo : folderFileInfoList) {
+        fileInfoList.append(fileInfo);
+        /*
+        qDebug() << "DataModel::addFolder"
+                 << "row =" << row
+                 << "file =" << fileInfo.fileName()
+                 << "folder =" << folderPath
+                    ; //*/
+        // Ensure thread-safe updates to the model
+        QMetaObject::invokeMethod(this, [this, row, fileInfo]() {
+            addFileDataForRow(row, fileInfo);
+        }, Qt::QueuedConnection);
+        row++;
+    }
+}
+
+void DataModel::removeFolder(const QString &folderPath)
+{
+    QMetaObject::invokeMethod(this, [this, folderPath]() {
+        for (int row = rowCount() - 1; row >= 0; --row) {
+            QString filePath = index(row, 0).data(Qt::UserRole).toString();
+            if (filePath.startsWith(folderPath)) {
+                removeRow(row);
+            }
+        }
+    }, Qt::QueuedConnection);
+}
+
+// END MULTI-SELECT FOLDERS
 
 bool DataModel::contains(QString &path)
 {
@@ -561,7 +670,8 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     - after the metadataReadThread has read all the metadata and thumbnails add
       the rest of the metadata to the datamodel.
 
-    - Note: building QMaps of unique field values for the filters is not done here,
+    Note:
+    - building QMaps of unique field values for the filters is not done here,
       but on demand when the user selects the filter panel or a menu filter command.
 */
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
@@ -578,11 +688,11 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     // emit centralMsg("Building image file list.");
 
     // do some initializing
-    fileFilters->clear();
-    foreach (const QString &str, metadata->supportedFormats) {
-            fileFilters->append("*." + str);
-            if (abortLoadingModel) return endLoad(false);
-    }
+    // fileFilters->clear();
+    // foreach (const QString &str, metadata->supportedFormats) {
+    //         fileFilters->append("*." + str);
+    //         if (abortLoadingModel) return endLoad(false);
+    // }
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
@@ -673,7 +783,7 @@ bool DataModel::addFileData()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
     if (isDebug)
         qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
-    // make sure if raw+jpg pair that raw file is first to make combining easier
+    // make sure, if raw+jpg pair, that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
     QString step = "Loading eligible images.\n\n";
@@ -742,7 +852,8 @@ bool DataModel::addFileData()
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
     if (G::isLogger) G::log("DataModel::addFileDataForRow", "row = " + QString::number(row));
-    if (isDebug) qDebug() << "DataModel::addFileDataForRow"
+    if (isDebug)
+        qDebug() << "DataModel::addFileDataForRow"
                           << "instance =" << instance
                           << "row =" << row
                           << currentFolderPath
@@ -750,9 +861,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
     QString folderName = fileInfo.dir().dirName();
-//    qDebug() << "DataModel::addFileDataForRow" << row << fPath;
     QString ext = fileInfo.suffix().toLower();
-    // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
+
+    // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
     fPathRow[fPath] = row;
 
     // string to hold aggregated text for searching
@@ -786,12 +897,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::CompareColumn), false);
-    // G::CreatedColumn is extracted from the image metadata, not QFileInfo
-
-    // rghcreate
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
     setData(index(row, G::CreatedColumn), s);
-
     s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
