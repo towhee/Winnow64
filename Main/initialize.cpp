@@ -908,10 +908,13 @@ void MW::createFSTree()
     connect(wnef, &WinNativeEventFilter::refreshFileSystem, fsTree, &FSTree::refreshModel);
     #endif
 
-    // this works for touchpad tap
-    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
+    // this works for touchpad tap (replaced with folderSelection)
+    // connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
 
-    // reselect folder after external program drop onto FSTree
+    // add folder to the DataModel processing queue
+    connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
+
+    // reselect folder after external program drop onto FSTree or a selectionChange
     connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)

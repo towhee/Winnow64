@@ -104,3 +104,59 @@ RowsPerStrip             4000
 Compression              5
 PlanarConfiguration      1
 Predictor                0
+QTimer::singleShot()
+FSTree::FSTree(QWidget *parent, Metadata *metadata)
+        : QTreeView(parent), delegate(new HoverDelegate(this))
+{
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+}
+
+void FSTree::mousePressEvent(QMouseEvent *event)
+{
+    QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid()) return;
+
+    // update path
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
+
+    // load all subfolders images
+    if (event->modifiers() & Qt::AltModifier) {
+        selectionModel()->clearSelection();
+        expandRecursively(idx0);
+        selectRecursively(idx0);
+        return;
+    }
+
+    QTreeView::mousePressEvent(event);
+}
+
+void FSTree::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier) {
+        QTreeView::mouseReleaseEvent(event);
+    }
+}
+
+void FSTree::selectItemAndChildren(const QModelIndex &index)
+{
+    QItemSelectionModel *selectionModel = this->selectionModel();
+    if (!selectionModel) {
+        return;
+    }
+
+    // Use a queue to traverse all children of the given index
+    QList<QModelIndex> queue;
+    queue.append(index);
+
+    while (!queue.isEmpty()) {
+        QModelIndex currentIndex = queue.takeFirst();
+        selectionModel->select(currentIndex, QItemSelectionModel::Select);
+
+        // Add all children of the current item to the queue
+        for (int i = 0; i < model()->rowCount(currentIndex); ++i) {
+            queue.append(model()->index(i, 0, currentIndex));
+        }
+    }
+}

@@ -304,6 +304,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata)
 
     // create model and filter
     createModel();
+    treeSelectionModel = selectionModel();
 
     // setup treeview
     for (int i = 1; i <= 3; ++i) {
@@ -317,7 +318,7 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata)
     setHeaderHidden(true);
     sortByColumn(0, Qt::AscendingOrder);
     setIndentation(16);
-    setSelectionMode(QAbstractItemView::SingleSelection);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
 
     setMouseTracking(true);
@@ -339,7 +340,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata)
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
 
-    connect(this, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expand(const QModelIndex&)));
+    // connect(this, &QTreeView::expanded, this, &FSTree::expand);
+    connect(this, &QTreeView::expanded, this, &FSTree::expandedSelectRecursively);
 
     // prevent select next folder when a folder is moved to trash/recycle
     connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
@@ -383,8 +385,6 @@ void FSTree::createModel()
 
     // apply model to treeview
     setModel(fsFilter);
-
-
 
     QAbstractFileIconProvider *iconProvider = fsModel->iconProvider();
     QIcon icon = fsModel->iconProvider()->icon(QFileIconProvider::Folder);
@@ -442,9 +442,6 @@ bool FSTree::select(QString dirPath)
 
     QDir test(dirPath);
     if (test.exists()) {
-//        QModelIndex idx = fsFilter->mapFromSource(fsModel->index(dirPath));
-//        setCurrentIndex(idx);
-//        selectionModel()->select(idx,QItemSelectionModel::Select);
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
         scrollToCurrent();
         return true;
@@ -455,11 +452,106 @@ bool FSTree::select(QString dirPath)
     }
 }
 
-//QModelIndex FSTree::index(QString dirPath)
-//{
-//    if (G::isLogger) G::log("FSTree::index");
-//    return fsFilter->mapFromSource(fsModel->index(dirPath));
-//}
+void FSTree::expandedSelectRecursively(const QModelIndex &index)
+{
+    if (!index.isValid() || !isRecursiveSelection) {
+        return;
+    }
+
+    // Select the current node
+    QString folderName = index.data().toString();
+    qDebug() << "FSTree::expandedSelectRecursively"
+             << "isExpanded =" << isExpanded(index)
+             << folderName;
+
+    // Delay to allow the expansion to complete before selecting children
+    QModelIndex sourceIndex = fsFilter->mapToSource(index);
+    setExpanded(index, true);
+
+    QElapsedTimer t;
+    t.start();
+    while (fsModel->canFetchMore(sourceIndex)) {
+        fsModel->fetchMore(sourceIndex);
+        if (t.elapsed() > 5000) {
+            qDebug() << "FSTree::expandedSelectRecursively timed out fetching more for " << folderName;
+            return;
+        }
+    }
+
+    fsFilter->refresh();
+    QTimer::singleShot(0, this, [this, index, folderName]() {
+        int childCount = 0;
+        if (index.isValid()) {
+            qDebug() << "FSTree::expandedSelectRecursively (after delay) valid index =" << folderName;
+            bool hasChildren = fsFilter->hasChildren(index);
+            qDebug() << "FSTree::expandedSelectRecursively (after delay) hasChildren =" << hasChildren;
+            childCount = fsFilter->rowCount(index);
+            qDebug() << "FSTree::expandedSelectRecursively (after delay) childCount =" << childCount << folderName;
+        }
+        else {
+            qDebug() << "FSTree::expandedSelectRecursively invalid index =" << folderName;
+        }
+
+        // Recursively select all child nodes
+        for (int i = 0; i < childCount; ++i) {
+            QModelIndex childIndex = fsFilter->index(i, 0, index);
+            if (!childIndex.isValid()) {
+                qDebug() << "FSTree::expandedSelectRecursively invalid childIndex =" << childIndex.data().toString() << childIndex;
+                continue;
+            }
+            qDebug() << "FSTree::expandedSelectRecursively Recurse child " << childIndex.data().toString();
+            selectRecursively(childIndex);
+        }
+
+        // Finished recursion
+        qDebug() << "FSTree::expandedSelectRecursively FINISHED";
+        qDebug() << "FSTree::expandedSelectRecursively"
+                 << "recursedForSelection count =" << recursedForSelection.count();
+
+        isRecursiveSelection = false;
+        for (QModelIndex index : recursedForSelection) {
+            // qDebug() << index.data().toString();
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        }
+        recursedForSelection.clear();
+    });
+}
+
+void FSTree::selectRecursively(const QModelIndex &index)
+{
+    if (!index.isValid()) {
+        return;
+    }
+
+    QString folderName = index.data().toString();
+    qDebug() << "FSTree::selectRecursively" << folderName;
+    recursedForSelection.append(index);
+    if (isExpanded(index)) expandedSelectRecursively(index);
+    else setExpanded(index, true);
+}
+
+void FSTree::selectItemAndChildren(const QModelIndex &index)
+{
+    if (G::isLogger) G::log("FSTree::selectItemAndChildren");
+    QItemSelectionModel *selectionModel = this->selectionModel();
+    if (!selectionModel) {
+        return;
+    }
+
+    // Use a queue to traverse all children of the given index
+    QList<QModelIndex> queue;
+    queue.append(index);
+
+    while (!queue.isEmpty()) {
+        QModelIndex currentIndex = queue.takeFirst();
+        selectionModel->select(currentIndex, QItemSelectionModel::Select);
+
+        // Add all children of the current item to the queue
+        for (int i = 0; i < model()->rowCount(currentIndex); ++i) {
+            queue.append(model()->index(i, 0, currentIndex));
+        }
+    }
+}
 
 QModelIndex FSTree::getCurrentIndex()
 {
@@ -469,6 +561,27 @@ QModelIndex FSTree::getCurrentIndex()
         idx = selectedIndexes().first();
     else idx = fsModel->index(-1, -1, QModelIndex());
     return idx;
+}
+
+QStringList FSTree::getSelectedFolderPaths() const
+{
+    QStringList selectedFolderPaths;
+    QItemSelectionModel *selectionModel = this->selectionModel();
+
+    if (!selectionModel) {
+        return selectedFolderPaths; // Return an empty list if there's no selection model
+    }
+
+    // Get all selected indexes from the selection model
+    QModelIndexList selectedIndexes = selectionModel->selectedRows();
+
+    // Iterate over the selected indexes and extract the folder paths
+    for (const QModelIndex &index : selectedIndexes) {
+        QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+        selectedFolderPaths.append(folderPath);
+    }
+
+    return selectedFolderPaths;
 }
 
 void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
@@ -548,11 +661,43 @@ void FSTree::resizeEvent(QResizeEvent *event)
 void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     if (G::isLogger) G::log("FSTree::selectionChanged");
+
     QTreeView::selectionChanged(selected, deselected);
-//    emit abortLoadDataModel();
-    emit selectionChange();
-//    QtConcurrent::run(this, &FSTree::updateVisibleImageCount);
-//    qDebug() << "FSTree::selectionChanged" << count;
+
+    int selectedRowCount = 0;
+    if (!G::isInitializing) selectedRowCount = treeSelectionModel->selectedRows().count();
+
+    // Iterate through the selected rows
+    for (const QModelIndex &index : selected.indexes()) {
+        if (index.column() == 0) { // Ensure we're only processing the first column
+            QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+            if (folderPath.length() && !G::isInitializing) {
+                // /*
+                qDebug()
+                    << "FSTree::selectionChanged"
+                    << "selectedRowCount =" << selectedRowCount
+                    << "Selected Path:" << folderPath; //*/
+                if (selectedRowCount == 1) {
+                    emit folderSelection(folderPath);
+                }
+                else {
+                    // datamodelQueue(folderPath, true);
+                }
+            }
+        }
+    }
+
+    // Iterate through the deselected rows
+    for (const QModelIndex &index : deselected.indexes()) {
+        if (index.column() == 0) { // Ensure we're only processing the first column
+            QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+            /*
+            qDebug()
+                << "FSTree::selectionChanged"
+                << "Deselected Path:" << folderPath; //*/
+        }
+    }
+
 }
 
 void FSTree::keyPressEvent(QKeyEvent *event){
@@ -646,8 +791,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // update path
     QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid()) return;
+
+    // update path
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
     QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
 
@@ -656,9 +803,33 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    // New selection
+    if (event->modifiers() == Qt::NoModifier) {
+        // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
+        QTreeView::mousePressEvent(event);
+        return;
+    }
+
     // load all subfolders images
-    if ((event->modifiers() & Qt::ControlModifier) && (event->modifiers() & Qt::ShiftModifier)) {
-        G::includeSubfolders = true;
+    if (event->modifiers() & Qt::AltModifier) {
+        qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS SELECTION" << path;
+        if (!(event->modifiers() & Qt::ControlModifier)) {
+            selectionModel()->clearSelection();
+        }
+        isRecursiveSelection = true;
+        selectRecursively(idx0);
+        return;
+    }
+
+    // toggle folder
+    if (event->modifiers() & Qt::ControlModifier) {
+        if (getSelectedFolderPaths().contains(path)) {
+            // qDebug() << "FSTree::mousePressEvent TOGGLE REMOVE SELECTION" << path;
+        }
+        else {
+            // qDebug() << "FSTree::mousePressEvent TOGGLE ADD SELECTION" << path;
+        }
+        event->accept();
     }
 
     QTreeView::mousePressEvent(event);
@@ -671,7 +842,10 @@ void FSTree::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         return;
     }
-    QTreeView::mouseReleaseEvent(event);
+
+    if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier) {
+        QTreeView::mouseReleaseEvent(event);
+    }
 }
 
 void FSTree::mouseMoveEvent(QMouseEvent *event)

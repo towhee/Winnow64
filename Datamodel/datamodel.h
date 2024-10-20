@@ -164,6 +164,7 @@ signals:
 
 public slots:
 //    void unfilteredItemSearchCount();
+    void enqueueFolderSelection(const QString &folderPath, bool isAdding);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
@@ -194,6 +195,13 @@ private:
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
+    // all folders in the datamodel
+    QStringList folderList;
+    // Pair of folderPath and operation type (true=add, false=remove)
+    QQueue<QPair<QString, bool>> folderQueue;
+    QMutex queueMutex;
+    bool isProcessing = false;
+
     enum ErrorType {
         General,
         DM
@@ -217,6 +225,9 @@ private:
 
     QItemSelection savedSelection;
 
+    void processNextFolder();
+    void addFolder(const QString &folderPath);
+    void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
     bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);

@@ -196,7 +196,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    qDebug() << dm->sf->index(0, G::FolderNameColumn).data().toString();
+    // QModelIndex index = fsTree->getCurrentIndex();
+    // fsTree->setExpanded(fsTree->testIdx, true);
+    QString dirPath = "/Users/roryhill/Pictures/_test6/folder1";
+    QModelIndex index = fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath));
+    int count = fsTree->fsFilter->rowCount(index);
+    qDebug() << "count =" << count;
 }
 /*
    Performance

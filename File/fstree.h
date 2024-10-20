@@ -81,6 +81,7 @@ public slots:
 
 private slots:
     void wheelStopped();
+    void expandedSelectRecursively(const QModelIndex &index);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -101,6 +102,7 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
     void folderSelection(QString dPath);
+    void datamodelQueue(QString dPath, bool isAdding);
     void abortLoadDataModel();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);
@@ -113,17 +115,23 @@ signals:
     void status(bool keepBase, QString msg, QString src);
 
 private:
-	QModelIndex dndOrigSelection;
+    void selectItemAndChildren(const QModelIndex &index);
+    void selectRecursively(const QModelIndex &index);
+    QStringList getSelectedFolderPaths() const;
+    QModelIndex dndOrigSelection;
     QFileSystemModel fileSystemModel;
+    QItemSelectionModel* treeSelectionModel;
     Metadata *metadata;
     HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
+    QModelIndexList recursedForSelection;
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
     QElapsedTimer t;
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
+    bool isRecursiveSelection = false;
 };
 
 #endif // FSTREE_H

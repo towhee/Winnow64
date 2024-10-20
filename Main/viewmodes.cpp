@@ -30,7 +30,7 @@ void MW::loupeDisplay(const QString src)
     painting itself.
 */
     // /*
-    // if (!G::isInitializing && G::isLogger)
+    if (!G::isInitializing && G::isLogger)
         qDebug() << "MW::loupeDisplay"
                  << "src =" << src
                  << "wasThumbDockVisible =" << QVariant(wasThumbDockVisible).toString()
