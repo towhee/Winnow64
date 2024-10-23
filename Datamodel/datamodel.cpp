@@ -434,16 +434,21 @@ void DataModel::remove(QString fPath)
 
 // MULTI-SELECT FOLDERS
 
-void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding) {
+void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
+{
 
     QMutexLocker locker(&queueMutex);
     folderQueue.enqueue(qMakePair(folderPath, isAdding));
 
+    // /*
+    if (isDebug)
+    {
     qDebug() << "DataModel::enqueueFolderSelection"
              << "isAdding =" << isAdding
              << "folder =" << folderPath
              << "folderQueue =" << folderQueue
         ;
+    } //*/
 
     // If not already processing, start the processing
     if (!isProcessing) {
@@ -454,9 +459,9 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
 
 void DataModel::processNextFolder() {
 
-    qDebug() << "DataModel::processNextFolder";
+    // qDebug() << "DataModel::processNextFolder";
 
-    // QMutexLocker locker(&queueMutex);
+    QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
         qDebug() << "DataModel::processNextFolder Queue is empty";
         isProcessing = false;
@@ -464,17 +469,21 @@ void DataModel::processNextFolder() {
     }
 
     QPair<QString, bool> folderOperation = folderQueue.dequeue();
-    // locker.unlock(); // Unlock the queue while processing
+    locker.unlock(); // Unlock the queue while processing
 
+    // if (isDebug)
+    {
     qDebug() << "DataModel::processNextFolder"
              << "folderOperation.first =" << folderOperation.first
              << "folderOperation.second =" << folderOperation.second
                 ;
+    }//*/
 
     // Process the folder asynchronously using QtConcurrent
     QtConcurrent::run([this, folderOperation]() {
         if (folderOperation.second) {
             addFolder(folderOperation.first);
+            emit addedFolderToDM(folderOperation.first);
         } else {
             removeFolder(folderOperation.first);
         }
@@ -492,9 +501,11 @@ void DataModel::addFolder(const QString &folderPath)
                 ;
 
     // control
+    QMutexLocker locker(&mutex);
     abortLoadingModel = false;
     currentFolderPath = folderPath;
-    loadingModel = true;
+    loadingModel = true;    // rgh is this needed?  Review loadingModel usage
+    locker.unlock(); // Unlock the queue while processing
 
     // folder fileInfo list
     QDir dir(folderPath);
@@ -508,7 +519,9 @@ void DataModel::addFolder(const QString &folderPath)
     setRowCount(rowCount() + folderFileInfoList.count());
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
+        mutex.lock();
         fileInfoList.append(fileInfo);
+        mutex.unlock();
         /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
@@ -521,6 +534,9 @@ void DataModel::addFolder(const QString &folderPath)
         }, Qt::QueuedConnection);
         row++;
     }
+    mutex.lock();
+    loadingModel = false;
+    mutex.unlock();
 }
 
 void DataModel::removeFolder(const QString &folderPath)
@@ -871,7 +887,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 
     QMutexLocker locker(&mutex);
     setData(index(row, G::RowNumberColumn), row + 1);
-    setData(index(row, G::RowNumberColumn), int(Qt::AlignRight), Qt::TextAlignmentRole);
+    setData(index(row, G::RowNumberColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
     QString tip = fPath;  //fileInfo.absoluteFilePath();
     if (showThumbNailSymbolHelp) tip += thumbnailHelp;
@@ -1900,9 +1916,9 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
     if (loadingModel) {
-        errMsg = "Model is still loading..";
-        G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
-        return;
+        // errMsg = "Model is still loading..";
+        // G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
+        // return;
     }
     if (G::stop) {
         return;
@@ -2037,8 +2053,10 @@ void DataModel::setIconRange(int sfRow)
     end = start + iconChunkSize;
     if (end >= rows) end = rows - 1;
     // G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
+    mutex.lock();
     startIconRange = start;
     endIconRange = end;
+    mutex.unlock();
     G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 

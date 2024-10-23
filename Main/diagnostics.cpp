@@ -297,7 +297,6 @@ void MW::diagnosticsReport(QString reportString, QString title)
     #endif
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    //dlg->setFixedWidth(1000);
     md.textBrowser->setStyleSheet(G::css);
     QFont courier("Courier", 12);
     md.textBrowser->setFont(courier);
@@ -305,9 +304,27 @@ void MW::diagnosticsReport(QString reportString, QString title)
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+
+    // determine width based on longest line in reportString
+    QStringList lines = reportString.split('\n');
+    int maxWidth = 0;
+    for (const QString &line : lines) {
+        int width = metrics.horizontalAdvance(line);
+        if (width > maxWidth) {
+            maxWidth = width;
+        }
+    }
+    int padding = 70;
+    maxWidth += padding;
+    int w = maxWidth;
+    int h = 1200;
+    if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
+    if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
+
+    dlg->resize(w, h);
+
     dlg->setWindowTitle(title);
     dlg->show();
-    //std::cout << reportString.toStdString() << std::flush;
 }
 
 void MW::allIssuesReport()

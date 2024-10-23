@@ -360,7 +360,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
         if (G::stop) return false;
 
-        // try again
+        // try again after 100ms
         if (status == Status::Open) {
             attempts++;
             G::wait(100);

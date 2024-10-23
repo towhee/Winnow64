@@ -148,7 +148,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     lastIconRow = dm->endIconRange;
     mutex.unlock();
 
-    if (isDebug)
+    // if (isDebug)
     {
     qDebug() << "\nMetaRead2::setStartRow "
              << "startRow =" << startRow
@@ -1104,9 +1104,13 @@ void MetaRead2::dispatchFinished(QString src)
     cleanupIcons();
     isDone = true;
     isDispatching = false;
+
+    emit dispatchIsFinished(src);
+
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {
         G::allMetadataLoaded = true;
+        // signal MW::loadConcurrentDone
         emit done();
     }
     G::iconChunkLoaded = true;      // RGH change to = dm->allIconChunkLoaded(first, last) ??

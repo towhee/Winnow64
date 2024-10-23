@@ -134,19 +134,22 @@ bool Reader::readMetadata()
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
     }
 
-    if (isDebug)
+    // ImageCache imageCacheList is mirror of dm->sf (current sort/filter)
+    int sfRow = dm->proxyRowFromModelRow(dmRow);
+
+    // if (isDebug)
     {
         qDebug().noquote()
             << "Reader::readMetadata emit addToImageCache   "
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
-            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "sfRow =" << QString::number(sfRow).leftJustified(4, ' ')
             << fPath
             ;
     }
 
-    if (!abort) emit addToImageCache(dmIdx.row(), instance);
-    // if (!abort) emit addToImageCache(metadata->m, instance);
-    // t4 = t.restart();
+    if (!abort) emit addToImageCache(sfRow, instance);
+    // if (!abort) emit addToImageCache(dmIdx.row(), instance);
 
     return isMetaLoaded;
 }
@@ -160,7 +163,7 @@ void Reader::readIcon()
              << "Reader::readIcon                            "
              << "id =" << QString::number(threadId).leftJustified(2, ' ')
              << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-             //<< fPath
+             << fPath
             ;
     }
 
@@ -218,6 +221,11 @@ void Reader::run()
         readMetadata();
     if (!abort && isReadIcon && instanceOk())
         readIcon();
+    else
+        qDebug() << "Reader::run unable to run readIcon"
+                 << "isReadIcon =" << isReadIcon
+                 << "instanceOk() =" << instanceOk()
+                    ;
     if (isDebug)
     {
     qDebug().noquote()

@@ -60,6 +60,7 @@ signals:
                              QString src = "MetaRead2::dispatch");
 
     void done();
+    void dispatchIsFinished(QString src);
 
 public slots:
     void initialize();

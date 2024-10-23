@@ -574,8 +574,9 @@ private slots:
     // caching
     void loadConcurrentNewFolder();
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
-
+    void loadConcurrentChanged(const QString folderPath);
     void loadConcurrentDone();
+
 
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);

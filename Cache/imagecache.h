@@ -55,7 +55,7 @@ public:
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCacheParameters();
     QString reportCacheDecoders();
-    QString reportCache(QString title = "");
+    QString reportCacheItemList(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
@@ -94,6 +94,7 @@ public slots:
     // void updateImageMetadataFromReader(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
+    void datamodelFolderCountChange(QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
     void refreshImageCache();
