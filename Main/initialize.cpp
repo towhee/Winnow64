@@ -224,6 +224,7 @@ void MW::createDataModel()
         dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();
     else dm->showThumbNailSymbolHelp = true;
 
+    connect(dm, &DataModel::addedFolderToDM, this, &MW::loadConcurrentChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -422,6 +423,10 @@ void MW::createMDCache()
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
     // save time to read image metadata and icon to the datamodel
     connect(metaReadThread, &MetaRead2::setMsToRead, dm, &DataModel::setValue);
+    // reset imagecache targets after folder added or removed from datamodel
+    connect(metaReadThread, &MetaRead2::dispatchIsFinished,
+            imageCacheThread, &ImageCache::datamodelFolderCountChange);
+
     // not being used:
     // read metadata
     //connect(this, &MW::startMetaRead, metaReadThread, &MetaRead2::setCurrentRow);
@@ -1527,7 +1532,7 @@ void MW::createDocks()
     createThumbDock();
     createEmbelDock();
 
-    connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
+    // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);

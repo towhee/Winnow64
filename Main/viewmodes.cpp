@@ -103,11 +103,15 @@ void MW::gridDisplay()
     if (G::isLogger || G::isFlowLogger) G::log(" MW::gridDisplay");
 
 
-    if (embelProperties->templateId > 0) {
-        QString msg = "Only loupe mode is available while the Embellish Editor is active.";
-        G::popUp->showPopup(msg, 2000);
-        return;
-    }
+    // if (embelProperties->templateId > 0) {
+    //     QString msg = "Only loupe mode is available while the Embellish Editor is active.<br>"
+    //                   "Select template \"Do not Embellish\" to deactivate Embellish Editor<br>"
+    //                   "and then you can switch to grid view<p>"
+    //                   "Press ESC to continue"
+    //         ;
+    //     G::popUp->showPopup(msg, 0);
+    //     return;
+    // }
 
     G::mode = "Grid";
     thumbDockVisibleAction->setEnabled(false);
@@ -183,12 +187,15 @@ void MW::tableDisplay()
     // if (G::isLogger || G::isFlowLogger)
         // qDebug() << "MW::tableDisplay";
 
-    if (embelProperties->templateId > 0) {
-        G::popUp->showPopup(
-            "Only loupe mode is available while the Embellish Editor "
-            "is active.", 2000);
-        return;
-    }
+    // if (embelProperties->templateId > 0) {
+    //     QString msg = "Only loupe mode is available while the Embellish Editor is active.<br>"
+    //                   "Select template \"Do not Embellish\" to deactivate Embellish Editor<br>"
+    //                   "and then you can switch to table view<p>"
+    //                   "Press ESC to continue"
+    //         ;
+    //     G::popUp->showPopup(msg, 0);
+    //     return;
+    // }
 
     G::mode = "Table";
     thumbDockVisibleAction->setEnabled(true);
@@ -272,9 +279,12 @@ void MW::compareDisplay()
     if (G::isLogger) G::log("MW::compareDisplay");
 
     if (embelProperties->templateId > 0) {
-        G::popUp->showPopup(
-            "Only loupe mode is available while the Embellish Editor "
-            "is active.", 2000);
+        QString msg = "Only loupe mode is available while the Embellish Editor is active.<br>"
+                      "Select template \"Do not Embellish\" to deactivate Embellish Editor<br>"
+                      "and then you can switch to compare view<p>"
+                      "Press ESC to continue"
+            ;
+        G::popUp->showPopup(msg, 0);
         return;
     }
 

@@ -76,6 +76,17 @@ PROGRAM FLOW - CONCURRENT
         - MW::loadConcurrent
         - MetaRead::setCurrentRow
 
+    • While loading - another folder appended to datamodel
+        - FSTree::selectionChanged             // selected > 1 folder
+        - DataModel::enqueueFolderSelection    // append to folder list queue
+        - DataModel::processNextFolder         // append to datamodel and add folder file data
+        - MW::loadConcurrentChanged            // prep and start MetaRead2
+        - MetaRead2::setStartRow               // start metadata and icon loading for new DM items
+        - Reader::read                         // prep reader
+        - Reader::readMetadata                 // read file metadata
+
+        - ImageCache::updateCacheItemMetadataFromReader // add item to cacheItemList
+
 PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
 
     • Selecting a new folder in the Folders or Bookmarks panel calls MW::folderSelectionChange.
@@ -2906,6 +2917,19 @@ void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::loadConcurrent");
 }
 
+void MW::loadConcurrentChanged(const QString folderPath)
+{
+/*
+    Signalled from DataModel::processNextFolder
+*/
+    qDebug() << "MW::loadConcurrentChanged" << folderPath;
+    G::allMetadataLoaded = false;
+    G::iconChunkLoaded = false;
+    dm->setIconRange(dm->currentSfRow);
+    bool isFileSelectionChange = false;
+    metaReadThread->setStartRow(dm->currentSfRow, isFileSelectionChange, "MW::loadConcurrentChanged");
+}
+
 void MW::loadConcurrentDone()
 {
 /*
@@ -2951,12 +2975,14 @@ void MW::loadConcurrentDone()
     // missing thumbnails menu enabled
     enableSelectionDependentMenus();
 
-    // if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
-    //     embedThumbnailsAction->setEnabled(true);
-    // }
-    // else {
-    //     embedThumbnailsAction->setEnabled(false);
-    // }
+    /*
+    if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
+        embedThumbnailsAction->setEnabled(true);
+    }
+    else {
+        embedThumbnailsAction->setEnabled(false);
+    }
+    */
 
     // if missing thumbnails show missing thumb dialog
     if (G::modifySourceFiles

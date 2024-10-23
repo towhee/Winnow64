@@ -2883,7 +2883,7 @@ void EmbelProperties::addTemplateHeader()
     propertyDelegate->setEditorData(templateListEditor, idx);
 
     if (templateList.size() == 1) {
-        QString msg = "You must create a template as a first step before adding\n"
+        QString msg = "You must create a template as a first step before adding<br>"
                       "borders, text, rectangles or graphics.";
         G::popUp->showPopup(msg, 2000);
     }

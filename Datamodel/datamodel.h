@@ -157,6 +157,7 @@ public:
     bool okManyImagesWarning();
 
 signals:
+    void addedFolderToDM(QString folderName);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -186,6 +187,9 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
+
+private slots:
+    void processNextFolder();
 
 private:
     // QWidget *mw;
@@ -225,7 +229,6 @@ private:
 
     QItemSelection savedSelection;
 
-    void processNextFolder();
     void addFolder(const QString &folderPath);
     void removeFolder(const QString &folderPath);
     bool endLoad(bool success);

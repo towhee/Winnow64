@@ -986,7 +986,7 @@ QString ImageCache::diagnostics()
     rpt << "\n\n";
     rpt << reportCacheParameters();
     rpt << reportCacheDecoders();
-    rpt << reportCache("");
+    rpt << reportCacheItemList("");
     rpt << reportImCache();
 
     rpt << "\n\n" ;
@@ -1072,7 +1072,7 @@ QString ImageCache::reportCacheDecoders()
     return reportString;
 }
 
-QString ImageCache::reportCache(QString title)
+QString ImageCache::reportCacheItemList(QString title)
 {
     log("reportCache");
     if (debugCaching) qDebug() << "ImageCache::reportCache";
@@ -1133,10 +1133,16 @@ QString ImageCache::reportCache(QString title)
             rpt.setFieldWidth(1);
             rpt.setFieldWidth(3);
             rpt << "   ";
-            rpt.setFieldWidth(30);
+            rpt.setFieldWidth(40);
             rpt << "File Name";
             rpt.setFieldWidth(1);
             rpt << " ";
+
+            rpt.setFieldWidth(40);
+            rpt << "DM File Name";
+            rpt.setFieldWidth(1);
+            rpt << " ";
+
             rpt.setFieldWidth(50);
             rpt << "Error message";
             rpt.setFieldWidth(0);
@@ -1171,12 +1177,25 @@ QString ImageCache::reportCache(QString title)
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(3);
         rpt << "   ";
-        rpt.setFieldWidth(30);
-        rpt << Utilities::getFileName(icd->cacheItemList.at(i).fPath);
+
+        QString icdPath = icd->cacheItemList.at(i).fPath;
+        QString  sfPath = dm->sf->index(i,0).data(G::PathRole).toString();
+
+        rpt.setFieldWidth(40);
+        rpt << Utilities::getFileName(icdPath);
         rpt.setFieldWidth(1);
         rpt << " ";
+
+        rpt.setFieldWidth(40);
+        rpt << Utilities::getFileName(sfPath);
+        rpt.setFieldWidth(1);
+        rpt << " ";
+
         rpt.setFieldWidth(50);
-        rpt << icd->cacheItemList.at(i).errMsg.left(50);
+        if (icdPath == sfPath)
+            rpt << icd->cacheItemList.at(i).errMsg.left(50);
+        else
+            rpt << "Path Mismatch";
         rpt.setFieldWidth(0);
         rpt << "\n";
         if (icd->cacheItemList.at(i).isCached) cachedCount++;
@@ -1557,41 +1576,6 @@ bool ImageCache::updateCacheItemMetadata(int row)
         icd->cacheItemList[row].samplesPerPixel = d->index(row, G::samplesPerPixelColumn).data().toInt();
         icd->cacheItemList[row].iccBuf = d->index(row, G::ICCBufColumn).data().toByteArray();
     }
-    // icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
-    // icd->cacheItemList[row].isVideo = m.video;
-
-    // if (m.video) {
-    //     icd->cacheItemList[row].sizeMB = 0;
-    //     icd->cacheItemList[row].estSizeMB = false;
-    //     icd->cacheItemList[row].offsetFull = 0;
-    //     icd->cacheItemList[row].lengthFull = 0;
-    //     icd->cacheItemList[row].status = ImageDecoder::Status::Video;
-    // }
-    // else {
-    //     // cacheItemList is a list of cacheItem used to track the current cache status and
-    //     // make future caching decisions for each image.
-    //     int w, h;
-    //     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
-    //     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
-
-    //     // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-    //     float sizeMB = static_cast<float>(w * h * 1.0 / 262144);
-    //     if (sizeMB > 0) {
-    //         icd->cacheItemList[row].sizeMB = sizeMB;
-    //         icd->cacheItemList[row].estSizeMB = false;
-    //     }
-    //     else {
-    //         icd->cacheItemList[row].sizeMB = m.size * 1.0 / 1000000;
-    //         icd->cacheItemList[row].estSizeMB = true;
-    //     }
-    //     // decoder parameters
-    //     icd->cacheItemList[row].orientation = m.orientation;
-    //     icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
-    //     icd->cacheItemList[row].offsetFull = m.offsetFull;
-    //     icd->cacheItemList[row].lengthFull = m.lengthFull;
-    //     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
-    //     icd->cacheItemList[row].iccBuf = m.iccBuf;
-    // }
 
     // item has been updated
     icd->cacheItemList[row].isUpdated = true;
@@ -1624,7 +1608,7 @@ void ImageCache::updateCacheItemMetadataFromReader(int row, int instance)
     log("addCacheItemImageMetadata", "Row = " + QString::number(row));
     if (debugCaching)
     {
-        qDebug() << "ImageCache::addCacheItemImageMetadata"
+        qDebug() << "ImageCache::updateCacheItemMetadataFromReader"
                  << "row =" << row
                     ;
     }
@@ -1804,14 +1788,9 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
                     ;
         //*/
     }
+
     // remove surplus images in icd->imCache
-    // CTSL::HashMap<QString, QImage> imCache
-    // QVector<QString> keys;
-    // icd->imCache.getKeys(keys);
-
-    // QHash<QString, QImage> imCache
     QStringList keys = icd->imCache.keys();
-
     for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) {
             // qDebug() << "ImageCache::rebuildImageCacheParameters"
@@ -1823,6 +1802,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     // if the sort has been reversed
     if (source == "SortChange") icd->cache.isForward = !icd->cache.isForward;
 
+    // call updateTargets instead of setPriorities and setTargetReange?
     setPriorities(icd->cache.key);
     setTargetRange();
 
@@ -1877,6 +1857,17 @@ void ImageCache::cacheSizeChange()
     if (debugCaching)
         qDebug() << "ImageCache::cacheSizeChange";
 
+    if (isRunning()) {
+        stop();
+    }
+    start(QThread::LowestPriority);
+}
+
+void ImageCache::datamodelFolderCountChange(QString src)
+{
+    log("cacheSizeChange");
+
+    // setTargetRange();
     if (isRunning()) {
         stop();
     }

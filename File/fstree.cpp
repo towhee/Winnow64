@@ -454,6 +454,21 @@ bool FSTree::select(QString dirPath)
 
 void FSTree::expandedSelectRecursively(const QModelIndex &index)
 {
+/*
+    Along with FSTree::selectRecursively, expand the current row for all of its branches
+    and select them all. This is tricky, because the model is lazy loading, so it is necessary
+    to wait for the fsModel to finish fetching data.
+
+    It is also necessary to execute another setExpanded instruction.  I do not know why this
+    is necessary.
+
+    Making any selections while this is happening results in a crash, so the subfolders
+    indexes are stored in a list, and the list is iterated after the recursive search is
+    finished to select all the rows (subFolders).
+
+    The recursion is initiated by the mousePressEvent with the alt/opt or alt/opt + cmd/ctrl
+    modifiers pressed.
+*/
     if (!index.isValid() || !isRecursiveSelection) {
         return;
     }
@@ -532,6 +547,9 @@ void FSTree::selectRecursively(const QModelIndex &index)
 
 void FSTree::selectItemAndChildren(const QModelIndex &index)
 {
+/*
+    Not being used.
+*/
     if (G::isLogger) G::log("FSTree::selectItemAndChildren");
     QItemSelectionModel *selectionModel = this->selectionModel();
     if (!selectionModel) {
@@ -565,6 +583,9 @@ QModelIndex FSTree::getCurrentIndex()
 
 QStringList FSTree::getSelectedFolderPaths() const
 {
+/*
+    Not being used
+*/
     QStringList selectedFolderPaths;
     QItemSelectionModel *selectionModel = this->selectionModel();
 
@@ -586,6 +607,8 @@ QStringList FSTree::getSelectedFolderPaths() const
 
 void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
+    // prevent select next folder when a folder is moved to trash/recycle
+
     // Q_UNUSED(parent)
     // Q_UNUSED(start)
     // Q_UNUSED(end)
@@ -681,7 +704,7 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
                     emit folderSelection(folderPath);
                 }
                 else {
-                    // datamodelQueue(folderPath, true);
+                    emit datamodelQueue(folderPath, true);
                 }
             }
         }

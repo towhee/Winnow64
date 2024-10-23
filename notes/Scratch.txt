@@ -160,3 +160,115 @@ void FSTree::selectItemAndChildren(const QModelIndex &index)
         }
     }
 }
+
+-----------------------------
+
+void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
+{
+
+    QMutexLocker locker(&queueMutex);
+    folderQueue.enqueue(qMakePair(folderPath, isAdding));
+
+    // /*
+    if (isDebug)
+    {
+    qDebug() << "DataModel::enqueueFolderSelection"
+             << "isAdding =" << isAdding
+             << "folder =" << folderPath
+             << "folderQueue =" << folderQueue
+        ;
+    } //*/
+
+    // If not already processing, start the processing
+    if (!isProcessing) {
+        isProcessing = true;
+        processNextFolder();
+    }
+}
+
+void DataModel::processNextFolder() {
+
+    qDebug() << "DataModel::processNextFolder";
+
+    // QMutexLocker locker(&queueMutex);
+    if (folderQueue.isEmpty()) {
+        qDebug() << "DataModel::processNextFolder Queue is empty";
+        isProcessing = false;
+        return;
+    }
+
+    QPair<QString, bool> folderOperation = folderQueue.dequeue();
+    // locker.unlock(); // Unlock the queue while processing
+
+    // if (isDebug)
+    {
+    qDebug() << "DataModel::processNextFolder"
+             << "folderOperation.first =" << folderOperation.first
+             << "folderOperation.second =" << folderOperation.second
+                ;
+    }//*/
+
+    // Process the folder asynchronously using QtConcurrent
+    QtConcurrent::run([this, folderOperation]() {
+        if (folderOperation.second) {
+            addFolder(folderOperation.first);
+        } else {
+            removeFolder(folderOperation.first);
+        }
+
+        // Continue with the next folder operation
+        QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
+    });
+}
+
+void DataModel::addFolder(const QString &folderPath)
+{
+
+    qDebug() << "DataModel::addFolder"
+             << "folder =" << folderPath
+                ;
+
+    // control
+    abortLoadingModel = false;
+    currentFolderPath = folderPath;
+    loadingModel = true;
+
+    // folder fileInfo list
+    QDir dir(folderPath);
+    dir.setNameFilters(*fileFilters);
+    dir.setFilter(QDir::Files);
+    QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+    std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+
+    // datamodel size
+    int row = rowCount();
+    setRowCount(rowCount() + folderFileInfoList.count());
+
+    for (const QFileInfo &fileInfo : folderFileInfoList) {
+        fileInfoList.append(fileInfo);
+        /*
+        qDebug() << "DataModel::addFolder"
+                 << "row =" << row
+                 << "file =" << fileInfo.fileName()
+                 << "folder =" << folderPath
+                    ; //*/
+        // Ensure thread-safe updates to the model
+        QMetaObject::invokeMethod(this, [this, row, fileInfo]() {
+            addFileDataForRow(row, fileInfo);
+        }, Qt::QueuedConnection);
+        row++;
+    }
+}
+
+void DataModel::removeFolder(const QString &folderPath)
+{
+    QMetaObject::invokeMethod(this, [this, folderPath]() {
+        for (int row = rowCount() - 1; row >= 0; --row) {
+            QString filePath = index(row, 0).data(Qt::UserRole).toString();
+            if (filePath.startsWith(folderPath)) {
+                removeRow(row);
+            }
+        }
+    }, Qt::QueuedConnection);
+}
+
