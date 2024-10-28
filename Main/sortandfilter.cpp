@@ -58,12 +58,13 @@ void MW::filterChange(QString source)
     - the image cache is rebuilt to match the current filter
     - the thumb and grid first/last/thumbsPerPage parameters are recalculated
       and icons are loaded if necessary.
+    - the row numbers are updated to show in tableView
 
     Save and recover selection is not required for filter operations.  It is
     required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    // qDebug() << "MW::filterChange" << "called from:" << source;
+    qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -217,6 +218,15 @@ void MW::filterSyncActionsWithFilters()
     filterBlueAction->setChecked(filters->isLabelChecked("Blue"));
     filterPurpleAction->setChecked(filters->isLabelChecked("Purple"));
     filterLastDayAction->setChecked(filters->isOnlyMostRecentDayChecked());
+}
+
+bool MW::isSortFilter()
+{
+    if (G::isLogger) G::log("MW::isSortFilter");
+    bool ret = false;
+    if (dm->rowCount() > dm->sf->rowCount()) ret = true;
+    if (sortColumn > G::NameColumn) ret = true;
+    return ret;
 }
 
 void MW::invertFilters()

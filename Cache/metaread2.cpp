@@ -148,7 +148,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     lastIconRow = dm->endIconRange;
     mutex.unlock();
 
-    // if (isDebug)
+    if (isDebug)
     {
     qDebug() << "\nMetaRead2::setStartRow "
              << "startRow =" << startRow
@@ -611,10 +611,6 @@ void MetaRead2::redo()
     dispatchReaders();
 }
 
-// void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx,
-//                                                const QModelIndex &idx2,
-//                                                bool clearSelection,
-//                                                const QString &src) {
 void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay)
 {
     // Emit the signal after a delay using QTimer::singleShot and a lambda
@@ -622,7 +618,12 @@ void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int m
     bool clearSelection = false;
     QString src = "MetaRead2::dispatch";
     QTimer::singleShot(msDelay, this, [this, sfIdx, idx2, clearSelection, src]() {
-        emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
+        /*
+        qDebug() << "MetaRead2::emitFileSelectionChangeWithDelay"
+                 << "instance =" << instance
+                 << "dm->instance =" << dm->instance; //*/
+        if (instance == dm->instance)
+            emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
     });
 }
 
@@ -945,16 +946,6 @@ void MetaRead2::dispatch(int id)
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = dmIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
-        if (isDebug)
-        if (nextRow > 8540)
-        {
-            qDebug().noquote()
-                << "MetaRead2::dispatch     launch reader       "
-                << "nextRow =" << nextRow
-                << "firstIconRow =" << firstIconRow
-                << "lastIconRow =" << lastIconRow
-               ;
-        }
         bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
         if (isDebug)
         {

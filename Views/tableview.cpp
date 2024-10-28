@@ -37,6 +37,9 @@ TableView::TableView(QWidget *parent, DataModel *dm)
 
     verticalScrollBar()->setObjectName("TableViewVerticalScrollBar");
 
+    RowNumberItemDelegate *rowNumberItemDelegate = new RowNumberItemDelegate;
+    setItemDelegateForColumn(G::RowNumberColumn, rowNumberItemDelegate);
+
     CreatedItemDelegate *createdItemDelegate = new CreatedItemDelegate;
     setItemDelegateForColumn(G::CreatedColumn, createdItemDelegate);
 
@@ -425,6 +428,17 @@ void TableView::showOrHide()
 //------------------------------------------------------------------------------
 //   DELEGATES
 //------------------------------------------------------------------------------
+
+RowNumberItemDelegate::RowNumberItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+void RowNumberItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    painter->save();
+    painter->drawText(option.rect, Qt::AlignRight | Qt::AlignVCenter, QString::number(index.row() + 1));
+    painter->restore();
+}
 
 CreatedItemDelegate::CreatedItemDelegate(QObject* parent): QStyledItemDelegate(parent)
 {

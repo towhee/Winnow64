@@ -10,7 +10,9 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Chenges from Table to Loupe wehn change dock
+- MW::deleteFiles filter/sort work?
+- MW::insertFiles filter/sort work?
+- DataModel could fileInfoList be local - req'd as class variable after model built?
 - When select folder using include subfolders make sure it is and remains selected in FSTree
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - FS and Bookmarks show unselected row highlighted sometimes
@@ -122,6 +124,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- replace dm->updateRowNumbers() with a delegate in tableView
+- Changes from Table to Loupe wehn change dock
 - Add folders to filters
 - Paste images to root folder selected
 - Bookmarks folder count not refreshing after delete all files in folder

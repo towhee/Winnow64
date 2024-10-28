@@ -434,14 +434,22 @@ void DataModel::remove(QString fPath)
 
 // MULTI-SELECT FOLDERS
 
+bool DataModel::isQueueEmpty()
+{
+    return folderQueue.isEmpty();
+}
+
 void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
 {
 
-    QMutexLocker locker(&queueMutex);
+    // do not process if already in datamodel
+    if (folderList.contains(folderPath) && isAdding) return;
+
+    // QMutexLocker locker(&queueMutex);
     folderQueue.enqueue(qMakePair(folderPath, isAdding));
 
     // /*
-    if (isDebug)
+    // if (isDebug)
     {
     qDebug() << "DataModel::enqueueFolderSelection"
              << "isAdding =" << isAdding
@@ -460,6 +468,7 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
 void DataModel::processNextFolder() {
 
     // qDebug() << "DataModel::processNextFolder";
+    if (G::stop) return;
 
     QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
@@ -481,11 +490,17 @@ void DataModel::processNextFolder() {
 
     // Process the folder asynchronously using QtConcurrent
     QtConcurrent::run([this, folderOperation]() {
+        // add images from model
         if (folderOperation.second) {
             addFolder(folderOperation.first);
+            // signal MW::loadConcurrentChanged
             emit addedFolderToDM(folderOperation.first);
-        } else {
+        }
+        // remove images from model
+        else {
             removeFolder(folderOperation.first);
+            // signal MW::loadConcurrentChanged
+            emit removedFolderFromDM(folderOperation.first);
         }
 
         // Continue with the next folder operation
@@ -504,6 +519,7 @@ void DataModel::addFolder(const QString &folderPath)
     QMutexLocker locker(&mutex);
     abortLoadingModel = false;
     currentFolderPath = folderPath;
+    folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
@@ -541,14 +557,22 @@ void DataModel::addFolder(const QString &folderPath)
 
 void DataModel::removeFolder(const QString &folderPath)
 {
-    QMetaObject::invokeMethod(this, [this, folderPath]() {
-        for (int row = rowCount() - 1; row >= 0; --row) {
-            QString filePath = index(row, 0).data(Qt::UserRole).toString();
-            if (filePath.startsWith(folderPath)) {
-                removeRow(row);
-            }
+    qDebug() << "DataModel::removeFolder"
+             << folderPath
+        ;
+
+    folderList.removeAll(folderPath);
+    for (int row = rowCount() - 1; row >= 0; --row) {
+        QString filePath = index(row, 0).data(G::PathRole).toString();
+        qDebug() << "DataModel::removeFolder remove row" << row
+            << filePath.startsWith(folderPath)
+            << folderPath << filePath;
+        if (filePath.startsWith(folderPath)) {
+            qDebug() << "DataModel::removeFolder remove row" << row << filePath;
+            removeRow(row);
         }
-    }, Qt::QueuedConnection);
+    }
+    emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
 // END MULTI-SELECT FOLDERS
@@ -697,9 +721,11 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
 
     abortLoadingModel = false;
-    currentFolderPath = folderPath;
     loadingModel = true;
     subFolderImagesLoaded = false;
+    folderList.clear();
+    folderList.append(folderPath);
+    currentFolderPath = folderPath;
 
     // emit centralMsg("Building image file list.");
 
@@ -2832,6 +2858,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     as categories, and each category has one or more filter items.  Categories
     map to columns in the data model ie Picked, Rating, Label ...
 */
+
     // Suspend?
     if (suspendFiltering) return true;
 
@@ -2937,6 +2964,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // check results of category items filter match for the last group
     if (isCategoryUnchecked) isMatch = true;
     finished = true;
+
     //qDebug() << "SortFilter::filterAcceptsRow  sf->rowCount =" << rowCount();
     return isMatch;
 }
@@ -2960,7 +2988,6 @@ void SortFilter::filterChange(QString src)
     if (suspendFiltering) return;
 
     invalidateRowsFilter();
-//    invalidateFilter();
 
     // force wait until finished to prevent sorting/editing datamodel
     int waitMs = 2000;

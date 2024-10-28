@@ -994,8 +994,9 @@ void IconView::scrollToCurrent(QString source)
              << "dm->currentSfIdx =" << dm->currentSfIdx
            ;
     // */
+
     G::ignoreScrollSignal = true;
-    scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
+    if (dm->currentSfIdx.isValid()) scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
 }
 
 void IconView::enterEvent(QEnterEvent *event)

@@ -59,6 +59,14 @@ signals:
 
 #include <QStyledItemDelegate>
 
+class RowNumberItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit RowNumberItemDelegate(QObject* parent = nullptr);
+    // virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+};
+
 class CreatedItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

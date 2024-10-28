@@ -78,14 +78,18 @@ PROGRAM FLOW - CONCURRENT
 
     • While loading - another folder appended to datamodel
         - FSTree::selectionChanged             // selected > 1 folder
+        - MW::loadConcurrentAddFolder          // clear filters
         - DataModel::enqueueFolderSelection    // append to folder list queue
         - DataModel::processNextFolder         // append to datamodel and add folder file data
         - MW::loadConcurrentChanged            // prep and start MetaRead2
         - MetaRead2::setStartRow               // start metadata and icon loading for new DM items
         - Reader::read                         // prep reader
         - Reader::readMetadata                 // read file metadata
-
         - ImageCache::updateCacheItemMetadataFromReader // add item to cacheItemList
+        - Reader::readIcon                     // read file icon
+        - MetaRead2::dispatchFinished          // finished all files in datamodel
+        - MW::loadCurrentDone                  // cleanup, rebuild filters
+
 
 PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
 
@@ -2869,6 +2873,31 @@ void MW::loadConcurrentNewFolder()
     sel->setCurrentRow(targetRow);
 }
 
+void MW::loadConcurrentAddFolder(const QString folderPath)
+{
+    QString fun = "MW::loadConcurrentNewFolder";
+    if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
+
+    if (filters->isAnyFilter()) {
+        QString msg = "Filters are set. Please wait for filtration of the new folder images...";
+        G::popUp->showPopup(msg, 3000);
+    }
+
+    filters->save();
+    // clearAllFilters();
+    dm->enqueueFolderSelection(folderPath, /*Add*/true);
+}
+
+void MW::loadConcurrentRemoveFolder(const QString folderPath)
+{
+    QString fun = "MW::loadConcurrentNewFolder";
+    if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
+
+    filters->save();
+    // clearAllFilters();
+    dm->enqueueFolderSelection(folderPath, /*Add*/false);
+}
+
 void MW::loadConcurrent(int sfRow, bool isFileSelectionChange, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.  If all
@@ -2926,6 +2955,7 @@ void MW::loadConcurrentChanged(const QString folderPath)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
     dm->setIconRange(dm->currentSfRow);
+    updateStatus(true, "", "MW::loadConcurrentChanged");
     bool isFileSelectionChange = false;
     metaReadThread->setStartRow(dm->currentSfRow, isFileSelectionChange, "MW::loadConcurrentChanged");
 }
@@ -2946,6 +2976,8 @@ void MW::loadConcurrentDone()
         G::log("MW::loadConcurrentDone", msg);
     }
     QString src = "MW::loadConcurrentDone ";
+    qDebug() << src;
+
     int count = 0;
     /*
     qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
@@ -2965,7 +2997,6 @@ void MW::loadConcurrentDone()
     */
 
     if (reset(src + QString::number(count++))) return;
-
     // missing thumbnails
     /*
     qDebug() << "MW::LoadConcurrentDone"
@@ -3016,7 +3047,23 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
 
     if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
+        qDebug() << src << "buildFilters->build()";
         buildFilters->build();
+    }
+
+    // filterChange();
+    // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
+
+    qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
+    if (dm->folderList.count() > 1 && dm->isQueueEmpty()) {
+        qDebug() << src << "dm->imageFilePathList.count() > 1";
+        // buildFilters->reset(false);
+        // buildFilters->build();
+
+        buildFilters->recount();
+        // filters->restore();
+        // filterChange();
+        // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
 
     // if (reset(src + QString::number(count++))) return;
@@ -3026,6 +3073,14 @@ void MW::loadConcurrentDone()
     if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
+
+    // reset datamodel processing flag
+    if (dm->isQueueEmpty()) {
+        dm->isProcessing = false;
+    }
+    else {
+        dm->processNextFolder();
+    }
 
     blocker.unblock();
     //QApplication::beep();
