@@ -225,6 +225,7 @@ void MW::createDataModel()
     else dm->showThumbNailSymbolHelp = true;
 
     connect(dm, &DataModel::addedFolderToDM, this, &MW::loadConcurrentChanged);
+    connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadConcurrentChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -916,8 +917,10 @@ void MW::createFSTree()
     // this works for touchpad tap (replaced with folderSelection)
     // connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
 
-    // add folder to the DataModel processing queue
-    connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
+    // add/remove folder to the DataModel processing queue
+    connect(fsTree, &FSTree::addToDataModel, this, &MW::loadConcurrentAddFolder);
+    connect(fsTree, &FSTree::removeFromDataModel, this, &MW::loadConcurrentRemoveFolder);
+    // connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
 
     // reselect folder after external program drop onto FSTree or a selectionChange
     connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);

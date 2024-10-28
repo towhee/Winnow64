@@ -55,6 +55,7 @@ public:
     void clearDataModel();
     void newInstance();
     bool hasFolderChanged();
+    bool isQueueEmpty();
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
@@ -105,11 +106,14 @@ public:
     void restoreSelection();
 
     QMutex mutex;
+    bool isProcessing = false;
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
     QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
+    // all folders in the datamodel
+    QStringList folderList;
     QDir::SortFlags thumbsSortFlags;
 
     // current status
@@ -158,6 +162,7 @@ public:
 
 signals:
     void addedFolderToDM(QString folderName);
+    void removedFolderFromDM(QString folderName);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -187,9 +192,9 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
+    void processNextFolder();
 
 private slots:
-    void processNextFolder();
 
 private:
     // QWidget *mw;
@@ -199,12 +204,10 @@ private:
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
-    // all folders in the datamodel
-    QStringList folderList;
     // Pair of folderPath and operation type (true=add, false=remove)
     QQueue<QPair<QString, bool>> folderQueue;
     QMutex queueMutex;
-    bool isProcessing = false;
+    // bool isProcessing = false;
 
     enum ErrorType {
         General,

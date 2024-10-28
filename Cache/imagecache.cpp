@@ -1461,6 +1461,7 @@ void ImageCache::addCacheItem(int key)
 {
 /*
     Add or append basic info to cacheItemList.
+    key == DataModel proxy sfRow
 */
     int n = dm->sf->rowCount();
     // if (toBeUpdated.size() < n) toBeUpdated.resize(n);
@@ -1493,15 +1494,17 @@ void ImageCache::addCacheItem(int key)
         icd->cacheItemList.append(icd->cacheItem);
     }
 
-    // increment key for rest of list
-    for (int i = row + 1; i < icd->cacheItemList.size(); i++) {
-        icd->cacheItemList[i].key = i;
-    }
+    // // increment key for rest of list
+    // for (int i = row + 1; i < icd->cacheItemList.size(); i++) {
+    //     icd->cacheItemList[i].key = i;
+    // }
 
     if (debugCaching)
     {
-        qDebug() << "ImageCache::addImageMetadata"
+        int size = dm->sf->index(row, G::SizeColumn).data().toInt();
+        qDebug() << "ImageCache::addCacheItem"
                  << "row =" << row
+                 << "size =" << size
                  << "isUpdated =" << icd->cacheItem.isUpdated
                  << "path =" << fPath
             ;
@@ -1597,7 +1600,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
 }
 
 // void ImageCache::updateCacheItemMetadataFromReader(ImageMetadata m, int instance)
-void ImageCache::updateCacheItemMetadataFromReader(int row, int instance)
+void ImageCache::updateCacheItemMetadataFromReader(int row, QString fPath, int instance)
 {
 /*
     The imageCacheList metadata information is updated for the row, triggered by signal
@@ -1612,8 +1615,6 @@ void ImageCache::updateCacheItemMetadataFromReader(int row, int instance)
                  << "row =" << row
                     ;
     }
-
-    QString fPath = dm->pathFromProxyRow(row);
 
     if (instance != dm->instance) {
         if (debugCaching) {

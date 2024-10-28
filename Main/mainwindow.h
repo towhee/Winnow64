@@ -507,6 +507,7 @@ private slots:
     void filterChange(QString source = "");
     void quickFilter();
     void quickFilterComplete();
+    bool isSortFilter();
     void invertFilters();
     void setFilterSolo();
     void toggleReject();
@@ -573,10 +574,11 @@ private slots:
                                 QString source);
     // caching
     void loadConcurrentNewFolder();
+    void loadConcurrentAddFolder(const QString folderPath);
+    void loadConcurrentRemoveFolder(const QString folderPath);
     void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
     void loadConcurrentChanged(const QString folderPath);
     void loadConcurrentDone();
-
 
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);

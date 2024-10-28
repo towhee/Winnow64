@@ -137,7 +137,7 @@ bool Reader::readMetadata()
     // ImageCache imageCacheList is mirror of dm->sf (current sort/filter)
     int sfRow = dm->proxyRowFromModelRow(dmRow);
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << "Reader::readMetadata emit addToImageCache   "
@@ -148,7 +148,7 @@ bool Reader::readMetadata()
             ;
     }
 
-    if (!abort) emit addToImageCache(sfRow, instance);
+    if (!abort) emit addToImageCache(sfRow, fPath, instance);
     // if (!abort) emit addToImageCache(dmIdx.row(), instance);
 
     return isMetaLoaded;

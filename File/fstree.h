@@ -103,6 +103,8 @@ signals:
     void selectionChange();
     void folderSelection(QString dPath);
     void datamodelQueue(QString dPath, bool isAdding);
+    void addToDataModel(QString dPath);
+    void removeFromDataModel(QString dPath);
     void abortLoadDataModel();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);

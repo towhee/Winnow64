@@ -7,7 +7,7 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = true;              // Writes log messages to file or console
+bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
@@ -55,6 +55,8 @@ bool useMultimedia = true;
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
 bool useProcessEvents = true;
+
+bool useMultiFolderSelection = true;
 
 // system display
 QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -291,7 +293,7 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
         qDebug().noquote() << issue->toString();
     }
 
-    bool includeInDataModel = sfRow >-1;
+    bool includeInDataModel = sfRow > -1;
 
     /*
     QString fun = "G::issue";

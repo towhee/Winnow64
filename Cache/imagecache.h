@@ -90,7 +90,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void updateCacheItemMetadataFromReader(int row, int instance);
+    void updateCacheItemMetadataFromReader(int row, QString fPath, int instance);
     // void updateImageMetadataFromReader(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);

@@ -196,12 +196,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // traverseFolderStressTest(50, 00, true);
     // qDebug() << dm->iconChunkSize;
 
-    // QModelIndex index = fsTree->getCurrentIndex();
-    // fsTree->setExpanded(fsTree->testIdx, true);
-    QString dirPath = "/Users/roryhill/Pictures/_test6/folder1";
-    QModelIndex index = fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath));
-    int count = fsTree->fsFilter->rowCount(index);
-    qDebug() << "count =" << count;
+    // clearAllFilters();
+    // filterChange();
+    buildFilters->recount();
+    filters->restore();
+    filterChange();
+    thumbView->sortThumbs(sortColumn, isReverseSort);
 }
 /*
    Performance

@@ -25,6 +25,7 @@
          *ratings;
          *labels;
          *types;
+         *folders
          *years;
          *days;
          *models;
@@ -327,7 +328,7 @@ void BuildFilters::updateUnfilteredSearchCount()
 
 void BuildFilters::updateUnfilteredCounts()
 {
-    /*
+/*
     Update the DataModel item counts in Filters.  A QMap is used to count all the unique
     items for each DataModel column that can be filtered and updates the unique item counts by
     calling filters->addFilteredCountPerItem.
@@ -840,8 +841,6 @@ void BuildFilters::run()
             << "action =" << action
                ;
     }
-
-    //if (filters->filtersBuilt) return;
 
     if (reportTime) {
         msTot = 0;

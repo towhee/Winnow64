@@ -683,44 +683,81 @@ void FSTree::resizeEvent(QResizeEvent *event)
 
 void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
+/*
+    Changes in folders selected triggers signals to add or remove all the folder eligible
+    files from the DataModel.  If only one folder is selected then the DataModel is cleared
+    and the selected folder images are appended to the DataModel. As additional folders
+    are selected their images are appended or removed from the DataModel.
+*/
     if (G::isLogger) G::log("FSTree::selectionChanged");
 
-    QTreeView::selectionChanged(selected, deselected);
+    if (G::isInitializing) return;
 
-    int selectedRowCount = 0;
-    if (!G::isInitializing) selectedRowCount = treeSelectionModel->selectedRows().count();
+    int selectionCount = treeSelectionModel->selectedRows().count();
+
+    // bool okToDelete = true;
+    // if (selectionCount > 1) okToDelete = false;
+
+    /*
+    qDebug()
+        << "\nFSTree::selectionChanged"
+        << "selectionCount =" << selectionCount
+        << "Changed:"
+        << "selected.count() =" << selected.count()
+        << "deselected.count() =" << deselected.count()
+        // << "okToDelete =" << okToDelete
+        ; //*/
+
+    QTreeView::selectionChanged(selected, deselected);
 
     // Iterate through the selected rows
     for (const QModelIndex &index : selected.indexes()) {
         if (index.column() == 0) { // Ensure we're only processing the first column
-            QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
-            if (folderPath.length() && !G::isInitializing) {
+            const QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+            if (folderPath.length()) {
                 // /*
                 qDebug()
-                    << "FSTree::selectionChanged"
-                    << "selectedRowCount =" << selectedRowCount
+                    << "FSTree::selectionChanged Iterate selected"
                     << "Selected Path:" << folderPath; //*/
-                if (selectedRowCount == 1) {
+                if (selectionCount == 1) {
                     emit folderSelection(folderPath);
                 }
                 else {
-                    emit datamodelQueue(folderPath, true);
+                    bool isAdd  = true;
+                    emit addToDataModel(folderPath);
+                    // emit datamodelQueue(folderPath, isAdd);
                 }
             }
         }
     }
 
+    // selected a new primary folder, nothing to remove
+    if (selected.count()) return;
+
+    /*
+    qDebug() << "\nFSTree::selectionChanged before process deleted"
+             << "Selection =" << treeSelectionModel->selection().count()
+             << "selected.count() =" << selected.count()
+             << "deselected.count() =" << deselected.count(); //*/
+
     // Iterate through the deselected rows
     for (const QModelIndex &index : deselected.indexes()) {
-        if (index.column() == 0) { // Ensure we're only processing the first column
+        // Only process the first column
+        if (index.column() == 0) {
             QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
-            /*
-            qDebug()
-                << "FSTree::selectionChanged"
-                << "Deselected Path:" << folderPath; //*/
+            if (folderPath.length()) {
+                // /*
+                qDebug()
+                    << "FSTree::selectionChanged Iterate deselected"
+                    << "Deselected Path:" << folderPath
+                    ; //*/
+
+                bool isAdd = false;
+                emit removeFromDataModel(folderPath);
+                // emit datamodelQueue(folderPath, isAdd);
+            }
         }
     }
-
 }
 
 void FSTree::keyPressEvent(QKeyEvent *event){
@@ -819,7 +856,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // update path
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
-    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
+    QString path = idx0.data(QFileSystemModel::FilePathRole).toString();
 
     // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
@@ -833,26 +870,40 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // load all subfolders images
-    if (event->modifiers() & Qt::AltModifier) {
-        qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS SELECTION" << path;
-        if (!(event->modifiers() & Qt::ControlModifier)) {
-            selectionModel()->clearSelection();
+    if (G::useMultiFolderSelection) {
+
+        // load all subfolders images
+        if (event->modifiers() & Qt::AltModifier) {
+            // ignore max control modifier and windows window key modifier
+            if (event->modifiers() & Qt::MetaModifier) return;
+            qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS SELECTION" << path;
+            if (!(event->modifiers() & Qt::ControlModifier)) {
+                selectionModel()->clearSelection();
+            }
+            isRecursiveSelection = true;
+            selectRecursively(idx0);
+            return;
         }
-        isRecursiveSelection = true;
-        selectRecursively(idx0);
-        return;
+
+        // toggle folder
+        if (event->modifiers() & Qt::ControlModifier) {
+            int folders = getSelectedFolderPaths().count();
+            bool folderWasSelected = getSelectedFolderPaths().contains(path);
+            // ignore if click on only folder selected
+            if (folderWasSelected && folders == 1) {
+                return;
+            }
+        }
     }
 
-    // toggle folder
-    if (event->modifiers() & Qt::ControlModifier) {
-        if (getSelectedFolderPaths().contains(path)) {
-            // qDebug() << "FSTree::mousePressEvent TOGGLE REMOVE SELECTION" << path;
+    else {
+        if (event->modifiers() & Qt::AltModifier) {
+            // ignore max control modifier and windows window key modifier
+            if (event->modifiers() & Qt::MetaModifier) return;
+            G::includeSubfolders = true;
+            QTreeView::mousePressEvent(event);
+            return;
         }
-        else {
-            // qDebug() << "FSTree::mousePressEvent TOGGLE ADD SELECTION" << path;
-        }
-        event->accept();
     }
 
     QTreeView::mousePressEvent(event);
