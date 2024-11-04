@@ -30,7 +30,8 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
-    void refresh(const QModelIndex &index);
+    void refresh();
+    // void refresh(const QModelIndex &index);
     void refresh(const QString &dPath);
     bool showImageCount;
     bool &combineRawJpg;
@@ -81,7 +82,7 @@ public slots:
 
 private slots:
     void wheelStopped();
-    void expandedSelectRecursively(const QModelIndex &index);
+    void expandedSelectRecursively(const QPersistentModelIndex &index);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -102,6 +103,7 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
     void folderSelection(QString dPath);
+    void folderSelection2(QString dPath, bool clearDataModel);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
@@ -118,7 +120,7 @@ signals:
 
 private:
     void selectItemAndChildren(const QModelIndex &index);
-    void selectRecursively(const QModelIndex &index);
+    void selectRecursively(const QPersistentModelIndex &index);
     QStringList getSelectedFolderPaths() const;
     QModelIndex dndOrigSelection;
     QFileSystemModel fileSystemModel;
@@ -127,7 +129,8 @@ private:
     HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
-    QModelIndexList recursedForSelection;
+    QList<QPersistentModelIndex> recursedForSelection;
+    // QModelIndexList recursedForSelection;
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
     QElapsedTimer t;

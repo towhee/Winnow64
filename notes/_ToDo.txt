@@ -10,6 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- When combineRawJpg shows all thumbnails and then filters when select folder
 - MW::deleteFiles filter/sort work?
 - MW::insertFiles filter/sort work?
 - DataModel could fileInfoList be local - req'd as class variable after model built?

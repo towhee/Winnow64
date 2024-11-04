@@ -58,7 +58,6 @@ void MW::filterChange(QString source)
     - the image cache is rebuilt to match the current filter
     - the thumb and grid first/last/thumbsPerPage parameters are recalculated
       and icons are loaded if necessary.
-    - the row numbers are updated to show in tableView
 
     Save and recover selection is not required for filter operations.  It is
     required for sorting operations.
@@ -74,9 +73,11 @@ void MW::filterChange(QString source)
     if (G::stop) return;
 
     //G::popUp->showPopup("Executing filter...", 0);
+
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead2 for the prior datamodel filter.
     dm->newInstance();
+
     // stop ImageCache
     imageCacheThread->stop();
 
@@ -102,7 +103,7 @@ void MW::filterChange(QString source)
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
-    dm->sf->suspend(false);
+    dm->sf->suspend(false, "MW::filterChange");
     dm->sf->filterChange("MW::filterChange");
 
     // update filter panel image count by filter item
@@ -668,7 +669,7 @@ void MW::setRating()
        - update proxy (filterChange) */
 
     // update category list in filters
-    dm->sf->suspend(true);
+    dm->sf->suspend(true, "MW::setRating");
     buildFilters->updateCategory(BuildFilters::RatingEdit);
 
     // was this rating filtered
@@ -856,7 +857,7 @@ void MW::setColorClass()
        - update proxy (filterChange) */
 
     // update category list in filters
-    dm->sf->suspend(true);
+    dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
 
     // // was this rating filtered

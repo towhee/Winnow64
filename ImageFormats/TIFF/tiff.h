@@ -18,7 +18,7 @@
 
 #ifdef Q_OS_MAC
 #include "ImageFormats/Tiff/libtiff.h"
-#include <tiffio.h>    // libtiff-6
+#include "/opt/homebrew/Cellar/libtiff/4.7.0/include/tiffio.h"    // libtiff
 // #include "zlib.h"
 #endif
 #ifdef Q_OS_WIN

@@ -249,7 +249,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
                 << "filters->filtersBuilt =" << filters->filtersBuilt
                    ;
     }
-    dm->sf->suspend(true);
+    dm->sf->suspend(true, "BuildFilters::update");
     abortIfRunning();
     afterAction = newAction;
     this->category = category;
@@ -271,6 +271,7 @@ void BuildFilters::done()
             << "afterAction =" << afterAction
                ;
     }
+    // dm->sf->suspend(false);
     filters->setEnabled(true);
     isReset = false;
     filters->filtersBuilt = true;

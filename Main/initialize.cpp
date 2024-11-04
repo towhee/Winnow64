@@ -924,6 +924,7 @@ void MW::createFSTree()
 
     // reselect folder after external program drop onto FSTree or a selectionChange
     connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
+    connect(fsTree, &FSTree::folderSelection2, this, &MW::folderSelectionChange2);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
@@ -962,6 +963,7 @@ void MW::createFSTree()
 //            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
 }
 
+
 void MW::createBookmarks()
 {
     if (G::isLogger) G::log("MW::createBookmarks");
@@ -982,10 +984,9 @@ void MW::createBookmarks()
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
-    // this does work for touchpad tap
+    // this works for touchpad tap
     // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange
-    connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
-            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
+    connect(bookmarks, &BookMarks::itemPressed, this, &MW::bookmarkClicked);
 
     // update folder image counts
     connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::updateBookmarks);
