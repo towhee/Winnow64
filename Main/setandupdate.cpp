@@ -458,6 +458,7 @@ void MW::setCombineRawJpg()
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
     G::popUp->showPopup(msg);
 
+    dm->sf->combineRawJpg = combineRawJpg;
     fsTree->combineRawJpg = combineRawJpg;
     bookmarks->combineRawJpg = combineRawJpg;
     fsTree->refreshModel();

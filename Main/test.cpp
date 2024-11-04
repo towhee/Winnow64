@@ -194,14 +194,20 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
-    // qDebug() << dm->iconChunkSize;
+
+    qDebug() << fsTree->fsModel->combineRawJpg;  return;
+
+    qDebug() << "dm->folderList.count()" << dm->folderList.count();
+    dm->blockSignals(false);
+    filterChange();
 
     // clearAllFilters();
     // filterChange();
-    buildFilters->recount();
-    filters->restore();
-    filterChange();
-    thumbView->sortThumbs(sortColumn, isReverseSort);
+
+    // buildFilters->recount();
+    // filters->restore();
+    // filterChange();
+    // thumbView->sortThumbs(sortColumn, isReverseSort);
 }
 /*
    Performance

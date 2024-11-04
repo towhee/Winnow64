@@ -322,10 +322,24 @@ bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 */
     QString s1 = i1.absoluteFilePath().toLower();
     QString s2 = i2.absoluteFilePath().toLower();
+    return s1 < s2;
+}
+
+bool DataModel::lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2)
+{
+    /*
+    The datamodel is sorted by absolute path, except jpg extensions follow all
+    other image extensions. This makes it easier to determine duplicate images
+    when combined raw+jpg is activated.
+*/
+    QString s1 = i1.absoluteFilePath().toLower();
+    QString s2 = i2.absoluteFilePath().toLower();
     // check if combined raw+jpg duplicates
     if (i1.completeBaseName() == i2.completeBaseName()) {
         if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
         if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
+        if (i1.suffix().toLower() == "jpeg") s1.replace(".jpeg", ".zzz");
+        if (i2.suffix().toLower() == "jpeg") s2.replace(".jpeg", ".zzz");
     }
     return s1 < s2;
 }
@@ -472,7 +486,7 @@ void DataModel::processNextFolder() {
 
     QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
-        qDebug() << "DataModel::processNextFolder Queue is empty";
+        // qDebug() << "DataModel::processNextFolder Queue is empty";
         isProcessing = false;
         return;
     }
@@ -532,7 +546,12 @@ void DataModel::addFolder(const QString &folderPath)
 
     // datamodel size
     int row = rowCount();
-    setRowCount(rowCount() + folderFileInfoList.count());
+    int newRowCount = rowCount() + folderFileInfoList.count();
+    setRowCount(newRowCount);
+    if (!columnCount()) setColumnCount(G::TotalColumns);
+    qDebug() << "DataModel::addFolder"
+             << "newRowCount =" << newRowCount
+        ;
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         mutex.lock();
@@ -727,6 +746,8 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     folderList.append(folderPath);
     currentFolderPath = folderPath;
 
+    // sf->suspend(true);
+
     // emit centralMsg("Building image file list.");
 
     // do some initializing
@@ -747,7 +768,8 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     // emit centralMsg("Building image file list.\n" + QString::number(imageCount) + " found.");
 
     // bail if no images and not including subfolders
-    if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
+    // if (!folderImageCount && !includeSubfoldersFlag) return endLoad(true);
+    // if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
 
     // add supported images in folder to image list
     folderCount = 1;
@@ -825,8 +847,14 @@ bool DataModel::addFileData()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
     if (isDebug)
         qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
-    // make sure, if raw+jpg pair, that raw file is first to make combining easier
-    std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
+
+    if (combineRawJpg) {
+        // make sure, if raw+jpg pair, that raw file is first to make combining easier
+        std::sort(fileInfoList.begin(), fileInfoList.end(), lessThanCombineRawJpg);
+    }
+    else {
+        std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
+    }
 
     QString step = "Loading eligible images.\n\n";
     QString escapeClause = "\n\nPress \"Esc\" to stop.";
@@ -838,7 +866,11 @@ bool DataModel::addFileData()
     QString baseName = "";
     QModelIndex prevRawIdx;
 
-    setRowCount(fileInfoList.count());
+    sf->suspend(true);
+
+    int n = fileInfoList.count();
+    // if (n == 0) n = 1;
+    setRowCount(n);
     setColumnCount(G::TotalColumns);
 
     for (int row = 0; row < fileInfoList.count(); ++row) {
@@ -863,6 +895,7 @@ bool DataModel::addFileData()
         suffix = fileInfoList.at(row).suffix().toLower();
         baseName = fileInfoList.at(row).completeBaseName();
         if (metadata->hasJpg.contains(suffix)) {
+            qDebug() << "DataModel::addFileData" << row << suffix;
             prevRawSuffix = suffix;
             prevRawBaseName = fileInfoList.at(row).completeBaseName();
             prevRawIdx = index(row, 0);
@@ -870,7 +903,7 @@ bool DataModel::addFileData()
 
         QMutexLocker locker(&mutex);
         // if row/jpg pair
-        if (suffix == "jpg" && baseName == prevRawBaseName) {
+        if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
             // hide raw version
             setData(prevRawIdx, true, G::DupHideRawRole);
             // set raw version other index to jpg pair
@@ -888,6 +921,7 @@ bool DataModel::addFileData()
         }
     }
 
+    sf->suspend(false);
     return true;
 }
 
@@ -2858,17 +2892,37 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     as categories, and each category has one or more filter items.  Categories
     map to columns in the data model ie Picked, Rating, Label ...
 */
+    // if (sourceRow == 0) {
+    // static int counter = 0;
+    // counter++;
+    // qDebug().noquote() << "SortFilter::filterAcceptsRow " << sourceRow
+    //              << "suspendFiltering =" << suspendFiltering
+    //              << "counter =" << counter;
+    // }
 
     // Suspend?
-    if (suspendFiltering) return true;
+    if (suspendFiltering) {
+        // qDebug() << "SortFilter::filterAcceptsRow suspendFiltering = true" << sourceRow;
+        return true;
+    }
 
     // still loading metadata
-    if (!G::allMetadataLoaded) return true;
+    if (!G::allMetadataLoaded) {
+        // qDebug() << "SortFilter::filterAcceptsRow G::allMetadataLoaded = false" << sourceRow;
+        return true;
+    }
 
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
-        if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
+        // qDebug() << "SortFilter::filterAcceptsRow combineRawJpg = true" << sourceRow;
+        if (rawIdx.data(G::DupHideRawRole).toBool()) {
+            // qDebug() << "SortFilter::filterAcceptsRow DupHideRaw = true" << sourceRow;
+            return false;
+        }
+        else {
+            // qDebug() << "SortFilter::filterAcceptsRow DupHideRaw = false" << sourceRow;
+        }
     }
 
     finished = false;
@@ -3009,16 +3063,15 @@ void SortFilter::filterChange(QString src)
                 ; //*/
 }
 
-void SortFilter::suspend(bool suspendFiltering)
+void SortFilter::suspend(bool suspendFiltering, QString src)
 {
 /*
     Sets the local suspendFiltering flag.  When true, filterAcceptsRow ignores calls.
     When false the filtering is refreshed.
 */
     if (G::isLogger) G::log("SortFilter::suspend");
-    //QMutexLocker locker(&mutex);
+    // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;
-    //if (!suspendFiltering) invalidateFilter();
 }
 
 bool SortFilter::isFinished()

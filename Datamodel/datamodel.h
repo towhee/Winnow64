@@ -20,10 +20,11 @@ public:
     SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg);
     bool isFinished();
     bool isSuspended();
+    bool &combineRawJpg;
 
 public slots:
     void filterChange(QString src = "");
-    void suspend(bool suspendFiltering);
+    void suspend(bool suspendFiltering, QString src = "");
 
 private slots:
 
@@ -34,7 +35,6 @@ signals:
 
 private:
     Filters *filters;
-    bool &combineRawJpg;
     mutable bool finished;
     bool suspendFiltering;
 };
@@ -203,6 +203,7 @@ private:
     bool &combineRawJpg;
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
+    static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 
     // Pair of folderPath and operation type (true=add, false=remove)
     QQueue<QPair<QString, bool>> folderQueue;

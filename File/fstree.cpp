@@ -14,7 +14,7 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 void FSFilter::refresh()
 {
-    qDebug() << "FSFilter::refresh";
+    // qDebug() << "FSFilter::refresh";
     this->invalidateFilter();
 }
 
@@ -87,11 +87,13 @@ FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
 }
 
 void FSModel::insertCount(QString dPath, QString value)
+// not being used
 {
     count[dPath] = value;
 }
 
 void FSModel::insertCombineCount(QString dPath, QString value)
+// not being used
 {
     combineCount[dPath] = value;
 }
@@ -139,22 +141,16 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
-void FSModel::refresh(const QModelIndex &index)
+void FSModel::refresh()
 {
     beginResetModel();
     endResetModel();
     return;
-    /*
-    QList<int> roles;
-    roles << Qt::DisplayRole;
-    emit dataChanged(index, index, roles);
-    qDebug() << "FSModel::refresh index" << index << testIdx;
-    */
 }
 
 void FSModel::refresh(const QString &dPath)
 {
-    // not being used
+    // used in MW::pasteFiles
     const QModelIndex idx = index(dPath, imageCountColumn);
     QList<int> roles;
     roles << Qt::DisplayRole;
@@ -174,7 +170,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
 
             static quint64 counter = 0;
-//            qDebug() << "FSModel::data" << ++counter << dPath;
+            // qDebug() << "FSModel::data" << ++counter << dPath;
 
             /*
             How to save/cast a const variable:
@@ -201,8 +197,10 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                     QString baseName = info.baseName();
                     QString suffix = info.suffix().toLower();
                     QString jpgPath = fPath + "/" + baseName + ".jpg";
+                    QString jpgPath1 = fPath + "/" + baseName + ".jpeg";
                     if (metadata.hasJpg.contains(suffix)) {
                         if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
+                        if (dir->entryInfoList().contains(QFileInfo(jpgPath1))) continue;
                     }
                     n++;
                 }
@@ -408,7 +406,7 @@ void FSTree::refreshModel()
             }
         }
     }
-    fsModel->refresh(fsModel->index(0,0));
+    fsModel->refresh();
     setFocus();
     select(G::currRootFolder);
 }
@@ -452,7 +450,7 @@ bool FSTree::select(QString dirPath)
     }
 }
 
-void FSTree::expandedSelectRecursively(const QModelIndex &index)
+void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
 {
 /*
     Along with FSTree::selectRecursively, expand the current row for all of its branches
@@ -464,7 +462,8 @@ void FSTree::expandedSelectRecursively(const QModelIndex &index)
 
     Making any selections while this is happening results in a crash, so the subfolders
     indexes are stored in a list, and the list is iterated after the recursive search is
-    finished to select all the rows (subFolders).
+    finished to select all the rows (subFolders).  The indexes must be persistent, as they
+    can change as the model changes.
 
     The recursion is initiated by the mousePressEvent with the alt/opt or alt/opt + cmd/ctrl
     modifiers pressed.
@@ -473,8 +472,11 @@ void FSTree::expandedSelectRecursively(const QModelIndex &index)
         return;
     }
 
+    bool isDebug = false;
+
     // Select the current node
     QString folderName = index.data().toString();
+    if (isDebug)
     qDebug() << "FSTree::expandedSelectRecursively"
              << "isExpanded =" << isExpanded(index)
              << folderName;
@@ -483,56 +485,74 @@ void FSTree::expandedSelectRecursively(const QModelIndex &index)
     QModelIndex sourceIndex = fsFilter->mapToSource(index);
     setExpanded(index, true);
 
+    fsFilter->refresh();    // necessary
+
+    // force lazy update to model expansion
     QElapsedTimer t;
     t.start();
     while (fsModel->canFetchMore(sourceIndex)) {
         fsModel->fetchMore(sourceIndex);
         if (t.elapsed() > 5000) {
+            if (isDebug)
             qDebug() << "FSTree::expandedSelectRecursively timed out fetching more for " << folderName;
             return;
         }
     }
 
-    fsFilter->refresh();
-    QTimer::singleShot(0, this, [this, index, folderName]() {
+    fsFilter->refresh();    // necessary
+    /* this does not work
+    QMetaObject::invokeMethod(this, [this]() {
+            // fsModel->refresh();
+            fsFilter->refresh();
+        }, Qt::QueuedConnection);  */
+
+    // delay checking for children until refresh is completed using singleshot
+    QTimer::singleShot(0, this, [this, isDebug, index, folderName]() {
         int childCount = 0;
         if (index.isValid()) {
-            qDebug() << "FSTree::expandedSelectRecursively (after delay) valid index =" << folderName;
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively (after delay) valid index =" << folderName;
             bool hasChildren = fsFilter->hasChildren(index);
-            qDebug() << "FSTree::expandedSelectRecursively (after delay) hasChildren =" << hasChildren;
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively (after delay) hasChildren =" << hasChildren;
             childCount = fsFilter->rowCount(index);
-            qDebug() << "FSTree::expandedSelectRecursively (after delay) childCount =" << childCount << folderName;
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively (after delay) childCount =" << childCount << folderName;
         }
         else {
-            qDebug() << "FSTree::expandedSelectRecursively invalid index =" << folderName;
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively invalid index =" << folderName;
         }
 
         // Recursively select all child nodes
         for (int i = 0; i < childCount; ++i) {
             QModelIndex childIndex = fsFilter->index(i, 0, index);
             if (!childIndex.isValid()) {
-                qDebug() << "FSTree::expandedSelectRecursively invalid childIndex =" << childIndex.data().toString() << childIndex;
+                if (isDebug) qDebug() << "FSTree::expandedSelectRecursively invalid childIndex =" << childIndex.data().toString() << childIndex;
                 continue;
             }
-            qDebug() << "FSTree::expandedSelectRecursively Recurse child " << childIndex.data().toString();
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively Recurse child " << childIndex.data().toString();
             selectRecursively(childIndex);
         }
 
         // Finished recursion
-        qDebug() << "FSTree::expandedSelectRecursively FINISHED";
-        qDebug() << "FSTree::expandedSelectRecursively"
+        if (isDebug) qDebug() << "FSTree::expandedSelectRecursively FINISHED";
+        if (isDebug) qDebug() << "FSTree::expandedSelectRecursively"
                  << "recursedForSelection count =" << recursedForSelection.count();
 
         isRecursiveSelection = false;
         for (QModelIndex index : recursedForSelection) {
-            // qDebug() << index.data().toString();
-            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            if (isDebug)
+            qDebug() << "Recursively select " << index.data().toString()
+                     << "isVisible =" << !visualRect(index).isEmpty()
+                     << "isExpanded =" << isExpanded(index)
+                ;
+            if (index.isValid()) {
+                // can crash here
+                selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            }
         }
         recursedForSelection.clear();
     });
 }
 
-void FSTree::selectRecursively(const QModelIndex &index)
+void FSTree::selectRecursively(const QPersistentModelIndex &index)
 {
     if (!index.isValid()) {
         return;
@@ -719,14 +739,19 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
                 qDebug()
                     << "FSTree::selectionChanged Iterate selected"
                     << "Selected Path:" << folderPath; //*/
+
+                bool clearDataModel;
                 if (selectionCount == 1) {
-                    emit folderSelection(folderPath);
+                    clearDataModel = true;
+                    // emit folderSelection(folderPath);
                 }
                 else {
-                    bool isAdd  = true;
-                    emit addToDataModel(folderPath);
+                    clearDataModel = false;
+                    // bool isAdd  = true;
+                    // emit addToDataModel(folderPath);
                     // emit datamodelQueue(folderPath, isAdd);
                 }
+                emit folderSelection2(folderPath, clearDataModel);
             }
         }
     }
@@ -754,7 +779,8 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 
                 bool isAdd = false;
                 emit removeFromDataModel(folderPath);
-                // emit datamodelQueue(folderPath, isAdd);
+
+                // emit datamodelQueue(folderPath, isAdd); replaced with emit removeFromDataModel
             }
         }
     }
@@ -874,10 +900,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
         // load all subfolders images
         if (event->modifiers() & Qt::AltModifier) {
-            // ignore max control modifier and windows window key modifier
+            // ignore mac control modifier or windows window key modifier
             if (event->modifiers() & Qt::MetaModifier) return;
             qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS SELECTION" << path;
             if (!(event->modifiers() & Qt::ControlModifier)) {
+                qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS not Qt::ControlModifier" << path;
                 selectionModel()->clearSelection();
             }
             isRecursiveSelection = true;
