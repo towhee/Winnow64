@@ -434,14 +434,17 @@ void FSTree::scrollToCurrent()
 
 bool FSTree::select(QString dirPath)
 {
-    if (G::isLogger) G::log("FSTree::select");
+    if (G::isLogger || G::isFlowLogger) G::log("FSTree::select");
+    // qDebug() << "FSTree::select" << dirPath;
 
     if (dirPath == "") return false;
 
     QDir test(dirPath);
     if (test.exists()) {
-        setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
+        QModelIndex index = fsFilter->mapFromSource(fsModel->index(dirPath));
+        setCurrentIndex(index);
         scrollToCurrent();
+        selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         return true;
     }
     else {
@@ -735,23 +738,23 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
         if (index.column() == 0) { // Ensure we're only processing the first column
             const QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
             if (folderPath.length()) {
-                // /*
-                qDebug()
-                    << "FSTree::selectionChanged Iterate selected"
-                    << "Selected Path:" << folderPath; //*/
 
-                bool clearDataModel;
+                bool primaryFolder;
                 if (selectionCount == 1) {
-                    clearDataModel = true;
+                    primaryFolder = true;
                     // emit folderSelection(folderPath);
                 }
                 else {
-                    clearDataModel = false;
+                    primaryFolder = false;
                     // bool isAdd  = true;
                     // emit addToDataModel(folderPath);
                     // emit datamodelQueue(folderPath, isAdd);
                 }
-                emit folderSelection2(folderPath, clearDataModel);
+                // /*
+                qDebug()
+                    << "FSTree::selectionChanged primary folder =" << primaryFolder
+                    << "Selected Path:" << folderPath; //*/
+                emit folderSelection2(folderPath, primaryFolder);
             }
         }
     }
@@ -889,7 +892,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // New selection
+    // New selection (primary folder)
     if (event->modifiers() == Qt::NoModifier) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
         QTreeView::mousePressEvent(event);

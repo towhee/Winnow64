@@ -5,6 +5,28 @@
 #import <AppKit/NSSharingService.h>
 #import <Cocoa/Cocoa.h>
 
+// Define an AppDelegate class
+@interface AppDelegate : NSObject <NSApplicationDelegate>
+@end
+
+@implementation AppDelegate
+
+// Implement the applicationSupportsSecureRestorableState method
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+    return YES;
+}
+
+@end
+
+// Set up the delegate in your main application entry
+void Mac::initializeAppDelegate() {
+    static AppDelegate *appDelegate = nil;
+    if (!appDelegate) {
+        appDelegate = [[AppDelegate alloc] init];
+        [NSApp setDelegate:appDelegate];
+    }
+}
+
 @interface SharingDelegate : NSObject<NSSharingServicePickerDelegate>
 @end
 

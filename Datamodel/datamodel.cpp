@@ -300,6 +300,8 @@ void DataModel::clearDataModel()
     fPathRow.clear();
     // clear list of fileInfo
     fileInfoList.clear();
+    // clear the folder list
+    folderList.clear();
     // reset iconChunkSize
     iconChunkSize = defaultIconChunkSize;
     // reset missing thumb (jpg/tiff)
@@ -459,10 +461,14 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
     // do not process if already in datamodel
     if (folderList.contains(folderPath) && isAdding) return;
 
-    // QMutexLocker locker(&queueMutex);
+    QString fun = "DataModel::enqueueFolderSelection";
+    QString msg = "isAdding = " + QVariant(isAdding).toString() +
+                  "folder = " + QVariant(folderPath).toString();
+    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+
     folderQueue.enqueue(qMakePair(folderPath, isAdding));
 
-    // /*
+    /*
     // if (isDebug)
     {
     qDebug() << "DataModel::enqueueFolderSelection"
@@ -494,7 +500,11 @@ void DataModel::processNextFolder() {
     QPair<QString, bool> folderOperation = folderQueue.dequeue();
     locker.unlock(); // Unlock the queue while processing
 
-    // if (isDebug)
+    QString fun = "DataModel::processNextFolder";
+    QString msg = "folderOperation.first = " + folderOperation.first = +
+                  "folderOperation.second = " + folderOperation.second;
+    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    if (isDebug)
     {
     qDebug() << "DataModel::processNextFolder"
              << "folderOperation.first =" << folderOperation.first
@@ -524,10 +534,10 @@ void DataModel::processNextFolder() {
 
 void DataModel::addFolder(const QString &folderPath)
 {
+    QString fun = "DataModel::addFolder";
+    if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
-    qDebug() << "DataModel::addFolder"
-             << "folder =" << folderPath
-                ;
+    // qDebug() << fun << "folder =" << folderPath;
 
     // control
     QMutexLocker locker(&mutex);
@@ -549,9 +559,10 @@ void DataModel::addFolder(const QString &folderPath)
     int newRowCount = rowCount() + folderFileInfoList.count();
     setRowCount(newRowCount);
     if (!columnCount()) setColumnCount(G::TotalColumns);
+    /*
     qDebug() << "DataModel::addFolder"
              << "newRowCount =" << newRowCount
-        ;
+        ; //*/
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         mutex.lock();
@@ -572,13 +583,15 @@ void DataModel::addFolder(const QString &folderPath)
     mutex.lock();
     loadingModel = false;
     mutex.unlock();
+    endLoad(true);
 }
 
 void DataModel::removeFolder(const QString &folderPath)
 {
-    qDebug() << "DataModel::removeFolder"
-             << folderPath
-        ;
+    QString fun = "DataModel::removeFolder";
+    if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
+
+    // qDebug() << "DataModel::removeFolder" << folderPath;
 
     folderList.removeAll(folderPath);
     for (int row = rowCount() - 1; row >= 0; --row) {
@@ -1402,7 +1415,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     int row = m.row;
     if (rowCount() <= row) return false;
 
-   if (!metadata->ratings.contains(m.rating)) {
+    if (!metadata->ratings.contains(m.rating)) {
 //        m.rating = "";
 //        m._rating = "";
     }
@@ -1456,6 +1469,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
+
+    // QString msg = "row = " + QString::number(row) +
+    //               " width = " + QString::number(m.width);
+    // G::log("DataModel::addMetadataForItem", msg);
+
     /*
     double ar = aspectRatio(m.width, m.height, m.orientation);
     qDebug().noquote()

@@ -27,6 +27,7 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateCacheItemMetadataFromReader, Qt::BlockingQueuedConnection);
 
     isDebug = false;
+    debugLog = false;
 }
 
 void Reader::read(const QModelIndex dmIdx,
@@ -147,6 +148,11 @@ bool Reader::readMetadata()
             << fPath
             ;
     }
+
+    QString msg = "row = " + QString::number(sfRow) +
+                  " w = " +  QString::number(metadata->m.width)
+        ;
+    G::log("Reader::readMetadata", msg);
 
     if (!abort) emit addToImageCache(sfRow, fPath, instance);
     // if (!abort) emit addToImageCache(dmIdx.row(), instance);

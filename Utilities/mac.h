@@ -14,6 +14,7 @@
 class Mac
 {
 public:
+    static void initializeAppDelegate();
     static void availableMemory();
     static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();

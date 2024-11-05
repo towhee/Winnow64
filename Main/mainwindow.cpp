@@ -63,6 +63,17 @@ PROGRAM FLOW - CONCURRENT
         - ImageCache::setCurrentPosition       // build image cache
         - ImageView::load                      // show current image from image cache
 
+    • New folder and image selected:
+        - FSTree::selectionChanged             // selected = 1 folder
+        - MW::fileSelectionChange2
+        - MW::primaryFolderSelection
+        - DM::enqueueFolderSelection
+        - DM::processNextFolder
+        - DM::addFolder
+        - DM::addFileDataForRow                // iterate all rows
+        - MW::MW::loadConcurrentChanged
+        - MW::loadConcurrentNewFolder
+
     • While loading - new image selected:
         - Selection::currentIndex              // set current index
         - MW::loadConcurrent                   // set scrollOnly false
@@ -89,6 +100,10 @@ PROGRAM FLOW - CONCURRENT
         - Reader::readIcon                     // read file icon
         - MetaRead2::dispatchFinished          // finished all files in datamodel
         - MW::loadCurrentDone                  // cleanup, rebuild filters
+
+NEW DATAMODEL
+    - Left mouse click on folder in fsTree which triggers selection change
+        -
 
 
 PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
@@ -597,7 +612,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                 if (isFolderValid(lastDir, true, true)) {
                     centralLayout->setCurrentIndex(LoupeTab);
                     fsTree->select(lastDir);
-                    folderSelectionChange();
+                    folderSelectionChange2(lastDir, true);
                     updateIconRange(false, "MW::MW rememberLastDir");
                 }
             }
@@ -1977,17 +1992,21 @@ void MW::folderSelectionChangeNoParam()
     folderSelectionChange("");
 }
 
-void MW::folderSelectionChange2(QString folderPath, bool clearDataModel)
+void MW::folderSelectionChange2(QString folderPath, bool primaryFolder)
 {
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 */
     // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
-    if (G::isLogger || G::isFlowLogger) G::log("MW::folderSelectionChange", G::currRootFolder);
-    // qDebug() << "\n\n\nMW::folderSelectionChange" << dPath;
+    QString fun = "MW::folderSelectionChange2";
+    if (G::isLogger || G::isFlowLogger) {
+        QString msg = "primaryFolder = " + QVariant(primaryFolder).toString() + " " + folderPath;
+        G::log(fun, msg);
+    }
+    // qDebug() << "\nMW::folderSelectionChange2" << folderPath;
 
-    if (clearDataModel) {
-        newFolderSelection(folderPath);
+    if (primaryFolder) {
+        primaryFolderSelection(folderPath);
         subFoldersAction->setChecked(true);
     }
     else {
@@ -1997,7 +2016,7 @@ void MW::folderSelectionChange2(QString folderPath, bool clearDataModel)
     dm->enqueueFolderSelection(folderPath, /*Add*/true);
 }
 
-void MW::newFolderSelection(QString folderPath)
+void MW::primaryFolderSelection(QString folderPath)
 {
 /*
     Reset all objects that involved the prior folder(s) selection
@@ -2007,10 +2026,14 @@ void MW::newFolderSelection(QString folderPath)
     - view mode
 
 */
+    QString fun = "MW::primaryFolderSelection";
+    if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
+    // qDebug() << "MW::primaryFolderSelection" << folderPath;
+
     G::t.restart();
 
     // reset all
-    stop("MW::folderSelectionChange()");
+    stop("MW::primaryFolderSelection()");
 
     setCentralMessage("");
 
@@ -2035,6 +2058,7 @@ void MW::newFolderSelection(QString folderPath)
     dm->forceBuildFilters = false;
     // clear filters
     uncheckAllFilters();
+    buildFilters->reset();
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -2074,7 +2098,7 @@ void MW::newFolderSelection(QString folderPath)
     if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
         stop("Invalid folder");
         setWindowTitle(winnowWithVersion);
-        if (G::isLogger) if (G::isFileLogger) Utilities::log("MW::folderSelectionChange", "Invalid folder " + G::currRootFolder);
+        if (G::isLogger) if (G::isFileLogger) Utilities::log(fun, "Invalid folder " + G::currRootFolder);
         return;
     }
 
@@ -2091,7 +2115,7 @@ void MW::newFolderSelection(QString folderPath)
     //enableEjectUsbMenu(G::currRootFolder);
 
     // update metadata read status light
-    updateMetadataThreadRunStatus(true, true, "MW::folderSelectionChange");
+    updateMetadataThreadRunStatus(true, true, true, fun);
 
     // testTime.restart();     // ms to fully load folder and read all the metadata and icons
 
@@ -2121,45 +2145,45 @@ void MW::newFolderSelection(QString folderPath)
         return;
     } */
 
-    if (G::stop) return;
+    // if (G::stop) return;
 
-    // Load folder progress
-    QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
-    if (subFoldersAction->isChecked()) msg += " and all subfolders";
-    setCentralMessage(msg);
-    updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
-    qApp->processEvents();
+    // // Load folder progress
+    // QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
+    // if (subFoldersAction->isChecked()) msg += " and all subfolders";
+    // setCentralMessage(msg);
+    // updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
+    // qApp->processEvents();
 
-    // turn off include subfolders to prevent accidental loading a humungous number of files
-    G::includeSubfolders = false;
-    subFoldersAction->setChecked(false);
-    updateStatusBar();
+    // // turn off include subfolders to prevent accidental loading a humungous number of files
+    // G::includeSubfolders = false;
+    // subFoldersAction->setChecked(false);
+    // updateStatusBar();
 
-    // datamodel loaded - invalidate indexes (set in MW::fileSelectionChange)
-    dm->currentSfRow = -1;
-    dm->currentSfIdx = dm->sf->index(-1, -1);
-    dm->currentDmIdx = dm->index(-1, -1);
+    // // datamodel loaded - invalidate indexes (set in MW::fileSelectionChange)
+    // dm->currentSfRow = -1;
+    // dm->currentSfIdx = dm->sf->index(-1, -1);
+    // dm->currentDmIdx = dm->index(-1, -1);
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
 
-    // folder change triggered by dragdrop event (see main/draganddrop.cpp)
-    bool dragFileSelected = false;
-    if (isDragDrop) {
-        if (dragDropFilePath.length() > 0) {
-            QFileInfo info(dragDropFilePath);
-            QString fileType = info.suffix().toLower();
-            if (metadata->supportedFormats.contains(fileType)) {
-                sel->setCurrentPath(dragDropFilePath);
-                dragFileSelected = true;
-            }
-        }
-        isDragDrop = false;
-    }
+    // // folder change triggered by dragdrop event (see main/draganddrop.cpp)
+    // bool dragFileSelected = false;
+    // if (isDragDrop) {
+    //     if (dragDropFilePath.length() > 0) {
+    //         QFileInfo info(dragDropFilePath);
+    //         QString fileType = info.suffix().toLower();
+    //         if (metadata->supportedFormats.contains(fileType)) {
+    //             sel->setCurrentPath(dragDropFilePath);
+    //             dragFileSelected = true;
+    //         }
+    //     }
+    //     isDragDrop = false;
+    // }
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", "MW::folderSelectionChange");
+    updateStatus(true, "", fun);
 
     // Load folder progress
     // QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
@@ -2182,22 +2206,22 @@ void MW::newFolderSelection(QString folderPath)
     bookmarkBlocker.unblock();
     fsTreeBlocker.unblock();
 
-    if (G::isLogger || G::isFlowLogger)
-    {
-        QString msg = QString::number(testTime.elapsed()) + " ms " +
-                      QString::number(dm->rowCount()) + " images from " +
-                      dm->currentFolderPath;
-        G::log("MW::folderSelectionChange load dm file info", msg);
-        G::t.restart();
-    }
+    // if (G::isLogger || G::isFlowLogger)
+    // {
+    //     QString msg = QString::number(testTime.elapsed()) + " ms " +
+    //                   QString::number(dm->rowCount()) + " images from " +
+    //                   dm->currentFolderPath;
+    //     G::log(fun, msg);
+    //     G::t.restart();
+    // }
     // start loading new folder
-   qDebug().noquote()
-            << "            MW::folderSelectionChange                "
-            << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
-    buildFilters->reset();
+   // qDebug().noquote()
+   //          << "            MW::folderSelectionChange                "
+   //          << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();
+   //  buildFilters->reset();
 
     //qDebug() << "MW::folderSelectionChange loadConcurrentNewFolder";
-    loadConcurrentNewFolder();
+    // loadConcurrentPrimaryFolder();
 }
 
 void MW::folderSelectionChange(QString dPath/*, bool clear, bool includeSubFolders*/)
@@ -2399,7 +2423,7 @@ void MW::folderSelectionChange(QString dPath/*, bool clear, bool includeSubFolde
     buildFilters->reset();
 
     //qDebug() << "MW::folderSelectionChange loadConcurrentNewFolder";
-    loadConcurrentNewFolder();
+    loadConcurrentPrimaryFolder();
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -3016,7 +3040,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     return chunkSizeChanged;
 }
 
-void MW::loadConcurrentNewFolder()
+void MW::loadConcurrentPrimaryFolder()
 /*
     MW::loadConcurrentNewFolder
     - Estimate memory req'd for datamodel for new folder(s).
@@ -3031,12 +3055,12 @@ void MW::loadConcurrentNewFolder()
     - See top of MainWindow for program flow
 */
 {
-    QString fun = "MW::loadConcurrentNewFolder";
+    QString fun = "MW::loadConcurrentPrimaryFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
     // if (G::isLogger)
-    //     qDebug().noquote() << fun << G::currRootFolder;
+        qDebug().noquote() << fun << G::currRootFolder;
 
-    QString src = "MW::loadConcurrentNewFolder ";
+    QString src = "MW::loadConcurrentPrimaryFolder";
     int count = 0;
 
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
@@ -3098,7 +3122,7 @@ void MW::loadConcurrentNewFolder()
 
 void MW::loadConcurrentAddFolder(const QString folderPath)
 {
-    QString fun = "MW::loadConcurrentNewFolder";
+    QString fun = "MW::loadConcurrentAddFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
 
     if (filters->isAnyFilter()) {
@@ -3113,7 +3137,7 @@ void MW::loadConcurrentAddFolder(const QString folderPath)
 
 void MW::loadConcurrentRemoveFolder(const QString folderPath)
 {
-    QString fun = "MW::loadConcurrentNewFolder";
+    QString fun = "MW::loadConcurrentRemoveFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, G::currRootFolder);
 
     filters->save();
@@ -3174,13 +3198,20 @@ void MW::loadConcurrentChanged(const QString folderPath)
 /*
     Signaled from DataModel::processNextFolder
 */
-    qDebug() << "MW::loadConcurrentChanged" << folderPath;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::loadConcurrentChanged", folderPath);
+    // qDebug() << "MW::loadConcurrentChanged" << folderPath;
+
+    // primary folder?
+    if (folderPath == dm->folderList.at(0)) {
+        loadConcurrentPrimaryFolder();
+    }
+
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
     dm->setIconRange(dm->currentSfRow);
     updateStatus(true, "", "MW::loadConcurrentChanged");
-    bool isFileSelectionChange = false;
-    metaReadThread->setStartRow(dm->currentSfRow, isFileSelectionChange, "MW::loadConcurrentChanged");
+    // bool isFileSelectionChange = false;
+    // metaReadThread->setStartRow(dm->currentSfRow, isFileSelectionChange, "MW::loadConcurrentChanged");
 }
 
 void MW::loadConcurrentDone()
@@ -3199,7 +3230,7 @@ void MW::loadConcurrentDone()
         G::log("MW::loadConcurrentDone", msg);
     }
     QString src = "MW::loadConcurrentDone";
-    qDebug() << src;
+    // qDebug() << src;
 
     int count = 0;
     /*
@@ -3377,8 +3408,8 @@ void MW::gridHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::gridHasScrolled", "isVisible = " + QVariant(gridView->isVisible()).toString());
-        qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
-                 << QVariant(gridView->isVisible()).toString();
+        // qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
+        //          << QVariant(gridView->isVisible()).toString();
     }
     if (G::isInitializing) return;
 

@@ -132,6 +132,8 @@ private:
 
     QStringList err;
 
+    bool debugLog;
+
     QElapsedTimer t;
     QElapsedTimer tAbort;
     quint32 ms;
