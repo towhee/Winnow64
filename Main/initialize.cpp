@@ -89,7 +89,6 @@ void MW::initialize()
 
     // prevent some warnings from Qt
     QLoggingCategory::setFilterRules(QStringLiteral("qt.gui.imageio.jpeg.debug=false\nqt.gui.imageio.jpeg.warning=false"));
-
 }
 
 void MW::setupPlatform()
@@ -923,7 +922,7 @@ void MW::createFSTree()
     // connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
 
     // reselect folder after external program drop onto FSTree or a selectionChange
-    connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
+    // connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
     connect(fsTree, &FSTree::folderSelection2, this, &MW::folderSelectionChange2);
 
     // if move drag and drop then delete files from source folder(s)

@@ -90,6 +90,7 @@ MetaRead2::MetaRead2(QObject *parent,
     instance = 0;
     abort = false;
     isDebug = false;
+    debugLog = false;
 }
 
 MetaRead2::~MetaRead2()
@@ -107,7 +108,8 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         QString running;
         isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(sfRow) + " src = " + src + " isRunning = " + running;
-        G::log("MetaRead2::setCurrentRow", s);
+        s += "dm->currentFolderPath =" + dm->currentFolderPath;
+        G::log("MetaRead2::setStartRow", s);
     }
 
     this->fileSelectionChanged = fileSelectionChanged;
@@ -228,7 +230,7 @@ bool MetaRead2::stop()
     indicates that dispatching is still running.
 */
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::stop");
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead2::stop");
     if (isDebug)
     {
         qDebug() << "MetaRead2::stop  instance / dm->instance =" << instance << "/" << dm->instance;
@@ -590,7 +592,7 @@ void MetaRead2::redo()
     If not all metadata or icons were successfully read so try again.
 */
 {
-    if (G::isLogger || G::isFlowLogger)
+    if (debugLog && (G::isLogger || G::isFlowLogger))
     {
         G::log("MetaRead2::redo", "count = " + QString::number(redoCount));
     }
@@ -713,7 +715,7 @@ void MetaRead2::dispatch(int id)
             ;
     }
 
-    if (G::isLogger || G::isFlowLogger)
+    if (debugLog && (G::isLogger || G::isFlowLogger))
     {
         QString  row;
         r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
@@ -791,7 +793,7 @@ void MetaRead2::dispatch(int id)
                     ;
             }
 
-            if (G::isFlowLogger)
+            if (debugLog && (G::isLogger || G::isFlowLogger))
             {
                 G::log("MetaRead2::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
             }
@@ -1012,7 +1014,7 @@ void MetaRead2::dispatch(int id)
 
 void MetaRead2::dispatchReaders()
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::dispatchReaders");
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead2::dispatchReaders");
     if (isDebug)
     {
     qDebug().noquote()
@@ -1065,7 +1067,7 @@ void::MetaRead2::quitAfterTimeout()
     //         }
     //     }
 
-    //     if (G::isLogger || G::isFlowLogger)  G::log("MW::quitAfterTimeout", "Done");
+    //     if (debugLog && (G::isLogger || G::isFlowLogger))  G::log("MW::quitAfterTimeout", "Done");
     //     if (isDebug)
     //     {
     //         qDebug().noquote()
@@ -1081,7 +1083,7 @@ void::MetaRead2::quitAfterTimeout()
 
 void MetaRead2::dispatchFinished(QString src)
 {
-    if (G::isLogger || G::isFlowLogger)  G::log("MetaRead2::dispatchFinished", src);
+    if (debugLog && (G::isLogger || G::isFlowLogger))  G::log("MetaRead2::dispatchFinished", src);
     if (isDebug)
         qDebug() << "MetaRead2::dispatchFinished" << src
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
@@ -1120,7 +1122,7 @@ void MetaRead2::run()
     Another flag, isDispatching, is used to track this.
 */
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead2::run", src);
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead2::run", src);
     if (isDebug)
     {
         qDebug().noquote() << "MetaRead2::run                             "

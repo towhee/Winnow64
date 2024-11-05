@@ -5,7 +5,9 @@
 #include <QObject>
 #include "Metadata/imagemetadata.h"
 #include "zlib.h"
-#include "/opt/homebrew/Cellar/libtiff/4.7.0/include/tiffio.h"    // libtiff
+#include <tiffio.h>    // libtiff
+// used on macbookair
+// #include "/opt/homebrew/Cellar/libtiff/4.7.0/include/tiffio.h"    // libtiff
 
 class LibTiff : public QObject
 {

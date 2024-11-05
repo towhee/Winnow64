@@ -781,7 +781,8 @@ bool Metadata::parsePanasonic()
 bool Metadata::parseJPG(quint32 startOffset)
 {
 //    qDebug() << "Metadata::parseJPG" << p.file.fileName();
-    if (G::isLogger) G::log("Metadata::parseJPG");
+    if (G::isLogger)
+        G::log("Metadata::parseJPG", p.fPath);
     if (!p.file.isOpen()) {
         QString msg = "File not open.";
         G::issue("Warning", msg, "Metadata::parseJPG", m.row, p.fPath);
@@ -1160,6 +1161,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 {
     if (G::isLogger)
         G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
+    qDebug() << "Metadata::loadImageMetadata G::dmEmpty =" << G::dmEmpty;
 
     // check abort
     if (G::dmEmpty && !isRemote) return false;

@@ -568,7 +568,6 @@ win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
 # macx arm64 only using homebrew installation
 # macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
 # macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
-
 macx:LIBS += -L$$PWD/Lib/libtiff/build-universal -ltiff
 macx:INCLUDEPATH += $$PWD/Lib/libtiff/build-universal/include
 macx:QMAKE_RPATHDIR += $$PWD/Lib/libtiff/build-universal
@@ -579,7 +578,6 @@ macx:QMAKE_RPATHDIR += $$PWD/Lib/libtiff/build-universal
 # macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-arm64
 # Ensure rpath is set correctly
 # macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-arm64
-
 macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build-universal -lturbojpeg
 macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-universal/include
 macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-universal

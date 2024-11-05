@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
+#include "Utilities/mac.h"
 
 static QString rory = "Rory";
 
@@ -71,10 +72,11 @@ int main(int argc, char *argv[])
     QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
                      &mw, &MW::whenActivated);
 
-//#ifdef Q_OS_MAC
-//    MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
-//    [NSApp setDelegate:delegate];
-//#endif
+#ifdef Q_OS_MAC
+    Mac::initializeAppDelegate();
+   // MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
+   // [NSApp setDelegate:delegate];
+#endif
 
     return instance.exec();
     //*/
