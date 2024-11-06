@@ -552,7 +552,26 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+
+    if (combineRawJpg) {
+        // make sure, if raw+jpg pair, that raw file is first to make combining easier
+        std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThanCombineRawJpg);
+    }
+    else {
+        std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+    }
+
+    QString step = "Loading eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
+
+    // test if raw file to match jpg when same file names and one is a jpg
+    QString suffix;
+    QString prevRawSuffix = "";
+    QString prevRawBaseName = "";
+    QString baseName = "";
+    QModelIndex prevRawIdx;
+
+    // sf->suspend(true);
 
     // datamodel size
     int row = rowCount();
@@ -575,11 +594,41 @@ void DataModel::addFolder(const QString &folderPath)
                  << "folder =" << folderPath
                     ; //*/
         // Ensure thread-safe updates to the model
-        QMetaObject::invokeMethod(this, [this, row, fileInfo]() {
+        // QMetaObject::invokeMethod(this, [this, row, prevRawSuffix, prevRawBaseName, prevRawIdx, fileInfo]() {
             addFileDataForRow(row, fileInfo);
-        }, Qt::QueuedConnection);
+            QString suffix = fileInfoList.at(row).suffix().toLower();
+            QString baseName = fileInfoList.at(row).completeBaseName();
+            if (metadata->hasJpg.contains(suffix)) {
+                qDebug() << "DataModel::addFileData" << row << suffix;
+                prevRawSuffix = suffix;
+                prevRawBaseName = fileInfoList.at(row).completeBaseName();
+                prevRawIdx = index(row, 0);
+            }
+
+            QMutexLocker locker(&mutex);
+            // if row/jpg pair
+            if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
+                // hide raw version
+                setData(prevRawIdx, true, G::DupHideRawRole);
+                // set raw version other index to jpg pair
+                setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
+                // point to raw version
+                setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
+                // set flag to show combined JPG file for filtering when ingesting
+                setData(index(row, 0), true, G::DupIsJpgRole);
+                // build combined suffix to show in type column
+                setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
+                if (combineRawJpg)
+                    setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
+                else
+                    setData(index(row, G::TypeColumn), "JPG");
+            }
+        // }, Qt::QueuedConnection);
         row++;
     }
+
+    sf->suspend(false);
+
     mutex.lock();
     loadingModel = false;
     mutex.unlock();
@@ -881,7 +930,7 @@ bool DataModel::addFileData()
 
     sf->suspend(true);
 
-    int n = fileInfoList.count();
+    int n = fileInfoList.count() + rowCount();
     // if (n == 0) n = 1;
     setRowCount(n);
     setColumnCount(G::TotalColumns);
