@@ -108,7 +108,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         QString running;
         isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(sfRow) + " src = " + src + " isRunning = " + running;
-        s += "dm->currentFolderPath =" + dm->currentFolderPath;
+        s += "dm->currentFolderPath = " + dm->currentPrimaryFolderPath;
         G::log("MetaRead2::setStartRow", s);
     }
 
@@ -118,7 +118,9 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     if (fileSelectionChanged) {
         if (dm->isMetadataAttempted(sfRow)) {
             emit fileSelectionChange(dm->sf->index(sfRow, 0));
-            if (G::allMetadataLoaded && G::iconChunkLoaded) return;
+            if (G::allMetadataLoaded && G::iconChunkLoaded) {
+                return;
+            }
         }
     }
 
@@ -160,7 +162,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "fileSelectionChanged =" << fileSelectionChanged
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
              << "G::iconChunkLoaded =" << G::iconChunkLoaded
-             << "folder =" << dm->currentFolderPath
+             << "folder =" << dm->currentPrimaryFolderPath
              << "isRunning =" << isRunning()
              << "isDispatching =" << isDispatching
              << "isDone =" << isDone
@@ -267,12 +269,12 @@ void MetaRead2::initialize()
 {
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MetaRead2::initialize", dm->currentFolderPath);
+        G::log("MetaRead2::initialize", dm->currentPrimaryFolderPath);
     }
     if (isDebug)
     {
         qDebug() << "\nMetaRead2::initialize     initialize      "
-                 << dm->currentFolderPath;
+                 << dm->currentPrimaryFolderPath;
     }
 
     abort = false;
@@ -905,7 +907,7 @@ void MetaRead2::dispatch(int id)
                     << "MetaRead2::dispatch     We Are Done.     "
                     << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
                     << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                    << dm->currentFolderPath
+                    << dm->currentPrimaryFolderPath
                     //<< "toRead =" << toRead
                     << "pending =" << pending()
                     ;

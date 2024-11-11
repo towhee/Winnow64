@@ -202,7 +202,10 @@ void BuildFilters::update()
 /*
     Update the filtered item counts in a separate thread.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::update";
+    if (G::isLogger || G::isFlowLogger) {
+    QString msg = "filters->filtersBuilt = " + QVariant(filters->filtersBuilt).toString();
+        G::log("BuildFilters::update", msg);
+    }
     if (debugBuildFilters)
         qDebug()
             << "BuildFilters::update"

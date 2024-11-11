@@ -119,7 +119,8 @@ public:
     // current status
     int instance = 0;                   // each new load of DataModel increments the instance
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
-    QString currentFolderPath;
+    QString firstFolderPathWithImages;
+    QString currentPrimaryFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentSfRow;                   // used in caching to check if new image selected
     int currentDmRow;                   // used in caching to check if new image selected
@@ -161,8 +162,8 @@ public:
     bool okManyImagesWarning();
 
 signals:
-    void addedFolderToDM(QString folderName);
-    void removedFolderFromDM(QString folderName);
+    void addedFolderToDM(QString folderName, QString op);
+    void removedFolderFromDM(QString folderName, QString op);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -170,7 +171,7 @@ signals:
 
 public slots:
 //    void unfilteredItemSearchCount();
-    void enqueueFolderSelection(const QString &folderPath, bool isAdding);
+    void enqueueFolderSelection(const QString &folderPath, bool isAdding, bool recurse = false);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,

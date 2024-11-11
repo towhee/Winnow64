@@ -1526,8 +1526,6 @@ bool ImageCache::updateCacheItemMetadata(int row)
     See Managing imageCacheList section for details.
 */
 {
-    G::log("ImageCache::updateCacheItemMetadata", "Row = " + QString::number(row));
-    log("updateCacheItemMetadata", "Row = " + QString::number(row));
     if (G::stop) {
         return false;
     }
@@ -1535,6 +1533,10 @@ bool ImageCache::updateCacheItemMetadata(int row)
     // int row = m.row;
     SortFilter *d = dm->sf;
 
+    QString dPath = d->index(row, G::FolderNameColumn).data().toString();
+    QString msg = "Row = " + QString::number(row) + " " + dPath;
+    G::log("ImageCache::updateCacheItemMetadata", msg);
+    log("updateCacheItemMetadata", msg);
     // qDebug() << "updateImageMetadata  row =" << row;
 
     // range check
@@ -1611,8 +1613,8 @@ void ImageCache::updateCacheItemMetadataFromReader(int row, QString fPath, int i
     See Managing imageCacheList section for details.
 */
     QString fun = "ImageCache::updateCacheItemMetadataFromReader";
-    G::log(fun, "Row = " + QString::number(row));
-    // log("updateCacheItemMetadataFromReader", "Row = " + QString::number(row));
+    // G::log(fun, "Row = " + QString::number(row));
+    log(fun, "Row = " + QString::number(row));
     if (debugCaching)
     {
         qDebug() << fun
@@ -1757,6 +1759,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     {
         qDebug() << "ImageCache::rebuildImageCacheParameters"
                  << "dm->sf->rowCount() =" << dm->sf->rowCount()
+                 << "currentImageFullPath =" << currentImageFullPath
             ;
     }
     if (dm->sf->rowCount() == 0) return;

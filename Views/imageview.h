@@ -75,7 +75,7 @@ public:
     int infoOverlayFontSize;
 
     ClassificationLabel *classificationLabel;
-    bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
+    bool isFirstImageNewInstance;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;
 
     void showRubber(QRect r);

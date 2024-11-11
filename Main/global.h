@@ -192,7 +192,6 @@ namespace G
     extern bool useReadIcons;
     extern bool useReadMetadata;
     extern bool useProcessEvents;
-    extern bool useMultiFolderSelection;
 
     extern QSettings *settings;
 

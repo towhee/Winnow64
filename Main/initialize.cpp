@@ -1,8 +1,8 @@
 #include "Main/mainwindow.h"
 
 void MW::initialize()
-{    
-    if (G::isLogger) G::log("MW::initialize");
+{
+    if (G::isLogger || G::isFlowLogger) G::log("MW::initialize");
     // connect(this, &QWindow::windowStateChanged, this, &MW::onWindowStateChanged);
 
     setWindowTitle(winnowWithVersion);
@@ -223,8 +223,8 @@ void MW::createDataModel()
         dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();
     else dm->showThumbNailSymbolHelp = true;
 
-    connect(dm, &DataModel::addedFolderToDM, this, &MW::loadConcurrentChanged);
-    connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadConcurrentChanged);
+    connect(dm, &DataModel::addedFolderToDM, this, &MW::loadChanged);
+    connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -409,7 +409,7 @@ void MW::createMDCache()
     // loading image metadata into datamodel, okay to select
     connect(metaReadThread, &MetaRead2::okToSelect, sel, &Selection::okToSelect);
     // message metadata reading completed
-    connect(metaReadThread, &MetaRead2::done, this, &MW::loadConcurrentDone);
+    connect(metaReadThread, &MetaRead2::done, this, &MW::loadDone);
     // Signal to change selection, fileSelectionChange, update ImageCache
     connect(metaReadThread, &MetaRead2::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
@@ -629,7 +629,7 @@ void MW::createSelection()
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
     connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
-    connect(sel, &Selection::loadConcurrent, this, &MW::loadConcurrent);
+    connect(sel, &Selection::loadConcurrent, this, &MW::load);
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
@@ -917,13 +917,13 @@ void MW::createFSTree()
     // connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
 
     // add/remove folder to the DataModel processing queue
-    connect(fsTree, &FSTree::addToDataModel, this, &MW::loadConcurrentAddFolder);
-    connect(fsTree, &FSTree::removeFromDataModel, this, &MW::loadConcurrentRemoveFolder);
+    // connect(fsTree, &FSTree::addToDataModel, this, &MW::loadConcurrentAddFolder);
+    // connect(fsTree, &FSTree::removeFromDataModel, this, &MW::loadConcurrentRemoveFolder);
     // connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
 
     // reselect folder after external program drop onto FSTree or a selectionChange
     // connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
-    connect(fsTree, &FSTree::folderSelection2, this, &MW::folderSelectionChange2);
+    connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
@@ -1000,7 +1000,7 @@ void MW::createBookmarks()
     connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
 
     // reselect folder after external program drop onto BookMarks
-    connect(bookmarks, &BookMarks::folderSelection, this, &MW::folderSelectionChange);
+    connect(bookmarks, &BookMarks::folderSelection, fsTree, &FSTree::select);
 
     // rename menu item "Eject USB drive <x>" and enable/disable
     connect(bookmarks, &BookMarks::renameEjectAction, this, &MW::renameEjectUsbMenu);

@@ -104,7 +104,8 @@ void Logger::log(const QString functionName, const QString comment)
     QString f = prevFunctionName.leftJustified(51, ' ');
     QString c = prevComment;
     if (sendLogToConsole) {
-        QString msg = e + f + c;
+        QString msg = "";
+        if (prevFunctionName != "") msg = e + f + c;
         qDebug().noquote() << msg;
     }
     else {

@@ -574,7 +574,8 @@ void BookMarks::dropEvent(QDropEvent *event)
 
     if (G::currRootFolder == dropDir) {
         // QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-        emit folderSelection(dropDir);
+        //emit folderSelection(dropDir, "Add");
+        // signal select(dropDir) to FSTree
     }
     else {
         select(G::currRootFolder);

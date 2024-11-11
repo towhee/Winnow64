@@ -259,7 +259,6 @@ bool Jpeg::parse(MetadataParameters &p,
 
     QString msg = "row = " + QString::number(m.row) +
                   " width = " + QString::number(m.width);
-    G::log("Jpeg::parse", msg);
 
     // EXIF: created datetime
     QString createdExif;

@@ -1309,7 +1309,7 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
     may want to check another item in the same category.
 */
     //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+    if (debugFilters /*|| G::isLogger || G::isFlowLogger*/)
         qDebug() << "Filters::addFilteredCountPerItem"
                  << "category =" << category->text(0)
             ;
@@ -1339,7 +1339,7 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     may want to check another item in the same category.
 */
 //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    if (debugFilters || G::isLogger || G::isFlowLogger)
+    if (debugFilters)
         qDebug() << "Filters::addFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;

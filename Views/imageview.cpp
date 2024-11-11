@@ -129,7 +129,7 @@ ImageView::ImageView(QWidget *parent,
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
-    isFirstImageNewFolder = true;
+    isFirstImageNewInstance = true;
     isBusy = false;
 }
 
@@ -283,9 +283,9 @@ bool ImageView::loadImage(QString fPath, QString src)
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        if (isFirstImageNewFolder) {
+        if (isFirstImageNewInstance) {
             isFit = true;
-            isFirstImageNewFolder = false;
+            isFirstImageNewInstance = false;
         }
         if (isFit) {
             setFitZoom();
@@ -542,7 +542,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     qDebug() << "ImageView::resizeEvent"
              << "G::isInitializing =" << G::isInitializing
              << "G::isLinearLoadDone =" << G::isLinearLoadDone
-             << "isFirstImageNewFolder =" << isFirstImageNewFolder;
+             << "isFirstImageNewInstance =" << isFirstImageNewInstance;
     //    */
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
@@ -1360,7 +1360,7 @@ QString ImageView::diagnostics()
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
-    rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewFolder);
+    rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewInstance);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);

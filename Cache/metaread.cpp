@@ -204,7 +204,7 @@ QString MetaRead::diagnostics()
     rpt << "\n" << "imageCacheTriggerCount: " << imageCacheTriggerCount;
     rpt << "\n" << "expansionFactor:        " << expansionFactor;
     rpt << "\n";
-    rpt << "\n" << "folder path:            " << dm->currentFolderPath;
+    rpt << "\n" << "folder path:            " << dm->currentPrimaryFolderPath;
     rpt << "\n" << "sfRowCount:             " << sfRowCount;
     rpt << "\n" << "dm->currentSfRow:       " << dm->currentSfRow;
     rpt << "\n";
