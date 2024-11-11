@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include <algorithm>
 
-// #include <turbojpeg.h>
+#include <turbojpeg.h>
 // Used on macbookair
-#include "/opt/homebrew/Cellar/jpeg-turbo/3.0.4/include/turbojpeg.h"
+// #include "/opt/homebrew/Cellar/jpeg-turbo/3.0.4/include/turbojpeg.h"
 //#include "Utilities/bit.h"
 
 /*

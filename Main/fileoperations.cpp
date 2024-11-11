@@ -379,7 +379,7 @@ void MW::deleteFiles(QStringList paths)
     if (sldm.count() == dm->sf->rowCount()) {
         bookmarks->updateBookmarks();
         stop("deleteFiles");
-        folderSelectionChange();
+        fsTree->select(dm->currentPrimaryFolderPath);
         return;
     }
 
@@ -555,7 +555,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     G::popUp->showPopup(msg);
 
     if (G::currRootFolder.contains(rootPath)) {
-        folderSelectionChange(rootPath);
+        fsTree->select(rootPath);
     }
 }
 

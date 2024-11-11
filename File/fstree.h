@@ -60,12 +60,12 @@ public:
     void createModel();
     void setShowImageCount(bool showImageCount);
     bool isShowImageCount();
+    qlonglong selectionCount();
 
     FSModel *fsModel;
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
-    bool select(QString dirPath);
     void scrollToCurrent();
 
     bool combineRawJpg;
@@ -74,6 +74,7 @@ public:
     QFileSystemWatcher volumesWatcher;
 
 public slots:
+    bool select(QString dirPath);
     void resizeColumns();
     void expand(const QModelIndex &);
 //    void expandAll(const QModelIndex &);
@@ -102,8 +103,7 @@ protected:
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
-    void folderSelection(QString dPath);
-    void folderSelection2(QString dPath, bool clearDataModel);
+    void folderSelectionChange(QString dPath, QString op, bool newInstance, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);

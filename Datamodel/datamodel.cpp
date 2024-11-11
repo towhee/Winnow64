@@ -302,6 +302,8 @@ void DataModel::clearDataModel()
     fileInfoList.clear();
     // clear the folder list
     folderList.clear();
+    // reset firstFolderPathWithImages
+    firstFolderPathWithImages = "";
     // reset iconChunkSize
     iconChunkSize = defaultIconChunkSize;
     // reset missing thumb (jpg/tiff)
@@ -455,7 +457,7 @@ bool DataModel::isQueueEmpty()
     return folderQueue.isEmpty();
 }
 
-void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
+void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding, bool recurse)
 {
 
     // do not process if already in datamodel
@@ -463,10 +465,24 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
 
     QString fun = "DataModel::enqueueFolderSelection";
     QString msg = "isAdding = " + QVariant(isAdding).toString() +
-                  "folder = " + QVariant(folderPath).toString();
+                  " " + QVariant(folderPath).toString();
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
 
-    folderQueue.enqueue(qMakePair(folderPath, isAdding));
+    if (recurse) {
+        qDebug() << "DataModel::enqueueFolderSelection recurse" << folderPath;
+        folderQueue.enqueue(qMakePair(folderPath, isAdding));
+        QDirIterator it(folderPath, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString dPath = it.next();
+            if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
+                qDebug() << "DataModel::enqueueFolderSelection recurse" << dPath;
+                folderQueue.enqueue(qMakePair(dPath, isAdding));
+            }
+        }
+    }
+    else {
+        folderQueue.enqueue(qMakePair(folderPath, isAdding));
+    }
 
     /*
     // if (isDebug)
@@ -487,12 +503,10 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
 
 void DataModel::processNextFolder() {
 
-    // qDebug() << "DataModel::processNextFolder";
     if (G::stop) return;
 
     QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
-        // qDebug() << "DataModel::processNextFolder Queue is empty";
         isProcessing = false;
         return;
     }
@@ -501,8 +515,8 @@ void DataModel::processNextFolder() {
     locker.unlock(); // Unlock the queue while processing
 
     QString fun = "DataModel::processNextFolder";
-    QString msg = "folderOperation.first = " + folderOperation.first = +
-                  "folderOperation.second = " + folderOperation.second;
+    QString msg = "folderOperation.first = " + folderOperation.first + " " +
+                  "folderOperation.second = " + QVariant(folderOperation.second).toString();
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
     if (isDebug)
     {
@@ -513,23 +527,25 @@ void DataModel::processNextFolder() {
     }//*/
 
     // Process the folder asynchronously using QtConcurrent
-    QtConcurrent::run([this, folderOperation]() {
+    // QtConcurrent::run([this, folderOperation]() {
         // add images from model
         if (folderOperation.second) {
             addFolder(folderOperation.first);
             // signal MW::loadConcurrentChanged
-            emit addedFolderToDM(folderOperation.first);
+            emit addedFolderToDM(folderOperation.first, "Add");
         }
         // remove images from model
         else {
             removeFolder(folderOperation.first);
+            qDebug() << "DataModel::processNextFolder rowCount3 =" << rowCount() << sf->rowCount();
             // signal MW::loadConcurrentChanged
-            emit removedFolderFromDM(folderOperation.first);
+            emit removedFolderFromDM(folderOperation.first, "Remove");
         }
 
         // Continue with the next folder operation
-        QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
-    });
+        // QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
+    // });
+        processNextFolder();
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -542,7 +558,7 @@ void DataModel::addFolder(const QString &folderPath)
     // control
     QMutexLocker locker(&mutex);
     abortLoadingModel = false;
-    currentFolderPath = folderPath;
+    currentPrimaryFolderPath = folderPath;
     folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
@@ -599,7 +615,6 @@ void DataModel::addFolder(const QString &folderPath)
             QString suffix = fileInfoList.at(row).suffix().toLower();
             QString baseName = fileInfoList.at(row).completeBaseName();
             if (metadata->hasJpg.contains(suffix)) {
-                qDebug() << "DataModel::addFileData" << row << suffix;
                 prevRawSuffix = suffix;
                 prevRawBaseName = fileInfoList.at(row).completeBaseName();
                 prevRawIdx = index(row, 0);
@@ -631,7 +646,11 @@ void DataModel::addFolder(const QString &folderPath)
 
     mutex.lock();
     loadingModel = false;
+    if (firstFolderPathWithImages == "" && rowCount()) {
+        firstFolderPathWithImages = folderPath;
+    }
     mutex.unlock();
+
     endLoad(true);
 }
 
@@ -640,19 +659,39 @@ void DataModel::removeFolder(const QString &folderPath)
     QString fun = "DataModel::removeFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
-    // qDebug() << "DataModel::removeFolder" << folderPath;
-
     folderList.removeAll(folderPath);
+
+    QModelIndex parIdx = QModelIndex();
     for (int row = rowCount() - 1; row >= 0; --row) {
         QString filePath = index(row, 0).data(G::PathRole).toString();
+        /*
         qDebug() << "DataModel::removeFolder remove row" << row
             << filePath.startsWith(folderPath)
-            << folderPath << filePath;
+            << folderPath << filePath; //*/
         if (filePath.startsWith(folderPath)) {
             qDebug() << "DataModel::removeFolder remove row" << row << filePath;
+            beginRemoveRows(parIdx, row, row);
             removeRow(row);
+            endRemoveRows();
         }
     }
+
+    sf->invalidate();
+
+    // rebuild fileInfoList
+    fileInfoList.clear();
+    int i;
+    for (i = 0; i < rowCount(); ++i) {
+        QString path = index(i, G::PathColumn).data(G::PathRole).toString();
+        fileInfoList.append(QFileInfo(path));
+    }
+
+    // rebuild fPathRow hash
+    rebuildRowFromPathHash();
+
+    // update imageCount
+    imageCount = rowCount();
+
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
@@ -806,7 +845,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     subFolderImagesLoaded = false;
     folderList.clear();
     folderList.append(folderPath);
-    currentFolderPath = folderPath;
+    currentPrimaryFolderPath = folderPath;
 
     // sf->suspend(true);
 
@@ -820,7 +859,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     // }
     dir->setNameFilters(*fileFilters);
     dir->setFilter(QDir::Files);
-    dir->setPath(currentFolderPath);
+    dir->setPath(currentPrimaryFolderPath);
 
     imageCount = 0;
     countInterval = 100;
@@ -850,7 +889,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 
     // if include subfolders
     includeSubfolders = true;
-    QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
+    QDirIterator it(currentPrimaryFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         if (abortLoadingModel) return endLoad(false);
         it.next();
@@ -908,7 +947,7 @@ bool DataModel::addFileData()
 */
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
     if (isDebug)
-        qDebug() << "DataModel::addFileData" << "instance =" << instance << currentFolderPath;
+        qDebug() << "DataModel::addFileData" << "instance =" << instance << currentPrimaryFolderPath;
 
     if (combineRawJpg) {
         // make sure, if raw+jpg pair, that raw file is first to make combining easier
@@ -957,7 +996,7 @@ bool DataModel::addFileData()
         suffix = fileInfoList.at(row).suffix().toLower();
         baseName = fileInfoList.at(row).completeBaseName();
         if (metadata->hasJpg.contains(suffix)) {
-            qDebug() << "DataModel::addFileData" << row << suffix;
+            // qDebug() << "DataModel::addFileData" << row << suffix;
             prevRawSuffix = suffix;
             prevRawBaseName = fileInfoList.at(row).completeBaseName();
             prevRawIdx = index(row, 0);
@@ -994,7 +1033,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
         qDebug() << "DataModel::addFileDataForRow"
                           << "instance =" << instance
                           << "row =" << row
-                          << currentFolderPath
+                          << currentPrimaryFolderPath
                              ;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
@@ -1055,7 +1094,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 bool DataModel::updateFileData(QFileInfo fileInfo)
 {
     if (G::isLogger) G::log("DataModel::updateFileData");
-    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
+    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentPrimaryFolderPath;
     QString fPath = fileInfo.filePath();
     if (!fPathRow.contains(fPath)) return false;
     int row = fPathRow[fPath];
@@ -1099,7 +1138,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
                           << "row =" << row
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
 
     QMutexLocker locker(&mutex);
     metadata->m.row = row;  // req'd?
@@ -1247,7 +1286,7 @@ void DataModel::addAllMetadata()
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addAllMetadata";
     if (isDebug) {
-        qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentFolderPath;
+        qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentPrimaryFolderPath;
     }
 //    G::t.restart();
 
@@ -1311,7 +1350,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     if (isDebug) {
         qDebug() << fun << "instance =" << instance
                           << "row =" << row
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     }
 
     // might be called from previous folder during folder change
@@ -1371,7 +1410,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::PathRole).toString());
     if (isDebug) qDebug() << fun << "instance =" << instance
                           << "row =" << sfRow
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
@@ -1452,7 +1491,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (G::stop) return false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
@@ -1644,7 +1683,7 @@ bool DataModel::metadataLoaded(int dmRow)
     if (G::isLogger) G::log("DataModel::metadataLoaded");
     if (isDebug) qDebug() << "DataModel::metadataLoaded" << "instance =" << instance
                           << "row =" << dmRow
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
@@ -1796,7 +1835,7 @@ bool DataModel::missingThumbnails()
 double DataModel::aspectRatio(int w, int h, int orientation)
 {
     if (G::isLogger) G::log("DataModel::aspectRatio");
-    if (isDebug) qDebug() << "DataModel::aspectRatio" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::aspectRatio" << "instance =" << instance << currentPrimaryFolderPath;
     if (w == 0 || h == 0) return 1.0;
     // portrait
     if (orientation == 6 || orientation == 8) return h * 1.0 / w;
@@ -1814,7 +1853,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                      << "value =" << value
                  << "src =" << src
                  << "instance =" << instance
-                 << currentFolderPath;
+                 << currentPrimaryFolderPath;
     }
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
@@ -1838,7 +1877,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
     if (G::stop) return;
     if (isDebug) qDebug() << "DataModel::setValueSf" << "instance =" << instance
                           << "row =" << sfIdx.row()
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     /*
     qDebug() << "DataModel::setValueSf"
              << "Instance =" << instance
@@ -2035,7 +2074,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
                  << "row =" << dmIdx.row()
-                 << currentFolderPath;
+                 << currentPrimaryFolderPath;
     }
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
@@ -2076,7 +2115,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
                           << "row =" << sfRow
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
@@ -2091,7 +2130,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
 
 int DataModel::iconCount()
 {
-    if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance << currentPrimaryFolderPath;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
@@ -2102,7 +2141,7 @@ int DataModel::iconCount()
 
 bool DataModel::isAllIconsLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (itemFromIndex(index(row, 0))->icon().isNull()) {
             //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
@@ -2115,7 +2154,7 @@ bool DataModel::isAllIconsLoaded()
 
 bool DataModel::isAllIconChunkLoaded(int first, int last)
 {
-    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentPrimaryFolderPath;
 
     if (first < 0 || last > sf->rowCount()) return false;
     for (int row = first; row <= last; ++row) {
@@ -2195,7 +2234,7 @@ void DataModel::setChunkSize(int chunkSize)
 
 void DataModel::clearAllIcons() // not being used
 {
-    if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance << currentPrimaryFolderPath;
     QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
@@ -2205,25 +2244,25 @@ void DataModel::clearAllIcons() // not being used
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
     // if (isDebug)
-        qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
+        qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     G::allMetadataLoaded = isLoaded;
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)
 {
-    if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << currentPrimaryFolderPath;
     return index(sfRow, G::MetadataAttemptedColumn).data().toBool();
 }
 
 bool DataModel::isMetadataLoaded(int sfRow)
 {
-    if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     return index(sfRow, G::MetadataLoadedColumn).data().toBool();
 }
 
 bool DataModel::isAllMetadataAttempted()
 {
-    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
             if (isDebug)
@@ -2236,7 +2275,7 @@ bool DataModel::isAllMetadataAttempted()
 
 bool DataModel::isAllMetadataLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
             if (isDebug)
@@ -2249,7 +2288,7 @@ bool DataModel::isAllMetadataLoaded()
 
 QList<int> DataModel::metadataNotLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance << currentPrimaryFolderPath;
     QList<int> rows;
     for (int row = 0; row < rowCount(); ++row) {
         if (index(row, G::MetadataAttemptedColumn).data().toBool() &&
@@ -2275,7 +2314,7 @@ bool DataModel::isPath(QString fPath)
 
 int DataModel::rowFromPath(QString fPath)
 {
-    if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentPrimaryFolderPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
     if (fPathRow.contains(fPath)) return fPathRow[fPath];
     else return -1;
@@ -2283,7 +2322,7 @@ int DataModel::rowFromPath(QString fPath)
 
 int DataModel::proxyRowFromPath(QString fPath)
 {
-    if (isDebug) qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance << fPath << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance << fPath << currentPrimaryFolderPath;
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
     int dmRow;
     int sfRow = -1;
@@ -2304,7 +2343,7 @@ QString DataModel::pathFromProxyRow(int sfRow)
 void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
-    if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance << currentPrimaryFolderPath;
     fPathRow.clear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
@@ -2321,16 +2360,16 @@ bool DataModel::hasFolderChanged()
     datamodel was loaded then it is added to the modifiedFiles list and return false.
 */
     if (G::isLogger) G::log("DataModel::hasFolderChanged");
-    if (isDebug) qDebug() << "DataModel::hasFolderChanged" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::hasFolderChanged" << "instance =" << instance << currentPrimaryFolderPath;
     bool hasChanged = false;
     modifiedFiles.clear();
     QList<QFileInfo> fileInfoList2;
-    dir->setPath(currentFolderPath);
+    dir->setPath(currentPrimaryFolderPath);
     for (int i = 0; i < dir->entryInfoList().size(); ++i) {
         fileInfoList2.append(dir->entryInfoList().at(i));
     }
     if (includeSubfolders) {
-        QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
+        QDirIterator it(currentPrimaryFolderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             it.next();
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
@@ -2378,7 +2417,7 @@ void DataModel::searchStringChange(QString searchString)
     if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString
-                  << currentFolderPath;
+                  << currentPrimaryFolderPath;
     // update datamodel search string match
     QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row)  {
@@ -2401,7 +2440,7 @@ void DataModel::rebuildTypeFilter()
     When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
 */
     if (G::isLogger) G::log("DataModel::rebuildTypeFilter");
-    if (isDebug) qDebug() << "DataModel::rebuildTypeFilter" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::rebuildTypeFilter" << "instance =" << instance << currentPrimaryFolderPath;
     QStringList typeList;
     QMap<QString,int> map;
     for (int row = 0; row < rowCount(); row++) {
@@ -2439,7 +2478,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (isDebug) {
         qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
                  << "fPath =" << fPath
-                 << currentFolderPath;
+                 << currentPrimaryFolderPath;
     }
     if (!fPathRow.contains(fPath)) {
         errMsg = "Not in fPathrow.";
@@ -2477,7 +2516,7 @@ int DataModel::proxyRowFromModelRow(int dmRow)
     if (G::isLogger) G::log("DataModel::proxyRowFromModelRow");
     if (isDebug) qDebug() << "DataModel::proxyRowFromModelRow" << "instance =" << instance
                           << "row =" << dmRow
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     return sf->mapFromSource(index(dmRow, 0)).row();
 }
 
@@ -2486,7 +2525,7 @@ int DataModel::modelRowFromProxyRow(int sfRow)
     if (G::isLogger) G::log("DataModel::modelRowFromProxyRow");
     if (isDebug) qDebug() << "DataModel::modelRowFromProxyRow" << "instance =" << instance
                           << "row =" << sfRow
-                          << currentFolderPath;
+                          << currentPrimaryFolderPath;
     return sf->mapToSource(sf->index(sfRow, 0)).row();
 }
 
@@ -2606,7 +2645,7 @@ bool DataModel::getSelection(QStringList &list)
     are picks and a selection then a dialog offers the user a choice to use.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
-    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance << currentPrimaryFolderPath;
 
     bool usePicks = false;
 
@@ -2662,7 +2701,7 @@ bool DataModel::getSelection(QStringList &list)
 QStringList DataModel::getSelectionOrPicks()
 {
     if (G::isLogger) G::log("DataModel::getSelectionOrPicks");
-    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance << currentPrimaryFolderPath;
 
     QStringList picks;
 
@@ -2694,7 +2733,7 @@ QStringList DataModel::getSelectionOrPicks()
 bool DataModel::isPick()
 {
     if (G::isLogger) G::log("DataModel::isPick");
-    if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentPrimaryFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         QModelIndex idx = index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "Picked") return true;
@@ -2708,7 +2747,7 @@ void DataModel::clearPicks()
     reset all the picks to false.
 */
     if (G::isLogger) G::log("DataModel::clearPicks");
-    if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance << currentPrimaryFolderPath;
     QMutexLocker locker(&mutex);
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
@@ -2768,13 +2807,14 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
 QString DataModel::diagnostics()
 {
     if (G::isLogger) G::log("DataModel::diagnostics");
-    if (isDebug) qDebug() << "DataModel::diagnostics" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::diagnostics" << "instance =" << instance << currentPrimaryFolderPath;
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
-    rpt << "\n" << G::sj("currentFolderPath", 27) << G::s(currentFolderPath);
+    rpt << "\n" << G::sj("currentPrimaryFolderPath", 27) << G::s(currentPrimaryFolderPath);
+    rpt << "\n" << G::sj("firstFolderPathWithImages", 27) << G::s(firstFolderPathWithImages);
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
     rpt << "\n" << G::sj("currentDMRow", 27) << G::s(currentDmRow);
     rpt << "\n" << G::sj("currentSFRow", 27) << G::s(currentSfRow);
@@ -2814,7 +2854,7 @@ QString DataModel::diagnostics()
 QString DataModel::diagnosticsForCurrentRow()
 {
     if (G::isLogger) G::log("DataModel::diagnosticsForCurrentRow");
-    if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << currentPrimaryFolderPath;
 
     if (rowCount() == 0) {
         G::popUp->showPopup("Empty folder or no folder selected");
@@ -2840,7 +2880,7 @@ QString DataModel::diagnosticsForCurrentRow()
 void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
 {
     if (G::isLogger) G::log("DataModel::getDiagnosticsForRow");
-    if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << currentFolderPath;
+    if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << currentPrimaryFolderPath;
 
     if (rowCount() == 0) {
         G::popUp->showPopup("Empty folder or no folder selected");

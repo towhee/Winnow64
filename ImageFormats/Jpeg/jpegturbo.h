@@ -5,9 +5,9 @@
 #include <QObject>
 #include "Main/global.h"
 // #include <turbojpeg.h>
-// #include <turbojpeg.h>
+#include <turbojpeg.h>
 // used on macbookair
-#include "/opt/homebrew/Cellar/jpeg-turbo/3.0.4/include/turbojpeg.h"
+// #include "/opt/homebrew/Cellar/jpeg-turbo/3.0.4/include/turbojpeg.h"
 
 /*
     libjpeg-turbo is the fastest jpeg library I have found, frequently 30-50%

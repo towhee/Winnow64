@@ -1681,6 +1681,7 @@ void MW::createFileMenu()
     }
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
+
     fileMenu->addAction(revealFileAction);
 
     fileMenu->addSeparator();

@@ -143,7 +143,7 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
             << "secInFolder =" << secPerFolder << path;
         bookmarks->select(path);
         fsTree->select(path);
-        folderSelectionChange();
+        folderSelectionChangeOld();
         traverseFolderStressTest(msPerImage, secPerFolder);
     }
 }
@@ -195,6 +195,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
+    updateStatus(true, "", "MW::test"); return;
+
+    fsTree->select("/Users/roryhill/Pictures/Coasterx"); return;
     qDebug() << fsTree->fsModel->combineRawJpg;  return;
 
     qDebug() << "dm->folderList.count()" << dm->folderList.count();

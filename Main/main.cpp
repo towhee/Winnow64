@@ -54,6 +54,12 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+#ifdef Q_OS_MAC
+    Mac::initializeAppDelegate();
+    // MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
+    // [NSApp setDelegate:delegate];
+#endif
+
     // start program
     QCoreApplication::addLibraryPath("./");
     MW mw(args);
@@ -71,12 +77,6 @@ int main(int argc, char *argv[])
     // hide root in FSTree after loaded
     QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
                      &mw, &MW::whenActivated);
-
-#ifdef Q_OS_MAC
-    Mac::initializeAppDelegate();
-   // MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
-   // [NSApp setDelegate:delegate];
-#endif
 
     return instance.exec();
     //*/

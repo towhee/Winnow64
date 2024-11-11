@@ -63,7 +63,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {

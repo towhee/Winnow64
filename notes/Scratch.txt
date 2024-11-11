@@ -1,274 +1,146 @@
-lipo -create /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64/lib/libturbojpeg.dylib /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64/lib/libturbojpeg.dylib -output /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.dylib
-lipo -create /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64/lib/libtiff.dylib /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64/lib/libtiff.dylib -output /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-universal/libtiff.dylib
+class FSTree : public QTreeView
 
-export PATH="/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake:$PATH"
-/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake .. -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
-
-/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake .. \
-    -G"Unix Makefiles" \
-    -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64 \
-    -DJPEG_LIBRARY=/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64/lib/libturbojpeg.dylib \
-    -DJPEG_INCLUDE_DIR=/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64/include
-
-/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.0.dylib
-/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.0.dylib
-
-/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.0.dylib (no such file)
-/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.0.dylib
-
-roryhill@Quark build-universal % otool -L /Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow
-/Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow (architecture x86_64):
-        /System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices (compatibility version 1.0.0, current version 65.0.0)
-        /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3038.1.255)
-        /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 3038.1.255)
-        /usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)
-        @rpath/libtiff.6.dylib (compatibility version 6.0.0, current version 6.1.0)
-        @rpath/libturbojpeg.0.dylib (compatibility version 0.0.0, current version 0.3.0)
-        @rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtWidgets.framework/Versions/A/QtWidgets (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtMultimedia.framework/Versions/A/QtMultimedia (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtGui.framework/Versions/A/QtGui (compatibility version 6.0.0, current version 6.5.3)
-        /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 2566.0.0)
-        /System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 366.22.0)
-        @rpath/QtNetwork.framework/Versions/A/QtNetwork (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtConcurrent.framework/Versions/A/QtConcurrent (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtCore.framework/Versions/A/QtCore (compatibility version 6.0.0, current version 6.5.3)
-        /System/Library/Frameworks/IOKit.framework/Versions/A/IOKit (compatibility version 1.0.0, current version 275.0.0)
-        /System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/AGL.framework/Versions/A/AGL (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL (compatibility version 1.0.0, current version 1.0.0)
-        /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1800.101.0)
-        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)
-        /System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync (compatibility version 1.0.0, current version 3764.0.0)
-        /System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics (compatibility version 64.0.0, current version 1883.0.0)
-        /usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
-/Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow (architecture arm64):
-        /System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices (compatibility version 1.0.0, current version 65.0.0)
-        /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3038.1.255)
-        /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 3038.1.255)
-        /usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)
-        @rpath/libtiff.6.dylib (compatibility version 6.0.0, current version 6.1.0)
-        @rpath/libturbojpeg.0.dylib (compatibility version 0.0.0, current version 0.3.0)
-        @rpath/QtMultimediaWidgets.framework/Versions/A/QtMultimediaWidgets (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtWidgets.framework/Versions/A/QtWidgets (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtMultimedia.framework/Versions/A/QtMultimedia (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtGui.framework/Versions/A/QtGui (compatibility version 6.0.0, current version 6.5.3)
-        /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 2566.0.0)
-        /System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 366.22.0)
-        @rpath/QtNetwork.framework/Versions/A/QtNetwork (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtConcurrent.framework/Versions/A/QtConcurrent (compatibility version 6.0.0, current version 6.5.3)
-        @rpath/QtCore.framework/Versions/A/QtCore (compatibility version 6.0.0, current version 6.5.3)
-        /System/Library/Frameworks/IOKit.framework/Versions/A/IOKit (compatibility version 1.0.0, current version 275.0.0)
-        /System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/AGL.framework/Versions/A/AGL (compatibility version 1.0.0, current version 1.0.0)
-        /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL (compatibility version 1.0.0, current version 1.0.0)
-        /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1800.101.0)
-        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)
-        /System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync (compatibility version 1.0.0, current version 3764.0.0)
-        /System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics (compatibility version 64.0.0, current version 1883.0.0)
-        /usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
-
-
-I have confirmed:
-1. the symlink correctly points to the target file
-2. my .pro file already has macx:QMAKE_RPATHDIR += /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal
-3. otool -l your_executable | grep -A 5 LC_RPATH ncludes the path /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal
-4. otool -L your_executable shows @rpath/libturbojpeg.0.dylib (compatibility version ... , current version ...)
-5. install_name_tool -add_rpath /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal your_executable reports file already has RPATH for /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal
-
-Steps to build /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.dylib
-
-mkdir /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
-mkdir /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64
-mkdir /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-universal
-cd /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64
-cmake .. -G"Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64
-make -j$(sysctl -n hw.ncpu)
-make install
-cd /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-x86_64
-cmake .. -G"Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_INSTALL_PREFIX=/Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64
-make -j$(sysctl -n hw.ncpu)
-make install
-lipo -create /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64/libturbojpeg.dylib /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64/libturbojpeg.dylib -output /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.dylib
-lipo -create /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-x86_64/libturbojpeg.0.3.0.dylib /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64/libturbojpeg.0.3.0.dylib -output /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-universal/libturbojpeg.0.3.0.dylib
-
-Decode TIFF parameter values:
-1st StripOffset          8
-1st StripByteCount       185852200
-BitsPerSample            16
-PhotometricInterpation   2
-SamplesPerPixel          3
-RowsPerStrip             4000
-Compression              5
-PlanarConfiguration      1
-Predictor                0
-QTimer::singleShot()
 FSTree::FSTree(QWidget *parent, Metadata *metadata)
         : QTreeView(parent), delegate(new HoverDelegate(this))
 {
-    setSelectionMode(QAbstractItemView::ExtendedSelection);
-    setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->metadata = metadata;
+    fileFilters = new QStringList;
+    dir = new QDir();
+
+    // create model and filter
+    createModel();
+    treeSelectionModel = selectionModel();
+
+    QStringList *fileFilters = new QStringList;
+    dir = new QDir();
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    connect(this, &QTreeView::expanded, this, &FSTree::expandedSelectRecursively);
+
+    connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
+            this, &FSTree::onRowsAboutToBeRemoved);
+
+    connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
+            this->viewport()->update();});
 }
 
-void FSTree::mousePressEvent(QMouseEvent *event)
+void FSTree::createModel()
 {
-    QModelIndex idx = indexAt(event->pos());
-    if (!idx.isValid()) return;
+/*
+    Create the model and filter in a separate function as it is also used to refresh
+    the folders by deleting the model and re-creating it.
+*/
+    if (G::isLogger) G::log("FSTree::createModel");
+    fsModel = new FSModel(this, *metadata, combineRawJpg);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    fsModel->setRootPath("");  //
+    //fsModel->setRootPath(fsModel->myComputer().toString());
 
-    // update path
-    QModelIndex idx0 = idx.sibling(idx.row(), 0);
-    QString path = idx0.data(QFileSystemModel::FileNameRole).toString();
-
-    // load all subfolders images
-    if (event->modifiers() & Qt::AltModifier) {
-        selectionModel()->clearSelection();
-        expandRecursively(idx0);
-        selectRecursively(idx0);
-        return;
-    }
-
-    QTreeView::mousePressEvent(event);
-}
-
-void FSTree::mouseReleaseEvent(QMouseEvent *event)
-{
-    if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier) {
-        QTreeView::mouseReleaseEvent(event);
-    }
-}
-
-void FSTree::selectItemAndChildren(const QModelIndex &index)
-{
-    QItemSelectionModel *selectionModel = this->selectionModel();
-    if (!selectionModel) {
-        return;
-    }
-
-    // Use a queue to traverse all children of the given index
-    QList<QModelIndex> queue;
-    queue.append(index);
-
-    while (!queue.isEmpty()) {
-        QModelIndex currentIndex = queue.takeFirst();
-        selectionModel->select(currentIndex, QItemSelectionModel::Select);
-
-        // Add all children of the current item to the queue
-        for (int i = 0; i < model()->rowCount(currentIndex); ++i) {
-            queue.append(model()->index(i, 0, currentIndex));
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+       if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
         }
     }
+
+    fsFilter = new FSFilter(fsModel);
+    fsFilter->setSourceModel(fsModel);
+    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
+
+    // apply model to treeview
+    setModel(fsFilter);
 }
 
------------------------------
-
-void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding)
+void FSTree::selectRecursively(const QPersistentModelIndex &index)
 {
-
-    QMutexLocker locker(&queueMutex);
-    folderQueue.enqueue(qMakePair(folderPath, isAdding));
-
-    // /*
-    if (isDebug)
-    {
-    qDebug() << "DataModel::enqueueFolderSelection"
-             << "isAdding =" << isAdding
-             << "folder =" << folderPath
-             << "folderQueue =" << folderQueue
-        ;
-    } //*/
-
-    // If not already processing, start the processing
-    if (!isProcessing) {
-        isProcessing = true;
-        processNextFolder();
-    }
-}
-
-void DataModel::processNextFolder() {
-
-    qDebug() << "DataModel::processNextFolder";
-
-    // QMutexLocker locker(&queueMutex);
-    if (folderQueue.isEmpty()) {
-        qDebug() << "DataModel::processNextFolder Queue is empty";
-        isProcessing = false;
+    if (!index.isValid()) {
         return;
     }
 
-    QPair<QString, bool> folderOperation = folderQueue.dequeue();
-    // locker.unlock(); // Unlock the queue while processing
+    QString folderName = index.data().toString();
+    QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+    G::log("FSTree::selectRecursively", folderPath);
+    recursedForSelection.append(index);
+    if (isExpanded(index)) expandedSelectRecursively(index);
+    else setExpanded(index, true);
+}
 
-    // if (isDebug)
-    {
-    qDebug() << "DataModel::processNextFolder"
-             << "folderOperation.first =" << folderOperation.first
-             << "folderOperation.second =" << folderOperation.second
-                ;
-    }//*/
+void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
+{
+    if (!index.isValid() || !isRecursiveSelection) {
+        return;
+    }
 
-    // Process the folder asynchronously using QtConcurrent
-    QtConcurrent::run([this, folderOperation]() {
-        if (folderOperation.second) {
-            addFolder(folderOperation.first);
-        } else {
-            removeFolder(folderOperation.first);
+     // Select the current node
+    QString folderName = index.data().toString();
+
+    // Delay to allow the expansion to complete before selecting children
+    QModelIndex sourceIndex = fsFilter->mapToSource(index);
+    setExpanded(index, true);
+
+    fsFilter->refresh();    // necessary
+
+    // force lazy update to model expansion
+    QElapsedTimer t;
+    t.start();
+    while (fsModel->canFetchMore(sourceIndex)) {
+        fsModel->fetchMore(sourceIndex);
+        if (t.elapsed() > 5000) {
+            return;
+        }
+    }
+
+    fsFilter->refresh();    // necessary
+
+    /* this does not work
+    QMetaObject::invokeMethod(this, [this]() {
+            // fsModel->refresh();
+            fsFilter->refresh();
+        }, Qt::QueuedConnection);  */
+
+    // delay checking for children until refresh is completed using singleshot
+    QTimer::singleShot(0, this, [this, isDebug, index, folderName]() {
+        int childCount = 0;
+        if (index.isValid()) {
+            bool hasChildren = fsFilter->hasChildren(index);
+            childCount = fsFilter->rowCount(index);
         }
 
-        // Continue with the next folder operation
-        QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
+        // Recursively select all child nodes
+        for (int i = 0; i < childCount; ++i) {
+            QModelIndex childIndex = fsFilter->index(i, 0, index);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively Recurse child " << childIndex.data().toString();
+            selectRecursively(childIndex);
+        }
+
+        // Finished recursion
+        isRecursiveSelection = false;
+        for (QModelIndex index : recursedForSelection) {
+            if (!index.isValid()) continue;
+            // can crash here Exception Type: EXC_BAD_ACCESS (SIGSEGV)
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);  // crash
+        }
+        recursedForSelection.clear();
     });
 }
 
-void DataModel::addFolder(const QString &folderPath)
-{
+How can I avoid the EXC_BAD_ACCESS (SIGSEGV) crash during the recursive selection?
 
-    qDebug() << "DataModel::addFolder"
-             << "folder =" << folderPath
-                ;
-
-    // control
-    abortLoadingModel = false;
-    currentFolderPath = folderPath;
-    loadingModel = true;
-
-    // folder fileInfo list
-    QDir dir(folderPath);
-    dir.setNameFilters(*fileFilters);
-    dir.setFilter(QDir::Files);
-    QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
-
-    // datamodel size
-    int row = rowCount();
-    setRowCount(rowCount() + folderFileInfoList.count());
-
-    for (const QFileInfo &fileInfo : folderFileInfoList) {
-        fileInfoList.append(fileInfo);
-        /*
-        qDebug() << "DataModel::addFolder"
-                 << "row =" << row
-                 << "file =" << fileInfo.fileName()
-                 << "folder =" << folderPath
-                    ; //*/
-        // Ensure thread-safe updates to the model
-        QMetaObject::invokeMethod(this, [this, row, fileInfo]() {
-            addFileDataForRow(row, fileInfo);
-        }, Qt::QueuedConnection);
-        row++;
-    }
-}
-
-void DataModel::removeFolder(const QString &folderPath)
-{
-    QMetaObject::invokeMethod(this, [this, folderPath]() {
-        for (int row = rowCount() - 1; row >= 0; --row) {
-            QString filePath = index(row, 0).data(Qt::UserRole).toString();
-            if (filePath.startsWith(folderPath)) {
-                removeRow(row);
-            }
+QTimer::singleShot(0, this, [this]() {
+    for (const QPersistentModelIndex &index : qAsConst(recursedForSelection)) {
+        if (index.isValid()) {
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
-    }, Qt::QueuedConnection);
-}
-
+    }
+    recursedForSelection.clear();
+});

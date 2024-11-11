@@ -413,10 +413,10 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void folderSelectionChangeNoParam();
-    void folderSelectionChange(QString dPath = ""/*, bool clear = true, bool includeSubFolders = false*/);
-    void folderSelectionChange2(QString folderPath, bool primaryFolder);
-    void primaryFolderSelection(QString folderPath);
+    void folderSelectionChangeOld(QString dPath = ""/*, bool clear = true, bool includeSubFolders = false*/);
+    void folderSelectionChange(QString folderPath = "", QString op = "Add",
+                               bool newInstance = true, bool recurse = false);
+    void loadNewInstance(QString folderPath);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void tryLoadImageAgain(QString fPath);
@@ -575,12 +575,10 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrentPrimaryFolder();
-    void loadConcurrentAddFolder(const QString folderPath);
-    void loadConcurrentRemoveFolder(const QString folderPath);
-    void loadConcurrent(int sfRow, bool isCurrent = true, QString src = "");
-    void loadConcurrentChanged(const QString folderPath);
-    void loadConcurrentDone();
+    void loadFolder(QString folderPath);
+    void load(int sfRow, bool isCurrent = true, QString src = "");
+    void loadChanged(const QString folderPath, const QString op);
+    void loadDone();
 
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);

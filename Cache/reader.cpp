@@ -149,8 +149,8 @@ bool Reader::readMetadata()
             ;
     }
 
-    QString msg = "row = " + QString::number(sfRow) +
-                  " w = " +  QString::number(metadata->m.width)
+    QString msg = "row = " + QString::number(sfRow)
+                  // + " w = " +  QString::number(metadata->m.width)
         ;
     G::log("Reader::readMetadata", msg);
 

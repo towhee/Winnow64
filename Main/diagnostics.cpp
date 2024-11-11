@@ -14,7 +14,7 @@ void MW::reportState(QString title)
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
         << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
-        << "\nimageView->isFirstImageNewFolder       " << imageView->isFirstImageNewFolder
+        << "\nimageView->isFirstImageNewInstance     " << imageView->isFirstImageNewInstance
 
 //        << "\nisDragDrop                             " << isDragDrop
 //        << "\nG::ignoreScrollSignal                  " << G::ignoreScrollSignal
@@ -318,8 +318,8 @@ void MW::diagnosticsReport(QString reportString, QString title)
     maxWidth += padding;
     int w = maxWidth;
     int h = 1200;
-    if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
-    if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
+    // if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
+    // if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
 
     dlg->resize(w, h);
 
