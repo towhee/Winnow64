@@ -338,8 +338,9 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata)
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
 
-    // connect(this, &QTreeView::expanded, this, &FSTree::expand);
-    connect(this, &QTreeView::expanded, this, &FSTree::expandedSelectRecursively);
+    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
+    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
+    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
 
     // prevent select next folder when a folder is moved to trash/recycle
     connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
@@ -348,6 +349,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata)
     // Repaint when hover changes: Lambda function to call update
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
+
+    isDebug = true;
 }
 
 void FSTree::createModel()
@@ -457,6 +460,218 @@ bool FSTree::select(QString dirPath)
     }
 }
 
+void FSTree::selectAndExpandRecursively(const QPersistentModelIndex &index)
+{
+    /*
+    Expands the current row for all of its branches and selects them all. This is tricky,
+    because the model is lazy loading, so it is necessary to wait for the fsModel to
+    finish fetching data.
+
+    It is also necessary to execute another setExpanded instruction.  I do not know why this
+    is necessary.
+
+    Making any selections while this is happening results in a crash, so the subfolders
+    indexes are stored in a list, and the list is iterated after the recursive search is
+    finished to select all the rows (subFolders).  The indexes must be persistent, as they
+    can change as the model changes.
+
+    The recursion is initiated by the mousePressEvent with the alt/opt or alt/opt + cmd/ctrl
+    modifiers pressed.
+*/
+    if (!index.isValid()) {
+        return;
+    }
+
+    QString folderName = index.data().toString();
+    QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+    if (isDebug || G::isLogger || G::isFlowLogger)
+        G::log("FSTree::selectAndExpandRecursively", folderPath);
+
+    recursedForSelection.append(QPersistentModelIndex(index));
+
+    // Check if expanded and proceed with recursive selection
+    if (!isExpanded(index)) {
+        expandAndWait(index);
+    }
+
+    // Delay to allow the expansion to complete before selecting children
+    QModelIndex sourceIndex = fsFilter->mapToSource(index);
+    setExpanded(index, true);
+    fsFilter->refresh();    // necessary
+
+    // Force lazy update to model expansion
+    QElapsedTimer t;
+    t.start();
+    while (fsModel->canFetchMore(sourceIndex)) {
+        fsModel->fetchMore(sourceIndex);
+        if (t.elapsed() > 5000) {
+            if (isDebug || G::isLogger) {
+                QString msg = "timed out fetching more for " + folderName;
+                G::log("FSTree::selectAndExpandRecursively", msg);
+            }
+            return;
+        }
+    }
+    setExpanded(index, true);
+    fsFilter->refresh();    // necessary
+
+    // Delay checking for children until refresh is completed using singleShot
+    bool isDebug = this->isDebug;
+    QTimer::singleShot(0, this, [this, isDebug, index, folderName]() {
+        int childCount = 0;
+        if (index.isValid()) {
+            // bool hasChildren = fsFilter->hasChildren(index);
+            childCount = fsFilter->rowCount(index);
+            QString msg = folderName + " has " + QString::number(childCount) + " children";
+            if (isDebug || G::isLogger) G::log("FSTree::selectAndExpandRecursively", msg);
+        }
+        else {
+            if (isDebug || G::isLogger) G::log("FSTree::selectAndExpandRecursively",  "WARNING invalid index for " + folderName);
+        }
+
+        // Recursively select all children
+        // if (isDebug || G::isLogger) qDebug() << "FSTree::selectAndExpandRecursively select all children: childCount =" << childCount;
+        for (int i = 0; i < childCount; ++i) {
+            QModelIndex childIndex = fsFilter->index(i, 0, index);
+            if (!childIndex.isValid()) {
+                if (isDebug || G::isLogger) {
+                    QString msg = "WARNING invalid childIndex for " + childIndex.data().toString();
+                    G::log("FSTree::selectAndExpandRecursively", msg);
+                }
+                continue;
+            }
+            if (isDebug || G::isLogger) G::log("FSTree::selectAndExpandRecursively", "Recurse child " + childIndex.data().toString());
+            selectAndExpandRecursively(childIndex);
+        }
+
+        // Finished recursion
+        // if (isDebug)
+        if (isDebug || G::isLogger)
+            G::log("FSTree::selectAndExpandRecursively", "Expansion completed");
+        // G::log("FSTree::selectAndExpandRecursively", "FINISHED");
+
+        isRecursiveSelection = false;
+        for (const QPersistentModelIndex &index : qAsConst(recursedForSelection)) {
+            if (index.isValid()) {
+                QTimer::singleShot(0, this, [this, index]() {
+                    selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                });
+            }
+            else {
+                if (isDebug) qDebug() << "FSTree::selectAndExpandRecursively invalid index";
+            }
+        }
+        if (isDebug || G::isLogger)
+            G::log("FSTree::selectAndExpandRecursively", "Selection completed");
+        recursedForSelection.clear();
+    });
+}
+
+// void FSTree::selectAndExpandRecursively(const QPersistentModelIndex &index)
+// {
+//     if (!index.isValid()) {
+//         return;
+//     }
+
+//     QString folderName = index.data().toString();
+//     QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
+//     G::log("FSTree::selectAndExpandRecursively", folderPath);
+//     recursedForSelection.append(QPersistentModelIndex(index));
+
+//     // Check if expanded and proceed with recursive selection
+//     if (!isExpanded(index)) {
+//         connect(this, &QTreeView::expanded, this, [=](const QModelIndex &expandedIndex) {
+//             if (expandedIndex == index) {
+//                 disconnect(this, &QTreeView::expanded, this, nullptr);
+//                 handleExpandedSelection(index);
+//             }
+//         });
+//         setExpanded(index, true);
+//     }
+//     else {
+//         handleExpandedSelection(index);
+//     }
+// }
+
+// void FSTree::handleExpandedSelection(const QPersistentModelIndex &index)
+// {
+//     if (!isRecursiveSelection) {
+//         return;
+//     }
+
+//     bool isDebug = true;
+
+//     // Select the current node
+//     QString folderName = index.data().toString();
+//     if (isDebug)
+//         qDebug() << "FSTree::handleExpandedSelection"
+//                  << "isExpanded =" << isExpanded(index)
+//                  << folderName;
+
+//     // Delay to allow the expansion to complete before selecting children
+//     QModelIndex sourceIndex = fsFilter->mapToSource(index);
+
+//     fsFilter->refresh();    // necessary
+
+//     // Force lazy update to model expansion
+//     QElapsedTimer t;
+//     t.start();
+//     while (fsModel->canFetchMore(sourceIndex)) {
+//         fsModel->fetchMore(sourceIndex);
+//         if (t.elapsed() > 5000) {
+//             if (isDebug)
+//                 qDebug() << "FSTree::handleExpandedSelection timed out fetching more for " << folderName;
+//             return;
+//         }
+//     }
+//     fsFilter->refresh();    // necessary
+
+//     // delay checking for children until refresh is completed using singleShot
+//     QTimer::singleShot(0, this, [this, isDebug, index, folderName]() {
+//         int childCount = 0;
+//         if (index.isValid()) {
+//             if (isDebug) qDebug() << "FSTree::handleExpandedSelection (after delay) valid index =" << folderName;
+//             bool hasChildren = fsFilter->hasChildren(index);
+//             if (isDebug) qDebug() << "FSTree::handleExpandedSelection (after delay) hasChildren =" << hasChildren;
+//             childCount = fsFilter->rowCount(index);
+//             if (isDebug) qDebug() << "FSTree::handleExpandedSelection (after delay) childCount =" << childCount << folderName;
+//         }
+//         else {
+//             if (isDebug) qDebug() << "FSTree::handleExpandedSelection invalid index =" << folderName;
+//         }
+
+//         // Recursively select all child nodes
+//         for (int i = 0; i < childCount; ++i) {
+//             QModelIndex childIndex = fsFilter->index(i, 0, index);
+//             if (!childIndex.isValid()) {
+//                 if (isDebug) qDebug() << "FSTree::handleExpandedSelection invalid childIndex =" << childIndex.data().toString() << childIndex;
+//                 continue;
+//             }
+//             if (isDebug) qDebug() << "FSTree::handleExpandedSelection Recurse child " << childIndex.data().toString();
+//             selectAndExpandRecursively(childIndex);
+//         }
+
+//         // Finished recursion
+//         if (isDebug) qDebug() << "FSTree::handleExpandedSelection FINISHED";
+//         if (isDebug) qDebug() << "FSTree::handleExpandedSelection"
+//                      << "recursedForSelection count =" << recursedForSelection.count();
+//         // G::log("FSTree::handleExpandedSelection", "FINISHED");
+
+//         isRecursiveSelection = false;
+//         for (const QPersistentModelIndex &index : qAsConst(recursedForSelection)) {
+//             if (index.isValid()) {
+//                 QTimer::singleShot(0, this, [this, index]() {
+//                     selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//                 });
+//             }
+//             else {
+//                 if (isDebug) qDebug() << "FSTree::handleExpandedSelection invalid index";
+//             }
+//         }
+//         recursedForSelection.clear();
+//     });
+// }
+
 void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
 {
 /*
@@ -480,7 +695,7 @@ void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
     }
 
     QString fun = "FSTree::expandedSelectRecursively";
-    bool isDebug = false;
+    bool isDebug = true;
 
     // Select the current node
     QString folderName = index.data().toString();
@@ -491,7 +706,8 @@ void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
 
     // Delay to allow the expansion to complete before selecting children
     QModelIndex sourceIndex = fsFilter->mapToSource(index);
-    setExpanded(index, true);
+    // setExpanded(index, true);
+    expandAndWait(index);
 
     fsFilter->refresh();    // necessary
 
@@ -690,29 +906,63 @@ void FSTree::resizeColumns()
     setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
 }
 
-void FSTree::expand(const QModelIndex &/*idx*/)
+void FSTree::expandAndWait(const QPersistentModelIndex &index)
 {
-/*
-    Get the image count when a user expands the folder hierarchy.  This can also occur when a
-    bookmark is selected and the matching folder is shown in the FSTree.
-*/
-    if (G::isLogger) G::log("FSTree::expand");
-//    qDebug() << "FSTree::expand" << idx << t.elapsed();
-//    if (t.elapsed() > 25) {
-//        QString src = "FSTree::expand";
-//        QTimer::singleShot(50, [this, src]() {getVisibleImageCount(src);});
-//    }
-//    t.restart();
+    if (isDebug || G::isLogger)
+        G::log("FSTree::expandAndWait", index.data().toString());
+
+    justExpandedIndex = index;  // Set the index to wait for
+
+    // Connect the expanded signal to the hasExpanded slot
+    connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
+
+    // Start the elapsed timer
+    QElapsedTimer elapsedTimer;
+    elapsedTimer.start();
+
+    QEventLoop loop;
+
+    // Set up a timeout timer for 1500 ms to avoid indefinite waiting
+    QTimer timeoutTimer;
+    timeoutTimer.setSingleShot(true);
+    timeoutTimer.start(1500);
+
+    // Connect the timeout and custom signal to quit the loop
+    connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    connect(this, &FSTree::indexExpanded, &loop, &QEventLoop::quit);
+
+    // Delay the `setExpanded` call to ensure `loop.exec()` starts first
+    QTimer::singleShot(0, this, [this, index]() {
+        setExpanded(index, true);
+    });
+
+    // Start the event loop and wait until either expansion or timeout occurs
+    loop.exec();
+
+    // Log the elapsed time
+    if (isDebug || G::isLogger)
+        G::log("FSTree::expandAndWait", index.data().toString() + " expanded");
+
+    // Clean up connections
+    disconnect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
 }
 
-//void FSTree::expandAll(const QModelIndex &idx)
-//{
-///*
-//    .
-//*/
-//    if (G::isLogger) G::log("FSTree::expandAll");
-//    this->expandAll(idx);
-//}
+void FSTree::hasExpanded(const QPersistentModelIndex &index)
+{
+    if (isDebug || G::isLogger) {
+        QString msg;
+        if (justExpandedIndex == index) msg = "justExpandedIndex == index ";
+        else msg = "justExpandedIndex != index ";
+        msg += " Expanded = " + index.data().toString() +
+                      " Just Expanded = " + index.data().toString();
+        G::log("FSTree::hasExpanded", index.data().toString());
+    }
+    // qDebug() << "FSTree::hasExpanded" << t.elapsed() << index << justExpandedIndex;
+
+    if (justExpandedIndex == index) {
+        emit indexExpanded();
+    }
+}
 
 void FSTree::resizeEvent(QResizeEvent *event)
 {
@@ -908,10 +1158,12 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             // qDebug() << "FSTree::mousePressEvent ADD SUBFOLDERS not Qt::ControlModifier" << path;
             emit folderSelectionChange(dPath, "Add", /*newInstance*/false, /*recurse*/true);
         }
-        isRecursiveSelection = true;
-        selectRecursively(idx0);
-        selectionModel()->clearSelection();
+        // selectRecursively(idx0);
         emit folderSelectionChange(dPath, "Add", /*newInstance*/true, /*recurse*/true);
+        t.restart();
+        isRecursiveSelection = true;
+        selectAndExpandRecursively(idx0);
+        selectionModel()->clearSelection();
         return;
     }
 

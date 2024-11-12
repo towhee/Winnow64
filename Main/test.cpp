@@ -195,6 +195,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
+    fsTree->expandRecursively(fsTree->currentIndex()); return;
+
     updateStatus(true, "", "MW::test"); return;
 
     fsTree->select("/Users/roryhill/Pictures/Coasterx"); return;

@@ -314,6 +314,7 @@ void DataModel::newInstance()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
     instance++;
+    // qDebug() << "DataModel::newInstance =" << instance;
     G::dmInstance = instance;
 }
 
@@ -469,13 +470,13 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding,
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
 
     if (recurse) {
-        qDebug() << "DataModel::enqueueFolderSelection recurse" << folderPath;
+        // qDebug() << "DataModel::enqueueFolderSelection recurse" << folderPath;
         folderQueue.enqueue(qMakePair(folderPath, isAdding));
         QDirIterator it(folderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             QString dPath = it.next();
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-                qDebug() << "DataModel::enqueueFolderSelection recurse" << dPath;
+                // qDebug() << "DataModel::enqueueFolderSelection recurse" << dPath;
                 folderQueue.enqueue(qMakePair(dPath, isAdding));
             }
         }

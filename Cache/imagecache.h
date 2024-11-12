@@ -62,6 +62,7 @@ public:
 
     int decoderCount = 1;
 
+    bool debugMultiFolders = true;
     bool debugCaching = false;
     bool debugLog = false;
     QString source;                 // temp for debugging

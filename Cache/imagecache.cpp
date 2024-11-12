@@ -91,6 +91,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
+    debugMultiFolders = false;
     debugCaching = false;       // turn on local qDebug
     debugLog = false;           // invoke log
 }
@@ -207,7 +208,7 @@ void ImageCache::updateTargets()
 /*
     Called by setCurrentPosition and fillCache.
 */
-    G::log("ImageCache::updateTargets");
+    if (debugMultiFolders) G::log("ImageCache::updateTargets");
     // log("updateTargets");
 
     if (debugCaching)
@@ -1535,7 +1536,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
 
     QString dPath = d->index(row, G::FolderNameColumn).data().toString();
     QString msg = "Row = " + QString::number(row) + " " + dPath;
-    G::log("ImageCache::updateCacheItemMetadata", msg);
+    // G::log("ImageCache::updateCacheItemMetadata", msg);
     log("updateCacheItemMetadata", msg);
     // qDebug() << "updateImageMetadata  row =" << row;
 
@@ -1889,7 +1890,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     int sfRow = dm->currentSfRow;
-    G::log("ImageCache::setCurrentPosition", "row = " + QString::number(sfRow));
+    if (debugMultiFolders) G::log("ImageCache::setCurrentPosition", "row = " + QString::number(sfRow));
     // log("setCurrentPosition", "row = " + QString::number(sfRow));
     if (debugCaching) {
         qDebug().noquote() << "ImageCache::setCurrentPosition"
@@ -1928,7 +1929,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     gMutex.unlock();
 
     // image not cached and not video
-    bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;
+    bool isVideo = icd->cacheItemList.at(icd->cache.key).isVideo;   // crash when filtering
 
     // not in cache, maybe loading
     if (!icd->imCache.contains(fPath) && !isVideo) {

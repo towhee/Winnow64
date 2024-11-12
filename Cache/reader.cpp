@@ -54,9 +54,11 @@ void Reader::read(const QModelIndex dmIdx,
             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
             << "status =" << statusText.at(status)
             << "isRunning =" << isRunning()
+            << "instanceOk() =" << instanceOk()
             ;
     }
-    if (instanceOk()) start();
+    // if (instanceOk())
+        start();
 }
 
 void Reader::stop()
@@ -100,7 +102,13 @@ void Reader::stop()
 
 inline bool Reader::instanceOk()
 {
-    return instance == G::dmInstance;
+    if (instance != dm->instance)
+    /*
+    qDebug() << "Reader::instanceOk"
+             << "reader instance =" << instance
+             << "datamodel instance =" << dm->instance;//*/
+    return instance == dm->instance;
+    // return instance == G::dmInstance;
 }
 
 bool Reader::readMetadata()
@@ -149,10 +157,8 @@ bool Reader::readMetadata()
             ;
     }
 
-    QString msg = "row = " + QString::number(sfRow)
-                  // + " w = " +  QString::number(metadata->m.width)
-        ;
-    G::log("Reader::readMetadata", msg);
+    // QString msg = "row = " + QString::number(sfRow);
+    // G::log("Reader::readMetadata", msg);
 
     if (!abort) emit addToImageCache(sfRow, fPath, instance);
     // if (!abort) emit addToImageCache(dmIdx.row(), instance);
@@ -222,16 +228,22 @@ void Reader::readIcon()
 
 void Reader::run()
 {
+    readMetadata();
+    readIcon();
+    emit done(threadId);
+    return;
+
     // t1 = t.restart();
     if (!abort && !G::allMetadataLoaded && !dm->isMetadataLoaded(dmIdx.row()) && instanceOk())
         readMetadata();
     if (!abort && isReadIcon && instanceOk())
         readIcon();
+    /*
     else
         qDebug() << "Reader::run unable to run readIcon"
                  << "isReadIcon =" << isReadIcon
                  << "instanceOk() =" << instanceOk()
-                    ;
+                    ;//*/
     if (isDebug)
     {
     qDebug().noquote()

@@ -2043,6 +2043,7 @@ void MW::loadNewInstance(QString folderPath)
 
     // reset all
     stop("MW::primaryFolderSelection()");
+    dm->newInstance();
 
     setCentralMessage("");
 
@@ -2758,7 +2759,7 @@ bool MW::stop(QString src)
              << "thread =" << QThread::currentThreadId()
              << "G::currRootFolder =" << G::currRootFolder;
     //*/
-    dm->newInstance();
+    // dm->newInstance();
     QString oldFolder = G::currRootFolder;
 
     // show qDebug info
@@ -5615,11 +5616,12 @@ void MW::getSubfolders(QString fPath)
 void MW::selectCurrentViewDir()
 {
     if (G::isLogger) G::log("MW::selectCurrentViewDir");
-    QModelIndex idx = fsTree->fsModel->index(G::currRootFolder);
-    if (idx.isValid()){
-        fsTree->expand(idx);
-        fsTree->setCurrentIndex(idx);
-    }
+    fsTree->select(G::currRootFolder);
+    // QModelIndex idx = fsTree->fsModel->index(G::currRootFolder);
+    // if (idx.isValid()){
+    //     fsTree->expand(idx);
+    //     fsTree->setCurrentIndex(idx);
+    // }
 }
 
 // not req'd rgh ??
