@@ -76,14 +76,14 @@ public:
 public slots:
     bool select(QString dirPath);
     void resizeColumns();
-    void expand(const QModelIndex &);
-//    void expandAll(const QModelIndex &);
     void refreshModel();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
 
 private slots:
     void wheelStopped();
     void expandedSelectRecursively(const QPersistentModelIndex &index);
+    void hasExpanded(const QPersistentModelIndex &index);
+    // void handleExpandedSelection(const QPersistentModelIndex &index);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -102,6 +102,7 @@ protected:
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
+    void indexExpanded();
     void selectionChange();
     void folderSelectionChange(QString dPath, QString op, bool newInstance, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
@@ -121,7 +122,13 @@ signals:
 private:
     void selectItemAndChildren(const QModelIndex &index);
     void selectRecursively(const QPersistentModelIndex &index);
+    void selectAndExpandRecursively(const QPersistentModelIndex &index);
+    void expandAndWait(const QPersistentModelIndex &index);
     QStringList getSelectedFolderPaths() const;
+    QSet<QPersistentModelIndex> nodesToExpand;
+    QElapsedTimer expansionTimer;
+    bool eventLoopRunning;
+    QPersistentModelIndex justExpandedIndex;
     QModelIndex dndOrigSelection;
     QFileSystemModel fileSystemModel;
     QItemSelectionModel* treeSelectionModel;
@@ -137,6 +144,7 @@ private:
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
     bool isRecursiveSelection = false;
+    bool isDebug = false;
 };
 
 #endif // FSTREE_H
