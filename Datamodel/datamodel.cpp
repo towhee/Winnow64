@@ -458,42 +458,58 @@ bool DataModel::isQueueEmpty()
     return folderQueue.isEmpty();
 }
 
-void DataModel::enqueueFolderSelection(const QString &folderPath, bool isAdding, bool recurse)
+void DataModel::enqueueOp(const QString folderPath, const QString op)
 {
+    qDebug() << "DataModel::enqueueOp"
+             << "op =" << op
+             << "folderPath =" << folderPath;
 
-    // do not process if already in datamodel
-    if (folderList.contains(folderPath) && isAdding) return;
+    if (op == "Toggle") {
+        if (folderList.contains(folderPath)) {
+            folderQueue.enqueue(qMakePair(folderPath, false));
+        }
+        else {
+            folderQueue.enqueue(qMakePair(folderPath, true));
+        }
+    }
 
+    else if (op == "Add") {
+        if (!folderList.contains(folderPath)) {
+            folderQueue.enqueue(qMakePair(folderPath, true));
+        }
+    }
+
+    else if (op == "Remove") {
+        if (folderList.contains(folderPath)) {
+            folderQueue.enqueue(qMakePair(folderPath, false));
+        }
+    }
+}
+
+void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bool recurse)
+{
     QString fun = "DataModel::enqueueFolderSelection";
-    QString msg = "isAdding = " + QVariant(isAdding).toString() +
+    QString msg = "isAdding = " + QVariant(op).toString() +
                   " " + QVariant(folderPath).toString();
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    qDebug() << fun
+             << "op =" << op
+             << "recurse =" << recurse
+             << "folderPath =" << folderPath;
 
     if (recurse) {
-        // qDebug() << "DataModel::enqueueFolderSelection recurse" << folderPath;
-        folderQueue.enqueue(qMakePair(folderPath, isAdding));
+        enqueueOp(folderPath, op);
         QDirIterator it(folderPath, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             QString dPath = it.next();
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-                // qDebug() << "DataModel::enqueueFolderSelection recurse" << dPath;
-                folderQueue.enqueue(qMakePair(dPath, isAdding));
+                 enqueueOp(dPath, op);
             }
         }
     }
     else {
-        folderQueue.enqueue(qMakePair(folderPath, isAdding));
+        enqueueOp(folderPath, op);
     }
-
-    /*
-    // if (isDebug)
-    {
-    qDebug() << "DataModel::enqueueFolderSelection"
-             << "isAdding =" << isAdding
-             << "folder =" << folderPath
-             << "folderQueue =" << folderQueue
-        ;
-    } //*/
 
     // If not already processing, start the processing
     if (!isProcessing) {
@@ -663,18 +679,24 @@ void DataModel::removeFolder(const QString &folderPath)
     folderList.removeAll(folderPath);
 
     QModelIndex parIdx = QModelIndex();
+    QList<int> rowsToRemove;
+
+    // Collect all rows that need to be removed
     for (int row = rowCount() - 1; row >= 0; --row) {
         QString filePath = index(row, 0).data(G::PathRole).toString();
-        /*
-        qDebug() << "DataModel::removeFolder remove row" << row
-            << filePath.startsWith(folderPath)
-            << folderPath << filePath; //*/
         if (filePath.startsWith(folderPath)) {
-            qDebug() << "DataModel::removeFolder remove row" << row << filePath;
-            beginRemoveRows(parIdx, row, row);
-            removeRow(row);
-            endRemoveRows();
+            rowsToRemove.append(row);
         }
+    }
+
+    // Remove rows in a single batch
+    if (!rowsToRemove.isEmpty()) {
+        beginRemoveRows(parIdx, rowsToRemove.last(), rowsToRemove.first());
+        for (int row : rowsToRemove) {
+            removeRow(row);
+            qDebug() << "DataModel::removeFolder   remove row =" << row;
+        }
+        endRemoveRows();
     }
 
     sf->invalidate();
@@ -2204,7 +2226,7 @@ bool DataModel::isIconRangeLoaded()
 
 void DataModel::setIconRange(int sfRow)
 /*
-    Called by MW::loadConcurrent and MW::updateIconRange.
+    Called by MW::load and MW::updateIconRange.
 */
 {
     // if (iconChunkSize >= rowCount()) {

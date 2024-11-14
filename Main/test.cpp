@@ -195,7 +195,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
-    fsTree->expandRecursively(fsTree->currentIndex()); return;
+    // fsTree->select("/Users/roryhill/Pictures/_test1a/folder2/folder23"); return;
+    bookmarks->select("/Users/roryhill/Pictures/_test0"); return;
+
+    // fsTree->expandRecursively(fsTree->currentIndex()); return;
 
     updateStatus(true, "", "MW::test"); return;
 

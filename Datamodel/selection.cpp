@@ -486,7 +486,6 @@ void Selection::chkForDeselection(int sfRow)
 
 void Selection::clear()
 {
-    //sm->clear();
     sm->select(dm->currentDmIdx, QItemSelectionModel::ClearAndSelect);
 }
 
@@ -533,19 +532,12 @@ void Selection::recover(QString src)
 /*
     The selection is saved in source (datamodel) indexes.  QItemSelectionModel uses proxy
     indexes, so the saved selection and current index are translated back into proxy
-    indexes before restting the selection.
+    indexes before resetting the selection.
 
     Only the 0 column indexes are saved, as all selections in Winnow are by row.
 */
     if (G::isLogger || isDebug) G::log("Selection::recover");
     QItemSelection selection;
-    //sm->clear();
-    /*
-    foreach (QModelIndex idx, selectedIndexes) {
-        selection.select(idx, idx);
-    }
-    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    //*/
 
     foreach (QModelIndex dmIdx, dmSelectedRows) {
         QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);

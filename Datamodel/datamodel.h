@@ -171,7 +171,7 @@ signals:
 
 public slots:
 //    void unfilteredItemSearchCount();
-    void enqueueFolderSelection(const QString &folderPath, bool isAdding, bool recurse = false);
+    void enqueueFolderSelection(const QString &folderPath, QString op, bool recurse = false);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
@@ -207,6 +207,7 @@ private:
     static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 
     // Pair of folderPath and operation type (true=add, false=remove)
+    void enqueueOp(const QString folderPath, const QString op);
     QQueue<QPair<QString, bool>> folderQueue;
     QMutex queueMutex;
     // bool isProcessing = false;

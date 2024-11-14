@@ -209,6 +209,7 @@ void BookMarks::select(QString fPath)
 */
     if (G::isLogger)
          G::log("BookMarks::select");
+    qDebug() << "BookMarks::select" << fPath;
 
     // ignore if already selected path (in tooltip)
     if (selectedItems().size())
