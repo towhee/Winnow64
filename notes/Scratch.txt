@@ -1,146 +1,26 @@
-class FSTree : public QTreeView
+class DataModel : public QStandardItemModel
 
-FSTree::FSTree(QWidget *parent, Metadata *metadata)
-        : QTreeView(parent), delegate(new HoverDelegate(this))
+void DataModel::removeFolder(const QString &folderPath)
 {
-    this->metadata = metadata;
-    fileFilters = new QStringList;
-    dir = new QDir();
-
-    // create model and filter
-    createModel();
-    treeSelectionModel = selectionModel();
-
-    QStringList *fileFilters = new QStringList;
-    dir = new QDir();
-
-    fileFilters->clear();
-    foreach (const QString &str, metadata->supportedFormats)
-            fileFilters->append("*." + str);
-    dir->setNameFilters(*fileFilters);
-    dir->setFilter(QDir::Files);
-
-    connect(this, &QTreeView::expanded, this, &FSTree::expandedSelectRecursively);
-
-    connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
-            this, &FSTree::onRowsAboutToBeRemoved);
-
-    connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
-            this->viewport()->update();});
+    QModelIndex parIdx = QModelIndex();
+    for (int row = rowCount() - 1; row >= 0; --row) {
+        QString filePath = index(row, 0).data(G::PathRole).toString();
+        if (filePath.startsWith(folderPath)) {
+            beginRemoveRows(parIdx, row, row);
+            removeRow(row);
+            qDebug() << "DataModel::removeFolder   remove row =" << row;
+            endRemoveRows();
+        }
+    }
 }
 
-void FSTree::createModel()
-{
-/*
-    Create the model and filter in a separate function as it is also used to refresh
-    the folders by deleting the model and re-creating it.
-*/
-    if (G::isLogger) G::log("FSTree::createModel");
-    fsModel = new FSModel(this, *metadata, combineRawJpg);
-    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
-    fsModel->setRootPath("");  //
-    //fsModel->setRootPath(fsModel->myComputer().toString());
+Output:
+DataModel::removeFolder   remove row = 2
+QSortFilterProxyModel: inconsistent changes reported by source model
+DataModel::removeFolder   remove row = 1
+QSortFilterProxyModel: inconsistent changes reported by source model
+DataModel::removeFolder   remove row = 0
+QSortFilterProxyModel: inconsistent changes reported by source model
 
-    // get mounted drives only
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-       if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                mountedDrives << storage.rootPath();
-            }
-        }
-    }
-
-    fsFilter = new FSFilter(fsModel);
-    fsFilter->setSourceModel(fsModel);
-    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
-
-    // apply model to treeview
-    setModel(fsFilter);
-}
-
-void FSTree::selectRecursively(const QPersistentModelIndex &index)
-{
-    if (!index.isValid()) {
-        return;
-    }
-
-    QString folderName = index.data().toString();
-    QString folderPath = index.data(QFileSystemModel::FilePathRole).toString();
-    G::log("FSTree::selectRecursively", folderPath);
-    recursedForSelection.append(index);
-    if (isExpanded(index)) expandedSelectRecursively(index);
-    else setExpanded(index, true);
-}
-
-void FSTree::expandedSelectRecursively(const QPersistentModelIndex &index)
-{
-    if (!index.isValid() || !isRecursiveSelection) {
-        return;
-    }
-
-     // Select the current node
-    QString folderName = index.data().toString();
-
-    // Delay to allow the expansion to complete before selecting children
-    QModelIndex sourceIndex = fsFilter->mapToSource(index);
-    setExpanded(index, true);
-
-    fsFilter->refresh();    // necessary
-
-    // force lazy update to model expansion
-    QElapsedTimer t;
-    t.start();
-    while (fsModel->canFetchMore(sourceIndex)) {
-        fsModel->fetchMore(sourceIndex);
-        if (t.elapsed() > 5000) {
-            return;
-        }
-    }
-
-    fsFilter->refresh();    // necessary
-
-    /* this does not work
-    QMetaObject::invokeMethod(this, [this]() {
-            // fsModel->refresh();
-            fsFilter->refresh();
-        }, Qt::QueuedConnection);  */
-
-    // delay checking for children until refresh is completed using singleshot
-    QTimer::singleShot(0, this, [this, isDebug, index, folderName]() {
-        int childCount = 0;
-        if (index.isValid()) {
-            bool hasChildren = fsFilter->hasChildren(index);
-            childCount = fsFilter->rowCount(index);
-        }
-
-        // Recursively select all child nodes
-        for (int i = 0; i < childCount; ++i) {
-            QModelIndex childIndex = fsFilter->index(i, 0, index);
-            if (!childIndex.isValid()) {
-                continue;
-            }
-            if (isDebug) qDebug() << "FSTree::expandedSelectRecursively Recurse child " << childIndex.data().toString();
-            selectRecursively(childIndex);
-        }
-
-        // Finished recursion
-        isRecursiveSelection = false;
-        for (QModelIndex index : recursedForSelection) {
-            if (!index.isValid()) continue;
-            // can crash here Exception Type: EXC_BAD_ACCESS (SIGSEGV)
-            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);  // crash
-        }
-        recursedForSelection.clear();
-    });
-}
-
-How can I avoid the EXC_BAD_ACCESS (SIGSEGV) crash during the recursive selection?
-
-QTimer::singleShot(0, this, [this]() {
-    for (const QPersistentModelIndex &index : qAsConst(recursedForSelection)) {
-        if (index.isValid()) {
-            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        }
-    }
-    recursedForSelection.clear();
-});
+The functionDataModel::removeFolder appears to be working correctly, but it is generating the warning
+"QSortFilterProxyModel: inconsistent changes reported by source model" for each row removed. What am I doing wrong?

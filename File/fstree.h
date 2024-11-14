@@ -81,9 +81,7 @@ public slots:
 
 private slots:
     void wheelStopped();
-    void expandedSelectRecursively(const QPersistentModelIndex &index);
     void hasExpanded(const QPersistentModelIndex &index);
-    // void handleExpandedSelection(const QPersistentModelIndex &index);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -120,9 +118,7 @@ signals:
     void status(bool keepBase, QString msg, QString src);
 
 private:
-    void selectItemAndChildren(const QModelIndex &index);
-    void selectRecursively(const QPersistentModelIndex &index);
-    void selectAndExpandRecursively(const QPersistentModelIndex &index);
+    void selectRecursively(const QPersistentModelIndex &index, bool toggle = false);
     void expandAndWait(const QPersistentModelIndex &index);
     QStringList getSelectedFolderPaths() const;
     QSet<QPersistentModelIndex> nodesToExpand;
