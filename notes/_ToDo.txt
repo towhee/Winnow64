@@ -10,7 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Try improve FSTree expand performance by turning showImageCount off/on
+- Retain datamodel selection when removing folders from datamodel
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
 - MW::deleteFiles filter/sort work?
@@ -127,6 +127,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Try improve FSTree expand performance by turning showImageCount off/on
 - replace dm->updateRowNumbers() with a delegate in tableView
 - Changes from Table to Loupe wehn change dock
 - Add folders to filters

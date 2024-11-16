@@ -460,9 +460,10 @@ bool DataModel::isQueueEmpty()
 
 void DataModel::enqueueOp(const QString folderPath, const QString op)
 {
-    qDebug() << "DataModel::enqueueOp"
-             << "op =" << op
-             << "folderPath =" << folderPath;
+    if (G::isLogger) G::log("DataModel::enqueueOp", op + " " + folderPath);
+    // qDebug() << "DataModel::enqueueOp"
+    //          << "op =" << op
+    //          << "folderPath =" << folderPath;
 
     if (op == "Toggle") {
         if (folderList.contains(folderPath)) {
@@ -489,13 +490,14 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
 void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bool recurse)
 {
     QString fun = "DataModel::enqueueFolderSelection";
-    QString msg = "isAdding = " + QVariant(op).toString() +
-                  " " + QVariant(folderPath).toString();
+    QString msg = "op = " + op +
+                  " recurse = " + QVariant(recurse).toString() +
+                  " folderPath = " + folderPath;
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
-    qDebug() << fun
-             << "op =" << op
-             << "recurse =" << recurse
-             << "folderPath =" << folderPath;
+    // qDebug() << fun
+    //          << "op =" << op
+    //          << "recurse =" << recurse
+    //          << "folderPath =" << folderPath;
 
     if (recurse) {
         enqueueOp(folderPath, op);

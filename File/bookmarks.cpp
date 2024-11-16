@@ -207,9 +207,9 @@ void BookMarks::select(QString fPath)
     selection, to reestablish the bookmark that was selected that is consistent with the
     datamodel current folder.
 */
-    if (G::isLogger)
-         G::log("BookMarks::select");
-    qDebug() << "BookMarks::select" << fPath;
+    if (G::isLogger || G::isFlowLogger) G::log("BookMarks::select", fPath);
+
+    // qDebug() << "BookMarks::select" << fPath;
 
     // ignore if already selected path (in tooltip)
     if (selectedItems().size())

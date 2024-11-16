@@ -581,6 +581,54 @@ void FSTree::selectRecursively(const QPersistentModelIndex &index, bool toggle)
     });
 }
 
+QStringList FSTree::selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2)
+{
+    QModelIndexList visibleIndexes;
+    QStringList visibleFolders;
+
+    if (!idx1.isValid() || !idx2.isValid()) {
+        return visibleFolders;
+    }
+
+    // Get the top and bottom visual rectangles
+    QRect topRect = visualRect(idx1);
+    QRect bottomRect = visualRect(idx2);
+
+    // Ensure idx1 is above idx2
+    if (topRect.top() > bottomRect.top()) {
+        std::swap(topRect, bottomRect);
+    }
+
+    // Calculate row height based on the distance between the top and bottom of the topRect
+    int rowHeight = topRect.height();
+
+    // Calculate the starting and ending Y positions
+    int yStart = topRect.top();
+    int yEnd = bottomRect.bottom();
+
+    // Iterate through each row within the viewport rectangle range
+    for (int y = yStart; y <= yEnd; y += rowHeight) {
+        QPoint pointInRow(viewport()->rect().left(), y);
+        QModelIndex index = indexAt(pointInRow);
+
+        // Check if the index is valid, then create an index in column 0
+        if (index.isValid()) {
+            QModelIndex column0Index = index.siblingAtColumn(0);
+            visibleIndexes.append(column0Index);
+        }
+    }
+
+    // Optionally, you can select the indexes if needed
+    for (const QModelIndex &index : visibleIndexes) {
+        if (!selectionModel()->isSelected(index)) {
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            visibleFolders.append(index.data(QFileSystemModel::FilePathRole).toString());
+        }
+    }
+
+    return visibleFolders;
+}
+
 QModelIndex FSTree::getCurrentIndex()
 {
 /*
@@ -810,8 +858,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     - alt/opt modifier recursively selects all subfolders and adds to datamodel
 */
 
-    if (G::isLogger) G::log("FSTree::mousePressEvent");
-    qDebug() << "FSTree::mousePressEvent" << event;
+    // if (G::isLogger) G::log("FSTree::mousePressEvent");
+    // qDebug() << "FSTree::mousePressEvent" << event;
 
     if (G::stop) {
         G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
@@ -846,6 +894,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // New selection (primary folder)
     if (event->modifiers() == Qt::NoModifier) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
+        if (G::isLogger) G::log("FSTree::mousePressEvent", "No modifiers, new instance");
         QTreeView::mousePressEvent(event);
         emit folderSelectionChange(dPath, "Add", true, false);
         return;
@@ -857,11 +906,13 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (event->modifiers() & Qt::MetaModifier) return;
         if ((event->modifiers() & Qt::ControlModifier)) {
             // to do: deal with toggle
+            if (G::isLogger) G::log("FSTree::mousePressEvent", "Modifers: Opt + Cmd, Recurse");
             emit folderSelectionChange(dPath, "Toggle", /*newInstance*/false, /*recurse*/true);
             bool toggle = true;
             selectRecursively(idx0, toggle);
             return;
         }
+        if (G::isLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
         emit folderSelectionChange(dPath, "Add", /*newInstance*/true, /*recurse*/true);
         selectionModel()->clearSelection();
 
@@ -879,12 +930,20 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (folderWasSelected) {
             // do not toggle if only one folder selected
             if (folders < 2) return;
+            if (G::isLogger) G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
             emit folderSelectionChange(dPath, "Remove", /*newInstance*/false, /*recurse*/false);
         }
         else {
+            if (G::isLogger) G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
             emit folderSelectionChange(dPath, "Add", /*newInstance*/false, /*recurse*/false);
         }
         QTreeView::mousePressEvent(event);
+    }
+
+    // Select from previous selected folder
+    if (event->modifiers() & Qt::ShiftModifier) {
+        QStringList foldersToAdd = selectVisibleBetween(currentIndex(), idx0);
+        qDebug() << foldersToAdd;
     }
 }
 
