@@ -195,6 +195,11 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
+    qDebug() << fsTree->currentIndex().row() << fsTree->currentIndex().data().toString(); return;
+
+    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2024-11-14_0030_Zen2048.JPG", "MW::test");
+    return;
+
     // fsTree->select("/Users/roryhill/Pictures/_test1a/folder2/folder23"); return;
     bookmarks->select("/Users/roryhill/Pictures/_test0"); return;
 

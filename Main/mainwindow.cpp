@@ -45,7 +45,7 @@ PROGRAM PIPELINE
     • New folder selected:
         - FSTree::mousePressEvent or
           FSTree::select
-        - MW::fileSelectionChange
+        - MW::folderSelectionChange
         - MW::loadNewInstance                  // if new primary folder
         - DM::enqueueFolderSelection
         - DM::processNextFolder
@@ -53,6 +53,37 @@ PROGRAM PIPELINE
         - DM::addFileDataForRow                // iterate all rows
         - MW::MW::loadChanged
         - MW::loadFolder
+        - Selection::setCurrentRow
+        - Selection::setCurrentIndex
+        - DataModel::setCurrentSF
+        - MW::load
+        - MetaRead2::setStartRow
+        - MetaRead2::run
+        - MetaRead2::dispatchReaders
+        - Reader::read
+        - Reader::run
+        - Reader::readMetadata
+        - ImageCache::updateCacheItemMetadataFromReader
+        - ImageCache::updateCacheItemMetadata
+        - Reader::readIcon
+        - MetaRead2::dispatch
+        - MW::fileSelectionChange
+        - ImageView::loadImage
+        - ImageCache::setCurrentPosition
+        - ImageCache::run
+        - ImageCache::updateTargets
+        - ImageCache::launchDecoders
+        - ImageCache::fillCache
+        - ImageCache::nextToCache
+        - ImageCache::decodeNextImage
+        - ImageDecoder::read
+        - ImageDecoder::run
+        - ImageDecoder::decode
+        - ImageDecoder::rotate
+        - ImageDecoder::colorManage
+        - ImageCache::fillCache
+        - ImageCache::cacheImage
+        - ImageCache::nextToCache
 
     • While loading - new image selected:
         - Selection::currentIndex              // set current index
@@ -1985,10 +2016,10 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool newInstance,
     // if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     QString fun = "MW::folderSelectionChange";
     if (G::isLogger || G::isFlowLogger) {
-        QString msg = "fsTree->selectionCount() = " +
-                QVariant(fsTree->selectionCount()).toString() +
-                " op = " + op +
-                + " " + folderPath;
+        QString msg = "op = " + op +
+                " recurse = " + QVariant(recurse).toString() +
+                " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
+                " folderPath = " + folderPath;
         G::log(fun, msg);
     }
 
@@ -2015,14 +2046,14 @@ void MW::loadNewInstance(QString folderPath)
     - view mode
 
 */
-    QString fun = "MW::primaryFolderSelection";
+    QString fun = "MW::loadNewInstance";
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
     // qDebug() << "MW::primaryFolderSelection" << folderPath;
 
     G::t.restart();
 
     // reset all
-    stop("MW::primaryFolderSelection()");
+    stop("MW::loadNewInstance()");
     dm->newInstance();
 
     setCentralMessage("");
@@ -2085,10 +2116,11 @@ void MW::loadNewInstance(QString folderPath)
     }
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
+    if (!isFolderValid(folderPath, true /*report*/, false /*isRemembered*/)) {
         stop("Invalid folder");
         setWindowTitle(winnowWithVersion);
-        if (G::isLogger) if (G::isFileLogger) Utilities::log(fun, "Invalid folder " + G::currRootFolder);
+        if (G::isLogger)
+            if (G::isFileLogger) Utilities::log(fun, "Invalid folder " + G::currRootFolder);
         return;
     }
 
@@ -2432,7 +2464,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2631,7 +2663,10 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     is req'd before the initial metadata has been cached and the image can be
     selected.
 */
-    if (G::isLogger) G::log("MW::folderAndFileSelectionChange", fPath);
+    if (G::isLogger || G::isFlowLogger) {
+        QString msg = "src = " + src + " fPath = " + fPath;
+        G::log("MW::folderAndFileSelectionChange", msg);
+    }
 
     setCentralMessage("Loading " + fPath + " ...");
 
@@ -2660,6 +2695,9 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
                 ;
                 //*/
 
+    // path to image, used in loadImageCacheForNewFolder to select image
+    folderAndFileChangePath = fPath;
+
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
         QString msg = "fsTree failed to select folder.";
@@ -2670,15 +2708,13 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (centralLayout->currentIndex() == CompareTab) {
         centralLayout->setCurrentIndex(LoupeTab);
     }
-    dm->selectionModel->clear();
+    // dm->selectionModel->clear();
 
-    // path to image, used in loadImageCacheForNewFolder to select image
-    folderAndFileChangePath = fPath;
     #ifdef METAREAD
     metaReadThread->resetTrigger();
     #endif
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
-    qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
+    // qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     // folderSelectionChange();
 
     return;
@@ -3042,8 +3078,9 @@ void MW::loadFolder(QString folderPath)
         bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
         QString msg = "isPrimaryFolder = " + QVariant(isPrimaryFolder).toString() +
                       " isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
-                      " " + folderPath;
-                G::log(fun, msg);
+                      " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString() +
+                      " folderPath = " + folderPath;
+        G::log(fun, msg);
     }
 
     QString src = "MW::loadFolder";
@@ -3054,7 +3091,7 @@ void MW::loadFolder(QString folderPath)
 
     // primary folder
     if (dm->folderList.count() == 1 /*&& folderPath == dm->folderList.at(0)*/) {
-        qDebug() << "MW::loadFolder  bookmarks->select" << folderPath;
+        // qDebug() << "MW::loadFolder  bookmarks->select" << folderPath;
         bookmarks->select(folderPath);
         if (dm->rowCount()) {
             settings->setValue("lastDir", folderPath);
@@ -3085,15 +3122,18 @@ void MW::loadFolder(QString folderPath)
 
     // target image
     int targetRow = 0;
-    if (folderAndFileChangePath != "") {
+    // qDebug() << "MW::loadFolder  folderAndFileChangePath =" << folderAndFileChangePath;
+    QString s = folderAndFileChangePath;
+
+    if (folderAndFileChangePath == "") {
+        targetRow = 0;
+        dm->currentSfRow = 0;
+    }
+    else {
         targetRow = dm->proxyRowFromPath(folderAndFileChangePath);
         if (targetRow < 0) targetRow = 0;
         dm->currentSfRow = targetRow;
         folderAndFileChangePath = "";
-    }
-    else {
-        targetRow = 0;
-        dm->currentSfRow = 0;
     }
 
     // test sudden move to last
@@ -3187,7 +3227,9 @@ void MW::loadChanged(const QString folderPath, const QString op)
     Signaled from DataModel::processNextFolder
 */
     QString fun = "MW::loadChanged";
-    if (G::isLogger || G::isFlowLogger) G::log(fun, op + " " + folderPath);
+    QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
+                  " folderPath = " + folderPath;
+    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
 
     static int rows = 0;
 
@@ -3197,7 +3239,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
 
     // primary folder?
     if (folderPath == dm->folderList.at(0)) {
-        qDebug() << fun << "Primary  rowCount =" << dm->rowCount() << dm->sf->rowCount();
+        // qDebug() << fun << "Primary  rowCount =" << dm->rowCount() << dm->sf->rowCount();
         rows = dm->rowCount();
         if (rows) {
             loadFolder(folderPath);
@@ -3209,8 +3251,8 @@ void MW::loadChanged(const QString folderPath, const QString op)
         return;
     }
 
-    if (op == "Add") {
-        qDebug() << fun << "Add  rowCount =" << dm->rowCount() << dm->sf->rowCount();
+    else if (op == "Add") {
+        // qDebug() << fun << "Add  rowCount =" << dm->rowCount() << dm->sf->rowCount();
         // might have been zero images in primary folder
         loadFolder(folderPath);
         int rows = dm->rowCount();
@@ -3223,9 +3265,9 @@ void MW::loadChanged(const QString folderPath, const QString op)
         return;
     }
 
-    if (op == "Remove") {
-        qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
-                 << dm->folderList.count() << dm->folderList;
+    else if (op == "Remove") {
+        // qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
+        //          << dm->folderList.count() << dm->folderList;
         // update bookmarks if only one folder selected
         if (dm->folderList.count() == 1) {
             // new primary folder
@@ -3238,9 +3280,9 @@ void MW::loadChanged(const QString folderPath, const QString op)
 
         // check if the image selection is still valid
         sel->recover(fun);
-        qDebug() << fun
-                 << "Remove  "
-                 << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
+        // qDebug() << fun
+        //          << "Remove  "
+        //          << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
 
         imageCacheThread->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
     }
@@ -3624,7 +3666,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         // fsTree->setCurrentIndex(filterIdx);
         fsTree->select(dPath);
-        // fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+        fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         // must have focus to show selection in blue instead of gray
         fsTree->setFocus();
     }

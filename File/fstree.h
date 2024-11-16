@@ -120,12 +120,14 @@ signals:
 private:
     void selectRecursively(const QPersistentModelIndex &index, bool toggle = false);
     void expandAndWait(const QPersistentModelIndex &index);
+    QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2);
     QStringList getSelectedFolderPaths() const;
     QSet<QPersistentModelIndex> nodesToExpand;
     QElapsedTimer expansionTimer;
     bool eventLoopRunning;
     QPersistentModelIndex justExpandedIndex;
     QModelIndex dndOrigSelection;
+    QModelIndex prevCurrentIndex;
     QFileSystemModel fileSystemModel;
     QItemSelectionModel* treeSelectionModel;
     Metadata *metadata;

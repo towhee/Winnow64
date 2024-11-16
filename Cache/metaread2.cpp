@@ -108,7 +108,7 @@ void MetaRead2::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         QString running;
         isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(sfRow) + " src = " + src + " isRunning = " + running;
-        s += "dm->currentFolderPath = " + dm->currentPrimaryFolderPath;
+        s += " dm->currentFolderPath = " + dm->currentPrimaryFolderPath;
         G::log("MetaRead2::setStartRow", s);
     }
 
