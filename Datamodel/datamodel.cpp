@@ -1868,6 +1868,13 @@ double DataModel::aspectRatio(int w, int h, int orientation)
     else return w * 1.0 / h;
 }
 
+QVariant DataModel::valueSF(int row, int column)
+{
+    QMutexLocker locker(&mutex);
+    QModelIndex sfIdx = sf->index(row, column);
+    return sfIdx.data();
+}
+
 void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                          QString src, int role, int align)
 {

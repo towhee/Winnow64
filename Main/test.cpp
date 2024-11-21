@@ -195,6 +195,20 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
+    fsTree->test(); return;
+
+    QString path = "/Users/roryhill/Pictures/_test6/folder1/folder2";
+    QModelIndex index = fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(path));
+    fsTree->selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
+    return;
+
+    fsTree->setShowImageCount(true); return;
+    fsTree->fsModel->refresh(); return;
+
+    fsTree->select("/Volumes/Untitled/DCIM/104MSDCF", "None"); return;
+    fsTree->select("/Users/roryhill/Pictures/_test6", "Recurse"); return;
+    fsTree->select("/Users/roryhill/Pictures/Coaster"); return;
+
     qDebug() << fsTree->currentIndex().row() << fsTree->currentIndex().data().toString(); return;
 
     folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2024-11-14_0030_Zen2048.JPG", "MW::test");
@@ -207,7 +221,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     updateStatus(true, "", "MW::test"); return;
 
-    fsTree->select("/Users/roryhill/Pictures/Coasterx"); return;
     qDebug() << fsTree->fsModel->combineRawJpg;  return;
 
     qDebug() << "dm->folderList.count()" << dm->folderList.count();

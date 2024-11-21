@@ -358,7 +358,7 @@ void MW::SessionIssuesReport()
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
-    dlg->setWindowTitle("Session Issues");
+    dlg->setWindowTitle("Winnow Session Issues");
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);

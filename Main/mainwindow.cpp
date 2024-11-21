@@ -2353,15 +2353,13 @@ void MW::folderSelectionChangeOld(QString dPath/*, bool clear, bool includeSubFo
     if (G::stop) return;
 
     // Load folder progress
-    QString msg = "Gathering metadata and thumbnails for images in folder " + G::currRootFolder;
-    if (subFoldersAction->isChecked()) msg += " and all subfolders";
+    QString msg = "Gathering metadata and thumbnails for images in selected folders" + G::currRootFolder;
     setCentralMessage(msg);
     updateStatus(false, "Collecting metadata for all images in folder(s)", "MW::folderSelectionChange");
     qApp->processEvents();
 
     // turn off include subfolders to prevent accidental loading a humungous number of files
     G::includeSubfolders = false;
-    subFoldersAction->setChecked(false);
     updateStatusBar();
 
     // datamodel loaded - invalidate indexes (set in MW::fileSelectionChange)
@@ -2501,6 +2499,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // if new folder and 1st file is a video and mode == "Table"
     if (G::mode == "Table" && centralLayout->currentIndex() != TableTab) {
         tableDisplay();
+    }
+
+    // if folderchange triggered by bookmark mouse click then scroll FSTree
+    if (fsTree->selectSrc == "Bookmark") {
+        fsTree->selectSrc = "";
+        fsTree->scrollToCurrent();
     }
 
     // Check if anything selected.  If not disable menu items dependent on selection
@@ -3665,7 +3669,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         QModelIndex idx = fsTree->fsModel->index(dPath);
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         // fsTree->setCurrentIndex(filterIdx);
-        fsTree->select(dPath);
+        fsTree->select(dPath, "None", "Bookmark");
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         // must have focus to show selection in blue instead of gray
         fsTree->setFocus();
@@ -5828,7 +5832,7 @@ void MW::openUsbFolder()
     G::includeSubfolders = true;
     QString fPath = usbMap[drive].rootPath;
     if (isFolderValid(fPath, true, false)) {
-        fsTree->select(fPath);
+        fsTree->select(fPath, "Recurse", "MW::openUSBFolder");
     }
     // isCurrentFolderOkay = isFolderValid(fPath, true, false);
     // if (isCurrentFolderOkay) {

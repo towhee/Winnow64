@@ -67,14 +67,17 @@ public:
 
 	QModelIndex getCurrentIndex();
     void scrollToCurrent();
+    QString selectSrc = "";
 
     bool combineRawJpg;
     QString hoverFolderName;
 
     QFileSystemWatcher volumesWatcher;
 
+    void test();
+
 public slots:
-    bool select(QString dirPath);
+    bool select(QString folderPath, QString modifier = "None", QString src = "");
     void resizeColumns();
     void refreshModel();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
@@ -118,9 +121,10 @@ signals:
     void status(bool keepBase, QString msg, QString src);
 
 private:
-    void selectRecursively(const QPersistentModelIndex &index, bool toggle = false);
-    void expandAndWait(const QPersistentModelIndex &index);
-    QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2);
+    void selectRecursively(QString folderPath, bool toggle = false);
+    // void selectRecursively(const QPersistentModelIndex &index, bool toggle = false);
+    // void expandAndWait(const QPersistentModelIndex &index);
+    QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QStringList getSelectedFolderPaths() const;
     QSet<QPersistentModelIndex> nodesToExpand;
     QElapsedTimer expansionTimer;
