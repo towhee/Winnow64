@@ -135,7 +135,7 @@ void MW::updateStatusBar()
     filterStatusLabel->setVisible(G::isFilter);
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
-    if (subFoldersAction->isChecked()) G::includeSubfolders = true;
+    // if (subFoldersAction->isChecked()) G::includeSubfolders = true;
     rawJpgStatusLabel->setVisible(combineRawJpgAction->isChecked());
     slideShowStatusLabel->setVisible(G::isSlideShow);
 }
@@ -178,7 +178,7 @@ QString MW::getPosition()
     int row = idx.row() + 1;
     fileCount = QString::number(row) + " of "
         + QString::number(rowCount);
-    if (subFoldersAction->isChecked()) fileCount += " including subfolders";
+    // if (subFoldersAction->isChecked()) fileCount += " including subfolders";
     return fileCount;
 }
 
@@ -194,7 +194,6 @@ QString MW::getZoom()
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
-//    qDebug() << "MW::getZoom" << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -205,8 +204,10 @@ QString MW::getPicked()
 */
     if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
-    for (int row = 0; row < dm->sf->rowCount(); row++)
-        if (dm->sf->index(row, G::PickColumn).data() == "Picked") count++;
+    for (int row = 0; row < dm->sf->rowCount(); row++) {
+        if (dm->valueSF(row, G::PickColumn) == "Picked") count++;   // dm->valueSF is thread safe
+    }
+
     QString image = count == 1 ? " image, " : " images, ";
 
     if (count == 0) return "Nothing";

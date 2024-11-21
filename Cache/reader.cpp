@@ -157,11 +157,12 @@ bool Reader::readMetadata()
             ;
     }
 
-    // QString msg = "row = " + QString::number(sfRow);
-    // G::log("Reader::readMetadata", msg);
+    if (G::isLogger || G::isFlowLogger) {
+        QString msg = "row = " + QString::number(sfRow);
+        G::log("Reader::readMetadata", msg);
+    }
 
     if (!abort) emit addToImageCache(sfRow, fPath, instance);
-    // if (!abort) emit addToImageCache(dmIdx.row(), instance);
 
     return isMetaLoaded;
 }

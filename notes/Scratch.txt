@@ -1,26 +1,75 @@
-class DataModel : public QStandardItemModel
+115,262 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder1/folder11
+       6 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a
+      19 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a
+       3 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder2
+      11 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder2
+       3 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder2/folder22
+      13 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder22
+       2 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder2/folder23
+       9 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder23
+       2 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder2/folder21
+       9 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder21
+       2 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder1
+      11 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder1
+       2 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder1/folder12
+      11 FSTree::selectRecursively                          toggle recursedFolder /Users/roryhill/Pictures/_test1a/folder1/folder12
+       2 FSTree::selectRecursively                          Next   /Users/roryhill/Pictures/_test1a/folder1/folder11
 
-void DataModel::removeFolder(const QString &folderPath)
-{
-    QModelIndex parIdx = QModelIndex();
-    for (int row = rowCount() - 1; row >= 0; --row) {
-        QString filePath = index(row, 0).data(G::PathRole).toString();
-        if (filePath.startsWith(folderPath)) {
-            beginRemoveRows(parIdx, row, row);
-            removeRow(row);
-            qDebug() << "DataModel::removeFolder   remove row =" << row;
-            endRemoveRows();
-        }
-    }
-}
 
-Output:
-DataModel::removeFolder   remove row = 2
-QSortFilterProxyModel: inconsistent changes reported by source model
-DataModel::removeFolder   remove row = 1
-QSortFilterProxyModel: inconsistent changes reported by source model
-DataModel::removeFolder   remove row = 0
-QSortFilterProxyModel: inconsistent changes reported by source model
 
-The functionDataModel::removeFolder appears to be working correctly, but it is generating the warning
-"QSortFilterProxyModel: inconsistent changes reported by source model" for each row removed. What am I doing wrong?
+
+
+
+738 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder2
+272,018 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder2/folder22
+266,068 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder2/folder23
+266,857 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder2/folder21
+ 839 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder1
+266,012 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder1/folder12
+111,960 FSTree::selectRecursively                          Recursed and expand /Users/roryhill/Pictures/_test1a/folder1/folder11
+   3 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a
+  10 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder2
+   6 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder2
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder2/folder22
+   5 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder22
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder2/folder23
+   4 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder23
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder2/folder21
+   5 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder2/folder21
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder1
+   6 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder1
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder1/folder12
+   6 FSTree::selectRecursively                          select recursedFolder /Users/roryhill/Pictures/_test1a/folder1/folder12
+   2 FSTree::selectRecursively                          Select /Users/roryhill/Pictures/_test1a/folder1/folder11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

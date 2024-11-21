@@ -408,7 +408,7 @@ void IconView::updateVisible(QString src)
 
     if (G::isInitializing || G::dmEmpty) return;
     if (G::isLogger || G::isFlowLogger)
-        G::log("IconView::updateVisible", objectName() + "src = " + src);
+        G::log("IconView::updateVisible", objectName() + " src = " + src);
     if (isDebug)
         qDebug() << "   IconView::updateVisible"
                  << objectName()

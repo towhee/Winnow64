@@ -177,6 +177,7 @@ public slots:
     bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
                                    int fromInstance, QString src);
     bool addMetadataForItem(ImageMetadata m, QString src);
+    QVariant valueSF(int row, int column);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",

@@ -190,13 +190,13 @@ void MW::createFileActions()
     addAction(renameAction);
     connect(renameAction, &QAction::triggered, this, &MW::renameSelectedFiles);
 
-    subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
-    subFoldersAction->setObjectName("subFolders");
-    subFoldersAction->setShortcutVisibleInContextMenu(true);
-    subFoldersAction->setCheckable(true);
-    subFoldersAction->setChecked(false);
-    addAction(subFoldersAction);
-    connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
+    // subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
+    // subFoldersAction->setObjectName("subFolders");
+    // subFoldersAction->setShortcutVisibleInContextMenu(true);
+    // subFoldersAction->setCheckable(true);
+    // subFoldersAction->setChecked(false);
+    // addAction(subFoldersAction);
+    // connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
 
     refreshFoldersAction = new QAction(tr("Refresh folders"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
@@ -1703,7 +1703,7 @@ void MW::createFileMenu()
     fileMenu->addSeparator();
     fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
-    fileMenu->addAction(subFoldersAction);
+    // fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
     fileMenu->addAction(renameAction);
@@ -2024,8 +2024,8 @@ void MW::createFSTreeContextMenu()
     separatorAction4->setSeparator(true);
     fsTreeActions = new QList<QAction *>;
     //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
-    fsTreeActions->append(refreshCurrentAction);
     fsTreeActions->append(refreshFoldersAction);
+    fsTreeActions->append(refreshCurrentAction);
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(ejectActionFromContextMenu);
@@ -2566,7 +2566,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
-        subFoldersAction->setShortcut(QKeySequence("B"));
+        // subFoldersAction->setShortcut(QKeySequence("B"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
         refreshFoldersAction->setShortcut(QKeySequence("F5"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));

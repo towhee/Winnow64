@@ -113,7 +113,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.41" ;
+    QString versionNumber = "1.41_test" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -763,7 +763,7 @@ private:
         QList<QAction *> recentFolderActions;
     QAction *ingestHistoryFoldersAction;
         QList<QAction *> ingestHistoryFolderActions;
-    QAction *subFoldersAction;
+    // QAction *subFoldersAction;
     QAction *collapseFoldersAction;
     QAction *addBookmarkAction;
     QAction *addBookmarkActionFromContext;

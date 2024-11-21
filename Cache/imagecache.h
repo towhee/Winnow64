@@ -59,6 +59,7 @@ public:
     QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
+    int col0Width = 50;
 
     int decoderCount = 1;
 
