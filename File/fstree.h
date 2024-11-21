@@ -75,6 +75,7 @@ public:
     QFileSystemWatcher volumesWatcher;
 
     void test();
+    void debugSelectedFolders(QString msg = "");
 
 public slots:
     bool select(QString folderPath, QString modifier = "None", QString src = "");

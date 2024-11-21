@@ -195,6 +195,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     // traverseFolderStressTest(50, 00, true);
 
+    fsTree->debugSelectedFolders(); return;
     fsTree->test(); return;
 
     QString path = "/Users/roryhill/Pictures/_test6/folder1/folder2";
