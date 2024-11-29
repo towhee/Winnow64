@@ -2,14 +2,15 @@
 #define DATAMODEL_H
 
 #include <QtWidgets>
+#include <QMessageBox>
+#include <algorithm>                // req'd for sorting fileInfoList
+#include <QWaitCondition>           // req'd for removeFolder process
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 //#include "Cache/framedecoder.h"
-#include "progressbar.h"        // rgh used??
+#include "progressbar.h"            // rgh used??
 #include "Main/global.h"
 #include "selectionorpicksdlg.h"
-#include <QMessageBox>
-#include <algorithm>                // req'd for sorting fileInfoList
 #include "Log/issue.h"
 
 class SortFilter : public QSortFilterProxyModel
@@ -49,7 +50,7 @@ public:
               bool &combineRawJpg);
 
     void setModelProperties();
-    bool load(QString &dir, bool includeSubfoldersFlag);
+    // bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
     bool refreshMetadataForItem(int sfRow, int instance);
     void clearDataModel();
@@ -162,6 +163,7 @@ public:
     bool okManyImagesWarning();
 
 signals:
+    void stop(QString src);
     void addedFolderToDM(QString folderName, QString op);
     void removedFolderFromDM(QString folderName, QString op);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
@@ -177,7 +179,7 @@ public slots:
     bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
                                    int fromInstance, QString src);
     bool addMetadataForItem(ImageMetadata m, QString src);
-    QVariant valueSF(int row, int column);
+    QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
@@ -203,7 +205,7 @@ private:
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
-    QList<QFileInfo> fileInfoList;
+    // QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
     static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 
@@ -239,7 +241,7 @@ private:
     void addFolder(const QString &folderPath);
     void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
-    bool addFileData();
+    // bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);

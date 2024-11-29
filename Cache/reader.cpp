@@ -134,6 +134,7 @@ bool Reader::readMetadata()
     metadata->m.metadataAttempted = true;
     metadata->m.metadataLoaded = isMetaLoaded;
 
+    // block until datamodel updated for row with image metadata
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
     // t3 = t.restart();
 

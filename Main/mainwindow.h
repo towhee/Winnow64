@@ -413,14 +413,15 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void folderSelectionChangeOld(QString dPath = ""/*, bool clear = true, bool includeSubFolders = false*/);
+    // void folderSelectionChangeOld(QString dPath = ""/*, bool clear = true, bool includeSubFolders = false*/);
     void folderSelectionChange(QString folderPath = "", QString op = "Add",
-                               bool newInstance = true, bool recurse = false);
+                               bool resetDataModel = true, bool recurse = false);
     void loadNewInstance(QString folderPath);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void tryLoadImageAgain(QString fPath);
     void currentFolderDeletedExternally(QString path);
+    bool stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
     void filterLastDay();
@@ -1235,7 +1236,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();
-    bool stop(QString src = "");
+    // bool stop(QString src = "");
 //    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();

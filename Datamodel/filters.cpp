@@ -486,6 +486,8 @@ bool Filters::isAnyFilter()
     if (debugFilters)
         qDebug() << "Filters::isAnyFilter"
             ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
         return true;
@@ -551,6 +553,8 @@ void Filters::disableColorZeroCountItems()
         qDebug() << "Filters::disableColorZeroCountItems"
                     ;
 
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent() != search) {
@@ -568,6 +572,8 @@ void Filters::disableAllItems(bool disable)
     if (debugFilters)
         qDebug() << "Filters::disableAllItems"
                     ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
@@ -583,6 +589,8 @@ void Filters::disableAllHeaders(bool disable)
     if (debugFilters)
         qDebug() << "Filters::disableAllHeaders"
                     ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent()) {
@@ -599,6 +607,8 @@ void Filters::disableColorAllHeaders(bool disable)
     if (debugFilters)
         qDebug() << "Filters::disableColorAllHeaders"
             ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent() && (*it) != search) {
@@ -639,6 +649,9 @@ void Filters::setEachCatTextColor()
     if (debugFilters)
         qDebug() << "Filters::setCatFiltering"
                     ;
+
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent() && (*it) != search) {
@@ -736,6 +749,9 @@ void Filters::invertFilters()
                     ;
     QList<QString> catWithCheckedItems;
     QString cat = "";
+
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
 
     // enable all items
@@ -760,7 +776,7 @@ void Filters::invertFilters()
         ++it;
     }
 
-    // invert categories with checked items
+   // invert categories with checked items
     QTreeWidgetItemIterator it2(this);
     while (*it2) {
         // traverse the children of the category and invert checkstate
@@ -837,6 +853,7 @@ void Filters::startBuildFilters(bool isReset)
     //if (isReset) collapseAll();
     disableAllHeaders(true);
     setEnabled(false);
+    finishedBuildFilters();
 }
 
 void Filters::finishedBuildFilters()
@@ -870,6 +887,8 @@ void Filters::clearAll()
     if (debugFilters)
         qDebug() << "Filters::clearAll"
                     ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {            
@@ -907,6 +926,32 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
     return false;
 }
 
+void Filters::reset()
+{
+/*
+    Reset filters before loading a new datamodel.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("Filters::reset");
+
+    // reset flags
+    filtersBuilt = false;
+    buildingFilters = false;
+    isReset = true;  // req'd?
+    // clear all items based on data content ie file types, camera model
+    removeChildrenDynamicFilters();
+
+    // reset all items to unchecked
+    clearAll();
+
+    // reset message frame
+    loadingDataModel(true);
+
+    setEnabled(true);
+    filterLabel->setVisible(false);
+    activeCategory = nullptr;
+
+}
+
 void Filters::save()
 /*
     The filters tree (this) is iterated, and every item that is checked is added to the list
@@ -916,6 +961,9 @@ void Filters::save()
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::save");
     //qDebug() << "Filters::save";
+
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -945,6 +993,9 @@ void Filters::restore()
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
     uncheckAllFilters();
+
+    QMutexLocker locker(&mutex);
+
     // check filters for items in itemStates
     for (int i = 0; i < itemStates.size(); i++) {
         QTreeWidgetItemIterator it(this);
@@ -1001,6 +1052,8 @@ void Filters::uncheckAllFilters()
     if (debugFilters)
         qDebug() << "Filters::uncheckAllFilters"
                     ;
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -1083,6 +1136,9 @@ void Filters::toggleExpansion()
         qDebug() << "Filters::toggleExpansion"
                     ;
     bool isExpanded = false;
+
+    QMutexLocker locker(&mutex);
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent()) {
@@ -1201,6 +1257,7 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
     // remove existing category items in filters if no longer in itemMap
     if (category->childCount()) {
         for (int i = category->childCount() - 1; i >= 0 ; i--) {
+            if (G::stop) return;
             QString s = category->child(i)->text(0);
             // count and remove from itemMap
             if (itemMap.contains(s)) {
@@ -1222,6 +1279,7 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
     QTreeWidgetItem *item;
     QMapIterator<QString, int> i(itemMap);
     while (i.hasNext()) {
+        if (G::stop) return;
         i.next();
         item = new QTreeWidgetItem(category);
         item->setText(0, i.key());
@@ -1262,9 +1320,12 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
                  << "category =" << category->text(0)
                     ;
 
+    QMutexLocker locker(&mutex);
+
     // eliminate any items in itemMap that are already items in the category to avoid
     // duplicates
     for (int i = 0; i < category->childCount(); ++i) {
+        if (G::stop) return;
         QTreeWidgetItem* child = category->child(i);
         QString text = child->text(0);
         if (itemMap.contains(text)) {
@@ -1314,7 +1375,10 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
                  << "category =" << category->text(0)
             ;
 
+    QMutexLocker locker(&mutex);
+
     for (int i = 0; i < category->childCount(); i++) {
+        if (abort) return;
         category->child(i)->setData(3, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
         if (itemMap.contains(key))
@@ -1344,7 +1408,10 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
                  << "category =" << category->text(0)
                     ;
 
+    QMutexLocker locker(&mutex);
+
     for (int i = 0; i < category->childCount(); i++) {
+        if (G::stop) return;
         category->child(i)->setData(2, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
         //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
@@ -1372,6 +1439,8 @@ void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidge
         qDebug() << "Filters::updateZeroCountCheckedItems"
                  << "category =" << category->text(0)
             ;
+
+    QMutexLocker locker(&mutex);
 
     for (int i = 0; i < category->childCount(); i++) {
         //category->child(i)->setData(2, Qt::EditRole, 0);

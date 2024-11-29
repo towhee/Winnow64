@@ -173,6 +173,9 @@ void BuildFilters::build(AfterAction newAction)
     // ignore if filters are up-to-date
     if (filters->filtersBuilt) return;
 
+    // ignore if filters are being built
+    if (filters->buildingFilters) return;
+
     if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
@@ -301,18 +304,21 @@ void BuildFilters::reset(bool collapse)
         qDebug()
             << "BuildFilters::reset"
                ;
-    isReset = true;
-    filters->filtersBuilt = false;
-    filters->buildingFilters = false;
-    filters->filterLabel->setVisible(false);
-    filters->setEnabled(true);
+    // filters->filtersBuilt = false;
+    // filters->buildingFilters = false;
+    // filters->loadingDataModel(false);
+    // filters->filterLabel->setVisible(false);
+    // filters->setEnabled(true);
+    // filters->activeCategory = nullptr;
+    // // clear all items for filters based on data content ie file types, camera model
+    // filters->removeChildrenDynamicFilters();
+    // filters->clearAll();
+
+    filters->reset();
+    afterAction = AfterAction::NoAfterAction;
     if (collapse) filters->collapseAll();
     action = Action::Reset;
-    afterAction = AfterAction::NoAfterAction;
-    filters->activeCategory = nullptr;
-    // clear all items for filters based on data content ie file types, camera model
-    filters->removeChildrenDynamicFilters();
-    filters->clearAll();
+    isReset = true;
 }
 
 void BuildFilters::updateUnfilteredSearchCount()
@@ -325,8 +331,10 @@ void BuildFilters::updateUnfilteredSearchCount()
 {
     QMap<QString,int> map;
     int rows = dm->rowCount();
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
+    }
     filters->updateSearchCategoryCount(map, false /*isFiltered*/);
 }
 
@@ -351,82 +359,113 @@ void BuildFilters::updateUnfilteredCounts()
     int rows = dm->rowCount();
 
     // count unfiltered
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
+    }
     //filters->updateSearchCategoryCount(map, true /*isFiltered*/);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->picks);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->ratings);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->labels);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->types);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->folders);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->years);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->days);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->models);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->lenses);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->focalLengths);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->titles);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    }
     filters->updateUnfilteredCountPerItem(map, filters->compare);
     map.clear();
 
     for (int row = 0; row < rows; row++) {
+        if (abort) return;
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
@@ -455,82 +494,113 @@ void BuildFilters::updateFilteredCounts()
     int rows = dm->sf->rowCount();
 
     // count unfiltered
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::SearchColumn).data().toString().trimmed()]++;
+    }
     filters->updateSearchCategoryCount(map, true /*isFiltered*/);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::PickColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->picks);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->ratings);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::LabelColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->labels);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::TypeColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->types);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->folders);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::YearColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->years);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::DayColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->days);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->models);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::LensColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->lenses);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->focalLengths);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::TitleColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->titles);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::CreatorColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->missingThumbs);
     map.clear();
 
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    }
     filters->updateFilteredCountPerItem(map, filters->compare);
     map.clear();
 
     for (int row = 0; row < rows; row++) {
+        if (abort) return;
         QStringList x = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
@@ -598,16 +668,20 @@ void BuildFilters::updateCategoryItems()
         break;
     }
 
-    for (int row = 0; row < dm->rowCount(); row++)
+    for (int row = 0; row < dm->rowCount(); row++) {
+        if (abort) return;
         map[dm->index(row, col).data().toString()]++;
+    }
 
     // update filter list and unfiltered counts
     filters->updateCategoryItems(map, cat);
     map.clear();
 
     // update filtered counts for category
-    for (int row = 0; row < dm->sf->rowCount(); row++)
+    for (int row = 0; row < dm->sf->rowCount(); row++) {
+        if (abort) return;
         map[dm->sf->index(row, col).data().toString()]++;
+    }
     filters->updateFilteredCountPerItem(map, cat);
 
     // filter
@@ -644,8 +718,10 @@ void BuildFilters::updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColum
     int rows = dm->sf->rowCount();
 
     // get datamodel filtered counts for category (ie picks)
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->sf->index(row, G::PickColumn).data().toString().trimmed()]++;
+    }
 
     filters->updateZeroCountCheckedItems(map, cat);
 }
@@ -690,120 +766,150 @@ void BuildFilters::appendUniqueItems()
     // Use QMap to count untiltered
 
     // search (special predefined items to always be shown)
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
+    }
     filters->updateSearchCategoryCount(map, false /*isFiltered*/);
     time("Initialize search count");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // picks
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->picks);
     time("Initialize picks");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // ratings
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->ratings);
     time("Initialize ratings");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // labels
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->labels);
     time("Initialize labels");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // file types
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->types);
     time("Initialize types");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // folders
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->folders);
     time("Initialize folders");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // years
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->years);
     time("Initialize years");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // days
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->days);
     time("Initialize days");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // camera models
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->models);
     time("Initialize models");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // lenses
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->lenses);
     time("Initialize lenses");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // focal lengths
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
+    }
     filters->addCategoryItems(map, filters->focalLengths);
     time("Initialize focallengths");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // titles
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->titles);
     time("Initialize titles");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // creators
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->creators);
     time("Initialize creators");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // missing thumbnails
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->missingThumbs);
     time("Initialize missing thumbs");
     emit updateProgress(progress += progressInc);
     map.clear();
 
     // duplicate found (compare)
-    for (int row = 0; row < rows; row++)
+    for (int row = 0; row < rows; row++) {
+        if (abort) return;
         map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
+    }
     filters->addCategoryItems(map, filters->compare);
     time("Initialize compare");
     emit updateProgress(progress += progressInc);
@@ -811,6 +917,7 @@ void BuildFilters::appendUniqueItems()
 
     // keywords
     for (int row = 0; row < rows; row++) {
+        if (abort) return;
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }

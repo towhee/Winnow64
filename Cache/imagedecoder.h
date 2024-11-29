@@ -107,6 +107,7 @@ private:
     QString ext;
     QString errImage = ":/images/badImage1.png";
     bool isDebug = false;
+    bool isLog = false;
 };
 
 #endif // IMAGEDECODER_H

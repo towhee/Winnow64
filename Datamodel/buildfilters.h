@@ -41,10 +41,9 @@ public:
     } category;
 
     void stop();
+    void abortIfRunning();
     void reset(bool collapse = true);
     void recount();
-
-    bool is = true;
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -68,7 +67,6 @@ public slots:
    // void updateCategoryItems(QTreeWidgetItem *item, int dmColumn);
 
 private:
-    void abortIfRunning();
     void done();
     void appendUniqueItems();
     void updateUnfilteredSearchCount();

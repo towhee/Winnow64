@@ -143,7 +143,6 @@ void MW::bounceFoldersStressTest(int msPerImage, int secPerFolder)
             << "secInFolder =" << secPerFolder << path;
         bookmarks->select(path);
         fsTree->select(path);
-        folderSelectionChangeOld();
         traverseFolderStressTest(msPerImage, secPerFolder);
     }
 }
@@ -194,6 +193,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 
     // traverseFolderStressTest(50, 00, true);
+
+    dm->hasFolderChanged(); return;
 
     fsTree->debugSelectedFolders(); return;
     fsTree->test(); return;

@@ -10,6 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- Check MW::refreshCurrentFolder still works
 - Retain datamodel selection when removing folders from datamodel
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;

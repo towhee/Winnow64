@@ -76,7 +76,7 @@ void MW::filterChange(QString source)
 
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead2 for the prior datamodel filter.
-    // qDebug() << "MW::filterChange call dm->newInstance()";
+    // qDebug() << "MW::filterChange call dm->resetDataModel()";
     dm->newInstance();
 
     // stop ImageCache

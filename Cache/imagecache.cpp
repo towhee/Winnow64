@@ -136,6 +136,7 @@ void ImageCache::stop()
             ;
     }
     if (debugLog) log("stop", "isRunning = " + QVariant(isRunning()).toString());
+    G::log("ImageCache::stop");
 
     // stop ImageCache first to prevent more decoder dispatch
     gMutex.lock();
@@ -284,6 +285,8 @@ bool ImageCache::cacheItemListCompleted()
     if (n < dm->sf->rowCount()) return false;
 
     foreach (int row, toBeUpdated) {
+        // chk in case datamodel has changed (filter) rghfilter
+        if (row < dm->sf->rowCount()) return false;
         // ImageMetadata m = dm->imMetadata(icd->cacheItemList.at(row).fPath);
         if (!updateCacheItemMetadata(row)) {
             return false;
@@ -1487,7 +1490,11 @@ void ImageCache::addCacheItem(int key)
     // if (toBeUpdated.size() < n) toBeUpdated.resize(n);
     int row = key;
 
-    QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+    QString fPath;
+    QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
+    if (value.isValid()) fPath = value.toString();
+    else return;
+    // QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
     keyFromPath[fPath] = row;
     pathFromKey[row] = fPath;
     toBeUpdated.insert(row);
@@ -1502,7 +1509,10 @@ void ImageCache::addCacheItem(int key)
     icd->cacheItem.decoderId = -1;
     icd->cacheItem.isTarget = false;
     icd->cacheItem.priority = row;
-    icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
+    if (value.isValid()) icd->cacheItem.metadataLoaded = value.toBool();
+    else return;
+
+    // icd->cacheItem.metadataLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool(); // crash
     icd->cacheItem.isUpdated = false;
 
     // insert new row
@@ -1554,8 +1564,12 @@ bool ImageCache::updateCacheItemMetadata(int row)
     // int row = m.row;
     SortFilter *d = dm->sf;
 
-    QString dPath = d->index(row, G::FolderNameColumn).data().toString();
-    QString msg = "Row = " + QString::number(row) + " " + dPath;
+    QString folderName;
+    QVariant value = dm->valueSf(row, G::FolderNameColumn);
+    if (value.isValid()) folderName = value.toString();
+    else return false;
+    // QString dPath = d->index(row, G::FolderNameColumn).data().toString();
+    QString msg = "Row = " + QString::number(row) + " " + folderName;
     // G::log("ImageCache::updateCacheItemMetadata", msg);
     if (G::isFlowLogger) log("updateCacheItemMetadata", msg);
     // qDebug() << "updateImageMetadata  row =" << row;
@@ -1564,8 +1578,12 @@ bool ImageCache::updateCacheItemMetadata(int row)
     if (row >= icd->cacheItemList.size()) return false;
 
     // QMutexLocker locker(&gMutex); spinning beachball at start
-    icd->cacheItemList[row].metadataLoaded = d->index(row, G::MetadataLoadedColumn).data().toBool();
-    icd->cacheItemList[row].isVideo = d->index(row, G::VideoColumn).data().toInt();
+    value = dm->valueSf(row, G::MetadataLoadedColumn);
+    if (value.isValid()) icd->cacheItem.metadataLoaded = value.toBool();
+    // icd->cacheItemList[row].metadataLoaded = d->index(row, G::MetadataLoadedColumn).data().toBool();
+    value = dm->valueSf(row, G::VideoColumn);
+    if (value.isValid()) icd->cacheItem.isVideo = value.toBool();
+    // icd->cacheItemList[row].isVideo = d->index(row, G::VideoColumn).data().toInt();
 
     if (icd->cacheItemList[row].isVideo) {
         icd->cacheItemList[row].sizeMB = 0;
@@ -1604,6 +1622,13 @@ bool ImageCache::updateCacheItemMetadata(int row)
         icd->cacheItemList[row].lengthFull = d->index(row, G::LengthFullColumn).data().toUInt();
         icd->cacheItemList[row].samplesPerPixel = d->index(row, G::samplesPerPixelColumn).data().toInt();
         icd->cacheItemList[row].iccBuf = d->index(row, G::ICCBufColumn).data().toByteArray();
+        // thread safe
+        // icd->cacheItem.orientation = dm->valueSf(row, G::OrientationColumn).toInt();
+        // icd->cacheItem.rotationDegrees = dm->valueSf(row, G::RotationColumn).toInt();
+        // icd->cacheItem.offsetFull = dm->valueSf(row, G::OffsetFullColumn).toInt();
+        // icd->cacheItem.lengthFull = dm->valueSf(row, G::LengthFullColumn).toInt();
+        // icd->cacheItem.samplesPerPixel = dm->valueSf(row, G::samplesPerPixelColumn).toInt();
+        // icd->cacheItem.iccBuf = dm->valueSf(row, G::ICCBufColumn).toByteArray();
     }
 
     // item has been updated
@@ -2375,33 +2400,39 @@ void ImageCache::fillCache(int id)
            as ImageCache is blocking the updates. */
 
         // if this is the last active decoder, restart if cacheUpToDate == false
-        if (!abort && instance == dm->instance && allDecodersDone) {
+        if (!abort && instance == dm->instance && allDecodersDone && retry < 5) {
             if (debugCaching)
             {
                 QString fun = "ImageCache::fillCache make final check";
                 qDebug().noquote()
                          << fun.leftJustified(col0Width, ' ')
+                         << "retry =" << retry
                          << "ImageCache isRunning =" << isRunning()
                          << "icd->cacheItemList.size() =" << icd->cacheItemList.size()
                          << "cacheUpToDate() =" << cacheUpToDate()
                     ;
             }
             resetCacheStateInTargetRange();
-            if (!cacheUpToDate()) {
+            if (!cacheUpToDate() && retry++ < 5) {
                 if (debugCaching)
                 {
                     QString fun = "ImageCache::fillCache Final check";
                     qDebug().noquote()
                         << fun.leftJustified(col0Width, ' ')
-                        << "allDecodersdone = true"
+                        << "retry =" << retry
+                        // << "allDecodersdone = true"
                         << "cacheUpToDate = false  restart ImageCache";
                 }
                 stop();
                 start();
+                // return;
+            }
+            else {
+                if (retry) retry = 0;
             }
         }
 
-        // Ok, now we are really done
+        // Ok, now we are really done or quit after retrying
 
         // turn off caching activity lights on statusbar
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
@@ -2437,35 +2468,37 @@ void ImageCache::launchDecoders(QString src)
     for (int id = 0; id < decoderCount; ++id) {
         bool isCacheUpToDate = cacheUpToDate();
         if (debugLog || G::isLogger) {
-            QString msg = "id =" + QString::number(id).leftJustified(2) +
-                          "cacheUpToDate = " + QVariant(isCacheUpToDate).toString();
-            log("launchDecoders");
-        }
-        if (debugCaching)
-        {
-            qDebug() << " ";
-            QString fun = "ImageCache::launchDecoders";
-            qDebug().noquote()
-                << fun.leftJustified(col0Width, ' ')
-                << "Decoder =" << id
-                << "status =" << decoder[id]->statusText.at(decoder[id]->status)
-                << "cacheUpToDate =" << isCacheUpToDate
-                << "isRunning =" << isRunning()
+            QString msg = "id = " + QString::number(id).leftJustified(2) +
+                          "cacheUpToDate = " + QVariant(isCacheUpToDate).toString() +
+                          " status = " + decoder[id]->statusText.at(decoder[id]->status)
                 ;
+            log("launchDecoders", msg);
         }
+        // if (debugCaching)
+        // {
+        //     qDebug() << " ";
+        //     QString fun = "ImageCache::launchDecoders";
+        //     qDebug().noquote()
+        //         << fun.leftJustified(col0Width, ' ')
+        //         << "Decoder =" << id
+        //         << "status =" << decoder[id]->statusText.at(decoder[id]->status)
+        //         << "cacheUpToDate =" << isCacheUpToDate
+        //         << "isRunning =" << isRunning()
+        //         ;
+        // }
         if (isCacheUpToDate) {
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
             break;
         }
         if (decoder[id]->status == ImageDecoder::Status::Ready) {
             decoder[id]->fPath = "";
-            if (debugCaching)
+            if (debugLog)
             {
-                QString fun = "ImageCache::launchDecoders";
-                qDebug().noquote()
-                    << fun.leftJustified(col0Width, ' ')
-                    << "Decoder =" << id
-                         << "fillCache...";
+                QString msg = "id = " + QString::number(id).leftJustified(2) +
+                              "cacheUpToDate = " + QVariant(isCacheUpToDate).toString() +
+                              " status = Ready, calling fillCache"
+                              ;
+                log("launchDecoders", msg);
             }
             fillCache(id);
         }

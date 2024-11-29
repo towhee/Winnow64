@@ -90,7 +90,7 @@ MetaRead2::MetaRead2(QObject *parent,
     instance = 0;
     abort = false;
     isDebug = false;
-    debugLog = false;
+    debugLog = true;
 }
 
 MetaRead2::~MetaRead2()
@@ -626,8 +626,9 @@ void MetaRead2::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int m
         qDebug() << "MetaRead2::emitFileSelectionChangeWithDelay"
                  << "instance =" << instance
                  << "dm->instance =" << dm->instance; //*/
-        if (instance == dm->instance)
+        if (instance == dm->instance) {
             emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
+        }
     });
 }
 
