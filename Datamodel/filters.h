@@ -81,6 +81,8 @@ public:
     bool combineRawJpg;
     bool buildingFilters = false;
     bool filtersBuilt = false;
+    // bool abort = false;
+    bool isReset = true;
     bool isSolo = true;
     QString buildingFiltersMsg = "Building filters.";
 
@@ -98,6 +100,7 @@ public slots:
     bool isAnyFilter();
     void setEachCatTextColor();
     bool isCatFiltering(QTreeWidgetItem *item);
+    void reset();
     void save();
     void restore();
     void disableEmptyCat();
@@ -138,6 +141,7 @@ protected:
 //    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
+    QMutex mutex;
     void resizeColumns();
     QLinearGradient categoryBackground;
     QFont categoryFont;

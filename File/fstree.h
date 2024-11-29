@@ -106,7 +106,7 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void indexExpanded();
     void selectionChange();
-    void folderSelectionChange(QString dPath, QString op, bool newInstance, bool recurse = false);
+    void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
@@ -123,8 +123,6 @@ signals:
 
 private:
     void selectRecursively(QString folderPath, bool toggle = false);
-    // void selectRecursively(const QPersistentModelIndex &index, bool toggle = false);
-    // void expandAndWait(const QPersistentModelIndex &index);
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QStringList getSelectedFolderPaths() const;
     QSet<QPersistentModelIndex> nodesToExpand;

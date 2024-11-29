@@ -7,6 +7,7 @@ void MW::initialize()
 
     setWindowTitle(winnowWithVersion);
     G::stop = false;
+    G::removingFolderFromDM = false;
     G::dmEmpty = true;
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
@@ -223,6 +224,7 @@ void MW::createDataModel()
         dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();
     else dm->showThumbNailSymbolHelp = true;
 
+    connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
     connect(dm, &DataModel::addedFolderToDM, this, &MW::loadChanged);
     connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
@@ -496,9 +498,9 @@ void MW::createImageCache()
     connect(imageCacheThread, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
     connect(imageCacheThread, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 
-    // start image cache
-    connect(infoView, &InfoView::setCurrentPosition,
-            imageCacheThread, &ImageCache::setCurrentPosition);
+    // // start image cache
+    // connect(infoView, &InfoView::setCurrentPosition,
+    //         imageCacheThread, &ImageCache::setCurrentPosition);
     // add to image cache list
 //    connect(infoView, &InfoView::addToImageCache,
 //            imageCacheThread, &ImageCache::addCacheItemImageMetadata);

@@ -208,6 +208,7 @@ void BookMarks::select(QString fPath)
     datamodel current folder.
 */
     if (G::isLogger || G::isFlowLogger) G::log("BookMarks::select", fPath);
+    return;
 
     // qDebug() << "BookMarks::select" << fPath;
 

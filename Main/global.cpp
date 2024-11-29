@@ -27,10 +27,14 @@ QStringList issueList;
 bool isRory = false;
 ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
 
+// mutex
+QWaitCondition waitCondition;
+QMutex gMutex;
+
 // flow
 bool isInitializing;            // flag program starting / initializing
-bool stop = false;              // flag to stop everything involving DM loading
-                                // new dataset
+bool stop = false;              // flag to stop everything involving DM loading new dataset
+bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
 bool dmEmpty;                   // DM is stopped and/or empty.  Flag to abort
                                 // all new folder processes.
 // datamodel status
@@ -196,6 +200,8 @@ int wait(int ms)
     Reset duration by calling G::wait(0).
 */
 {
+    return 0;
+
     static int duration = 0;
     if (ms == 0) {
         duration = 0;

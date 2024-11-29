@@ -1,5 +1,4 @@
 #ifndef GLOBAL_H
-
 #define GLOBAL_H
 
 #include <QtWidgets>
@@ -166,8 +165,13 @@ namespace G
         QString args;
     };
 
+    // mutex
+    extern QWaitCondition waitCondition;
+    extern QMutex gMutex;
+
     // flow
     extern bool stop;
+    extern bool removingFolderFromDM;
     extern bool dmEmpty;
     extern bool isInitializing;
 

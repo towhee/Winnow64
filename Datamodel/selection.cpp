@@ -491,6 +491,7 @@ void Selection::clear()
 
 int Selection::count()
 {
+    QMutexLocker locker(&mutex);
     return sm->selectedRows().count();
 }
 
@@ -539,7 +540,10 @@ void Selection::recover(QString src)
     if (G::isLogger || isDebug) G::log("Selection::recover");
     QItemSelection selection;
 
+    QMutexLocker locker(&mutex);
+
     foreach (QModelIndex dmIdx, dmSelectedRows) {
+        if (!dmIdx.isValid()) return;
         QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
         selection.select(sfIdx, sfIdx);
     }

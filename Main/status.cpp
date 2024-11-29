@@ -12,7 +12,14 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger) G::log("MW::updateStatus");
 
     // check if instance clash (old folder signal)
-    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+
+    // QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    QString fPath;
+    int row = thumbView->currentIndex().row();
+    QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
+    if (value.isValid()) fPath = value.toString();
+    else return;
+
     int sfRow = dm->proxyRowFromPath(fPath);
     if ((sfRow == -1) && (dm->instance > -1) && (fPath != "")) {
         QString msg = "File not found.  Probable instance clash.";
@@ -205,7 +212,7 @@ QString MW::getPicked()
     if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++) {
-        if (dm->valueSF(row, G::PickColumn) == "Picked") count++;   // dm->valueSF is thread safe
+        if (dm->valueSf(row, G::PickColumn) == "Picked") count++;   // dm->valueSF is thread safe
     }
 
     QString image = count == 1 ? " image, " : " images, ";

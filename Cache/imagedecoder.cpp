@@ -34,6 +34,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     this->dm = dm;
     this->metadata = metadata;
     isDebug = false;
+    isLog = false;
 }
 
 void ImageDecoder::stop()
@@ -67,7 +68,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     cacheKey = n.key;       // not being used (ImageCache::fixOrphans artifact)
     this->instance = instance;
     errMsg = "";
-    if (G::isLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
+    if (isLog || G::isLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
     /*
     qDebug() << "ImageDecoder::decode                              "
              << "decoder" << threadId
@@ -84,7 +85,7 @@ bool ImageDecoder::load()
     Loads a full size preview into a QImage.  It is invoked from ImageCache::fillCache.
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isLogger) G::log("ImageDecoder::load",
+    if (isLog || G::isLogger) G::log("ImageDecoder::load",
                "row = " + QString::number(cacheKey) + "  " + fPath);
     QString fun = "ImageDecoder::load";
     if (isDebug)
@@ -92,7 +93,7 @@ bool ImageDecoder::load()
 
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
-        errMsg = "Null file path.";
+        errMsg = "Blank file path.";
         G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
         status = Status::BlankFilePath;
         return false;
@@ -121,6 +122,8 @@ bool ImageDecoder::load()
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
+        errMsg = "Unable to open file.";
+        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
         status = Status::FileOpen;
         return false;
     }
@@ -129,8 +132,12 @@ bool ImageDecoder::load()
 
     // Embedded jpg?
     bool isEmbeddedJpg = false;
+    // embedded image type but no offset
+    if (metadata->hasJpg.contains(ext) && n.offsetFull == 0) {
+
+    }
     // raw file or jpg
-    if ((metadata->hasJpg.contains(ext) || ext == "jpg") && n.offsetFull) {
+    if (metadata->hasJpg.contains(ext) || (ext == "jpg" && n.offsetFull)) {
         isEmbeddedJpg = true;
     }
     // heic saved as a jpg
@@ -138,7 +145,8 @@ bool ImageDecoder::load()
         isEmbeddedJpg = true;
     }
 
-    // Embedded JPG format (including embedded in raw files)
+    /**************************************************************************/
+    // EMBEDDED JPG FORMAT (RAW FILES AND SOME HEIC)
     if (isEmbeddedJpg) {
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
@@ -199,6 +207,7 @@ bool ImageDecoder::load()
         }
     }
 
+    /**************************************************************************/
     // HEIC format
     else if (metadata->hasHeic.contains(ext)) {
         #ifdef Q_OS_WIN
@@ -216,10 +225,11 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
+        imFile.close();
         if (!image.load(fPath)) {
-            errMsg = "Could not read because decoder failed.";
+            errMsg = "Could not read because QImage::load failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-            imFile.close();
+            // imFile.close();
             status = Status::Invalid;
             return false;
         }
@@ -240,6 +250,7 @@ bool ImageDecoder::load()
         #endif
     }
 
+    /**************************************************************************/
     // TIFF format
     else if (ext == "tif") {
 
@@ -281,6 +292,7 @@ bool ImageDecoder::load()
 
         if (decoderToUse == QtImage) {
             // use Qt tiff decoder
+            imFile.close();
             if (!image.load(fPath)) {
                 errMsg = "Could not read because Qt tiff decoder failed.";
                 G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
@@ -304,6 +316,7 @@ bool ImageDecoder::load()
         }
     }
 
+    /**************************************************************************/
     // JPEG format
     else if (ext == "jpg" || ext == "jpeg") {
         #ifdef Q_OS_WIN
@@ -336,23 +349,26 @@ bool ImageDecoder::load()
         }
 
         if (decoderToUse == QtImage) {
-            image.load(fPath);
+            imFile.close();
+            image.load(fPath);  // crash 2024-11-23 EXC_BAD_ACCESS (SIGSEGV)
             if (image.isNull()) {
                 errMsg = "Could not read because Qt decoder failed.";
                 G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
-                imFile.close();
+                // imFile.close();
                 status = Status::Invalid;
                 return false;
             }
         }
     }
 
+    /**************************************************************************/
     // All other formats
     else {
         // try to decode
+        imFile.close();
         if (!image.load(fPath)) {
             imFile.close();
-            errMsg = "Could not read because decoder failed.";
+            errMsg = "Could not read because QImage::load failed.";
             G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
             status = Status::Invalid;
             return false;
@@ -423,7 +439,7 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
+    if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
     if (isDebug) {
         mutex.lock();
         G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
@@ -436,13 +452,7 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-    if (isDebug) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
-    if (isDebug)
-    {
-        mutex.lock();
-        G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
-        mutex.unlock();
-    }
+    if (isLog) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;

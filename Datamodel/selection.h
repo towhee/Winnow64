@@ -70,6 +70,7 @@ public slots:
     void okToSelect(bool isOk);
 
 private:
+    QMutex mutex;
     DataModel *dm;
     IconView *thumbView;
     IconView *gridView;

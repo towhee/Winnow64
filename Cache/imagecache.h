@@ -109,6 +109,7 @@ private:
     bool restart;
     bool abort;
     bool paused;
+    int retry = 0;
     bool isInitializing;
     bool cacheSizeHasChanged = false;
     bool filterOrSortHasChanged = false;

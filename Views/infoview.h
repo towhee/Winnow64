@@ -94,8 +94,8 @@ signals:
     void dataEdited();
     void updateFilter(BuildFilters::Category category, BuildFilters::AfterAction afterAction);
     void filterChange(QString source);
-//    void addToImageCache(ImageMetadata m);
-    void setCurrentPosition(QString fPath, QString src);
+    // void addToImageCache(ImageMetadata m);
+    // void setCurrentPosition(QString fPath, QString src);
 
 public slots:
     void showOrHide();
