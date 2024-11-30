@@ -7,7 +7,7 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = false;              // Writes log messages to file or console
+bool isLogger = true;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
@@ -275,6 +275,7 @@ QMutex issueListMutex;
 
 void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
+    if (!isIssueLogger) return;
     QMutexLocker locker(&issueListMutex);
 
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();

@@ -101,6 +101,7 @@ public slots:
     void colorManageChange();
     void refreshImageCache();
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
+    void buildImageCacheList();
 
 private:
     QMutex gMutex;
@@ -147,13 +148,14 @@ private:
     //    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
     void memChk();                  // still room in system memory for cache?
+    bool isKey(int key);
     bool isValidKey(int key);
     // int keyFromPath(QString path);
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
-    void buildImageCacheList();     //
+    // void buildImageCacheList();
     void addCacheItem(int key);
     bool updateCacheItemMetadata(int key);
     // bool updateCacheItemMetadata(ImageMetadata m);

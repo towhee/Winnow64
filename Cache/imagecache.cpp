@@ -208,6 +208,14 @@ bool ImageCache::keySort(const ImageCacheData::CacheItem &k1,
     return k1.key < k2.key;       // sort by key to return to thumbnail order
 }
 
+bool ImageCache::isKey(int key)
+{
+    for (int i = 0; i < icd->cacheItemList.size(); ++i) {
+        if (icd->cacheItemList.at(i).key == key) return true;
+    }
+    return false;
+}
+
 bool ImageCache::isValidKey(int key)
 {
     if (key > -1 && key < icd->cacheItemList.size()) return true;
@@ -1480,13 +1488,14 @@ void ImageCache::reportRunStatus()
 */
 
 
+
 void ImageCache::addCacheItem(int key)
 {
 /*
     Add or append basic info to cacheItemList.
     key == DataModel proxy sfRow
 */
-    int n = dm->sf->rowCount();
+    // int n = dm->sf->rowCount();
     // if (toBeUpdated.size() < n) toBeUpdated.resize(n);
     int row = key;
 
@@ -1494,11 +1503,13 @@ void ImageCache::addCacheItem(int key)
     QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
     if (value.isValid()) fPath = value.toString();
     else return;
+    if (abort) return;
     // QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
     keyFromPath[fPath] = row;
     pathFromKey[row] = fPath;
     toBeUpdated.insert(row);
 
+    if (abort) return;
     icd->cacheItem.key = row;              // need to be able to sync with imageList
     icd->cacheItem.fPath = fPath;
     icd->cacheItem.ext = fPath.section('.', -1).toLower();
@@ -1509,6 +1520,7 @@ void ImageCache::addCacheItem(int key)
     icd->cacheItem.decoderId = -1;
     icd->cacheItem.isTarget = false;
     icd->cacheItem.priority = row;
+    if (abort) return;
     if (value.isValid()) icd->cacheItem.metadataLoaded = value.toBool();
     else return;
 
@@ -1569,10 +1581,13 @@ bool ImageCache::updateCacheItemMetadata(int row)
     if (value.isValid()) folderName = value.toString();
     else return false;
     // QString dPath = d->index(row, G::FolderNameColumn).data().toString();
-    QString msg = "Row = " + QString::number(row) + " " + folderName;
     // G::log("ImageCache::updateCacheItemMetadata", msg);
-    if (G::isFlowLogger) log("updateCacheItemMetadata", msg);
+    if (G::isFlowLogger) {
+        QString msg = "Row = " + QString::number(row) + " " + folderName;
+        log("updateCacheItemMetadata", msg);
+    }
     // qDebug() << "updateImageMetadata  row =" << row;
+    if (abort) return false;
 
     // range check
     if (row >= icd->cacheItemList.size()) return false;
@@ -1585,6 +1600,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
     if (value.isValid()) icd->cacheItem.isVideo = value.toBool();
     // icd->cacheItemList[row].isVideo = d->index(row, G::VideoColumn).data().toInt();
 
+    if (abort) return false;
     if (icd->cacheItemList[row].isVideo) {
         icd->cacheItemList[row].sizeMB = 0;
         icd->cacheItemList[row].estSizeMB = false;
@@ -1615,6 +1631,7 @@ bool ImageCache::updateCacheItemMetadata(int row)
             icd->cacheItemList[row].sizeMB = size * 1.0 / 1000000;
             icd->cacheItemList[row].estSizeMB = true;
         }
+        if (abort) return false;
         // decoder parameters
         icd->cacheItemList[row].orientation = d->index(row, G::OrientationColumn).data().toInt();
         icd->cacheItemList[row].rotationDegrees = d->index(row, G::RotationColumn).data().toInt();
@@ -1669,6 +1686,7 @@ void ImageCache::updateCacheItemMetadataFromReader(int row, QString fPath, int i
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
             << "row =" << row
+            << "n =" << icd->cacheItemList.size()
                     ;
     }
 
@@ -1682,13 +1700,21 @@ void ImageCache::updateCacheItemMetadataFromReader(int row, QString fPath, int i
 
     if (!G::useImageCache) return;  // rgh isolate image cache
 
-    if (G::stop) {
+    if (G::stop || abort) {
         return;
     }
 
+
     QMutexLocker locker(&gMutex);
 
-    if (!keyFromPath.contains(fPath)) {
+    // if (!keyFromPath.contains(fPath)) {
+    //     addCacheItem(row);
+    // }
+
+    /* check if already added
+       (note that icd->cacheItemList may not be sorted as many readers
+       can be signalling here out-of-order) */
+    if (!isKey(row)) {
         addCacheItem(row);
     }
     updateCacheItemMetadata(row);
@@ -1717,11 +1743,6 @@ void ImageCache::buildImageCacheList()
     for (int i = 0; i < n; ++i) {
         addCacheItem(i);
         if (G::allMetadataLoaded) {
-            // qDebug() << "ImageCache::buildImageCacheList  UPDATE";
-            // QString fPath = dm->sf->index(i, G::PathColumn).data(G::PathRole).toString();
-            // QString fPath = icd->cacheItemList.at(i).fPath;
-            // ImageMetadata m = dm->imMetadata(fPath);
-            // ImageMetadata m = dm->imMetadata(fPath);
             updateCacheItemMetadata(i);
         }
     } // next row
