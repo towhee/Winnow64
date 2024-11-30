@@ -21,7 +21,7 @@ Reader::Reader(QObject *parent,
     // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
     // connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::QueuedConnection);
 
-    // Try BlockingQueuedConnection
+    // Using Qt::BlockingQueuedConnection:
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateCacheItemMetadataFromReader, Qt::BlockingQueuedConnection);
@@ -78,12 +78,19 @@ void Reader::stop()
     if (isRunning()) {
         mutex.lock();
         abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        /*
+        // crashing when rapidly change folders
+        mutex.lock();
+        abort = true;
         mutex.unlock();
         // BlockingQueuedConnections conflicts with wait()
         QEventLoop loop;
         connect(this, &Reader::finished, &loop, &QEventLoop::quit);
         loop.exec();
         //wait();
+        */
     }
 
     status = Status::Ready;
@@ -233,45 +240,4 @@ void Reader::run()
     readMetadata();
     readIcon();
     emit done(threadId);
-    return;
-
-    // t1 = t.restart();
-    if (!abort && !G::allMetadataLoaded && !dm->isMetadataLoaded(dmIdx.row()) && instanceOk())
-        readMetadata();
-    if (!abort && isReadIcon && instanceOk())
-        readIcon();
-    /*
-    else
-        qDebug() << "Reader::run unable to run readIcon"
-                 << "isReadIcon =" << isReadIcon
-                 << "instanceOk() =" << instanceOk()
-                    ;//*/
-    if (isDebug)
-    {
-    qDebug().noquote()
-             << "Reader::run             emiting done        "
-             << "id =" << QString::number(threadId).leftJustified(2, ' ')
-             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-            << "status =" << statusText.at(status)
-            ;
-    }
-    /*
-    t5 = t.elapsed();
-    msToRead = t1 + t2 + t3 + t4 + t5;
-    // msToRead = t.elapsed();
-    int delay = 1500;
-    if (t3 > delay || t4 > delay)
-    qDebug().noquote()
-             << "Reader::run row:" << QString::number(dmIdx.row()).rightJustified(5, ' ')
-             << "start ms:" << QString::number(t1).leftJustified(5, ' ')
-             << "metadata ms:" << QString::number(t2).leftJustified(5, ' ')
-             << "datamodel ms:" << QString::number(t3).leftJustified(5, ' ')
-             << "imagecache ms:" << QString::number(t4).leftJustified(5, ' ')
-             << "total ms:" << QString::number(msToRead).rightJustified(5, ' ')
-             << "type:" << metadata->m.type.leftJustified(5)
-             << "isReadIcon =" << isReadIcon
-        ;  //*/
-
-    if (!abort && instanceOk()) emit done(threadId);
-    //if (abort) qDebug() << "Reader::run aborted";
 }

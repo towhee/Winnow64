@@ -1027,6 +1027,11 @@ void FSTree::dropEvent(QDropEvent *event)
     QString src = "FSTree::dropEvent";
     if (G::isLogger) G::log(src);
 
+    if (QMessageBox::question(nullptr, "Confirm", "Accept drop operation?",
+                              QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) return;
 

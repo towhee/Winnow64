@@ -2463,7 +2463,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         G::log("MW::fileSelectionChange",
                "row = " + QString::number(current.row()) + " Src = " + src
                + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
-        G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
+        // can crash here
+        // G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
     }
 
     if (G::stop) {
@@ -2472,7 +2473,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2763,7 +2764,7 @@ bool MW::stop(QString src)
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
-    qApp->processEvents();  // rgh req'd?
+    // qApp->processEvents();  // can cause spinning ball from hell
     /*
     qDebug() << "MW::stop"
              << "src =" << src
@@ -3738,9 +3739,15 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     Called by signal itemClicked in bookmark.
 */
     if (G::isLogger) qDebug() << "MW::bookmarkClicked";
+
+    if (G::stop) {
+        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        return;
+    }
+
     const QString dPath = item->toolTip(col);
-    setCentralMessage("Loading " + dPath);
-    if (G::useProcessEvents) qApp->processEvents();
+    // setCentralMessage("Loading " + dPath);
+    // if (G::useProcessEvents) qApp->processEvents();
     isCurrentFolderOkay = isFolderValid(dPath, true, false);
 
     if (isCurrentFolderOkay) {

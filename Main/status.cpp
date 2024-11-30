@@ -212,6 +212,7 @@ QString MW::getPicked()
     if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++) {
+        if (G::stop) return "";
         if (dm->valueSf(row, G::PickColumn) == "Picked") count++;   // dm->valueSF is thread safe
     }
 

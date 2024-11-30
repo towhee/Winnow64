@@ -290,12 +290,7 @@ void DataModel::clearDataModel()
     if (mLock) return;
     if (isDebug) qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
-    setModelProperties();
-    // // clear all items for filters based on data content ie file types, camera model
-    // filters->removeChildrenDynamicFilters();
-    // // reset remaining criteria without signalling filter change as no new data yet
-    // filters->clearAll();
-    // filters->setEnabled(false);
+    // setModelProperties();
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear the folder list
