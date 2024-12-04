@@ -24,7 +24,7 @@ Reader::Reader(QObject *parent,
     // Using Qt::BlockingQueuedConnection:
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateCacheItemMetadataFromReader, Qt::BlockingQueuedConnection);
+    // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
 
     isDebug = false;
     debugLog = false;
@@ -151,27 +151,6 @@ bool Reader::readMetadata()
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
     }
 
-    // ImageCache imageCacheList is mirror of dm->sf (current sort/filter)
-    int sfRow = dm->proxyRowFromModelRow(dmRow);
-
-    if (isDebug)
-    {
-        qDebug().noquote()
-            << "Reader::readMetadata emit addToImageCache   "
-            << "id =" << QString::number(threadId).leftJustified(2, ' ')
-            << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-            << "sfRow =" << QString::number(sfRow).leftJustified(4, ' ')
-            << fPath
-            ;
-    }
-
-    if (G::isLogger || G::isFlowLogger) {
-        QString msg = "row = " + QString::number(sfRow);
-        G::log("Reader::readMetadata", msg);
-    }
-
-    if (!abort) emit addToImageCache(sfRow, fPath, instance);
-
     return isMetaLoaded;
 }
 
@@ -240,4 +219,5 @@ void Reader::run()
     readMetadata();
     readIcon();
     emit done(threadId);
+    if (G::isLogger) G::log("Reader::run", "Finished");
 }

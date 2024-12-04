@@ -228,21 +228,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     int dmRow = dm->rowFromPath(fPath);
     if (dmRow == -1) return false;
     int sfRow = dm->proxyRowFromModelRow(dmRow);
-    if (sfRow == -1) return false;
+    if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
     bool isCached = false;
-    if (icd->cacheItemList.size() > sfRow) {
-        isCached = src == "ImageCache::cacheImage" || icd->cacheItemList.at(sfRow).isCached;
-    }
-    /* try again
-    if (!isCached) {
-        isCaching = icd->cacheItemList.at(sfRow).isCaching || src == "ImageCache::cacheImage";
-        if (isCaching) {
-            qDebug() << "ImageView::loadImage   emit tryAgain" << fPath;
-            isBusy = false;
-            emit tryAgain(fPath);
-        }
-    }
-    //*/
+    isCached = src == "ImageCache::cacheImage" || dm->sf->index(sfRow, G::IsCachedColumn).data().toBool();
+
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
         //qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
@@ -262,10 +251,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     }
     else {
         // report why no image cached (chk range in case filtering has just occurred)
-        if (icd->cacheItemList.count() > dmRow) {
-            if (G::mode == "Loupe")
-                emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
-        }
+        // if (icd->cacheItemList.count() > dmRow) {
+        //     if (G::mode == "Loupe")
+        //         emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
+        // }
     }
 
     /* When the program is opening or resizing it is possible this function could be called

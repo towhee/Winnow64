@@ -92,8 +92,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void updateCacheItemMetadataFromReader(int row, QString fPath, int instance);
-    // void updateImageMetadataFromReader(ImageMetadata m, int instance);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void datamodelFolderCountChange(QString src);
@@ -101,7 +99,6 @@ public slots:
     void colorManageChange();
     void refreshImageCache();
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
-    void buildImageCacheList();
 
 private:
     QMutex gMutex;
@@ -114,7 +111,6 @@ private:
     bool isInitializing;
     bool cacheSizeHasChanged = false;
     bool filterOrSortHasChanged = false;
-    QString currentPath;
     int maxAttemptsToCacheImage = 10;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
@@ -130,26 +126,26 @@ private:
     QHash<int,QString> pathFromKey;     // path
     QSet<int> toBeUpdated;
     // std::list<int> toBeUpdated;
-    QList<int> priorityList;
+    QList<int> toCache;
+    QStringList priorityList;
 
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
-    bool cacheItemListCompleted();
     void updateTargets();
     void resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
-    void setPriorities(int key);    // based on proximity to current position and wtAhead
-    void setTargetRange();          // define start and end key in the target range to cache
+    void trimOutsideTargetRange();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
-    //    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
-    void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
     void memChk();                  // still room in system memory for cache?
-    bool isKey(int key);
     bool isValidKey(int key);
+
+    bool updateTarget(int sfRow, bool &isDone);
+    void setTargetRange(int key);
+
     // int keyFromPath(QString path);
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
@@ -157,8 +153,6 @@ private:
                         const ImageCacheData::CacheItem &k2);
     // void buildImageCacheList();
     void addCacheItem(int key);
-    bool updateCacheItemMetadata(int key);
-    // bool updateCacheItemMetadata(ImageMetadata m);
     void log(const QString function, const QString comment = "");
 
     QElapsedTimer t;

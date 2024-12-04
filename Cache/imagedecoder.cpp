@@ -29,7 +29,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     threadId = id;
     status = Status::Ready;
     fPath = "";
-    cacheKey = -1;
+    sfRow = -1;
     instance = 0;
     this->dm = dm;
     this->metadata = metadata;
@@ -56,23 +56,22 @@ bool ImageDecoder::quit()
     fPath = "";
     // QImage blank;
     // image = QImage();
-    cacheKey = -1;
+    sfRow = -1;
     return false;
 }
 
-void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
+void ImageDecoder::decode(int row, int instance)
 {
+    sfRow = row ;
     status = Status::Busy;
-    n = item;
-    fPath = n.fPath;
-    cacheKey = n.key;       // not being used (ImageCache::fixOrphans artifact)
+    fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     this->instance = instance;
     errMsg = "";
-    if (isLog || G::isLogger) G::log("ImageDecoder::decode", "row = " + QString::number(cacheKey));
+    if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
     /*
     qDebug() << "ImageDecoder::decode                              "
              << "decoder" << threadId
-             << "row =" << cacheKey
+             << "sfRow =" << sfRow
              << fPath; //*/
     start(QThread::LowestPriority);
 }
@@ -86,7 +85,7 @@ bool ImageDecoder::load()
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
     if (isLog || G::isLogger) G::log("ImageDecoder::load",
-               "row = " + QString::number(cacheKey) + "  " + fPath);
+               "sfRow = " + QString::number(sfRow) + "  " + fPath);
     QString fun = "ImageDecoder::load";
     if (isDebug)
         qDebug() << fun << fPath;
@@ -94,7 +93,7 @@ bool ImageDecoder::load()
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
         errMsg = "Blank file path.";
-        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+        G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
         status = Status::BlankFilePath;
         return false;
     }
@@ -102,7 +101,9 @@ bool ImageDecoder::load()
     /* get image type (extension)
        can cause crash: QFileInfo fileInfo(fPath);  or
                         ext = fPath.section('.', -1).toLower(); */
-    ext = n.ext;
+    // ext = n.ext;
+    ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+    // qDebug() << "ImageDecoder::load" << sfRow << ext << fPath;
 
     // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
@@ -115,7 +116,7 @@ bool ImageDecoder::load()
     // is file already open by another process
     if (imFile.isOpen()) {
         errMsg = "File already open.";
-        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+        G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
         status = Status::FileOpen;
         return false;
     }
@@ -123,7 +124,7 @@ bool ImageDecoder::load()
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         errMsg = "Unable to open file.";
-        G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+        G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
         status = Status::FileOpen;
         return false;
     }
@@ -132,16 +133,18 @@ bool ImageDecoder::load()
 
     // Embedded jpg?
     bool isEmbeddedJpg = false;
+    int offsetFull = dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
+    int lengthFull = dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
     // embedded image type but no offset
-    if (metadata->hasJpg.contains(ext) && n.offsetFull == 0) {
+    if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
 
     }
     // raw file or jpg
-    if (metadata->hasJpg.contains(ext) || (ext == "jpg" && n.offsetFull)) {
+    if (metadata->hasJpg.contains(ext) || (ext == "jpg" && offsetFull)) {
         isEmbeddedJpg = true;
     }
     // heic saved as a jpg
-    if (metadata->hasHeic.contains(ext) && n.lengthFull) {
+    if (metadata->hasHeic.contains(ext) && lengthFull) {
         isEmbeddedJpg = true;
     }
 
@@ -149,27 +152,27 @@ bool ImageDecoder::load()
     // EMBEDDED JPG FORMAT (RAW FILES AND SOME HEIC)
     if (isEmbeddedJpg) {
         // make sure legal offset by checking the length
-        if (n.lengthFull == 0) {
+        if (lengthFull == 0) {
             errMsg = "Could not read embedded JPG because length = 0.";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             imFile.close();
             status = Status::Invalid;
             return false;
         }
 
         // try to read the data
-        if (!imFile.seek(n.offsetFull)) {
+        if (!imFile.seek(offsetFull)) {
             errMsg = "Could not read embedded JPG because offset is invalid.";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             imFile.close();
             status = Status::Invalid;
             return false;
         }
 
-        QByteArray buf = imFile.read(n.lengthFull);
+        QByteArray buf = imFile.read(lengthFull);
         if (buf.length() == 0) {
             errMsg = "Could not read embedded JPG because buffer length = 0.";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             imFile.close();
             status = Status::Invalid;
             return false;
@@ -189,7 +192,7 @@ bool ImageDecoder::load()
             image = jpegTurbo.decode(buf);
             if (image.isNull()) {
                 errMsg = "Could not read JPG because JpegTurbo::decode failed.";
-                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 // try Qt decoder
                 decoderToUse = QtImage;
             }
@@ -199,7 +202,7 @@ bool ImageDecoder::load()
         if (decoderToUse == QtImage) {
             if (!image.loadFromData(buf, "JPEG")) {
                 errMsg = "Could not read JPG because QImage::loadFromData failed.";
-                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
                 return false;
@@ -228,14 +231,14 @@ bool ImageDecoder::load()
         imFile.close();
         if (!image.load(fPath)) {
             errMsg = "Could not read because QImage::load failed.";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             // imFile.close();
             status = Status::Invalid;
             return false;
         }
         else if (image.width() == 0) {
             errMsg = "Unable to read heic image";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;
         }
@@ -271,9 +274,10 @@ bool ImageDecoder::load()
 
         if (decoderToUse == Rory) {
             // check for sampling format we cannot read
-            if (n.samplesPerPixel > 3) {
+            int samplesPerPixel = dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
+            if (samplesPerPixel > 3) {
                  errMsg = "TIFF samplesPerPixel more than 3.";
-                 G::issue("Warning", errMsg, "ImageDecoder::run", cacheKey, fPath);
+                 G::issue("Warning", errMsg, "ImageDecoder::run", sfRow, fPath);
                  imFile.close();
                  status = Status::Invalid;
                  return false;
@@ -281,7 +285,7 @@ bool ImageDecoder::load()
 
             // try Winnow decoder
             Tiff tiff("ImageDecoder::load Id = " + QString::number(threadId));
-            if (!tiff.decode(fPath, n.offsetFull, image)) {
+            if (!tiff.decode(fPath, offsetFull, image)) {
                 decoderToUse = QtImage;     // maybe change to QtTiff?
                 /*
                 qDebug() << "ImageDecoder::load "
@@ -295,7 +299,7 @@ bool ImageDecoder::load()
             imFile.close();
             if (!image.load(fPath)) {
                 errMsg = "Could not read because Qt tiff decoder failed.";
-                G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Error", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
                 return false;
@@ -308,7 +312,7 @@ bool ImageDecoder::load()
             // qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
             if (!tiff.read(fPath, &image)) {
                 errMsg = "Could not read because QTiff decoder failed.";
-                G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Error", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
                 return false;
@@ -329,7 +333,7 @@ bool ImageDecoder::load()
             image = jpegTurbo.decode(fPath);
             if (image.isNull()) {
                 errMsg = "Could not read because TurboJpg decoder failed.";
-                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 // try using QImage
                 decoderToUse = QtImage;
             }
@@ -341,7 +345,7 @@ bool ImageDecoder::load()
             jpeg.decodeScan(imFile, image);
             if (image.isNull()) {
                 errMsg = "Could not read because Rory decoder failed.";
-                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
                 return false;
@@ -353,7 +357,7 @@ bool ImageDecoder::load()
             image.load(fPath);  // crash 2024-11-23 EXC_BAD_ACCESS (SIGSEGV)
             if (image.isNull()) {
                 errMsg = "Could not read because Qt decoder failed.";
-                G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+                G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 // imFile.close();
                 status = Status::Invalid;
                 return false;
@@ -369,7 +373,7 @@ bool ImageDecoder::load()
         if (!image.load(fPath)) {
             imFile.close();
             errMsg = "Could not read because QImage::load failed.";
-            G::issue("Warning", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;
         }
@@ -393,7 +397,7 @@ void ImageDecoder::setReady()
 
 void ImageDecoder::rotate()
 {
-    if (G::isLogger) G::log("ImageDecoder::rotate", "row = " + QString::number(cacheKey));
+    if (G::isLogger) G::log("ImageDecoder::rotate", "sfRow = " + QString::number(sfRow));
     if (isDebug) {
         mutex.lock();
         G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
@@ -401,30 +405,32 @@ void ImageDecoder::rotate()
     }
     QTransform trans;
     int degrees = 0;
-    if (n.orientation > 0) {
-        switch (n.orientation) {
+    int orientation = dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+    int rotationDegrees = dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+    if (orientation > 0) {
+        switch (orientation) {
         case 3:
-            degrees = n.rotationDegrees + 180;
+            degrees = rotationDegrees + 180;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 6:
-            degrees = n.rotationDegrees + 90;
+            degrees = rotationDegrees + 90;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 8:
-            degrees = n.rotationDegrees + 270;
+            degrees = rotationDegrees + 270;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         }
     }
-    else if (n.rotationDegrees > 0){
-        trans.rotate(n.rotationDegrees);
+    else if (rotationDegrees > 0){
+        trans.rotate(rotationDegrees);
         image = image.transformed(trans, Qt::SmoothTransformation);
     }
     /* debug
@@ -439,14 +445,15 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "row = " + QString::number(cacheKey));
+    if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "sfRow = " + QString::number(sfRow));
     if (isDebug) {
         mutex.lock();
         G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
         mutex.unlock();
     }
     if (metadata->iccFormats.contains(ext)) {
-        ICC::transform(n.iccBuf, image);
+        QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+        ICC::transform(iccBuf, image);
     }
 }
 
@@ -457,7 +464,7 @@ void ImageDecoder::run()
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
-        G::issue("Comment", errMsg, "ImageDecoder::run", cacheKey, fPath);
+        G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         emit done(threadId);
         return;
     }
@@ -471,7 +478,7 @@ void ImageDecoder::run()
         qDebug().noquote()
             << "ImageDecoder::run                    "
             << "decoder" <<  QString::number(threadId).leftJustified(2)
-            << "row =" <<  QString::number(cacheKey).leftJustified(4)
+            << "sfRow =" <<  QString::number(sfRow).leftJustified(4)
             << "DecoderToUse:" << decodersText.at(decoderToUse)
             << "ms =" << t.elapsed()
             << fPath;
@@ -482,7 +489,7 @@ void ImageDecoder::run()
     else {
         if (isDebug)
         qDebug() << "ImageDecoder::run load failed"
-                 << "cacheKey =" << cacheKey
+                 << "sfRow =" << sfRow
                  << "status =" << statusText.at(status)
                  << "errMsg =" << errMsg
                     ; //*/
@@ -511,14 +518,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 */
     this->metadata = metadata;
     fPath = m.fPath;
-    n.fPath = m.fPath;
-    n.ext = m.ext;
-    n.metadataLoaded = m.metadataLoaded;
-    n.orientation = m.orientation;
-    n.rotationDegrees = m.rotationDegrees;
-    n.offsetFull = m.offsetFull;
-    n.lengthFull = m.lengthFull;
-    n.samplesPerPixel = m.samplesPerPixel;
+    sfRow = dm->proxyRowFromPath(fPath);
 
     if (load()) {
         //if (metadata->rotateFormats.contains(ext)) rotate();

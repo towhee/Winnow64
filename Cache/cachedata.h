@@ -65,7 +65,7 @@ public:
         QString errMsg;
     } cacheItem;
 
-    QList<CacheItem> cacheItemList;
+    // QList<CacheItem> cacheItemList;
 
     /*
       Key Priority   Target Attempts  Caching   Thread   Cached   SizeMB   File Name
