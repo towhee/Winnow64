@@ -206,24 +206,9 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating")); horizontalHeaderItem(G::RatingColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::PermissionsColumn, new QStandardItem("Permissions")); horizontalHeaderItem(G::PermissionsColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ReadWriteColumn, new QStandardItem("R/W")); horizontalHeaderItem(G::ReadWriteColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created")); horizontalHeaderItem(G::CreatedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year")); horizontalHeaderItem(G::YearColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day")); horizontalHeaderItem(G::DayColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator")); horizontalHeaderItem(G::CreatorColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix")); horizontalHeaderItem(G::MegaPixelsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO")); horizontalHeaderItem(G::ISOColumn)->setData(false, G::GeekRole);
@@ -236,16 +221,29 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::FocusXColumn, new QStandardItem("FocusX")); horizontalHeaderItem(G::FocusXColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FocusYColumn, new QStandardItem("FocusY")); horizontalHeaderItem(G::FocusYColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::GPSCoordColumn, new QStandardItem("GPS Coord")); horizontalHeaderItem(G::GPSCoordColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title")); horizontalHeaderItem(G::TitleColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created")); horizontalHeaderItem(G::CreatedColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year")); horizontalHeaderItem(G::YearColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day")); horizontalHeaderItem(G::DayColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator")); horizontalHeaderItem(G::CreatorColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix")); horizontalHeaderItem(G::MegaPixelsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright")); horizontalHeaderItem(G::CopyrightColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title")); horizontalHeaderItem(G::TitleColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email")); horizontalHeaderItem(G::EmailColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
-
     setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
-
+    setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_CreatorColumn, new QStandardItem("_Creator")); horizontalHeaderItem(G::_CreatorColumn)->setData(true, G::GeekRole);
@@ -253,9 +251,8 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::_CopyrightColumn, new QStandardItem("_Copyright")); horizontalHeaderItem(G::_CopyrightColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email")); horizontalHeaderItem(G::_EmailColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_UrlColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::_OrientationColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_OrientationColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::_RotationColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_RotationColumn)->setData(true, G::GeekRole);
-
+    setHorizontalHeaderItem(G::PermissionsColumn, new QStandardItem("Permissions")); horizontalHeaderItem(G::PermissionsColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ReadWriteColumn, new QStandardItem("R/W")); horizontalHeaderItem(G::ReadWriteColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::WidthPreviewColumn, new QStandardItem("WidthPreview")); horizontalHeaderItem(G::WidthPreviewColumn)->setData(true, G::GeekRole);
@@ -263,7 +260,6 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
-
     setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ifdOffsetsColumn, new QStandardItem("ifd0Offsets")); horizontalHeaderItem(G::ifdOffsetsColumn)->setData(true, G::GeekRole);
@@ -274,13 +270,20 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentLengthColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCBuf")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSpaceColumn, new QStandardItem("ICCSpace")); horizontalHeaderItem(G::ICCSpaceColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::CacheSizeColumn, new QStandardItem("CacheSize")); horizontalHeaderItem(G::CacheSizeColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::IsTargetColumn, new QStandardItem("IsTarget")); horizontalHeaderItem(G::IsTargetColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::IsCachingColumn, new QStandardItem("IsCaching")); horizontalHeaderItem(G::IsCachingColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::IsCachedColumn, new QStandardItem("IsCached")); horizontalHeaderItem(G::IsCachedColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::AttemptsColumn, new QStandardItem("Attempts")); horizontalHeaderItem(G::AttemptsColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::DecoderIdColumn, new QStandardItem("DecoderId")); horizontalHeaderItem(G::DecoderIdColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::DecoderReturnStatusColumn, new QStandardItem("DecoderReturnStatus")); horizontalHeaderItem(G::DecoderReturnStatusColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::DecoderErrMsgColumn, new QStandardItem("Decoder Err Msg")); horizontalHeaderItem(G::DecoderErrMsgColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
+    // "🔎" was title for search column
 }
 
 void DataModel::clearDataModel()
@@ -290,7 +293,7 @@ void DataModel::clearDataModel()
     if (mLock) return;
     if (isDebug) qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
-    // setModelProperties();
+    setModelProperties();
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear the folder list
@@ -1665,6 +1668,23 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
+    // image cache helpers
+    setData(index(row, G::IsTargetColumn), false);
+    setData(index(row, G::IsCachingColumn), false);
+    setData(index(row, G::IsCachedColumn), false);
+    setData(index(row, G::AttemptsColumn), 0);
+    setData(index(row, G::DecoderIdColumn), -1);
+    setData(index(row, G::DecoderReturnStatusColumn), -1);
+    // calc size in MB req'd to store image in cache
+    int w, h;
+    m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
+    m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+    // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+    float sizeMB;
+    if (w == 0 || h == 0) sizeMB = m.size;
+    else sizeMB = static_cast<float>(w * h * 1.0 / 262144);
+    setData(index(row, G::CacheSizeColumn), sizeMB);
+
     // check for missing thumbnail in jpg/tiif
     if (m.isReadWrite)
         if (metadata->canEmbedThumb.contains(m.type.toLower()))
@@ -1686,6 +1706,172 @@ bool DataModel::metadataLoaded(int dmRow)
                           << "row =" << dmRow
                           << currentPrimaryFolderPath;
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
+}
+
+// Image Cache functions
+
+void DataModel::updateTarget(int sfRow, ImageCacheData *icd, QList<int> &toCache)
+{
+    // QString fun = "DataModel::updateTarget";
+    // if (G::isLogger) G::log(fun, "row = " + QString::number(row));
+    // QString fPath = sf->index(sfRow, 0).data(G::PathRole).toString();
+    toCache.append(sfRow);
+    sf->setData(index(sfRow, G::IsCachedColumn), true);
+}
+
+void DataModel::setImageCacheTargetRange(ImageCacheData *icd, QList<int> &toCache)
+
+{
+/*
+    Clear the priority list and cache items in datamodel.
+
+    From the current position, iterate ahead and behind, based on the direction of
+    travel. For each iteration, if there is room in the cache, add the image file path to
+    the priority list and set target = true. When the cache room is filled, record the
+    beginning and end of the cache.
+
+    Set target = false for all rows outside the target range.
+
+To do: push/pop cached instead of iterating through entire dataset.
+
+*/
+    QString fun = "DataModel::setTargetRange";
+    if (G::isLogger) G::log(fun, "maxMB = " + QString::number(icd->cache.maxMB));
+
+    int n = sf->rowCount();
+    bool isForward = icd->cache.isForward;
+    float maxMB = static_cast<float>(icd->cache.maxMB);
+    float sumMB = 0;
+    float prevMB = 0;
+    int aheadAmount = 2;
+    int behindAmount = 1;
+    int aheadPos = currentSfRow;
+    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    bool aheadDone = false;
+    bool behindDone = false;
+
+    // Iterate while there is space in the cache
+    while (sumMB < maxMB && (!aheadDone || !behindDone)) {
+        // Handle "ahead" direction
+        for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
+            if (isForward ? (aheadPos < n) : (aheadPos >= 0)) {
+                bool isVideo = sf->index(aheadPos, G::VideoColumn).data().toBool();
+                if (isVideo) continue;
+                float sizeMB = sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                sumMB += sizeMB;
+                bool isCached = sf->index(aheadPos, G::IsCachedColumn).data().toBool();
+                sf->setData(sf->index(aheadPos, G::IsTargetColumn), true);
+                if (!isCached && sumMB < maxMB) {
+                    qDebug() << fun << "aheadPos =" << aheadPos;
+                    updateTarget(aheadPos, icd, toCache);
+                    isForward ? icd->cache.targetLast = aheadPos++ : icd->cache.targetFirst = aheadPos--;
+               } else aheadDone = true;
+            } else aheadDone = true;
+        }
+
+        // Handle "behind" direction
+        for (int b = 0; b < behindAmount && !behindDone; ++b) {
+            if (isForward ? (behindPos >= 0) : (behindPos < n)) {
+                bool isVideo = sf->index(aheadPos, G::VideoColumn).data().toBool();
+                if (isVideo) continue;
+                float sizeMB = sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
+                sumMB += sizeMB;
+                bool isCached = sf->index(behindPos, G::IsCachedColumn).data().toBool();
+                sf->setData(sf->index(behindPos, G::IsTargetColumn), true);
+                if (!isCached && sumMB < maxMB) {
+                    qDebug() << fun << "behindPos =" << behindPos;
+                    updateTarget(behindPos, icd, toCache);
+                    isForward ? icd->cache.targetFirst = behindPos-- : icd->cache.targetLast = behindPos++;
+                } else  behindDone = true;
+            } else  behindDone = true;
+        }
+    }
+    return;
+    //*/
+
+    /* MY ORIGINAL VERSION
+    // iterate through all rows
+    for (int i = 0; i < n; i++) {
+        // iterate ahead
+        if (isForward) {
+            if (!aheadDone) {
+                for (int a = 0; a < aheadAmount; a++) {
+                    if (aheadPos < n) {
+                        sumMB += index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                        if (sumMB < maxMB) {
+                            sf->setData(sf->index(aheadPos, G::IsTargetColumn), true);
+                            qDebug() << "DataModel::setTargetRange"
+                                     << "ifForward =" << isForward
+                                     << "target aheadPos =" << aheadPos
+                                ;
+                            endImageCacheTargetRange = aheadPos++;
+                            aheadPos++;
+                        }
+                        else aheadDone = true;
+                    }
+                    else aheadDone = true;
+                }
+            }
+            // iterate behind
+            if (!behindDone) {
+                for (int b = 0; b < behindAmount; b--) {
+                    if (behindPos >= 0) {
+                        sumMB += index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                        if (sumMB < maxMB) {
+                            sf->setData(sf->index(behindPos, G::IsTargetColumn), true);
+                            qDebug() << "DataModel::setTargetRange"
+                                     << "ifForward =" << isForward
+                                     << "target behindPos =" << behindPos
+                                ;
+                            startImageCacheTargetRange = behindPos--;
+                        }
+                        else behindDone = true;
+                    }
+                    else behindDone = true;
+                }
+            }
+        }
+        // iterate ahead
+        else {
+            if (!aheadDone) {
+                for (int a = 0; a < aheadAmount; a--) {
+                    if (aheadPos >= 0) {
+                        sumMB += index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                        if (sumMB < maxMB) {
+                            sf->setData(sf->index(aheadPos, G::IsTargetColumn), true);
+                            qDebug() << "DataModel::setTargetRange"
+                                     << "ifForward =" << isForward
+                                     << "target aheadPos =" << aheadPos
+                                ;
+                            startImageCacheTargetRange = aheadPos--;
+                        }
+                        else aheadDone = true;
+                    }
+                    else aheadDone = true;
+                }
+            }
+            // iterate behind
+            if (!behindDone) {
+                for (int b = 0; b < behindAmount; b++) {
+                    if (behindPos < n) {
+                        sumMB += index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                        if (sumMB < maxMB) {
+                            sf->setData(sf->index(behindPos, G::IsTargetColumn), true);
+                            endImageCacheTargetRange = behindPos;
+                            qDebug() << "DataModel::setTargetRange"
+                                     << "ifForward =" << isForward
+                                     << "target behindPos =" << behindPos
+                                ;
+                            startImageCacheTargetRange = behindPos++;
+                        }
+                        else behindDone = true;
+                    }
+                    else behindDone = true;
+                }
+            }
+        }
+    }
+    //*/
 }
 
 bool DataModel::isDimensions(int sfRow)

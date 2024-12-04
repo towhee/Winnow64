@@ -148,29 +148,13 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::FolderNameColumn) return fm.boundingRect("This is the folder name========").width();
     if (column == G::MSToReadColumn) return fm.boundingRect("=Read ms=").width();
-    if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
-    if (column == G::VideoColumn) return fm.boundingRect("=Video=").width();
-    if (column == G::PermissionsColumn) return fm.boundingRect("=Permissions=").width();
-    if (column == G::ReadWriteColumn) return fm.boundingRect("=false=").width();
-    if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
-    if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09.999=").width();
-    if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
-    if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
-    if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
     if (column == G::PickColumn) return fm.boundingRect("===Pick===").width();
     if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
-    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
-    if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
     if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
     if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
-    if (column == G::WidthColumn) return fm.boundingRect("=Width=").width();
-    if (column == G::HeightColumn) return fm.boundingRect("=Height=").width();
-    if (column == G::CreatorColumn) return fm.boundingRect("Rory Hill=====").width();
-    if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
-    if (column == G::LoadMsecPerMpColumn) return fm.boundingRect("=Msec/Mp=").width();
-    if (column == G::DimensionsColumn) return fm.boundingRect("=99999x99999=").width();
-    if (column == G::AspectRatioColumn) return fm.boundingRect("=Aspect Ratio=").width();
-    if (column == G::RotationColumn) return fm.boundingRect("=Rot=").width();
+    if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
+    if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
+    if (column == G::VideoColumn) return fm.boundingRect("=Video=").width();
     if (column == G::ApertureColumn) return fm.boundingRect("=Aperture=").width();
     if (column == G::ShutterspeedColumn) return fm.boundingRect("=1/8000 sec=").width();
     if (column == G::ISOColumn) return fm.boundingRect("999999").width();
@@ -183,17 +167,38 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::FocusXColumn) return fm.boundingRect("=FocusX==").width();
     if (column == G::FocusYColumn) return fm.boundingRect("=FocusY==").width();
     if (column == G::GPSCoordColumn) return fm.boundingRect("=49°13'13.477  N 123°57'22.22 W=").width();
-    if (column == G::TitleColumn) return fm.boundingRect("=Title=========================").width();
+    if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
+    if (column == G::WidthColumn) return fm.boundingRect("=Width=").width();
+    if (column == G::HeightColumn) return fm.boundingRect("=Height=").width();
+    if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
+    if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09.999=").width();
+    if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
+    if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
+    if (column == G::CreatorColumn) return fm.boundingRect("Rory Hill=====").width();
+    if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
+    if (column == G::LoadMsecPerMpColumn) return fm.boundingRect("=Msec/Mp=").width();
+    if (column == G::DimensionsColumn) return fm.boundingRect("=99999x99999=").width();
+    if (column == G::AspectRatioColumn) return fm.boundingRect("=Aspect Ratio=").width();
+    if (column == G::OrientationColumn) return fm.boundingRect("=Orientation=").width();
+    if (column == G::RotationColumn) return fm.boundingRect("=Rot=").width();
     if (column == G::CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
+    if (column == G::TitleColumn) return fm.boundingRect("=Title=========================").width();
     if (column == G::EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::UrlColumn) return fm.boundingRect("=Url=======================").width();
-    if (column == G::_TitleColumn) return fm.boundingRect("=Title=========================").width();
-    if (column == G::_CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
+    if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
+    if (column == G::MetadataAttemptedColumn) return fm.boundingRect("=Metadata Attempted=").width();
+    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
+    if (column == G::MissingThumbColumn) return fm.boundingRect("=Missing Thumb=").width();
+    if (column == G::CompareColumn) return fm.boundingRect("=Compare=").width();
+    if (column == G::_RatingColumn) return fm.boundingRect("=_Rating=").width();
+    if (column == G::_LabelColumn) return fm.boundingRect("=_Label=").width();
+    if (column == G::_CreatorColumn) return fm.boundingRect("=_Creator=").width();
+    if (column == G::_TitleColumn) return fm.boundingRect("=_Title=========================").width();
+    if (column == G::_CopyrightColumn) return fm.boundingRect("=_Copyright=====").width();
     if (column == G::_EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
-    if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
-    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Metadata Loaded=").width();
-    if (column == G::MissingThumbColumn) return fm.boundingRect("=Missing Thumb=").width();
+    if (column == G::PermissionsColumn) return fm.boundingRect("=Permissions=").width();
+    if (column == G::ReadWriteColumn) return fm.boundingRect("=false=").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
     if (column == G::WidthPreviewColumn) return fm.boundingRect("=WidthPreview=").width();
@@ -203,6 +208,7 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::samplesPerPixelColumn) return fm.boundingRect("=samplesPerPixelFullColumn=").width();
     if (column == G::isBigEndianColumn) return fm.boundingRect("=isBigEndian=").width();
     if (column == G::ifd0OffsetColumn) return fm.boundingRect("=ifd0OffsetColumn=").width();
+    if (column == G::ifdOffsetsColumn) return fm.boundingRect("=ifdOffsetColumn=").width();
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
     if (column == G::XmpSegmentLengthColumn) return fm.boundingRect("=XmpSegmentLengthColumn=").width();
     if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();
@@ -210,12 +216,20 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::ICCSegmentLengthColumn) return fm.boundingRect("=ICCSegmentLengthColumn=").width();
     if (column == G::ICCBufColumn) return fm.boundingRect("=ICCBuf=").width();
     if (column == G::ICCSpaceColumn) return fm.boundingRect("=ICCSpaceColumn=").width();
+
+    if (column == G::CacheSizeColumn) return fm.boundingRect("=CacheMB=").width();
+    if (column == G::IsTargetColumn) return fm.boundingRect("=Target=").width();
+    if (column == G::IsCachingColumn) return fm.boundingRect("=IsCaching=").width();
+    if (column == G::IsCachedColumn) return fm.boundingRect("=IsCached=").width();
+    if (column == G::AttemptsColumn) return fm.boundingRect("=Attempts=").width();
+    if (column == G::DecoderIdColumn) return fm.boundingRect("=Decoder ID=").width();
+    if (column == G::DecoderReturnStatusColumn) return fm.boundingRect("=Status=").width();
+    if (column == G::DecoderErrMsgColumn) return fm.boundingRect("=Decoder Error Message==============================").width();
+
     if (column == G::OrientationOffsetColumn) return fm.boundingRect("=OrientationOffsetColumn=").width();
-    if (column == G::OrientationColumn) return fm.boundingRect("=Orientation=").width();
     if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();
     if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
     if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
-    if (column == G::CompareColumn) return fm.boundingRect("=Compare=").width();
     if (column == G::ErrColumn) return fm.boundingRect("==ErrText=========================================================").width();
     return 50;
 }
@@ -397,6 +411,7 @@ void TableView::createOkToShow()
     // do not include column 0 as it is used to index tableView
     for (int i = 1; i < dm->columnCount(); i++) {
         QString columnName = dm->horizontalHeaderItem(i)->text();
+        // qDebug() << "TableView::createOkToShow" << i << columnName;
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
         bool isGeek = dm->horizontalHeaderItem(i)->data(G::GeekRole).toBool();
@@ -421,7 +436,7 @@ void TableView::showOrHide()
         else hideColumn(i + 1);
         /*
         QString s = ok->index(i, 0).data().toString();
-        qDebug() << "TableView::showOrHide" << i << s << showField;  */
+        qDebug() << "TableView::showOrHide" << i << s << showField;  //*/
     }
 }
 

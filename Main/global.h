@@ -134,6 +134,16 @@ namespace G
         ICCBufColumn,
         ICCSpaceColumn,
 
+        // image cache helpers
+        CacheSizeColumn,
+        IsTargetColumn,
+        IsCachingColumn,
+        IsCachedColumn,
+        AttemptsColumn,
+        DecoderIdColumn,
+        DecoderReturnStatusColumn,
+        DecoderErrMsgColumn,
+
         OrientationOffsetColumn,
         RotationDegreesColumn,
         ShootingInfoColumn,

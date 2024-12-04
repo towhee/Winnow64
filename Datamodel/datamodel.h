@@ -12,6 +12,7 @@
 #include "Main/global.h"
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
+#include "Cache/cachedata.h"        // req'd by setTargetRange
 
 class SortFilter : public QSortFilterProxyModel
 {
@@ -128,6 +129,9 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
+    int startImageCacheTargetRange;
+    int endImageCacheTargetRange;
+
     int hugeThreshold = G::maxIconChunk;
     int firstVisibleIcon;
     int lastVisibleIcon;
@@ -197,6 +201,8 @@ public slots:
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     void processNextFolder();
+    void updateTarget(int row, ImageCacheData *icd, QList<int> &toCache);
+    void setImageCacheTargetRange(ImageCacheData *icd, QList<int> &toCache);
 
 private slots:
 

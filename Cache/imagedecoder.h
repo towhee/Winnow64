@@ -23,16 +23,16 @@ public:
                  int id,
                  DataModel *dm,
                  Metadata *metadata);
-    void decode(ImageCacheData::CacheItem item, int instance);
+    void decode(int sfRow, int instance);
     bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
     void setReady();
     void stop();
 
     int threadId;
+    int sfRow;
     int instance;
     QImage image;
     QString fPath;
-    int cacheKey;
     QString errMsg;
 
     enum Status {
@@ -102,12 +102,12 @@ private:
     bool abort = false;
     DataModel *dm;
     Metadata *metadata;
-    ImageCacheData::CacheItem n;
+    // ImageCacheData::CacheItem n;
     unsigned char *buf;
     QString ext;
     QString errImage = ":/images/badImage1.png";
     bool isDebug = false;
-    bool isLog = false;
+    bool isLog   = false;
 };
 
 #endif // IMAGEDECODER_H

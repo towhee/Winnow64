@@ -63,8 +63,6 @@ PROGRAM PIPELINE
         - Reader::read
         - Reader::run
         - Reader::readMetadata
-        - ImageCache::updateCacheItemMetadataFromReader
-        - ImageCache::updateCacheItemMetadata
         - Reader::readIcon
         - MetaRead2::dispatch
         - MW::fileSelectionChange
@@ -107,7 +105,6 @@ PROGRAM PIPELINE
         - MetaRead2::setStartRow               // start metadata and icon loading for new DM items
         - Reader::read                         // prep reader
         - Reader::readMetadata                 // read file metadata
-        - ImageCache::updateCacheItemMetadataFromReader // add item to cacheItemList
         - Reader::readIcon                     // read file icon
         - MetaRead2::dispatchFinished          // finished all files in datamodel
         - MW::loadCurrentDone                  // cleanup, rebuild filters
@@ -184,7 +181,6 @@ Flow by function call: (MetaRead2)
     MW::loadConcurrentNewFolder
     ImageCache::initImageCache
     ImageCache::ClearImageCache
-    ImageCache::buildImageCacheList
     MetaRead2::initialize
     Selection::setCurrentRow                           row = 0
     Selection::setCurrentIndex                         row = 0 clearSelection = true
@@ -410,7 +406,6 @@ Folder change
     IconView::bestAspect
     IconView::setThumbParameters
     ImageCache::initImageCache
-    ImageCache::buildImageCacheList
     ImageCache::updateImageCachePosition
     ImageCache::updateImageCacheList
     ImageCache::setPriorities
@@ -3708,7 +3703,7 @@ void MW::updateImageCacheStatus(QString instruction,
         return;
     }
 
-    int rows = static_cast<int>(icd->cacheItemList.size());
+    int rows = dm->sf->rowCount();
 
     if (instruction == "Update all rows") {
         // clear progress
@@ -3720,7 +3715,7 @@ void MW::updateImageCacheStatus(QString instruction,
                                          cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
-            if (icd->cacheItemList.at(i).isCached)
+            if (dm->sf->index(i, G::IsCachedColumn).data().toBool())
                 cacheProgressBar->updateImageCacheProgress(i, i + 1, rows,
                                   cacheProgressBar->imageCacheColorGradient);
         }
