@@ -80,7 +80,7 @@ void MW::filterChange(QString source)
     dm->newInstance();
 
     // stop ImageCache
-    imageCacheThread->stop();
+    imageCacheThread->stop("MW::filterChange");
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();

@@ -39,7 +39,7 @@ public:
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
                                int &cacheWtAhead);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
-    void stop();
+    void stop(QString src);
     void clearImageCache(bool includeList = true);
     //    void pauseImageCache();
     //    void resumeImageCache();

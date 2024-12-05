@@ -152,10 +152,16 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-    // qDebug() << "ImageView::loadImage:" << fPath << " Src:" << src;
+    /*
+    qDebug() << "ImageView::loadImage:"
+         << "isFirstImageNewInstance =" << isFirstImageNewInstance
+         << fPath
+         << " Src:" << src; //*/
     if (G::isLogger || G::isFlowLogger) {
     QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
-        G::log("ImageView::loadImage", row + " Src:" + src + " " + fPath);
+        G::log("ImageView::loadImage", row + " Src:" + src +
+               " isFirstImageNewInstance = " + QVariant(isFirstImageNewInstance).toString() +
+               " " + fPath);
     }
 
     // ignore if result of remote operation
@@ -225,9 +231,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     index and the image in icd->imCache hash table. Also must check in case
     where an ejected drive has resulted in clearing icd->cacheItemList. */
 
-    int dmRow = dm->rowFromPath(fPath);
-    if (dmRow == -1) return false;
-    int sfRow = dm->proxyRowFromModelRow(dmRow);
+    // int dmRow = dm->rowFromPath(fPath);
+    // if (dmRow == -1) return false;
+    int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
     bool isCached = false;
     isCached = src == "ImageCache::cacheImage" || dm->sf->index(sfRow, G::IsCachedColumn).data().toBool();
@@ -246,6 +252,7 @@ bool ImageView::loadImage(QString fPath, QString src)
             isLoaded = true;
         }
        else { // not available
+            qDebug() << "ImageCache::cacheImage not in ImCache" << "row =" << sfRow;
             // review logic here
        }
     }
@@ -261,7 +268,15 @@ bool ImageView::loadImage(QString fPath, QString src)
     before the central widget has been fully defined, and has a small default size. If that is
     the case, ignore, as the function will be called again. Also ignore if the image failed to
     be loaded into the graphics scene. */
-    if (isLoaded && rect().height() > 50) {
+    /*
+    qDebug() << "ImageView::loadImage:"
+             << "isFirstImageNewInstance =" << isFirstImageNewInstance
+             << "row =" << sfRow
+             << "isLoaded =" << isLoaded
+             << "rect().height() > 50 =" << QVariant(rect().height() > 50).toString();
+    //*/
+    // if (isLoaded && rect().height() > 50) {
+    if (isLoaded) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -279,6 +294,15 @@ bool ImageView::loadImage(QString fPath, QString src)
         if (isFit) {
             setFitZoom();
         }
+        /*
+        qDebug() << "ImageView::loadImage:"
+                 << "isFirstImageNewInstance =" << isFirstImageNewInstance
+                 << "row =" << sfRow
+                 << "isFit =" << isFit
+                 << "zoomFit =" << zoomFit
+                 << "zoom =" << zoom
+                 << " Src:" << src;
+        //*/
         scale();
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
@@ -295,8 +319,10 @@ bool ImageView::loadImage(QString fPath, QString src)
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);
-        //QString msg = "Could not read " + fPath;
-        //G::popUp->showPopup(msg, 0);
+        /*
+        qDebug() << "ImageView::loadImage failed"
+                 << "isFirstImageNewInstance =" << isFirstImageNewInstance
+                 << "row =" << sfRow; //*/
         return false;
     }
 }
@@ -693,7 +719,7 @@ void ImageView::setFitZoom()
 {
     if (G::isLogger) G::log("ImageView::setFitZoom");
     zoom = zoomFit;
-    if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
+    if (limitFit100Pct && zoom > toggleZoom) zoom = toggleZoom;
 }
 
 void ImageView::zoomToggle()

@@ -718,7 +718,7 @@ void MetaRead2::dispatch(int id)
             ;
     }
 
-    if (debugLog && (G::isLogger || G::isFlowLogger))
+    if (debugLog && (G::isLogger /*|| G::isFlowLogger*/))
     {
         QString  row;
         r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
@@ -1101,7 +1101,8 @@ void MetaRead2::dispatchFinished(QString src)
     isDone = true;
     isDispatching = false;
 
-    emit dispatchIsFinished(src);
+    // Is this req'd, causing problems
+    // emit dispatchIsFinished(src);
 
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {

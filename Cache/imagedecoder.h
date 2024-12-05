@@ -38,6 +38,7 @@ public:
     enum Status {
         Ready,
         Busy,
+        Pending,
         Success,
         Abort,
         Invalid,
@@ -53,6 +54,7 @@ public:
     QStringList statusText {
         "Ready",
         "Busy",
+        "Pending",
         "Done",
         "Abort",
         "Invalid",

@@ -219,5 +219,5 @@ void Reader::run()
     readMetadata();
     readIcon();
     emit done(threadId);
-    if (G::isLogger) G::log("Reader::run", "Finished");
+    if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");
 }

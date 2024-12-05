@@ -1674,7 +1674,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::IsCachedColumn), false);
     setData(index(row, G::AttemptsColumn), 0);
     setData(index(row, G::DecoderIdColumn), -1);
-    setData(index(row, G::DecoderReturnStatusColumn), -1);
+    setData(index(row, G::DecoderReturnStatusColumn), 0);
     // calc size in MB req'd to store image in cache
     int w, h;
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
