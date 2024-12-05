@@ -358,7 +358,6 @@ void ImageCache::setTargetRange(int key)
                 sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
                 qDebug().noquote() << fun << "isForward =" << isForward << "aheadPos  =" << aheadPos << sumMB;
                 bool isCached = dm->sf->index(aheadPos, G::IsCachedColumn).data().toBool();
-                dm->sf->setData(dm->sf->index(aheadPos, G::IsTargetColumn), true);
                 if (!isCached) {
                     if (sumMB < maxMB) {
                         toCache.append(aheadPos);
@@ -377,7 +376,6 @@ void ImageCache::setTargetRange(int key)
                 sumMB +=  dm->sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
                 qDebug().noquote() << fun << "isForward =" << isForward << "behindPos =" << behindPos << sumMB;
                 bool isCached = dm->sf->index(behindPos, G::IsCachedColumn).data().toBool();
-                dm->sf->setData(dm->sf->index(behindPos, G::IsTargetColumn), true);
                 if (!isCached) {
                     if (sumMB < maxMB) {
                         toCache.append(behindPos);
@@ -1407,11 +1405,11 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
 */
     int sfRow = dm->currentSfRow;
+    QString fun = "ImageCache::setCurrentPosition";
     // qDebug() << "ImageCache::setCurrentPosition" << sfRow;
-    log("ImageCache::setCurrentPosition", "row = " + QString::number(sfRow));
+    log(fun, "row = " + QString::number(sfRow));
     // log("setCurrentPosition", "row = " + QString::number(sfRow));
     if (debugCaching) {
-        QString fun = "ImageCache::setCurrentPosition";
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
                            << "sfRow =" << sfRow
                            << "dm->rowFromPath(fPath) =" << dm->rowFromPath(fPath)
@@ -1483,6 +1481,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     if (isRunning()) {
         // reset target range
         updateTargets();
+        launchDecoders(fun);
     }
     else {
         start(QThread::LowestPriority);
