@@ -2816,7 +2816,7 @@ bool MW::stop(QString src)
     }
     G::t.restart();
 
-    imageCacheThread->stop();
+    imageCacheThread->stop("MW::stop");
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");

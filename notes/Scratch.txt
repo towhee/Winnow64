@@ -16,3 +16,488 @@ dm->sf->index(sfRow, G::VideoColumn).data().toBool()
 dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt()
 dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()
 dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
+
+if (debugCaching)
+{
+    QString fun = "ImageCache::launchDecoders";
+    qDebug().noquote()
+        << fun.leftJustified(col0Width, ' ')
+        << "" <<
+        ;
+}
+
+
+
+ImageCache::stop                                   src = MW::stop isRunning = false
+ 46,956,045 ImageCache::stop
+ImageCache::initImageCache                         dm->instance = 2
+ImageCache::run
+ImageCache::memChk
+ImageCache::updateTargets                          current position = 0 total = 39
+ImageCache::setDirection
+ImageCache::getImCacheSize                         cache size = 0
+ImageCache::setTargetRange                         current position = 0
+ImageCache::trimImCache                            toCache: QList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38)
+ImageCache::launchDecoders                         Decoder = 0 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache starting                     decoder 0  status = Ready
+ImageCache::fillCache                              decoder 0  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 0  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 0    decoder status = Ready
+ImageCache::decodeNextImage                        decoder 0  sfRow = 0 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
+ImageCache::launchDecoders                         Decoder = 1 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 1
+ImageCache::fillCache starting                     decoder 1  status = Ready
+ImageCache::fillCache                              decoder 1  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 1  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 2 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 2
+ImageCache::fillCache starting                     decoder 2  status = Ready
+ImageCache::fillCache                              decoder 2  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 2  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 3 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 3
+ImageCache::fillCache starting                     decoder 3  status = Ready
+ImageCache::fillCache                              decoder 3  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 3  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 4 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 4
+ImageCache::fillCache starting                     decoder 4  status = Ready
+ImageCache::fillCache                              decoder 4  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 4  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 5 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 5
+ImageCache::fillCache starting                     decoder 5  status = Ready
+ImageCache::fillCache                              decoder 5  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 5  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 6 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 6
+ImageCache::fillCache starting                     decoder 6  status = Ready
+ImageCache::fillCache                              decoder 6  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 6  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 7 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 7
+ImageCache::fillCache starting                     decoder 7  status = Ready
+ImageCache::fillCache                              decoder 7  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 7  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 8 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 8
+ImageCache::fillCache starting                     decoder 8  status = Ready
+ImageCache::fillCache                              decoder 8  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 8  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 9 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 9
+ImageCache::fillCache starting                     decoder 9  status = Ready
+ImageCache::fillCache                              decoder 9  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 9  row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 10 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 10
+ImageCache::fillCache starting                     decoder 10 status = Ready
+ImageCache::fillCache                              decoder 10 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 10 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 11 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 11
+ImageCache::fillCache starting                     decoder 11 status = Ready
+ImageCache::fillCache                              decoder 11 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 11 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 12 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 12
+ImageCache::fillCache starting                     decoder 12 status = Ready
+ImageCache::fillCache                              decoder 12 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 12 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 13 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 13
+ImageCache::fillCache starting                     decoder 13 status = Ready
+ImageCache::fillCache                              decoder 13 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 13 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 14 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 14
+ImageCache::fillCache starting                     decoder 14 status = Ready
+ImageCache::fillCache                              decoder 14 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 14 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 15 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 15
+ImageCache::fillCache starting                     decoder 15 status = Ready
+ImageCache::fillCache                              decoder 15 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 15 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 16 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 16
+ImageCache::fillCache starting                     decoder 16 status = Ready
+ImageCache::fillCache                              decoder 16 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 16 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 17 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 17
+ImageCache::fillCache starting                     decoder 17 status = Ready
+ImageCache::fillCache                              decoder 17 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 17 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 18 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 18
+ImageCache::fillCache starting                     decoder 18 status = Ready
+ImageCache::fillCache                              decoder 18 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 18 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 19 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 19
+ImageCache::fillCache starting                     decoder 19 status = Ready
+ImageCache::fillCache                              decoder 19 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 19 row = 0    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::fillCache starting                     decoder 0
+
+ImageCache::fillCache                              returning decoder 0 row = 0 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 0    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
+ImageCache::fillCache cache                        decoder 0  row = 0    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
+ImageCache::cacheImage                             decoder 0  row = 0    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
+ImageCache::getImCacheSize                         cache size = 0
+ImageCache::fillCache dispatch                     decoder 0  row = 1    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 1    decoder status = Ready /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 1 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 1 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 1    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
+ImageCache::fillCache cache                        decoder 0  row = 1    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
+ImageCache::cacheImage                             decoder 0  row = 1    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
+ImageCache::getImCacheSize                         cache size = 5.49316
+ImageCache::fillCache dispatch                     decoder 0  row = 2    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 2    decoder status = Ready /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 2 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
+
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 2 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 2    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
+ImageCache::fillCache cache                        decoder 0  row = 2    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
+ImageCache::cacheImage                             decoder 0  row = 2    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
+ImageCache::getImCacheSize                         cache size = 10.9863
+ImageCache::fillCache dispatch                     decoder 0  row = 3    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 3    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 3 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 3 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 3    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
+ImageCache::fillCache cache                        decoder 0  row = 3    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
+ImageCache::cacheImage                             decoder 0  row = 3    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
+ImageCache::getImCacheSize                         cache size = 16.4795
+ImageCache::fillCache dispatch                     decoder 0  row = 4    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 4    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 4 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 4 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 4    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
+ImageCache::fillCache cache                        decoder 0  row = 4    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
+ImageCache::cacheImage                             decoder 0  row = 4    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
+ImageCache::getImCacheSize                         cache size = 21.9727
+ImageCache::fillCache dispatch                     decoder 0  row = 5    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 5    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 5 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 5 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 5    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
+ImageCache::fillCache cache                        decoder 0  row = 5    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
+ImageCache::cacheImage                             decoder 0  row = 5    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
+ImageCache::getImCacheSize                         cache size = 27.4658
+ImageCache::fillCache dispatch                     decoder 0  row = 6    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 6    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 6 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 6 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 6    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
+ImageCache::fillCache cache                        decoder 0  row = 6    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
+ImageCache::cacheImage                             decoder 0  row = 6    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
+ImageCache::getImCacheSize                         cache size = 32.959
+ImageCache::fillCache dispatch                     decoder 0  row = 7    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 7    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 7 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 7 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 7    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
+ImageCache::fillCache cache                        decoder 0  row = 7    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
+ImageCache::cacheImage                             decoder 0  row = 7    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
+ImageCache::getImCacheSize                         cache size = 38.4521
+ImageCache::fillCache dispatch                     decoder 0  row = 8    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 8    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 8 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 8 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 8    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
+ImageCache::fillCache cache                        decoder 0  row = 8    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
+ImageCache::cacheImage                             decoder 0  row = 8    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
+ImageCache::getImCacheSize                         cache size = 43.9453
+ImageCache::fillCache dispatch                     decoder 0  row = 9    decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 9    decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 9 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 9 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 9    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
+ImageCache::fillCache cache                        decoder 0  row = 9    decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
+ImageCache::cacheImage                             decoder 0  row = 9    G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
+ImageCache::getImCacheSize                         cache size = 49.4385
+ImageCache::fillCache dispatch                     decoder 0  row = 10   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 10   decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 10 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 10 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 10   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
+ImageCache::fillCache cache                        decoder 0  row = 10   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
+ImageCache::cacheImage                             decoder 0  row = 10   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
+ImageCache::getImCacheSize                         cache size = 54.9316
+ImageCache::fillCache dispatch                     decoder 0  row = 11   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 11   decoder status = Ready /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 11 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 11 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 11   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
+ImageCache::fillCache cache                        decoder 0  row = 11   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
+ImageCache::cacheImage                             decoder 0  row = 11   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
+ImageCache::getImCacheSize                         cache size = 60.4248
+ImageCache::fillCache dispatch                     decoder 0  row = 12   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 12   decoder status = Ready /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 12 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 12 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 12   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
+ImageCache::fillCache cache                        decoder 0  row = 12   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
+ImageCache::cacheImage                             decoder 0  row = 12   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
+ImageCache::getImCacheSize                         cache size = 65.918
+ImageCache::fillCache dispatch                     decoder 0  row = 13   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 13   decoder status = Ready /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 13 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 13 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 13   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
+ImageCache::fillCache cache                        decoder 0  row = 13   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
+ImageCache::cacheImage                             decoder 0  row = 13   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
+ImageCache::getImCacheSize                         cache size = 71.4111
+ImageCache::fillCache dispatch                     decoder 0  row = 14   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 14   decoder status = Ready /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 14 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 14 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 14   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
+ImageCache::fillCache cache                        decoder 0  row = 14   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
+ImageCache::cacheImage                             decoder 0  row = 14   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
+ImageCache::getImCacheSize                         cache size = 76.9043
+ImageCache::fillCache dispatch                     decoder 0  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = true isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = true
+ImageCache::fillCache okDecodeNextImage            decoder 0  row = 15   decoder status = Ready /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
+ImageCache::decodeNextImage                        decoder 0  sfRow = 15 threadId = 0 isMetadata = true isCaching = true isCached = false attempts = 1 status = 0 /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
+ImageCache::setCurrentPosition 0
+ImageCache::setCurrentPosition                     sfRow = 0 dm->rowFromPath(fPath) = 0 /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg src = MW::fileSelectionChange isRunning = false
+ImageCache::run
+ImageCache::memChk
+ImageCache::updateTargets                          current position = 0 total = 39
+ImageCache::setDirection
+ImageCache::getImCacheSize                         cache size = 82.3975
+ImageCache::setTargetRange                         current position = 0
+ImageCache::trimImCache                            toCache: QList()
+ImageCache::launchDecoders                         Decoder = 0 rowCount = 39 status = Done cacheUpToDate = false isRunning = true
+ImageCache::launchDecoders                         Decoder = 1 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 1
+ImageCache::fillCache starting                     decoder 1  status = Ready
+ImageCache::fillCache                              decoder 1  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 1  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 2 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 2
+ImageCache::fillCache starting                     decoder 2  status = Ready
+ImageCache::fillCache                              decoder 2  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 2  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 3 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 3
+ImageCache::fillCache starting                     decoder 3  status = Ready
+ImageCache::fillCache                              decoder 3  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 3  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 4 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 4
+ImageCache::fillCache starting                     decoder 4  status = Ready
+ImageCache::fillCache                              decoder 4  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 4  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 5 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 5
+ImageCache::fillCache starting                     decoder 5  status = Ready
+ImageCache::fillCache                              decoder 5  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 5  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 6 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 6
+ImageCache::fillCache starting                     decoder 6  status = Ready
+ImageCache::fillCache                              decoder 6  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 6  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 7 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 7
+ImageCache::fillCache starting                     decoder 7  status = Ready
+ImageCache::fillCache                              decoder 7  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 7  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 8 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 8
+ImageCache::fillCache starting                     decoder 8  status = Ready
+ImageCache::fillCache                              decoder 8  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 8  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 9 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 9
+ImageCache::fillCache starting                     decoder 9  status = Ready
+ImageCache::fillCache                              decoder 9  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 9  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 10 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 10
+ImageCache::fillCache starting                     decoder 10 status = Ready
+ImageCache::fillCache                              decoder 10 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 10 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 11 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 11
+ImageCache::fillCache starting                     decoder 11 status = Ready
+ImageCache::fillCache                              decoder 11 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 11 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 12 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 12
+ImageCache::fillCache starting                     decoder 12 status = Ready
+ImageCache::fillCache                              decoder 12 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 12 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 13 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 13
+ImageCache::fillCache starting                     decoder 13 status = Ready
+ImageCache::fillCache                              decoder 13 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 13 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 14 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 14
+ImageCache::fillCache starting                     decoder 14 status = Ready
+ImageCache::fillCache                              decoder 14 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 14 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 15 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 15
+ImageCache::fillCache starting                     decoder 15 status = Ready
+ImageCache::fillCache                              decoder 15 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 15 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 16 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 16
+ImageCache::fillCache starting                     decoder 16 status = Ready
+ImageCache::fillCache                              decoder 16 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 16 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 17 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 17
+ImageCache::fillCache starting                     decoder 17 status = Ready
+ImageCache::fillCache                              decoder 17 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 17 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 18 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 18
+ImageCache::fillCache starting                     decoder 18 status = Ready
+ImageCache::fillCache                              decoder 18 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 18 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 19 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 19
+ImageCache::fillCache starting                     decoder 19 status = Ready
+ImageCache::fillCache                              decoder 19 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 19 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache                              returning decoder 0 row = 15 status = 3 status = Done errMsg =  isRunning = false
+ImageCache::fillCache dispatch                     decoder 0  row = 15   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
+ImageCache::fillCache cache                        decoder 0  row = 15   decoder isRunning = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
+ImageCache::cacheImage                             decoder 0  row = 15   G::mode = Loupe errMsg =  decoder[id]->fPath = /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
+ImageCache::getImCacheSize                         cache size = 82.3975
+ImageCache::fillCache dispatch                     decoder 0  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::fillCache make final check             retry = 2 ImageCache isRunning = false dm->sf->rowCount() = 39 cacheUpToDate() = false
+ImageCache::fillCache Final check                  retry = 3 cacheUpToDate = false  restart ImageCache
+ImageCache::fillCache Finished                     decoder 0  row = 15   allDecodersDone = true cacheUpToDate = true: decoder set to Ready state
+ImageCache::run
+ImageCache::memChk
+ImageCache::updateTargets                          current position = 0 total = 39
+ImageCache::setDirection
+ImageCache::getImCacheSize                         cache size = 87.8906
+ImageCache::setTargetRange                         current position = 0
+ImageCache::trimImCache                            toCache: QList()
+ImageCache::launchDecoders                         Decoder = 0 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 0
+ImageCache::fillCache starting                     decoder 0  status = Ready
+ImageCache::fillCache                              decoder 0  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 0  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::fillCache make final check             retry = 3 ImageCache isRunning = true dm->sf->rowCount() = 39 cacheUpToDate() = false
+ImageCache::fillCache Final check                  retry = 4 cacheUpToDate = false  restart ImageCache
+ImageCache::launchDecoders                         Decoder = 1 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 1
+ImageCache::fillCache starting                     decoder 1  status = Ready
+ImageCache::fillCache                              decoder 1  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 1  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 2 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 2
+ImageCache::fillCache starting                     decoder 2  status = Ready
+ImageCache::fillCache                              decoder 2  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 2  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 3 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 3
+ImageCache::fillCache starting                     decoder 3  status = Ready
+ImageCache::fillCache                              decoder 3  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 3  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 4 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 4
+ImageCache::fillCache starting                     decoder 4  status = Ready
+ImageCache::fillCache                              decoder 4  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 4  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 5 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 5
+ImageCache::fillCache starting                     decoder 5  status = Ready
+ImageCache::fillCache                              decoder 5  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 5  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 6 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 6
+ImageCache::fillCache starting                     decoder 6  status = Ready
+ImageCache::fillCache                              decoder 6  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 6  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 7 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 7
+ImageCache::fillCache starting                     decoder 7  status = Ready
+ImageCache::fillCache                              decoder 7  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 7  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 8 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 8
+ImageCache::fillCache starting                     decoder 8  status = Ready
+ImageCache::fillCache                              decoder 8  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 8  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 9 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 9
+ImageCache::fillCache starting                     decoder 9  status = Ready
+ImageCache::fillCache                              decoder 9  status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 9  row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 10 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 10
+ImageCache::fillCache starting                     decoder 10 status = Ready
+ImageCache::fillCache                              decoder 10 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 10 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 11 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 11
+ImageCache::fillCache starting                     decoder 11 status = Ready
+ImageCache::fillCache                              decoder 11 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 11 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 12 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 12
+ImageCache::fillCache starting                     decoder 12 status = Ready
+ImageCache::fillCache                              decoder 12 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 12 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 13 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 13
+ImageCache::fillCache starting                     decoder 13 status = Ready
+ImageCache::fillCache                              decoder 13 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 13 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 14 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 14
+ImageCache::fillCache starting                     decoder 14 status = Ready
+ImageCache::fillCache                              decoder 14 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 14 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 15 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 15
+ImageCache::fillCache starting                     decoder 15 status = Ready
+ImageCache::fillCache                              decoder 15 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 15 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 16 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 16
+ImageCache::fillCache starting                     decoder 16 status = Ready
+ImageCache::fillCache                              decoder 16 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 16 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 17 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 17
+ImageCache::fillCache starting                     decoder 17 status = Ready
+ImageCache::fillCache                              decoder 17 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 17 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 18 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 18
+ImageCache::fillCache starting                     decoder 18 status = Ready
+ImageCache::fillCache                              decoder 18 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 18 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false
+ImageCache::launchDecoders                         Decoder = 19 rowCount = 39 status = Ready cacheUpToDate = false isRunning = true
+ImageCache::fillCache starting                     decoder 19
+ImageCache::fillCache starting                     decoder 19 status = Ready
+ImageCache::fillCache                              decoder 19 status 0 started (cacheKey == -1)
+ImageCache::fillCache dispatch                     decoder 19 row = 15   decoder status = Ready abort = false isCacheUpToDate = false isNextToCache = false isValidKey(icd->cache.toCacheKey) = true okDecodeNextImage = false

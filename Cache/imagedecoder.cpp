@@ -475,6 +475,7 @@ void ImageDecoder::run()
     if (load()) {
         if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (isDebug)
+        {
         qDebug().noquote()
             << "ImageDecoder::run                    "
             << "decoder" <<  QString::number(threadId).leftJustified(2)
@@ -482,6 +483,7 @@ void ImageDecoder::run()
             << "DecoderToUse:" << decodersText.at(decoderToUse)
             << "ms =" << t.elapsed()
             << fPath;
+        }
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         status = Status::Success;
