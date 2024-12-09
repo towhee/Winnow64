@@ -1310,11 +1310,12 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     isLeftMouseBtnPressed = false;
 
     // prevent zooming if release is outside the ImageView area
+    /*
     qDebug() << "ImageView::mouseReleaseEvent"
              << "viewport()->rect() =" << viewport()->rect()
              << "event->pos() =" << event->pos()
              << "viewport()->rect().contains(event->pos()) =" << viewport()->rect().contains(event->pos())
-        ;
+        ; //*/
     if (!viewport()->rect().contains(event->pos())) return;
 
     // zoom > zoomFit (set in scale)

@@ -351,7 +351,7 @@ void IconViewDelegate::paint(QPainter *painter,
     if (index.data(Qt::DecorationRole).isNull()) return;
 
     painter->save();
-    /* debug
+    // /* debug
     qDebug() << "IconViewDelegate::paint  "
              << "row =" << index.row()
              << "index =" << index
@@ -399,7 +399,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isPicked = pickStatus == "Picked";
     bool isRejected = pickStatus == "Rejected";
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
-    bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
+    bool isCached = index.model()->index(row, G::IsCachedColumn).data(Qt::EditRole).toBool();
     bool isMissingThumb = index.model()->index(row, G::MissingThumbColumn).data().toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();

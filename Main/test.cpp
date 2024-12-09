@@ -72,8 +72,9 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         // next image
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
+        /*
         qDebug() << "slideCount =" << slideCount << "dm->currentSfRow =" << dm->currentSfRow
-                 << "isForward =" << isForward << "isStressTest =" << isStressTest;
+                 << "isForward =" << isForward << "isStressTest =" << isStressTest; //*/
         if (isForward) sel->next();
         else sel->prev();
     }

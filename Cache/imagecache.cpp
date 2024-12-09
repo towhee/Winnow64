@@ -630,14 +630,14 @@ bool ImageCache::nextToCache(int id)
             continue;
         }
 
-        // // max attempts exceeded
-        // if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
-        //     if (debugThis){
-        //         msg = "row " + sRow + " maxAttemptsToCacheImage exceeded";
-        //         sDebug(sId, msg);
-        //     }
-        //     continue;
-        // }
+        // max attempts exceeded
+        if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
+            if (debugThis){
+                msg = "row " + sRow + " maxAttemptsToCacheImage exceeded";
+                sDebug(sId, msg);
+            }
+            continue;
+        }
 
         // isCaching and not the same decoder
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool() &&
@@ -1001,7 +1001,7 @@ QString ImageCache::reportCacheItemList(QString title)
                 << "Cached"
                 << "Status"
                 << "imCached"
-                << "dmCached"
+                // << "dmCached"
                 << "Metadata"
                 << "Update"
                 << "Video"
@@ -1042,7 +1042,7 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::IsCachedColumn).data().toBool() ? "true" : "false")
             << rptStatus[dm->sf->index(sfRow, G::DecoderReturnStatusColumn).data().toInt()]
             << (icd->imCache.contains(fPath) ? "true" : "false")
-            << (dm->sf->index(sfRow, 0).data(G::UserRoles::CachedRole).toBool() ? "true" : "false")
+            // << (dm->sf->index(sfRow, 0).data(G::UserRoles::CachedRole).toBool() ? "true" : "false")
             << (dm->index(sfRow, G::MetadataAttemptedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::MetadataLoadedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
@@ -1576,6 +1576,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
     Do not cache video files, but do show them as cached for the cache status display.
 */
+    {
     QString src = "ImageCache::cacheImage";
     QString comment = "decoder " + QString::number(id).leftJustified(3) +
                       "row = " + QString::number(cacheKey).leftJustified(5) +
@@ -1593,13 +1594,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
                << "decoder[id]->fPath =" << decoder[id]->fPath
                 ;
     }
+    }
 
-    // if (decoder[id]->status == ImageDecoder::Status::Video) return;
-
+    QString src = "ImageCache::cacheImage";
     gMutex.lock();
 
     // check if null image
     if (decoder[id]->image.width() <= 0) {
+        gMutex.unlock();
         QString msg = "Decoder returned a null image.";
         G::issue("Warning", msg, "ImageCache::cacheImage", cacheKey, decoder[id]->fPath);
         return;
@@ -1615,7 +1617,8 @@ void ImageCache::cacheImage(int id, int cacheKey)
     dm->setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
     dm->setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
     // set datamodel isCached = true (combine with above)
-    emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
+    // emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
+    emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // reset attempts
     dm->setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
@@ -1787,7 +1790,7 @@ void ImageCache::fillCache(int id)
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
     }
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         if (cacheKey == -1) {
             QString fun = "ImageCache::fillCache";
@@ -1928,6 +1931,8 @@ void ImageCache::fillCache(int id)
 
         if (allDecodersDone)
         {
+            if (debugCaching)
+            {
             QString fun = "ImageCache::fillCache Finished";
             if (cacheKey != -1)
                 qDebug().noquote()
@@ -1937,6 +1942,7 @@ void ImageCache::fillCache(int id)
                     << "allDecodersDone =" << QVariant(allDecodersDone).toString()
                     // << "cacheUpToDate = true: decoder set to Ready state"
                     ;
+            }
         }
     }
 }
@@ -1996,11 +2002,14 @@ void ImageCache::launchDecoders(QString src)
                           "status = " + decoder[id]->statusText.at(decoder[id]->status)
                 ;
             log("launchDecoders launch:", msg);
+            if (debugCaching)
+            {
             qDebug().noquote()
                 << fun.leftJustified(col0Width, ' ')
                 << "Decoder" << QVariant(id).toString().leftJustified(3)
                 << "calling fillCache"
                 ;
+            }
 
             fillCache(id);
         }

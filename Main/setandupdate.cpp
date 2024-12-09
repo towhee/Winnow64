@@ -526,7 +526,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::updateCachedStatus", msg);
     }
-    /*
+    // /*
     qDebug() << "MW::updateCachedStatus"
              << "sfRow =" << sfRow
              << "isCached =" << isCached
@@ -538,10 +538,11 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         return;
     }
 
-    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    QModelIndex sfIdx = dm->sf->index(sfRow, G::IsCachedColumn);
+    QModelIndex sfIdx0 = dm->sf->index(sfRow, 0);
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
-        emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);
+        emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus");
         if (isCached) {
             if (sfIdx.row() == dm->currentSfRow) {
                 if (G::isFlowLogger) qDebug() << "MW::updateCachedStatus", fPath;
@@ -550,8 +551,8 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
                 centralLayout->setCurrentIndex(prevCentralView);
             }
         }
-        thumbView->refreshThumb(sfIdx, G::CachedRole);
-        gridView->refreshThumb(sfIdx, G::CachedRole);
+        thumbView->refreshThumb(sfIdx0);
+        gridView->refreshThumb(sfIdx0);
     }
     else {
         QString msg = "Invalid index.";

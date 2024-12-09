@@ -10,7 +10,6 @@ The data is structured in columns:
     ● Path:             from QFileInfoList  G::PathRole (absolutePath)
                         from QFileInfoList  Qt::ToolTipRole
                                             G::IconRectRole (icon)
-                                            G::CachedRole
                                             G::CachingIcon
                                             G::DupIsJpgRole
                                             G::DupOtherIdxRole
@@ -126,7 +125,7 @@ Code examples for model:
     // edit an isCached role in model based on file path
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
     QModelIndex idx = idxList[0];
-    dm->sf->setData(idx, iscached, G::CachedRole);
+    dm->sf->setData->(index(row, G::IsCachedColumn), isCached));
 
     // file path for current index (primary selection)
     fPath = thumbView->currentIndex().data(G::PathRole).toString();
@@ -271,7 +270,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCBuf")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSpaceColumn, new QStandardItem("ICCSpace")); horizontalHeaderItem(G::ICCSpaceColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CacheSizeColumn, new QStandardItem("CacheSize")); horizontalHeaderItem(G::CacheSizeColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IsTargetColumn, new QStandardItem("IsTarget")); horizontalHeaderItem(G::IsTargetColumn)->setData(true, G::GeekRole);
+    // setHorizontalHeaderItem(G::IsTargetColumn, new QStandardItem("IsTarget")); horizontalHeaderItem(G::IsTargetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsCachingColumn, new QStandardItem("IsCaching")); horizontalHeaderItem(G::IsCachingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsCachedColumn, new QStandardItem("IsCached")); horizontalHeaderItem(G::IsCachedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::AttemptsColumn, new QStandardItem("Attempts")); horizontalHeaderItem(G::AttemptsColumn)->setData(true, G::GeekRole);
@@ -1058,7 +1057,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     if (showThumbNailSymbolHelp) tip += thumbnailHelp;
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
-    setData(index(row, G::PathColumn), false, G::CachedRole);
+    setData(index(row, G::IsCachedColumn), false);
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -1669,7 +1668,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
     // image cache helpers
-    setData(index(row, G::IsTargetColumn), false);
+    // setData(index(row, G::IsTargetColumn), false);
     setData(index(row, G::IsCachingColumn), false);
     setData(index(row, G::IsCachedColumn), false);
     setData(index(row, G::AttemptsColumn), 0);
@@ -2938,7 +2937,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
     rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
     rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
-    rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, 0).data(G::CachedRole));
+    rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("isMetadataAttempted", 25) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
