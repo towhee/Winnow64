@@ -80,7 +80,7 @@ void MW::filterChange(QString source)
     dm->newInstance();
 
     // stop ImageCache
-    imageCacheThread->stop("MW::filterChange");
+    imageCache->stop("MW::filterChange");
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
@@ -150,7 +150,7 @@ void MW::filterChange(QString source)
 
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
-    imageCacheThread->rebuildImageCacheParameters(fPath, "FilterChange");
+    imageCache->rebuildImageCacheParameters(fPath, "FilterChange");
 
     // select after filtration
     if (newSelectReqd) {
@@ -469,7 +469,7 @@ void MW::sortChange(QString source)
     // sync image cache with datamodel filtered proxy unless sort has been triggered by a
     // filter change, which will do its own rebuildImageCacheParameters
     if (source != "filterChange")
-        imageCacheThread->rebuildImageCacheParameters(fPath, "SortChange");
+        imageCache->rebuildImageCacheParameters(fPath, "SortChange");
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.

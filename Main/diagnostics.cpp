@@ -22,7 +22,7 @@ void MW::reportState(QString title)
 //        << "\nturnOffEmbellish                       " << turnOffEmbellish
 
         << "\nTHREADS:"
-        << "\nImageCache   isRunning                 " << imageCacheThread->isRunning()
+        << "\nImageCache   isRunning                 " << imageCache->isRunning()
         << "\nBuildFilters isRunning                 " << buildFilters->isRunning()
 
         << "\nPOSITION:"
@@ -276,7 +276,7 @@ void MW::diagnosticsMetadata() {
 }
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics(), "Winnow Diagnostics: MetaRead2");}
-void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics(), "Winnow Diagnostics: ImageCache");}
+void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
 void MW::diagnosticsFilters() {} // dummy for now

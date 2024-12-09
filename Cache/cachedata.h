@@ -13,8 +13,7 @@ public:
 
     QMutex mutex;
 
-    // concurrent image cache hash
-    // CTSL::HashMap<QString, QImage> imCache;
+    // image cache hash
     QHash<QString, QImage> imCache;
 
     // cache parameters in struct (used in ImageCache and MainWindow)

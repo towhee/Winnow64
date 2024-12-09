@@ -147,7 +147,7 @@ void MW::renameSelectedFiles()
         }
     }
 
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCacheThread);
+    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCache);
     rf.exec();
     // may have renamed current image
     setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
@@ -220,7 +220,7 @@ void MW::insertFiles(QStringList fPaths)
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);
             dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
-            imageCacheThread->removeCachedImage(fPath);
+            imageCache->removeCachedImage(fPath);
             G::allMetadataLoaded = false;
             G::iconChunkLoaded = false;
         }
@@ -397,7 +397,7 @@ void MW::deleteFiles(QStringList paths)
     metaReadThread->cleanupIcons();
 
     // remove deleted files from imageCache
-    imageCacheThread->removeFromCache(sldm);
+    imageCache->removeFromCache(sldm);
 
     G::ignoreScrollSignal = false;
 

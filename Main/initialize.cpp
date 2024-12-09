@@ -395,7 +395,7 @@ void MW::createMDCache()
 #ifdef METAREAD2
     // MetaRead2
     // Runs multiple reader threads to load metadata and thumbnails
-    metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCacheThread);
+    metaReadThread = new MetaRead2(this, dm, metadata, frameDecoder, imageCache);
     // metaReadThread->iconChunkSize = dm->iconChunkSize;
     // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
@@ -427,7 +427,7 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead2::setMsToRead, dm, &DataModel::setValue);
     // reset imagecache targets after folder added or removed from datamodel
     connect(metaReadThread, &MetaRead2::dispatchIsFinished,
-            imageCacheThread, &ImageCache::datamodelFolderCountChange);
+            imageCache, &ImageCache::datamodelFolderCountChange);
 
     // not being used:
     // read metadata
@@ -451,7 +451,7 @@ void MW::createImageCache()
     */
 
 //    icd = new ImageCacheData(this);
-    imageCacheThread = new ImageCache(this, icd, dm);
+    imageCache = new ImageCache(this, icd, dm);
 
     /* Image caching is triggered from the metadataReadThread to avoid the two threads
        running simultaneously and colliding */
@@ -464,39 +464,39 @@ void MW::createImageCache()
 //    connect(metadataCacheThread, &MetadataCache::loadImageCache,
 //            this, &MW::loadImageCacheForNewFolder);
 
-    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+    connect(imageCache, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // signal to stop the ImageCache
-    connect(this, &MW::abortImageCache, imageCacheThread, &ImageCache::stop);
+    connect(this, &MW::abortImageCache, imageCache, &ImageCache::stop);
 
     // // signal stopped when abort completed
     // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
 
     // Update the cache status progress bar when changed in ImageCache
-    connect(imageCacheThread, &ImageCache::showCacheStatus,
+    connect(imageCache, &ImageCache::showCacheStatus,
             this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
-    connect(imageCacheThread, &ImageCache::updateCacheOnThumbs,
+    connect(imageCache, &ImageCache::updateCacheOnThumbs,
             this, &MW::updateCachedStatus);
 
     // Signal from ImageCache::run() update central view
-    connect(imageCacheThread, &ImageCache::imageCachePrevCentralView,
+    connect(imageCache, &ImageCache::imageCachePrevCentralView,
             this, &MW::imageCachePrevCentralView);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
-            imageCacheThread, &ImageCache::setCurrentPosition);
+            imageCache, &ImageCache::setCurrentPosition);
 
     // Send message to setCentralMsg
-    connect(imageCacheThread, &ImageCache::centralMsg,
+    connect(imageCache, &ImageCache::centralMsg,
             this, &MW::setCentralMessage);
 
     // set values in the datamodel
-    connect(imageCacheThread, &ImageCache::setValue, dm, &DataModel::setValue);
-    connect(imageCacheThread, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
-    connect(imageCacheThread, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
+    connect(imageCache, &ImageCache::setValue, dm, &DataModel::setValue);
+    connect(imageCache, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
+    connect(imageCache, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 
     // // start image cache
     // connect(infoView, &InfoView::setCurrentPosition,
@@ -731,7 +731,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
     connect(imageView, &ImageView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
-    connect(imageCacheThread, &ImageCache::loadImage, imageView, &ImageView::loadImage);
+    connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
 void MW::createCompareView()
