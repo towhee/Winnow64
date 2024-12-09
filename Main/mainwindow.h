@@ -1113,7 +1113,7 @@ private:
     #ifdef METAREAD2
     MetaRead2 *metaReadThread;
     #endif
-    ImageCache *imageCacheThread;
+    ImageCache *imageCache;
     FrameDecoder *frameDecoder;
 
     Thumb *thumb;

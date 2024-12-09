@@ -19,7 +19,7 @@ void MW::slideShow()
         cacheProgressBar->setVisible(true);
         // change to ImageCache
         if (G::useImageCache)
-            imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::slideShow");
+            imageCache->setCurrentPosition(dm->currentFilePath, "MW::slideShow");
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);

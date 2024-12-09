@@ -207,7 +207,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setImageCacheSize(v.toString());
         mw->setImageCacheParameters();
 
-        int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
+        int memAvail = mw->imageCache->getImCacheSize() + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);

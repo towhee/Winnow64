@@ -328,9 +328,9 @@ void MW::resortImageCache()
     if (G::isLogger) G::log("MW::resortImageCache");
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
-    imageCacheThread->rebuildImageCacheParameters(currentFilePath, "MW::resortImageCache");
+    imageCache->rebuildImageCacheParameters(currentFilePath, "MW::resortImageCache");
     // change to ImageCache
-    imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::resortImageCache");
+    imageCache->setCurrentPosition(dm->currentFilePath, "MW::resortImageCache");
 //    emit setImageCachePosition(dm->currentFilePath);
 }
 
@@ -474,7 +474,7 @@ void MW::toggleColorManage(Tog n)
         updateCachedStatus(fPath, false, "MW::toggleColorManage");
     }
     // reload image cache
-    imageCacheThread->colorManageChange();
+    imageCache->colorManageChange();
 }
 
 void MW::toggleImageCacheStrategy()

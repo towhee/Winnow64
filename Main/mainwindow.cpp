@@ -899,9 +899,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
         G::popUp->reset();
         // end stress test
-        if (isStressTest) {isStressTest = false;
-            // return;
-        }
+        if (isStressTest) isStressTest = false;
         // stop loading a new folder
         else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
@@ -2819,13 +2817,13 @@ bool MW::stop(QString src)
     }
     G::t.restart();
 
-    imageCacheThread->stop("MW::stop");
+    imageCache->stop("MW::stop");
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
     if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop imageCacheThread:    "
-                 << "isRunning =" << (imageCacheThread->isRunning() ? "true " : "false")
+                 << "isRunning =" << (imageCache->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
 
     G::t.restart();
@@ -3228,7 +3226,7 @@ void MW::loadFolder(QString folderPath)
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
     // if (reset(src + QString::number(count++))) return;
-    imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
+    imageCache->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
 
     // no sorting or filtering until all metadata loaded
@@ -3366,7 +3364,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
         //          << "Remove  "
         //          << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
 
-        imageCacheThread->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
+        imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
     }
 }
 
@@ -3690,7 +3688,7 @@ void MW::updateImageCacheStatus(QString instruction,
             + " of "
             + QString::number(double(maxMB)/1024,'f',1)
             + "GB ("
-            + QString::number(imageCacheThread->decoderCount)
+            + QString::number(imageCache->decoderCount)
             + " threads)"
             ;
     if (G::useInfoView) {
@@ -4051,14 +4049,14 @@ void MW::setImageCacheParameters()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    imageCacheThread->cacheSizeChange();
+    imageCache->cacheSizeChange();
 
     bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
-    imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
+    imageCache->updateImageCacheParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
 
     // set position in image cache
     if (dm->currentFilePath.length() && G::useImageCache)
-        imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
+        imageCache->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()
@@ -6115,7 +6113,7 @@ void MW::generateMeanStack()
         int sfRow = dm->rowFromPath(fPath);
         qDebug() << "MW::generateMeanStack" << sfRow << dmRow << fPath;
         // metadataCacheThread->loadIcon(sfRow);
-        imageCacheThread->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
+        imageCache->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
         sel->setCurrentPath(fPath);
         // update FSTree image count
         fsTree->refreshModel();

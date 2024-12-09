@@ -45,6 +45,7 @@ public:
     //    void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
     bool isCached(int sfRow);
+    float getImCacheSize();         // add up total MB cached
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
     //    QSize getPreviewSize();
@@ -149,7 +150,6 @@ private:
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
-    float getImCacheSize();         // add up total MB cached
     void updateToCacheTargets();
     bool resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // All decoder status is ready
