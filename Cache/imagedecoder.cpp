@@ -68,7 +68,7 @@ void ImageDecoder::decode(int row, int instance)
     this->instance = instance;
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
-    // /*
+    /*
     qDebug().noquote()
              << "ImageDecoder::decode                              "
              << "decoder" << QVariant(threadId).toString().leftJustified(3)

@@ -332,7 +332,7 @@ CACHE STATUS
 * The flag isShowCacheProgressBar toggles cache progress updates and the visibility of the
   progress bar.
 
-* isCached is stored in datamodel as dm->sf->setData(idx, isCached, G::CachedRole)
+* isCached is stored in datamodel as dm->sf->index(row, G::IsCachedColumn).data()
 
 * Functions:
   MW::createStatusBar                       - add status labels to right side of status bar

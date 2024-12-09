@@ -37,7 +37,7 @@ namespace G
     enum UserRoles {
         PathRole = Qt::UserRole + 1,    // path to image file
         IconRectRole,                   // used in IconView
-        CachedRole,                     // used in ImageView, IconViewDelegate
+        // CachedRole,                     // used in ImageView, IconViewDelegate
         DupIsJpgRole,                   // manage raw/jpg pairs
         DupOtherIdxRole,                // manage raw/jpg pairs
         DupHideRawRole,                 // manage raw/jpg pairs
@@ -136,7 +136,7 @@ namespace G
 
         // image cache helpers
         CacheSizeColumn,
-        IsTargetColumn,
+        // IsTargetColumn,
         IsCachingColumn,
         IsCachedColumn,
         AttemptsColumn,

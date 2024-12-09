@@ -92,7 +92,7 @@ public slots:
     QModelIndex pageDownIndex(int fromRow);
 
     bool isCellVisible(int row);
-    void refreshThumb(QModelIndex idx, int role);
+    void refreshThumb(QModelIndex idx, int role = Qt::EditRole);
     void refreshThumbs();
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
                             int _labelFontSize, bool _showThumbLabels,
