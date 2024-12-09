@@ -591,7 +591,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         embelProperties->doNotEmbellish();
     }
 
-    qRegisterMetaType<ImageCacheData::Cache>();
+    // qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
     qRegisterMetaType<QSharedPointer<Issue>>("QSharedPointer<Issue>");

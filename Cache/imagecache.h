@@ -138,7 +138,6 @@ private:
     int sumStep;                // sum of step until threshold
     int directionChangeThreshold;//number of steps before change direction of cache
     int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
-    float currMB;               // the current MB consumed by the cache
     int maxMB;                  // maximum MB available to cache
     int minMB;                  // minimum MB available to cache
     int folderMB;               // MB required for all files in folder // rgh req'd?
@@ -151,11 +150,11 @@ private:
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     void updateToCacheTargets();
-    bool resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
+    bool resetInsideTargetRangeCacheState();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
-    void trimOutsideTargetRange();          // define start and end key in the target range to cache
+    void resetOutsideTargetRangeCacheState();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
@@ -165,10 +164,10 @@ private:
     void setTargetRange(int key);
 
     // int keyFromPath(QString path);
-    static bool prioritySort(const ImageCacheData::CacheItem &p1,
-                             const ImageCacheData::CacheItem &p2);
-    static bool keySort(const ImageCacheData::CacheItem &k1,
-                        const ImageCacheData::CacheItem &k2);
+    // static bool prioritySort(const ImageCacheData::CacheItem &p1,
+    //                          const ImageCacheData::CacheItem &p2);
+    // static bool keySort(const ImageCacheData::CacheItem &k1,
+    //                     const ImageCacheData::CacheItem &k2);
     // void buildImageCacheList();
     void addCacheItem(int key);
     void log(const QString function, const QString comment = "");
