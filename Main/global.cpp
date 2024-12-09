@@ -209,7 +209,7 @@ int wait(int ms)
     }
     QTime t = QTime::currentTime().addMSecs(ms);
     while (QTime::currentTime() < t) {
-        /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+        /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents, 10);
     }
     duration += ms;
     return duration;

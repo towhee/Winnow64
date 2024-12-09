@@ -896,13 +896,16 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
+
         G::popUp->reset();
         // end stress test
-        if (isStressTest) isStressTest = false;
+        if (isStressTest) {isStressTest = false;
+            // return;
+        }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded || !G::allMetadataLoaded) stop("Escape key");
+        else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
-        else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
+        // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
         else if (G::isCopyingFiles) G::stopCopyingFiles = true;
         // cancel slideshow
@@ -916,7 +919,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // abort stack operation
         else if (G::isRunningStackOperation) emit abortStackOperation();
         // stop building filters
-        else if (filters->buildingFilters) buildFilters->stop();
+        // else if (filters->buildingFilters) buildFilters->stop();
         // exit full screen mode
         else if (fullScreenAction->isChecked()) escapeFullScreen();
     }
@@ -3651,7 +3654,7 @@ void MW::loadEntireMetadataCache(QString source)
 }
 
 void MW::updateImageCacheStatus(QString instruction,
-                                ImageCacheData::Cache cache,
+                                float currMB, int maxMB, int tFirst, int tLast,
                                 QString source)
 {
 /*
@@ -3683,11 +3686,11 @@ void MW::updateImageCacheStatus(QString instruction,
                 ; //*/
 
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
-    QString cacheAmount = QString::number(double(cache.currMB)/1024,'f',1)
+    QString cacheAmount = QString::number(double(currMB)/1024,'f',1)
             + " of "
-            + QString::number(double(cache.maxMB)/1024,'f',1)
+            + QString::number(double(maxMB)/1024,'f',1)
             + "GB ("
-            + QString::number(cache.decoderCount)
+            + QString::number(imageCacheThread->decoderCount)
             + " threads)"
             ;
     if (G::useInfoView) {
@@ -3708,9 +3711,6 @@ void MW::updateImageCacheStatus(QString instruction,
     if (instruction == "Update all rows") {
         // clear progress
         cacheProgressBar->clearImageCacheProgress();
-        // target range
-        int tFirst = cache.targetFirst;
-        int tLast = cache.targetLast + 1;
         cacheProgressBar->updateImageCacheProgress(tFirst, tLast, rows,
                                          cacheProgressBar->targetColorGradient);
         // cached
