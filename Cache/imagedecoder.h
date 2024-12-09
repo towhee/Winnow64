@@ -55,7 +55,7 @@ public:
         "Ready",
         "Busy",
         "Pending",
-        "Done",
+        "Success",
         "Abort",
         "Invalid",
         "Failed",

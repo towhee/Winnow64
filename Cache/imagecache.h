@@ -81,7 +81,7 @@ signals:
     void loadImage(QString fPath, QString src);
     void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
-                         ImageCacheData::Cache cache,
+                         float currMB, int maxMB, int targetFirst, int targetLast,
                          QString source = "");
     void centralMsg(QString msg);
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
@@ -113,7 +113,6 @@ private:
     bool filterOrSortHasChanged = false;
     int maxAttemptsToCacheImage = 10;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
-    bool isCacheUpToDate = false;
     bool isFinalCheckCompleted = false;
     int fileIsOpen = ImageDecoder::Status::FileOpen;
     int inValidImage = ImageDecoder::Status::Invalid;
@@ -129,12 +128,30 @@ private:
     QList<int> toCache;
     QStringList priorityList;
 
+    int key;                    // current image
+    int prevKey;                // used to establish direction of travel
+    int toCacheKey;             // next file to cache
+    int toDecacheKey;           // next file to remove from cache
+    bool isForward;             // direction of travel for caching algorithm
+    int step;                   // difference between key and prevKey
+    int sumStep;                // sum of step until threshold
+    int directionChangeThreshold;//number of steps before change direction of cache
+    int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
+    float currMB;               // the current MB consumed by the cache
+    int maxMB;                  // maximum MB available to cache
+    int minMB;                  // minimum MB available to cache
+    int folderMB;               // MB required for all files in folder // rgh req'd?
+    int targetFirst;            // beginning of target range to cache
+    int targetLast;             // end of the target range to cache
+    // int decoderCount;           // number of separate threads used to decode images
+    bool isShowCacheStatus;     // show in app status bar
+
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     float getImCacheSize();         // add up total MB cached
-    void updateTargets();
-    void resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
+    void updateToCacheTargets();
+    bool resetCacheStateInTargetRange();       // Set IsCaching = false within current target range
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
@@ -143,7 +160,8 @@ private:
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
 
-    bool updateTarget(int sfRow, bool &isDone);
+    void updateTargets(bool dotForward, bool isAhead, int &pos,
+                       int &amount, bool &isDone, float &sumMB);
     void setTargetRange(int key);
 
     // int keyFromPath(QString path);

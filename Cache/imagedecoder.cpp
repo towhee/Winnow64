@@ -52,7 +52,7 @@ void ImageDecoder::stop()
 bool ImageDecoder::quit()
 {
     abort = false;
-    status = Status::Abort;
+    // status = Status::Abort;
     fPath = "";
     // QImage blank;
     // image = QImage();
@@ -68,10 +68,11 @@ void ImageDecoder::decode(int row, int instance)
     this->instance = instance;
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
-    /*
-    qDebug() << "ImageDecoder::decode                              "
-             << "decoder" << threadId
-             << "sfRow =" << sfRow
+    // /*
+    qDebug().noquote()
+             << "ImageDecoder::decode                              "
+             << "decoder" << QVariant(threadId).toString().leftJustified(3)
+             << "sfRow =" << QString::number(sfRow).leftJustified(4)
              << fPath; //*/
     start(QThread::LowestPriority);
 }
@@ -505,6 +506,8 @@ void ImageDecoder::run()
     /* debug
         qDebug() << "ImageDecoder::run"
                  << "Id =" << threadId
+                 << "sfRow =" << sfRow
+                 << "status =" << statusText.at(status)
                  << "decoder->fPath =" << fPath
                     ; //*/
     emit done(threadId);

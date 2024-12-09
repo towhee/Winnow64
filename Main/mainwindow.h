@@ -573,7 +573,7 @@ private slots:
                                        bool success, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateImageCacheStatus(QString instruction,
-                                ImageCacheData::Cache cache,
+                                float currMB, int maxMB, int tFirst, int tLast,
                                 QString source);
     // caching
     void loadFolder(QString folderPath);

@@ -41,8 +41,8 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
     int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
     QElapsedTimer t;
-    t.start();
     while (isStressTest) {
+        t.restart();
         // countdown time limit reached
         if (secPerFolder && t.elapsed() > msPerFolder) return;
 
@@ -57,8 +57,10 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         ++slideCount;
         if (!uturn && slideCount >= dm->sf->rowCount()) return;
 
+
         // pause
-        G::wait(msPerImage);
+        // G::wait(msPerImage);
+        while (t.elapsed() < msPerImage){qApp->processEvents();}
         qint64 msElapsed = t.elapsed();
         double seconds = msElapsed * 0.001;
 
@@ -70,6 +72,8 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
         // next image
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
+        qDebug() << "slideCount =" << slideCount << "dm->currentSfRow =" << dm->currentSfRow
+                 << "isForward =" << isForward << "isStressTest =" << isStressTest;
         if (isForward) sel->next();
         else sel->prev();
     }
@@ -191,8 +195,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-
-    // traverseFolderStressTest(50, 00, true);
+#ifdef ENABLE_DEBUG
+    //region Debugging Code
+    qDebug() << "Debug message";
+// More debug code here
+//endregion
+#endif
+    traverseFolderStressTest(25, 100, true);
     // dm->setImageCacheTargetRange(2000, true);
 
 }

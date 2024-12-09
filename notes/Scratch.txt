@@ -27,6 +27,17 @@ if (debugCaching)
 }
 
 
+QHash<QString, QImage> imCache;
+// imCache has been populated, remove out-of-range items
+
+// does this iteration look at all indexes in imCache?
+for (int key = 0; key < icd->imCache.keys().size(); key++) {
+    QString fPath = icd->imCache.keys().at(key);
+    int sfRow = dm->proxyRowFromPath(fPath);
+    if (sfRow < targetFirst || sfRow > targetLast ) {
+        icd->imCache.remove(fPath);
+    }
+}
 
 ImageCache::stop                                   src = MW::stop isRunning = false
  46,956,045 ImageCache::stop

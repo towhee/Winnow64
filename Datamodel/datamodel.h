@@ -201,8 +201,6 @@ public slots:
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     void processNextFolder();
-    void updateTarget(int row, ImageCacheData *icd, QList<int> &toCache);
-    void setImageCacheTargetRange(ImageCacheData *icd, QList<int> &toCache);
 
 private slots:
 
