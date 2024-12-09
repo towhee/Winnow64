@@ -1088,7 +1088,7 @@ private:
     DataModel *dm;
     Selection *sel;
     ImageCacheData *icd;
-    IconCacheData *iconCacheData;
+    // IconCacheData *iconCacheData;
     BuildFilters *buildFilters;
 //    QItemSelectionModel *selectionModel;
     Metadata *metadata;

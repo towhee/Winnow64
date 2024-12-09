@@ -319,20 +319,14 @@ void IconView::refreshThumb(QModelIndex idx, int role)
     }
     QVector<int> roles;
     roles.append(Qt::EditRole);
-    // roles.append(role);
     dataChanged(idx, idx, roles);
-    qDebug()
-        << "IconView::refreshThumb"
-        << "idx =" << idx
-        << "roles =" << roles
-        ;
 }
 
 void IconView::refreshThumbs() {
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
     int last = dm->sf->rowCount() - 1;
     QVector<int> roles;
-    roles.append(Qt::DecorationRole);
+    roles.append(Qt::EditRole);
     dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
 }
 

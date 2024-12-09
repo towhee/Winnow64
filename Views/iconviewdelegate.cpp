@@ -351,7 +351,7 @@ void IconViewDelegate::paint(QPainter *painter,
     if (index.data(Qt::DecorationRole).isNull()) return;
 
     painter->save();
-    // /* debug
+    /* debug
     qDebug() << "IconViewDelegate::paint  "
              << "row =" << index.row()
              << "index =" << index

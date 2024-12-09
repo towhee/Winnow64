@@ -204,7 +204,7 @@ void MW::createDataModel()
 {
     if (G::isLogger) G::log("MW::createDataModel");
     icd = new ImageCacheData(this);
-    iconCacheData = new IconCacheData(this);
+    // iconCacheData = new IconCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
     bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;

@@ -70,18 +70,19 @@ ImageCache::ImageCache(QObject *parent,
     : QThread(parent)
 {
     if (debugCaching)
+    {
         qDebug() << "ImageCache::ImageCache";
+    }
     if (debugLog) log("ImageCache");
 
-    // data is kept in ImageCacheData icd, a concurrent hash table
+    // data is kept in ImageCacheData icd, a hash table
     this->icd = icd;
     this->dm = dm;
-    // new metadata to avoid thread collisions
+    // new metadata to avoid thread collisions?
     metadata = new Metadata;
 
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
-    //decoderCount = 10;
     decoderCount = decoderCount;
     for (int id = 0; id < decoderCount; ++id) {
         ImageDecoder *d = new ImageDecoder(this, id, dm, metadata);
@@ -89,17 +90,15 @@ ImageCache::ImageCache(QObject *parent,
         decoder.append(d);
         connect(decoder[id], &ImageDecoder::done, this, &ImageCache::fillCache);
     }
-    restart = false;
     abort = false;
-    debugMultiFolders = false;
+    debugMultiFolders = false;   // rgh remove soon
     debugCaching = false;        // turn on local qDebug
-    debugLog = false;            // invoke log
+    debugLog = false;            // invoke log without G::isLogger or G::isFlowLogger
 }
 
 ImageCache::~ImageCache()
 {
     gMutex.lock();
-    //if (debugCaching) qDebug() << "ImageCache::~ImageCache";
     if (debugLog) log("~ImageCache");
     abort = true;
     condition.wakeOne();
@@ -113,8 +112,6 @@ void ImageCache::clearImageCache(bool includeList)
     log("ClearImageCache");
     gMutex.lock();
     icd->imCache.clear();
-    currMB = 0;
-    // do not clear cacheItemList if called from start slideshow
     gMutex.unlock();
     updateStatus("Clear", "ImageCache::clearImageCache");
 }
@@ -136,8 +133,7 @@ void ImageCache::stop(QString src)
             << "isRunning =" << isRunning()
             ;
     }
-    if (debugLog) log("stop", "isRunning = " + QVariant(isRunning()).toString());
-    // G::log("ImageCache::stop");
+    log("stop", "isRunning = " + QVariant(isRunning()).toString());
 
     // stop ImageCache first to prevent more decoder dispatch
     gMutex.lock();
@@ -155,24 +151,10 @@ void ImageCache::stop(QString src)
         gMutex.lock();
         condition.wakeOne();
         gMutex.unlock();
-        // wait();
+        // wait();      // rgh why not need this
     }
 
     abort = false;
-
-    // if (restart) {
-    //     qDebug().noquote()
-    //     << fun.leftJustified(col0Width, ' ')
-    //     << "isRunning =" << isRunning()
-    //     << "restart";
-    //     restart = false;
-    //     if (isRunning()) {
-    //         updateToCacheTargets();
-    //         launchDecoders(fun);
-    //     }
-    //     else start(QThread::LowestPriority);
-    // return;
-    // }
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
@@ -180,8 +162,8 @@ void ImageCache::stop(QString src)
 
 bool ImageCache::allDecodersReady()
 {
+    // rgh confirm this is right
     for (int id = 0; id < decoderCount; ++id) {
-        // if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
         if (decoder[id]->isRunning()) return false;
         if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
     }
@@ -191,18 +173,19 @@ bool ImageCache::allDecodersReady()
 float ImageCache::getImCacheSize()
 {
     // return the current size of the cache
-    //if (debugCaching) qDebug() << "ImageCache::getImCacheSize";
+    if (debugCaching) qDebug() << "ImageCache::getImCacheSize";
     if (debugLog) log("getImCacheSize");
 
     float cacheMB = 0;
-    for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
-        if (abort) break;
-        if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
-            cacheMB += dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat();
-        }
+
+    for (auto it = icd->imCache.constBegin(); it != icd->imCache.constEnd(); ++it) {
+        QString fPath = it.key();
+        int sfRow = dm->proxyRowFromPath(fPath);
+        cacheMB += dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat();
     }
 
-    if (debugCaching) {
+    if (debugCaching)
+    {
         QString fun = "ImageCache::getImCacheSize";
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
@@ -210,18 +193,6 @@ float ImageCache::getImCacheSize()
     }
 
     return cacheMB;
-}
-
-bool ImageCache::prioritySort(const ImageCacheData::CacheItem &p1,
-                              const ImageCacheData::CacheItem &p2)
-{
-    return p1.priority < p2.priority;       // sort by priority
-}
-
-bool ImageCache::keySort(const ImageCacheData::CacheItem &k1,
-                         const ImageCacheData::CacheItem &k2)
-{
-    return k1.key < k2.key;       // sort by key to return to thumbnail order
 }
 
 bool ImageCache::isValidKey(int key)
@@ -235,8 +206,7 @@ void ImageCache::updateToCacheTargets()
 /*
     Called by setCurrentPosition and fillCache.
 */
-    if (G::isFlowLogger)  G::log("ImageCache::updateTargets");
-    // log("updateTargets");
+    log("updateTargets");
 
     QString fun = "ImageCache::updateTargets";
     if (debugCaching)
@@ -247,15 +217,11 @@ void ImageCache::updateToCacheTargets()
             ;
     }
 
-    // Mutex req'd (do not remove 2023-11-13)
-    // QMutexLocker locker(&gMutex);
-
+    // rgh resolve key vs sfRow vs ...
     key = dm->currentSfRow;
     setDirection();
-    currMB = getImCacheSize();
-    // setPriorities(key);
     setTargetRange(key);
-    trimOutsideTargetRange();
+    resetOutsideTargetRangeCacheState();
     if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -265,7 +231,7 @@ void ImageCache::updateToCacheTargets()
     }
 }
 
-bool ImageCache::resetCacheStateInTargetRange()
+bool ImageCache::resetInsideTargetRangeCacheState()
 {
 /*
     Rapidly updating the cache can result in aborted decoder threads that leave
@@ -282,8 +248,7 @@ bool ImageCache::resetCacheStateInTargetRange()
             ;
     }
 
-    trimOutsideTargetRange();
-
+    // inside target range
     for (int sfRow = targetFirst; sfRow < targetLast; ++sfRow) {
         if (abort) return false;
         if (sfRow >= dm->sf->rowCount()) return false;
@@ -312,6 +277,63 @@ bool ImageCache::resetCacheStateInTargetRange()
         }
     }
     return true;
+}
+
+void ImageCache::resetOutsideTargetRangeCacheState()
+/*
+    Any images in imCache that are no longer in the target range are removed.
+*/
+{
+    QMutexLocker locker(&gMutex);
+
+    QString src = "ImageCache::trimImCache";
+
+    // trim imCache
+    auto it = icd->imCache.begin();
+    while (it != icd->imCache.end()) {
+        QString fPath = it.key();
+        int sfRow = dm->proxyRowFromPath(fPath);
+        // fPath not in datamodel if sfRow == -1
+        if (sfRow < targetFirst || sfRow > targetLast || sfRow == -1) {
+            if (debugCaching)
+            {
+                QString fun = "ImageCache::trimImCache outside target range";
+                qDebug().noquote()
+                    << fun.leftJustified(col0Width, ' ')
+                    << "sfRow =" << sfRow
+                    << "isCached =" << dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
+                    << "targetFirst =" << targetFirst
+                    << "targetLast =" << targetLast
+                    << "fPath =" << fPath
+                    ;
+            }
+            it = icd->imCache.erase(it); // Erase and move iterator forward
+            dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+            emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
+        }
+        else {
+            ++it; // Only move forward if no removal
+        }
+    }
+
+    // trim toCache
+    QMutableListIterator<int> i(toCache);
+    while (i.hasNext()) {
+        int value = i.next();
+        if (value < targetFirst || value > targetLast) {
+            i.remove();
+        }
+    }
+
+    if (debugCaching)
+    {
+        QString fun = "ImageCache::trimImCache";
+        qDebug().noquote()
+            << fun.leftJustified(col0Width, ' ')
+            << "toCache:" << toCache
+
+            ;
+    }
 }
 
 void ImageCache::setDirection()
@@ -453,63 +475,6 @@ void ImageCache::setTargetRange(int key)
     {
     qDebug() << "targetFirst =" << targetFirst << "targetLast =" << targetLast;
     qDebug() << "toCache:" << toCache;
-    }
-}
-
-void ImageCache::trimOutsideTargetRange()
-/*
-    Any images in imCache that are no longer in the target range are removed.
-*/
-{
-    QMutexLocker locker(&gMutex);
-
-    QString src = "ImageCache::trimImCache";
-
-    // trim imCache
-    auto it = icd->imCache.begin();
-    while (it != icd->imCache.end()) {
-        QString fPath = it.key();
-        int sfRow = dm->proxyRowFromPath(fPath);
-        // fPath not in datamodel if sfRow == -1
-        if (sfRow < targetFirst || sfRow > targetLast || sfRow == -1) {
-            if (debugCaching)
-            {
-                QString fun = "ImageCache::trimImCache outside target range";
-                qDebug().noquote()
-                    << fun.leftJustified(col0Width, ' ')
-                    << "sfRow =" << sfRow
-                    << "isCached =" << dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
-                    << "targetFirst =" << targetFirst
-                    << "targetLast =" << targetLast
-                    << "fPath =" << fPath
-                    ;
-            }
-            it = icd->imCache.erase(it); // Erase and move iterator forward
-            dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
-            emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
-        }
-        else {
-            ++it; // Only move forward if no removal
-        }
-    }
-
-    // trim toCache
-    QMutableListIterator<int> i(toCache);
-    while (i.hasNext()) {
-        int value = i.next();
-        if (value < targetFirst || value > targetLast) {
-            i.remove();
-        }
-    }
-
-    if (debugCaching)
-    {
-        QString fun = "ImageCache::trimImCache";
-        qDebug().noquote()
-            << fun.leftJustified(col0Width, ' ')
-            << "toCache:" << toCache
-
-            ;
     }
 }
 
@@ -801,7 +766,7 @@ void ImageCache::memChk()
     #endif
 
     // still fit cache?
-    currMB = getImCacheSize();
+    float currMB = getImCacheSize();
     float roomInCache = maxMB - currMB;
         // int roomInCache = maxMB - currMB;
     if (G::availableMemoryMB < roomInCache) {
@@ -854,6 +819,7 @@ void ImageCache::updateStatus(QString instruction, QString source)
     (unless G::showProgress == G::ShowProgress::ImageCache)
 */
 {
+    float currMB = getImCacheSize();
     emit showCacheStatus(instruction, currMB, maxMB, targetFirst, targetLast, source);
 }
 
@@ -895,11 +861,20 @@ QString ImageCache::reportCacheParameters()
     rpt << "\n";
     rpt << "isRunning                = " << (isRunning() ? "true" : "false") << "\n";
     rpt << "abort                    = " << (abort ? "true" : "false") << "\n";
-    rpt << "restart                  = " << (restart ? "true" : "false") << "\n";
 
     rpt << "\n";
     rpt << "instance                 = " << instance << "\n";
     rpt << "G::dmInstance            = " << G::dmInstance << "\n";
+
+    rpt << "\n";
+    rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
+    rpt << "currMB                   = " << getImCacheSize() << "\n";
+    rpt << "maxMB                    = " << maxMB << "\n";
+    rpt << "minMB                    = " << minMB << "\n";
+
+    rpt << "\n";
+    rpt << "decoderCount             = " << decoderCount << "\n";
+    rpt << "filterOrSortHasChanged   = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
 
     rpt << "\n";
     rpt << "key                      = " << key << "\n";
@@ -907,16 +882,8 @@ QString ImageCache::reportCacheParameters()
     rpt << "directionChangeThreshold = " << directionChangeThreshold << "\n";
     rpt << "wtAhead                  = " << wtAhead << "\n";
     rpt << "isForward                = " << (isForward ? "true" : "false") << "\n";
-    rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
-    rpt << "currMB                   = " << getImCacheSize() << "\n";
-    rpt << "maxMB                    = " << maxMB << "\n";
-    rpt << "minMB                    = " << minMB << "\n";
-    // rpt << "folderMB                 = " << folderMB << "          (if all metadata loaded)\n";
     rpt << "targetFirst              = " << targetFirst << "\n";
     rpt << "targetLast               = " << targetLast << "\n";
-    rpt << "decoderCount             = " << decoderCount << "\n";
-    rpt << "\n";
-    rpt << "filterOrSortHasChanged   = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
     rpt << "\n";
     rpt << "toCache count            = " << toCache.count() << "\n";
     rpt << "cacheUpToDate            = " << (cacheUpToDate() ? "true" : "false") << "\n";
@@ -1477,7 +1444,6 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     gMutex.lock();
     key = dm->currentSfRow;
-    restart = false;
     gMutex.unlock();
 
     // image not cached and not video
@@ -1906,12 +1872,9 @@ void ImageCache::fillCache(int id)
                         ;
                 }
                 // gMutex.lock();
-                resetCacheStateInTargetRange();
+                resetInsideTargetRangeCacheState();
+                resetOutsideTargetRangeCacheState();
                 setTargetRange(dm->currentSfRow);
-                // restart = true;
-                // stop("ImageCache::fillCache");
-                // start();
-                // launchDecoders("fillCacheFinalCheck");
                 // return;
             }
         }
