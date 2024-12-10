@@ -41,24 +41,16 @@ public:
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stop(QString src);
     void clearImageCache(bool includeList = true);
-    //    void pauseImageCache();
-    //    void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
-    bool isCached(int sfRow);
     float getImCacheSize();         // add up total MB cached
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
-    //    QSize getPreviewSize();
 
-    QString getFPath(int i);
-
-    QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
+    QString diagnostics();
     QString reportCacheParameters();
     QString reportCacheDecoders();
     QString reportCacheItemList(QString title = "");
-    QString reportCacheProgress(QString action);
-    void reportRunStatus();
     QString reportImCache();
     int col0Width = 50;
 
@@ -69,17 +61,21 @@ public:
     bool debugLog = false;
     QString source;                 // temp for debugging
 
-    //    ImageCacheData::Cache icd->cache;
-
 signals:
+    // not being used:
     void stopped(QString src);
+    // not being used:
     void setValue(QModelIndex dmIdx, QVariant value,
                   int instance, QString scr = "ImageCache",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
+    // not being used:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
+    // not being used:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
+
     void loadImage(QString fPath, QString src);
+    // not sure what this does: connects to MW::imageCachePrevCentralView in setandupdate.cpp
     void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
                          float currMB, int maxMB, int targetFirst, int targetLast,
