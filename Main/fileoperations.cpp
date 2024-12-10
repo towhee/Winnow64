@@ -208,6 +208,7 @@ void MW::insertFiles(QStringList fPaths)
     QString fPath;
     QList<int> insertedRows;
     int dmRow;
+    QString src = "MW::insertFiles";
 
     // must sort fPaths before insertion in case multiple items are appended to end of datamodel
     // fPaths.sort(Qt::CaseInsensitive);
@@ -216,11 +217,21 @@ void MW::insertFiles(QStringList fPaths)
         // replace existing image with the same name
         if (dm->isPath(fPath)) {
             dmRow = dm->rowFromPath(fPath);
+            int sfRow = dm->proxyRowFromPath(fPath);
             insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);
             dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
+            if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
+                dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+            }
+            if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
+                dm->setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+            }
+            if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt()) {
+                dm->setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), 0, instance, src);
+            }
             G::allMetadataLoaded = false;
             G::iconChunkLoaded = false;
         }

@@ -26,6 +26,7 @@ QStringList issueList;
 // Rory version (expanded cache pref)
 bool isRory = false;
 ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
+// ShowProgress showProgress = ImageCache; // None, MetaCache, ImageCache
 
 // mutex
 QWaitCondition waitCondition;
