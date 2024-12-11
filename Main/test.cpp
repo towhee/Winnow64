@@ -196,14 +196,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-#ifdef ENABLE_DEBUG
-    //region Debugging Code
-    qDebug() << "Debug message";
-// More debug code here
-//endregion
-#endif
+
     traverseFolderStressTest(25, 100, true);
-    // dm->setImageCacheTargetRange(2000, true);
+    // filters->disableAllHeaders(false);
+    // filters->expandAllFilters();
 
 }
 /*

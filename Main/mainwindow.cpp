@@ -3454,20 +3454,19 @@ void MW::loadDone()
     enableStatusBarBtns();
     if (reset(src + QString::number(count++))) return;
 
-    if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-        // qDebug() << src << "buildFilters->build()";
-        buildFilters->build();
-    }
+    // if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
+    //     // qDebug() << src << "buildFilters->build()";
+    //     buildFilters->build();
+    // }
 
     // filterChange();
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
-    // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
-    if (dm->folderList.count() > 1 && dm->isQueueEmpty()) {
-        // qDebug() << src << "dm->imageFilePathList.count() > 1";
+    qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
+    if (dm->folderList.count() >= 1 && dm->isQueueEmpty()) {
+        qDebug() << src << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
-
         buildFilters->recount();
         // filters->restore();
         filterChange("MW::loadConcurrentDone");

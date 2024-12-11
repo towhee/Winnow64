@@ -97,7 +97,7 @@ BuildFilters::BuildFilters(QObject *parent,
     this->filters = filters;
     afterAction = AfterAction::NoAfterAction;
     isReset = true;
-    debugBuildFilters = false;
+    debugBuildFilters = true;
     reportTime = false;
 }
 
@@ -166,6 +166,7 @@ void BuildFilters::build(AfterAction newAction)
             << "afterAction =" << newAction
             << "filters visible =" << filters->isVisible()
             << "filters->filtersBuilt =" << filters->filtersBuilt
+            << "filters->buildingFilters =" << filters->buildingFilters
             << "G::allMetadataLoaded =" << G::allMetadataLoaded
                ;
     }
@@ -950,6 +951,7 @@ void BuildFilters::run()
         qDebug()
             << "BuildFilters::run"
             << "action =" << action
+            << "filters->filtersBuilt =" << filters->filtersBuilt
                ;
     }
 
@@ -960,7 +962,7 @@ void BuildFilters::run()
 
     switch (action) {
     case Action::Reset:
-        if (!abort && !filters->filtersBuilt) appendUniqueItems();
+        if (!abort /*&& filters->filtersBuilt*/) appendUniqueItems();
         break;
     case Action::Update:
         if (!abort) {
