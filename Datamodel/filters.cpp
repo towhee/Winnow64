@@ -162,7 +162,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     disableAllHeaders(true);
 
-    debugFilters = false;
+    debugFilters = true;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
@@ -622,8 +622,8 @@ void Filters::disableColorAllHeaders(bool disable)
 void Filters::updateProgress(int progress)
 {
     if (G::isLogger) G::log("Filters::updateProgress");
-    if (debugFilters)
-        qDebug() << "Filters::updateProgress"
+    // if (debugFilters)
+    //     qDebug() << "Filters::updateProgress"
                     ;
     bfProgressBar->setValue(progress);
 //    if (progress < 0) {
@@ -1346,7 +1346,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight);
         item->setTextAlignment(3, Qt::AlignRight);
-        /*
+        // /*
         qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
                  << "item =" << i.value();
         //*/

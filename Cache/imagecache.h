@@ -75,6 +75,8 @@ signals:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
 
     void loadImage(QString fPath, QString src);
+
+    // IN USE:
     // not sure what this does: connects to MW::imageCachePrevCentralView in setandupdate.cpp
     void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
@@ -101,34 +103,26 @@ private:
     QMutex gMutex;
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load
-    bool restart;
     bool abort;
-    bool paused;
     int retry = 0;
     bool isInitializing;
-    bool cacheSizeHasChanged = false;
-    bool filterOrSortHasChanged = false;
+    // bool cacheSizeHasChanged = false;
+    // bool filterOrSortHasChanged = false;
     int maxAttemptsToCacheImage = 10;
-    bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
+    // bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isFinalCheckCompleted = false;
     int fileIsOpen = ImageDecoder::Status::FileOpen;
-    int inValidImage = ImageDecoder::Status::Invalid;
+    // int inValidImage = ImageDecoder::Status::Invalid;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
-    QHash<QString,int> keyFromPath;     // cache key for assigned path
-    QHash<int,QString> pathFromKey;     // path
-    QSet<int> toBeUpdated;
-    // std::list<int> toBeUpdated;
     QList<int> toCache;
-    QStringList priorityList;
 
     int key;                    // current image
     int prevKey;                // used to establish direction of travel
-    int toCacheKey;             // next file to cache
-    int toDecacheKey;           // next file to remove from cache
+    // int toCacheKey;             // next file to cache
     bool isForward;             // direction of travel for caching algorithm
     int step;                   // difference between key and prevKey
     int sumStep;                // sum of step until threshold
@@ -136,35 +130,27 @@ private:
     int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
     int maxMB;                  // maximum MB available to cache
     int minMB;                  // minimum MB available to cache
-    int folderMB;               // MB required for all files in folder // rgh req'd?
+    // int folderMB;               // MB required for all files in folder // rgh req'd?
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
-    // int decoderCount;           // number of separate threads used to decode images
     bool isShowCacheStatus;     // show in app status bar
 
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
-    void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
+    void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void updateToCacheTargets();
-    bool resetInsideTargetRangeCacheState();       // Set IsCaching = false within current target range
+    bool resetInsideTargetRangeCacheState(); // Set IsCaching = false within current target range
+    void resetOutsideTargetRangeCacheState();// define start and end key in the target range to cache
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
-    void resetOutsideTargetRangeCacheState();          // define start and end key in the target range to cache
-    bool nextToCache(int id);       // find highest priority not cached
+    int nextToCache(int id);        // find highest priority not cached
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
 
     void updateTargets(bool dotForward, bool isAhead, int &pos,
                        int &amount, bool &isDone, float &sumMB);
     void setTargetRange(int key);
-
-    // int keyFromPath(QString path);
-    // static bool prioritySort(const ImageCacheData::CacheItem &p1,
-    //                          const ImageCacheData::CacheItem &p2);
-    // static bool keySort(const ImageCacheData::CacheItem &k1,
-    //                     const ImageCacheData::CacheItem &k2);
-    // void buildImageCacheList();
     void addCacheItem(int key);
     void log(const QString function, const QString comment = "");
 
