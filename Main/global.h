@@ -136,7 +136,7 @@ namespace G
 
         // image cache helpers
         CacheSizeColumn,
-        // IsTargetColumn,
+        IsVideoColumn,
         IsCachingColumn,
         IsCachedColumn,
         AttemptsColumn,
