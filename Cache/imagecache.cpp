@@ -151,7 +151,7 @@ void ImageCache::stop(QString src)
         gMutex.lock();
         condition.wakeOne();
         gMutex.unlock();
-        // wait();      // rgh why not need this
+        wait();      // rgh why not need this
     }
 
     abort = false;
@@ -287,7 +287,7 @@ void ImageCache::resetOutsideTargetRangeCacheState()
     Any images in imCache that are no longer in the target range are removed.
 */
 {
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     QString src = "ImageCache::resetOutsideTargetRangeCacheState";
 
@@ -399,7 +399,7 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
@@ -440,9 +440,9 @@ void ImageCache::setTargetRange(int key)
                             toCache.append(aheadPos);
                         }
                         // if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
-                        isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
                     }
                 }
+                isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
             }
             else aheadDone = true;
         }
@@ -452,7 +452,7 @@ void ImageCache::setTargetRange(int key)
             // if (behindPos >= n || behindPos < 0) break;
             if (isForward ? (behindPos >= 0) : (behindPos < n)) {
                 // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
-                if (!dm->sf->index(aheadPos, G::VideoColumn).data().toBool()) {
+                if (!dm->sf->index(aheadPos, G::IsVideoColumn).data().toBool()) {
                     sumMB +=  dm->sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
                     QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
@@ -460,9 +460,9 @@ void ImageCache::setTargetRange(int key)
                             toCache.append(behindPos);
                         }
                         // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
-                        isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
                     }
                 }
+                isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
             }
             else  behindDone = true;
         }
@@ -495,7 +495,7 @@ void ImageCache::removeCachedImage(QString fPath)
             ;
     }
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     // rgh confirm this is working
     icd->imCache.remove(fPath);
@@ -581,7 +581,7 @@ int ImageCache::nextToCache(int id)
         return -1;
     }
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     if (toCache.isEmpty()) {
         if (debugThis) sDebug(sId, "toCache is empty");
@@ -625,14 +625,14 @@ int ImageCache::nextToCache(int id)
             continue;
         }
 
-        // // max attempts exceeded
-        // if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
-        //     if (debugThis){
-        //         msg = "row " + sRow + " maxAttemptsToCacheImage exceeded";
-        //         sDebug(sId, msg);
-        //     }
-        //     continue;
-        // }
+        // max attempts exceeded
+        if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
+            if (debugThis){
+                msg = "row " + sRow + " maxAttemptsToCacheImage exceeded";
+                sDebug(sId, msg);
+            }
+            continue;
+        }
 
         // isCaching and not the same decoder
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool() &&
@@ -1122,13 +1122,13 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB,
 */
     log("updateImageCacheParam");
     if (debugCaching) qDebug() << "ImageCache::updateImageCacheParam";
-    gMutex.lock();
+    // gMutex.lock();
     // rgh cache amount fix from pref to here
     maxMB = cacheSizeMB;
     minMB = cacheMinMB;
     isShowCacheStatus = isShowCacheStatus;
     wtAhead = cacheWtAhead;
-    gMutex.unlock();
+    // gMutex.unlock();
 }
 
 void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString source)
@@ -1272,12 +1272,12 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         }
     }
 
-    gMutex.lock();
+    // gMutex.lock();
     key = dm->currentSfRow;
-    gMutex.unlock();
+    // gMutex.unlock();
 
     // image not cached and not video
-    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
+    // bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
     // // not in cache, maybe loading
     // if (!icd->imCache.contains(fPath) && !isVideo) {
@@ -1319,7 +1319,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     QString src = "ImageCache::decodeNextImage";
     // log ("decodeNextImage");
 
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     if (!isValidKey(sfRow)) {
         decoder[id]->status = ImageDecoder::Status::Ready;
@@ -1392,11 +1392,10 @@ void ImageCache::cacheImage(int id, int cacheKey)
     }
 
     QString src = "ImageCache::cacheImage";
-    gMutex.lock();
+    // QMutexLocker locker(&gMutex);
 
     // check if null image
     if (decoder[id]->image.width() <= 0) {
-        gMutex.unlock();
         QString msg = "Decoder returned a null image.";
         G::issue("Warning", msg, "ImageCache::cacheImage", cacheKey, decoder[id]->fPath);
         return;
@@ -1417,8 +1416,6 @@ void ImageCache::cacheImage(int id, int cacheKey)
 
     // reset attempts rgh review re nextToCache check (not working)
     dm->setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
-
-    gMutex.unlock();
 
     // QString errMsg = dm->sf->index(cacheKey, G::DecoderErrMsgColumn).data().toString();
 

@@ -270,7 +270,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCBuf")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSpaceColumn, new QStandardItem("ICCSpace")); horizontalHeaderItem(G::ICCSpaceColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CacheSizeColumn, new QStandardItem("CacheSize")); horizontalHeaderItem(G::CacheSizeColumn)->setData(true, G::GeekRole);
-    // setHorizontalHeaderItem(G::IsTargetColumn, new QStandardItem("IsTarget")); horizontalHeaderItem(G::IsTargetColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::IsVideoColumn, new QStandardItem("IsVideo")); horizontalHeaderItem(G::IsVideoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsCachingColumn, new QStandardItem("IsCaching")); horizontalHeaderItem(G::IsCachingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsCachedColumn, new QStandardItem("IsCached")); horizontalHeaderItem(G::IsCachedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::AttemptsColumn, new QStandardItem("Attempts")); horizontalHeaderItem(G::AttemptsColumn)->setData(true, G::GeekRole);
@@ -1064,8 +1064,10 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::FolderNameColumn), folderName);
     setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
     QString s = fileInfo.suffix().toUpper();
-    setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
+    bool isVideo = metadata->videoFormats.contains(ext);
+    setData(index(row, G::VideoColumn), isVideo);
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::IsVideoColumn), isVideo);
     uint p = static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
     setData(index(row, G::PermissionsColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1675,14 +1677,16 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::DecoderIdColumn), -1);
     setData(index(row, G::DecoderReturnStatusColumn), 0);
     // calc size in MB req'd to store image in cache
-    int w, h;
-    m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
-    m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
-    // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-    float sizeMB;
-    if (w == 0 || h == 0) sizeMB = m.size;
-    else sizeMB = static_cast<float>(w * h * 1.0 / 262144);
-    setData(index(row, G::CacheSizeColumn), sizeMB);
+    if (!m.video) {
+        int w, h;
+        m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
+        m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+        float sizeMB;
+        if (w == 0 || h == 0) sizeMB = m.size / 1000000;
+        else sizeMB = static_cast<float>(w * h * 1.0 / 262144);
+        setData(index(row, G::CacheSizeColumn), sizeMB);
+    }
 
     // check for missing thumbnail in jpg/tiif
     if (m.isReadWrite)
