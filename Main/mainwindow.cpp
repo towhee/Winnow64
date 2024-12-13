@@ -1977,10 +1977,11 @@ void MW::handleStartupArgs(const QString &args)
         // open the folder
         else {
             // go there ...
-            fsTree->select(fDir);
+            // fsTree->select(fDir);
             // refresh FSTree counts
-            fsTree->refreshModel();
+            // fsTree->refreshModel();
             QString fPath = embellishedPaths.at(0);
+            qDebug() << "MW::handleStartupArgs" << fPath;
             folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
     }
@@ -2035,6 +2036,8 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
         G::currRootFolder = folderPath;
         stop(fun + " reset DataModel");
         reset(fun);
+        // sync bookmarks if exists
+        bookmarks->select(folderPath);
         // }
         // loadNewInstance(folderPath);
     }
@@ -2698,11 +2701,11 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    /*
+    // /*
     qDebug() << "MW::folderAndFileSelectionChange"
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
-             << "currentViewDir =" << currentViewDir
+             << "fPath =" << fPath
                 ;
                 //*/
 
@@ -2721,9 +2724,6 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     }
     // dm->selectionModel->clear();
 
-    #ifdef METAREAD
-    metaReadThread->resetTrigger();
-    #endif
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     // qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
     // folderSelectionChange();
@@ -3194,7 +3194,7 @@ void MW::loadFolder(QString folderPath)
 
     // target image
     int targetRow = 0;
-    // qDebug() << "MW::loadFolder  folderAndFileChangePath =" << folderAndFileChangePath;
+    qDebug() << "MW::loadFolder  folderAndFileChangePath =" << folderAndFileChangePath;
     QString s = folderAndFileChangePath;
 
     if (folderAndFileChangePath == "") {

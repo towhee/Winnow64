@@ -218,7 +218,7 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::ICCSpaceColumn) return fm.boundingRect("=ICCSpaceColumn=").width();
 
     if (column == G::CacheSizeColumn) return fm.boundingRect("=CacheMB=").width();
-    if (column == G::IsVideoColumn) return fm.boundingRect("=IsVideo=").width();
+    // if (column == G::IsVideoColumn) return fm.boundingRect("=IsVideo=").width();
     if (column == G::IsCachingColumn) return fm.boundingRect("=IsCaching=").width();
     if (column == G::IsCachedColumn) return fm.boundingRect("=IsCached=").width();
     if (column == G::AttemptsColumn) return fm.boundingRect("=Attempts=").width();

@@ -97,7 +97,7 @@ BuildFilters::BuildFilters(QObject *parent,
     this->filters = filters;
     afterAction = AfterAction::NoAfterAction;
     isReset = true;
-    debugBuildFilters = true;
+    debugBuildFilters = false;
     reportTime = false;
 }
 

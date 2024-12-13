@@ -189,15 +189,22 @@ void listChildren(const QObject *parent, int depth = 0) {
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    QString fPath = dm->currentFilePath;
-    metadata->testNewFileFormat(fPath);
+    // filterChange();
+    filters->save();
+    clearAllFilters();
+    // QString fPath = dm->currentFilePath;
+    // metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
+    // filters->save();
+    // clearAllFilters();
+    filters->restore();
 
-    traverseFolderStressTest(25, 100, true);
+    // folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2024-12-11_0012_Zen2048.JPG");
+    // traverseFolderStressTest(25, 100, true);
     // filters->disableAllHeaders(false);
     // filters->expandAllFilters();
 

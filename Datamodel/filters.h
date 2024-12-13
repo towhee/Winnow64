@@ -158,7 +158,7 @@ private:
         QString item;
     };
     QList<ItemState>itemStates;
-    QString searchTextState;
+    QString searchText;
 };
 
 #endif // FILTERS_H
