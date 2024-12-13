@@ -162,7 +162,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     disableAllHeaders(true);
 
-    debugFilters = true;
+    debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
@@ -960,13 +960,13 @@ void Filters::save()
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::save");
-    //qDebug() << "Filters::save";
+    qDebug() << "Filters::save";
 
     QMutexLocker locker(&mutex);
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent()) {
+        if ((*it)->parent()/* && (*it)->parent() != search*/) {
             /*
             qDebug().noquote()
                      << (*it)->parent()->text(0).leftJustified(15)
@@ -981,8 +981,8 @@ void Filters::save()
         }
         ++it;
     }
-    searchTextState = searchTrue->text(0);
-    if (searchTextState == enterSearchString) searchTextState = "";
+    searchText = searchTrue->text(0);
+    if (searchText == enterSearchString) searchText = "";
 }
 
 void Filters::restore()
@@ -994,32 +994,32 @@ void Filters::restore()
     if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
     uncheckAllFilters();
 
-    QMutexLocker locker(&mutex);
-
-    // check filters for items in itemStates
-    for (int i = 0; i < itemStates.size(); i++) {
-        QTreeWidgetItemIterator it(this);
-        while (*it) {
-            if ((*it)->parent()) {
-                if ((*it)->parent()->text(0) == itemStates.at(i).parent) {
-                    if ((*it)->text(0) == itemStates.at(i).item) {
-                        (*it)->setCheckState(0, Qt::Checked);
-                    }
-                }
-            }
-            ++it;
+    // build lookup map (faster than iterating through tree)
+    QMap<QString, QList<QTreeWidgetItem*>> parentToChildrenMap;
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        QTreeWidgetItem* item = *it;
+        if (item->parent()) {
+            parentToChildrenMap[item->parent()->text(0)].append(item);
         }
-        // restore search text
-        searchTrue->setText(0, searchTextState);
-
-        emit filterChange("Filters::restore");
-        /*
-        qDebug().noquote()
-            << itemStates.at(i).parent.leftJustified(15)
-            << itemStates.at(i).item.leftJustified(50, '.') + "Checked";
-            //*/
+        ++it;
     }
 
+    // restore checked items
+    for (const auto& state : itemStates) {
+        const auto& children = parentToChildrenMap.value(state.parent);
+        for (QTreeWidgetItem* child : children) {
+            if (child->text(0) == state.item) {
+                child->setCheckState(0, Qt::Checked);
+                /*
+                qDebug().noquote() << state.parent.leftJustified(15)
+                                   << child->text(0); //*/
+                break;
+            }
+        }
+    }
+    searchTrue->setText(0, searchText);
+    // emit filterChange("Filters::restore");
 }
 
 void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state)
@@ -1346,7 +1346,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight);
         item->setTextAlignment(3, Qt::AlignRight);
-        // /*
+        /*
         qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
                  << "item =" << i.value();
         //*/

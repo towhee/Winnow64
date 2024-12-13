@@ -256,13 +256,13 @@ bool ImageCache::resetInsideTargetRangeCacheState()
         if (abort) return false;
         if (sfRow >= dm->sf->rowCount()) return false;
 
-        // isCaching - set to false
+        // isCaching: set to false
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
             dm->setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
             dm->setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
         }
 
-        // in imCache - isCached = false and toCache not contain
+        // in imCache: then isCached = false and remove from toCache
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         if (icd->imCache.contains(fPath)) {
             dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
@@ -270,7 +270,7 @@ bool ImageCache::resetInsideTargetRangeCacheState()
             continue;
         }
 
-        // not in imCache
+        // not in imCache:
         else {
             dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
             dm->setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
@@ -452,7 +452,7 @@ void ImageCache::setTargetRange(int key)
             // if (behindPos >= n || behindPos < 0) break;
             if (isForward ? (behindPos >= 0) : (behindPos < n)) {
                 // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
-                if (!dm->sf->index(aheadPos, G::IsVideoColumn).data().toBool()) {
+                if (!dm->sf->index(aheadPos, G::VideoColumn).data().toBool()) {
                     sumMB +=  dm->sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
                     QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
@@ -513,10 +513,12 @@ void ImageCache::removeFromCache(QStringList &pathList)
     QMutexLocker locker(&gMutex);
 
     // rgh confirm this is working
-    // remove images from imCache
+    // remove images from imCache and toCache
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPathToRemove = pathList.at(i);
         icd->imCache.remove(fPathToRemove);
+        int sfRow = dm->proxyRowFromPath(fPathToRemove);
+        if (toCache.contains(sfRow)) toCache.remove(sfRow);
     }
 }
 

@@ -394,7 +394,7 @@ void MW::deleteFiles(QStringList paths)
     Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
     is the same as dm: no filtering.  We save the filter, clear filters, remove all the
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
-    the rows, updates dm->fileInfoList and dm->fPathRow.
+    the rows, updates dm->fPathRow.
     */
     filters->save();
     clearAllFilters();
@@ -402,7 +402,9 @@ void MW::deleteFiles(QStringList paths)
         QString fPath = sldm.at(i);
         dm->remove(fPath);
     }
-    filters->restore();
+    // rebuild filters
+    // buildFilters->build();
+    // filters->restore();
 
     // cleanup G::rowsWithIcon
     metaReadThread->cleanupIcons();
@@ -414,6 +416,7 @@ void MW::deleteFiles(QStringList paths)
 
     // rebuild filters
     buildFilters->build();
+    filters->restore();
 
     // update current index
     int sfRow;
