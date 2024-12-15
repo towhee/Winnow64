@@ -190,6 +190,7 @@ void listChildren(const QObject *parent, int depth = 0) {
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     // filterChange();
+
     filters->save();
     clearAllFilters();
     // QString fPath = dm->currentFilePath;
@@ -199,9 +200,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    // filters->save();
-    // clearAllFilters();
-    filters->restore();
+    // thumbView->reset();
+    // dm->sf->filterChange();
+    // filterChange();
+    dm->removeFolder("/Users/roryhill/Pictures/_test1");
 
     // folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2024-12-11_0012_Zen2048.JPG");
     // traverseFolderStressTest(25, 100, true);

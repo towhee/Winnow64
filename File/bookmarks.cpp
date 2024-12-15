@@ -220,7 +220,7 @@ void BookMarks::select(QString fPath)
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
         if (items.length() > 0) {
-            qDebug() << "BookMarks::select" << fPath;
+            // qDebug() << "BookMarks::select" << fPath;
             setCurrentItem(items[0]);
             setCurrentIndex(selectedIndexes().at(0));
             //count();  // big slowdown
