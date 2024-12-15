@@ -10,7 +10,6 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
-- Delete image in folder crashing
 - Check MW::refreshCurrentFolder still works
 - Retain datamodel selection when removing folders from datamodel
 - ImageView::loadImage happening twice when select a new primary folder
@@ -130,6 +129,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Delete image in folder crashing
 - Redid ImageCache to directly use DataModel
 - Try improve FSTree expand performance by turning showImageCount off/on
 - replace dm->updateRowNumbers() with a delegate in tableView

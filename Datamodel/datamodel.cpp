@@ -418,7 +418,8 @@ void DataModel::remove(QString fPath)
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
-            QModelIndex par;
+            QModelIndex par = QModelIndex();
+            // do not use a mutex here
             beginRemoveRows(par, row, row);
             removeRow(row);
             endRemoveRows();
@@ -520,7 +521,7 @@ void DataModel::processNextFolder() {
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
 
     // Process the folder synchronously using QtConcurrent
-    QtConcurrent::run([this, folderOperation]() {
+    // QtConcurrent::run([this, folderOperation]() {
         // add images from model
         if (folderOperation.second) {
             addFolder(folderOperation.first);
@@ -530,17 +531,17 @@ void DataModel::processNextFolder() {
         // remove images from model
         else {
             // wait for processing to be stopped
-            if (!G::stop) {
-                G::removingFolderFromDM = true;
-                G::stop = true;
-                qDebug() << "DataModel::processNextFolder stop before removing" << folderOperation.first;
-                emit stop("DataModel::processNextFolder");
-                // QMutexLocker locker(&G::gMutex);
-                // while (G::stop) {
-                //     G::waitCondition.wait(&G::gMutex); // EXC_BAD_ACCESS (SIGSEGV) exception
-                // }
-                // locker.unlock();
-            }
+            // if (!G::stop) {
+            //     G::removingFolderFromDM = true;
+            //     G::stop = true;
+            //     qDebug() << "DataModel::processNextFolder stop before removing" << folderOperation.first;
+            //     emit stop("DataModel::processNextFolder");
+            //     // QMutexLocker locker(&G::gMutex);
+            //     // while (G::stop) {
+            //     //     G::waitCondition.wait(&G::gMutex); // EXC_BAD_ACCESS (SIGSEGV) exception
+            //     // }
+            //     // locker.unlock();
+            // }
             removeFolder(folderOperation.first);
             qDebug() << "DataModel::processNextFolder rowCount =" << rowCount() << sf->rowCount();
             // signal MW::loadConcurrentChanged
@@ -550,7 +551,7 @@ void DataModel::processNextFolder() {
         // Continue with the next folder operation
         if (!G::stop)
             QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
-    });
+    // });
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -662,40 +663,53 @@ void DataModel::removeFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
     qDebug() << fun << folderPath;
 
-    QMutexLocker locker(&mutex);
-
     folderList.removeAll(folderPath);
 
-    QModelIndex parIdx = QModelIndex();
-    QList<int> rowsToRemove;
+    QModelIndex par = QModelIndex();
+    // QList<int> rowsToRemove;
 
     // Collect all rows that need to be removed
-    for (int row = rowCount() - 1; row >= 0; --row) {
+    for (int row = rowCount() - 1; row >= 0; row--) {
+        // if (row <= 4) break;
         QString filePath = index(row, 0).data(G::PathRole).toString();
         if (filePath.startsWith(folderPath)) {
-            rowsToRemove.append(row);
+            // rowsToRemove.append(row);
+            // remove(filePath);
+            qDebug() << "remove row" << row;
+            // do not use a mutex here
+            beginRemoveRows(par, row, row);
+            removeRows(row, 1);
+            endRemoveRows();
         }
     }
-
-    // Remove rows in a single batch
-    if (!rowsToRemove.isEmpty()) {
-        beginRemoveRows(parIdx, rowsToRemove.last(), rowsToRemove.first());
-        for (int row : rowsToRemove) {
-            removeRow(row);
-            // qDebug() << "DataModel::removeFolder   remove row =" << row;
-        }
-        endRemoveRows();
-    }
-
     sf->invalidate();
+    /* // Collect all rows that need to be removed
+    // for (int row = rowCount() - 1; row >= 0; --row) {
+    //     QString filePath = index(row, 0).data(G::PathRole).toString();
+    //     if (filePath.startsWith(folderPath)) {
+    //         rowsToRemove.append(row);
+    //     }
+    // }
+
+    // // Remove rows in a single batch
+    // if (!rowsToRemove.isEmpty()) {
+    //     beginRemoveRows(parIdx, rowsToRemove.last(), rowsToRemove.first());
+    //     for (int row : rowsToRemove) {
+    //         removeRow(row);
+    //         // qDebug() << "DataModel::removeFolder   remove row =" << row;
+    //     }
+    //     endRemoveRows();
+    // }
+
+    // sf->invalidate();  //*/
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
-    // update imageCount
-    imageCount = rowCount();
+    // // update imageCount
+    // imageCount = rowCount();
 
-    emit updateStatus(true, "", "DataModel::removeFolder");
+    // emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
 // END MULTI-SELECT FOLDERS

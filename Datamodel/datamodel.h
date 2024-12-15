@@ -107,6 +107,8 @@ public:
     void saveSelection();
     void restoreSelection();
 
+    void removeFolder(const QString &folderPath);
+
     QMutex mutex;
     bool isProcessing = false;
 
@@ -243,7 +245,7 @@ private:
     QItemSelection savedSelection;
 
     void addFolder(const QString &folderPath);
-    void removeFolder(const QString &folderPath);
+    // void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
     // bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);

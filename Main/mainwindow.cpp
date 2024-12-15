@@ -1977,11 +1977,7 @@ void MW::handleStartupArgs(const QString &args)
         // open the folder
         else {
             // go there ...
-            // fsTree->select(fDir);
-            // refresh FSTree counts
-            // fsTree->refreshModel();
             QString fPath = embellishedPaths.at(0);
-            qDebug() << "MW::handleStartupArgs" << fPath;
             folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
     }
@@ -1993,7 +1989,7 @@ void MW::handleStartupArgs(const QString &args)
         f.dir().path();
         fsTree->select(f.dir().path());
         // folderSelectionChange(); // not req'd after multi-select FSTree
-         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
 
     if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "done");
@@ -2701,7 +2697,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    // /*
+    /*
     qDebug() << "MW::folderAndFileSelectionChange"
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
@@ -3343,28 +3339,30 @@ void MW::loadChanged(const QString folderPath, const QString op)
     }
 
     else if (op == "Remove") {
-        // qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
-        //          << dm->folderList.count() << dm->folderList;
+        qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
+                 << dm->folderList.count() << dm->folderList;
         // update bookmarks if only one folder selected
         if (dm->folderList.count() == 1) {
-            // new primary folder
-            QString newPrimaryFolder = dm->folderList.at(0);
-            qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
-            QSignalBlocker bookmarkBlocker(bookmarks);
-            bookmarks->select(newPrimaryFolder);
-            bookmarkBlocker.unblock();
+            // // new primary folder
+            // QString newPrimaryFolder = dm->folderList.at(0);
+            // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
+            // QSignalBlocker bookmarkBlocker(bookmarks);
+            // bookmarks->select(newPrimaryFolder);
+            // bookmarkBlocker.unblock();
         }
 
-        // call directly as MetaRead2 not used for removals
-        loadDone();
+        // // call directly as MetaRead2 not used for removals
+        thumbView->refreshThumbs();
 
-        // check if the image selection is still valid
-        sel->recover(fun);
-        // qDebug() << fun
-        //          << "Remove  "
-        //          << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
+        // loadDone();
 
-        imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
+        // // check if the image selection is still valid
+        // sel->recover(fun);
+        // // qDebug() << fun
+        // //          << "Remove  "
+        // //          << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
+
+        // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
     }
 }
 
@@ -3462,9 +3460,9 @@ void MW::loadDone()
     // filterChange();
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
-    qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
+    // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
     if (dm->folderList.count() >= 1 && dm->isQueueEmpty()) {
-        qDebug() << src << "buildFilters";
+        // qDebug() << src << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();

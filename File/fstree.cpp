@@ -923,13 +923,13 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     if (isCtrl) {
         int folders = getSelectedFolderPaths().count();
         bool folderWasSelected = getSelectedFolderPaths().contains(dPath);
+        resetDataModel = false;
+        recurse = false;
         // ignore if click on only folder selected
         if (folderWasSelected) {
             // do not toggle if only one folder selected
             if (folders < 2) return;
             if (G::isLogger) G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            resetDataModel = false;
-            recurse = false;
             emit folderSelectionChange(dPath, "Remove", /*resetDataModel*/false, /*recurse*/false);
         }
         else {
