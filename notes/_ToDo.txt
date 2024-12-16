@@ -10,6 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 
 BUGS / TO DO
+- When select thumb check if null and retry to read
 - Check MW::refreshCurrentFolder still works
 - Retain datamodel selection when removing folders from datamodel
 - ImageView::loadImage happening twice when select a new primary folder

@@ -586,7 +586,6 @@ bool MetaRead2::allMetaIconLoaded()
     Has the datamodel been fully loaded?
 */
     return dm->isAllMetadataAttempted() && dm->isIconRangeLoaded();
-    // return dm->isAllMetadataLoaded() && dm->isIconRangeLoaded();
 }
 
 void MetaRead2::redo()
@@ -949,15 +948,17 @@ void MetaRead2::dispatch(int id)
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
-        QString fPath = dmIdx.data(G::PathRole).toString();
+        // QString fPath = dmIdx.data(G::PathRole).toString();
+        QString fPath = sfIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
         bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
-        if (isDebug)
+        // if (isDebug)
         {
+            QString fun = "MetaRead2::dispatch reader";
             qDebug().noquote()
-                << "MetaRead2::dispatch     launch reader       "
+                << fun.leftJustified(30)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "dmIdx.row() =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+                << "row =" << QString::number(sfIdx.row()).leftJustified(4, ' ')
                 << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
                 << "isReadIcon =" << QVariant(okReadIcon).toString().leftJustified(5, ' ')
                 << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
@@ -965,6 +966,7 @@ void MetaRead2::dispatch(int id)
                 << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
                 << "a =" << QString::number(a).leftJustified(4, ' ')
                 << "b =" << QString::number(b).leftJustified(4, ' ')
+                << fPath
                 ;
         }
 

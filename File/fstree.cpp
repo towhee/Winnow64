@@ -481,11 +481,12 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
         resetDataModel = true;
         recurse = true;
         emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
-        selectionModel()->clearSelection();
         setCurrentIndex(index);
         scrollToCurrent();
-        // selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-        selectRecursively(folderPath, false);
+        selectionModel()->clearSelection();
+        selectRecursively(folderPath);
+        setExpanded(index, false);
+        return true;
     }
 }
 

@@ -188,6 +188,7 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
     if (column == G::MetadataAttemptedColumn) return fm.boundingRect("=Metadata Attempted=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
+    if (column == G::IconLoadedColumn) return fm.boundingRect("=Icon Loaded=").width();
     if (column == G::MissingThumbColumn) return fm.boundingRect("=Missing Thumb=").width();
     if (column == G::CompareColumn) return fm.boundingRect("=Compare=").width();
     if (column == G::_RatingColumn) return fm.boundingRect("=_Rating=").width();

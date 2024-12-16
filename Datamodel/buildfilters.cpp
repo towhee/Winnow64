@@ -305,15 +305,6 @@ void BuildFilters::reset(bool collapse)
         qDebug()
             << "BuildFilters::reset"
                ;
-    // filters->filtersBuilt = false;
-    // filters->buildingFilters = false;
-    // filters->loadingDataModel(false);
-    // filters->filterLabel->setVisible(false);
-    // filters->setEnabled(true);
-    // filters->activeCategory = nullptr;
-    // // clear all items for filters based on data content ie file types, camera model
-    // filters->removeChildrenDynamicFilters();
-    // filters->clearAll();
 
     filters->reset();
     afterAction = AfterAction::NoAfterAction;

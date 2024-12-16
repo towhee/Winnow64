@@ -2468,7 +2468,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2560,9 +2560,23 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
+    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+
+    // failsafe to load thumbnail if MetaRead2 failed
+    if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
+        qDebug() << source << "reloading thumb for row" << current.row();
+        QImage image;
+        bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
+        if (ok) {
+            QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
+                                                         Qt::KeepAspectRatio));
+            QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
+            dm->setIcon(dmIdx, pm, ok, dm->instance, source);
+        }
+    }
+
     // update loupe/video view
     if (G::useMultimedia) videoView->stop();
-    bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
@@ -3343,18 +3357,15 @@ void MW::loadChanged(const QString folderPath, const QString op)
                  << dm->folderList.count() << dm->folderList;
         // update bookmarks if only one folder selected
         if (dm->folderList.count() == 1) {
-            // // new primary folder
-            // QString newPrimaryFolder = dm->folderList.at(0);
-            // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
-            // QSignalBlocker bookmarkBlocker(bookmarks);
-            // bookmarks->select(newPrimaryFolder);
-            // bookmarkBlocker.unblock();
+            // new primary folder
+            QString newPrimaryFolder = dm->folderList.at(0);
+            qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
+            QSignalBlocker bookmarkBlocker(bookmarks);
+            bookmarks->select(newPrimaryFolder);
+            bookmarkBlocker.unblock();
         }
 
-        // // call directly as MetaRead2 not used for removals
-        thumbView->refreshThumbs();
-
-        // loadDone();
+        loadDone();
 
         // // check if the image selection is still valid
         // sel->recover(fun);
@@ -3369,11 +3380,15 @@ void MW::loadChanged(const QString folderPath, const QString op)
 void MW::loadDone()
 {
 /*
-    Signalled from MetaRead::run when finished
+    Signalled by MetaRead::run when finished reading all metadata.
+    Called by loadChange when a folder has been removed.
+    - check for missing thumbnails.
+    - update filters
+    - resize tableView columns
+    - process next folder
 */
-    QSignalBlocker blocker(bookmarks);
+    // QSignalBlocker bookmarkBlocker(bookmarks);
 
-    // time series to load new folder
     if (G::isLogger || G::isFlowLogger)
     {
         QString msg = QString::number(testTime.elapsed()) + " ms " +
@@ -3383,6 +3398,7 @@ void MW::loadDone()
     }
     QString src = "MW::loadDone";
     // qDebug() << src;
+    // return;
 
     int count = 0;
     /*
@@ -3393,16 +3409,9 @@ void MW::loadDone()
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
                 ;
                 //*/
-    /* elapsed time
-    qDebug().noquote()
-             << "            MW::loadConcurrentDone       Elapsed     "
-             << QString::number(testTime.elapsed()).rightJustified((5)) << "ms"
-             << dm->rowCount() << "images from"
-             << dm->currentFolderPath << "\n"
-        ;
-    */
 
     if (reset(src + QString::number(count++))) return;
+
     // missing thumbnails
     /*
     qDebug() << "MW::LoadConcurrentDone"
@@ -3411,7 +3420,6 @@ void MW::loadDone()
                 ; //*/
     // missing thumbnails menu enabled
     enableSelectionDependentMenus();
-
     /*
     if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
         embedThumbnailsAction->setEnabled(true);
@@ -3420,7 +3428,6 @@ void MW::loadDone()
         embedThumbnailsAction->setEnabled(false);
     }
     */
-
     // if missing thumbnails show missing thumb dialog
     if (G::modifySourceFiles
         && !ignoreAddThumbnailsDlg
@@ -3462,7 +3469,7 @@ void MW::loadDone()
 
     // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
     if (dm->folderList.count() >= 1 && dm->isQueueEmpty()) {
-        // qDebug() << src << "buildFilters";
+        qDebug() << src << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
@@ -3479,15 +3486,15 @@ void MW::loadDone()
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
-    // reset datamodel processing flag
-    if (dm->isQueueEmpty()) {
-        dm->isProcessing = false;
-    }
-    else {
-        dm->processNextFolder();
-    }
+    // // reset datamodel processing flag
+    // if (dm->isQueueEmpty()) {
+    //     dm->isProcessing = false;
+    // }
+    // else {
+    //     dm->processNextFolder();
+    // }
 
-    blocker.unblock();
+    // bookmarkBlocker.unblock();
     //QApplication::beep();
 }
 
@@ -5815,7 +5822,7 @@ void MW::refreshCurrentFolder()
             else
                 pm = QPixmap(":/images/error_image256.png");
             QModelIndex dmIdx = dm->index(dmRow, 0);
-            dm->setIcon(dmIdx, pm, dm->instance, src);
+            dm->setIcon(dmIdx, pm, thumbLoaded, dm->instance, src);
         }
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
         refreshCurrentAfterReload();
@@ -5874,9 +5881,9 @@ void MW::openUsbFolder()
                         usbInfo.name = storage.name();
                         QString count = QString::number(n) + ". ";
                         if (usbInfo.name.length() > 0)
-                        usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+                            usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
                         else
-                        usbInfo.description = count + usbInfo.rootPath;
+                            usbInfo.description = count + usbInfo.rootPath;
                         usbMap.insert(usbInfo.description, usbInfo);
 
                         usbDrives << usbInfo.description;
@@ -5908,7 +5915,8 @@ void MW::openUsbFolder()
     G::includeSubfolders = true;
     QString fPath = usbMap[drive].rootPath;
     if (isFolderValid(fPath, true, false)) {
-        fsTree->select(fPath, "Recurse", "MW::openUSBFolder");
+        fsTree->select(fPath, "USBDrive", "MW::openUSBFolder");
+        // fsTree->select(fPath, "Recurse", "MW::openUSBFolder");
     }
     // isCurrentFolderOkay = isFolderValid(fPath, true, false);
     // if (isCurrentFolderOkay) {

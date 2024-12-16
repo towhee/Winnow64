@@ -303,7 +303,9 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     to get a thumbnail. This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
-    if (isDebug) qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
+    if (fPath.isEmpty()) qDebug() << "Thumb::loadThumb EMPTY FPATH";
+    if (isDebug)
+        qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
 
     dmRow = dm->rowFromPath(fPath);
 
