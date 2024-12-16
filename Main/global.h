@@ -100,6 +100,7 @@ namespace G
         KeywordsColumn,
         MetadataAttemptedColumn,
         MetadataLoadedColumn,
+        IconLoadedColumn,
         MissingThumbColumn,
         CompareColumn,
         // original values

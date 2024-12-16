@@ -182,11 +182,9 @@ public slots:
     void enqueueFolderSelection(const QString &folderPath, QString op, bool recurse = false);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
-    bool addMetadataAndIconForItem(ImageMetadata m, QModelIndex dmIdx, const QPixmap &pm,
-                                   int fromInstance, QString src);
     bool addMetadataForItem(ImageMetadata m, QString src);
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
-    void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
+    void setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
@@ -255,7 +253,6 @@ private:
     void updateLoadStatus();
     // bool tooManyImagesWarning();
 
-    int imageCount;
     int folderCount;
     int countInterval = 0;
 

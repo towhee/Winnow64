@@ -387,7 +387,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     //void restartMetaRead(int newRow);
     //void startMetaRead(int sfRow, QString src);
     //void startIconCache(int sfRow, QString src);

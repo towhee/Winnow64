@@ -727,7 +727,7 @@ void ImageCache::updateStatus(QString instruction, QString source)
 
 void ImageCache::log(const QString function, const QString comment)
 {
-    if (debugLog || G::isLogger || G::isFlowLogger) {
+    if (debugLog || ((G::isLogger || G::isFlowLogger) && debugLog)) {
         G::log("ImageCache::" + function, comment);
     }
 }

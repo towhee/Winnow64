@@ -221,7 +221,7 @@ void MW::insertFiles(QStringList fPaths)
             insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);
-            dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
+            dm->setIcon(dmIdx, QPixmap(), false, dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
             if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
                 dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
@@ -402,9 +402,6 @@ void MW::deleteFiles(QStringList paths)
         QString fPath = sldm.at(i);
         dm->remove(fPath);
     }
-    // rebuild filters
-    // buildFilters->build();
-    // filters->restore();
 
     // cleanup G::rowsWithIcon
     metaReadThread->cleanupIcons();
