@@ -398,18 +398,18 @@ QString MetaRead2::diagnostics()
     }
 
     // rows with icons
-    /*
+    // /*
     rpt << "\n";
     rpt << "\n";
     rpt.setFieldAlignment(QTextStream::AlignLeft);
-    rpt << "Icon rows in datamodel:";
+    rpt << "Empty icon rows in datamodel:";
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
-    for (int i = 0; i < dm->rowCount(); i++) {
-        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
+    for (int i = 0; i < dm->sf->rowCount(); i++) {
+        if (dm->iconLoaded(i, instance)) continue;
         rpt << "\n" << i;
     }
-    */
+    //*/
     rpt << "\n\n" ;
 
     return reportString;
@@ -459,16 +459,6 @@ void MetaRead2::cleanupIcons()
             dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
         }
     }
-    // for (int i = 0; i < firstIconRow; i++) {
-    //     if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
-    //         dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
-    //     }
-    // }
-    // for (int i = lastIconRow + 1; i < sfRowCount; i++) {
-    //     if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
-    //         dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
-    //     }
-    // }
 }
 
 inline bool MetaRead2::needToRead(int row)
@@ -479,7 +469,7 @@ inline bool MetaRead2::needToRead(int row)
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
         return true;
     }
-    if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) {
+    if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) {
         return true;
     }
     return false;
@@ -952,7 +942,7 @@ void MetaRead2::dispatch(int id)
         QString fPath = sfIdx.data(G::PathRole).toString();
         // only read icons within the icon chunk range
         bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
-        // if (isDebug)
+        if (isDebug)
         {
             QString fun = "MetaRead2::dispatch reader";
             qDebug().noquote()

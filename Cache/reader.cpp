@@ -26,7 +26,7 @@ Reader::Reader(QObject *parent,
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
     // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
 
-    isDebug = true;
+    isDebug = false;
     debugLog = false;
 }
 
@@ -177,7 +177,7 @@ void Reader::readIcon()
     QString msg;
     QImage image;
     // get thumbnail or err.png or generic video
-    bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
+    loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
 
     if (abort) return;
 
@@ -185,39 +185,18 @@ void Reader::readIcon()
     // if !G::renderVideoThumb then generic Video image returned from Thumb
     if (isVideo && G::renderVideoThumb) return;
 
-    if (thumbLoaded) {
+    if (loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    }
-    else {
-        pm = QPixmap(":/images/error_image256.png");
-        if (status == Status::MetaFailed) status = Status::MetaIconFailed;
-        else status = Status::IconFailed;
-        msg = "Failed to load thumbnail.";
-        G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
+        emit setIcon(dmIdx, pm, loadedIcon, instance, "MetaRead::readIcon");
+        if (!pm.isNull()) return;
     }
 
-    if (pm.isNull()) {
-        if (status == Status::MetaFailed) status = Status::MetaIconFailed;
-        else status = Status::IconFailed;
-        msg = "Null icon loaded.";
-        G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
-        return;
-    }
-
-    // using BlockingQueuedConnection
-    if (!abort) emit setIcon(dmIdx, pm, thumbLoaded, instance, "MetaRead::readIcon");
-
-    if (!dm->iconLoaded(dmRow, instance)) {
-        if (status == Status::MetaFailed) status = Status::MetaIconFailed;
-        else status = Status::IconFailed;
-        msg = "Failed to load icon.";
-        G::issue("Warning", msg, "Reader::loadIcon", dmRow, fPath);
-    }
-    else {
-        loadedIcon = true;
-    }
-
-    // loadedIcon = true;
+    // failed to load icon, load error icon
+    pm = QPixmap(":/images/error_image256.png");
+    if (status == Status::MetaFailed) status = Status::MetaIconFailed;
+    else status = Status::IconFailed;
+    msg = "Failed to load thumbnail.";
+    G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
 }
 
 void Reader::run()

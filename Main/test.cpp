@@ -200,7 +200,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    loadDone();
+    buildFilters->reset(false);
+    buildFilters->build();
+    buildFilters->recount();
+    // loadDone();
     // thumbView->reset();
     // dm->sf->filterChange();
     // filterChange();
