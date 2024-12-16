@@ -2468,7 +2468,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     qDebug() << "MW::fileSelectionChange"
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -3365,6 +3365,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
             bookmarkBlocker.unblock();
         }
 
+        G::allMetadataLoaded = true;
         loadDone();
 
         // // check if the image selection is still valid
@@ -3469,7 +3470,7 @@ void MW::loadDone()
 
     // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
     if (dm->folderList.count() >= 1 && dm->isQueueEmpty()) {
-        qDebug() << src << "buildFilters";
+        // qDebug() << src << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
