@@ -172,8 +172,16 @@ bool ImageView::loadImage(QString fPath, QString src)
         return false;
     }
 
+    // /*
+    qDebug().noquote()
+        << "ImageView::loadImage"
+        << "fPath =" << fPath
+        << "currentImagePath =" << currentImagePath
+        ;
+    //*/
+
     // Already displayed
-    //if (fPath == currentImagePath) return true;
+    if (fPath == currentImagePath && !pmItem->pixmap().isNull()) return true;
 
     // could be a popup from a prior uncached image being loaded
     //G::popUp->end();
@@ -189,12 +197,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     // set busy in case tryAgain attempt after already moved on to another image
     isBusy = true;
 
-    /* important to keep currentImagePath. It is used to check if there isn't an image (when
-    currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
-    same image is being reloaded. It is also used by Embellish.  */
-    currentImagePath = fPath;
     bool isLoaded = false;
-    pmItem->setVisible(true);
 
     // SLIDESHOW
     if (G::isSlideShow) {
@@ -277,6 +280,11 @@ bool ImageView::loadImage(QString fPath, QString src)
     //*/
     // if (isLoaded && rect().height() > 50) {
     if (isLoaded) {
+        /* important to keep currentImagePath. It is used to check if there isn't an image (when
+        currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
+        same image is being reloaded. It is also used by Embellish.  */
+        currentImagePath = fPath;
+        pmItem->setVisible(true);
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());

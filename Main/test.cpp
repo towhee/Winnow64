@@ -200,9 +200,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    buildFilters->reset(false);
-    buildFilters->build();
-    buildFilters->recount();
+    qDebug() << "DataModel::setCurrent using dmIdx"
+             << "currentSfIdx =" << dm->currentSfIdx
+             << "currentSfRow =" << dm->currentSfRow
+             << "currentDmIdx =" << dm->currentDmIdx
+             << "currentDmRow =" << dm->currentDmRow
+             << "currentFilePath =" << dm->currentFilePath
+        ;
+
+    // buildFilters->reset(false);
+    // buildFilters->build();
+    // buildFilters->recount();
     // loadDone();
     // thumbView->reset();
     // dm->sf->filterChange();

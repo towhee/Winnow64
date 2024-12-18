@@ -531,6 +531,8 @@ void DataModel::processNextFolder()
     if (G::stop) return;
 
     QPair<QString, bool> folderOperation = folderQueue.dequeue();
+    QString folderPath = folderOperation.first;
+    bool addFolderImages = folderOperation.second;
 
     {
     QString fun = "DataModel::processNextFolder";
@@ -540,16 +542,16 @@ void DataModel::processNextFolder()
     }
 
     // add images from model
-    if (folderOperation.second) {
-        addFolder(folderOperation.first);
+    if (addFolderImages) {
+        addFolder(folderPath);
         // signal MW::loadChanged
         emit addedFolderToDM(folderOperation.first, "Add");
     }
+
     // remove images from model
     else {
-        removeFolder(folderOperation.first);
-        qDebug() << "DataModel::processNextFolder rowCount =" << rowCount() << sf->rowCount();
-        // signal MW::loadChanged
+        removeFolder(folderPath);
+       // signal MW::loadChanged
         emit removedFolderFromDM(folderOperation.first, "Remove");
     }
 
@@ -1970,9 +1972,42 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     currentDmIdx = dmIdx;
     currentDmRow = currentDmIdx.row();
     currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
-    if (isDebug)
+    // if (isDebug)
     {
-        qDebug() << "DataModel::setCurrent"
+        qDebug() << "DataModel::setCurrent using dmIdx"
+                 << "currentSfIdx =" << currentSfIdx
+                 << "currentSfRow =" << currentSfRow
+                 << "currentDmIdx =" << currentDmIdx
+                 << "currentDmRow =" << currentDmRow
+                 << "currentFilePath =" << currentFilePath
+            ;
+    }
+}
+
+void DataModel::setCurrent(QString fPath, int instance)
+{
+    if (instance != this->instance) {
+        errMsg = "Instance clash.";
+        G::issue("Comment", errMsg, "DataModel::setCurrent");
+        return;
+    }
+
+    // update current index parameters
+    QMutexLocker locker(&mutex);
+    if (fPathRow.contains(fPath)) {
+        currentDmIdx = indexFromPath(fPath);
+        currentFilePath = fPath;
+    } else {
+        currentDmIdx = index(0, 0);
+        currentFilePath = index(0, 0).data(G::PathRole).toString();
+    }
+    currentDmRow = currentDmIdx.row();
+    QModelIndex sfIdx = sf->mapFromSource(currentDmIdx);
+    currentSfRow = sfIdx.row();
+
+    // if (isDebug)
+    {
+        qDebug() << "DataModel::setCurrent using fPath" << fPath
                  << "currentSfIdx =" << currentSfIdx
                  << "currentSfRow =" << currentSfRow
                  << "currentDmIdx =" << currentDmIdx
@@ -2496,9 +2531,39 @@ void DataModel::rebuildTypeFilter()
 //    filters->addCategoryFromData(typesMap, filters->types);
 //}
 
-QModelIndex DataModel::proxyIndexFromPath(QString fPath)
+QModelIndex DataModel::indexFromPath(QString fPath)
 {
 /*
+    The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
+    quick lookup to get the datamodel row from an image path.
+*/
+    if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
+    if (isDebug) {
+        qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
+                 << "fPath =" << fPath
+                 << currentPrimaryFolderPath;
+    }
+    if (!fPathRow.contains(fPath)) {
+        errMsg = "Not in fPathrow.";
+        G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
+        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        return index(-1, -1);
+    }
+    int dmRow = fPathRow[fPath];
+    QModelIndex dmIdx = index(dmRow, 0);
+    if (dmIdx.isValid()) {
+        return dmIdx;
+    }
+    else {
+        errMsg = "Invalid index.";
+        G::issue("Warning", errMsg, "DataModel::indexFromPath", dmRow, fPath);
+        return index(-1, -1);       // invalid index
+    }
+}
+
+QModelIndex DataModel::proxyIndexFromPath(QString fPath)
+{
+    /*
     The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
     quick lookup to get the datamodel row from an image path.
 */
@@ -2524,14 +2589,6 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", dmRow, fPath);
         return index(-1, -1);       // invalid index
     }
-
-    /* deprecated code
-    QModelIndexList idxList = sf->match(sf->index(0, 0), G::PathRole, fPath);
-    if (idxList.size() > 0 && idxList[0].isValid()) {
-        return idxList[0];
-    }
-    return index(-1, -1);       // invalid index
-    */
 }
 
 QModelIndex DataModel::proxyIndexFromModelIndex(QModelIndex dmIdx)
