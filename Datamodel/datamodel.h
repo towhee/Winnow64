@@ -65,6 +65,7 @@ public:
     void clearPicks();
     void remove(QString fPath);
     int insert(QString fPath);
+    QModelIndex indexFromPath(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     QModelIndex proxyIndexFromModelIndex(QModelIndex dmIdx);
     int proxyRowFromModelRow(int dmRow);
@@ -192,6 +193,7 @@ public slots:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex dmIdx, int instance);
+    void setCurrent(QString fPath, int instance);
     void setCurrentSF(QModelIndex sfIdx, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);

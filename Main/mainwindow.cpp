@@ -2711,7 +2711,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    /*
+    // /*
     qDebug() << "MW::folderAndFileSelectionChange"
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
@@ -3156,10 +3156,8 @@ void MW::loadFolder(QString folderPath)
 {
     QString fun = "MW::loadFolder";
     if (G::isLogger || G::isFlowLogger) {
-        bool isPrimaryFolder = dm->folderList.count() && folderPath == dm->folderList.at(0);
         bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
-        QString msg = "isPrimaryFolder = " + QVariant(isPrimaryFolder).toString() +
-                      " isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
+        QString msg = " isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
                       " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString() +
                       " folderPath = " + folderPath;
         G::log(fun, msg);
@@ -3172,8 +3170,7 @@ void MW::loadFolder(QString folderPath)
     QSignalBlocker bookmarkBlocker(bookmarks);
 
     // primary folder
-    if (dm->folderList.count() == 1 /*&& folderPath == dm->folderList.at(0)*/) {
-        // qDebug() << "MW::loadFolder  bookmarks->select" << folderPath;
+    if (dm->folderList.count() == 1) {
         bookmarks->select(folderPath);
         if (dm->rowCount()) {
             settings->setValue("lastDir", folderPath);
@@ -3187,9 +3184,14 @@ void MW::loadFolder(QString folderPath)
 
         // read metadata using MetaRead
         metaReadThread->initialize();     // only when new instance / new primary folder
-        if (reset(src + QString::number(count++))) return;
-        // if (G::isFileLogger) Utilities::log(fun, "metaReadThread->setCurrentRow");
+        // if (reset(src + QString::number(count++))) return;
+    }
 
+    // if there was a folder and file change
+    if (folderAndFileChangePath != "") {
+        dm->setCurrent(folderAndFileChangePath, instance);
+        // qDebug() << fun <<  "folderAndFileChangePath =" << folderAndFileChangePath << dm->currentSfRow;
+        folderAndFileChangePath = "";
     }
 
     // add to recent folders
@@ -3202,29 +3204,6 @@ void MW::loadFolder(QString folderPath)
     int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
-    // target image
-    int targetRow = 0;
-    qDebug() << "MW::loadFolder  folderAndFileChangePath =" << folderAndFileChangePath;
-    QString s = folderAndFileChangePath;
-
-    if (folderAndFileChangePath == "") {
-        targetRow = 0;
-        dm->currentSfRow = 0;
-    }
-    else {
-        targetRow = dm->proxyRowFromPath(folderAndFileChangePath);
-        if (targetRow < 0) targetRow = 0;
-        dm->currentSfRow = targetRow;
-        folderAndFileChangePath = "";
-    }
-
-    // test sudden move to last
-    // targetRow = dm->sf->rowCount() - 1;
-
-    // if (reset(src + QString::number(count++))) return;
-    // updateIconRange(false, fun);
-    // if (reset(src + QString::number(count++))) return;
-
     // reset metadata progress
     if (G::showProgress == G::ShowProgress::MetaCache) {
         cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
@@ -3232,7 +3211,7 @@ void MW::loadFolder(QString folderPath)
         progressLabel->setVisible(true);
     }
 
-    // set image cache parameters and build image cacheItemList
+    // set image cache parameters
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
     // if (reset(src + QString::number(count++))) return;
@@ -3250,7 +3229,7 @@ void MW::loadFolder(QString folderPath)
     updateStatus(true, "", fun);
 
     // set selection and current index, start metaReadThread
-    sel->setCurrentRow(targetRow);
+    sel->select(dm->currentSfRow);
 
     bookmarkBlocker.unblock();
 }
@@ -3312,6 +3291,19 @@ void MW::loadChanged(const QString folderPath, const QString op)
     QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
                   " folderPath = " + folderPath;
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    {
+        ///*
+        qDebug().noquote()
+                << fun
+                << "op =" << op
+                << "instance =" << instance
+                << "dm->instance =" << dm->instance
+                << "dm->folderList.count = =" << dm->folderList.count()
+                << "\n\tfolderPath =             " << folderPath
+                << "\n\tdm->currentFilePath =    " << dm->currentFilePath
+                << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
+                   ;//*/
+    }
 
     static int rows = 0;
 
@@ -3324,35 +3316,20 @@ void MW::loadChanged(const QString folderPath, const QString op)
 
     updateStatus(true, "", fun);
 
-    // primary folder?
-    if (folderPath == dm->folderList.at(0)) {
-        // qDebug() << fun << "Primary  rowCount =" << dm->rowCount() << dm->sf->rowCount();
-        rows = dm->rowCount();
-        if (rows) {
-            loadFolder(folderPath);
-            // updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
-        }
-        else {
-            setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
-        }
-        return;
+    // set icon range and G::iconChunkLoaded
+    dm->setIconRange(dm->currentSfRow);
+
+    // assign current image (datamodel current index)
+    if (folderAndFileChangePath.isEmpty()) {
+        if (dm->currentFilePath.isEmpty()) dm->setCurrent(dm->index(0, 0), instance);
+        else dm->setCurrent(dm->currentFilePath, dm->instance);
+    }
+    else {
+        dm->setCurrent(folderAndFileChangePath, dm->instance);
+        folderAndFileChangePath = "";
     }
 
-    else if (op == "Add") {
-        // qDebug() << fun << "Add  rowCount =" << dm->rowCount() << dm->sf->rowCount();
-        // might have been zero images in primary folder
-        loadFolder(folderPath);
-        int rows = dm->rowCount();
-        int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
-        G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
-        // set icon range and G::iconChunkLoaded
-        dm->setIconRange(dm->currentSfRow);
-        // set selection and current index, start metaReadThread
-        sel->setCurrentRow(dm->currentSfRow);
-        return;
-    }
-
-    else if (op == "Remove") {
+    if (op == "Remove") {
         qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
                  << dm->folderList.count() << dm->folderList;
         // update bookmarks if only one folder selected
@@ -3365,16 +3342,26 @@ void MW::loadChanged(const QString folderPath, const QString op)
             bookmarkBlocker.unblock();
         }
 
-        G::allMetadataLoaded = true;
-        loadDone();
+        sel->select(dm->currentSfRow);
 
-        // // check if the image selection is still valid
-        // sel->recover(fun);
-        // // qDebug() << fun
-        // //          << "Remove  "
-        // //          << "dm->currentSfRow =" << dm->currentSfRow << dm->currentSfIdx;
-
+        if (dm->isAllMetadataAttempted()) {
+            G::allMetadataLoaded = true;
+            loadDone();
+        }
         // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
+        return;
+    }
+
+    if (op == "Add") {
+    // if (folderPath == dm->folderList.at(0)) {
+        if (dm->rowCount()) {
+            loadFolder(folderPath);
+        }
+        else {
+            updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
+            setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
+        }
+        return;
     }
 }
 
