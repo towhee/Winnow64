@@ -172,7 +172,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         return false;
     }
 
-    // /*
+    /*
     qDebug().noquote()
         << "ImageView::loadImage"
         << "fPath =" << fPath

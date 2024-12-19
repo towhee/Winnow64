@@ -453,8 +453,9 @@ void ImageDecoder::colorManage()
         mutex.unlock();
     }
     if (metadata->iccFormats.contains(ext)) {
+        // QMutexLocker locker(&mutex);
         QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
-        ICC::transform(iccBuf, image);
+        ICC::transform(iccBuf, image);  // crash when mash next
     }
 }
 

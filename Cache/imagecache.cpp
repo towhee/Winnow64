@@ -251,6 +251,8 @@ bool ImageCache::resetInsideTargetRangeCacheState()
             ;
     }
 
+    QMutexLocker locker(&gMutex);
+
     // inside target range
     for (int sfRow = targetFirst; sfRow < targetLast; ++sfRow) {
         if (abort) return false;
@@ -287,7 +289,7 @@ void ImageCache::resetOutsideTargetRangeCacheState()
     Any images in imCache that are no longer in the target range are removed.
 */
 {
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
     QString src = "ImageCache::resetOutsideTargetRangeCacheState";
 

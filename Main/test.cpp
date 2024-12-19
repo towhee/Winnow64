@@ -9,104 +9,199 @@ void MW::traverseFolderStressTestFromMenu()
 
 void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 {
-/*
-    msPerImage      time per image
-    secPerFolder    ms test (0 == forever) ESC to stop
-    uturn           randomly change direction
-*/
-    if (G::isLogger) G::log("MW::traverseFolderStressTest");
-    G::popUp->reset();
-
     // if no images in folder then return
     if (dm->sf->rowCount() == 0) return;
 
     int msPerFolder = secPerFolder * 1000;
-    //qDebug() << "MW::traverseFolderStressTest" << msPerImage << msPerFolder;
-
     if (!msPerImage) {
         msPerImage = QInputDialog::getInt(this,
-                                  "Enter ms delay between images",
-                                  "Delay (1-1000 ms) ",
-                                  50, 1, 1000);
+                                          "Enter ms delay between images",
+                                          "Delay (1-1000 ms) ",
+                                          50, 1, 1000);
     }
 
-//    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+    G::popUp->reset();
     QString stopMsg = "Press ESC to stop stress test";
     G::popUp->showPopup(stopMsg, 0);
+
     isStressTest = true;
     bool isForward = true;
-    //slideCount = 0;
     int uturnCounter = 0;
-    int uturnMax;
-    dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
+    int uturnMax = qMin(dm->sf->rowCount(), 300);
     int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
-    QElapsedTimer t;
-    while (isStressTest) {
-        t.restart();
-        // countdown time limit reached
-        if (secPerFolder && t.elapsed() > msPerFolder) return;
 
-        // uturn
+    QElapsedTimer elapsedTimer;
+    elapsedTimer.start();
+
+    qint64 elapsedMsInFolder = 0;
+    int slideCount = 0;
+
+    QTimer *imageTimer = new QTimer(this);
+    imageTimer->setInterval(msPerImage);
+
+    connect(imageTimer, &QTimer::timeout,
+            this, [=, &elapsedMsInFolder, &slideCount, &uturnCounter, &isForward]() mutable
+    {
+        if (!isStressTest) {
+            imageTimer->stop();
+            return;
+        }
+
+        elapsedMsInFolder += msPerImage;
+
+        // Countdown time limit reached
+        if (secPerFolder && elapsedMsInFolder >= msPerFolder) {
+            isStressTest = false;
+            imageTimer->stop();
+            return;
+        }
+
+        // U-turn logic
         if (uturn && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
             uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
             uturnCounter = 0;
         }
 
-        // no uturn and end of images in folder
+        // Slide count and folder end logic
         ++slideCount;
-        if (!uturn && slideCount >= dm->sf->rowCount()) return;
+        if (!uturn && slideCount >= dm->sf->rowCount()) {
+            isStressTest = false;
+            imageTimer->stop();
+            return;
+        }
 
-
-        // pause
-        // G::wait(msPerImage);
-        while (t.elapsed() < msPerImage){qApp->processEvents();}
-        qint64 msElapsed = t.elapsed();
-        double seconds = msElapsed * 0.001;
-
-        // report countdown time left in this folder
+        // Update stress test status
+        double seconds = elapsedTimer.elapsed() * 0.001;
         if (secPerFolder) stressSecToGoInFolder = secPerFolder - seconds;
-        // report number of images traversed
-        // if (secPerFolder) stressSecToGoInFolder = slideCount;
 
-        // next image
+        // Navigate to the next image
         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && dm->currentSfRow == 0) isForward = true;
-        /*
-        qDebug() << "slideCount =" << slideCount << "dm->currentSfRow =" << dm->currentSfRow
-                 << "isForward =" << isForward << "isStressTest =" << isStressTest; //*/
         if (isForward) sel->next();
         else sel->prev();
-    }
-    qint64 msElapsed = t.elapsed();
-    double seconds = msElapsed * 0.001;
-    stressSecToGoInFolder = secPerFolder - seconds;
-    double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
-    int imagePerSec = slideCount * 1.0 / seconds;
-    QString msg = "" + QString::number(slideCount) + " images.<br>" +
-                  QString::number(secPerFolder) + " secPerFolder.<br>" +
-                  QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
-                  QString::number(msElapsed) + " ms elapsed.<br>" +
-                  QString::number(elapsedMsPerImage) + " ms delay.<br>" +
-                  QString::number(imagePerSec) + " images per second.<br>" +
-                  QString::number(elapsedMsPerImage) + " ms per image."
-//                  + "<br><br>Press <font color=\"red\"><b>Spacebar</b></font> to cancel this popup."
-                  ;
-    G::popUp->showPopup(msg, 0);
-    qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
-             << msElapsed << "ms elapsed  "
-             << msPerImage << "ms delay  "
-             << imagePerSec << "images per second  "
-             << elapsedMsPerImage << "ms per image."
-                ;
-    return;
+    });
 
-    if (G::isLogger) G::log("MW::traverseFolderStressTest");
-    getSubfolders("/users/roryhill/pictures");
-    QString fPath;
-    int r = static_cast<int>(QRandomGenerator::global()->generate());
-    fPath = subfolders->at(r % (subfolders->count()));
+    imageTimer->start();
+
+    // Block until isStressTest becomes false
+    while (isStressTest) {
+        qApp->processEvents(); // Process events to keep the UI responsive
+    }
+
+    // Cleanup and final reporting
+    imageTimer->deleteLater();
+    double elapsedSeconds = elapsedTimer.elapsed() * 0.001;
+    double elapsedMsPerImage = elapsedTimer.elapsed() * 1.0 / slideCount;
+    int imagesPerSecond = slideCount / elapsedSeconds;
+
+    QString msg = QString("%1 images.<br>%2 secPerFolder.<br>%3 stressSecToGoInFolder.<br>%4 ms elapsed.<br>%5 ms delay.<br>%6 images per second.<br>%7 ms per image.")
+                      .arg(slideCount)
+                      .arg(secPerFolder)
+                      .arg(secPerFolder - elapsedSeconds)
+                      .arg(elapsedTimer.elapsed())
+                      .arg(elapsedMsPerImage)
+                      .arg(imagesPerSecond)
+                      .arg(elapsedMsPerImage);
+
+    G::popUp->showPopup(msg, 0);
+
+    qDebug() << "MW::traverseFolderStressTest"
+             << "Executed stress test" << slideCount << "times."
+             << elapsedTimer.elapsed() << "ms elapsed"
+             << msPerImage << "ms delay"
+             << imagesPerSecond << "images per second"
+             << elapsedMsPerImage << "ms per image.";
 }
+
+// void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
+// {
+// /*
+//     msPerImage      time per image
+//     secPerFolder    ms test (0 == forever) ESC to stop
+//     uturn           randomly change direction
+// */
+//     G::popUp->reset();
+
+//     // if no images in folder then return
+//     if (dm->sf->rowCount() == 0) return;
+
+//     int msPerFolder = secPerFolder * 1000;
+//     //qDebug() << "MW::traverseFolderStressTest" << msPerImage << msPerFolder;
+
+//     if (!msPerImage) {
+//         msPerImage = QInputDialog::getInt(this,
+//                                   "Enter ms delay between images",
+//                                   "Delay (1-1000 ms) ",
+//                                   50, 1, 1000);
+//     }
+
+//     QString stopMsg = "Press ESC to stop stress test";
+//     G::popUp->showPopup(stopMsg, 0);
+//     isStressTest = true;
+//     bool isForward = true;
+//     //slideCount = 0;
+//     int uturnCounter = 0;
+//     int uturnMax;
+//     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
+//     int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
+//     QElapsedTimer t;
+//     t.start();
+//     qint64 elapsedMsInFolder = 0;
+//     while (isStressTest) {
+//         elapsedMsInFolder += t.elapsed();
+//         t.restart();
+//         // countdown time limit reached
+//         if (secPerFolder && (elapsedMsInFolder > msPerFolder)) return;
+
+//         // uturn
+//         if (uturn && ++uturnCounter > uturnAmount) {
+//             isForward = !isForward;
+//             uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
+//             uturnCounter = 0;
+//         }
+
+//         // no uturn and end of images in folder
+//         ++slideCount;
+//         if (!uturn && slideCount >= dm->sf->rowCount()) return;
+
+
+//         // pause
+//         while (t.elapsed() < msPerImage){qApp->processEvents();}
+//         double seconds = elapsedMsInFolder * 0.001;
+
+//         // report countdown time left in this folder
+//         if (secPerFolder) stressSecToGoInFolder = secPerFolder - seconds;
+
+//         // next image
+//         if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
+//         if (!isForward && dm->currentSfRow == 0) isForward = true;
+//         if (isForward) sel->next();
+//         else sel->prev();
+//     }
+//     qint64 msElapsed = t.elapsed();
+//     double seconds = msElapsed * 0.001;
+//     stressSecToGoInFolder = secPerFolder - seconds;
+//     double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
+//     int imagePerSec = slideCount * 1.0 / seconds;
+//     QString msg = "" + QString::number(slideCount) + " images.<br>" +
+//                   QString::number(secPerFolder) + " secPerFolder.<br>" +
+//                   QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
+//                   QString::number(msElapsed) + " ms elapsed.<br>" +
+//                   QString::number(elapsedMsPerImage) + " ms delay.<br>" +
+//                   QString::number(imagePerSec) + " images per second.<br>" +
+//                   QString::number(elapsedMsPerImage) + " ms per image."
+//                   // + "<br><br>Press <font color=\"red\"><b>Spacebar</b></font> to cancel this popup."
+//                   ;
+//     G::popUp->showPopup(msg, 0);
+//     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
+//              << msElapsed << "ms elapsed  "
+//              << msPerImage << "ms delay  "
+//              << imagePerSec << "images per second  "
+//              << elapsedMsPerImage << "ms per image."
+//                 ;
+//     return;
+// }
 
 void MW::bounceFoldersStressTestFromMenu()
 {
