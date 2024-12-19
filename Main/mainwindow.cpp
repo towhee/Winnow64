@@ -3291,21 +3291,17 @@ void MW::loadChanged(const QString folderPath, const QString op)
     QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
                   " folderPath = " + folderPath;
     if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
-    {
-        ///*
-        qDebug().noquote()
-                << fun
-                << "op =" << op
-                << "instance =" << instance
-                << "dm->instance =" << dm->instance
-                << "dm->folderList.count = =" << dm->folderList.count()
-                << "\n\tfolderPath =             " << folderPath
-                << "\n\tdm->currentFilePath =    " << dm->currentFilePath
-                << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
-                   ;//*/
-    }
-
-    static int rows = 0;
+    /*
+    qDebug().noquote()
+            << fun
+            << "op =" << op
+            << "instance =" << instance
+            << "dm->instance =" << dm->instance
+            << "dm->folderList.count = =" << dm->folderList.count()
+            << "\n\tfolderPath =             " << folderPath
+            << "\n\tdm->currentFilePath =    " << dm->currentFilePath
+            << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
+               ;//*/
 
     if (dm->folderList.isEmpty()) return;
 
@@ -3330,8 +3326,9 @@ void MW::loadChanged(const QString folderPath, const QString op)
     }
 
     if (op == "Remove") {
+        /*
         qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
-                 << dm->folderList.count() << dm->folderList;
+                 << dm->folderList.count() << dm->folderList;//*/
         // update bookmarks if only one folder selected
         if (dm->folderList.count() == 1) {
             // new primary folder
@@ -3373,7 +3370,6 @@ void MW::loadDone()
     - check for missing thumbnails.
     - update filters
     - resize tableView columns
-    - process next folder
 */
     // QSignalBlocker bookmarkBlocker(bookmarks);
 
@@ -3386,7 +3382,6 @@ void MW::loadDone()
     }
     QString src = "MW::loadDone";
     // qDebug() << src;
-    // return;
 
     int count = 0;
     /*
@@ -3456,7 +3451,10 @@ void MW::loadDone()
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
     // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
-    if (dm->folderList.count() >= 1 && dm->isQueueEmpty()) {
+    if (dm->folderList.count() >= 1 &&
+        dm->isQueueEmpty() &&
+        !filterDock->visibleRegion().isNull())
+    {
         // qDebug() << src << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
@@ -3474,15 +3472,6 @@ void MW::loadDone()
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
-    // // reset datamodel processing flag
-    // if (dm->isQueueEmpty()) {
-    //     dm->isProcessing = false;
-    // }
-    // else {
-    //     dm->processNextFolder();
-    // }
-
-    // bookmarkBlocker.unblock();
     //QApplication::beep();
 }
 

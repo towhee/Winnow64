@@ -2708,13 +2708,13 @@ void MW::loadShortcuts(bool defaultShortcuts)
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
         defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
 
-        folderDockVisibleAction->setShortcut(QKeySequence("Shift+F3"));
-        favDockVisibleAction->setShortcut(QKeySequence("Shift+F4"));
-        filterDockVisibleAction->setShortcut(QKeySequence("Shift+F5"));
-        metadataDockVisibleAction->setShortcut(QKeySequence("Shift+F6"));
-        thumbDockVisibleAction->setShortcut(QKeySequence("Shift+F7"));
+        folderDockVisibleAction->setShortcut(QKeySequence("F3"));
+        favDockVisibleAction->setShortcut(QKeySequence("F4"));
+        filterDockVisibleAction->setShortcut(QKeySequence("F5"));
+        metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
+        thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
         //menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
-        statusBarVisibleAction->setShortcut(QKeySequence("Shift+F10"));
+        statusBarVisibleAction->setShortcut(QKeySequence("F10"));
 
         //        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
         //        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));

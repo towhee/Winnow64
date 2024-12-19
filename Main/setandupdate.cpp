@@ -266,6 +266,9 @@ void MW::toggleFilterDockVisibility() {
     case SetFocus:
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
+        if (!filters->filtersBuilt) {
+            buildFilters->build();
+        }
         break;
     case SetInvisible:
         filterDock->setVisible(false);
@@ -275,6 +278,9 @@ void MW::toggleFilterDockVisibility() {
         filterDock->setVisible(true);
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
+        if (!filters->filtersBuilt) {
+            buildFilters->build();
+        }
     }
 }
 
@@ -315,7 +321,7 @@ void MW::toggleThumbDockVisibity()
 //         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
 //         return;
 //     }
-   qDebug() << "MW::toggleThumbDockVisibity";
+    // qDebug() << "MW::toggleThumbDockVisibity";
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;
