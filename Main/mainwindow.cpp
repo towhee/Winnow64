@@ -513,7 +513,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
        Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
     simulateJustInstalled = false;
-    isStressTest = false;
+    G::isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer
 
@@ -569,7 +569,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
-
+    createStressTest();         // dependent on DataModel
 
     // platform specific settings (must follow dock creation)
     setupPlatform();
@@ -899,7 +899,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
         G::popUp->reset();
         // end stress test
-        if (isStressTest) isStressTest = false;
+        if (G::isStressTest) G::isStressTest = false;
         // stop loading a new folder
         else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
@@ -2103,7 +2103,7 @@ void MW::loadNewInstance(QString folderPath)
     pickMemSize = "";
 
     // stop slideshow if a new folder is selected
-    if (G::isSlideShow && !isStressTest) slideShow();
+    if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
     if (asCompareAction->isChecked()) {
@@ -2281,7 +2281,7 @@ void MW::loadNewInstance(QString folderPath)
 //     pickMemSize = "";
 
 //     // stop slideshow if a new folder is selected
-//     if (G::isSlideShow && !isStressTest) slideShow();
+//     if (G::isSlideShow && !G::isStressTest) slideShow();
 
 //     // if previously in compare mode switch to loupe mode
 //     if (asCompareAction->isChecked()) {
@@ -2564,7 +2564,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // failsafe to load thumbnail if MetaRead2 failed
     if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
-        qDebug() << source << "reloading thumb for row" << current.row();
+        // qDebug() << source << "reloading thumb for row" << current.row();
         QImage image;
         bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
         if (ok) {
@@ -2791,7 +2791,7 @@ bool MW::stop(QString src)
     G::t.restart();
 
     // // stop slideshow
-    if (G::isSlideShow && !isStressTest) slideShow();
+    if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // stop other threads
     videoView->stop();
@@ -2969,7 +2969,7 @@ bool MW::reset(QString src)
     updateMetadataThreadRunStatus(true, true, true, "MW::reset");
 
     // stop slideshow if a new folder is selected
-    if (G::isSlideShow && !isStressTest) slideShow();
+    if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
     if (asCompareAction->isChecked()) {

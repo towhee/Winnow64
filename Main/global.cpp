@@ -7,7 +7,7 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = true;              // Writes log messages to file or console
+bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
@@ -137,6 +137,7 @@ bool isRunningColorAnalysis;
 bool isRunningStackOperation;
 bool isProcessingExportedImages;
 bool isEmbellish;
+bool includeSidecars;
 bool colorManage;
 bool modifySourceFiles;
 bool backupBeforeModifying;
@@ -172,6 +173,7 @@ QString tiffData;                   // temp for testing tiff decoder performance
 QElapsedTimer t;
 bool isTimer;
 bool isTest;
+bool isStressTest;
 
 QString s(QVariant x)
 // helper function to convert variable values to a string for reporting

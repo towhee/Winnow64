@@ -420,6 +420,18 @@ bool FSTree::isShowImageCount()
     return fsModel->showImageCount;
 }
 
+int FSTree::imageCount(QString path)
+{
+    QModelIndex idx0 = fsFilter->mapFromSource(fsModel->index(path));
+    int row = idx0.row();
+    int col = fsModel->imageCountColumn;
+    QModelIndex par = idx0.parent();
+    QModelIndex idx4 = fsFilter->index(row, col, par);
+    int count = idx4.data().toInt();
+    // qDebug() << row << col << idx0.data() << idx4.data().toString() << idx0 << idx4;
+    return count;
+}
+
 void FSTree::setShowImageCount(bool showImageCount)
 {
     fsModel->showImageCount = showImageCount;

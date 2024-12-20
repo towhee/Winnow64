@@ -52,7 +52,7 @@ void MW::slideShow()
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WidgetShortcut);
 
-        if (isStressTest) getSubfolders("/users/roryhill/pictures");
+        if (G::isStressTest) getSubfolders("/users/roryhill/pictures");
 
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);

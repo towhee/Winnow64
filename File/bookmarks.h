@@ -15,7 +15,6 @@ public:
     BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount, bool &combineRawJpg);
     void reloadBookmarks();
     void saveBookmarks(QSettings *setting);
-    void select(QString fPath);
     void updateCount();
     void updateCount(QString fPath);
 
@@ -26,7 +25,8 @@ public:
     QString hoverFolderName;
 
 public slots:
-	void removeBookmark();
+    void select(QString fPath);
+    void removeBookmark();
     void updateBookmarks();
 
 private:

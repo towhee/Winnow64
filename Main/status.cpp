@@ -76,7 +76,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         }
 
         QString preBase = "";
-        if (isStressTest) {
+        if (G::isStressTest) {
             preBase = "<font color=\"red\"><b>PRESS ESC TO STOP STRESS TEST</b></font>  ";
             preBase += QString::number(stressSecToGoInFolder) + " seconds.\t";
         }
@@ -131,6 +131,9 @@ void MW::updateStatusBar()
 
     if (G::modifySourceFiles) modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
     else modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
+
+    if (G::includeSidecars) includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
+    else includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
 
     if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
@@ -436,6 +439,35 @@ void MW::toggleModifyImages()
     }
 }
 
+void MW::toggleIncludeSidecarsClick()
+{
+/*
+    This is called by connect signals from the menu action and the include sidecars
+    button. The call is redirected to toggleColorManage, which has a parameter which is
+    not supported by the action and button signals.
+*/
+    if (G::isLogger) G::log("MW::toggleColorManageClick");
+    toggleIncludeSidecars(Tog::toggle);
+}
+
+void MW::toggleIncludeSidecars(Tog n)
+{
+/*
+    The image cache is rebuilt to show the color manage option.
+*/
+    if (G::isLogger) G::log("MW::toggleColorManage");
+    if (n == Tog::toggle) G::includeSidecars = !G::includeSidecars;
+    if (n == Tog::off) G::includeSidecars = false;
+    if (n == Tog::on) G::includeSidecars = true;
+    includeSidecarsAction->setChecked(G::includeSidecars);
+    if (G::includeSidecars) {
+        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
+    }
+    else {
+        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
+    }
+}
+
 void MW::toggleColorManageClick()
 {
     /*
@@ -449,7 +481,7 @@ void MW::toggleColorManageClick()
 
 void MW::toggleColorManage(Tog n)
 {
-/*
+    /*
     The image cache is rebuilt to show the color manage option.
 */
     if (G::isLogger) G::log("MW::toggleColorManage");
@@ -466,7 +498,7 @@ void MW::toggleColorManage(Tog n)
 
     if (dm->rowCount() == 0) return;
 
-//    imageView->loadImage(dm->currentFilePath, "MW::toggleColorManage", true/*refresh*/);
+    //    imageView->loadImage(dm->currentFilePath, "MW::toggleColorManage", true/*refresh*/);
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {

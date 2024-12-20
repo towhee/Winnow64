@@ -310,6 +310,14 @@ void MW::createFileActions()
     addAction(colorManageAction);
     connect(colorManageAction, &QAction::triggered, this, &MW::toggleColorManageClick);
 
+    includeSidecarsAction = new QAction(tr("Include sidecars"), this);
+    includeSidecarsAction->setObjectName("includeSidecars");
+    includeSidecarsAction->setShortcutVisibleInContextMenu(true);
+    includeSidecarsAction->setCheckable(true);
+    includeSidecarsAction->setChecked(G::includeSidecars);
+    addAction(includeSidecarsAction);
+    connect(includeSidecarsAction, &QAction::triggered, this, &MW::toggleIncludeSidecarsClick);
+
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
@@ -1703,6 +1711,7 @@ void MW::createFileMenu()
     fileMenu->addSeparator();
     fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
+    fileMenu->addAction(includeSidecarsAction);
     // fileMenu->addAction(subFoldersAction);
     fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();

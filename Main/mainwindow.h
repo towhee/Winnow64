@@ -5,6 +5,7 @@
 #include <QtConcurrent>
 //#include <QDesktopWidget>         // qt6.2
 #include "sstream"
+#include "stresstest.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -518,10 +519,12 @@ private slots:
     void clearAllFilters();
     void sortChangeFromAction();
     void sortReverse();
-    void toggleSortDirectionClick();
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
+    void toggleSortDirectionClick();
     void toggleSortDirection(Tog n = toggle);
+    void toggleIncludeSidecarsClick();
+    void toggleIncludeSidecars(Tog n = toggle);
     void toggleModifyImagesClick();
     void toggleModifyImages();
     void toggleColorManageClick();
@@ -776,6 +779,7 @@ private:
     QAction *eraseUsbAction;
     QAction *eraseUsbActionFromContextMenu;
     QAction *colorManageAction;
+    QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
     QAction *renameAction;
@@ -1048,6 +1052,7 @@ private:
     QProgressBar *progressBar;
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
+    BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
@@ -1100,6 +1105,7 @@ private:
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
     Preferences *pref = nullptr;
+    StressTest *stressTest;
     QFrame *embelFrame;
     Embel *embel;
     InfoString *infoString;
@@ -1174,7 +1180,7 @@ private:
 
     bool simulateJustInstalled;
     bool isSettings = false;
-    bool isStressTest;
+    // bool isStressTest;
     int stressSecToGoInFolder;
     bool hasGridBeenActivated;
 //    bool isSlideshowPaused;
@@ -1297,6 +1303,7 @@ private:
     void updateStatusBar();
     void createMessageView();
     void createPreferences();
+    void createStressTest();
     void createAppStyle();
     void setupCentralWidget();
     void initialize();
@@ -1393,9 +1400,9 @@ private:
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
-    void traverseFolderStressTest(int msPerImage = 0, int secPerFolder = 0, bool uturn = true);
+    void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0, bool uturn = true);
     void bounceFoldersStressTestFromMenu();
-    void bounceFoldersStressTest(int msPerImage = 0, int secPerFolder = -1);
+    void bounceFoldersStressTest(int msPerImage = 0, double secPerFolder = -1);
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;

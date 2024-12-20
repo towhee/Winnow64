@@ -62,6 +62,7 @@ void MW::writeSettings()
     settings->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
+    settings->setValue("includeSidecars", G::includeSidecars);
     settings->setValue("colorManage", G::colorManage);
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
@@ -443,6 +444,7 @@ bool MW::loadSettings()
     if (settings->contains("maxIconSize")) G::maxIconSize = settings->value("maxIconSize").toInt();
 
     // files
+    if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();
     if (settings->contains("colorManage")) G::colorManage = settings->value("colorManage").toBool();
     if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
