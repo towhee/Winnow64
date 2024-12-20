@@ -40,6 +40,11 @@ void MW::initialize()
     modifyImagesBtn->setToolTip(msg);
     connect(modifyImagesBtn, &BarBtn::clicked, this, &MW::toggleModifyImagesClick);
 
+    includeSidecarsToggleBtn = new BarBtn();
+    msg = "Toggle include sidecars when dragging on/off.";
+    includeSidecarsToggleBtn->setToolTip(msg);
+    connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
+
     colorManageToggleBtn = new BarBtn();
     msg = "Toggle color manage on/off.";
     colorManageToggleBtn->setToolTip(msg);
@@ -982,6 +987,7 @@ void MW::createBookmarks()
     else {
         bookmarks->bookmarkPaths.insert(QDir::homePath());
     }
+    qDebug() << "END CREATE BOOKMARKS)";
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
@@ -1021,6 +1027,7 @@ void MW::createBookmarks()
 
     // update status in status bar
     connect(bookmarks, &BookMarks::status, this, &MW::updateStatus);
+
 }
 
 void MW::createAppStyle()
@@ -1131,6 +1138,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(statusBarSpacer1);
     statusBar()->addWidget(modifyImagesBtn);
     statusBar()->addWidget(colorManageToggleBtn);
+    statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
@@ -1565,5 +1573,16 @@ void MW::createPreferences()
 {
     if (G::isLogger) G::log("MW::createPreferences");
     pref = new Preferences(this);
+}
+
+void MW::createStressTest()
+{
+    if (G::isLogger) G::log("MW::createPreferences");
+    stressTest = new StressTest(this, dm, bookmarks, fsTree);
+    connect(stressTest, &StressTest::next, sel, &Selection::next);
+    connect(stressTest, &StressTest::prev, sel, &Selection::prev);
+    connect(stressTest, &StressTest::selectFolder, fsTree, &FSTree::select);
+    connect(stressTest, &StressTest::selectBookmark, bookmarks, &BookMarks::select);
+
 }
 

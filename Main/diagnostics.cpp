@@ -242,7 +242,7 @@ QString MW::diagnostics()
     rpt << "\n" << "refreshCurrentPath = " << G::s(refreshCurrentPath);
     rpt << "\n" << "simulateJustInstalled = " << G::s(simulateJustInstalled);
     rpt << "\n" << "isSettings = " << G::s(isSettings);
-    rpt << "\n" << "isStressTest = " << G::s(isStressTest);
+    rpt << "\n" << "isStressTest = " << G::s(G::isStressTest);
     rpt << "\n" << "hasGridBeenActivated = " << G::s(hasGridBeenActivated);
     rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
     rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);

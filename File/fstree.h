@@ -59,6 +59,7 @@ public:
     FSTree(QWidget *parent, Metadata *metadata);
     void createModel();
     void setShowImageCount(bool showImageCount);
+    int imageCount(QString path);
     bool isShowImageCount();
     qlonglong selectionCount();
 

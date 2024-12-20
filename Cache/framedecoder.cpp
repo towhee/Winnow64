@@ -190,7 +190,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         frameAlreadyDone = true;
         if (!queue.isEmpty()) queue.remove(0);
         // exhaust QVideoSink frameChanged signals after mediaPlayer is stopped
-        if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
+        // if (G::useProcessEvents && !isStressTest) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
         getNextThumbNail("frameChanged");
     }
 }

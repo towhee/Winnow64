@@ -297,6 +297,7 @@ namespace G
     extern bool isRunningStackOperation;
     extern bool isProcessingExportedImages;
     extern bool isEmbellish;
+    extern bool includeSidecars;
     extern bool colorManage;
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
@@ -330,6 +331,7 @@ namespace G
     extern QElapsedTimer t1;
     extern bool isTimer;
     extern bool isTest;
+    extern bool isStressTest;
 
     void setDM(QObject *dm);
 

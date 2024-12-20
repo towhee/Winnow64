@@ -2005,7 +2005,7 @@ void DataModel::setCurrent(QString fPath, int instance)
     QModelIndex sfIdx = sf->mapFromSource(currentDmIdx);
     currentSfRow = sfIdx.row();
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "DataModel::setCurrent using fPath" << fPath
                  << "currentSfIdx =" << currentSfIdx

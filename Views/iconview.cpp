@@ -1559,7 +1559,6 @@ void IconView::startDrag(Qt::DropActions)
     qDebug() << "IconView::startDrag";
     //*/
     isMouseDrag = false;
-    bool isShiftModifier = QGuiApplication::queryKeyboardModifiers() & Qt::ShiftModifier;
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
@@ -1573,7 +1572,7 @@ void IconView::startDrag(Qt::DropActions)
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
         QString xmpPath = Utilities::assocXmpPath(fPath);
-        if (isShiftModifier && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
+        if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
     }
 
     QDrag *drag = new QDrag(this);
