@@ -1958,6 +1958,7 @@ void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 
 void DataModel::setCurrent(QModelIndex dmIdx, int instance)
 {
+    if (G::isLogger) G::log("DataModel::setCurrent (dmIdx)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
@@ -1986,6 +1987,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
 
 void DataModel::setCurrent(QString fPath, int instance)
 {
+    if (G::isLogger) G::log("DataModel::setCurrent (fPath)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setCurrent");

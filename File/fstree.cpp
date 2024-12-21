@@ -1271,5 +1271,16 @@ void FSTree::test()
         //     visibleFolders.append(index.data(QFileSystemModel::FilePathRole).toString());
         // }
     }
+}
 
+void FSTree::howThisWorks()
+{
+    if (G::isLogger) G::log("FSTree::howThisWorks");
+
+    QDialog *dlg = new QDialog;
+    Ui::FoldersHelpDlg *ui = new Ui::FoldersHelpDlg;
+    ui->setupUi(dlg);
+    dlg->setWindowTitle("Folders Panel Help");
+    dlg->setStyleSheet(G::css);
+    dlg->exec();
 }

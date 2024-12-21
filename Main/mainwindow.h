@@ -1405,6 +1405,9 @@ private:
     void bounceFoldersStressTest(int msPerImage = 0, double secPerFolder = -1);
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
+
+    QString readSvgFileToString(const QString &filePath);
+
     QElapsedTimer testTime;
     bool testCrash = false;
 

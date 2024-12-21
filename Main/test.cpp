@@ -326,6 +326,20 @@ void listChildren(const QObject *parent, int depth = 0) {
     }
 }
 
+QString MW::readSvgFileToString(const QString &filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "Unable to open file:" << filePath;
+        return QString();
+    }
+
+    QTextStream in(&file);
+    QString svgContent = in.readAll();
+    file.close();
+    return svgContent;
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     // filterChange();
@@ -338,12 +352,27 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
-    // traverseFolderStressTest(50, 5, true);
-    //bounceFoldersStressTest();
-    // stressTest->begin();
-    qDebug() << G::includeSidecars;
+    QString filePath = "/Users/roryhill/Downloads/wrench-svgrepo-com.svg";
+
+    // Read SVG into a QString
+    QString svgString = readSvgFileToString(filePath);
+    if (!svgString.isEmpty()) {
+        qDebug() << "SVG content as QString:";
+        qDebug() << svgString;
+
+        // Convert QString to char*
+        QByteArray byteArray = svgString.toUtf8();
+        const char *svgChar = byteArray.data();
+
+        qDebug() << "SVG content as char*:";
+        qDebug() << svgChar;
+
+        // Use svgChar as needed...
+    }
+
+
 }
+// Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
    Performance
         Big max number of thumbnails
