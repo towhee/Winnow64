@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
+#include "ui_foldershelp.h"
 #include "HoverDelegate.h"
 
 #ifndef FSTREE_H
@@ -83,6 +84,7 @@ public slots:
     void resizeColumns();
     void refreshModel();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
+    void howThisWorks();
 
 private slots:
     void wheelStopped();

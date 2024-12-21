@@ -448,7 +448,8 @@ SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/loupeinfodlg.ui
+    Dialogs/loupeinfodlg.ui \
+    Help/foldershelp.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
@@ -478,7 +479,7 @@ FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Embellish/embelCoord.ui
 FORMS += Help/filtershelp.ui
-FORMS += Help/filtershelp_copy.ui
+FORMS += Help/foldershelp.ui
 FORMS += Help/helpfindduplicates.ui
 FORMS += Help/helppixeldelta.ui
 FORMS += Help/helpform.ui

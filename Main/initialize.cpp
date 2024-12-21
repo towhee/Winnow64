@@ -1198,6 +1198,16 @@ void MW::createFolderDock()
     // Spacer
     folderTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *folderQuestionBtn = new BarBtn();
+    folderQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    folderQuestionBtn->setToolTip("How this works");
+    connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
+    folderTitleLayout->addWidget(folderQuestionBtn);
+
+    // Spacer
+    folderTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -1304,7 +1314,7 @@ void MW::createFilterDock()
     filterTitleLayout->addWidget(filterGearBtn);
 
     // Spacer
-    filterTitleLayout->addSpacing(5);
+    filterTitleLayout->addSpacing(10);
 
     // question mark button
     BarBtn *filterQuestionBtn = new BarBtn();

@@ -45,22 +45,26 @@ PROGRAM PIPELINE
     • New folder selected:
         - FSTree::mousePressEvent or
           FSTree::select
-        - MW::folderSelectionChange
-        - MW::loadNewInstance                  // if new primary folder
+        - MW::folderSelectionChange             // prep based on mouse click modifier
+        - MW::stop                              // halt prior loading
+        - MW::reset                             // reset all parameters
+        - MW::clearDataModel
+        - DM::newInstance                       // if new primary folder
         - DM::enqueueFolderSelection
+        - DM::enqueueOp
         - DM::processNextFolder
         - DM::addFolder
-        - DM::addFileDataForRow                // iterate all rows
-        - MW::MW::loadChanged
+        - DM::addFileDataForRow                 // iterate all rows
+        - MW::loadChanged
         - MW::loadFolder
         - Selection::setCurrentRow
         - Selection::setCurrentIndex
-        - DataModel::setCurrentSF
+        - DataModel::setCurrentSF               // update current indexes and fPath
         - MW::load
         - MetaRead2::setStartRow
         - MetaRead2::run
         - MetaRead2::dispatchReaders
-        - Reader::read
+        - Reader::read                          // prep reader
         - Reader::run
         - Reader::readMetadata
         - Reader::readIcon
@@ -83,36 +87,7 @@ PROGRAM PIPELINE
         - ImageCache::cacheImage
         - ImageCache::nextToCache
 
-    • While loading - new image selected:
-        - Selection::currentIndex              // set current index
-        - MW::load                   // set scrollOnly false
-        - MetaRead::setCurrentRow              // read metadata and icons
-        - MW::fileSelectionChange              // current file housekeeping
-        - ImageCache::setCurrentPosition       // build image cache
-        - ImageView::load                      // show current image from image cache
-
-    • While loading - IconView or TableView is scrolled:
-        - MW::thumbHasScrolled, MW::gridHasScrolled or MW::tableHasScrolled
-        - MW::load
-        - MetaRead::setCurrentRow
-
-    • While loading - another folder appended to datamodel
-        - FSTree::selectionChanged             // selected > 1 folder
-        - MW::loadConcurrentAddFolder          // clear filters
-        - DataModel::enqueueFolderSelection    // append to folder list queue
-        - DataModel::processNextFolder         // append to datamodel and add folder file data
-        - MW::loadConcurrentChanged            // prep and start MetaRead2
-        - MetaRead2::setStartRow               // start metadata and icon loading for new DM items
-        - Reader::read                         // prep reader
-        - Reader::readMetadata                 // read file metadata
-        - Reader::readIcon                     // read file icon
-        - MetaRead2::dispatchFinished          // finished all files in datamodel
-        - MW::loadCurrentDone                  // cleanup, rebuild filters
-
-NEW DATAMODEL
-    - Left mouse click on folder in fsTree which triggers selection change
-        -
-
+        * Use G::isFlowLogger or G::isLogger to output program progress
 
 PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
 
@@ -162,54 +137,7 @@ A new image is selected which triggers a scroll event
 
     • Update the icon range (firstVisible/lastVisible)
 
-Flow by function call: (MetaRead2)
 
-    MW::folderSelectionChange
-    MW::stop                                Stop all activities before loading a new folder of images
-    DataModel::newInstance                  Increment datamodel instance
-    VideoView::stop
-    BuildFilters::stop
-    MetaRead2::stop
-    ImageCache::stop
-    FrameDecoder::stop
-    MW::reset
-    DataModel::clearDataModel
-    Filters::removeChildrenDynamicFilters
-    Filters::clearAll
-    DataModel::load
-    DataModel::addFileData
-    MW::loadConcurrentNewFolder
-    ImageCache::initImageCache
-    ImageCache::ClearImageCache
-    MetaRead2::initialize
-    Selection::setCurrentRow                           row = 0
-    Selection::setCurrentIndex                         row = 0 clearSelection = true
-    MW::load                                 row = 0 G::iconChunkLoaded = false
-    MetaRead2::setCurrentRow                           row = 0
-    MetaRead2::run
-    MetaRead2::dispatchReaders
-    MetaRead2::dispatch (for every image in folder)    emits to ImageCache::addCacheItemImageMetadata
-    Reader::read (for every image file in folder)      Reads metadata and icon (thumbnail)
-    ImageCache::addCacheItemImageMetadata
-    MW::fileSelectionChange                            emit from MetaRead2::dispatch for row = currentRow
-    ImageView::loadImage                               May not be cached yet
-    ImageCache::setCurrentPosition                     row = 0
-    ImageCache::memChk
-    ImageCache::updateTargets
-    ImageCache::cacheItemListComplete
-    ImageCache::setDirection
-    ImageCache::getImCacheSize
-    ImageCache::setPriorities                          key = 0
-    ImageCache::setTargetRange
-    ImageCache::resetAbortedCaching
-    MetaRead2::dispatchFinished
-    MW::loadConcurrentDone
-    Iterate to load the image cache
-    ImageCache::cacheImage                             Signal ImageView::loadImage if current image
-    ImageView::loadImage
-
-    Changes:
-        // emit stopped("FrameDecoder");
 
 Flow Flags:
 
@@ -2001,6 +1929,11 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
 
+    If the source is FSTree then the op is defined by the mouse click modifier
+    - NoModifier: Add folder and resetDataModel = true
+    - Ctrl/cmd:   Toggle folder Add or Remove
+    - Alt/opt:    recurse = true
+
     op = operation to perform:
     - Add
     - Remove
@@ -2763,7 +2696,7 @@ bool MW::stop(QString src)
     if (G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
 
     // ignore if already stopping
-    if (G::stop && ! G::removingFolderFromDM) return false;
+    if (G::stop && !G::removingFolderFromDM) return false;
 
 
     // stop flags
@@ -2888,7 +2821,7 @@ bool MW::stop(QString src)
 bool MW::reset(QString src)
 {
 /*
-    Resets everything prior to aa insatance / new folder heirarchy change.
+    Resets everything prior to aa instance / new folder heirarchy change.
 */
 
     // if (!G::stop || G::removingFolderFromDM) {
