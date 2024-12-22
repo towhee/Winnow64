@@ -352,25 +352,43 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString filePath = "/Users/roryhill/Downloads/wrench-svgrepo-com.svg";
+    // Load the custom font
+    QString fontPath = "/Users/roryhill/Downloads/glyphter-font/fonts/glyphs.ttf";
+    int fontId = QFontDatabase::addApplicationFont(fontPath);
 
-    // Read SVG into a QString
-    QString svgString = readSvgFileToString(filePath);
-    if (!svgString.isEmpty()) {
-        qDebug() << "SVG content as QString:";
-        qDebug() << svgString;
-
-        // Convert QString to char*
-        QByteArray byteArray = svgString.toUtf8();
-        const char *svgChar = byteArray.data();
-
-        qDebug() << "SVG content as char*:";
-        qDebug() << svgChar;
-
-        // Use svgChar as needed...
+    if (fontId == -1) {
+        qDebug() << "Failed to load the font from:" << fontPath;
+        return;
     }
 
+    // Get the family name of the loaded font
+    QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
+    if (fontFamilies.isEmpty()) {
+        qDebug() << "No font families found in the loaded font.";
+        return;
+    }
+    QString fontFamily = fontFamilies.at(0);
 
+    qDebug() << "Font loaded successfully with family name:" << fontFamily;
+
+    // Create a QFont using the loaded font family
+    QFont customFont(fontFamily);
+
+    // Insert the glyph into a QString
+    // Assuming 'A' is the character you want from the font
+    QChar glyph('A'); // Replace with the Unicode value if it's not a standard character
+    QString s = QString(glyph);
+
+    // Set the custom font in your application or a widget
+    // For example:
+    // QLabel *label = new QLabel;
+    // label->setFont(customFont);
+    // label->setText(s);
+
+    qDebug() << "Generated string with glyph:" << s << "A";
+
+    statusLabel->setFont(customFont);
+    statusLabel->setText(s);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

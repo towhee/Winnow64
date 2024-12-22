@@ -17,3 +17,23 @@ https://www.w3.org/TR/xml-entity-names/025.html  = geometric shapes
 ⬜  White large square
 ⊡⛶🔲▢⬜⬛⌗🄰
 🌑
+
+CONVERT SVG TO PIXMAP AND PUT ON QLABLE
+#include <QLabel>
+#include <QSvgRenderer>
+#include <QPixmap>
+#include <QPainter>
+
+void renderSvgToLabel(QLabel *label, const QString &svgContent) {
+    QSvgRenderer renderer(svgContent.toUtf8());
+    QPixmap pixmap(label->size());
+    pixmap.fill(Qt::transparent); // Transparent background
+    QPainter painter(&pixmap);
+    renderer.render(&painter);
+    label->setPixmap(pixmap);
+}
+
+// Usage
+QLabel *label = new QLabel(this);
+label->setFixedSize(50, 50); // Set desired size
+renderSvgToLabel(label, sWrench);
