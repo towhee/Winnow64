@@ -500,6 +500,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
         setExpanded(index, false);
         return true;
     }
+
+    return false;
 }
 
 void FSTree::selectRecursively(QString folderPath, bool toggle)
