@@ -406,7 +406,7 @@ void DataModel::remove(QString fPath)
 {
 /*
     Delete a row from the data model matching the absolute path.  This is used when an image
-    file has been deleted by Winnow.  Also update fileInfoList and fPathRow.
+    file has been deleted by Winnow.  Also update fPathRow.
 */
     if (G::isLogger) G::log("DataModel::remove");
     if (isDebug) qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
@@ -429,7 +429,23 @@ void DataModel::remove(QString fPath)
     rebuildRowFromPathHash();
 }
 
-// MULTI-SELECT FOLDERS
+/* MULTI-SELECT FOLDERS
+
+    When a folder is selected it is added to the folderQueue. If a folder is unselected,
+    it is added to the folderQueue, but the add flag is set to false, and the folder
+    images are removed from the datamodel.
+
+    When a folderQueue item (a folder) is processed, all the eligible images in the
+    folder are added to the datamodel:
+    - add each image file to the datamodel with QFileInfo related data such as file
+      name, path, file size, creation date...
+    - also determine if there are duplicate raw+jpg files, and if so, populate all
+      the Dup...Role values to manage the raw+jpg files
+
+    After the folder has been processed, MW calls MetaRead2, where the iamge metadata
+    and thumbnails are read and addMetadataForItem is signaled.
+
+*/
 
 bool DataModel::isQueueEmpty()
 {
@@ -603,6 +619,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     // datamodel size
     int row = rowCount();
+    int oldRowCount = rowCount();
     int newRowCount = rowCount() + folderFileInfoList.count();
     setRowCount(newRowCount);
     if (!columnCount()) setColumnCount(G::TotalColumns);
@@ -618,47 +635,61 @@ void DataModel::addFolder(const QString &folderPath)
                  << "file =" << fileInfo.fileName()
                  << "folder =" << folderPath
                     ; //*/
-        // Ensure thread-safe updates to the model
-        // QMetaObject::invokeMethod(this, [this, row, prevRawSuffix, prevRawBaseName, prevRawIdx, fileInfo]() {
-            addFileDataForRow(row, fileInfo);
-            QString suffix = fileInfo.suffix().toLower();
-            QString baseName = fileInfo.completeBaseName();
-            if (metadata->hasJpg.contains(suffix)) {
-                prevRawSuffix = suffix;
-                prevRawBaseName = fileInfo.completeBaseName();
-                prevRawIdx = index(row, 0);
-            }
+        addFileDataForRow(row, fileInfo);
 
-            QMutexLocker locker(&mutex);
-            // if row/jpg pair
-            if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
-                // hide raw version
-                setData(prevRawIdx, true, G::DupHideRawRole);
-                // set raw version other index to jpg pair
-                setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
-                // point to raw version
-                setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
-                // set flag to show combined JPG file for filtering when ingesting
-                setData(index(row, 0), true, G::DupIsJpgRole);
-                // build combined suffix to show in type column
-                setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
-                if (combineRawJpg)
-                    setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
-                else
-                    setData(index(row, G::TypeColumn), "JPG");
-            }
-        // }, Qt::QueuedConnection);
+        /* Save info for duplicated raw and jpg files, which generally are the result of
+        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
+        with the same path precede jpg files with duplicate names. Two roles track duplicates:
+        G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
+        the duplicate other file of the pair. For example:
+
+        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
+        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
+        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
+        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
+        */
+
+        QString suffix = fileInfo.suffix().toLower();
+        QString baseName = fileInfo.completeBaseName();
+        if (metadata->hasJpg.contains(suffix)) {
+            prevRawSuffix = suffix;
+            prevRawBaseName = fileInfo.completeBaseName();
+            prevRawIdx = index(row, 0);
+        }
+
+        QMutexLocker locker(&mutex);
+        // if row/jpg pair
+        if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
+            // hide raw version
+            setData(prevRawIdx, true, G::DupHideRawRole);
+            // set raw version other index to jpg pair
+            setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
+            // point to raw version
+            setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
+            // set flag to show combined JPG file for filtering when ingesting
+            setData(index(row, 0), true, G::DupIsJpgRole);
+            // build combined suffix to show in type column
+            setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
+            if (combineRawJpg)
+                setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
+            else
+                setData(index(row, G::TypeColumn), "JPG");
+        }
         row++;
     }
 
     sf->suspend(false);
 
-    mutex.lock();
     loadingModel = false;
-    if (firstFolderPathWithImages == "" && rowCount()) {
+    if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
+        setCurrent(index(0, 0), instance);
     }
-    mutex.unlock();
+
+    // huge image count
+    if (newRowCount > hugeThreshold) {
+        iconChunkSize = 100;
+    }
 
     endLoad(true);
 }
@@ -808,222 +839,30 @@ void DataModel::updateLoadStatus()
         ;//*/
 }
 
-// bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
-// {
-// /*
-//     When a new folder is selected load it into the data model.  This clears the
-//     model and populates the data model with all the cached thumbnail pixmaps from
-//     metadataCache.  If include subfolders has been chosen then the entire subfolder
-//     heirarchy is loaded.
-
-//     Steps:
-//     - filter to only show supported image formats, iterating subfolders if include
-//       subfolders is set
-//     - add each image file to the datamodel with QFileInfo related data such as file
-//       name, path, file size, creation date
-//     - also determine if there are duplicate raw+jpg files, and if so, populate all
-//       the Dup...Role values to manage the raw+jpg files
-//     - after the metadataReadThread has read all the metadata and thumbnails add
-//       the rest of the metadata to the datamodel.
-
-//     Note:
-//     - building QMaps of unique field values for the filters is not done here,
-//       but on demand when the user selects the filter panel or a menu filter command.
-// */
-//     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", folderPath);
-
-//     // clearDataModel();        // already called by MW::reset
-//     if (isDebug)
-//         qDebug() << "DataModel::load" << "instance =" << instance << folderPath;
-
-//     abortLoadingModel = false;
-//     loadingModel = true;
-//     subFolderImagesLoaded = false;
-//     folderList.clear();
-//     folderList.append(folderPath);
-//     currentPrimaryFolderPath = folderPath;
-
-//     // sf->suspend(true);
-
-//     // emit centralMsg("Building image file list.");
-
-//     // do some initializing
-//     // fileFilters->clear();
-//     // foreach (const QString &str, metadata->supportedFormats) {
-//     //         fileFilters->append("*." + str);
-//     //         if (abortLoadingModel) return endLoad(false);
-//     // }
-//     dir->setNameFilters(*fileFilters);
-//     dir->setFilter(QDir::Files);
-//     dir->setPath(currentPrimaryFolderPath);
-
-//     imageCount = 0;
-//     countInterval = 100;
-
-//     // load file list for the current folder
-//     int folderImageCount = dir->entryInfoList().size();
-//     // emit centralMsg("Building image file list.\n" + QString::number(imageCount) + " found.");
-
-//     // bail if no images and not including subfolders
-//     // if (!folderImageCount && !includeSubfoldersFlag) return endLoad(true);
-//     // if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
-
-//     // add supported images in folder to image list
-//     folderCount = 1;
-//     for (int i = 0; i < folderImageCount; ++i) {
-//         fileInfoList.append(dir->entryInfoList().at(i));
-//         imageCount++;
-//         if (imageCount % countInterval == 0 && imageCount > 0) updateLoadStatus();
-//         if (abortLoadingModel) return endLoad(false);
-//         if (G::stop) return endLoad(false);
-//     }
-
-//     if (!includeSubfoldersFlag) {
-//         includeSubfolders = false;
-//         return endLoad(addFileData());
-//     }
-
-//     // if include subfolders
-//     includeSubfolders = true;
-//     QDirIterator it(currentPrimaryFolderPath, QDirIterator::Subdirectories);
-//     while (it.hasNext()) {
-//         if (abortLoadingModel) return endLoad(false);
-//         it.next();
-//         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-//             folderCount++;
-//             dir->setPath(it.filePath());
-//             int folderImageCount = dir->entryInfoList().size();
-//             // try next subfolder if no images in this folder
-//             if (!folderImageCount) continue;
-//             subFolderImagesLoaded = true;
-//             // add supported images in folder to image list
-//             for (int i = 0; i < folderImageCount; ++i) {
-//                 if (abortLoadingModel) break;
-//                 fileInfoList.append(dir->entryInfoList().at(i));
-//                 imageCount++;
-//                 if (imageCount == G::maxIconChunk) {
-//                     if (!okManyImagesWarning()) {
-//                         abortLoadingModel = true;
-//                         G::includeSubfolders = false;
-//                         return endLoad(false);
-//                     }
-//                 }
-//             }
-//             updateLoadStatus();
-//         }
-//     }
-//     if (abortLoadingModel || !imageCount) return endLoad(false);
-
-//     // huge image count
-//     if (imageCount > hugeThreshold) {
-//         iconChunkSize = 100;
-//     }
-
-//     // images were found and added to data model
-//     return endLoad(addFileData());
-// }
-
-// bool DataModel::addFileData()
-// {
-// /*
-//     Load the information from the operating system contained in QFileInfo
-
-//     • PathColumn
-//     • NameColumn        (core sort item)
-//     • TypeColumn        (core sort item)
-//     • PermissionsColumn (core sort item)  rgh?
-//     • ReadWriteColumn   (core sort item)  rgh?
-//     • SizeColumn        (core sort item)
-//     • CreatedColumn     (core sort item)
-//     • ModifiedColumn    (core sort item)
-//     • PickColumn        (core sort item)
-//     • IngestedColumn
-//     • SearchColumn
-//     • ErrColumn
-// */
-//     if (G::isLogger || G::isFlowLogger) G::log("DataModel::addFileData");
-//     if (isDebug)
-//         qDebug() << "DataModel::addFileData" << "instance =" << instance << currentPrimaryFolderPath;
-
-//     if (combineRawJpg) {
-//         // make sure, if raw+jpg pair, that raw file is first to make combining easier
-//         std::sort(fileInfoList.begin(), fileInfoList.end(), lessThanCombineRawJpg);
-//     }
-//     else {
-//         std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
-//     }
-
-//     QString step = "Loading eligible images.\n\n";
-//     QString escapeClause = "\n\nPress \"Esc\" to stop.";
-
-//     // test if raw file to match jpg when same file names and one is a jpg
-//     QString suffix;
-//     QString prevRawSuffix = "";
-//     QString prevRawBaseName = "";
-//     QString baseName = "";
-//     QModelIndex prevRawIdx;
-
-//     sf->suspend(true);
-
-//     int n = fileInfoList.count() + rowCount();
-//     // if (n == 0) n = 1;
-//     setRowCount(n);
-//     setColumnCount(G::TotalColumns);
-
-//     for (int row = 0; row < fileInfoList.count(); ++row) {
-//         if (abortLoadingModel) return false;
-
-//         // get file info
-//         fileInfo = fileInfoList.at(row);
-//         addFileDataForRow(row, fileInfo);
-
-//         /* Save info for duplicated raw and jpg files, which generally are the result of
-//         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
-//         with the same path precede jpg files with duplicate names. Two roles track duplicates:
-//         G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
-//         the duplicate other file of the pair. For example:
-
-//         Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
-//         Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
-//         Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
-//         Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
-//         */
-
-//         suffix = fileInfoList.at(row).suffix().toLower();
-//         baseName = fileInfoList.at(row).completeBaseName();
-//         if (metadata->hasJpg.contains(suffix)) {
-//             // qDebug() << "DataModel::addFileData" << row << suffix;
-//             prevRawSuffix = suffix;
-//             prevRawBaseName = fileInfoList.at(row).completeBaseName();
-//             prevRawIdx = index(row, 0);
-//         }
-
-//         QMutexLocker locker(&mutex);
-//         // if row/jpg pair
-//         if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
-//             // hide raw version
-//             setData(prevRawIdx, true, G::DupHideRawRole);
-//             // set raw version other index to jpg pair
-//             setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
-//             // point to raw version
-//             setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
-//             // set flag to show combined JPG file for filtering when ingesting
-//             setData(index(row, 0), true, G::DupIsJpgRole);
-//             // build combined suffix to show in type column
-//             setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
-//             if (combineRawJpg)
-//                 setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
-//             else
-//                 setData(index(row, G::TypeColumn), "JPG");
-//         }
-//     }
-
-//     sf->suspend(false);
-//     return true;
-// }
-
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
+/*
+    Load the information from the operating system contained in QFileInfo
+
+    • PathColumn
+    • NameColumn
+    • TypeColumn
+    • PermissionsColumn
+    • ReadWriteColumn
+    • SizeColumn
+    • CreatedColumn
+    • ModifiedColumn
+
+    Also add non-imagedata fields
+
+    • PickColumn
+    • IngestedColumn
+    • MetadataAttemptedColumn
+    • MetadataLoadedColumn
+    • IconLoadedColumn
+    • SearchColumn
+    • ErrColumn
+*/
     if (G::isLogger) G::log("DataModel::addFileDataForRow", "row = " + QString::number(row));
     if (isDebug)
         qDebug() << "DataModel::addFileDataForRow"

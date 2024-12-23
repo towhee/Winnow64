@@ -987,7 +987,7 @@ void MW::createBookmarks()
     else {
         bookmarks->bookmarkPaths.insert(QDir::homePath());
     }
-    qDebug() << "END CREATE BOOKMARKS)";
+    // qDebug() << "END CREATE BOOKMARKS)";
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 

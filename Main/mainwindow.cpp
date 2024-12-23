@@ -1337,11 +1337,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 int i = tabBar->tabAt(e->pos());
                 if (i >= 0 && i != prevTabIndex) {
                     QString tip = "";
-                    if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
-                    if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
-                    if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
-                    if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
-                    if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                    if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel (F3)";
+                    if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel (F4)";
+                    if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel (F5)";
+                    if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel (F6)";
+                    if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel (F8)";
                     prevTabIndex = i;
                     QToolTip::showText(e->globalPos(), tip);
                 }
@@ -3295,7 +3295,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
         if (dm->rowCount()) {
             loadFolder(folderPath);
         }
-        else {
+        else if (dm->isQueueEmpty()) {
             updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
             setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
         }
@@ -3716,117 +3716,7 @@ QString MW::getSelectedPath()
     return dirInfo.absoluteFilePath();
 }
 
-// QTabBar* MW::tabifiedBar()
-// {
-//     // find the tabbar containing the dock widgets
-//     QTabBar* tabBar = nullptr;
-//     QList<QTabBar *> tabList = findChildren<QTabBar *>();
-//     for (int i = 0; i < tabList.count(); i++) {
-//         if (tabList.at(i)->currentIndex() != -1) {
-//             tabBar = tabList.at(i);
-//             break;
-//         }
-//     }
-//     return tabBar;
-// }
-
-// void MW::tabBarAssignRichText(QTabBar *tabBar)
-// /*
-//     Not being used. RichTextTabBar not used. Would require also subclassing QMainWindow
-//     to use this (see dockwidget.cpp line 56).
-// */
-// {
-//     for (int i = 0; i < tabBar->count(); i++) {
-//         bool match = tabBar->tabText(i) == folderDockTabText;
-//         qDebug() << "MW::tabBarAssignRichText" << "tab count =" << tabBar->count()
-//                  << i << "tabBar->tabText() =" << tabBar->tabText(i)
-//                  << "folderDockTabText =" << folderDockTabText
-//                  << "match =" << match;
-//         if (tabBar->tabText(i) == folderDockTabText) {
-//             qDebug() << "MW::tabBarAssignRichText match found";
-//             tabBar->setTabText(i, "xxx");
-// //            RichTextTabBar *richTextTabBar = qobject_cast<RichTextTabBar*>(tabBar);
-// //            richTextTabBar->setTabText(i, folderDockTabRichText);
-//         }
-//     }
-// }
-
-// bool MW::tabBarContainsDocks(QTabBar *tabBar)
-// {
-//     if (tabBar == nullptr) return false;
-//     for (int i = 0; i < tabBar->count(); i++) {
-//         qDebug() << "MW::tabBarContainsDocks" << "tab count =" << tabBar->count()
-//                  << i << "tabBar->tabText() =" << tabBar->tabText(i);
-//         if (dockTextNames.contains(tabBar->tabText(i))) {
-//             return true;
-//         }
-//     }
-//     return false;
-// }
-
-// bool MW::isDockTabified(QString tabText)
-// {
-//     QTabBar* widgetTabBar = tabifiedBar();
-//     bool found = false;
-//     if (widgetTabBar != nullptr) {
-//         int idx = widgetTabBar->currentIndex();
-//         for (int i = 0; i < widgetTabBar->count(); i++) {
-//             if (widgetTabBar->tabText(i) == tabText) {
-//                 found = true;
-//                 break;
-//             }
-//         }
-//     }
-//     return found;
-// }
-
-// bool MW::isSelectedDockTab(QString tabText)
-// {
-//     QTabBar* widgetTabBar = tabifiedBar();
-//     bool selected = false;
-//     if (widgetTabBar != nullptr) {
-//         int idx = widgetTabBar->currentIndex();
-//         for (int i = 0; i < widgetTabBar->count(); i++) {
-//             if (widgetTabBar->tabText(i) == tabText) {
-//                 if (i == idx) {
-//                     selected = true;
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-//     return selected;
-// }
-
-// void MW::folderDockVisibilityChange()
-// {
-//     if (G::isLogger) G::log("MW::folderDockVisibilityChange");
-//     if (folderDock->isVisible()) {
-//         fsTree->scrollToCurrent();
-//     }
-// }
-
-// void MW::embelDockVisibilityChange()
-// {
-//     if (G::isLogger) G::log("MW::embelDockVisibilityChange");
-
-//     // loupeDisplay("MW::embelDockVisibilityChange");
-//     if (turnOffEmbellish) embelProperties->doNotEmbellish();
-// }
-
-// void MW::embelDockActivated(QDockWidget *dockWidget)
-// {
-//     if (G::isLogger) G::log("MW::embelDockActivated");
-// //    if (dockWidget->objectName() == "embelDock") embelDisplay();
-//     // enable the folder dock (first one in tab)
-//     embelDockTabActivated = true;
-//     QList<QTabBar*> tabList = findChildren<QTabBar*>();
-//     QTabBar* widgetTabBar = tabList.at(0);
-//     widgetTabBar->setCurrentIndex(4);
-//     loupeDisplay("MW::embelDockActivated");
-// //    qDebug() << "MW::embelDockActivated" << dockWidget->objectName() << widgetTabBar->currentIndex();
-
-// }
+// MAINWINDOW DOCK RELATED FUNCTIONS MOVED TO DOCKWIDGET.CPP
 
 void MW::embelTemplateChange(int id)
 {
@@ -5831,24 +5721,11 @@ void MW::openUsbFolder()
 
     refreshFolders();
     bookmarks->selectionModel()->clear();
-//    bool wasSubFoldersChecked = subFoldersAction->isChecked();
-//    if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
-//    updateStatusBar();
     G::includeSubfolders = true;
     QString fPath = usbMap[drive].rootPath;
     if (isFolderValid(fPath, true, false)) {
         fsTree->select(fPath, "USBDrive", "MW::openUSBFolder");
-        // fsTree->select(fPath, "Recurse", "MW::openUSBFolder");
     }
-    // isCurrentFolderOkay = isFolderValid(fPath, true, false);
-    // if (isCurrentFolderOkay) {
-    //     QModelIndex idx = fsTree->fsModel->index(fPath);
-    //     QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-    //     fsTree->setCurrentIndex(filterIdx);
-    //     fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-    //     folderSelectionChange();
-    //     G::popUp->showPopup("Loading " + fPath);
-    // }
     else {
         setWindowTitle(winnowWithVersion);
         setCentralMessage("Unable to access " + fPath);

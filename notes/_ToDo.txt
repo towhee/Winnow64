@@ -17,7 +17,7 @@ BUGS / TO DO
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
 - MW::deleteFiles filter/sort work?
 - MW::insertFiles filter/sort work?
-- CR@/CR3 shutter count
+- CR2/CR3 shutter count
 - DataModel could fileInfoList be local - req'd as class variable after model built?
 - When select folder using include subfolders make sure it is and remains selected in FSTree
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
@@ -132,9 +132,10 @@ ENHANCEMENTS
 DONE/FIXED
 - Delete image in folder crashing
 - Redid ImageCache to directly use DataModel
+- Multi-select folders
 - Try improve FSTree expand performance by turning showImageCount off/on
-- replace dm->updateRowNumbers() with a delegate in tableView
-- Changes from Table to Loupe wehn change dock
+- Replace dm->updateRowNumbers() with a delegate in tableView
+- Changes from Table to Loupe when change dock
 - Add folders to filters
 - Paste images to root folder selected
 - Bookmarks folder count not refreshing after delete all files in folder
