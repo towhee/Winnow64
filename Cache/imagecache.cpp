@@ -43,7 +43,7 @@ Data structures:
     corresponds to a row in the filtered DataModel dm->sf, or each image in the view. The
     cache status, target, priority and metadata required for decoding are in CacheItem.
 
-    cacheItemList is populated by MetaRead2, which emits a signal to addCacheItemImageMetadata
+    cacheItemList is populated by MetaRead, which emits a signal to addCacheItemImageMetadata
     for each image as the metadata is read.  Since this is happening concurrently with
     The Decoders generating the images, careful management of mutexes is required.  Potenntial
     orphans are captured at the end of the fillCache function.
@@ -1683,9 +1683,9 @@ void ImageCache::fillCache(int id)
         // is this the last active decoder?       make final check for orphans
         bool allDecodersDone = allDecodersReady();
 
-        /* Both MetaRead2 and ImageCache are running at the same time, and sometimes
-        ImageCache catches up to MetaRead2 and the datamodel has not been loaded/updated
-        for the next item to cache. For MetaRead2 updates to be executed ImageCache must
+        /* Both MetaRead and ImageCache are running at the same time, and sometimes
+        ImageCache catches up to MetaRead and the datamodel has not been loaded/updated
+        for the next item to cache. For MetaRead updates to be executed ImageCache must
         be stopped as ImageCache is blocking the updates. */
 
         // if this is the last active decoder, restart if cacheUpToDate == false

@@ -275,7 +275,7 @@ void MW::diagnosticsMetadata() {
     diagnosticsReport(metadata->diagnostics(dm->currentFilePath), "Winnow Diagnostics: Metadata");
 }
 void MW::diagnosticsXMP() {} // dummy for now
-void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics(), "Winnow Diagnostics: MetaRead2");}
+void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics(), "Winnow Diagnostics: MetaRead");}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}

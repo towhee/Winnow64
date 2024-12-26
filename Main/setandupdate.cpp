@@ -312,16 +312,12 @@ void MW::toggleMetadataDockVisibility() {
 void MW::toggleThumbDockVisibity()
 {
     if (G::isLogger) G::log("MW::toggleThumbDockVisibity");
+
     if (G::isInitializing) {
         G::popUp->showPopup("Please wait until initialization is completed.", 2000);
         return;
     }
-//    if (!metaRead->isReading()) {
-//    if (!metaReadThread->isRunning()) {
-//         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
-//         return;
-//     }
-    // qDebug() << "MW::toggleThumbDockVisibity";
+
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;

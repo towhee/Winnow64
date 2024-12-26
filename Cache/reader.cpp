@@ -44,7 +44,7 @@ void Reader::read(const QModelIndex dmIdx,
     this->isReadIcon = isReadIcon;
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
     status = Status::Success;
-    pending = true;     // set to false when processed in MetaRead2::dispatch
+    pending = true;     // set to false when processed in MetaRead::dispatch
     loadedIcon = false;
 
     QString fun = "Reader::read";
