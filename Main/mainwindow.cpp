@@ -61,14 +61,14 @@ PROGRAM PIPELINE
         - Selection::setCurrentIndex
         - DataModel::setCurrentSF               // update current indexes and fPath
         - MW::load
-        - MetaRead2::setStartRow
-        - MetaRead2::run
-        - MetaRead2::dispatchReaders
+        - MetaRead::setStartRow
+        - MetaRead::run
+        - MetaRead::dispatchReaders
         - Reader::read                          // prep reader
         - Reader::run
         - Reader::readMetadata
         - Reader::readIcon
-        - MetaRead2::dispatch
+        - MetaRead::dispatch
         - MW::fileSelectionChange
         - ImageView::loadImage
         - ImageCache::setCurrentPosition
@@ -2503,7 +2503,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
-    // failsafe to load thumbnail if MetaRead2 failed
+    // failsafe to load thumbnail if MetaRead failed
     if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
         // qDebug() << source << "reloading thumb for row" << current.row();
         QImage image;

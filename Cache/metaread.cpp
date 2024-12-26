@@ -1,174 +1,265 @@
 #include "metaread.h"
+#include "Main/global.h"
 
 /*
-    MetaRead, running in a separate thread, loads the metadata and icons into the
-    datamodel (dm) for a folder. All the metadata will be loaded, and icons will be
-    loaded up to either the iconChunkSize or visibleIcons, depending on the preferences.
-    ImageCache list data will be built.
+    MetaRead, running in a separate thread, dispatches readers to load the metadata and
+    icons into the datamodel (dm), which will already include the file information,
+    loaded by DataModel::addFileData. Icons will be loaded up to iconChunkSize, which
+    defaults to 3000, and can be customized in settings.
+
+    The idealThreadCount number of reader are created.  Readers read the metadata and icon
+    and update the DataModel and ImageCache.
+
+    Steps:
+
+        • Call setStartRow.  The start row can be any row in the datamodel.
+
+        • Dispatch is called for each reader.  Each time dispatch is called it iterates
+          through the datamodel in a ahead/behind order.
+
+        • Start the ImageCache when startRow has been read.
+
+        • When each reader is finished it signals dispatch to be assigned a new file.
+
+        • When all files read clean up excess icons and signal MW::loadCurrentDone.
+
+        • Abort and restart when a new setCurrentRow is called.
 
     MetaRead::setCurrentRow is called when:
+
         • a new folder is selected
         • a new image is selected
         • thumbnails are scrolled
         • the gridView or thumbView are resized
+        • there is an insertion into the datamodel
 
-    Steps:
-        • Set the start position in the DataModel.
-        • Start iterating the DataModel Proxy rows, starting with the current row and
-          alternating one ahead and one behind, loading the metadata and icons.
-        • Part way through the iteration start the ImageCache.
-        • Cleanup (remove) icons exceeding amount set in preferences.  If loadOnlyVisibleIcons
-          then remove all icons except those visible in either thumbView or gridView.  Other-
-          wise, remove icons exceeding iconChunkSize based on the priorityQueue.
-        • Abort and restart when a new setCurrentRow is called.
+    Immediately show image in loupe view while MetaRead is working
+
+        • if the new start row has already been read, fileSelectionChange is called
+          from MW::loadCurrent.
+        • if the new start row has not been read, fileSelectionChange is emitted
+          from dispatch when a reader returns after reading the start row.
+
+    Are we done?
+
+        Determining if all the metadata and iconChunkRange have been loaded needs to
+        consider if a read operation has failed or if the file has been read but the
+        reader done signal has not been processed yet.
+
+        • dm->isAllMetadataAttempted and dm->isAllIconChunkLoaded check if datamodel is
+          complete.  If not, calling redo will redispatch readers to try again, up to
+          5 times.
+        • quitAfterTimeout runs if dispatchFinished has not run after a delay of 1000 ms.
+          redo is called and then dispatchFinished.
+        • dispatchFinished cleans up icons, resets flags, updates the statusbar and emits
+          done, which signals MW::loadCurrentDone.
 
     Note: All data in the DataModel must be set using a queued connection.  When subsequent
-    actions are dependent on the data being set use Qt::BlockingQueuedConnection.  This can
-    result in a deadlock with thread wait functions, so the stop function does its own
-    custom check.
+    actions are dependent on the data being set use Qt::BlockingQueuedConnection.
 
-    Note: This thread does not have to be stopped when a new folder is selected.  run() is
-    self healing, and can adapt to new folders.  This was added before I figured out how to
-    avoid deadlocks stopping the thread.
+    qDebug format:
+          function      col X
+          Desc          col +24
+          Param         col +44
+
+
 */
 
 MetaRead::MetaRead(QObject *parent,
                    DataModel *dm,
                    Metadata *metadata,
-                   FrameDecoder *frameDecoder)
+                   FrameDecoder *frameDecoder,
+                   ImageCache *imageCache)
     : QThread(parent)
 {
     if (isDebug || G::isLogger) G::log("MetaRead::MetaRead");
     this->dm = dm;
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
+    this->imageCache = imageCache;
     thumb = new Thumb(dm, metadata, frameDecoder);
-    imageCacheTriggerCount =  1;
-//    imageCacheTriggerCount =  QThread::idealThreadCount();
-    showProgressInStatusbar = true;
+
+    // create n reader threads
+    readerCount = QThread::idealThreadCount();
+    for (int id = 0; id < readerCount; ++id) {
+        Reader *r = new Reader(this, id, dm, imageCache);
+        reader.append(r);
+        connect(reader[id], &Reader::done, this, &MetaRead::dispatch);
+    }
+
+    instance = 0;
+    abort = false;
     isDebug = false;
+    debugLog = true;
 }
 
 MetaRead::~MetaRead()
 {
-//    if (isDebug) qDebug() << "MetaRead::~MetaRead";
-//    delete thumb;
+    if (isDebug) qDebug() << "MetaRead::~MetaRead";
+    delete thumb;
 }
 
-//void MetaRead::setStartRow(int row, bool isCurrent, QString src)
-void MetaRead::setStartRow(int row, bool fileSelectionChanged, QString src)
+void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 {
 /*
-    Starts reading metadata and icons from row, alternating ahead and behind.
 
-    fileSelectionChanged == false (Scroll event):
-
-        Read metadata and icons.  Do not trigger a fileSelectioChange.
-
-    fileSelectionChanged == true:
-
-        The row is the current image and MW::fileSelectionChange will be signalled after
-        a delay of imageCacheTriggerCount images.
-
-    Invoked by MW::loadCurrent.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::setCurrentRow", "row = " + QString::number(row));
+    if (G::isLogger || G::isFlowLogger) {
+        QString running;
+        isRunning() ? running = "true" : running = "false";
+        QString s = "row = " + QString::number(sfRow) + " src = " + src + " isRunning = " + running;
+        s += " dm->currentFolderPath = " + dm->currentPrimaryFolderPath;
+        G::log("MetaRead::setStartRow", s);
+    }
+
+    this->fileSelectionChanged = fileSelectionChanged;
+
+    // has metadata already been read for this row
+    if (fileSelectionChanged) {
+        if (dm->isMetadataAttempted(sfRow)) {
+            emit fileSelectionChange(dm->sf->index(sfRow, 0));
+            if (G::allMetadataLoaded && G::iconChunkLoaded) {
+                return;
+            }
+        }
+    }
+
     if (isDebug)
     {
-        qDebug() << "MetaRead::setCurrentRow"
-                 << "row =" << row
+        qDebug() << "\nMetaRead::setStartRow "
+                 << "startRow =" << startRow
                  << "fileSelectionChanged =" << fileSelectionChanged
-                 << "isRunning =" << isRunning()
-                 << "src =" << src
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                  << "G::iconChunkLoaded =" << G::iconChunkLoaded
-                    ;
+                 << "src =" << src
+            ;
     }
 
-    // Nothing to read
-    if (G::allMetadataLoaded && G::iconChunkLoaded) {
-        if (fileSelectionChanged) {
-            targetRow = row;
-            triggerFileSelectionChange();
-        }
-        return;
-    }
-
-    t.restart();
-    this->src = src;
-
+    // load datamodel with metadata and icons
     mutex.lock();
-    //iconChunkSize = dm->iconChunkSize;
-    sfRowCount = dm->sf->rowCount();
-    if (row >= 0 && row < sfRowCount) startRow = row;
-    else startRow = 0;
-
+    this->src = src;
     sfRowCount = dm->sf->rowCount();
     lastRow = sfRowCount - 1;
-    // icon range size in case changes ie thumb size change
-    //iconChunkSize = dm->iconChunkSize;
-    iconLimit = static_cast<int>(dm->iconChunkSize * 1.2);  // RGH not req'd
-    // adjust icon range to startRow
-    firstIconRow = startRow - dm->iconChunkSize / 2;
-    if (firstIconRow < 0) firstIconRow = 0;
-    lastIconRow = firstIconRow + dm->iconChunkSize - 1;
-    if (lastIconRow > lastRow) lastIconRow = lastRow;
-    /*
-            qDebug() << "MetaRead::start"
-                     << "startRow =" << startRow
-                     << "firstIconRow =" << firstIconRow
-                     << "lastIconRow =" << lastIconRow
-                     << "iconChunkSize =" << dm->iconChunkSize
-                ; //*/
-    // housekeeping
-    instance = dm->instance;
-    abort = false;
-
-    triggerCount = 0;
-    targetRow = startRow;
-    hasBeenTriggered = false;
-    abortCleanup = isRunning();
-
-    okToTrigger = fileSelectionChanged;
-
+    if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
+    else startRow = 0;
+    aIsDone = false;
+    bIsDone = false;
+    if (startRow == 0) bIsDone = true;
+    isDone = false;
+    success = false;                        // used to update statusbar
+    // set icon range. G::iconChunkLoaded is set in MW::loadCurrent
+    firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
+    lastIconRow = dm->endIconRange;
     mutex.unlock();
 
-    if (!isRunning()) {
-        start(QThread::HighestPriority);
+    if (isDebug)
+    {
+    qDebug() << "\nMetaRead::setStartRow "
+             << "startRow =" << startRow
+             << "firstIconRow =" << firstIconRow
+             << "lastIconRow =" << lastIconRow
+             << "iconChunkSize =" << dm->iconChunkSize
+             << "fileSelectionChanged =" << fileSelectionChanged
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded
+             << "G::iconChunkLoaded =" << G::iconChunkLoaded
+             << "folder =" << dm->currentPrimaryFolderPath
+             << "isRunning =" << isRunning()
+             << "isDispatching =" << isDispatching
+             << "isDone =" << isDone
+             << "instance =" << instance << "/" << dm->instance
+            ;
+    }
+
+    if (G::useUpdateStatus) emit runStatus(true, true, false, "MetaRead::run");
+                                        // isRunning, show, success, source
+
+    /*
+    Readers are dispatched and this run() finishes. The readers load the data into the
+    DataModel and ImageCache, and then signal MW::dispatch, where they are iterated to
+    read the next DataModel item.
+
+    This means that isRunning() == false while the dispatching is still running. Another
+    flag, isDispatching, is used to track this.
+    */
+
+    if (isDebug)
+    {
+        qDebug() << "MetaRead::setStartRow" << startRow << "src =" << src;
+    }
+
+    if (isDispatching) {
+        if (isDebug)
+        {
+            qDebug() << "MetaRead::setStartRow isDispatching = true";
+        }
+        mutex.lock();
+        isNewStartRowWhileStillReading = true;
+        mutex.unlock();
+        // dispatch any inactive readers
+        for (int id = 0; id < readerCount; id++) {
+            if (!reader[id]->isRunning()) {
+                reader[id]->status = Reader::Status::Ready;
+                reader[id]->fPath = "";
+                dispatch(id);
+            }
+        }
+    }
+    //
+    else {
+        mutex.lock();
+        isNewStartRowWhileStillReading = false;
+        a = startRow;
+        b = startRow - 1;
+        mutex.unlock();
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead::setStartRow  Not dispatching so start()"
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                ;
+        }
+        if (!isRunning()) start();
     }
 }
 
 bool MetaRead::stop()
+/*
+    MetaRead::run dispatches all the readers and returns immediately.  The isDispatched flag
+    indicates that dispatching is still running.
+*/
 {
-    if (isDebug) G::log("MetaRead::stop");
-
-    abort = true;
-    for (int i = 0; i < 100; i++) {
-        G::wait(1);
-        //qDebug() << "metaReadThread->isRunning =" << isRunning();
-        if (!isRunning()) break;
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead::stop");
+    if (isDebug)
+    {
+        qDebug() << "MetaRead::stop  instance / dm->instance =" << instance << "/" << dm->instance;
     }
-    abort = false;
-    return isRunning();
 
-    /*
-    This conventional thread stop does not work, apparently because it deadlocks
-    with the addToDatamodel signal connection which is Qt::BlockingQueuedConnection.
-
-    if (isRunning()) {
-        abort = true;
+    // stop MetaRead first so not calling readers
+    if (isDispatching && !abort) {
         mutex.lock();
         abort = true;
-        condition.wakeOne();
         mutex.unlock();
-        wait();
-        if (!wait(5000)) {
-            qDebug() << "** MetaRead::stopping wait() FAILED **   " << folderPath;
-            return false;
-        }
     }
-    return true;
-    */
+
+    // stop all readers
+    for (int id = 0; id < readerCount; ++id) {
+        reader[id]->stop();
+    }
+
+    abort = false;
+
+    if (isDebug)
+    {
+    qDebug() << "MetaRead::stop"
+             << "isRunning =" << isRunning()
+             << "isDispatching =" << isDispatching
+        ;
+    }
+    return isRunning();
 }
 
 void MetaRead::initialize()
@@ -176,63 +267,157 @@ void MetaRead::initialize()
     Called when change folders.
 */
 {
-    if (isDebug || G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MetaRead::initialize",
-               "imageCacheTriggerCount = " + QString::number(imageCacheTriggerCount));
+        G::log("MetaRead::initialize", dm->currentPrimaryFolderPath);
     }
-    rowsWithIcon.clear();
+    if (isDebug)
+    {
+        qDebug() << "\nMetaRead::initialize     initialize      "
+                 << dm->currentPrimaryFolderPath;
+    }
+
+    abort = false;
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
-    triggerCount = -1;                     // used to delay start ImageCache
-    abort = false;
+    metaReadItems = dmRowCount;
+    instance = dm->instance;
+    isAhead = true;
+    aIsDone = false;
+    bIsDone = false;
+    isDone = false;
+    success = false;
+    quitAfterTimeoutInitiated = false;
+    redoCount = 0;
+    redoMax = 5;
+    err.clear();
+
+    /* // to be removed
+    toRead.clear();
+    for (int i = 0; i < dmRowCount; i++) {
+        toRead.append(i);
+    }
+    //*/
+}
+
+void MetaRead::syncInstance()
+{
+    if (G::isLogger) G::log("MetaRead::syncInstance");
+    instance = dm->instance;
 }
 
 QString MetaRead::diagnostics()
 {
-    if (isDebug) G::log("MetaRead::diagnostics");
+    if (isDebug || G::isLogger) G::log("MetaRead::diagnostics");
 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead Diagnostics");
     rpt << "\n" ;
-    rpt << "\n" << "instance:               " << instance;
-    rpt << "\n" << "abort:                  " << (abort ? "true" : "false");
-    rpt << "\n" << "isRunning:              " << (isRunning() ? "true" : "false");
+    rpt << "\n" << "instance:                   " << instance;
     rpt << "\n";
-    rpt << "\n" << "imageCacheTriggerCount: " << imageCacheTriggerCount;
-    rpt << "\n" << "expansionFactor:        " << expansionFactor;
+    rpt << "\n" << "expansionFactor:            " << expansionFactor;
     rpt << "\n";
-    rpt << "\n" << "folder path:            " << dm->currentPrimaryFolderPath;
-    rpt << "\n" << "sfRowCount:             " << sfRowCount;
-    rpt << "\n" << "dm->currentSfRow:       " << dm->currentSfRow;
+    rpt << "\n" << "sfRowCount:                 " << sfRowCount;
+    rpt << "\n" << "dm->currentSfRow:           " << dm->currentSfRow;
     rpt << "\n";
-    rpt << "\n" << "defaultIconChunkSize:   " << dm->defaultIconChunkSize;
-    rpt << "\n" << "iconChunkSize:          " << dm->iconChunkSize;
-    //rpt << "\n" << "iconChunkSize:          " << iconChunkSize;
-    rpt << "\n" << "iconLimit:              " << iconLimit;
-    rpt << "\n" << "firstIconRow:           " << firstIconRow;
-    rpt << "\n" << "lastIconRow:            " << lastIconRow;
-    rpt << "\n" << "rowsWithIcon:           " << rowsWithIcon.size();
-    rpt << "\n" << "dm->iconCount:          " << dm->iconCount();
+    rpt << "\n" << "defaultIconChunkSize:       " << dm->defaultIconChunkSize;
+    rpt << "\n" << "iconChunkSize:              " << dm->iconChunkSize;
+    rpt << "\n" << "iconLimit:                  " << iconLimit;
     rpt << "\n";
+    rpt << "\n" << "firstVisibleIcon:           " << dm->firstVisibleIcon;
+    rpt << "\n" << "lastVisibleIcon:            " << dm->lastVisibleIcon;
+    rpt << "\n" << "visibleIcons:               " << dm->visibleIcons;
     rpt << "\n";
-    rpt << "rowsWithIcon in datamodel:";
-    rpt.setFieldAlignment(QTextStream::AlignRight);
-    rpt.setFieldWidth(9);
-    for (int i = 0; i < dm->rowCount(); i++) {
-        if (dm->itemFromIndex(dm->index(i,0))->icon().isNull()) continue;
-        rpt << "\n" << i;
+    rpt << "\n" << "firstIconRow:               " << firstIconRow;
+    rpt << "\n" << "lastIconRow:                " << lastIconRow;
+    rpt << "\n" << "dm->startIconRange:         " << dm->startIconRange;
+    rpt << "\n" << "dm->endIconRange:           " << dm->endIconRange;
+    rpt << "\n" << "dm->iconCount:              " << dm->iconCount();
+    rpt << "\n";
+    QStringList s;
+    for (int i : dm->metadataNotLoaded()) s << QString::number(i);
+    rpt << "\n" << "dm->isAllMetadataAttempted: " << QVariant(dm->isAllMetadataAttempted()).toString();
+    if (s.size()) rpt << "  Rows not loaded: " << s.join(",");
+    rpt << "\n" << "G::allMetadataLoaded:       " << QVariant(G::allMetadataLoaded).toString();
+    rpt << "\n" << "G::iconChunkLoaded:         " << QVariant(G::iconChunkLoaded).toString();
+    rpt << "\n" << "G::maxIconChunk:            " << QVariant(G::maxIconChunk).toString();
+    rpt << "\n";
+    rpt << "\n" << "isDone:                     " << QVariant(isDone).toString();
+    rpt << "\n" << "aIsDone && bIsDone:         " << QVariant(aIsDone && bIsDone).toString();
+    rpt << "\n";
+    rpt << "\n" << "abort:                      " << QVariant(abort).toString();
+    rpt << "\n" << "isRunning:                  " << QVariant(isRunning()).toString();
+    rpt << "\n" << "isRunloop:                  " << QVariant(runloop.isRunning()).toString();
+    rpt << "\n" << "isDispatching:              " << QVariant(isDispatching).toString();
+    rpt << "\n";
+    rpt << "\n" << "redoCount:                  " << QVariant(redoCount).toString();
+    rpt << "\n" << "redoMax:                    " << QVariant(redoMax).toString();
+
+    /* toRead (to be removed)
+    rpt << "\n";
+    rpt << "\n" << "toRead: " << toRead.length() << " items";
+    for (int i = 0; i < toRead.length(); i++) {
+        rpt << "\n";
+        rpt << "Item at row ";
+        rpt.setFieldWidth(5);
+        rpt << toRead.at(i) ;
+        rpt << " dm metadata loaded ";
+        rpt << QVariant(dm->isMetadataLoaded(toRead.at(i))).toString();
+    }
+    //*/
+
+    // errors
+    rpt << "\n";
+    rpt << "\n" << "Errors: " << err.length() << " items";
+    rpt.setFieldWidth(5);
+    for (int i = 0; i < err.length(); i++) {
+        rpt << "\n" << err.at(i);
     }
 
+    // readers
+    rpt << "\n";
+    rpt << "\n";
+    rpt << "Reader status:";
+    rpt << "\n";
+    rpt << "  ID  isRunning   Pending     Status";
+    for (int id = 0; id < readerCount; id++) {
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(4);
+        rpt << "\n" << id;
+        rpt.setFieldWidth(11);
+        rpt << QVariant(reader[id]->isRunning()).toString();
+        rpt.setFieldWidth(10);
+        rpt << QVariant(reader[id]->pending).toString();
+        rpt.setFieldWidth(5);
+        rpt << " ";
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(30);
+        rpt << reader[id]->statusText.at(reader[id]->status);
+    }
+
+    // rows with icons
+    // /*
+    rpt << "\n";
+    rpt << "\n";
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt << "Empty icon rows in datamodel:";
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(9);
+    for (int i = 0; i < dm->sf->rowCount(); i++) {
+        if (dm->iconLoaded(i, instance)) continue;
+        rpt << "\n" << i;
+    }
+    //*/
     rpt << "\n\n" ;
+
     return reportString;
 }
 
 QString MetaRead::reportMetaCache()
 {
-    if (isDebug) G::log("MetaRead::reportMetaCache");
+    if (isDebug || G::isLogger) G::log("MetaRead::reportMetaCache");
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -251,339 +436,703 @@ void MetaRead::cleanupIcons()
 
     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
     the current datamodel row dm->currentSfRow.
-
-    For efficiency, the currently cached icons are tracked in the QList rowsWithIcon.
-    Each item in rowsWithIcon is the dmRow in the datamodel.
-
-    If a new startRow is sent to setStartPosition while running then the icon
-    cleanup is interrupted.
 */
-    if (isDebug) G::log("MetaRead::cleanupIcons");
+    if (G::isLogger) G::log("MetaRead::cleanupIcons");
+    if (isDebug)
+        qDebug() << "MetaRead::cleanupIcons"
+                 << "firstIconRow =" << firstIconRow
+                 << "lastIconRow =" << lastIconRow
+            ;
 
     // check if datamodel size is less than assigned icon cache chunk size
-    if (dm->iconChunkSize >= sfRowCount) return;
-
-    int i = 0;
-    while (rowsWithIcon.size() > dm->iconChunkSize) {
-        if (i >= rowsWithIcon.size()) break;
-        if (abortCleanup) break;
-        int dmRow = rowsWithIcon.at(i);
-        QModelIndex dmIdx = dm->index(dmRow, 0);
-        int sfRow = dm->sf->mapFromSource(dmIdx).row();
-        // if row in icon chunk range then skip
-        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
-            ++i;
-            continue;
-        }
-        // if no icon continue
-        if (dmIdx.data(Qt::DecorationRole).isNull()) {
-            i++;
-            continue;
-        }
-        // remove icon
-        emit setIcon(dmIdx, QPixmap(), instance, "MetaRead::cleanupIcons");
-        rowsWithIcon.remove(i);
-    }
-}
-
-bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
-{
-    if (G::isLogger) G::log("MetaRead::readMetadata", "row = " + QString::number(sfIdx.row()));
-
-    if (isDebug)
-    {
-        qDebug() << "MetaRead::readMetadata"
-                 << "instance =" << instance
-                 << "dm->instance" << dm->instance
-                 << "row =" << sfIdx.row()
-                 << "abort =" << abort
-                 << fPath;
-    }
-    if (instance != dm->instance) {
-        QString msg = "Instance Clash.";
-        G::issue("Warning", msg, "MetaRead::readMetadata", sfIdx.row(), fPath);        return false;
-    }
-
-
-    // read metadata from file into metadata->m
-
-    int dmRow = dm->sf->mapToSource(sfIdx).row();
-    QFileInfo fileInfo(fPath);
-    bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
-    if (abort) return false;
-    if (!isMetaLoaded) {
-        QString msg = "Metadata load failed.";
-        G::issue("Warning", msg, "MetaRead::readMetadata", sfIdx.row(), fPath);
-    }
-
-    metadata->m.row = dmRow;
-    metadata->m.instance = instance;
-
-    // update progress in case filters panel activated before all metadata loaded
-    metaReadCount++;
-    int progress = 1.0 * metaReadCount / dmRowCount * 100;
-    emit updateProgressInFilter(progress);
-    if (showProgressInStatusbar) emit updateProgressInStatusbar(dmRow, dmRowCount);
-
-    if (isDebug)
-    {
-        qDebug() << "MetaRead::readMetadata"
-                 << "added row =" << sfIdx.row()
-                 << "abort =" << abort
-                 ;
-    }
-
-    if (abort) {
-        if (isDebug)
-        {
-            qDebug() << "MetaRead::readMetadata aborted";
-        }
-        return false;
-    }
-
-    // add metadata->m to DataModel dm
-    emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
-    if (isDebug)
-    {
-        qDebug() << "MetaRead::readMetadata"
-                 << "addToDatamodel row =" << sfIdx.row()
-                 << "abort =" << abort
-                 ;
-    }
-
-    if (abort) {
-        if (isDebug)
-        {
-            qDebug() << "MetaRead::readMetadata aborted";
-        }
-        return false;
-    }
-
-    if (isDebug)
-    {
-        qDebug() << "MetaRead::readMetadata"
-                 << "addToImageCache row =" << sfIdx.row()
-                 //<< "abort =" << abort
-                 ;
-    }
-    return true;
-}
-
-void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
-{
-    if (G::isLogger) G::log("MetaRead::readIcon");
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readIcon"
-                           << "start  row =" << sfIdx.row()
-                              ;
-    }
-
-    // dm->sf->mapToSource(sfIdx) EXC_BAD_ACCESS crash when rapid folder changes
-    int dmRow = dm->rowFromPath(fPath);
-    QModelIndex dmIdx = dm->index(dmRow, 0);
-
-    bool isVideo = false;
-    isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
-
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readIcon"
-                           << "load   row =" << sfIdx.row()
-                              ;
-    }
-    // get thumbnail
-    QImage image;
-    bool thumbLoaded = false;
-    thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
-    if (abort) return;
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readIcon"
-                           << "loaded row =" << sfIdx.row()
-                              ;
-    }
-
-    if (isVideo) {
-        rowsWithIcon.append(dmRow);
-        if (G::renderVideoThumb) return;
-    }
-
-    QPixmap pm;
-    if (thumbLoaded && !image.isNull() && !abort) {
-        pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    }
-    else {
-        pm = QPixmap(":/images/error_image256.png");
-        QString msg = "Failed to load thumbnail.";
-        G::issue("Warning", msg, "MetaRead::readIcon", dmRow, fPath);
-    }
-    if (abort) return;
-    emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-    rowsWithIcon.append(dmRow);
-
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readIcon"
-                           << "done   row =" << sfIdx.row()
-                              ;
-    }
-}
-
-void MetaRead::readRow(int sfRow)
-{
-    if (G::isLogger) G::log("MetaRead::readRow", "row = " + QString::number(sfRow));
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readRow"
-                           << "start  row =" << sfRow
-                           << "dm->sf->rowCount() =" << dm->sf->rowCount()
-                              ;
-    }
-
-    // range check
-    if (sfRow >= dm->sf->rowCount()) {
-       return;
-    }
-    // valid index check
-    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    if (!sfIdx.isValid()) {
-        QString msg = "Invalid sfIdx.";
-        G::issue("Warning", msg, "MetaRead::readRow", sfRow);
+    if (dm->iconChunkSize >= sfRowCount) {
         return;
     }
 
-    // load metadata
-    QString fPath = sfIdx.data(G::PathRole).toString();
-    if (!G::allMetadataLoaded /*&& !isVideo*/ && G::useReadMetadata) {
-        bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-        if (!metaLoaded) {
-            if (!readMetadata(sfIdx, fPath)) {
-            }
+    for (int i = 0; i < dm->startIconRange; i++) {
+        if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
         }
     }
-    if (abort) return;
-
-    // load icon
-
-    // can ignore if debugging
-    if (!G::useReadIcons) return;
-
-    // read icon if in icon range
-    if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
-        if (!dm->iconLoaded(sfRow, instance)) {
-            readIcon(sfIdx, fPath);
-            if (abort) return;
-            if (rowsWithIcon.size() > iconLimit) {
-                cleanupIcons();
-            }
+    for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
+        if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
         }
     }
-
-    // add to ImageCache icd->cacheItemList (used to manage image cache)
-    if (G::useImageCache) {
-        emit addToImageCache(metadata->m, instance);
-    }
-
-    if (isDebug)
-    {
-        qDebug().noquote() << "MetaRead::readRow"
-                           << "done   row =" << sfRow
-                              ;
-    }
 }
 
-void MetaRead::resetTrigger()
-{
-    hasBeenTriggered = false;
-}
-
-void MetaRead::triggerFileSelectionChange()
-{
-    // file selection change and start image caching thread after head start
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::triggerFileSelectionChange", "signal fileSelectionChange");
-    //qDebug() << "MetaRead::triggerFileSelectionChange  targetRow =" << targetRow;
-    QModelIndex sfIdx = dm->sf->index(targetRow, 0);
-    emit fileSelectionChange(sfIdx);
-    hasBeenTriggered = true;
-}
-
-void MetaRead::triggerCheck()
+inline bool MetaRead::needToRead(int row)
 /*
-    Signal MW::fileSelectionChange to trigger the ImageCache to rebuild.
+    Returns true if either the metadata or icon (thumbnail) has not been loaded.
 */
 {
-    if (hasBeenTriggered) return;
-    if (G::allMetadataLoaded) {
-        triggerFileSelectionChange();
+    if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
+        return true;
+    }
+    if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) {
+        return true;
+    }
+    return false;
+}
+
+bool MetaRead::nextA()
+{
+    // find next a
+    if (aIsDone) return false;
+    for (int i = a; i < sfRowCount; i++) {
+        if (needToRead(i)) {
+            nextRow = i;
+            a = i + 1;
+            if (a == sfRowCount) aIsDone = true;
+            if (!bIsDone) isAhead = false;
+            return true;
+        }
+    }
+    a = sfRowCount;
+    aIsDone = true;
+    return false;
+}
+
+bool MetaRead::nextB()
+{
+    // find next b
+    if (bIsDone) return false;
+    for (int i = b; i >= 0; i--) {
+        if (needToRead(i)) {
+            nextRow = i;
+            b = i - 1;
+            if (!aIsDone) isAhead = true;
+            return true;
+        }
+    }
+    b = -1;
+    bIsDone = true;
+    return false;
+}
+
+bool MetaRead::nextRowToRead()
+/*
+    Alternate searching ahead/behind for the next datamodel row missing metadata or icon.
+    Only search for missing icons within the iconChunk range.
+
+    a (ahead row) or b (behind row) is updated.
+*/
+{
+    // ahead
+    if (isAhead) {
+        /*
+        qDebug().noquote()
+            << "MetaRead::dispatch     nextRowToRead       "
+            << "id =   "
+            << "row =" << QString::number(nextRow).leftJustified(4, ' ')
+            << "isReadIcon =      "
+            << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+            << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+            << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+            << "a =" << QString::number(a).leftJustified(4, ' ')
+            << "b =" << QString::number(b).leftJustified(4, ' ')
+            << "startRow =" << startRow
+            << "firstIconRow =" << firstIconRow
+            << "lastIconRow =" << lastIconRow
+                ; //*/
+        if (nextA()) return true;
+        else if (nextB()) return true;
+        else return false;
+    }
+    else {
+        if (nextB()) return true;
+        else if (nextA()) return true;
+        else return false;
+    }
+}
+
+int MetaRead::pending()
+/*
+    Return the number of Readers that have been dispatched and not signalled back
+    that they are done.
+*/
+{
+    int pendingCount = 0;
+    for (int id = 0; id < readerCount; ++id) {
+        if (reader[id]->pending) {
+            pendingCount ++;
+            if (isDebug)
+            {
+                qDebug().noquote()
+                    << "MetaRead::pending                          "
+                    << "id =" << QString::number(id).leftJustified(2, ' ')
+                    << "row =" << QString::number(reader[id]->dmIdx.row()).leftJustified(4, ' ')
+                    << "allMetadataLoaded =" << G::allMetadataLoaded
+                    ;
+            }
+        }
+    }
+    return pendingCount;
+}
+
+bool MetaRead::allMetaIconLoaded()
+{
+/*
+    Has the datamodel been fully loaded?
+*/
+    return dm->isAllMetadataAttempted() && dm->isIconRangeLoaded();
+}
+
+void MetaRead::redo()
+/*
+    If not all metadata or icons were successfully read so try again.
+*/
+{
+    if (debugLog && (G::isLogger || G::isFlowLogger))
+    {
+        G::log("MetaRead::redo", "count = " + QString::number(redoCount));
+    }
+    if (isDebug)
+    {
+        qDebug() << "MetaRead::redo                             "
+                 << "count =" << redoCount;//<< toRead;
+    }
+    redoCount++;
+    aIsDone = false;
+    bIsDone = false;
+    a = startRow;
+    b = startRow;
+    // stop all readers
+    for (int id = 0; id < readerCount; ++id) {
+        reader[id]->stop();
+    }
+    dispatchReaders();
+}
+
+void MetaRead::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay)
+{
+    // Emit the signal after a delay using QTimer::singleShot and a lambda
+    QModelIndex idx2 = QModelIndex();
+    bool clearSelection = false;
+    QString src = "MetaRead::dispatch";
+    QTimer::singleShot(msDelay, this, [this, sfIdx, idx2, clearSelection, src]() {
+        /*
+        qDebug() << "MetaRead::emitFileSelectionChangeWithDelay"
+                 << "instance =" << instance
+                 << "dm->instance =" << dm->instance; //*/
+        if (instance == dm->instance) {
+            emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
+        }
+    });
+}
+
+void MetaRead::dispatch(int id)
+{
+/*
+    All available readers (each with their own thread) are sent here by dispatchReaders().
+    Each reader is assigned a file, which it reads and then updates the datamodel and
+    imagecache.  When the reader is finished, it signals this function, where it iterates,
+    being dispatched to read another file until all the files have been read by the
+    readers.
+
+    From the startRow position, each datamodel row file is read, alternating ahead and
+    behind.
+
+    Initial conditions: a = startRow, b = a - 1, isAhead = true
+    a = row in ahead position
+    b = row in behind position
+    readers signal back to dispatch when done
+
+    - if reader returning
+        - status update
+        - deplete toRead list (decremented)
+        - quit if all read (return)
+    - if a is done and b is done then return
+    - if ahead then reader a, else reader b
+    - increment a or decrement b to next datamodel row without metadata or icon
+
+    Function logic:
+
+        1. Check ok to continue or abort
+        2. If returning reader[n]
+           - check for instance clash
+           - report read failure
+           - trigger file selection if fileSelectionChange and is startRow
+           - report progress
+           - if finished then quit
+        3. Dispatch reader[n]
+           - assign next row to read
+           - call reader[n] to read metadata and icon into datamodel
+           - if last row then quit after delay
+*/
+
+    // terse pointer to reader[id]
+    r = reader[id];
+    r->pending = false;
+
+    // abort
+    if (abort || instance != dm->instance) {
+        if (isDebug)
+        {
+        qDebug().noquote()
+            << "MetaRead::dispatch aborting "
+            << "reader =" << id
+            << "abort =" << abort
+            << "isDone =" << isDone
+            << "dm instance =" << dm->instance
+            << "instance =" << instance
+            << "reader instance =" << reader[id]->instance
+               ;
+        }
+        r->status = Reader::Status::Ready;
+        r->fPath = "";
         return;
     }
-    triggerCount++;
-    if (triggerCount == lastRow || triggerCount == imageCacheTriggerCount) {
-            triggerFileSelectionChange();
+
+    // New reader and less rows (images to read) than readers - do not dispatch
+    if (r->fPath == "" && id >= dmRowCount) return;
+
+    if (isDebug)
+    {
+        QString  row;
+        r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
+        QString s;
+        if (r->fPath == "") s = "MetaRead::dispatch     reader starting     ";
+        else s = "MetaRead::dispatch     reader returning    ";
+        qDebug().noquote()
+            << s
+            << "id =" << QString::number(id).leftJustified(2, ' ')
+            << "row =" << row.leftJustified(4, ' ')
+            //<< "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+            << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+            << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+            //<< "allRead =" << QVariant(allDone).toString().leftJustified(5, ' ')
+            << "a =" << QString::number(a).leftJustified(4, ' ')
+            << "b =" << QString::number(b).leftJustified(4, ' ')
+            ;
     }
+
+    if (debugLog && (G::isLogger /*|| G::isFlowLogger*/))
+    {
+        QString  row;
+        r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
+        QString from;
+        r->fPath == "" ? from = "start reader" : from = "return from reader";
+        QString s = "id = " + QString::number(id).rightJustified(2, ' ');
+        s += " row = " + row.rightJustified(4, ' ');
+        G::log("MetaRead::dispatch: " + from, s);
+    }
+
+    // RETURNING READER
+    if (r->fPath != "" && r->instance == dm->instance) {
+
+        /*
+        - track metadata rows read by depleting toRead (to be removed)
+        - report read failures
+        - trigger fileSelectionChange if reader row = startRow
+        - update progress
+        - if readers have been dispatched for all rows
+             - check if still pending
+             - check if all metadata and necessary icons loaded
+             - if all checks out signal done
+        */
+
+        int dmRow = r->dmIdx.row();
+
+        // progress counter
+        metaReadCount++;
+
+        // it is not ok to select while the datamodel is being built.
+        if (metaReadCount == 1) emit okToSelect(true);
+
+        // time to read item
+        QModelIndex tIdx = dm->index(dmRow, G::MSToReadColumn);
+        emit setMsToRead(tIdx, r->msToRead, r->instance);
+
+        /* deplete toRead (to be removed)
+        for (int i = 0; i < toRead.size(); i++) {
+            if (toRead.at(i) == dmRow) {
+                toRead.removeAt(i);
+                break;
+            }
+        }
+        //*/
+
+        // report read failure
+        if (!(r->status == r->Status::Success /*|| r->status == r->Status::Ready*/)) {
+            QString error = "row " + QString::number(dmRow).rightJustified(5) + " " +
+                            r->statusText.at(r->status).leftJustified(10) + " " + r->fPath;
+            err.append(error);
+            if (isDebug)
+            {
+            qDebug().noquote()
+                     << "MetaRead::dispatch     Failure             "
+                     << "id =" << QString::number(id).leftJustified(2, ' ')
+                     << "row =" << dmRow
+                     << "status =" << r->statusText.at(r->status)
+                     << r->fPath;
+            }
+        }
+
+        // trigger fileSelectionChange which starts ImageCache if this row = startRow
+        if (fileSelectionChanged && dmRow == startRow) {
+            QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
+
+            if (isDebug)  // returning reader, row has been processed by reader
+            {
+                qDebug().noquote()
+                    << "MetaRead::dispatch     startRow         "
+                    << "dmRow =" << dmRow
+                    << "startRow =" << startRow
+                    << "r->dmIdx =" << r->dmIdx
+                    << "sfIdx =" << sfIdx
+                    << r->fPath
+                    ;
+            }
+
+            if (debugLog && (G::isLogger || G::isFlowLogger))
+            {
+                G::log("MetaRead::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
+            }
+            if (isDebug) // fileSelectionChange
+            {
+                bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
+                qDebug().noquote()
+                    << "\nMetaRead::dispatch     fileSelectionChange "
+                    << "id =" << QString::number(id).leftJustified(2, ' ')
+                    << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+                    << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
+                    << r->fPath;
+            }
+            if (!abort) {
+                // emit fileSelectionChange(r->dmIdx);
+                int msDelay = 500;
+                emitFileSelectionChangeWithDelay(r->dmIdx, msDelay);
+            }
+        }
+
+        if (isDebug)  // returning reader, row has been processed by reader
+        {
+            // bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
+            bool allLoaded = (dm->isAllMetadataAttempted() && dm->isAllIconsLoaded());
+            qDebug().noquote()
+                << "MetaRead::dispatch     processed           "
+                << "id =" << QString::number(id).leftJustified(2, ' ')
+                //<< "startRow =" << QString::number(startRow).leftJustified(4, ' ')
+                << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+                << "isRunning =" << QVariant(r->isRunning()).toString().leftJustified(5)
+                << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
+                << "iconChunkLoaded =" << QVariant(dm->isAllIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
+                //<< "toRead =" << toRead.size()
+                << "rowCount =" << dm->rowCount()
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                << "startRow =" << QString::number(startRow).leftJustified(4, ' ')
+                << "isReadIcon =" << QVariant(r->isReadIcon).toString().leftJustified(5)
+                << "iconLoaded =" << QVariant(dm->iconLoaded(dmRow, instance)).toString().leftJustified(5)
+                //<< "isRunning =" << QVariant(isRunning()).toString().leftJustified(5)
+                ;
+        }
+
+        // report progress
+        if (showProgressInStatusbar) {
+            emit updateProgressInStatusbar(dmRow, dmRowCount);
+            int progress = 1.0 * metaReadCount / dmRowCount * 100;
+            emit updateProgressInFilter(progress);
+        }
+
+        // if readers have been dispatched for all rows
+        if (aIsDone && bIsDone) {
+
+            // all metadata and icons been loaded into datamodel?
+            // should it be dm->isAllMetadataLoaded()
+            bool allAttempted = dm->isAllMetadataAttempted() &&
+                                dm->isAllIconChunkLoaded(dm->startIconRange, dm->endIconRange);
+
+            if (isDebug)  // dispatch for all rows completed
+            {
+                qDebug().noquote()
+                    << "MetaRead::dispatch     all dispatch done   "
+                    << "id =" << QString::number(id).leftJustified(2, ' ')
+                    << "row =" << QString::number(reader[id]->dmIdx.row()).leftJustified(4, ' ')
+                    << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                    << "allAttempted =" << QVariant(allAttempted).toString().leftJustified(5)
+                    //<< "toRead =" << toRead.size()
+                    << "pending =" << pending()
+                    << "isDone =" << isDone
+                    << "metaReadCount =" << metaReadCount
+                    //<< "toRead =" << toRead
+                    ;
+            }
+
+            if (!allAttempted) {
+                // are there still pending readers
+                if (pending()) {
+                    r->status = Reader::Status::Ready;
+                    r->fPath = "";
+                    return;
+                }
+                // if all readers finished but not all loaded, then redo
+                else {
+                    if (redoCount < redoMax) {
+                        if (isDebug) {
+                            qDebug()
+                                << "MetaRead::dispatch     Redo                "
+                                << "redoCount =" << redoCount
+                                << "redoMax =" << redoMax
+                                ;
+                        }
+                        // try to read again
+                        wait(100);
+                        if (!abort) {
+                            redo();
+                        }
+                    }
+                    else {
+                        qWarning() << "REDO MAXED OUT";
+                    }
+                }
+            }
+
+            // Now we are done
+            if (!isDone) {
+                if (isDebug)
+                {
+                qDebug().noquote()
+                    << "MetaRead::dispatch     We Are Done.     "
+                    << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
+                    << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                    << dm->currentPrimaryFolderPath
+                    //<< "toRead =" << toRead
+                    << "pending =" << pending()
+                    ;
+                }
+                dispatchFinished("WeAreDone");
+            }
+
+            r->status = Reader::Status::Ready;
+            r->fPath = "";
+            return;
+
+        } // end aIsDone && bIsDone
+
+    } // end returning reader
+
+    // DISPATCH READER
+
+    /* check if new start row while dispatch reading all metadata.  The user may have jumped
+       to the end of a large folder while metadata is being read.  Also could have scrolled. */
+    if (isNewStartRowWhileStillReading) {
+        a = startRow;
+        b = startRow - 1;
+        isNewStartRowWhileStillReading = false;
+        // if (a == dm->sf->rowCount() - 1) isAhead = false;
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead::dispatch isNewStartRowWhileStillReading"
+                << "startRow =" << QString::number(startRow).leftJustified(4, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                << "isAhead =" << QVariant(isAhead).toString()
+                ;
+        }
+    }
+
+    // assign either a or b as the next row to read in the datamodel
+    if (nextRowToRead()) {
+        QModelIndex sfIdx = dm->sf->index(nextRow, 0);
+        QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
+        // QString fPath = dmIdx.data(G::PathRole).toString();
+        QString fPath = sfIdx.data(G::PathRole).toString();
+        // only read icons within the icon chunk range
+        bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
+        if (isDebug)
+        {
+            QString fun = "MetaRead::dispatch reader";
+            qDebug().noquote()
+                << fun.leftJustified(30)
+                << "id =" << QString::number(id).leftJustified(2, ' ')
+                << "row =" << QString::number(sfIdx.row()).leftJustified(4, ' ')
+                << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
+                << "isReadIcon =" << QVariant(okReadIcon).toString().leftJustified(5, ' ')
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                << fPath
+                ;
+        }
+
+        /* read the image file metadata and icon.  When the reader is finished, it will
+           signal dispatch (this function) to loop through to read another file...  */
+        if (!abort) r->read(dmIdx, fPath, instance, okReadIcon);
+    }
+    // nothing to read, we're finished
+    else {
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead::dispatch     NO launch reader    "
+                << "id =" << QString::number(id).leftJustified(2, ' ')
+                << "row =" << QString::number(nextRow).leftJustified(4, ' ')
+                << "nextRowToRead = FALSE"
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                ;
+        }
+    }
+
+    // if done in both directions fire delay to quit in case isDone fails
+    if (aIsDone && bIsDone && !isDone) {
+        if (!quitAfterTimeoutInitiated) {
+            if (isDebug)
+            {
+                qDebug().noquote()
+                    << "MetaRead::dispatch     aIsDone && bIsDone "
+                    << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
+            quitAfterTimeoutInitiated = true;
+            // isDispatching = false;
+            // if pending readers not all processed in delay ms then quit anyway
+            int delay = 1000;
+            if (isDebug)
+            {
+                qDebug()
+                    << "MetaRead::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in"
+                    << delay << "ms";
+            }
+            QTimer::singleShot(delay, this, &MetaRead::quitAfterTimeout);
+        }
+        r->status = Reader::Status::Ready;
+        return;
+    }
+}
+
+void MetaRead::dispatchReaders()
+{
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead::dispatchReaders");
+    if (isDebug)
+    {
+    qDebug().noquote()
+             << "MetaRead::dispatchReaders"
+             << "readerCount =" << readerCount
+                ;
+    }
+
+    isDispatching = true;
+
+    for (int id = 0; id < readerCount; id++) {
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead::dispatchReaders                  "
+                << "reader =" << id << "dispatched"
+                ;
+        }
+        if (reader[id]->isRunning()) reader[id]->stop();
+        else {
+            reader[id]->status = Reader::Status::Ready;
+            reader[id]->fPath = "";
+        }
+        dispatch(id);
+        if (abort) return;
+    }
+}
+
+void::MetaRead::quitAfterTimeout()
+{
+    if (redoCount < redoMax) {
+        if (!abort && !allMetaIconLoaded()) {
+            redo();
+        }
+    }
+    dispatchFinished("QuitAfterTimeout");
+
+    // if (!isDone) {
+    //     if ((pending()) && (redoCount < redoMax)) {
+    //         if (isDebug) {
+    //             qDebug()
+    //                 << "MetaRead::dispatch     Redo                "
+    //                 << "redoCount =" << redoCount
+    //                 << "redoMax =" << redoMax
+    //                 ;
+    //         }
+    //         // try to read again
+    //         if (!abort) {
+    //             redo();
+    //         }
+    //     }
+
+    //     if (debugLog && (G::isLogger || G::isFlowLogger))  G::log("MW::quitAfterTimeout", "Done");
+    //     if (isDebug)
+    //     {
+    //         qDebug().noquote()
+    //              << "MetaRead::quitAfterTimeout  We Are Done."
+    //              << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
+    //              ;
+    //              //<< dm->currentFolderPath << "toRead =" << toRead;
+    //     }
+
+    //     dispatchFinished("QuitAfterTimeout");
+    // }
+}
+
+void MetaRead::dispatchFinished(QString src)
+{
+    if (debugLog && (G::isLogger || G::isFlowLogger))  G::log("MetaRead::dispatchFinished", src);
+    if (isDebug)
+        qDebug() << "MetaRead::dispatchFinished" << src
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded
+             // << "instanceClash =" << instanceClash
+            ;
+
+    bool running = false;
+    bool show = true;
+    success = allMetaIconLoaded();
+    if (G::useUpdateStatus) emit runStatus(running, show, success, src);
+    cleanupIcons();
+    isDone = true;
+    isDispatching = false;
+
+    // Is this req'd, causing problems
+    // emit dispatchIsFinished(src);
+
+    // do not emit done if only updated icon loading
+    if (!G::allMetadataLoaded) {
+        G::allMetadataLoaded = true;
+        // signal MW::loadConcurrentDone
+        emit done();
+    }
+    G::iconChunkLoaded = true;      // RGH change to = dm->allIconChunkLoaded(first, last) ??
 }
 
 void MetaRead::run()
-{
 /*
     Loads the metadata and icons into the datamodel (dm) for a folder.  The iteration
     proceeds from the start row in an ahead/behind progression.
+
+    Readers are dispatched and this function finishes.  The readers load the data into the
+    DataModel and ImageCache, and then signal MW::dispatch, where they are iterated to read
+    the next DataModel item.
+
+    This means that this thread isRunning() == false while the dispatching is still running.
+    Another flag, isDispatching, is used to track this.
 */
-    if (isDebug) G::log("MetaRead::run", src);
+{
+    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead::run", src);
     if (isDebug)
     {
-        qDebug().noquote() << "MetaRead::run"
-                           << "src =" << src
+        qDebug().noquote() << "MetaRead::run                             "
                            << "startRow =" << startRow
+                           << "a =" << a
+                           << "b =" << b
                            << "sfRowCount =" << sfRowCount
                               ;
     }
 
-    if (G::useUpdateStatus) emit runStatus(true, true, "MetaRead::run");
+    dispatchReaders();
 
-    int a = startRow;       // forward counter
-    int b = startRow - 1;   // backward counter
-
-    while (a < sfRowCount || b >= 0) {
-
-        if (a < sfRowCount) {
-            if (!abort) readRow(a);
-            a++;
-            if (!abort && okToTrigger) triggerCheck();
-        }
-
-        if (b >= 0) {
-            if (!abort) readRow(b);
-            b--;
-            if (!abort && okToTrigger) triggerCheck();
-        }
-
-        // terminate loop
-        if (G::allMetadataLoaded && (b < firstIconRow && a > lastIconRow)) break;
-
-        if (abort) {
-            if (isDebug)
-                qDebug() << "MetaRead::run  abort = true  exit run";
-            return;
-        }
+    if (isDebug)
+    {
+        qDebug().noquote() << "MetaRead::run          finished";
     }
-
-    /* When images are inserted into the current folder (ie export from lightroom to a
-    Winnet - see MW::handleStartArgs), fileSelectionChanged may not be triggered. */
-    if (!hasBeenTriggered && fileSelectionChanged) {
-        QModelIndex sfIdx = dm->sf->index(startRow, 0);
-        emit fileSelectionChange(sfIdx);
-    }
-
-    if (instance != dm->instance) return;
-    if (!abort) if (G::useUpdateStatus) emit runStatus(false, true, "MetaRead::run");
-    if (!abort) G::allMetadataLoaded = true;
-    if (!abort) cleanupIcons();
-    if (!abort) emit done();
-    if (isDebug) qDebug() << "MetaRead::run  Done.";
-
-    abort = false;
-
-    return;
 }

@@ -442,7 +442,7 @@ void DataModel::remove(QString fPath)
     - also determine if there are duplicate raw+jpg files, and if so, populate all
       the Dup...Role values to manage the raw+jpg files
 
-    After the folder has been processed, MW calls MetaRead2, where the iamge metadata
+    After the folder has been processed, MW calls MetaRead, where the iamge metadata
     and thumbnails are read and addMetadataForItem is signaled.
 
 */
@@ -2091,7 +2091,7 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
 
 bool DataModel::isIconRangeLoaded()
 /*
-    Called by MetaRead2::dispatch when aIsDone && bIsDone (readers have been dispatched
+    Called by MetaRead::dispatch when aIsDone && bIsDone (readers have been dispatched
     for all rows) to determine if a redo is required because a metadata or icon read has
     failed.
 

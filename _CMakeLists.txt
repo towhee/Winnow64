@@ -16,7 +16,6 @@ qt_add_executable(Winnow WIN32 MACOSX_BUNDLE
     Cache/imagecache.cpp Cache/imagecache.h
     Cache/imagedecoder.cpp Cache/imagedecoder.h
     Cache/metaread.cpp Cache/metaread.h
-    Cache/metaread2.cpp Cache/metaread2.h
     Cache/reader.cpp Cache/reader.h
     Cache/tshash.h
     Datamodel/HashMap.h

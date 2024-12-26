@@ -45,7 +45,6 @@
 
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
-#include "Cache/metaread2.h"
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
@@ -1112,16 +1111,9 @@ private:
     PropertyEditor *propertyEditor;
     QHeaderView *headerView;
     CompareImages *compareImages;
-
-    #ifdef METAREAD
     MetaRead *metaReadThread;
-    #endif
-    #ifdef METAREAD2
-    MetaRead2 *metaReadThread;
-    #endif
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;
-
     Thumb *thumb;
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;
