@@ -71,12 +71,9 @@ HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
 HEADERS += Cache/metaread.h
 HEADERS += Cache/reader.h
-HEADERS +=
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
-HEADERS += Datamodel/HashMap.h
-HEADERS += Datamodel/HashNode.h
 HEADERS += Datamodel/selection.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/addthumbnailsdlg.h
@@ -255,7 +252,6 @@ SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/hoverdelegate.cpp
 SOURCES += File/ingest.cpp
-SOURCES +=
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
@@ -383,9 +379,9 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/loupeinfodlg.ui \
-    Help/foldershelp.ui
+FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/loupeinfodlg.ui
+FORMS += Help/foldershelp.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
@@ -432,14 +428,14 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-    CMakeLists.txt \
-    _CMakeLists.txt \
-    notes/_InstallLibrary.txt \
-    notes/_install library.txt \
-    notes/_install library.txt \
-    notes/_install library.txt \
-    notes/_install library.txt
+DISTFILES += Docs/ingestautopath
+DISTFILES += CMakeLists.txt
+DISTFILES += _CMakeLists.txt
+DISTFILES += notes/_InstallLibrary.txt
+DISTFILES += notes/_install library.txt
+DISTFILES += notes/_install library.txt
+DISTFILES += notes/_install library.txt
+DISTFILES += notes/_install library.txt
 DISTFILES += notes/Create help dialog.rtf
 DISTFILES += notes/Create help dialog.txt
 DISTFILES += Docs/ingestautopath.html
