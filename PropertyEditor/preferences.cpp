@@ -859,7 +859,7 @@ void Preferences::addItems()
     i.min = 3;
     i.max = 20;
     i.fixedWidth = 50;
-    addItem(i);
+    // addItem(i);
 
     // Thumbnail count number size
     i.name = "iconNumberSize";
