@@ -98,12 +98,7 @@ ImageCache::ImageCache(QObject *parent,
 
 ImageCache::~ImageCache()
 {
-    gMutex.lock();
-    if (debugLog) log("~ImageCache");
-    abort = true;
-    condition.wakeOne();
-    gMutex.unlock();
-    // wait();
+    stop("ImageCache::~ImageCache");
 }
 
 void ImageCache::clearImageCache(bool includeList)
@@ -119,10 +114,10 @@ void ImageCache::clearImageCache(bool includeList)
 void ImageCache::stop(QString src)
 {
 /*
-    Note that initImageCache and updateImageCache both check if isRunning and
-    stop a running thread before starting again. Use this function to stop the
-    image caching thread without a new one starting when there has been a
-    folder change. The cache status label in the status bar will be hidden.
+    Note that initImageCache and updateImageCache both check if isRunning and stop a
+    running thread before starting again. Use this function to stop the image caching
+    thread without a new one starting when there has been a folder change or when closing
+    the program. The cache status label in the status bar will be hidden.
 */
     QString fun = "ImageCache::stop";
     if (debugCaching)
@@ -135,23 +130,18 @@ void ImageCache::stop(QString src)
     }
     log("stop", "isRunning = " + QVariant(isRunning()).toString());
 
-    // stop ImageCache first to prevent more decoder dispatch
-    gMutex.lock();
-    abort = true;
-    gMutex.unlock();
+    if (isRunning()) {
+        gMutex.lock();
+        if (debugLog) log("~ImageCache");
+        abort = true;
+        condition.wakeOne();
+        gMutex.unlock();
+        wait();
+    }
 
     // stop decoder threads
     for (int id = 0; id < decoderCount; ++id) {
         decoder[id]->stop();
-    }
-
-    /* stop imagecache thread if running, which is unlikely as run() initiates the
-       fillCache cycle and ends */
-    if (isRunning()) {
-        gMutex.lock();
-        condition.wakeOne();
-        gMutex.unlock();
-        wait();      // rgh why not need this
     }
 
     abort = false;
