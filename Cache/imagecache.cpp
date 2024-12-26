@@ -103,7 +103,7 @@ ImageCache::~ImageCache()
     abort = true;
     condition.wakeOne();
     gMutex.unlock();
-    wait();
+    // wait();
 }
 
 void ImageCache::clearImageCache(bool includeList)
