@@ -400,9 +400,9 @@ void ImageDecoder::rotate()
 {
     if (G::isLogger) G::log("ImageDecoder::rotate", "sfRow = " + QString::number(sfRow));
     if (isDebug) {
-        mutex.lock();
+        // mutex.lock();
         G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
-        mutex.unlock();
+        // mutex.unlock();
     }
     QTransform trans;
     int degrees = 0;
@@ -448,9 +448,9 @@ void ImageDecoder::colorManage()
 {
     if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "sfRow = " + QString::number(sfRow));
     if (isDebug) {
-        mutex.lock();
+        // mutex.lock();
         G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
-        mutex.unlock();
+        // mutex.unlock();
     }
     if (metadata->iccFormats.contains(ext)) {
         // QMutexLocker locker(&mutex);
@@ -461,6 +461,8 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
+    if (abort) return;
+
     if (isLog) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
 
     if (instance != dm->instance) {
@@ -473,6 +475,8 @@ void ImageDecoder::run()
 
     QElapsedTimer t;
     t.start();
+
+    if (abort) return;
 
     if (load()) {
         if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
@@ -500,9 +504,9 @@ void ImageDecoder::run()
     }
 
     if (isDebug) {
-        mutex.lock();
+        // mutex.lock();
         G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
-        mutex.unlock();
+        // mutex.unlock();
     }
     /* debug
         qDebug() << "ImageDecoder::run"
@@ -511,7 +515,7 @@ void ImageDecoder::run()
                  << "status =" << statusText.at(status)
                  << "decoder->fPath =" << fPath
                     ; //*/
-    emit done(threadId);
+    if (!abort) emit done(threadId);
 }
 
 bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
