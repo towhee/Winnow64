@@ -22,7 +22,7 @@ Canon::Canon()
     canonMakerHash[26] = "Super macro";
     canonMakerHash[38] = "AF info";
     canonMakerHash[131] = "Original decision data offset";
-    canonMakerHash[147] = "FileInfo tags";
+    canonMakerHash[147] = "FileInfo tags";  // ChatGPT says shutter count
     canonMakerHash[149] = "Lens model";
     canonMakerHash[150] = "Internal serial number";
     canonMakerHash[151] = "Dust removal data";

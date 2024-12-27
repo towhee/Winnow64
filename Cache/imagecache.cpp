@@ -32,24 +32,68 @@ Procedure every time a new thumbnail is selected:
 Data structures:
 
     The main data structures are in a separate class ImageCacheData to facilitate
-    concurrent data access. The image cache for QImages reside in the concurrent hash
-    table imCache. This table is written to by fillCache and read by ImageView.
+    concurrent data access. The image cache for QImages reside in the hash table imCache.
+    This table is written to by fillCache and read by ImageView.
 
     ImageDecoders, each in their own thread, signal ImageCache::fillCache for each QImage.
     They form queued connections so that only one decoder at a time can add images to
     imCache.
 
-    The caching process is managed by the cacheItemList of cacheItem. Each CacheItem
-    corresponds to a row in the filtered DataModel dm->sf, or each image in the view. The
-    cache status, target, priority and metadata required for decoding are in CacheItem.
+    The caching process uses the cache size, isCaching, isCached, decoder id, decoder
+    return status and metadata read attempted fields from the datamodel to manage the
+    priorities and target range.
 
-    cacheItemList is populated by MetaRead, which emits a signal to addCacheItemImageMetadata
-    for each image as the metadata is read.  Since this is happening concurrently with
-    The Decoders generating the images, careful management of mutexes is required.  Potenntial
-    orphans are captured at the end of the fillCache function.
+    A number of ImageDecoders are created when ImageCache is created. Each ImageDecoder
+    runs in a separate thread. The decoders convert an image file into a QImage and then
+    signal this function (fillCache) with their id so the QImage can be inserted into the
+    image cache. The ImageDecoders are launched from ImageCache::launchDecoders.
 
-    In addition to the cacheItemList, there are two hashes: keyFromPath and pathFromKey.
-    These hashes improve efficiency and resolve some concurrency issues.
+    The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the
+    decoder is created and when the QImage has been inserted into the image cache the
+    status is set to Ready. When the decoder is called from CacheImage the status is set
+    to Busy. Finally, when the decoder finishes the decoding in ImageDecoder::run the
+    status is set to Done. Each decoder signals ImageCache::fillCache when the image has
+    been converted into a QImage. Here the QImage is added to the imCache. If there are
+    more targeted images to be cached, the next one is assigned to the decoder, which is
+    run again. The decoders keep running until all the targeted images have been cached.
+
+    If there is a file selection change, cache size change, color manage change or
+    sort/filter change the image cache parameters are updated and this function is called
+    for each Ready decoder. The decoders not Ready are Busy and already in the fillCache
+    loop.
+
+    An image decoder can be running when a new folder is selected, returning an image
+    from the previous folder. When an image decoder is run it is seeded with the
+    datamodel instance (which is incremented every time a new folder is selected). When
+    the decoder signals back to ImageCache::fillCache the decoder instance is checked
+    against the current dm->instance to confirm the decoder image is from the current
+    datamodel instance.
+
+    Every time a new image is selected, setCurrentPosition is called. The target range is
+    updated and fillCache is called by each ImageDecoder. When the ImageDecoder has
+    loaded a QImage it is sent back to fillCache and added to the ImCache hash.
+
+    Each decoder follows this basic pattern:
+    - launch
+      - fillCache
+        - starting
+          - nextToCache
+        - returning with QImage
+          - cacheImage
+          - nextToCache
+
+    nextToCache detail:
+    - nextToCache
+      - yes
+        - decodeNextImage
+        - fillCache
+        - cacheImage
+      - no
+        - cacheUpToDate (checks for orphans and item list completed)
+          - no
+            - restart
+          - yes
+            - done
 
 Image size in cache:
 

@@ -842,7 +842,9 @@ void MW::createFSTree()
 
     // reselect folder after external program drop onto FSTree or a selectionChange
     // connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
-    // connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
+
+    // select a folder including modifier keys
+    connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
