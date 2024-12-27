@@ -399,11 +399,9 @@ bool Olympus::parse(MetadataParameters &p,
 
             m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
             m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
-    //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
+            // if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
             // read CameraSettingsIFD
-//            if (ifd->ifdDataHash.contains(8224)) {
-//                offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
             if (cameraSettingsIFDOffset) {
                 p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
                 p.offset = cameraSettingsIFDOffset;

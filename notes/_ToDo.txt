@@ -8,6 +8,7 @@ WHAT'S NEW
 - Pick audio
 - Tweak mouse wheel / trackpad sensitivity algorithm
 - Help for film strip and status bar symbols
+- Folder multi-select
 
 BUGS / TO DO
 - When select thumb check if null and retry to read
