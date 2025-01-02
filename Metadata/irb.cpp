@@ -1,5 +1,9 @@
 #include "irb.h"
 
+/* IRB chain structure
+
+*/
+
 IRB::IRB()
 {
 
@@ -46,28 +50,72 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
                     //*/
 
         // read the pascal string which we don't care about
-        uint pascalStringLength = static_cast<uint>(Utilities::get16(p.file.read(2)));
+        uint pascalStringLength = static_cast<uint>(Utilities::get16(p.file.read(1)));
+        // uint pascalStringLength = static_cast<uint>(Utilities::get16(p.file.read(2)));
         if (pascalStringLength > 0) p.file.read(pascalStringLength);
+        // if position is odd pad to even offset
+        if ((p.file.pos() & 1) == 1) p.file.read(1);
 
         // get the length of the IRB data block
         quint32 dataBlockLength = Utilities::get32(p.file.read(4));
         // round to even 2 bytes
         dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
+        quint32 blockLengthPos = p.file.pos();
 
-        // found the thumb, collect offsets and return
+        // found the thumb IRB, collect offsets and return
         if (foundTifThumb) {
-            m.offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
-            m.lengthThumb = dataBlockLength - 28;
+            // find start of jpeg
+            bool foundJpeg = false;
+            while (!foundJpeg) {
+                quint16 jpgStart = Utilities::get16(p.file.read(2));
+                if (jpgStart == 0xFFD8) foundJpeg = true;
+                if (p.file.pos() - blockLengthPos > 1000) break;
+            }
+            int hdrLength = p.file.pos() - blockLengthPos - 2;
+            if (!foundJpeg) {
+                qDebug() << "IRB::readThumb not found"
+                         << "IRB ID 1036 offset =" << p.offset
+                         << "dataBlockLength =" << dataBlockLength
+                         << "searched =" << hdrLength << "bytes"
+                            ;
+                return;
+            }
+            m.offsetThumb = static_cast<quint32>(p.file.pos()) - 2;
+            m.lengthThumb = dataBlockLength - hdrLength;
             m.thumbFormat = G::ImageFormat::Jpg;
             if (p.report) p.rpt << "Embedded IRB Jpg found.\n";
-            /*
+            // /*
             qDebug() << "IRB::readThumb"
+                     << m.row
+                     << "IRB ID 1036 offset =" << p.offset
+                     << "dataBlockLength =" << dataBlockLength
+                     << "hdrLength =" << hdrLength
                      << "m.offsetThumb =" << m.offsetThumb
                      << "m.lengthThumb =" << m.lengthThumb
                         ;
                         //*/
             return;
         }
+
+        // // get the length of the IRB data block
+        // quint32 dataBlockLength = Utilities::get32(p.file.read(4));
+        // // round to even 2 bytes
+        // dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
+
+        // // found the thumb, collect offsets and return
+        // if (foundTifThumb) {
+        //     m.offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
+        //     m.lengthThumb = dataBlockLength - 28;
+        //     m.thumbFormat = G::ImageFormat::Jpg;
+        //     if (p.report) p.rpt << "Embedded IRB Jpg found.\n";
+        //     /*
+        //     qDebug() << "IRB::readThumb"
+        //              << "m.offsetThumb =" << m.offsetThumb
+        //              << "m.lengthThumb =" << m.lengthThumb
+        //                 ;
+        //                 //*/
+        //     return;
+        // }
 
         // did not find the thumb, try again
         p.file.read(dataBlockLength);

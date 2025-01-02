@@ -435,7 +435,7 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');

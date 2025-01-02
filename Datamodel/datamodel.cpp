@@ -579,9 +579,8 @@ void DataModel::processNextFolder()
 void DataModel::addFolder(const QString &folderPath)
 {
     QString fun = "DataModel::addFolder";
-    if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
-
-    // qDebug() << fun << "folder =" << folderPath;
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, folderPath);
 
     // control
     QMutexLocker locker(&mutex);
@@ -596,6 +595,13 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+
+    /*
+    qDebug().noquote()
+             << fun << "folder =" << folderPath
+             << "folderQueue(count) =" << folderQueue.count()
+             << "folderFileInfoList(count) =" << folderFileInfoList.count()
+        ;//*/
 
     if (combineRawJpg) {
         // make sure, if raw+jpg pair, that raw file is first to make combining easier
@@ -678,9 +684,8 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
-    sf->suspend(false);
+    // sf->suspend(false);
 
-    loadingModel = false;
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
         setCurrent(index(0, 0), instance);
@@ -691,7 +696,9 @@ void DataModel::addFolder(const QString &folderPath)
         iconChunkSize = 100;
     }
 
-    endLoad(true);
+    if (folderQueue.isEmpty()) {
+        endLoad(true);
+    }
 }
 
 void DataModel::removeFolder(const QString &folderPath)
@@ -770,6 +777,7 @@ bool DataModel::endLoad(bool success)
                           << "success =" << success;
 
     loadingModel = false;
+    sf->suspend(false);
     if (success) {
         G::dmEmpty = false;
         checkChunkSize = iconChunkSize > rowCount();
@@ -889,6 +897,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     if (showThumbNailSymbolHelp) tip += thumbnailHelp;
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
+    // setData(index(row, G::MSToReadColumn), 0);
+    // setData(index(row, G::MSToReadColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IsCachedColumn), false);
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
@@ -1812,7 +1822,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     currentDmIdx = dmIdx;
     currentDmRow = currentDmIdx.row();
     currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "DataModel::setCurrent using dmIdx"
                  << "currentSfIdx =" << currentSfIdx

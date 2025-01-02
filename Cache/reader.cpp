@@ -19,12 +19,10 @@ Reader::Reader(QObject *parent,
     // Try QueuedConnection
     // connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
     // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
-    // connect(this, &Reader::addToImageCache, imageCache, &ImageCache::updateImageMetadataFromReader, Qt::QueuedConnection);
 
-    // Using Qt::BlockingQueuedConnection:
+    // Using Qt::BlockingQueuedConnection: (can be slow)
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
 
     isDebug = false;
     debugLog = false;
@@ -139,7 +137,9 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
-    // t2 = t.restart();
+    #ifdef TIMER
+    t2 = t.restart();
+    #endif
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
     metadata->m.metadataAttempted = true;
@@ -147,7 +147,9 @@ bool Reader::readMetadata()
 
     // block until datamodel updated for row with image metadata
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-    // t3 = t.restart();
+#ifdef TIMER
+    t3 = t.restart();
+#endif
 
     if (!dm->isMetadataLoaded(dmRow)) {
         status = Status::MetaFailed;
@@ -203,6 +205,18 @@ void Reader::run()
 {
     readMetadata();
     readIcon();
+    #ifdef TIMER
+    t4 = t.restart();
+    msToRead = t2 + t3 + t4;
+    // /*
+    qDebug().noquote()
+        << "Reader::run" << QString::number(dmIdx.row()).leftJustified(6)
+        << "msToRead =" << QString::number(msToRead).leftJustified(8)
+        << "meta =" << QString::number(t2).leftJustified(6)
+        << "dm =" << QString::number(t3).leftJustified(6)
+        << "icon =" << QString::number(t4).leftJustified(6)
+        ;//*/
+    #endif
     emit done(threadId);
     if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");
 }

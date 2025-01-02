@@ -1352,7 +1352,7 @@ bool Jpeg::embedThumbnail(QString fPath)
     QString thumbPath = folder + "/" + base + "_thumb.jpg";
 
     // create a thumbnail size jpg
-    QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
+    QImage thumb = QImage(fPath).scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio);
     if (!thumb.save(thumbPath, "JPG", 60)) return false;
 
     // add the thumb.jpg to the source file

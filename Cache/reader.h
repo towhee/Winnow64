@@ -12,6 +12,8 @@
 #include "Image/thumb.h"
 #include "Cache/imagecache.h"
 
+#define TIMER
+
 class Reader : public QThread
 {
     Q_OBJECT

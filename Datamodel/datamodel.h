@@ -169,6 +169,8 @@ public:
     void setShowThumbNailSymbolHelp(bool showHelp);
     bool okManyImagesWarning();
 
+    QQueue<QPair<QString, bool>> folderQueue;
+
 signals:
     void stop(QString src);
     void addedFolderToDM(QString folderName, QString op);
@@ -188,7 +190,7 @@ public slots:
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+                  int role = Qt::EditRole, int align = Qt::AlignLeft | Qt::AlignVCenter);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
@@ -217,7 +219,7 @@ private:
 
     // Pair of folderPath and operation type (true=add, false=remove)
     void enqueueOp(const QString folderPath, const QString op);
-    QQueue<QPair<QString, bool>> folderQueue;
+    // QQueue<QPair<QString, bool>> folderQueue;
     QMutex queueMutex;
     // bool isProcessing = false;
 

@@ -352,6 +352,22 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QFont glyphs;
+    int id = QFontDatabase::addApplicationFont("/Users/roryhill/Downloads/glyphs.ttf");
+    if (id != -1) {
+        QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+        glyphs = QFont(family);
+        statusLabel->setFont(glyphs);
+    } else {
+        qDebug() << "Failed to load font.";
+    }
+
+    statusLabel->setText("C");  // filter symbol
+    // updateStatus();
+    return;
+
+
+
     // Load the custom font
     QString fontPath = "/Users/roryhill/Downloads/glyphter-font/fonts/glyphs.ttf";
     int fontId = QFontDatabase::addApplicationFont(fontPath);

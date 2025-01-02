@@ -172,7 +172,7 @@ bool Tiff::parse(ImageMetadata &m, QString fPath)
         IPTC *iptc = new IPTC;
         Exif *exif = new Exif;
         GPS *gps = new GPS;
-        return parse(p, m, ifd,irb, iptc, exif, gps);
+        return parse(p, m, ifd, irb, iptc, exif, gps);
     }
     return false;
 }
@@ -189,12 +189,12 @@ bool Tiff::parse(MetadataParameters &p,
     Called from Metadata::readMetadata.
 
     This function reads the metadata from a tiff file. If the tiff file does not contain
-    a thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail
-    will be added at the end of file.
+    a thumbnail, either in an IRB or IFB, and G::autoAddMissingThumbnails == true, then a
+    thumbnail will be added at the end of file.
 */
     if (G::isLogger || isDebug) G::log("Tiff::parse", p.fPath);
     //file.open happens in readMetadata
-    //qDebug() << "Tiff::parse" << p.file.fileName();
+    // qDebug() << "Tiff::parse" << p.file.fileName();
 
     Utilities u;
     quint32 startOffset = 0;
@@ -1354,6 +1354,56 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     p.file.write(bat);
 
     return true;
+}
+
+void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
+{
+    // convert QImage to QByteArray
+    QByteArray jpegData;
+    QBuffer buffer(&jpegData); // Create a buffer that writes to jpegData
+    buffer.open(QIODevice::WriteOnly);
+    thumbnail.save(&buffer, "JPEG"); // Save the image in JPEG format
+
+    // Open the TIFF file
+    TIFF *tif = TIFFOpen(tiffPath.toUtf8().constData(), "r+");
+    if (!tif) {
+        qWarning() << "Failed to open TIFF file:" << tiffPath;
+        return;
+    }
+
+    qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
+
+    // Prepare the IRB block
+    QByteArray irbData;
+    irbData.append("8BIM");                  // Signature
+
+    // IRB ID (1036 for JPEG thumbnail, in big-endian)
+    irbData.append(Utilities::put16(1036));
+    // irbData.append(char(0x04)); // High byte
+    // irbData.append(char(0x0C)); // Low byte
+
+    // Empty name (Pascal string, length = 0)
+    irbData.append(Utilities::put16(0));
+    // irbData.append(char(0x00));
+    // irbData.append(char(0x00));
+    // irbData.append(char(0x00));
+    // irbData.append(char(0x00));
+
+    // Size of the JPEG data (4 bytes, big-endian)
+    irbData.append(Utilities::put32(jpegData.size()));
+    // irbData.append((jpegData.size() >> 24) & 0xFF);
+    // irbData.append((jpegData.size() >> 16) & 0xFF);
+    // irbData.append((jpegData.size() >> 8) & 0xFF);
+    // irbData.append(jpegData.size() & 0xFF);
+
+    // JPEG data
+    irbData.append(jpegData);
+
+    // Add the IRB as a TIFF tag
+    TIFFSetField(tif, TIFFTAG_PHOTOSHOP, irbData.size(), irbData.constData());
+
+    // Finalize and close
+    TIFFClose(tif);
 }
 
 void Tiff::perChannelToInterleave(QImage *im1)
