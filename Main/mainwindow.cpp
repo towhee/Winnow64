@@ -1298,27 +1298,40 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     if (!dockTabBars.contains(tabBar)) {
                         dockTabBars.append(tabBar);
                         tabBarAssignRichText(tabBar);
-                        qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
+                        // qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
                     }
                 }
             }  //*/
 
-            /*
-            // Set icon to tabified dock widgets tabbar tabs
+            // Set tab tooltip and maybe use tooltip so can identify if change tab text
             if (event->type() == QEvent::ChildAdded) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QFont glyphs;
+                int id = QFontDatabase::addApplicationFont("/Users/roryhill/Downloads/glyphs.ttf");
+                QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+                glyphs = QFont(family);
+                tabBar->setFont(glyphs);
                 for (int i = 0; i < tabBar->count(); ++i) {
-                    if (tabBar->tabText(i) == filterDockTabText) {
-                        tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
-                        qDebug().noquote()
-                                << "MW::eventFilter-tabbar"
-                                << "text =" << tabBar->tabText(i)
-                                << "tabBar->tabData(i) =" << tabBar->tabData(i)
-                                << "tabBar->tabToolTip(i) =" << tabBar->tabToolTip(i)
-                                ;
+                    if (tabBar->tabText(i) == folderDockTabText) {
+                        tabBar->setTabToolTip(i, "System Folders Panel (F3)");
                     }
-                }
-            }  //*/
+                    if (tabBar->tabText(i) == favDockTabText) {
+                        tabBar->setTabToolTip(i, "Bookmarks Panel (F4)");
+                    }
+                    if (tabBar->tabText(i) == filterDockTabText) {
+                        // tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
+                        // tabBar->setTabData(i, filterDockTabText);
+                        tabBar->setTabToolTip(i, "Filter Panel (F5)");
+                        // tabBar->setTabText(i, "Filters");  not working
+                    }
+                    if (tabBar->tabText(i) == metadataDockTabText) {
+                        tabBar->setTabToolTip(i, "Metadata Panel (F6)");
+                    }
+                    if (tabBar->tabText(i) == embelDockTabText) {
+                        tabBar->setTabToolTip(i, "Embellish Panel (F8)");
+                    }
+                 }
+            }
 
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
@@ -1328,6 +1341,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == filterDockTabText) {
                     filterDockTabMousePress();
                 }
+                /*
+                // if rename tab text then use tooltips to id tab
+                if (tabBar->tabToolTip(i) == "Filter Panel (F5)") {
+                    filterDockTabMousePress();
+                    qDebug() << "PRESSED";
+                }
+                //*/
             }
 
             // show tool tip for tab
@@ -1335,38 +1355,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                if (i >= 0 && i != prevTabIndex) {
-                    QString tip = "";
-                    if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel (F3)";
-                    if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel (F4)";
-                    if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel (F5)";
-                    if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel (F6)";
-                    if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel (F8)";
-                    prevTabIndex = i;
-                    QToolTip::showText(e->globalPos(), tip);
-                }
+                QToolTip::showText(e->globalPos(), tabBar->tabToolTip(i));
+
             }
             if (event->type() == QEvent::Leave) {
                 prevTabIndex = -1;
             }
 
-            /* experimenting to maybe replace text with an icon
-            if (event->type() == QEvent::ChildAdded) {
-                QChildEvent *e = static_cast<QChildEvent*>(event);
-                QTabBar *tabBar = static_cast<QTabBar*>(obj);
-                qDebug() << "event =" << event
-                    << "obj =" << obj
-                    << "e =" << e
-                    << "e->child()->children() =" << e->child()->children();
-                for (int j = 0; j < tabBar->count(); j++) {
-                    qDebug()
-                             << "tab" << j
-                             << "text" << tabBar->tabText(j)
-                        ;
-                }
-            }
-
-            if (event->type() == QEvent::ChildRemoved) {
+            /* remove tab event
+\            if (event->type() == QEvent::ChildRemoved) {
                 qDebug() << event << obj;
             }
             //*/
@@ -1984,6 +1981,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     }
 
     // figure out folderWatcher.startWatching(G::currRootFolder, 1000);
+    // qDebug().noquote() << fun << folderPath;
 
     dm->enqueueFolderSelection(folderPath, op, recurse);
 }
@@ -3322,7 +3320,7 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    // qDebug() << src;
+    // qDebug().noquote() << src << "dm->folderQueue.count() =" << dm->folderQueue.count();
 
     int count = 0;
     /*
@@ -5333,7 +5331,7 @@ QString MW::embedThumbnails()
 
     There are two routines to do this:
 
-        • JPEG: TJpeg::embedThumbnail inserts thumbnail using ExifTool.
+        • JPEG: Jpeg::embedThumbnail inserts thumbnail using ExifTool.
 
         • TIFF: Tiff::encodeThumbnail inserts thumbnail from Tiff::parse.
 
@@ -5409,17 +5407,31 @@ QString MW::embedThumbnails()
         if (isMissing && isReadWrite) {
             // Add a thumbnail
             if (fileType == "tif") {
-                // call tif->parse which calls tif->encodeThumbnail
                 Tiff tiff;
+                /*
+                   Create a QImage from stored icon and save it in a buffer as a jpg
+                   and then create IRB 1036 to save jpg themb in tiff file.  This is
+                   a bad idea, because any existing IRB are ignored.
+                QModelIndex thumbIdx = dm->sf->index(sfRow, 0);
+                QIcon icon = qvariant_cast<QIcon>(thumbIdx.data(Qt::DecorationRole));
+                QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
+                QImage thumbnail = icon.pixmap(maxSize).toImage();
+                tiff.embedIRBThumbnail(fPath, thumbnail);
+                QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
+                dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
+                */
+                // exiftool does not add thumbs to tiff files
+                // call tif->parse which calls tif->encodeThumbnail
                 ImageMetadata m;
                 tiff.parse(m, fPath);
                 if (!m.isEmbeddedThumbMissing) {
                     QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
                     dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
                 }
-            }
-            else {
-                // must be a jpeg
+
+             }
+             else {
+                // must be a jpeg, use exiftool to add thumb
                 Jpeg jpeg;
                 if (jpeg.embedThumbnail(fPath)) {
                     QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);

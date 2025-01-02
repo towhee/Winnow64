@@ -452,7 +452,7 @@ RowNumberItemDelegate::RowNumberItemDelegate(QObject* parent): QStyledItemDelega
 void RowNumberItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     painter->save();
-    painter->drawText(option.rect, Qt::AlignRight | Qt::AlignVCenter, QString::number(index.row() + 1));
+    painter->drawText(option.rect, Qt::AlignCenter | Qt::AlignVCenter, QString::number(index.row() + 1));
     painter->restore();
 }
 

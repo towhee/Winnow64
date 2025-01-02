@@ -853,11 +853,12 @@ void IconView::thumbsFitTopOrBottom(QString src)
 
     // do nothing if exceed limits
     if (exceedsLimits) {
+        /*
         qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
                  << "newViewportHt =" << newViewportHt
                  << "maxCellHeight =" << maxCellHeight
                  << "minCellHeight =" << minCellHeight
-            ;
+            ;//*/
         return;
     }
 
@@ -865,7 +866,7 @@ void IconView::thumbsFitTopOrBottom(QString src)
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-    // /*
+    /*
     qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
              << "newViewportHt =" << newViewportHt
              << "maxCellHeight =" << maxCellHeight

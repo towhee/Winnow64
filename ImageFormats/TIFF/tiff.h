@@ -60,6 +60,8 @@ public:
 
     // add a thumbnail to the tiff for faster thumbnail generation
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    // add a thumbnail jpg in IRB block
+    void embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
 
     // // test libtiff
     // // #ifdef Q_OS_MAC

@@ -126,7 +126,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 
     if (isDebug)
     {
-        qDebug() << "\nMetaRead::setStartRow "
+        qDebug() << "MetaRead::setStartRow "
                  << "startRow =" << startRow
                  << "fileSelectionChanged =" << fileSelectionChanged
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
@@ -740,9 +740,12 @@ void MetaRead::dispatch(int id)
         // it is not ok to select while the datamodel is being built.
         if (metaReadCount == 1) emit okToSelect(true);
 
-        // time to read item
+        // /*
+        // time to read item (performance testing only)
         QModelIndex tIdx = dm->index(dmRow, G::MSToReadColumn);
-        emit setMsToRead(tIdx, r->msToRead, r->instance);
+        emit setMsToRead(tIdx, r->msToRead, r->instance,
+                         "", Qt::EditRole, Qt::AlignCenter | Qt::AlignVCenter);
+        //*/
 
         /* deplete toRead (to be removed)
         for (int i = 0; i < toRead.size(); i++) {
@@ -831,8 +834,10 @@ void MetaRead::dispatch(int id)
 
         // report progress
         if (showProgressInStatusbar) {
-            emit updateProgressInStatusbar(dmRow, dmRowCount);
-            int progress = 1.0 * metaReadCount / dmRowCount * 100;
+            emit updateProgressInStatusbar(dmRow, dm->rowCount());
+            // emit updateProgressInStatusbar(dmRow, dmRowCount);
+            int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
+            // int progress = 1.0 * metaReadCount / dmRowCount * 100;
             emit updateProgressInFilter(progress);
         }
 

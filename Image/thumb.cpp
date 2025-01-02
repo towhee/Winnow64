@@ -301,6 +301,9 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     jpg, heic and tif files can contain smaller previews. Check if they do and load the
     smaller preview as that is faster than loading the entire full resolution image just
     to get a thumbnail. This thumbnail is used by the grid and filmstrip views.
+
+    Called by MW::fileSelectionChange when an icon has not been loaded and by
+    MW::refreshCurrentFolder.
 */
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
     if (fPath.isEmpty()) qDebug() << "Thumb::loadThumb EMPTY FPATH";
@@ -343,7 +346,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
     lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
     isEmbeddedThumb = offsetThumb && lengthThumb;
-    /*
+    // /*
     qDebug() << "Thumb::loadThumb"
              << "dmRow =" << dmRow
              << "offsetThumb =" << offsetThumb

@@ -435,8 +435,8 @@ bool MW::tabBarContainsDocks(QTabBar *tabBar)
 {
     if (tabBar == nullptr) return false;
     for (int i = 0; i < tabBar->count(); i++) {
-        qDebug() << "MW::tabBarContainsDocks" << "tab count =" << tabBar->count()
-        << i << "tabBar->tabText() =" << tabBar->tabText(i);
+        // qDebug() << "MW::tabBarContainsDocks" << "tab count =" << tabBar->count()
+        // << i << "tabBar->tabText() =" << tabBar->tabText(i);
         if (dockTextNames.contains(tabBar->tabText(i))) {
             return true;
         }
