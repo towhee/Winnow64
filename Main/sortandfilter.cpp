@@ -124,7 +124,7 @@ void MW::filterChange(QString source)
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
-        G::popUp->reset();
+        // G::popUp->reset();
         return;
     }
 
@@ -167,7 +167,7 @@ void MW::filterChange(QString source)
     // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
-    G::popUp->reset();
+    // G::popUp->reset();
 }
 
 void MW::quickFilter()
@@ -477,7 +477,7 @@ void MW::sortChange(QString source)
 //    sel->select(idx);
 
     scrollToCurrentRowIfNotVisible();
-    G::popUp->reset();
+    // G::popUp->reset();
 
 }
 
@@ -681,10 +681,10 @@ void MW::setRating()
     // update ImageView classification badge
     updateClassification();
 
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
-    }
+    // if (G::useSidecar) {
+    //     G::popUp->setProgressVisible(false);
+    //     G::popUp->reset();
+    // }
 
     // auto advance
     if (G::autoAdvance) sel->next();
@@ -869,10 +869,10 @@ void MW::setColorClass()
     // update ImageView classification badge
     updateClassification();
 
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
-    }
+    // if (G::useSidecar) {
+    //     G::popUp->setProgressVisible(false);
+    //     G::popUp->reset();
+    // }
 
     // auto advance
     if (G::autoAdvance) sel->next();

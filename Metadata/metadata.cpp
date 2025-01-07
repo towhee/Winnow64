@@ -360,6 +360,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("pick", n) << G::s(m.pick) << "\n";
     p.rpt << G::sj("ingested", n) << G::s(m.ingested) << "\n";
     p.rpt << G::sj("metadataLoaded", n) << G::s(m.metadataLoaded) << "\n";
+    p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
     p.rpt << G::sj("isSearch", n) << G::s(m.isSearch) << "\n";
     p.rpt << "\n";
     p.rpt << G::sj("width", n) << G::s(m.width) << "\n";

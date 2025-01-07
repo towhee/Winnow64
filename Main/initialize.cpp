@@ -88,6 +88,12 @@ void MW::initialize()
     sortColumn = G::NameColumn;
     isReverseSort = false;
 
+    // Initialize G::relay
+    G::relay = new G::SignalRelay(this);
+    // Connect the relay signal to the updateStatus slot
+    connect(G::relay, &G::SignalRelay::updateStatus, this, &MW::updateStatus);
+    connect(G::relay, &G::SignalRelay::showPopUp, this, &MW::showPopUp);
+
     // Temp until resolve tiff decoding crash issues with some compression methods
     #ifdef  Q_OS_WIN
     G::useMyTiff = true;
@@ -1074,7 +1080,8 @@ void MW::createStatusBar()
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
-    folderDockTabText = "  📁  ";
+    folderDockTabText = "Folders";
+    // folderDockTabText = "  📁  ";
     QPixmap pm(":/images/icon16/anchor.png");
     folderDockTabRichText = "test";
 //    folderDockTabRichText = Utilities::pixmapToString(pm);
@@ -1138,7 +1145,8 @@ void MW::createFolderDock()
 void MW::createFavDock()
 {
     if (G::isLogger) G::log("MW::createFavDock");
-    favDockTabText = "  🔖  ";
+    favDockTabText = "Bookmarks";
+    // favDockTabText = "  🔖  ";
     dockTextNames << favDockTabText;
     favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
     // favDock->setObjectName("Bookmarks");
@@ -1187,7 +1195,8 @@ void MW::createFavDock()
 void MW::createFilterDock()
 {
     if (G::isLogger) G::log("MW::createFilterDock");
-    filterDockTabText = "  🤏  ";
+    filterDockTabText = "Filters";
+    // filterDockTabText = "  🤏  ";
     dockTextNames << filterDockTabText;
     filterDock = new DockWidget(filterDockTabText, "FilterDock", this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
 
@@ -1276,7 +1285,8 @@ void MW::createMetadataDock()
     // this does not work
 //    QPixmap pixmap(":/images/icon16/anchor.png");
 //    metadataDockTabText = Utilities::pixmapToString(pixmap);
-    metadataDockTabText = "  📷  ";
+    metadataDockTabText = "Metadata";
+    // metadataDockTabText = "  📷  ";
     dockTextNames << metadataDockTabText;
     metadataDock = new DockWidget(metadataDockTabText, "MetadataDock", this);    // Metadata
     metadataDock->setWidget(infoView);
@@ -1358,7 +1368,8 @@ void MW::createEmbelDock()
     connect (embelProperties, &EmbelProperties::centralMsg, this, &MW::setCentralMessage);
     connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
-    embelDockTabText = "  🎨  ";
+    embelDockTabText = "Embellish";
+    // embelDockTabText = "  🎨  ";
     dockTextNames << embelDockTabText;
     embelDock = new DockWidget(embelDockTabText, "EmbelDock", this);  // Embellish
     embelDock->setObjectName("EmbelDock");

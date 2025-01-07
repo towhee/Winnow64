@@ -11,6 +11,10 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- Change encodeThumbnail to use Tiff::read and call from thumb.cpp
+- Tiff with compression 7 (jpg) not being decoded
+- If filtering and change filter item for all iconview does not update
+- Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read
 - Check MW::refreshCurrentFolder still works
 - Retain datamodel selection when removing folders from datamodel

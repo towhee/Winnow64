@@ -195,6 +195,38 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff("Thumb::loadFromTiff");
+    if (!tiff.read(fPath, &image, m.offsetThumb)) {
+        QString errMsg = "Could not read because QtTiff read failed.";
+        G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
+        return Status::Fail;
+    }
+
+    // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
+    image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+
+    // fix missing embedded thumbnail
+    QModelIndex sfIdx = dm->sf->index(row, G::MissingThumbColumn);
+    bool isMissingThumb = sfIdx.data().toBool();
+    if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
+        if (G::backupBeforeModifying) {
+            QString msg = "File(s) have been backed up before embedding thumbnail(s).<p>"
+                          "Press <font color=\"red\">ESC</font> to close";
+            // use relay because probably in non-gui thread
+            emit G::relay->showPopUp(msg, 10000, true, 0.75, Qt::AlignHCenter);
+            // emit G::relay->updateStatus(false, msg, "Thumb::loadFromTiff");  // this works
+            Utilities::backup(fPath, "backup");
+        }
+        if (tiff.encodeThumbnail(fPath, image)) {
+            dm->setValueSf(sfIdx, false, dm->instance, "Thumb::loadFromTiff");
+        }
+    }
+
+    return Status::Success;
+
+
+
+
+
     if (tiff.read(fPath, &image, m.offsetThumb)) {
         // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
         image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
@@ -205,6 +237,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
         G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
         return Status::Fail;
     }
+
+    // deprecated code...
 
     int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
     /*
@@ -346,7 +380,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
     lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
     isEmbeddedThumb = offsetThumb && lengthThumb;
-    // /*
+    /*
     qDebug() << "Thumb::loadThumb"
              << "dmRow =" << dmRow
              << "offsetThumb =" << offsetThumb

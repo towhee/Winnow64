@@ -323,6 +323,20 @@ namespace G
     extern bool isTest;
     extern bool isStressTest;
 
+    // Signal relay class for global communication
+    class SignalRelay : public QObject {
+        Q_OBJECT
+    public:
+        explicit SignalRelay(QObject *parent = nullptr) : QObject(parent) {}
+
+    signals:
+        void updateStatus(bool keepBase, QString s, QString source);
+        void showPopUp(QString msg, int duration, bool isAutosize,
+                       float opacity, Qt::Alignment alignment);
+    };
+
+    extern SignalRelay *relay;
+
     void setDM(QObject *dm);
 
     extern Logger logger;

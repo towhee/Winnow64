@@ -172,7 +172,10 @@ bool Tiff::parse(ImageMetadata &m, QString fPath)
         IPTC *iptc = new IPTC;
         Exif *exif = new Exif;
         GPS *gps = new GPS;
-        return parse(p, m, ifd, irb, iptc, exif, gps);
+        if (parse(p, m, ifd, irb, iptc, exif, gps)) {
+            p.file.close();
+            return true;
+        }
     }
     return false;
 }
@@ -310,23 +313,19 @@ bool Tiff::parse(MetadataParameters &p,
     m.widthPreview = m.width;
     m.heightPreview = m.height;
 
-    // start thumbnail dimensions
-    int thumbLongside;
-    m.widthPreview > m.heightPreview ? thumbLongside = m.widthPreview : thumbLongside = m.heightPreview;
+    // IFD0: samplesPerPixelFull (cannot decode if > 3)
+    (ifd->ifdDataHash.contains(277))
+        ? m.samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
+        : m.samplesPerPixel = 0;
 
     /*
-     Moved to Tiff::parseForDecoding:
+        Tiff::parseForDecoding sets:
          IFD0: bitsPerSampleFull
          IFD0: photoInterpFull
          IFD0: compressionFull
          IFD0: stripByteCountsFull
          IFD0: planarConfigurationFull
-    //*/
-
-    // IFD0: samplesPerPixelFull (cannot decode if > 3)
-    (ifd->ifdDataHash.contains(277))
-        ? m.samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
-        : m.samplesPerPixel = 0;
+    */
 
     p.offset = m.ifd0Offset;
     if (p.report) parseForDecoding(p, ifd);
@@ -338,12 +337,20 @@ bool Tiff::parse(MetadataParameters &p,
     }
 
 
-    /* Search for thumbnail in chained IFDs, IRB and subIFDs.
-       - if no thumbnail found then:    m.offsetThumb == m.offsetFull
-       - if IRB Jpg thumb found then:   m.lengthThumb > 0
-       - if IFD tiff thumb found then:  m.offsetThumb != m.offsetFull
+    /* Search for thumbnail in IRB, chained IFDs and subIFDs.
+       - if IRB Jpg thumb:          thumbLongside = 256, m.lengthThumb > 0
+       - if chained IFD tiff thumb: thumbLongside = x,   m.offsetThumb == m.offsetFull
+       - if subIFD tiff thumb:      thumbLongside = x,   m.offsetThumb != m.offsetFull
+       - if thumbLongside > 512:    m.isEmbeddedThumbMissing = false
     */
-    // IRB:  Get embedded JPG thumbnail if available
+
+    // start thumbnail dimensions
+    int thumbLongside;
+    m.widthPreview > m.heightPreview ? thumbLongside = m.widthPreview : thumbLongside = m.heightPreview;
+    m.isEmbeddedThumbMissing = true;
+
+    // IRB ********************************************************************
+    // Get embedded JPG thumbnail if available
     if (ifdPhotoshopOffset) {
         if (p.report) {
             p.hdr = "IRB";
@@ -352,8 +359,8 @@ bool Tiff::parse(MetadataParameters &p,
             p.rpt << "Offset        IRB Id   (1036 = embedded jpg thumbnail)\n";
         }
         p.offset = ifdPhotoshopOffset;
-        // set m.offsetThumb, m.lengthThumb, m.thumbFormat
-        irb->readThumb(p, m);    // rgh need to add IRB for DNG
+        // set m.offsetThumb, m.lengthThumb, m.thumbFormat, m.isEmbeddedThumbMissing
+        irb->readThumb(p, m);    // rgh need to add IRB to dng.cpp
         if (m.lengthThumb) {
             // assign arbitrary value to thumbLongside less than 512
             thumbLongside = 256;
@@ -367,114 +374,35 @@ bool Tiff::parse(MetadataParameters &p,
 
     // Chained IFDs ************************************************************
     // search for lastIFDOffset and existing thumbnail
-    int count = 0;
-    if (p.report) {
-        while (nextIFDOffset) {
-            count++;
-            p.hdr = "IFD" + QString::number(count);
-            p.offset = nextIFDOffset;
-            p.hash = &exif->hash;
-            nextIFDOffset = ifd->readIFD(p, isBigEnd);
-            parseForDecoding(p, ifd);
-            if (!ifd->ifdDataHash.contains(256)) continue;
-            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-            int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-            int thumbLong;
-            w > h ? thumbLong = w : thumbLong = h;
-            if (thumbLong > G::maxIconSize) continue;
-            m.offsetThumb = p.offset;
-        }
-    }
-    else {
-        while (nextIFDOffset > 0 && !m.isEmbeddedThumbMissing) {
-            count++;
-            p.hdr = "IFD" + QString::number(count);
-            p.offset = nextIFDOffset;
-            p.hash = &exif->hash;
-            nextIFDOffset = ifd->readIFD(p, isBigEnd);
-            // check if IFD is a reduced resolution main image ie maybe the thumbnail
-            // SubFileType == 1 (tagid == 254)
-            if (!ifd->ifdDataHash.contains(254)) continue;
-            if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
-            // is image width small then full size and less than 640 pixels?
-            if (!ifd->ifdDataHash.contains(256)) continue;
-            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-            int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-            int thumbLong;
-            w > h ? thumbLong = w : thumbLong = h;
-            if (thumbLong < G::maxIconSize) break;
-            // qDebug() << "Tiff::parse  thumbLong =" << thumbLong;
-            m.offsetThumb = p.offset;
-        }
-        if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
-    }
+    parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "IFD");
+    if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
 
     // subIFDs: ****************************************************************
     /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
        possibly read smallest for thumbnail. */
-    nextIFDOffset = ifdsubIFDOffset;
-    count = 0;
-    if (p.report && ifdsubIFDOffset) {
-        while (nextIFDOffset && count < 10) {
-            count ++;
-            p.hdr = "SubIFD " + QString::number(count);
-            p.offset = nextIFDOffset;
-            nextIFDOffset = ifd->readIFD(p, isBigEnd);
-            parseForDecoding(p, ifd);
-            if (!ifd->ifdDataHash.contains(256)) continue;
-            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-            int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-            int thumbLong;
-            w > h ? thumbLong = w : thumbLong = h;
-            if (thumbLong >= thumbLongside) continue;
-            thumbLongside = thumbLong;
-            m.offsetThumb = p.offset;
-        }
-
-    }
-    if (!p.report && ifdsubIFDOffset && !m.isEmbeddedThumbMissing) {
-        while (nextIFDOffset && count < 10) {
-            count ++;
-            p.hdr = "SubIFD " + QString::number(count);
-            p.offset = nextIFDOffset;
-            m.ifdOffsets.append(nextIFDOffset);
-            nextIFDOffset = ifd->readIFD(p, isBigEnd);
-            // check if IFD is a reduced resolution main image ie maybe the thumbnail
-            // SubFileType == 1 (tagid == 254)
-            if (!ifd->ifdDataHash.contains(254)) continue;
-            if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
-            // is image width smaller then full size and less than 640 pixels?
-            if (!ifd->ifdDataHash.contains(256)) continue;
-            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-            int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-            int thumbLong;
-            w > h ? thumbLong = w : thumbLong = h;
-            if (thumbLong >= thumbLongside) continue;
-            thumbLongside = thumbLong;
-            m.offsetThumb = p.offset;
-        }
+    if (ifdsubIFDOffset) {
+        nextIFDOffset = ifdsubIFDOffset;
+        parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "subIFD");
     }
 
-    if (G::modifySourceFiles &&
-        G::autoAddMissingThumbnails &&
-        m.offsetThumb == m.offsetFull &&
-        thumbLongside > 512)
-    {
-        p.offset = m.offsetThumb;        // Smallest preview to use
-        encodeThumbnail(p, m, ifd);
-        // write thumbnail added to xmp sidecar if writing sidecars
-        if (G::useSidecar) {
-            Xmp xmp(p.file, p.instance);
-            if (xmp.isValid) {
-                QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
-                xmp.setItem("WinnowAddThumb", val);
-                // xmp.writeSidecar(p.file);
-            }
-        }
-    }
-
-    // Identify thumbnail is missing
-    m.isEmbeddedThumbMissing = (m.offsetThumb == m.offsetFull);
+    // // Create thumbnail if ok and missing
+    // if (G::modifySourceFiles &&
+    //     G::autoAddMissingThumbnails &&
+    //     m.offsetThumb == m.offsetFull &&
+    //     thumbLongside > 512)
+    // {
+    //     p.offset = m.offsetThumb;        // Smallest preview to use
+    //     encodeThumbnail(p, m, ifd);
+    //     // write thumbnail added to xmp sidecar if writing sidecars
+    //     if (G::useSidecar) {
+    //         Xmp xmp(p.file, p.instance);
+    //         if (xmp.isValid) {
+    //             QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
+    //             xmp.setItem("WinnowAddThumb", val);
+    //             // xmp.writeSidecar(p.file);
+    //         }
+    //     }
+    // }
 
     // EXIF: *******************************************************************
 
@@ -624,6 +552,50 @@ bool Tiff::parse(MetadataParameters &p,
     return true;
 }
 
+quint32 Tiff::parseIFDs(MetadataParameters &p, ImageMetadata &m, IFD *ifd,
+                     quint32 &nextIFDOffset, int &thumbLongside, QString hdr)
+{
+    int count = 0;
+    while (nextIFDOffset) {
+        count ++;
+        p.hdr = hdr + " " + QString::number(count);
+        p.offset = nextIFDOffset;
+        m.ifdOffsets.append(nextIFDOffset);
+        nextIFDOffset = ifd->readIFD(p, m.isBigEnd);
+        if (p.report) parseForDecoding(p, ifd);
+        // if (!m.isEmbeddedThumbMissing) continue;
+        // check if IFD is a reduced resolution main image ie maybe the thumbnail
+        // SubFileType == 1 (tagid == 254)
+        if (!ifd->ifdDataHash.contains(254)) continue;
+        if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
+        // is image width smaller then full size and less than 640 pixels?
+        if (!ifd->ifdDataHash.contains(256)) continue;
+        int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+        int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+        int thumbLong;
+        w > h ? thumbLong = w : thumbLong = h;
+        // ignore if undersize
+        if (thumbLong < G::maxIconSize * 0.75) continue;
+        // smallest so far but larger than G::maxIconSize
+        if (thumbLong < thumbLongside) {
+            thumbLongside = thumbLong;
+            m.offsetThumb = p.offset;
+            if (thumbLongside < (G::maxIconSize * 1.5)) m.isEmbeddedThumbMissing = false;
+        }
+        /*
+        qDebug() << "Tiff::parseIFDs" << p.hdr
+                 << "offset =" << p.offset
+                 << "m.isEmbeddedThumbMissing =" << m.isEmbeddedThumbMissing
+                 << "thumbLongside =" << thumbLongside
+                 << "fPath =" << m.fPath
+                    ;//*/
+    }
+
+    // nextIFDOffset is now last IFDOffset
+    return nextIFDOffset;
+
+}
+
 bool Tiff::isBigEndian(MetadataParameters &p)
 {
 /*
@@ -637,7 +609,7 @@ bool Tiff::isBigEndian(MetadataParameters &p)
     else return false;
 }
 
-bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd)
+bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
 {
 /*
     Get IFD parameters required for TIF decoding: stripOffsets, stripByteCounts,
@@ -658,7 +630,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
 
     // endianess
     isBigEnd = isBigEndian(p);
-//    qDebug() << "Tiff::parseForDecoding" << p.fPath << "isBigEnd =" << isBigEnd;
+    // qDebug() << "Tiff::parseForDecoding" << p.fPath << "isBigEnd =" << isBigEnd;
 
     bool isReport = p.report;
     p.report = false;
@@ -975,8 +947,8 @@ bool Tiff::decodeBase(MetadataParameters &p)
 {
 /*
     Decodes TIFF image data with no compression (compression type 1) and loads it into
-    a QImage object. It operates by reading the image data strip by strip and copying it
-    into the QImage object row by row.
+    the class QImage im. It operates by reading the image data strip by strip and copying
+    it into the QImage object row by row.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decodeBase", p.fPath + " Source = " + source);
     /*
@@ -1220,9 +1192,261 @@ bool Tiff::decodeJpg(MetadataParameters &p)
     return true;
 }
 
+bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
+{
+/*
+    Append existing datamodel thumb basic tif image to the EOF in an additional IFD. The
+    QImage thumb is the existing thumbnail created during the folder loading phase when
+    sent from MW::embedThumbnails(). See other Tiff::encodeThumbnail to create the thumb
+    by subsampling another IFD image in the tiff.
+
+    Steps:
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
+          will be appended.
+        - add new IFD at end of chain, starting with the number of IFD items (15).
+        - add IFD items:
+            Num  tagId tagType  tagCount    tagValue   tagDescription
+              0    254       4         1           1   SubfileType
+              1    256       3         1               ImageWidth (thumbnail)
+              2    257       3         1               ImageHeight (thumbnail)
+              3    258       3         3      offset   BitsPerSample
+              4    259       3         1           1   Compression
+              5    262       3         1           2   PhotometricInterpretation
+              6    273       4         1       value   StripOffsets
+              7    274       3         1           1   Orientation
+              8    277       3         1           3   SamplesPerPixel
+              9    278       3         1      height   RowsPerStrip
+             10    279       4         1       value   StripByteCounts
+             11    282       5         1      offset   XResolution
+             12    283       5         1      offset   YResolution
+             13    284       3         1           1   PlanarConfiguration
+             14    296       3         1           2   ResolutionUnit
+        - write strip pixels rgb at offset StripOffsets
+
+*/
+    ImageMetadata m;
+
+    // get lastIFDOffsetPosition
+    parse(m, fPath);
+
+    // change p.file (opened in parse()) from QIODevice::ReadOnly to QIODevice::ReadWrite
+    MetadataParameters p;
+    p.file.setFileName(fPath);
+    if (!p.file.open(QIODevice::ReadWrite)) {
+        QString errMsg = "Open file failed.";
+        G::issue("Error", errMsg, "Tiff::encodeThumbnail", -1, fPath);
+        return false;
+    }
+
+    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+
+    IFD *ifd = new IFD;
+
+    // go to last main IFD offset and replace with offset to new IFD at end of file
+    m.offsetThumb = p.file.size();
+    p.file.seek(lastIFDOffsetPosition);
+    p.file.write(u.put32(m.offsetThumb, m.isBigEnd));
+
+    // Go to new thumbIFDOffset and write the count of IFD entries (15)
+    p.offset = m.offsetThumb;
+    ifd->writeIFDCount(p, m, 15);
+
+    // thumbnail size and sample increment (nth)
+    int w, h, nth;
+    sample(m, G::maxIconSize, nth, w, h);
+
+    /* First offset in IFD is BitsPerSample (bpsOffset) located at end of IFD.
+       Length of IFD = 15 entries * 12 bytes per entry + 4 bytes nextIFDOffset.
+       Since StripOffsets count = 1, value is in the IFD, not an offset from the IFD,
+       and same thing for StripByteCounts. */
+    quint32 bpsOffset = p.file.pos() + 15 * 12 + 4;     // write 2 bytes * 3
+    quint32 xresOffset = bpsOffset + 6;                 // write 8 bytes
+    quint32 yresOffset = xresOffset + 8;                // write 8 bytes
+    quint32 pixelsOffset = yresOffset + 8;
+
+    // write IFD items (15)
+    ifd->writeIFDItem(p, m, 254, 4, 1, 1);              // SubfileType
+    ifd->writeIFDItem(p, m, 256, 3, 1, w);              // ImageWidth
+    ifd->writeIFDItem(p, m, 257, 3, 1, h);              // ImageHeight
+    ifd->writeIFDItem(p, m, 258, 3, 3, bpsOffset);      // BitsPerSample
+    ifd->writeIFDItem(p, m, 259, 3, 1, 1);              // Compression
+    ifd->writeIFDItem(p, m, 262, 3, 1, 2);              // PhotometricInterpretation
+    ifd->writeIFDItem(p, m, 273, 4, 1, pixelsOffset);   // StripOffsets
+    ifd->writeIFDItem(p, m, 274, 3, 1, 1);              // Orientation
+    ifd->writeIFDItem(p, m, 277, 3, 1, 3);              // SamplesPerPixel
+    ifd->writeIFDItem(p, m, 278, 4, 1, h);              // RowsPerStrip
+    ifd->writeIFDItem(p, m, 279, 4, 1, w*h*3);          // StripByteCounts
+    ifd->writeIFDItem(p, m, 282, 5, 1, xresOffset);     // XResolution
+    ifd->writeIFDItem(p, m, 283, 5, 1, yresOffset);     // YResolution
+    ifd->writeIFDItem(p, m, 284, 3, 1, 1);              // PlanarConfiguration
+    ifd->writeIFDItem(p, m, 296, 3, 1, 2);              // ResolutionUnit
+    p.file.write(u.put32(0, m.isBigEnd));               // Next IFD = zero
+
+    // write values at offset locations
+    p.file.write(u.put16(8, m.isBigEnd));               // BitsPerSample R
+    p.file.write(u.put16(8, m.isBigEnd));               // BitsPerSample G
+    p.file.write(u.put16(8, m.isBigEnd));               // BitsPerSample B
+    p.file.write(u.put32(1200000, m.isBigEnd));         // XResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));           // XResolution Denominator
+    p.file.write(u.put32(1200000, m.isBigEnd));         // YResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));           // YResolution Denominator
+
+    // byte array for thumb
+    QByteArray bat;
+    bat.resize(thumb.width() * thumb.height() * 3);
+    int scanWidth = thumb.width() * 3;
+    int batPos = 0;
+
+    // copy thumb (scanline 32-bit aligned) to bat line by line
+    thumb.convertTo(QImage::Format_RGB888);
+    for (int y = 0; y < thumb.height(); ++y) {
+        std::memcpy(bat.data() + batPos, thumb.scanLine(y), (size_t)scanWidth);
+        batPos += scanWidth;
+    }
+
+    // write thumb at EOF
+    p.file.seek(p.file.size());
+    p.file.write(bat);
+
+    p.file.close();
+
+    return true;
+}
+
+// bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
 /*
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
+    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
+    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
+    (source) to the new thumbnail.
+
+    Steps:
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
+          will be appended.
+        - add new IFD at end of chain, starting with the number of IFD items (15).
+        - add IFD items:
+            Num  tagId tagType  tagCount    tagValue   tagDescription
+              0    254       4         1           1   SubfileType
+              1    256       3         1               ImageWidth (thumbnail)
+              2    257       3         1               ImageHeight (thumbnail)
+              3    258       3         3      offset   BitsPerSample
+              4    259       3         1           1   Compression
+              5    262       3         1           2   PhotometricInterpretation
+              6    273       4         1       value   StripOffsets
+              7    274       3         1           1   Orientation
+              8    277       3         1           3   SamplesPerPixel
+              9    278       3         1      height   RowsPerStrip
+             10    279       4         1       value   StripByteCounts
+             11    282       5         1      offset   XResolution
+             12    283       5         1      offset   YResolution
+             13    284       3         1           1   PlanarConfiguration
+             14    296       3         1           2   ResolutionUnit
+        - subsample image down to thumbnail resolution
+        - write strip pixels rgb at offset StripOffsets
+
+    p.offset must be set to ifdOffset that describes the source image to be sampled to
+    create the thumbnail before calling this function.
+*/
+    if (G::isLogger || isDebug) G::log("Tiff::encodeThumbnail", p.fPath + " Source = " + source);
+
+   // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
+    p.file.close();
+    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    p.file.open(QIODevice::ReadWrite);
+
+    // go to last main IFD offset and replace with offset to new IFD at end of file
+    m.offsetThumb = p.file.size();
+    p.file.seek(lastIFDOffsetPosition);
+    p.file.write(u.put32(m.offsetThumb, m.isBigEnd));
+
+    // Go to new thumbIFDOffset and write the count of IFD entries (15)
+    p.offset = m.offsetThumb;
+    ifd->writeIFDCount(p, m, 15);
+
+    // thumbnail size and sample increment (nth)
+    int w, h, nth;
+    sample(m, G::maxIconSize, nth, w, h);
+
+    /* First offset in IFD is BitsPerSample (bpsOffset) located at end of IFD.
+       Length of IFD = 15 entries * 12 bytes per entry + 4 bytes nextIFDOffset.
+       Since StripOffsets count = 1, value is in the IFD, not an offset from the IFD, and same
+       thing for StripByteCounts. */
+    quint32 bpsOffset = p.file.pos() + 15 * 12 + 4;             // write 2 bytes * 3
+    quint32 xresOffset = bpsOffset + 6;                         // write 8 bytes
+    quint32 yresOffset = xresOffset + 8;                        // write 8 bytes
+    quint32 pixelsOffset = yresOffset + 8;
+
+    // write IFD items (15)
+    ifd->writeIFDItem(p, m, 254, 4, 1, 1);                      // SubfileType
+    ifd->writeIFDItem(p, m, 256, 3, 1, w);                      // ImageWidth
+    ifd->writeIFDItem(p, m, 257, 3, 1, h);                      // ImageHeight
+    ifd->writeIFDItem(p, m, 258, 3, 3, bpsOffset);              // BitsPerSample
+    ifd->writeIFDItem(p, m, 259, 3, 1, 1);                      // Compression
+    ifd->writeIFDItem(p, m, 262, 3, 1, 2);                      // PhotometricInterpretation
+    ifd->writeIFDItem(p, m, 273, 4, 1, pixelsOffset);           // StripOffsets
+    ifd->writeIFDItem(p, m, 274, 3, 1, 1);                      // Orientation
+    ifd->writeIFDItem(p, m, 277, 3, 1, 3);                      // SamplesPerPixel
+    ifd->writeIFDItem(p, m, 278, 4, 1, h);                      // RowsPerStrip
+    ifd->writeIFDItem(p, m, 279, 4, 1, w*h*3);                  // StripByteCounts
+    ifd->writeIFDItem(p, m, 282, 5, 1, xresOffset);             // XResolution
+    ifd->writeIFDItem(p, m, 283, 5, 1, yresOffset);             // YResolution
+    ifd->writeIFDItem(p, m, 284, 3, 1, 1);                      // PlanarConfiguration
+    ifd->writeIFDItem(p, m, 296, 3, 1, 2);                      // ResolutionUnit
+    p.file.write(u.put32(0, m.isBigEnd));              // Next IFD = zero
+
+    // write values at offset locations
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample R
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample G
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample B
+    p.file.write(u.put32(1200000, m.isBigEnd));        // XResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));          // XResolution Denominator
+    p.file.write(u.put32(1200000, m.isBigEnd));        // YResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));          // YResolution Denominator
+
+    // read existing smallest IFD into a QImage
+
+    // bool decoded = false;
+    // qDebug() << "Tiff::encodeThumbnail" << p.fPath;
+    // if (compression == 1) decoded = decodeBase(p);
+    // if (compression == 5) decoded = decodeLZW(p);
+    // if (!decoded) return false;
+
+    // if (bitsPerSample == 16) {
+    //     if (m.isBigEnd) invertEndian16(im);
+    //     toRRGGBBAA(im);
+    //     im->convertTo(QImage::Format_RGB888);
+    // }
+
+    // QImage image = im->scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+
+    QImage image;
+    // bool decoded = read();
+
+    // byte array thumb
+    QByteArray bat;
+    bat.resize(image.width() * image.height() * 3);
+    int scanWidth = image.width() * 3;
+    int batPos = 0;
+    // copy QImage (scanline 32-bit aligned) to bat line by line
+    for (int y = 0; y < image.height(); ++y) {
+        std::memcpy(bat.data() + batPos, image.scanLine(y), (size_t)scanWidth);
+        batPos += scanWidth;
+    }
+
+    delete im;
+
+    // write thumb at EOF
+    p.file.seek(p.file.size());
+    p.file.write(bat);
+
+    return true;
+}
+
+bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
+{
+    /*
     If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
     thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
     an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
@@ -1322,10 +1546,10 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    bool decoded;
+    bool decoded = false;
     qDebug() << "Tiff::encodeThumbnail" << p.fPath;
-    if (compression == 1) decoded = decodeBase(/*m, */p/*, *im*/);
-    if (compression == 5) decoded = decodeLZW(p/*, *im*/);
+    if (compression == 1) decoded = decodeBase(p);
+    if (compression == 5) decoded = decodeLZW(p);
     if (!decoded) return false;
 
     if (bitsPerSample == 16) {

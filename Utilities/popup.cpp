@@ -113,7 +113,8 @@ void PopUp::showPopup(const QString &text,
     int y = source->geometry().y() + cwRect.y() + cwRect.height() / 2 - h / 2;
     setGeometry(x, y, w, h);
 
-    QWidget::show();
+    show();
+    // QWidget::show();
 
     // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) hideTimer->start(popupDuration);
