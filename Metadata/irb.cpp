@@ -83,7 +83,8 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             m.offsetThumb = static_cast<quint32>(p.file.pos()) - 2;
             m.lengthThumb = dataBlockLength - hdrLength;
             m.thumbFormat = G::ImageFormat::Jpg;
-            if (p.report) p.rpt << "Embedded IRB Jpg found.\n";
+            m.isEmbeddedThumbMissing = false;
+            if (p.report) p.rpt << "Embedded IRB Jpg thumbnail found.\n";
             // /*
             qDebug() << "IRB::readThumb"
                      << m.row

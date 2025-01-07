@@ -170,6 +170,9 @@ QStringList copyCutFileList;
 
 QString tiffData;                   // temp for testing tiff decoder performance
 
+// Initialize the global signal relay
+SignalRelay *relay = nullptr;
+
 QElapsedTimer t;
 bool isTimer;
 bool isTest;
@@ -203,7 +206,7 @@ int wait(int ms)
     Reset duration by calling G::wait(0).
 */
 {
-    return 0;
+    // return 0;
 
     static int duration = 0;
     if (ms == 0) {
@@ -212,7 +215,7 @@ int wait(int ms)
     }
     QTime t = QTime::currentTime().addMSecs(ms);
     while (QTime::currentTime() < t) {
-        /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents, 10);
+        // /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents, 10);
     }
     duration += ms;
     return duration;
@@ -344,6 +347,11 @@ bool instanceClash(int instance, QString src)
     }
     return clash;
 }
+
+/*
+    IF CALLING FROM A NON-GUI THREAD
+    Use (example) emit G::relay->showPopUp(msg, 0, true, 0.75, Qt::AlignHCenter);
+*/
 
 int popUpProgressCount = 0;
 int popUpLoadFolderStep = 100;

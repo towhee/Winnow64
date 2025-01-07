@@ -567,6 +567,8 @@ private slots:
     // status functions
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
     void clearStatus();
+    void showPopUp(QString msg, int duration, bool isAutosize = false,
+                   float opacity = 0.75, Qt::Alignment alignment = Qt::AlignHCenter);
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();

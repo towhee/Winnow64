@@ -11,18 +11,23 @@ Reader::Reader(QObject *parent,
     this->imageCache = imageCache;
     threadId = id;
     instance = 0;
-    frameDecoder = new FrameDecoder(this);
-    thumb = new Thumb(dm, metadata, frameDecoder);
 
+    frameDecoder = new FrameDecoder(this);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
 
-    // Try QueuedConnection
-    // connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
-    // connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+    thumb = new Thumb(dm, metadata, frameDecoder);
 
-    // Using Qt::BlockingQueuedConnection: (can be slow)
-    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-    connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+
+    bool isBlockingQueuedConnection = false;
+    if (isBlockingQueuedConnection) {
+        // Try QueuedConnection
+        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
+        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+    } else {
+        // Try Qt::BlockingQueuedConnection: (can be slow)
+        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+    }
 
     isDebug = false;
     debugLog = false;
@@ -137,9 +142,11 @@ bool Reader::readMetadata()
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
+
     #ifdef TIMER
     t2 = t.restart();
     #endif
+
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
     metadata->m.metadataAttempted = true;
@@ -147,9 +154,10 @@ bool Reader::readMetadata()
 
     // block until datamodel updated for row with image metadata
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-#ifdef TIMER
+
+    #ifdef TIMER
     t3 = t.restart();
-#endif
+    #endif
 
     if (!dm->isMetadataLoaded(dmRow)) {
         status = Status::MetaFailed;
@@ -181,6 +189,11 @@ void Reader::readIcon()
     // get thumbnail or err.png or generic video
     loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
 
+
+    #ifdef TIMER
+    t4 = t.restart();
+    #endif
+
     if (abort) return;
 
     // videos set the datamodel icon separately from FrameDecoder
@@ -205,16 +218,23 @@ void Reader::run()
 {
     readMetadata();
     readIcon();
+
     #ifdef TIMER
-    t4 = t.restart();
-    msToRead = t2 + t3 + t4;
+    t5 = t.restart();
+    msToRead = t2 + t3 + t4 + t5;
+
+    int dmRow = dmIdx.row();
+
     // /*
     qDebug().noquote()
-        << "Reader::run" << QString::number(dmIdx.row()).leftJustified(6)
+        << "Reader::run"
+        << "row =" << QString::number(dmRow).leftJustified(6)
         << "msToRead =" << QString::number(msToRead).leftJustified(8)
-        << "meta =" << QString::number(t2).leftJustified(6)
-        << "dm =" << QString::number(t3).leftJustified(6)
+        << "meta  =" << QString::number(t2).leftJustified(6)
+        << "meta dm =" << QString::number(t3).leftJustified(6)
         << "icon =" << QString::number(t4).leftJustified(6)
+        << "icon dm =" << QString::number(t5).leftJustified(6)
+        << dm->index(dmRow, G::NameColumn).data().toString()
         ;//*/
     #endif
     emit done(threadId);

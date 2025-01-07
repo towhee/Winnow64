@@ -154,7 +154,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         return;
     }
     else {
-        G::popUp->reset();
+        // G::popUp->reset();
     }
 
     if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {

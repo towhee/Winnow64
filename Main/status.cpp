@@ -531,3 +531,8 @@ void MW::toggleImageCacheStrategy()
 
 }
 
+void MW::showPopUp(QString msg, int duration, bool isAutosize,
+                   float opacity, Qt::Alignment alignment)
+{
+    G::popUp->showPopup(msg, duration, isAutosize, opacity, alignment);
+}

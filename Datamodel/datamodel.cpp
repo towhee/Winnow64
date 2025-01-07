@@ -1756,7 +1756,8 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
              << currentFolderPath;
     //*/
 
-    QMutexLocker locker(&mutex);
+    // lock cuases hang if called from gui threaad
+    // QMutexLocker locker(&mutex);
 
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
@@ -2835,6 +2836,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("isMetadataAttempted", 25) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
+    rpt << "\n  " << G::sj("isMissingThumb", 25) << G::s(index(row, G::MissingThumbColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
     rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));

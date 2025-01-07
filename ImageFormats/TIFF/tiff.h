@@ -59,7 +59,13 @@ public:
     bool decode(MetadataParameters &p, QImage &image, int newSize = 0);
 
     // add a thumbnail to the tiff for faster thumbnail generation
+    // old version
+    bool encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    // new call from thumb.cpp to ßembed thumbnail in tiff
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    // new call after image loaded using menu (thumb already exists in datamodel)
+    bool encodeThumbnail(QString fPath, QImage &thumb);
+
     // add a thumbnail jpg in IRB block
     void embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
 
@@ -141,6 +147,8 @@ private:
     bool isDebug;
 
     void parseJpgTables(MetadataParameters &p, ImageMetadata &m);
+    quint32 parseIFDs(MetadataParameters &p, ImageMetadata &m, IFD *ifd,
+                   quint32 &nextIFDOffset, int &thumbLongside, QString hdr);
 
     bool decodeBase(MetadataParameters &p);
     bool decodeLZW(MetadataParameters &p);
