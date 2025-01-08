@@ -1316,7 +1316,7 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
 // bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
-/*
+/*  NOT BEING USED
     If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
     thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
     an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
@@ -1446,7 +1446,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
 bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
-    /*
+    /* NOT BEING USED
     If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
     thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
     an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
