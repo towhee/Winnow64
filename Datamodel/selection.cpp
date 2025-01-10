@@ -118,8 +118,8 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
         G::log("Selection::updateCurrentIndex", "row = " + QString::number(sfIdx.row()));
 
     // update datamodel current parameters
-    dm->setCurrentSF(sfIdx, G::dmInstance);
-    //emit updateCurrent(sfIdx, G::dmInstance);
+    // dm->setCurrentSF(sfIdx, G::dmInstance);
+    emit updateCurrent(sfIdx, G::dmInstance);
     shiftAnchorIndex = sfIdx;
     shiftExtendIndex = sfIdx;
 }

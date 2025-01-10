@@ -16,7 +16,8 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
 
-    connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
+    connect(this, &Thumb::setValueDm, dm, &DataModel::setValueDm, Qt::QueuedConnection);
+    connect(this, &Thumb::setValueSf, dm, &DataModel::setValueSf, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
     isDebug = false;
@@ -81,12 +82,12 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
     QString d = QString::number(w) + "x" + QString::number(h);
     QString src = "Thumb::setImageDimensions";
 
-    emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
-    emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
-    emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
-    emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
-    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
-    emit setValue(dm->index(row, G::DimensionsColumn), d, instance, src, Qt::EditRole, alignRight);
+    emit setValueDm(dm->index(row, G::WidthColumn), w, instance, src);
+    emit setValueDm(dm->index(row, G::WidthPreviewColumn), w, instance, src);
+    emit setValueDm(dm->index(row, G::HeightColumn), h, instance, src);
+    emit setValueDm(dm->index(row, G::HeightPreviewColumn), h, instance, src);
+    emit setValueDm(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
+    emit setValueDm(dm->index(row, G::DimensionsColumn), d, instance, src, Qt::EditRole, alignRight);
 
 }
 
@@ -217,7 +218,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
             Utilities::backup(fPath, "backup");
         }
         if (tiff.encodeThumbnail(fPath, image)) {
-            dm->setValueSf(sfIdx, false, dm->instance, "Thumb::loadFromTiff");
+            emit setValueSf(sfIdx, false, dm->instance, "Thumb::loadFromTiff");
         }
     }
 

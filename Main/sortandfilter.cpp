@@ -157,7 +157,8 @@ void MW::filterChange(QString source)
         sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
     else {
-        dm->setCurrentSF(newSfIdx, dm->instance);
+        // dm->setCurrentSF(newSfIdx, dm->instance);
+        emit updateCurrent(newSfIdx, G::dmInstance);
     }
 
     // only scroll if filtration has changed visible cells in thumbView
@@ -635,7 +636,7 @@ void MW::setRating()
         updateRatingLog(fPath, rating);
         // update datamodel
         QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
-        emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+        emit setValueDm(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
@@ -648,7 +649,7 @@ void MW::setRating()
                 updateRatingLog(jpgPath, rating);
                 // set rating for raw file row as well
                 ratingIdx = dm->index(rowDup, G::RatingColumn);
-                emit setValue(ratingIdx, rating, dm->instance, src, Qt::EditRole);
+                emit setValueDm(ratingIdx, rating, dm->instance, src, Qt::EditRole);
             }
         }
         // write to sidecar
@@ -658,7 +659,7 @@ void MW::setRating()
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)
             QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
-            emit setValue(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
+            emit setValueDm(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }
@@ -823,7 +824,7 @@ void MW::setColorClass()
         updateColorClassLog(fPath, colorClass);
         // update datamodel
         QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
-        emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+        emit setValueDm(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
@@ -837,7 +838,7 @@ void MW::setColorClass()
                 // set color class (label) for raw file row as well
                 labelIdx = dm->index(rowDup, G::LabelColumn);
                 QString src = "MW::setColorClass";
-                emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                emit setValueDm(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             }
         }
         // write to sidecar
@@ -846,7 +847,7 @@ void MW::setColorClass()
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
             // update _Label (used to check what metadata has changed in metadata->writeXMP)
             QModelIndex _labelIdx = dm->index(dmRow, G::_LabelColumn);
-            emit setValue(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
+            emit setValueDm(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
             G::popUp->setProgress(i+1);
         }
     }

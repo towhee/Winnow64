@@ -8,7 +8,7 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
     #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     QImageReader::setAllocationLimit(1024);
     #endif
-    connect(this, &Pixmap::setValue, dm, &DataModel::setValue);
+    connect(this, &Pixmap::setValueDm, dm, &DataModel::setValueDm);
 }
 
 bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
@@ -319,7 +319,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
     QString source = "Pixmap::load";
-    emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
+    emit setValueDm(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
     /*
     qDebug() << "Pixmap::load"
              << "Decode:" << tDecode << "ms"

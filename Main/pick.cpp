@@ -46,7 +46,7 @@ void MW::togglePickUnlessRejected()
         QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         if (pickStatus != "Rejected") {
-            emit setValue(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
+            emit setValueDm(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
         }
     }
     if (n > 1) pushPick("End multiple select");
@@ -165,7 +165,7 @@ void MW::togglePick()
         pushPick(fPath, priorPickStatus);
         // set pick status
         QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
-        emit setValue(pickIdx, pickStatus, dm->instance, "MW::togglePick", Qt::EditRole,
+        emit setValueDm(pickIdx, pickStatus, dm->instance, "MW::togglePick", Qt::EditRole,
                       Qt::AlignCenter);
         updatePickLog(fPath, pickStatus);
     }

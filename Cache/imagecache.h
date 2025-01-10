@@ -64,11 +64,9 @@ public:
 signals:
     // not being used:
     void stopped(QString src);
-    // not being used:
-    void setValue(QModelIndex dmIdx, QVariant value,
+    void setValueDm(QModelIndex dmIdx, QVariant value,
                   int instance, QString scr = "ImageCache",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    // not being used:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
     // not being used:
