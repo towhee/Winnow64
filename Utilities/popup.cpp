@@ -88,8 +88,8 @@ void PopUp::showPopup(const QString &text,
                  Qt::Alignment alignment)
 {
     hideTimer->stop();
-    okayToHide = true;
-    hide();
+    // okayToHide = true;
+    // hide();
     if (msDuration > 0) okayToHide = false;
     if (msDuration == 0) {
         openAndNoTimeout = true;

@@ -352,6 +352,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
     // QString msg = "<font color=\"red\">Backing up " + fPath +
     //               "before embedding a thumbnail</font>" + "<p>" +
     //               "Press ESC to close";
