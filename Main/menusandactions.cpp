@@ -537,8 +537,7 @@ void MW::createEditActions()
     label4Action = new QAction(tr("Set to Blue"), this);
     label4Action->setObjectName("Label4");
     label4Action->setShortcutVisibleInContextMenu(true);
-    addAction(label4Action);
-    connect(label4Action, &QAction::triggered, this, &MW::setColorClass);
+    addAction(label4Action); connect(label4Action, &QAction::triggered, this, &MW::setColorClass);
 
     label5Action = new QAction(tr("Set to Purple"), this);
     label5Action->setObjectName("Label5");
@@ -2222,9 +2221,10 @@ void MW::addMenuSeparator(QWidget *widget)
 // req'd?
 void MW::enableEjectUsbMenu(QString path)
 {
-    if (G::isLogger) G::log("MW::enableEjectUsbMenu");
-//    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
-//    else ejectAction->setEnabled(false);
+    // if (G::isLogger)
+        G::log("MW::enableEjectUsbMenu");
+   // if(Usb::isUsb(path)) ejectAction->setEnabled(true);
+   // else ejectAction->setEnabled(false);
 }
 
 void MW::renameEjectUsbMenu(QString path)
@@ -2243,7 +2243,7 @@ void MW::renameEjectUsbMenu(QString path)
         enabled = false;
         text = "Eject Memory Card";
     }
-    //qDebug() << "MW::renameEjectUsbMenu" << path << drive;
+    qDebug() << "MW::renameEjectUsbMenu" << path << drive;
     ejectAction->setEnabled(enabled);
     ejectActionFromContextMenu->setEnabled(enabled);
     ejectAction->setText(text);

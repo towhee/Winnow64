@@ -866,7 +866,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
                 if (slideCount > 1) slideShow();
             }
             else if (event->key() == Qt::Key_W) {
-                slideShowTimer->stop();
+                // slideShowTimer->stop();
                 isSlideShowWrap = !isSlideShowWrap;
                 isSlideShowHelpVisible = true;
                 QString msg;
@@ -880,7 +880,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             }
             else if (event->key() == Qt::Key_Space) {
                 slideShowTimer->stop();
-                G::popUp->showPopup("Slideshow is paused");
+                G::popUp->showPopup("Slideshow is paused", 0);
             }
             else if (event->key() == Qt::Key_R) {
                 isSlideShowRandom = !isSlideShowRandom;
@@ -922,9 +922,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         }
     }
 
-    if (event->key() == Qt::Key_Space) {
-        G::popUp->reset();
-    }
+    // if (event->key() == Qt::Key_Space) {
+    //     G::popUp->reset();
+    // }
 
     QMainWindow::keyReleaseEvent(event);
 }
@@ -1144,6 +1144,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::ContextMenu) {
 
             // default enable
+            qDebug() << "MW::eventFilter QEvent::ContextMenu";
             copyFolderPathFromContextAction->setEnabled(true);
             revealFileActionFromContext->setEnabled(true);
             deleteFSTreeFolderAction->setEnabled(true);
@@ -1227,8 +1228,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 renameCopyFolderPathAction(folderName);
                 renameRevealFileAction(folderName);
                 renameDeleteFolderAction(folderName);
-                renameEraseMemCardFromContextMenu(folderName);
-                renameEjectUsbMenu(folderName);
+                renameEraseMemCardFromContextMenu(mouseOverFolderPath);
+                renameEjectUsbMenu(mouseOverFolderPath);
                 renamePasteFilesAction(folderName);
                 renameAddBookmarkAction(folderName);
                 renameRemoveBookmarkAction(folderName);
@@ -5213,9 +5214,8 @@ void MW::ejectUsb(QString path)
     QStorageInfo ejectDrive(path);
     QStorageInfo currentDrive(G::currRootFolder);
     bool ejectDriveIsCurrent = currentDrive.rootPath() == ejectDrive.rootPath();
-    /*
+    // /*
     qDebug() << "MW::ejectUsb"
-             << "currentViewDir =" << currentViewDir
              << "path =" << path
              << "currentDrive.name() =" << currentDrive.name()
              << "currentDrive.rootPath() =" << currentDrive.rootPath()

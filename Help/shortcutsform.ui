@@ -3,7 +3,7 @@
  <class>shortcutsForm</class>
  <widget class="QScrollArea" name="shortcutsForm">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -44,7 +44,7 @@
     <item>
      <widget class="QTreeWidget" name="treeWidget">
       <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
+       <enum>Qt::FocusPolicy::NoFocus</enum>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
@@ -108,6 +108,17 @@
         </property>
         <property name="text">
          <string>Opt/Alt + F5</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Refresh Folders</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + F5</string>
+        </property>
+        <property name="text">
+         <string>Use to update folders, for example when insert USB drive</string>
         </property>
        </item>
        <item>
@@ -182,17 +193,6 @@
         </property>
         <property name="text">
          <string>Cmd/Ctrl + R</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Refresh Folders</string>
-        </property>
-        <property name="text">
-         <string>F5</string>
-        </property>
-        <property name="text">
-         <string>Use to update folders, for example when insert USB drive</string>
         </property>
        </item>
        <item>
@@ -493,7 +493,7 @@
          <string>Previous Image</string>
         </property>
         <property name="text">
-         <string>Mouse scroll whell</string>
+         <string>Mouse scroll wheel</string>
         </property>
         <property name="text">
          <string>When in Loupe view</string>
@@ -861,7 +861,7 @@
          <string>Files Panel</string>
         </property>
         <property name="text">
-         <string>Shift + F3</string>
+         <string>F3</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -872,7 +872,7 @@
          <string>Favourites Panel</string>
         </property>
         <property name="text">
-         <string>Shift + F4</string>
+         <string>F4</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -883,7 +883,7 @@
          <string>Filters Panel</string>
         </property>
         <property name="text">
-         <string>Shift + F5</string>
+         <string>F5</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -894,7 +894,7 @@
          <string>Metadata Panel</string>
         </property>
         <property name="text">
-         <string>Shift + F6</string>
+         <string>F6</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -905,7 +905,7 @@
          <string>Thumbnails Panel</string>
         </property>
         <property name="text">
-         <string>Shift + F7</string>
+         <string>F7</string>
         </property>
         <property name="text">
          <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
@@ -916,7 +916,7 @@
          <string>Application Menu</string>
         </property>
         <property name="text">
-         <string>Shift + F9</string>
+         <string>F9</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>
@@ -927,7 +927,7 @@
          <string>Application Statusbar</string>
         </property>
         <property name="text">
-         <string>Shift + F10</string>
+         <string>F10</string>
         </property>
         <property name="text">
          <string>Toggles visibility</string>
@@ -1017,7 +1017,7 @@
          <string>Exit</string>
         </property>
         <property name="text">
-         <string>Esc</string>
+         <string>Esc or S</string>
         </property>
        </item>
        <item>
