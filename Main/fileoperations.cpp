@@ -224,13 +224,13 @@ void MW::insertFiles(QStringList fPaths)
             dm->setIcon(dmIdx, QPixmap(), false, dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
             if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
-                dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+                emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
             }
             if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
-                dm->setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+                emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
             }
             if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt()) {
-                dm->setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), 0, instance, src);
+                emit setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), 0, instance, src);
             }
             G::allMetadataLoaded = false;
             G::iconChunkLoaded = false;

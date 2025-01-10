@@ -243,7 +243,8 @@ void MW::createDataModel()
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
-    connect(this, &MW::setValue, dm, &DataModel::setValue);
+    connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
+    connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
@@ -348,7 +349,7 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
     // save time to read image metadata and icon to the datamodel
-    connect(metaReadThread, &MetaRead::setMsToRead, dm, &DataModel::setValue);
+    connect(metaReadThread, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
     // reset imagecache targets after folder added or removed from datamodel
     connect(metaReadThread, &MetaRead::dispatchIsFinished,
             imageCache, &ImageCache::datamodelFolderCountChange);
@@ -417,7 +418,7 @@ void MW::createImageCache()
             this, &MW::setCentralMessage);
 
     // set values in the datamodel
-    connect(imageCache, &ImageCache::setValue, dm, &DataModel::setValue);
+    connect(imageCache, &ImageCache::setValueDm, dm, &DataModel::setValueDm);
     connect(imageCache, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
     connect(imageCache, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 

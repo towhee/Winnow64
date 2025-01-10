@@ -382,7 +382,8 @@ protected:
     void changeEvent(QEvent *event) override;
 
 signals:
-    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
+    void updateCurrent(QModelIndex sfIdx, int instance);
+    void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);

@@ -5441,7 +5441,7 @@ QString MW::embedThumbnails()
             }
             if (thumbEmbedded) {
                 QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
-                dm->setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
+                emit setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
                 dm->sf->filterChange("MW::embedThumbnails");
             }
             embeddingHappened = true;
@@ -5517,7 +5517,7 @@ void MW::metadataChanged(QStandardItem* item)
         paths << dm->sf->index(row, G::PathColumn).data().toString();
         // update data model
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
-        emit setValue(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
+        emit setValueDm(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
@@ -5525,7 +5525,7 @@ void MW::metadataChanged(QStandardItem* item)
                 // set tag item for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
                 QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
-                emit setValue(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                emit setValueDm(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             }
         }
     }

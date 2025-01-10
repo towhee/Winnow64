@@ -294,23 +294,23 @@ bool ImageCache::resetInsideTargetRangeCacheState()
 
         // isCaching: set to false
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
-            dm->setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
-            dm->setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
         }
 
         // in imCache: then isCached = false and remove from toCache
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         if (icd->imCache.contains(fPath)) {
-            dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
             if (toCache.contains(sfRow)) toCache.remove(sfRow);
             continue;
         }
 
         // not in imCache:
         else {
-            dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
-            dm->setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
-            dm->setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
+            emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
                            ImageDecoder::Status::Ready, instance, src);
             if (!toCache.contains(sfRow)) toCache.append(sfRow);
         }
@@ -346,7 +346,7 @@ void ImageCache::resetOutsideTargetRangeCacheState()
                     ;
             }
             it = icd->imCache.erase(it); // Erase and move iterator forward
-            dm->setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+            emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
             emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
         }
         else {
@@ -1365,10 +1365,10 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     }
 
     // set isCaching
-    dm->setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
-    dm->setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), id, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), id, instance, src);
     int attempts = dm->sf->index(sfRow, G::AttemptsColumn).data().toInt();
-    dm->setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), ++attempts, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), ++attempts, instance, src);
 
     {
     log("decodeNextImage",
@@ -1446,14 +1446,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
     if (toCache.contains(cacheKey)) toCache.remove(toCache.indexOf(cacheKey));
 
     // reset caching and cache flags
-    dm->setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
-    dm->setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
+    emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
+    emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
     // set datamodel isCached = true (combine with above)
     // emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
     emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // reset attempts rgh review re nextToCache check (not working)
-    dm->setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
+    emit setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
 
     // QString errMsg = dm->sf->index(cacheKey, G::DecoderErrMsgColumn).data().toString();
 
@@ -1544,7 +1544,7 @@ void ImageCache::fillCache(int id)
 
     // check if aborted
     if (abort || decoder[id]->status == ImageDecoder::Status::Abort) {
-        dm->setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
+        emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
         decoder[id]->status = ImageDecoder::Status::Ready;
         return;
     }
@@ -1577,7 +1577,7 @@ void ImageCache::fillCache(int id)
     else {
         cacheKey = decoder[id]->sfRow;
         // cacheKey = dm->proxyRowFromPath(decoder[id]->fPath);
-        dm->setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
+        emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
         /* more direct version
         // dm->sf->setData(dm->sf->index(cacheKey, G::IsCachingColumn), false);
 
@@ -1585,13 +1585,13 @@ void ImageCache::fillCache(int id)
         // dm->sf->setData(dm->sf->index(cacheKey, G::DecoderReturnStatusColumn),
         //                 static_cast<int>(decoder[id]->status));
         //*/
-        dm->setValueSf(dm->sf->index(cacheKey, G::DecoderReturnStatusColumn),
+        emit setValueSf(dm->sf->index(cacheKey, G::DecoderReturnStatusColumn),
                        static_cast<int>(decoder[id]->status), instance, src);
         if (decoder[id]->status == ImageDecoder::Status::Video) {
-            dm->setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
+            emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
         }
         if (decoder[id]->errMsg != "") {
-            dm->setValueSf(dm->sf->index(cacheKey, G::DecoderErrMsgColumn), decoder[id]->errMsg, instance, src);
+            emit setValueSf(dm->sf->index(cacheKey, G::DecoderErrMsgColumn), decoder[id]->errMsg, instance, src);
         }
         if (debugCaching)
         {
@@ -1607,8 +1607,8 @@ void ImageCache::fillCache(int id)
         }
         // if decoder failed to load an image
         if (decoder[id]->status != ImageDecoder::Status::Success) {
-            dm->setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
-            dm->setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), false, instance, src);
+            emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
+            emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), false, instance, src);
             cacheKey = -1;
         }
     }

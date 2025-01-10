@@ -1703,18 +1703,22 @@ QVariant DataModel::valueSf(int row, int column, int role)
 /*
     Thread safe
 */
-    QMutexLocker locker(&mutex);
+    // QMutexLocker locker(&mutex);
     // range check in case model has changed, return invalid result
     if (row >= sf->rowCount()) return QVariant();
     return sf->index(row, column).data(role);
 }
 
-void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
+void DataModel::setValueDm(QModelIndex dmIdx, QVariant value, int instance,
                          QString src, int role, int align)
 {
+/*
+    Only call via connection.  If calling from GUI thread use signal
+    MW::setValueDm   example: emit setValueDm(args)
+*/
     if (G::stop) return;
     if (isDebug) {
-        qDebug() << "DataModel::setValue"
+        qDebug() << "DataModel::setValueDm"
                  << "row =" << dmIdx.row()
                      << "value =" << value
                  << "src =" << src
@@ -1723,16 +1727,15 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
     }
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row());
+        G::issue("Comment", errMsg, "DataModel::setValueDm", dmIdx.row());
         return;
     }
 
     if (!dmIdx.isValid()) {
         errMsg = "Invalid dmIdx.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setValue", dmIdx.row());
+        G::issue("Warning", errMsg, "DataModel::setValueDm", dmIdx.row());
         return;
     }
-    QMutexLocker locker(&mutex);
     setData(dmIdx, value, role);
     setData(dmIdx, align, Qt::TextAlignmentRole);
 }
@@ -1740,6 +1743,10 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
                            QString src, int role, int align)
 {
+/*
+    Only call via connection.  If calling from GUI thread use signal
+    MW::setValueSf   example: emit setValueSf(args)
+*/
     if (G::stop) return;
     if (isDebug) qDebug() << "DataModel::setValueSf" << "instance =" << instance
                           << "row =" << sfIdx.row()
@@ -1755,9 +1762,6 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
              << "value =" << value
              << currentFolderPath;
     //*/
-
-    // lock cuases hang if called from gui threaad
-    // QMutexLocker locker(&mutex);
 
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
@@ -1788,7 +1792,6 @@ void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
     }
 
     // update current index parameters
-    QMutexLocker locker(&mutex);
     currentSfIdx = sfIdx;
     currentSfRow = sfIdx.row();
     currentDmIdx = sf->mapToSource(currentSfIdx);
