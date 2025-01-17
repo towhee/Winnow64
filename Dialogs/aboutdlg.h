@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <QtWidgets>
 #include <QDesktopServices>
-#include "Main/global.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif

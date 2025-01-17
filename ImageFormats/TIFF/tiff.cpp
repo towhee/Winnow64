@@ -951,15 +951,10 @@ bool Tiff::decodeBase(MetadataParameters &p)
     it into the QImage object row by row.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decodeBase", p.fPath + " Source = " + source);
-    /*
+    // /*
     qDebug() << "Tiff::decodeBase"
-             << "strip =" << strip
-             << "row =" << row
-             << "buf.pos() =" << buf.pos()
+             << "bytesPerPixel =" << bytesPerPixel
              << "bytesPerRow =" << bytesPerRow
-             << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
-             << "ba.length() =" << ba.length()
-             << "scanBytes =" << scanBytes
              << "scanBytesAvail =" << scanBytesAvail
                 ;
                 //*/
@@ -2696,6 +2691,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
              << "grayscale =" << grayscale
              << "floatingPoint =" << floatingPoint
              << "transformation =" << transformation
+             << "PHOTOMETRIC_RGB =" << PHOTOMETRIC_RGB
              << fPath
         ; //*/
 
@@ -2879,13 +2875,16 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
         }
     }
 
-    uint32_t count;
-    void *profile;
-    if (TIFFGetField(tiff, TIFFTAG_ICCPROFILE, &count, &profile)) {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-        image->setColorSpace(QColorSpace::fromIccProfile(iccProfile));
-    }
-    // We do not handle colorimetric metadat not on ICC profile form, it seems to be a lot
+    // convert to standard QImage format for display in Winnow
+    image->convertTo(QImage::Format_RGB32);
+
+    // uint32_t count;
+    // void *profile;
+    // if (TIFFGetField(tiff, TIFFTAG_ICCPROFILE, &count, &profile)) {
+    //     QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
+    //     image->setColorSpace(QColorSpace::fromIccProfile(iccProfile));
+    // }
+    // We do not handle colorimetric metadata not on ICC profile form, it seems to be a lot
     // less common, and would need additional API in QColorSpace.
 
     return true;

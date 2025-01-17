@@ -7,8 +7,8 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = false;              // Writes log messages to file or console
-bool isFlowLogger = false;          // Writes key program flow points to file or console
+bool isLogger = true;              // Writes log messages to file or console
+bool isFlowLogger = true;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
@@ -25,8 +25,8 @@ QStringList issueList;
 
 // Rory version (expanded cache pref)
 bool isRory = false;
-ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
-// ShowProgress showProgress = ImageCache; // None, MetaCache, ImageCache
+// ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
+ShowProgress showProgress = ImageCache; // None, MetaCache, ImageCache
 
 // mutex
 QWaitCondition waitCondition;
@@ -233,6 +233,23 @@ void track(QString functionName, QString comment, bool hideTime)
     t.restart();
 }
 
+//*** POPUP ******************************************************************************
+
+/*
+    IF CALLING FROM A NON-GUI THREAD
+    Use (example) emit G::relay->showPopUp(msg, 0, true, 0.75, Qt::AlignHCenter);
+*/
+
+int popUpProgressCount = 0;
+int popUpLoadFolderStep = 100;
+PopUp *popUp = nullptr;
+void newPopUp(QWidget *widget, QWidget *centralWidget)
+{
+    popUp = new PopUp(widget, centralWidget);
+}
+
+//*** LOGGER ******************************************************************************
+
 Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
@@ -268,8 +285,13 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
     t.restart();
 }
 
+//*** ISSUES ******************************************************************************
 
-IssueLog issueLog(popUp);
+IssueLog *issueLog = nullptr;
+void newIssueLog()
+{
+    issueLog = new IssueLog();
+}
 
 static QObject *modelInstance = nullptr;
 void setDM(QObject *dm)
@@ -328,8 +350,8 @@ void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
     // update current session issue list
     issueList.append(issue->toString());
 
-    // write to issue log (to do)
-    issueLog.log(issue->toString());  // rename to issueLog??
+    // write to issue log
+    issueLog->log(issue->toString());
     if (isIssueLogger) {
     }
 }
@@ -346,19 +368,6 @@ bool instanceClash(int instance, QString src)
                       ;
     }
     return clash;
-}
-
-/*
-    IF CALLING FROM A NON-GUI THREAD
-    Use (example) emit G::relay->showPopUp(msg, 0, true, 0.75, Qt::AlignHCenter);
-*/
-
-int popUpProgressCount = 0;
-int popUpLoadFolderStep = 100;
-PopUp *popUp = nullptr;
-void newPopUp(QWidget *widget, QWidget *centralWidget)
-{
-    popUp = new PopUp(widget, centralWidget);
 }
 
 } // end NameSpace G

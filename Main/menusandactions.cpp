@@ -2221,7 +2221,7 @@ void MW::addMenuSeparator(QWidget *widget)
 // req'd?
 void MW::enableEjectUsbMenu(QString path)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("MW::enableEjectUsbMenu");
    // if(Usb::isUsb(path)) ejectAction->setEnabled(true);
    // else ejectAction->setEnabled(false);
@@ -2570,14 +2570,14 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         // File
         openAction->setShortcut(QKeySequence("O"));
-        refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         // subFoldersAction->setShortcut(QKeySequence("B"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
-        refreshFoldersAction->setShortcut(QKeySequence("F5"));
+        refreshFoldersAction->setShortcut(QKeySequence("Ctrl+F5"));
+        refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+M"));
         diagnosticsCurrentAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+D"));

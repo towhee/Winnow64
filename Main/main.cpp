@@ -63,6 +63,11 @@ int main(int argc, char *argv[])
     // start program
     QCoreApplication::addLibraryPath("./");
     MW mw(args);
+
+    // // hide root in FSTree after loaded
+    // QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
+    //                  &mw, &MW::whenActivated);
+
     mw.show();
 
     // connect message when instance already running
@@ -74,9 +79,9 @@ int main(int argc, char *argv[])
     // not being used
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
-    // hide root in FSTree after loaded
-    QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
-                     &mw, &MW::whenActivated);
+    // // hide root in FSTree after loaded
+    // QObject::connect(&instance, &QGuiApplication::applicationStateChanged,
+    //                  &mw, &MW::whenActivated);
 
     return instance.exec();
     //*/

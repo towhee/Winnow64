@@ -5,14 +5,13 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Image/thumb.h"
 #include "Cache/imagecache.h"
 
-#define TIMER
+// #define TIMER    // uncomment to time execution
 
 class Reader : public QThread
 {

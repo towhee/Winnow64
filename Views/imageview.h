@@ -47,6 +47,7 @@ public:
     qreal toggleZoom;
     bool isRubberBand;
     int wheelDeltaThreshold = 20;
+    bool currentImageHasChanged = false;
 
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;

@@ -2,7 +2,6 @@
 #define FILTERS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "ui_filtershelp.h"
 //#include "Datamodel/datamodel.h"

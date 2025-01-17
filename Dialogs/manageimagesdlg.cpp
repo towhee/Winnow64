@@ -1,5 +1,6 @@
 #include "manageimagesdlg.h"
 #include "ui_manageimagesdlg.h"
+#include "Main/global.h"
 
 ManageImagesDlg::ManageImagesDlg(QString title,
                                  QSettings *setting,

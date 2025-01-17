@@ -1,4 +1,5 @@
 #include "copystyledlg.h"
+#include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "ui_copystyledlg.h"
 #ifdef Q_OS_WIN

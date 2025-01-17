@@ -124,12 +124,12 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 }
 //*/
 
-void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool uturn)
-{
+// void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool uturn)
+// {
 
-}
+// }
 
-/*
+// /*
 void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool uturn)
 {
 
@@ -152,7 +152,31 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
                                   50, 1, 1000);
     }
 
-    QString stopMsg = "Press ESC to stop stress test";
+    bool randomChangeDirection = false;
+    if (secPerFolder < 0.1) {
+        QStringList options;
+        options << "No" << "Yes";
+
+        // Show the input dialog
+        bool ok;
+        QString choice = QInputDialog::getItem(
+            nullptr,                                // Parent widget
+            "Folder Stress Test",            // Dialog title
+            "Randomly Change Direction:", // Label text
+            options,                               // Options
+            0,                                     // Initial selection index
+            false,                                 // Editable (false for a dropdown)
+            &ok                                    // To check if the user confirmed
+            );
+
+        // If the user confirmed, update the value
+        if (ok) {
+            randomChangeDirection = (choice == "Yes");
+        }
+    }
+    qDebug() << "MW::traverseFolderStressTest randomChangeDirection =" << randomChangeDirection;
+
+    QString stopMsg = "Press <font color=\"red\"><b>ESC</b></font> to stop stress test";
     if (!secPerFolder) G::popUp->showPopup(stopMsg, 0);
     G::isStressTest = true;
     bool isForward = true;
@@ -161,6 +185,8 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     int uturnMax;
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
     int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
+    QElapsedTimer folderTime;
+    folderTime.start();
     QElapsedTimer t;
     t.start();
     qint64 elapsedMsInFolder = 0;
@@ -171,7 +197,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
         if (secPerFolder && (elapsedMsInFolder > msPerFolder)) return;
 
         // uturn
-        if (uturn && ++uturnCounter > uturnAmount) {
+        if (randomChangeDirection && ++uturnCounter > uturnAmount) {
             isForward = !isForward;
             uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
             uturnCounter = 0;
@@ -197,19 +223,20 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
         if (isForward) sel->next();
         else sel->prev();
     }
-    qint64 msElapsed = t.elapsed();
+    qint64 msElapsed = folderTime.elapsed();
     double seconds = msElapsed * 0.001;
     stressSecToGoInFolder = secPerFolder - seconds;
     double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
     QString msg = "" + QString::number(slideCount) + " images.<br>" +
-                  QString::number(secPerFolder) + " secPerFolder.<br>" +
-                  QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
-                  QString::number(msElapsed) + " ms elapsed.<br>" +
-                  QString::number(elapsedMsPerImage) + " ms delay.<br>" +
-                  QString::number(imagePerSec) + " images per second.<br>" +
-                  QString::number(elapsedMsPerImage) + " ms per image."
-                  // + "<br><br>Press <font color=\"red\"><b>Spacebar</b></font> to cancel this popup."
+                  QString::number(seconds) + " seconds elapsed.<br>" +
+                  // QString::number(secPerFolder) + " secPerFolder.<br>" +
+                  // QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
+                  // QString::number(msElapsed) + " ms elapsed.<br>" +
+                  // QString::number(elapsedMsPerImage) + " ms delay.<br>" +
+                  // QString::number(imagePerSec) + " images per second.<br>" +
+                  // QString::number(elapsedMsPerImage) + " ms per image."
+                  + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
@@ -340,6 +367,18 @@ QString MW::readSvgFileToString(const QString &filePath)
     return svgContent;
 }
 
+void MW::ingestTest(QWidget* target)
+{
+    for(int i = 0; i < 10; i++) {
+        togglePick();
+        sel->next();
+    }
+    QKeyEvent pressEvent(QEvent::KeyPress, Qt::Key_Q, Qt::NoModifier, "Q");
+    QKeyEvent releaseEvent(QEvent::KeyRelease, Qt::Key_Q, Qt::NoModifier, "Q");
+    QApplication::sendEvent(target, &pressEvent);
+    QApplication::sendEvent(target, &releaseEvent);
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     // filterChange();
@@ -352,13 +391,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug()
+        << "G::isRory =" << G::isRory
+        << "isShowCacheProgressBar =" << isShowCacheProgressBar
+        << "cacheBarProgressWidth =" << cacheBarProgressWidth
+        ;
+    return;
 
-    // QString msg = "<font color=\"red\">Backing up " + fPath +
-    //               "before embedding a thumbnail</font>" + "<p>" +
-    //               "Press ESC to close";
-    // // use relay because probably in non-gui thread
-    // emit G::relay->showPopUp(msg, 0, true, 0.75, Qt::AlignHCenter);
-    // // emit G::popUp->showPopUp(msg, 0, true, 0.75, Qt::AlignHCenter);
+    // G::popUp->showPopup("Test");
+    QString msg = "Test issue log file missing.";
+    QString issueLogPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+                           "/Log/WinnowErrorLog.txt";
+    G::issue("Error", msg, "MW::showEvent", -1, issueLogPath);
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

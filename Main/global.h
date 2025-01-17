@@ -344,7 +344,8 @@ namespace G
     extern void log(QString functionName = "",
                     QString comment = "",
                     bool zeroElapsedTime = false);
-    extern IssueLog issueLog;
+    extern IssueLog *issueLog;
+    extern void newIssueLog();
     extern QMutex issueListMutex;
     extern void issue(QString type, QString msg = "", QString src = "",
                       int sfRow = -1, QString fPath = "");

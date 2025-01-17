@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Main/global.h"
 
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
@@ -1978,7 +1979,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromI
     This function is subject to potential race conditions, so it is critical that it only
     be called via a connection with Qt::BlockingQueuedConnection.
 */
-    QMutexLocker locker(&mutex);
+    // QMutexLocker locker(&mutex);
     if (G::isLogger) G::log("DataModel::setIcon");
     if (isDebug)
     {
@@ -2239,15 +2240,20 @@ int DataModel::rowFromPath(QString fPath)
 
 int DataModel::proxyRowFromPath(QString fPath)
 {
-    if (isDebug) qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance << fPath << currentPrimaryFolderPath;
+    // if (isDebug)
+        qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
+                 << fPath << currentPrimaryFolderPath;
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
     int dmRow;
     int sfRow = -1;
     if (fPathRow.contains(fPath)) {
         dmRow = fPathRow[fPath];
+        qDebug() << "DataModel::proxyRowFromPath" << "dmRow =" << dmRow;
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
         if (sfIdx.isValid()) sfRow = sfIdx.row();
+        qDebug() << "DataModel::proxyRowFromPath" << "sfRow =" << sfRow;
     }
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath done");
     return sfRow;
 }
 
@@ -3089,8 +3095,10 @@ void SortFilter::filterChange(QString src)
     if (suspendFiltering) return;
 
     invalidateRowsFilter();
+    return;
 
     // force wait until finished to prevent sorting/editing datamodel
+    // this may be causing occasional crashes
     int waitMs = 2000;
     int ms = 0;
     bool timeIsUp = false;

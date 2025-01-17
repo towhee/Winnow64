@@ -1,4 +1,5 @@
 #include "Datamodel/filters.h"
+#include "Main/global.h"
 
 /*
     OVERVIEW

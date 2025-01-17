@@ -1,5 +1,6 @@
 #include "editlistdlg.h"
 #include "ui_editlistdlg.h"
+#include "Main/global.h"
 
 EditListDlg::EditListDlg(QStringListModel *model, QString title, QWidget *parent) :
     QDialog(parent),

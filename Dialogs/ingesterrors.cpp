@@ -1,5 +1,6 @@
 #include "ingesterrors.h"
 #include "ui_ingesterrors.h"
+#include "Main/global.h"
 
 IngestErrors::IngestErrors(const QStringList &failedToCopy,
                            const QStringList &integrityFailure,

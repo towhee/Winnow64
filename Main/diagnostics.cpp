@@ -341,7 +341,7 @@ void MW::allIssuesReport()
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setFontFamily("Monaco");
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    md.textBrowser->setText(G::issueLog.logText());
+    md.textBrowser->setText(G::issueLog->logText());
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
     #endif

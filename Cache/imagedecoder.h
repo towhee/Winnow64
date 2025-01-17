@@ -5,7 +5,6 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
-#include "Main/global.h"
 #include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"

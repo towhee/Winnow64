@@ -17,7 +17,7 @@ class PopUp : public QWidget
 
 
 public:
-    explicit PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent = 0);
+    explicit PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent = nullptr);
     void setPopupOpacity(float opacity);
     float getPopupOpacity() const;
     void setPopupDuration(int msDuration);
@@ -59,6 +59,6 @@ private:
     bool isProgressBar = false;
     QString popupText;
     QWidget *source;
-    };
+};
 
 #endif // POPUP_H

@@ -9,7 +9,6 @@
 #include "Datamodel/filters.h"
 //#include "Cache/framedecoder.h"
 #include "progressbar.h"            // rgh used??
-#include "Main/global.h"
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
 #include "Cache/cachedata.h"        // req'd by setTargetRange

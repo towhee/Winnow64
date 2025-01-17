@@ -5,7 +5,6 @@
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
 #include "Views/tableview.h"
-#include "Main/global.h"
 
 class Selection : public QObject
 {

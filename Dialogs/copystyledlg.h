@@ -2,7 +2,6 @@
 #define COPYSTYLEDLG_H
 
 #include <QDialog>
-#include "Main/global.h"
 
 namespace Ui {
 class CopyStyleDlg;

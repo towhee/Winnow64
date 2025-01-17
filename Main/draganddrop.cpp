@@ -1,6 +1,6 @@
 #include "Main/mainwindow.h"
 
-// DRAG AND DROP
+// DRAG AND DROP ONTO MAIN WINDOW
 
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -30,15 +30,14 @@ void MW::handleDrop(QString fPath)
 {
     if (G::isLogger) G::log("MW::handleDrop");
     QFileInfo info(fPath);
-    QDir incoming = info.dir();
-    if (incoming == currRootDir) {
-        QString fileType = info.suffix().toLower();
-        if (metadata->supportedFormats.contains(fileType)) {
-            sel->setCurrentPath(dragDropFilePath);
+    QString incoming = info.dir().absolutePath();
+    if (incoming == dm->currentPrimaryFolderPath) {
+        QString ext = info.suffix().toLower();
+        if (metadata->supportedFormats.contains(ext)) {
+            sel->setCurrentPath(fPath);
         }
     }
     else {
-        qDebug() << "MW::handleDrop" << fPath;
         folderAndFileSelectionChange(fPath, "handleDropOnCentralView");
     }
 

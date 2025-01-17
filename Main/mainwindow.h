@@ -17,7 +17,6 @@
 //#include "AppKit/NSSharingService.h"
 #endif
 
-#include "Main/global.h"
 #include "Main/widgetcss.h"
 
 #include "appdlg.h"
@@ -389,9 +388,6 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
-    //void restartMetaRead(int newRow);
-    //void startMetaRead(int sfRow, QString src);
-    //void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();        // not being used
@@ -414,7 +410,6 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    // void folderSelectionChangeOld(QString dPath = ""/*, bool clear = true, bool includeSubFolders = false*/);
     void folderSelectionChange(QString folderPath = "", QString op = "Add",
                                bool resetDataModel = true, bool recurse = false);
     void loadNewInstance(QString folderPath);
@@ -487,7 +482,7 @@ private slots:
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
     void renameEmbedThumbsContextMenu();
-    void updateCachedStatus(QString fPath, bool isCached, QString src);
+    void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
 //    void searchTextEdit();
 
@@ -1399,6 +1394,7 @@ private:
     void bounceFoldersStressTestFromMenu();
     void bounceFoldersStressTest(int msPerImage = 0, double secPerFolder = -1);
     template<typename T> void test2(T& io, int x);
+    void ingestTest(QWidget *target);
     void testNewFileFormat();       // for debugging
 
     QString readSvgFileToString(const QString &filePath);

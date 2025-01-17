@@ -98,8 +98,8 @@ void VideoView::stop()
     emit showMouseCursor();
     video->stop();
     QGuiApplication::restoreOverrideCursor();
-    QGuiApplication::restoreOverrideCursor();
-    QGuiApplication::restoreOverrideCursor();
+    // QGuiApplication::restoreOverrideCursor();
+    // QGuiApplication::restoreOverrideCursor();
 }
 
 void VideoView::scrubMoved(int ms)

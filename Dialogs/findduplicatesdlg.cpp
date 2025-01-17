@@ -1,5 +1,6 @@
 #include "Dialogs/FindDuplicatesDlg.h"
 #include "ui_findduplicatesdlg.h"
+#include "Main/global.h"
 #include "Effects/effects.h"
 
 /*******************************************************************************************/

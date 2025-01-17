@@ -1,5 +1,5 @@
 #include "Cache/imagecache.h"
-
+#include "Main/global.h"
 
 /*  How the Image Cache works:
 
@@ -347,7 +347,7 @@ void ImageCache::resetOutsideTargetRangeCacheState()
             }
             it = icd->imCache.erase(it); // Erase and move iterator forward
             emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
-            emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
+            emit refreshViewsOnCacheChange(fPath, false, "ImageCache::setTargetRange");
         }
         else {
             ++it; // Only move forward if no removal
@@ -475,10 +475,11 @@ void ImageCache::setTargetRange(int key)
                         if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
                             toCache.append(aheadPos);
                         }
+                        isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
                         // if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
                     }
                 }
-                isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
+                // isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
             }
             else aheadDone = true;
         }
@@ -495,10 +496,11 @@ void ImageCache::setTargetRange(int key)
                         if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
                             toCache.append(behindPos);
                         }
+                        isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
                         // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
                     }
                 }
-                isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
+                // isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
             }
             else  behindDone = true;
         }
@@ -506,8 +508,8 @@ void ImageCache::setTargetRange(int key)
 
     if (debugCaching)
     {
-    qDebug() << "targetFirst =" << targetFirst << "targetLast =" << targetLast;
-    qDebug() << "toCache:" << toCache;
+    qDebug() << fun << "targetFirst =" << targetFirst << "targetLast =" << targetLast;
+    qDebug() << fun << "toCache:" << toCache;
     }
 }
 
@@ -535,7 +537,7 @@ void ImageCache::removeCachedImage(QString fPath)
 
     // rgh confirm this is working
     icd->imCache.remove(fPath);
-    emit updateCacheOnThumbs(fPath, false, "ImageCache::setTargetRange");
+    emit refreshViewsOnCacheChange(fPath, false, "ImageCache::setTargetRange");
 }
 
 void ImageCache::removeFromCache(QStringList &pathList)
@@ -1310,9 +1312,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         }
     }
 
-    // gMutex.lock();
     key = dm->currentSfRow;
-    // gMutex.unlock();
 
     // image not cached and not video
     // bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
@@ -1430,7 +1430,6 @@ void ImageCache::cacheImage(int id, int cacheKey)
     }
 
     QString src = "ImageCache::cacheImage";
-    // QMutexLocker locker(&gMutex);
 
     // check if null image
     if (decoder[id]->image.width() <= 0) {
@@ -1448,24 +1447,22 @@ void ImageCache::cacheImage(int id, int cacheKey)
     // reset caching and cache flags
     emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
     emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
-    // set datamodel isCached = true (combine with above)
-    // emit setValuePath(decoder[id]->fPath, 0, true, instance, G::CachedRole);
-    emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // reset attempts rgh review re nextToCache check (not working)
     emit setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
 
-    // QString errMsg = dm->sf->index(cacheKey, G::DecoderErrMsgColumn).data().toString();
+    // refresh thumbs (and main image if is current)
+    emit refreshViewsOnCacheChange(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // if current image signal ImageView::loadImage
-    if (decoder[id]->fPath == dm->currentFilePath) {
-        // clear "Loading Image..." central msg
-        emit centralMsg("");
+    // if (decoder[id]->fPath == dm->currentFilePath) {
+        // clear "Loading Image..." central msg in setCurrentPosition (not being used)
+        // emit centralMsg("");
         // load in ImageView
-        emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
-        // revert central view
-        emit imageCachePrevCentralView();
-    }
+        // emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+        // revert central view (req'd? see setCurrentPosition)
+        // emit imageCachePrevCentralView();
+    // }
 
     decoder[id]->status = ImageDecoder::Status::Ready;
     updateStatus("Update all rows", "ImageCache::cacheImage");

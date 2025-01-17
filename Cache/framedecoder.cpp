@@ -1,4 +1,5 @@
 #include "framedecoder.h"
+#include "Main/global.h"
 
 /*
     Generates a thumbnail from the first video frame in a video file.

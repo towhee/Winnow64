@@ -37,7 +37,8 @@ namespace ICC
 
     void transform(const QByteArray &buf, QImage &image)
     {
-        if (G::isLogger) G::log("ICC::transform");
+        if (G::isLogger)
+            G::log("ICC::transform");
 
         cmsHPROFILE hInProfile;
         if (buf == nullptr) {
