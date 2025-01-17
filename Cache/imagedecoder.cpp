@@ -1,4 +1,5 @@
 #include "imagedecoder.h"
+#include "Main/global.h"
 
 /*
    This class decouples the asyncronous image reading (in CacheImage) from the synchronous
@@ -260,11 +261,15 @@ bool ImageDecoder::load()
 
         /* decoder options:
            QtImage      use QImage::load
-           QtTiff       use QTiffHandler override - overall best results
+           QtTiff       use QTiffHandler override - overall best results incl jpg compression
            LibTiff      use libtiff library directly
            Rory         use Rory decoder
         */
-        decoderToUse = QtImage;
+
+        decoderToUse = QtTiff;         // works for all
+        // decoderToUse = Rory;           // works for Zerene, not jpg compression
+        // decoderToUse = LibTiff;        // works for all
+        // decoderToUse = QtImage;        // works for all except jpg compression
 
         #ifdef Q_OS_MAC
         if (decoderToUse == LibTiff) {

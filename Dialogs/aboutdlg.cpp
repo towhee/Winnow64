@@ -1,5 +1,6 @@
 #include "aboutdlg.h"
 #include "ui_aboutdlg.h"
+#include "Main/global.h"
 
 AboutDlg::AboutDlg(QWidget *parent,
                    QString &version,

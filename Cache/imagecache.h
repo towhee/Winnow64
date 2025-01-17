@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <QObject>
-#include "Main/global.h"
 #include "Cache/cachedata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
@@ -82,7 +81,7 @@ signals:
                          QString source = "");
     void centralMsg(QString msg);
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
-    void updateCacheOnThumbs(QString fPath, bool isCached, QString src);
+    void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
     void dummyDecoder(int id);
 
 protected:

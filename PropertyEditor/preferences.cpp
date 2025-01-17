@@ -163,11 +163,14 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "showCacheProgressBar") {
         mw->isShowCacheProgressBar = v.toBool();
+        mw->progressLabel->setVisible(v.toBool());
+        if (mw->isShowCacheProgressBar)  G::showProgress = G::ShowProgress::ImageCache;
+        else G::showProgress = G::ShowProgress::MetaCache;
         mw->setImageCacheParameters();
         // hide/show progressWidthSlider in preferences
-        QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
-        if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
-        else setRowHidden(capIdx.row(), capIdx.parent(), true);
+        // QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
+        // if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
+        // else setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     if (source == "progressWidthSlider") {
@@ -790,7 +793,7 @@ void Preferences::addItems()
 //    i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
-    i.max = 17;
+    i.max = 24;
     i.fixedWidth = 50;
     addItem(i);
 
@@ -1064,7 +1067,7 @@ void Preferences::addItems()
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 100;
-    i.max = 4000;
+    i.max = 2000;
     i.fixedWidth = 50;
     addItem(i);
     // hide/show progressWidthSlider in preferences
@@ -1455,7 +1458,7 @@ void Preferences::addItems()
     }
 
     // enable/disable rory items
-    rory();
+    // rory();
 
     return;
 }

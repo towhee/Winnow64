@@ -232,7 +232,7 @@ bool MetaRead::stop()
     indicates that dispatching is still running.
 */
 {
-    if (debugLog && (G::isLogger || G::isFlowLogger)) G::log("MetaRead::stop");
+    if (/*debugLog && */(G::isLogger || G::isFlowLogger)) G::log("MetaRead::stop");
     if (isDebug)
     {
         qDebug() << "MetaRead::stop  instance / dm->instance =" << instance << "/" << dm->instance;
@@ -244,6 +244,8 @@ bool MetaRead::stop()
         abort = true;
         mutex.unlock();
     }
+
+    G::log("MetaRead::stop stopped metaread");
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
@@ -259,6 +261,8 @@ bool MetaRead::stop()
              << "isDispatching =" << isDispatching
         ;
     }
+    G::log("MetaRead::stop stopped all readers");
+
     return isRunning();
 }
 

@@ -54,12 +54,13 @@ class IssueLog : public QThread
 {
     Q_OBJECT
 public:
-    IssueLog(PopUp *popUp, QObject* parent = nullptr);
+    IssueLog(QObject* parent = nullptr);
     ~IssueLog() override;
 
     void log(const QString& msg);
     QString logText();
     void stop();
+    bool failedToOpen = false;
 
 protected:
     void run() override;
@@ -71,6 +72,7 @@ private:
     QString issueLogPath;
     QFile issueLogFile;
     QTextStream out;
+    // PopUp popUp;
 };
 
 #endif // LOG_H

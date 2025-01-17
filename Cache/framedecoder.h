@@ -4,7 +4,6 @@
 #include <QtWidgets>
 #include <QObject>
 #include <QMutex>
-#include "Main/global.h"
 #include <QMediaPlayer>
 #include <QVideoSink>
 #include <QVideoFrame>

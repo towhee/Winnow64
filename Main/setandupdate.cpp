@@ -509,57 +509,47 @@ void MW::imageCachePrevCentralView()
     centralLayout->setCurrentIndex(prevCentralView);
 }
 
-void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
+void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
 {
 /*
-    When an image is added or removed from the image cache in ImageCache a signal triggers
-    this slot to update the datamodel cache status role. After the datamodel update the
-    thumbView and gridView thumbnail is refreshed to update the cache badge.
+    When an image is added or removed from the image cache in ImageCache a signal
+    triggers this slot. The thumbView and gridView thumbnail is refreshed to update the
+    cache badge.
 
-    Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is used and
-    the user then sorts or filters the index could go out of range and the app will crash.
+    If the image is the current one, then imageView is called.
 
-    Make sure the file path exists in the datamodel. The most likely failure will be if a
-    new folder has been selected but the image cache has not been rebuilt.
 */
     int sfRow = dm->proxyRowFromPath(fPath);
+    bool isCurrent = sfRow == dm->currentSfRow;
+    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
 
     if (G::isLogger) {
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
-        G::log("MW::updateCachedStatus", msg);
+        G::log("MW::refreshViewsOnCacheChange", msg);
     }
     /*
-    qDebug() << "MW::updateCachedStatus"
+    qDebug() << "MW::refreshViewsOnCacheChange"
              << "sfRow =" << sfRow
              << "isCached =" << isCached
-        ; //*/
+             << "isCurrent =" << isCurrent
+                ; //*/
 
     if (sfRow == -1) {
         QString msg = "Image not found, maybe sudden folder change.";
-        G::issue("Warning", msg, "MW::updateCachedStatus");
+        G::issue("Warning", msg, "MW::refreshViewsOnCacheChange");
         return;
     }
 
-    QModelIndex sfIdx = dm->sf->index(sfRow, G::IsCachedColumn);
-    QModelIndex sfIdx0 = dm->sf->index(sfRow, 0);
+    if (isCached && isCurrent) {
+        // qDebug() << "MW::refreshViewsOnCacheChange call imageView->loadImage" << fPath;
+        centralLayout->setCurrentIndex(prevCentralView);
+        imageView->loadImage(fPath, "MW::updateCachedStatus");
+        updateClassification();
+    }
 
-    if (sfIdx.isValid()/* && metaLoaded*/) {
-        emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus");
-        if (isCached) {
-            if (sfIdx.row() == dm->currentSfRow) {
-                if (G::isFlowLogger) qDebug() << "MW::updateCachedStatus", fPath;
-                imageView->loadImage(fPath, "MW::updateCachedStatus");
-                updateClassification();
-                centralLayout->setCurrentIndex(prevCentralView);
-            }
-        }
-        thumbView->refreshThumb(sfIdx0);
-        gridView->refreshThumb(sfIdx0);
-    }
-    else {
-        QString msg = "Invalid index.";
-        G::issue("Warning", msg, "MW::updateCachedStatus", sfRow, fPath);
-    }
+    thumbView->refreshThumb(sfIdx);
+    gridView->refreshThumb(sfIdx);
+
     return;
 }
 

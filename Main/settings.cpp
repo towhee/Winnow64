@@ -492,6 +492,7 @@ bool MW::loadSettings()
     if (settings->contains("isCachePreview")) isCachePreview = settings->value("isCachePreview").toBool();
     if (settings->contains("cachePreviewWidth")) cachePreviewWidth = settings->value("cachePreviewWidth").toInt();
     if (settings->contains("cachePreviewHeight")) cachePreviewHeight = settings->value("cachePreviewHeight").toInt();
+    // setImageCacheParameters();
 
     // full screen
     if (settings->contains("isFullScreenFolders")) fullScreenDocks.isFolders = settings->value("isFullScreenFolders").toBool();

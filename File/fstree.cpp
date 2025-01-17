@@ -1033,6 +1033,7 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
     setCurrentIndex(indexAt(event->pos()));
 }
 
+
 void FSTree::dropEvent(QDropEvent *event)
 {
 /*

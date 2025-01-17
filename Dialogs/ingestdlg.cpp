@@ -30,7 +30,7 @@ protected:
 /*
 When this dialog is invoked the files that have been picked are copied to a primary
 destination folder, and optionally, to a backup location.  This process is known as
-ingestion: selecting and copying images from a camera card to a computer.  If backround
+ingestion: selecting and copying images from a camera card to a computer.  If background
 ingesting is selected then the dialog closes and the user can continue working while the
 ingest happens in the background in another thread, using all the IngestDlg settings.
 

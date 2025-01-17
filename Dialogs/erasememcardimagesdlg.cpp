@@ -1,5 +1,6 @@
 #include "erasememcardimagesdlg.h"
 #include "ui_erasememcardimagesdlg.h"
+#include "Main/global.h"
 #include <QDebug>
 
 class EraseMemCardDelegate : public QStyledItemDelegate

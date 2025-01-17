@@ -227,7 +227,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             // Update embellished text fields - Embel::refreshTexts
             emit dataEdited();
         }
-        dm->sf->suspend(false, "InfoView::dataChange count = 0");
+        dm->sf->suspend(false, "InfoView::dataChanged count = 0");
 
         /* update filters
         must execute in order:
@@ -237,20 +237,20 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         - update proxy (filterChange) */
 
         if (field == "Title*") {
-            dm->sf->suspend(true, "InfoView::dataChange Title");
+            dm->sf->suspend(true, "InfoView::dataChanged Title");
             buildFilters->updateCategory(BuildFilters::TitleEdit);
             //emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->titles))
                 thumbView->selectionModel()->clear();
-            emit filterChange("InfoView::dataChange");
+            emit filterChange("InfoView::dataChanged");
         }
         if (field == "Creator*") {
-            dm->sf->suspend(true, "InfoView::dataChange Creator");
+            dm->sf->suspend(true, "InfoView::dataChanged Creator");
             buildFilters->updateCategory(BuildFilters::CreatorEdit);
             //emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->creators))
                 thumbView->selectionModel()->clear();
-            emit filterChange("InfoView::dataChange");
+            emit filterChange("InfoView::dataChanged");
         }
     }
     count++;

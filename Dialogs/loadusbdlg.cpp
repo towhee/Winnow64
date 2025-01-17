@@ -1,5 +1,6 @@
 #include "loadusbdlg.h"
 #include "ui_loadusbdlg.h"
+#include "Main/global.h"
 #include <QDebug>
 
 class LoadUsbDelegate : public QStyledItemDelegate

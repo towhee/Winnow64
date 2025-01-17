@@ -11,8 +11,7 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- Refresh folders and Filters = F5
-- Tiff with compression 7 (jpg) not being decoded
+- Click bookmark _Videos of Eva and then another bookmark = hang
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read
@@ -135,6 +134,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Include cache progress in status bar again
+- Refresh tiff full image when toggle color management
+- Fix IssueLog initialization
+- Zerene 16bit AdobeRGB tiffs color management not working
 - Slideshow spacebar popup being reset
 - Eject USB disabled in menu
 - Change encodeThumbnail to use Tiff::read and call from thumb.cpp

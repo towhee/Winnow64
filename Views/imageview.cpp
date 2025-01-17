@@ -152,13 +152,21 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-    /*
-    qDebug() << "ImageView::loadImage:"
+
+    bool isDebug = false;
+    bool isCurrent = (fPath == currentImagePath);
+
+    if (isDebug)
+    qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
+         << "isCurrent =" << isCurrent
+         << "currentImageHasChanged =" << currentImageHasChanged
+         << " Src:" << src
          << fPath
-         << " Src:" << src; //*/
-    if (G::isLogger || G::isFlowLogger) {
-    QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
+            ; //*/
+    if (G::isLogger || G::isFlowLogger)
+    {
+        QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
         G::log("ImageView::loadImage", row + " Src:" + src +
                " isFirstImageNewInstance = " + QVariant(isFirstImageNewInstance).toString() +
                " " + fPath);
@@ -172,16 +180,20 @@ bool ImageView::loadImage(QString fPath, QString src)
         return false;
     }
 
+    // Already displayed
+    if (isCurrent && currentImageHasChanged == false) {
+        return true;
+    }
+    currentImageHasChanged = false;
+
     /*
     qDebug().noquote()
         << "ImageView::loadImage"
+        // << "imageHasChanged =" << currentImageHasChanged
         << "fPath =" << fPath
         << "currentImagePath =" << currentImagePath
         ;
     //*/
-
-    // Already displayed
-    if (fPath == currentImagePath && !pmItem->pixmap().isNull()) return true;
 
     // could be a popup from a prior uncached image being loaded
     //G::popUp->end();
@@ -230,12 +242,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     }
 
     /* Get cached image. Must check if image has been cached before calling
-    icd->imCache.find(fPath, image) to prevent a mismatch between the fPath
-    index and the image in icd->imCache hash table. Also must check in case
-    where an ejected drive has resulted in clearing icd->cacheItemList. */
+    icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
+    image in icd->imCache hash table. Also must check in case where an ejected drive has
+    resulted in clearing icd->cacheItemList. */
 
-    // int dmRow = dm->rowFromPath(fPath);
-    // if (dmRow == -1) return false;
     int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
     bool isCached = false;
@@ -243,23 +253,29 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
-        //qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
+        if (isDebug)
+        qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
 
-        // CTSL::HashMap<QString, QImage> imCache
-        // bool imageAvailable = icd->imCache.find(fPath, image);
-
-        // QHash<QString, QImage> imCache
         bool imageAvailable = icd->imCache.contains(fPath);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
             isLoaded = true;
+            if (isDebug)
+                qDebug() << "ImageView::loadImage"
+                         << "w =" << pmItem->pixmap().width()
+                         << "h =" << pmItem->pixmap().height()
+                         << "isNull =" << pmItem->pixmap().isNull()
+                         << fPath;
         }
        else { // not available
+            if (isDebug)
             qDebug() << "ImageCache::cacheImage not in ImCache" << "row =" << sfRow;
             // review logic here
        }
     }
     else {
+        if (isDebug)
+        qDebug() << "ImageView::loadImage isCached = false";
         // report why no image cached (chk range in case filtering has just occurred)
         // if (icd->cacheItemList.count() > dmRow) {
         //     if (G::mode == "Loupe")
@@ -302,15 +318,15 @@ bool ImageView::loadImage(QString fPath, QString src)
         if (isFit) {
             setFitZoom();
         }
-        /*
+        if (isDebug)
         qDebug() << "ImageView::loadImage:"
                  << "isFirstImageNewInstance =" << isFirstImageNewInstance
                  << "row =" << sfRow
                  << "isFit =" << isFit
+                 << "isFit =" << isFit
                  << "zoomFit =" << zoomFit
                  << "zoom =" << zoom
-                 << " Src:" << src;
-        //*/
+                 << "Src:" << src;
         scale();
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
@@ -324,6 +340,8 @@ bool ImageView::loadImage(QString fPath, QString src)
 
     if (isLoaded) return true;
     else {
+        if (isDebug)
+        qDebug() << "ImageView::loadImage isLoaded = false";
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);

@@ -105,7 +105,7 @@ void MW::filterChange(QString source)
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
     dm->sf->suspend(false, "MW::filterChange");
-    dm->sf->filterChange("MW::filterChange");
+    dm->sf->filterChange("MW::filterChange");  // crash (removed wait in SortFilter::filterChange)
 
     // update filter panel image count by filter item
     buildFilters->update();

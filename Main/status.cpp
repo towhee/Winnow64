@@ -503,8 +503,12 @@ void MW::toggleColorManage(Tog n)
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
         QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        updateCachedStatus(fPath, false, "MW::toggleColorManage");
+        refreshViewsOnCacheChange(fPath, false, "MW::toggleColorManage");
     }
+
+    // // let ImageView know that the image changed
+    imageView->currentImageHasChanged = true;
+
     // reload image cache
     imageCache->colorManageChange();
 }

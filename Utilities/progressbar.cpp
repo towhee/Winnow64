@@ -151,12 +151,12 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
 
     // to and from can be mixed depending on direction of travel
     if (fromItem < toItem) {
-        pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;
+        pxWidth = qRound((toItem - fromItem) * itemWidth) + itemWidth + 1;
         pxStart = qRound(fromItem * itemWidth);
         if (pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
     }
     else {
-        pxWidth = qRound((fromItem - toItem) * itemWidth) + 1;
+        pxWidth = qRound((fromItem - toItem) * itemWidth) + itemWidth + 1;
         pxStart = qRound(toItem * itemWidth);
     }
     if (pxWidth < 2) pxWidth = 2;

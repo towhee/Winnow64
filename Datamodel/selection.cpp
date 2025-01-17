@@ -1,4 +1,5 @@
 #include "selection.h"
+#include "Main/global.h"
 
 /*
     The DataModel selection model (dm->selectionModel) operations occur here.

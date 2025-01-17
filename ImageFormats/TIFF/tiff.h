@@ -105,6 +105,26 @@ private:
     uint bytesPerRow;
     quint32 scanBytesAvail;                 // Maximum bytes in QImage im
 
+    // Qt enumerations: https://doc.qt.io/qt-6/qimage.html#Format-enum
+    enum TiffPhotometric {
+        TIFF_PHOTOMETRIC_NONE       = -1,
+        TIFF_PHOTOMETRIC_WHITE_IS_ZERO,      /* mono or grayscale, 0 is white */
+        TIFF_PHOTOMETRIC_BLACK_IS_ZERO,      /* mono or grayscale, 0 is black */
+        TIFF_PHOTOMETRIC_RGB,                /* RGB or RGBA*/
+        TIFF_PHOTOMETRIC_PALETTE,            /* Uses a palette */
+        TIFF_PHOTOMETRIC_ALPHA_MASK,         /* Transparency mask */
+        TIFF_PHOTOMETRIC_SEPARATED,          /* CMYK or some other ink set */
+        TIFF_PHOTOMETRIC_YCBCR,              /* YCbCr */
+        TIFF_PHOTOMETRIC_CIE_LAB    = 8,     /* 1976 CIE L*a*b* */
+        TIFF_PHOTOMETRIC_ICC_LAB,            /* ICC L*a*b* */
+        TIFF_PHOTOMETRIC_ITU_LAB,            /* ITU L*a*b* */
+        TIFF_PHOTOMETRIC_CFA        = 32803, /* Color Filter Array (TIFF/AP and DNG) */
+        TIFF_PHOTOMETRIC_LOG_L      = 32844, /* CIE Log2(L) */
+        TIFF_PHOTOMETRIC_LOG_LUV,            /* CIE Log L*u*v* */
+        TIFF_PHOTOMETRIC_LINEAR_RAW = 34892, /* Linear Raw (DNG) */
+    };
+
+
     enum TiffType {
         unknown,
         tiff8bit,

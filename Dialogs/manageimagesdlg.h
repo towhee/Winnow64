@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include "Dialogs/patterndlg.h"
-#include "Main/global.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif

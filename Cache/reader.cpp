@@ -1,4 +1,5 @@
 #include "reader.h"
+#include "Main/global.h"
 
 Reader::Reader(QObject *parent,
                int id,
@@ -80,6 +81,8 @@ void Reader::stop()
     //              << "isRunning =" << isRunning()
     //         ;
     // }
+
+    G::log("Reader::stop", QString::number(threadId));
 
     if (isRunning()) {
         mutex.lock();
@@ -225,7 +228,7 @@ void Reader::run()
 
     int dmRow = dmIdx.row();
 
-    // /*
+    /*
     qDebug().noquote()
         << "Reader::run"
         << "row =" << QString::number(dmRow).leftJustified(6)
@@ -236,6 +239,7 @@ void Reader::run()
         << "icon dm =" << QString::number(t5).leftJustified(6)
         << dm->index(dmRow, G::NameColumn).data().toString()
         ;//*/
+
     #endif
     emit done(threadId);
     if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");

@@ -218,8 +218,9 @@ void MW::createDataModel()
     // iconCacheData = new IconCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
-    bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;
-    cacheProgressBar->setMetaProgressStyle(onTopOfCache);
+    // bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;
+    // cacheProgressBar->setMetaProgressStyle(onTopOfCache);
+    cacheProgressBar->setMetaProgressStyle(false);
 
     // loadSettings not run yet
     if (isSettings && settings->contains("combineRawJpg"))
@@ -245,6 +246,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
+    connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
@@ -354,12 +356,6 @@ void MW::createMDCache()
     connect(metaReadThread, &MetaRead::dispatchIsFinished,
             imageCache, &ImageCache::datamodelFolderCountChange);
 
-    // not being used:
-    // read metadata
-    //connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
-    // pause waits until isRunning == false
-    //connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt);
-
 }
 
 void MW::createImageCache()
@@ -402,8 +398,7 @@ void MW::createImageCache()
             this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
-    connect(imageCache, &ImageCache::updateCacheOnThumbs,
-            this, &MW::updateCachedStatus);
+    connect(imageCache, &ImageCache::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
 
     // Signal from ImageCache::run() update central view
     connect(imageCache, &ImageCache::imageCachePrevCentralView,
@@ -982,7 +977,7 @@ void MW::createStatusBar()
     // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
-    if (isSettings && settings->contains("cacheStatusWidth") && G::isRory)
+    if (isSettings && settings->contains("cacheStatusWidth"))
         cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
     else cacheBarProgressWidth = 100;
     if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 200;
