@@ -2240,18 +2240,17 @@ int DataModel::rowFromPath(QString fPath)
 
 int DataModel::proxyRowFromPath(QString fPath)
 {
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
                  << fPath << currentPrimaryFolderPath;
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    // QMutexLocker locker(&mutex);
     int dmRow;
     int sfRow = -1;
     if (fPathRow.contains(fPath)) {
         dmRow = fPathRow[fPath];
-        qDebug() << "DataModel::proxyRowFromPath" << "dmRow =" << dmRow;
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
         if (sfIdx.isValid()) sfRow = sfIdx.row();
-        qDebug() << "DataModel::proxyRowFromPath" << "sfRow =" << sfRow;
     }
     if (G::isLogger) G::log("DataModel::proxyRowFromPath done");
     return sfRow;

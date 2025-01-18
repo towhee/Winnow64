@@ -2371,8 +2371,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
             else {
                 if (!imageView->isFirstImageNewInstance) {
-                    int row = dm->proxyRowFromPath(fPath);
+                    // int row = dm->proxyRowFromPath(fPath);
                     QString msg = "imageView->loadImage failed.";
+                    qDebug() << "MW::fileSelectionChange" << msg;
                     // G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
                 }
             }
@@ -2385,12 +2386,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update ImageCache
 
     /*
-    qDebug() << "MW::fileSelectionChange" << "IMAGECACHE"
-             << "isNoModifier =" << (key == Qt::NoModifier)
-             << "isShiftModifier =" << (key == Qt::ShiftModifier)
-             << "isControlModifier =" << (key == Qt::ControlModifier)
-             << "isAltModifier =" << (key == Qt::AltModifier)
-             << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
+    qDebug() << "MW::fileSelectionChange" << "isVideo" << isVideo
+             // << "isNoModifier =" << (key == Qt::NoModifier)
+             // << "isShiftModifier =" << (key == Qt::ShiftModifier)
+             // << "isControlModifier =" << (key == Qt::ControlModifier)
+             // << "isAltModifier =" << (key == Qt::AltModifier)
+             // << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
                 ;
     //*/
     if (!(G::isSlideShow && isSlideShowRandom)
@@ -2600,8 +2601,6 @@ bool MW::stop(QString src)
                  << G::t.elapsed() << "ms";
     }
     G::t.restart();
-
-    G::log("MW::stop next");
 
     imageCache->stop("MW::stop");
     {

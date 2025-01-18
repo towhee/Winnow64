@@ -74,15 +74,13 @@ void Reader::stop()
     conflicts with using wait() - use an event loop instead.
 */
 {
-    // if (isDebug)
-    // {
-    //     qDebug() << "Reader::stop commencing"
-    //              << threadId
-    //              << "isRunning =" << isRunning()
-    //         ;
-    // }
-
-    G::log("Reader::stop", QString::number(threadId));
+    if (isDebug)
+    {
+        qDebug() << "Reader::stop commencing"
+                 << threadId
+                 << "isRunning =" << isRunning()
+            ;
+    }
 
     if (isRunning()) {
         mutex.lock();
