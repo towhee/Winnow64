@@ -157,7 +157,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     bool isCurrent = (fPath == currentImagePath);
 
     if (isDebug)
-    qDebug() << "\nImageView::loadImage:"
+        qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "currentImageHasChanged =" << currentImageHasChanged

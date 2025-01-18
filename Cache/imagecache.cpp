@@ -254,6 +254,9 @@ void ImageCache::updateToCacheTargets()
     // rgh resolve key vs sfRow vs ...
     key = dm->currentSfRow;
     setDirection();
+
+    if (debugCaching) qDebug() <<  fun << "1";
+
     setTargetRange(key);
     resetOutsideTargetRangeCacheState();
     if (debugCaching)
@@ -326,7 +329,7 @@ void ImageCache::resetOutsideTargetRangeCacheState()
     QMutexLocker locker(&gMutex);
 
     QString src = "ImageCache::resetOutsideTargetRangeCacheState";
-
+    if (debugCaching) qDebug() << src;
     // trim imCache outside target range
     auto it = icd->imCache.begin();
     while (it != icd->imCache.end()) {
@@ -435,11 +438,12 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    QMutexLocker locker(&gMutex);
+    // QMutexLocker locker(&gMutex);
 
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
     if (G::isLogger) G::log(fun, "maxMB = " + QString::number(maxMB));
+    if (debugCaching) qDebug().noquote() << fun;
 
     float sumMB = 0;
     int aheadAmount = 2;
@@ -475,11 +479,11 @@ void ImageCache::setTargetRange(int key)
                         if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
                             toCache.append(aheadPos);
                         }
-                        isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
-                        // if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
+                        isForward ? targetLast = aheadPos : targetFirst = aheadPos;
+                        if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
                     }
                 }
-                // isForward ? targetLast = aheadPos++ : targetFirst = aheadPos--;
+                isForward ? aheadPos++ : aheadPos--;
             }
             else aheadDone = true;
         }
@@ -496,11 +500,11 @@ void ImageCache::setTargetRange(int key)
                         if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
                             toCache.append(behindPos);
                         }
-                        isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
-                        // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
+                        isForward ? targetFirst = behindPos : targetLast = behindPos;
+                        if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
                     }
                 }
-                // isForward ? targetFirst = behindPos-- : targetLast = behindPos++;
+                isForward ? behindPos-- : behindPos++;
             }
             else  behindDone = true;
         }
@@ -1267,7 +1271,6 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 */
     int sfRow = dm->proxyRowFromPath(fPath);
     QString fun = "ImageCache::setCurrentPosition";
-    // qDebug() << "ImageCache::setCurrentPosition" << sfRow;
     log(fun, "row = " + QString::number(sfRow));
     // log("setCurrentPosition", "row = " + QString::number(sfRow));
     if (debugCaching) {
