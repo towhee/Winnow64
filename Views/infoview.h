@@ -10,8 +10,6 @@
 #include "Views/iconview.h"
 #include "Utilities/utilities.h"
 
-#include "Main/global.h"
-
 class InfoView : public QTreeView
 {
 	Q_OBJECT

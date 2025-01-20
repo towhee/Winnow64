@@ -1,4 +1,5 @@
 #include "canon.h"
+#include "Main/global.h"
 
 Canon::Canon()
 {

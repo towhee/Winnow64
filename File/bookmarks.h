@@ -2,7 +2,6 @@
 #define BOOKMARKS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "File/fstree.h"
 #include "HoverDelegate.h"

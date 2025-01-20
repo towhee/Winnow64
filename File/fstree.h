@@ -1,6 +1,5 @@
 #include <QtWidgets>
 #include <QHash>
-#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
 #include "ui_foldershelp.h"

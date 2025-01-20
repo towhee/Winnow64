@@ -2,7 +2,6 @@
 #define WIDGETCSS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 class WidgetCSS
 {

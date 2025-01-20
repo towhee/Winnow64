@@ -7,7 +7,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 #include "Metadata/exif.h"

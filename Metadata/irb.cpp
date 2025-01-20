@@ -1,4 +1,5 @@
 #include "irb.h"
+#include "Main/global.h"
 
 /* IRB chain structure
 

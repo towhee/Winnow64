@@ -1,5 +1,6 @@
 #include "tokendlg.h"
 #include "ui_tokendlg.h"
+#include "Main/global.h"
 #include <QDebug>
 
 /*

@@ -1,4 +1,5 @@
 #include "File/bookmarks.h"
+#include "Main/global.h"
 
 class BookDelegate : public QStyledItemDelegate
 {

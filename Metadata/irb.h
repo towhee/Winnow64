@@ -2,7 +2,6 @@
 #define IRB_H
 
 #include <QtCore>
-#include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 

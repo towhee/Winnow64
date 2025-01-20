@@ -1,4 +1,5 @@
 #include "Utilities/classificationlabel.h"
+#include "Main/global.h"
 #include <QPainter>
 #include <QDebug>
 

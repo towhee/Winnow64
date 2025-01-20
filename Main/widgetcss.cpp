@@ -1,4 +1,5 @@
 #include "Main/widgetcss.h"
+#include "Main/global.h"
 
 QString WidgetCSS::css()
 {

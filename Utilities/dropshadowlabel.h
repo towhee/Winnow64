@@ -2,7 +2,6 @@
 #define DROPSHADOWLABEL_H
 
 #include <QObject>
-#include "Main/global.h"
 #include <QWidget>
 #include <QLabel>
 

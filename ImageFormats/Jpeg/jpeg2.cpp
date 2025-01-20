@@ -1,4 +1,5 @@
 #include "jpeg2.h"
+#include "Main/global.h"
 #include <QDebug>
 
 Jpeg2::Jpeg2()

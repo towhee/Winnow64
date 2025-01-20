@@ -1,4 +1,5 @@
 #include "coloranalysis.h"
+#include "Main/global.h"
 #include "Effects/effects.h"
 
 ColorAnalysis::ColorAnalysis(QObject *)

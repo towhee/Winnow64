@@ -1,4 +1,5 @@
 #include "patterndlg.h"
+#include "Main/global.h"
 
 /*
    Find a repeating pattern in the pixmap (pm) or any selection in pm.  Save this as a tile

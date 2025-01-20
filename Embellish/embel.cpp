@@ -1,4 +1,5 @@
 #include "embel.h"
+#include "Main/global.h"
 //#include "Effects/effect.h"       // temp to test
 
 /*

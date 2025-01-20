@@ -1,4 +1,5 @@
 #include "dng.h"
+#include "Main/global.h"
 
 DNG::DNG()
 {

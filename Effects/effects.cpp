@@ -1,4 +1,5 @@
 #include "effects.h"
+#include "Main/global.h"
 
 #define M_EPSILON 1.0e-6
 #define M_SQ2PI 2.50662827463100024161235523934010416269302368164062

@@ -1,4 +1,5 @@
 #include "utilities.h"
+#include "Main/global.h"
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {

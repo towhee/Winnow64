@@ -1,4 +1,5 @@
 #include "mp4.h"
+#include "Main/global.h"
 
 MP4::MP4()
 {

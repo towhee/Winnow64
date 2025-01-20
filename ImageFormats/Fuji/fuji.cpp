@@ -1,4 +1,5 @@
 #include "fuji.h"
+#include "Main/global.h"
 
 Fuji::Fuji()
 {

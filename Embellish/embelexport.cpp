@@ -1,4 +1,5 @@
 #include "embelexport.h"
+#include "Main/global.h"
 
 EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,

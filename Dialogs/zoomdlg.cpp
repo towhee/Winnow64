@@ -1,5 +1,6 @@
 #include "zoomdlg.h"
 #include "ui_zoomdlg.h"
+#include "Main/global.h"
 #include "QDebug"
 
 ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent),

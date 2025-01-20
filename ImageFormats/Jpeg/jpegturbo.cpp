@@ -1,4 +1,5 @@
 #include "jpegturbo.h"
+#include "Main/global.h"
 
 JpegTurbo::JpegTurbo() {}
 

@@ -1,4 +1,5 @@
 #include "Views/infostring.h"
+#include "Main/global.h"
 
 /*
     InfoString is called from MW to display or edit the info text displayed on top of an

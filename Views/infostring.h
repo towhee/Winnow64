@@ -2,7 +2,6 @@
 #define INFOSTRING_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include <functional>

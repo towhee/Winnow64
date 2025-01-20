@@ -2,7 +2,6 @@
 #define TOKENDLG_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "renamedlg.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"

@@ -1,4 +1,5 @@
 #include "graphicsitemeventfilter.h"
+#include "Main/global.h"
 
 GraphicsItemEventFilter::GraphicsItemEventFilter(/*QObject *parent*/)
 {

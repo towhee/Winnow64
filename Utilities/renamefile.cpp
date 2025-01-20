@@ -1,5 +1,6 @@
 #include "renamefile.h"
 #include "ui_renamefiledlg.h"
+#include "Main/global.h"
 
 RenameFileDlg::RenameFileDlg(QWidget *parent,
                              QString &folderPath,

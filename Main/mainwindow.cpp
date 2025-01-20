@@ -5458,7 +5458,10 @@ void MW::refreshCurrentFolder()
     if (G::isLogger) G::log("MW::refreshCurrentFolder");
     QString src = "MW::refreshCurrentFolder";
     isRefreshingDM = true;
+
+    // use dm->currentFilePath ??
     refreshCurrentPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+
     if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
         for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
             QString fPath = dm->modifiedFiles.at(i).filePath();

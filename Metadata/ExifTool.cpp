@@ -1,4 +1,5 @@
 #include "Metadata/ExifTool.h"
+#include "Main/global.h"
 
 ExifTool::ExifTool()
 {

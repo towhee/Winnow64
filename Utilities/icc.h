@@ -14,7 +14,6 @@
 #define ICC_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Lcms2/lcms2.h"                // little color management system
 
 namespace ICC

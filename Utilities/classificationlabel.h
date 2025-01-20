@@ -2,7 +2,6 @@
 #define CLASSIFICATIONLABEL_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 class ClassificationLabel : public QLabel
 {

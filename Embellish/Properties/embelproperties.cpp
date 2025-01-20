@@ -1,4 +1,5 @@
 #include "embelproperties.h"
+#include "Main/global.h"
 
 /*
 This class holds the template information used by Embel to create borders, add text,

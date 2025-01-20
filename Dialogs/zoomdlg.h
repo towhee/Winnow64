@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <QDialog>
-#include "Main/global.h"
 
 namespace Ui {
 class ZoomDlg;
