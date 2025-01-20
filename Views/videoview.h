@@ -3,6 +3,7 @@
 
 #include "Views/videowidget.h"
 #include "Main/global.h"
+#include "Main/global.h"
 #include "Views/iconview.h"
 #include "Datamodel/selection.h"
 

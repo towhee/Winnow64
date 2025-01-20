@@ -312,10 +312,10 @@ void Appdlg::setScreenDependencies()
     int hdr0Width = fm.boundingRect("==Shortcut==").width();
     int hdr1Width = fm.boundingRect("==Adobe Photoshop 2022==").width();
     int hdr2Width = fm.boundingRect("/Applications/Adobe Photoshop 2022/Adobe Photoshop 2022.app=========").width();
-//    int hdr3Width = fm.boundingRect("------Display args------").width();
-//    int hdr2Width = ui->appsTable->viewport()->width() - hdr0Width - hdr1Width - hdr3Width;
+    // int hdr3Width = fm.boundingRect("------Display args------").width();
+    // int hdr2Width = ui->appsTable->viewport()->width() - hdr0Width - hdr1Width - hdr3Width;
     ui->appsTable->setColumnWidth(0, hdr0Width);
     ui->appsTable->setColumnWidth(1, hdr1Width);
     ui->appsTable->setColumnWidth(2, hdr2Width);
-//    ui->appsTable->setColumnWidth(3, hdr3Width);
+    // ui->appsTable->setColumnWidth(3, hdr3Width);
 }

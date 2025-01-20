@@ -2,7 +2,6 @@
 #define COLORANALYSIS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 class ColorAnalysis : public QObject
 {

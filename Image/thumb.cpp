@@ -1,4 +1,5 @@
 #include "Image/thumb.h"
+#include "Main/global.h"
 
 /*
    Loads a thumbnail preview from a file based on metadata already extracted by

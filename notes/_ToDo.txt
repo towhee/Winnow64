@@ -11,7 +11,6 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- Click bookmark _Videos of Eva and then another bookmark = hang
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read

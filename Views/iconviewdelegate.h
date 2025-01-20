@@ -7,7 +7,6 @@
 #include <QFont>
 #include "Datamodel/datamodel.h"
 #include "Cache/cachedata.h"
-#include "Main/global.h"
 
 class IconViewDelegate : public QStyledItemDelegate
 {

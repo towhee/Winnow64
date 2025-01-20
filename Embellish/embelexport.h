@@ -2,7 +2,6 @@
 #define EMBELEXPORT_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"

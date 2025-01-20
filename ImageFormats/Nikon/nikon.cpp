@@ -1,4 +1,5 @@
 #include "nikon.h"
+#include "Main/global.h"
 
 Nikon::Nikon()
 {

@@ -2,7 +2,6 @@
 #define HTMLWINDOW_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 class HtmlWindow : QScrollArea
 {

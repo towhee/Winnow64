@@ -1,4 +1,5 @@
 #include "mov.h"
+#include "Main/global.h"
 
 MOV::MOV()
 {

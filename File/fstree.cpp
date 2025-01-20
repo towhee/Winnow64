@@ -1,4 +1,5 @@
 #include "File/fstree.h"
+#include "Main/global.h"
 
 extern QStringList mountedDrives;
 QStringList mountedDrives;

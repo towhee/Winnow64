@@ -38,6 +38,7 @@
 **
 ****************************************************************************/
 
+#include "Main/global.h"
 
 #include "qtlocalpeer.h"
 #include <QCoreApplication>

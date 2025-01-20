@@ -1,5 +1,6 @@
 #include "selectionorpicksdlg.h"
 #include "ui_selectionorpicksdlg.h"
+#include "Main/global.h"
 
 SelectionOrPicksDlg::SelectionOrPicksDlg(Option &option, QWidget *parent) :
     QDialog(parent),

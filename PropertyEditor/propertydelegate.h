@@ -2,7 +2,6 @@
 #define PROPERTYDELEGATE_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "propertywidgets.h"
 #include "Main/widgetcss.h"
 #include <QStyledItemDelegate>

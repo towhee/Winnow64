@@ -1,4 +1,5 @@
 #include "panasonic.h"
+#include "Main/global.h"
 
 Panasonic::Panasonic()
 {

@@ -6,7 +6,6 @@
 #include <QAbstractNativeEventFilter>
 #include <Windows.h>
 #include <Dbt.h>
-#include "Main/global.h"
 
 class WinNativeEventFilter : public QObject, public QAbstractNativeEventFilter
 {

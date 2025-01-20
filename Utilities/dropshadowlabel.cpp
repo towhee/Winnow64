@@ -1,4 +1,5 @@
 #include "Utilities/dropshadowlabel.h"
+#include "Main/global.h"
 #include <QPainter>
 #include <QDebug>
 

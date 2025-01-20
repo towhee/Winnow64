@@ -2,7 +2,6 @@
 #define PREFERENCES_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "propertyeditor.h"
 #include "propertywidgets.h"
 

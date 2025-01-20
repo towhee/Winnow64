@@ -1,3 +1,4 @@
+#include "Main/global.h"
 #include "Utilities/popup.h"
 #include <QPainter>
 #include <QApplication>

@@ -7,7 +7,6 @@
 #include <QGridLayout>
 #include <QPropertyAnimation>
 #include <QTimer>
-//#include "Main/global.h"
 
 class PopUp : public QWidget
 {

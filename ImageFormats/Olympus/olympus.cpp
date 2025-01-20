@@ -1,4 +1,5 @@
 #include "olympus.h"
+#include "Main/global.h"
 
 /*
     https://exiftool.org/TagNames/Olympus.html

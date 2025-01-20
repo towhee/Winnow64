@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <QObject>
-#include "Main/global.h"
 // #include <turbojpeg.h>
 #include <turbojpeg.h>
 // used on macbookair

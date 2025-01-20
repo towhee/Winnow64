@@ -1,5 +1,6 @@
 #include "inputdlg.h"
 #include "ui_inputdlg.h"
+#include "Main/global.h"
 #include <QDebug>
 
 InputDlg::InputDlg(QString windowTitle,

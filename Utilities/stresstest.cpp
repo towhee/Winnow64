@@ -1,4 +1,5 @@
 #include "stresstest.h"
+#include "Main/global.h"
 
 StressTest::StressTest(QObject *parent, DataModel *dm, BookMarks *bookmarks, FSTree *fsTree)
 {

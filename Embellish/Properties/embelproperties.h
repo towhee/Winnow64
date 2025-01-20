@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <filesystem>
-#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "PropertyEditor/propertyeditor.h"
 #include "Utilities/utilities.h"

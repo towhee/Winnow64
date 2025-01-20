@@ -1,4 +1,5 @@
 #include "sony.h"
+#include "Main/global.h"
 
 Sony::Sony()
 {

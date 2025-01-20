@@ -1,4 +1,5 @@
 #include "propertydelegate.h"
+#include "Main/global.h"
 
 /*
 The property editor has four components:

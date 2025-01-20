@@ -1,4 +1,5 @@
 #include "htmlwindow.h"
+#include "Main/global.h"
 
 HtmlWindow::HtmlWindow(const QString &title,
                        const QString &htmlPath,

@@ -9,7 +9,6 @@
 //#include <iostream>
 //#include <iomanip>
 //#include "Cache/tshash.h"
-#include "Main/global.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/irb.h"

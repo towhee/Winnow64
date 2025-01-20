@@ -1,4 +1,5 @@
 #include "heic.h"
+#include "Main/global.h"
 
 Heic::Heic(/*QFile &file*/)
 {

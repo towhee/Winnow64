@@ -11,6 +11,7 @@
 */
 
 #include "icc.h"
+#include "Main/global.h"
 
 namespace ICC
 {

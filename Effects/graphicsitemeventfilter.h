@@ -2,7 +2,6 @@
 #define GRAPHICSITEMEVENTFILTER_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 class GraphicsItemEventFilter : public QGraphicsItem
 {

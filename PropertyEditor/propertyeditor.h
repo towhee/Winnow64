@@ -2,7 +2,6 @@
 #define PROPERTYEDITOR_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Main/dockwidget.h"  // includes BarBtn
 #include "propertydelegate.h"
 #include "PropertyEditor/propertywidgets.h"

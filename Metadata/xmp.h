@@ -15,7 +15,6 @@
 #include <fstream>
 #include <cstdint>
 
-#include "Main/global.h"
 #include "Utilities/utilities.h"
 
 class Xmp : public QObject

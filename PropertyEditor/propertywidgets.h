@@ -3,7 +3,6 @@
 
 #include <QtWidgets>
 #include <Main/dockwidget.h>
-#include "Main/global.h"
 #include "Main/widgetcss.h"
 
 enum DelegateType

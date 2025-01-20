@@ -1,5 +1,6 @@
 
 #include "iconviewdelegate.h"
+#include "Main/global.h"
 
 /*
 IconViewDelegate Anatomy:

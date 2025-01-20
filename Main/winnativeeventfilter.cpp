@@ -1,4 +1,5 @@
 #include "winnativeeventfilter.h"
+#include "Main/global.h"
 
 WinNativeEventFilter::WinNativeEventFilter(QObject *parent)
     : QObject{parent}

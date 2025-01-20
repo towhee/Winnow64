@@ -2,7 +2,6 @@
 #define UTILITIES_H
 
 #include <QtWidgets>
-//#include "Main/global.h"
 #include "Utilities/inputdlg.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"

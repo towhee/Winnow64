@@ -4,7 +4,6 @@
 #include <QtWidgets>
 #include <QObject>
 #include <QThread>
-#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "File/bookmarks.h"
 #include "File/fstree.h"
