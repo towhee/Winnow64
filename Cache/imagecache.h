@@ -113,7 +113,14 @@ private:
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
+
+    struct CachingStatus {
+        bool isCaching;
+        int decoderId;
+    };
+
     QList<int> toCache;
+    QHash<int,CachingStatus> toCacheStatus;
 
     int key;                    // current image
     int prevKey;                // used to establish direction of travel
@@ -140,6 +147,10 @@ private:
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     int nextToCache(int id);        // find highest priority not cached
+    void toCacheRemove(int sfRow);
+    void toCacheAppend(int sfRow);
+    bool isCaching(int sfRow);
+    int toCacheDecoder(int sfRow);
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
 
