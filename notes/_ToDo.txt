@@ -11,6 +11,9 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
+- Eliminate use of G::currRootFolder
+- Review fillCache logic, make toCache struct with isCaching flag)
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read

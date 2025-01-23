@@ -1932,15 +1932,17 @@ void MW::handleStartupArgs(const QString &args)
             ; //*/
 
         bool useDynamicInsertion = true;
-        // // folder already open
-        if (useDynamicInsertion && fDir == G::currRootFolder) {
+        // folder already open
+        bool folderAlreadyOpen = dm->folderList.contains(fDir);
+        if (useDynamicInsertion && folderAlreadyOpen) {
+            // imageView->currentImageHasChanged = true;
             insertFiles(embellishedPaths);
             // update filter counts
-            buildFilters->recount();
+            // buildFilters->recount();
             //filterChange("MW::handleStartupArgs_remoteEmbellish");
             // select first new embellished image
-            QString fPath = embellishedPaths.at(0);
-            sel->select(fPath);
+            // QString fPath = embellishedPaths.at(0);
+            // sel->select(fPath);
         }
         // open the folder
         else {
@@ -2363,7 +2365,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
         }
         else if (G::useImageView) {
-            if (imageView->loadImage(fPath, "MW::fileSelectionChange")) {
+            if (imageView->loadImage(fPath, false, "MW::fileSelectionChange")) {
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay("MW::fileSelectionChange");
@@ -2450,7 +2452,7 @@ void MW::tryLoadImageAgain(QString fPath)
     if (G::isLogger) G::log("MW::tryLoadImageAgain", fPath);
     QTimer::singleShot(500, [this, fPath]() {
                         if (!imageView->isBusy)
-                            imageView->loadImage(fPath, "MW::tryLoadImageAgain");
+                            imageView->loadImage(fPath, true, "MW::tryLoadImageAgain");
                       });
 }
 
@@ -4176,7 +4178,7 @@ void MW::setDisplayResolution()
         // refresh loupe / compare views to new scale
         if (G::mode == "Loupe") {
             // reload to force complete refresh
-            imageView->loadImage(dm->currentFilePath, "DevicePixelRatioChange");
+            imageView->loadImage(dm->currentFilePath, true, "DevicePixelRatioChange");
         }
         if (G::mode == "Compare") compareImages->zoomTo(imageView->zoom/* / G::actDevicePixelRatio*/);
     }
@@ -5449,42 +5451,72 @@ void MW::openFolder()
     // folderSelectionChange();
 }
 
-void MW::refreshCurrentFolder()
+void MW::refreshDataModel()
 {
 /*
-    Reloads the current folder and returns to the same image.  This is handy when some of the
-    folder images have changed.
+    If there has been any additions or removals of images in the selected folders then
+    reload the folders and reselect the current image.  If the image count has not
+    changed, check if there have been any images modified.  If so, reload the modified
+    images, and if necessary, redisplay the current image.
 */
-    if (G::isLogger) G::log("MW::refreshCurrentFolder");
-    QString src = "MW::refreshCurrentFolder";
+    QString fun = "MW::refreshCurrentFolder";
+    if (G::isLogger) G::log(fun);
+    QString src = "fun";
     isRefreshingDM = true;
 
     // use dm->currentFilePath ??
     refreshCurrentPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
 
-    if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
-        for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
-            QString fPath = dm->modifiedFiles.at(i).filePath();
+    QStringList added;
+    QStringList removed;
+    QStringList modified;
+
+    if (!dm->sourceModified(added, removed, modified)) {
+        G::popUp->showPopup("There have been no changes to any images in the folder.", 2000);
+        return;
+    }
+
+    if (added.count()) {
+        dmInsert(added);
+    }
+
+    if (removed.count()) {
+        dmRemove(removed);
+    }
+
+    if (modified.count()) {
+        foreach (QString fPath, modified) {
+            QFileInfo info = QFileInfo(fPath);
             int dmRow = dm->rowFromPath(fPath);
             if (dmRow == -1) continue;
-            int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+
+            QDateTime t1 = dm->index(dmRow, G::ModifiedColumn).data().toDateTime();
+            QDateTime t2 = info.lastModified();
+            qint64 diff = t1.msecsTo(t2);
+            qDebug().noquote() << fun << "modified"
+                               << "t1 =" << t1
+                               << "t2 =" << t2
+                               << "t2 - t1 =" << diff
+                                  ;
+            continue;
+
             // update file size and modified date
-            dm->updateFileData(dm->modifiedFiles.at(i));
+            dm->updateFileData(info);
 
             // update metadata
-            QString ext = dm->modifiedFiles.at(i).suffix().toLower();
+            QString ext = Utilities::getSuffix(fPath);
             if (metadata->hasMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), dm->instance, true, true, false, true, "MW::refreshCurrentFolder")) {
+                if (metadata->loadImageMetadata(info, dm->instance, true, true, false, true, "MW::refreshCurrentFolder")) {
                     metadata->m.row = dmRow;
                     metadata->m.instance = dm->instance;
-                    dm->addMetadataForItem(metadata->m, "MW::refreshCurrentFolder");
+                    dm->addMetadataForItem(metadata->m, fun);
                 }
             }
 
             // update image cache in case image has changed
             if (icd->imCache.contains(fPath)) icd->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
-                if (imageView->loadImage(fPath, "MW::refreshCurrentFolder")) {
+                if (imageView->loadImage(fPath, true, fun)) {
                     updateClassification();
                 }
             }
@@ -5492,7 +5524,7 @@ void MW::refreshCurrentFolder()
             // update thumbnail in case image has changed
             QImage image;
             QPixmap pm;
-            bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, "MW::refreshCurrentFolder");
+            bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, fun);
             if (thumbLoaded)
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             else
@@ -5503,10 +5535,6 @@ void MW::refreshCurrentFolder()
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
         refreshCurrentAfterReload();
     }
-    // else selectionChange();
-    else  {
-        G::popUp->showPopup("There have been no changes to any images in the folder.", 2000);
-    }
 }
 
 void MW::refreshCurrentAfterReload()
@@ -5516,14 +5544,12 @@ void MW::refreshCurrentAfterReload()
     complete the refresh current folder process by selecting the previously selected thumb.
 */
     if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
-    int dmRow = dm->rowFromPath(refreshCurrentPath);
-    if (dmRow == -1) return;
-    int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+    int sfRow = dm->proxyRowFromPath(refreshCurrentPath);
     /*
     qDebug() << "MW::refreshCurrentAfterReload" << refreshCurrentPath
              << "dmRow =" << dmRow
              << "sfRow =" << sfRow;
-//             */
+                //*/
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
     sel->setCurrentRow(sfRow);

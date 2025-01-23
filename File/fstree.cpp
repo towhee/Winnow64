@@ -291,10 +291,11 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
 CLASS FSTree subclassing QTreeView
 ------------------------------------------------------------------------------*/
 
-FSTree::FSTree(QWidget *parent, Metadata *metadata)
+FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
         : QTreeView(parent), delegate(new HoverDelegate(this))
 {
     if (G::isLogger) G::log("FSTree::FSTree");
+    this->dm = dm;
     this->metadata = metadata;
     fileFilters = new QStringList;
     dir = new QDir();
@@ -1050,7 +1051,9 @@ void FSTree::dropEvent(QDropEvent *event)
     }
 
     const QMimeData *mimeData = event->mimeData();
-    if (!mimeData->hasUrls()) return;
+    if (!mimeData->hasUrls()) {
+        return;
+    }
 
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
 
@@ -1186,24 +1189,31 @@ void FSTree::dropEvent(QDropEvent *event)
             emit deleteFiles(srcPaths);
         }
     }
+
+    if (dm->folderList.contains(dropDir)) {
+        emit refreshDataModel();
+    }
+    event->acceptProposedAction();
+
     // END MIRRORED CODE SECTION
 
-    // if external source
-    if (!event->source()) {
-        refreshModel();
+    // // if external source
+    // if (!event->source()) {
+    //     refreshModel();
+    //     if (dm->folderList.contains(dropDir)) {
+    //         emit refreshDataModel();
+    //     }
+    //     event->acceptProposedAction();
+    // }
+    // else {
+    //     select(G::currRootFolder);
+    // }
 
-        // if the drag is into the current FSTree folder then need to reload
-        // QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
-        if (G::currRootFolder == dropDir) {
-            // QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-            // emit folderSelection(dropDir);
-            select(dropDir);
-        }
-        event->acceptProposedAction();
-    }
-    else {
-        select(G::currRootFolder);
-    }
+    refreshModel();
+    // if (dm->folderList.contains(dropDir)) {
+    //     emit refreshDataModel();
+    // }
+    // event->acceptProposedAction();
 
     /*
     QString fstreeStr = "FSTree";
