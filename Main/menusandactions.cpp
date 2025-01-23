@@ -34,7 +34,7 @@ void MW::createFileActions()
     refreshCurrentAction->setObjectName("refreshFolder");
     refreshCurrentAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshCurrentAction);
-    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshCurrentFolder);
+    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshDataModel);
 
     openUsbAction = new QAction(tr("Open Memory Card..."), this);
     openUsbAction->setObjectName("openUsbFolder");

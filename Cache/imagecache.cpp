@@ -1418,7 +1418,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
                       "row = " + QString::number(cacheKey).leftJustified(5) +
                       "decoder[id]->fPath =" + decoder[id]->fPath;
     log("cacheImage", comment);
-    if (debugCaching)
+    // if (debugCaching)
     {
         QString fun = "ImageCache::cacheImage";
         qDebug().noquote()
@@ -1458,14 +1458,15 @@ void ImageCache::cacheImage(int id, int cacheKey)
     emit refreshViewsOnCacheChange(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // if current image signal ImageView::loadImage
-    // if (decoder[id]->fPath == dm->currentFilePath) {
+    if (decoder[id]->fPath == dm->currentFilePath) {
         // clear "Loading Image..." central msg in setCurrentPosition (not being used)
         // emit centralMsg("");
         // load in ImageView
-        // emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+        emit loadImage(decoder[id]->fPath, true, "ImageCache::cacheImage");
+        qDebug() << src << "replacing current image in imageview" << decoder[id]->fPath;
         // revert central view (req'd? see setCurrentPosition)
         // emit imageCachePrevCentralView();
-    // }
+    }
 
     decoder[id]->status = ImageDecoder::Status::Ready;
     updateStatus("Update all rows", "ImageCache::cacheImage");
@@ -1473,7 +1474,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
 
 void ImageCache::fillCache(int id)
 {
-    /*
+/*
     Read all the image files from the target range and save the QImages in  the
     concurrent image cache hash icd->imCache (see cachedata.h).
 
@@ -1620,7 +1621,7 @@ void ImageCache::fillCache(int id)
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
     }
 
-    if (debugCaching)
+    // if (debugCaching)
     {
         if (cacheKey == -1) {
             QString fun = "ImageCache::fillCache";
@@ -1645,7 +1646,7 @@ void ImageCache::fillCache(int id)
     // returning decoder add decoded QImage to imCache.
     if (cacheKey != -1) {
         if (decoder[id]->status == ImageDecoder::Status::Success) {
-            if (debugCaching)
+            // if (debugCaching)
             {
                 QString fun = "ImageCache::fillCache cache";
                 qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -1672,7 +1673,7 @@ void ImageCache::fillCache(int id)
     bool isCacheKeyOk = isValidKey(toCacheKey);
     bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
 
-    if (debugCaching)
+    // if (debugCaching)
     {
         QString fun = "ImageCache::fillCache dispatch";
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -1690,7 +1691,7 @@ void ImageCache::fillCache(int id)
 
     // decode the next image in the target range
     if (okDecodeNextImage) {
-        if (debugCaching)
+        // if (debugCaching)
         {
             QString fun = "ImageCache::fillCache okDecodeNextImage";
             qDebug().noquote()

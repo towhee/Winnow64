@@ -820,7 +820,7 @@ void MW::createFSTree()
 {
     if (G::isLogger) G::log("MW::createFSTree");
     // loadSettings has not run yet (dependencies, but QSettings has been opened
-    fsTree = new FSTree(this, metadata);
+    fsTree = new FSTree(this, dm, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
@@ -847,6 +847,9 @@ void MW::createFSTree()
 
     // select a folder including modifier keys
     connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
+
+    // refresh datamodel after dragdrop operation
+    connect(fsTree, &FSTree::refreshDataModel, this, &MW::refreshDataModel);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
@@ -889,7 +892,7 @@ void MW::createFSTree()
 void MW::createBookmarks()
 {
     if (G::isLogger) G::log("MW::createBookmarks");
-    bookmarks = new BookMarks(this, metadata, true /*showImageCount*/, combineRawJpg);
+    bookmarks = new BookMarks(this, dm, metadata, true /*showImageCount*/, combineRawJpg);
 
     if (isSettings) {
         settings->beginGroup("Bookmarks");
@@ -906,6 +909,9 @@ void MW::createBookmarks()
     // qDebug() << "END CREATE BOOKMARKS)";
 
     bookmarks->setMaximumWidth(folderMaxWidth);
+
+    // refresh datamodel after dragdrop operation
+    connect(bookmarks, &BookMarks::refreshDataModel, this, &MW::refreshDataModel);
 
     // this works for touchpad tap
     // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange

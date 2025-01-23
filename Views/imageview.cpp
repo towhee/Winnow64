@@ -133,7 +133,7 @@ ImageView::ImageView(QWidget *parent,
     isBusy = false;
 }
 
-bool ImageView::loadImage(QString fPath, QString src)
+bool ImageView::loadImage(QString fPath, bool replace, QString src)
 {
 /*
     All image decoding and loading into memory happens in ImageCache in a separate thread
@@ -160,7 +160,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
          << "isCurrent =" << isCurrent
-         << "currentImageHasChanged =" << currentImageHasChanged
+         << "replace =" << replace
          << " Src:" << src
          << fPath
             ; //*/
@@ -181,10 +181,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     }
 
     // Already displayed
-    if (isCurrent && currentImageHasChanged == false) {
+    if (isCurrent && replace == false) {
         return true;
     }
-    currentImageHasChanged = false;
 
     /*
     qDebug().noquote()

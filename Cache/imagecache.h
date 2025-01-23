@@ -71,9 +71,7 @@ signals:
     // not being used:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
 
-    void loadImage(QString fPath, QString src);
-
-    // IN USE:
+    void loadImage(QString fPath, bool replace, QString src);
     // not sure what this does: connects to MW::imageCachePrevCentralView in setandupdate.cpp
     void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
