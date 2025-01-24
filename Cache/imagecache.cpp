@@ -307,8 +307,7 @@ bool ImageCache::resetInsideTargetRangeCacheState()
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         if (icd->imCache.contains(fPath)) {
             emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
-            toCache.remove(sfRow);
-            // toCacheRemove(sfRow);
+            if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
             continue;
         }
 
@@ -569,7 +568,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
         QString fPathToRemove = pathList.at(i);
         icd->imCache.remove(fPathToRemove);
         int sfRow = dm->proxyRowFromPath(fPathToRemove);
-        if (toCache.contains(sfRow)) toCache.remove(sfRow);
+        if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
     }
 }
 

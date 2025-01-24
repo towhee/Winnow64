@@ -1058,7 +1058,6 @@ void FSTree::dropEvent(QDropEvent *event)
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
 
     // START MIRRORED CODE SECTION
-    // This code section is mirrored in BookMarks::dropEvent.  Make sure to sync any changes.
 
     /* Drag and Drop files:
 
