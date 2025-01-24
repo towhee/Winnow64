@@ -1058,7 +1058,7 @@ void FSTree::dropEvent(QDropEvent *event)
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
 
     // START MIRRORED CODE SECTION
-    // This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any changes.
+    // This code section is mirrored in BookMarks::dropEvent.::dropEvent.  Make sure to sync any changes.
 
     /* Drag and Drop files:
 
@@ -1197,30 +1197,7 @@ void FSTree::dropEvent(QDropEvent *event)
 
     // END MIRRORED CODE SECTION
 
-    // // if external source
-    // if (!event->source()) {
-    //     refreshModel();
-    //     if (dm->folderList.contains(dropDir)) {
-    //         emit refreshDataModel();
-    //     }
-    //     event->acceptProposedAction();
-    // }
-    // else {
-    //     select(G::currRootFolder);
-    // }
-
     refreshModel();
-    // if (dm->folderList.contains(dropDir)) {
-    //     emit refreshDataModel();
-    // }
-    // event->acceptProposedAction();
-
-    /*
-    QString fstreeStr = "FSTree";
-    bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
-    emit dropOp(event->keyboardModifiers(), dirOp, event->mimeData()->urls().at(0).toLocalFile());
-    setCurrentIndex(dndOrigSelection);
-    */
 }
 
 void FSTree::debugSelectedFolders(QString msg)
