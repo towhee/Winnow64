@@ -2273,12 +2273,13 @@ void DataModel::rebuildRowFromPathHash()
     }
 }
 
-bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
+bool DataModel::hasFolderChanged()
 {
 /*
-    Called from MW::refreshCurrentFolder. Determine if the eligible file count has
-    changed and/or any images have been modified. If a file has been modified since the
-    datamodel was loaded then it is added to the modifiedFiles list.
+    Called from MW::refreshCurrentFolder.  The list of eligible files is read and compared to
+    the datamodel.  If the count has changed then return false.  If the count has not changed
+    compare the last modified datetime for each file.  If a file has been modified since the
+    datamodel was loaded then it is added to the modifiedFiles list and return false.
 */
     if (G::isLogger) G::log("DataModel::hasFolderChanged");
     // if (isDebug)
@@ -2287,48 +2288,44 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
                  << folderList;
 
     bool hasChanged = false;
-    QStringList srcImageFiles;
+    modifiedFiles.clear();
+    int currentEligibleFileCount = 0;
 
-    // added
+    // list of all eligible files in datamodel folderList
+    // QList<QFileInfo> fileInfoList2;
     foreach(QString folderPath, folderList) {
-        // populate srcImageFiles
         QDir d;
         d.setPath(folderPath);
         d.setNameFilters(*fileFilters);
         d.setFilter(QDir::Files);
-        foreach(QFileInfo info, d.entryInfoList()) {
-            QString fPath = info.filePath();
-            srcImageFiles << fPath;
-            // in datamodel?
-            if (!fPathRow.contains(fPath)) {
-                added << fPath;
-            }
-        }
+        currentEligibleFileCount += d.entryInfoList().size();
+        // for (int i = 0; i < d.entryInfoList().size(); ++i) {
+        // }
     }
 
-    // removed
-    for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
-        QString fPath = i.key();
-        if (!srcImageFiles.contains(fPath)) {
-            removed << fPath;
-        }
-    }
+    // check eligible file counts match
+    int oldCount = rowCount();
+    // int newCount = fileInfoList2.count();
+    if (currentEligibleFileCount < oldCount) return true;
 
-    // modified
+    // check eligible file last modified dates match
+    bool isFileModification = false;
     for (int i = 0; i < rowCount(); ++i) {
         QDateTime t1 = index(i, G::ModifiedColumn).data().toDateTime();
         // get current
-        QString fPath = index(i, G::PathColumn).data(G::PathRole).toString();
-        QFileInfo info = QFileInfo(fPath);
+        QString path = index(i, G::PathColumn).data(G::PathRole).toString();
+        QFileInfo info = QFileInfo(path);
         QDateTime t2 = info.lastModified();
-        // many file formats to not include ms in datetime
-        if (t1.msecsTo(t2) > 1000) {
-            modified << fPath;
+        if (t1 != t2) {
+            hasChanged = true;
+            isFileModification = true;
+            modifiedFiles.append(info);
+            /*
+            qDebug() << "DataModel::hasFolderChanged" << fileInfoList2.at(i).fileName()
+                     << "modified at" << t2;
+                     //*/
         }
     }
-
-    if (added.count() || removed.count() || modified.count()) hasChanged = true;
-
     return hasChanged;
 }
 

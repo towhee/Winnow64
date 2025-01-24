@@ -189,16 +189,36 @@ void MW::saveAsFile()
     saveAsDlg->exec();
 }
 
-void MW::dmInsert(QStringList pathList)
+void MW::insertFiles(QStringList fPaths)
 {
-    QString src = "MW::dmInsert";
-    foreach(QString fPath, pathList) {
+/*
+    Replace or insert a new image file into the datamodel.
+
+    After insertion, the call function should select row: sel->select(fPath);
+    This will invoke MetaRead which will load the metadata, icon and imageCache.
+*/
+    if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
+
+    if (fPaths.isEmpty()) {
+        QString msg = "No files to insert, fPaths is empty.";
+        G::issue("Warning", msg, "MW::insertFiles");
+        return;
+    }
+
+    QString fPath;
+    QList<int> insertedRows;
+    int dmRow;
+    QString src = "MW::insertFiles";
+
+    // must sort fPaths before insertion in case multiple items are appended to end of datamodel
+    // fPaths.sort(Qt::CaseInsensitive);
+
+    foreach(fPath, fPaths) {
         // replace existing image with the same name
         if (dm->isPath(fPath)) {
-            qDebug() << src << "replace" << fPath;
-            int dmRow = dm->rowFromPath(fPath);
+            dmRow = dm->rowFromPath(fPath);
             int sfRow = dm->proxyRowFromPath(fPath);
-            // insertedRows << dmRow;
+            insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);
             dm->setIcon(dmIdx, QPixmap(), false, dm->instance, "MW::insert");
@@ -217,40 +237,10 @@ void MW::dmInsert(QStringList pathList)
         }
         // insert a new image
         else {
-            qDebug() << src << "insert" << fPath;
-            dm->insert(fPath);
+            insertedRows << dm->insert(fPath);
             ImageMetadata m = dm->imMetadata(fPath, false);
         }
     }
-    // selection triggers thumbnail and imagecache updates
-    // imageView->currentImageHasChanged = true;
-    sel->select(dm->currentSfIdx);
-}
-
-void MW::insertFiles(QStringList pathList)
-{
-/*
-    Replace or insert a new image file into the datamodel.
-
-    After insertion, the call function should select row: sel->select(fPath);
-    This will invoke MetaRead which will load the metadata, icon and imageCache.
-*/
-    if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
-
-    if (pathList.isEmpty()) {
-        QString msg = "No files to insert, fPaths is empty.";
-        G::issue("Warning", msg, "MW::insertFiles");
-        return;
-    }
-
-    QString fPath;
-    QList<int> insertedRows;
-    int dmRow;
-    QString src = "MW::insertFiles";
-
-    // must sort fPaths before insertion in case multiple items are appended to end of datamodel
-    // fPaths.sort(Qt::CaseInsensitive);
-    dmInsert(pathList);
 }
 
 void MW::deleteSelectedFiles()
@@ -318,47 +308,6 @@ void MW::deleteSelectedFiles()
     }
 
     deleteFiles(paths);
-}
-
-void MW::dmRemove(QStringList pathList)
-{
-    /*
-    Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
-    is the same as dm: no filtering.  We save the filter, clear filters, remove all the
-    datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
-    the rows, updates dm->fPathRow.
-    */
-    filters->save();
-    clearAllFilters();
-    for (int i = 0; i < pathList.count(); ++i) {
-        QString fPath = pathList.at(i);
-        dm->remove(fPath);
-    }
-
-    // cleanup G::rowsWithIcon
-    metaReadThread->cleanupIcons();
-
-    // remove deleted files from imageCache
-    imageCache->removeFromCache(pathList);
-
-    G::ignoreScrollSignal = false;
-
-    // rebuild filters
-    buildFilters->build();
-    filters->restore();
-
-    // // update current index
-    // int sfRow;
-    // if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
-    // sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
-
-    // QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    // sel->select(sfIdx, Qt::NoModifier,"MW::deleteFiles");
-
-    /* Just in case deletion was from a bookmark folder then force update for image count.
-       This is required if fsTree is hidden, and consequently, is not receiving signals.
-       As a result, fsTree does not update its data and does not signal back to Bookmarks. */
-    bookmarks->updateBookmarks();
 }
 
 void MW::deleteFiles(QStringList paths)
@@ -441,31 +390,30 @@ void MW::deleteFiles(QStringList paths)
         return;
     }
 
-    dmRemove(sldm);
-    // /*
-    // Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
-    // is the same as dm: no filtering.  We save the filter, clear filters, remove all the
-    // datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
-    // the rows, updates dm->fPathRow.
-    // */
-    // filters->save();
-    // clearAllFilters();
-    // for (int i = 0; i < sldm.count(); ++i) {
-    //     QString fPath = sldm.at(i);
-    //     dm->remove(fPath);
-    // }
+    /*
+    Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
+    is the same as dm: no filtering.  We save the filter, clear filters, remove all the
+    datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
+    the rows, updates dm->fPathRow.
+    */
+    filters->save();
+    clearAllFilters();
+    for (int i = 0; i < sldm.count(); ++i) {
+        QString fPath = sldm.at(i);
+        dm->remove(fPath);
+    }
 
-    // // cleanup G::rowsWithIcon
-    // metaReadThread->cleanupIcons();
+    // cleanup G::rowsWithIcon
+    metaReadThread->cleanupIcons();
 
-    // // remove deleted files from imageCache
-    // imageCache->removeFromCache(sldm);
+    // remove deleted files from imageCache
+    imageCache->removeFromCache(sldm);
 
-    // G::ignoreScrollSignal = false;
+    G::ignoreScrollSignal = false;
 
-    // // rebuild filters
-    // buildFilters->build();
-    // filters->restore();
+    // rebuild filters
+    buildFilters->build();
+    filters->restore();
 
     // update current index
     int sfRow;
@@ -475,10 +423,10 @@ void MW::deleteFiles(QStringList paths)
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     sel->select(sfIdx, Qt::NoModifier,"MW::deleteFiles");
 
-    // /* Just in case deletion was from a bookmark folder then force update for image count.
-    //    This is required if fsTree is hidden, and consequently, is not receiving signals.
-    //    As a result, fsTree does not update its data and does not signal back to Bookmarks. */
-    // bookmarks->updateBookmarks();
+    /* Just in case deletion was from a bookmark folder then force update for image count.
+       This is required if fsTree is hidden, and consequently, is not receiving signals.
+       As a result, fsTree does not update its data and does not signal back to Bookmarks. */
+    bookmarks->updateBookmarks();
 }
 
 void MW::currentFolderDeletedExternally(QString path)

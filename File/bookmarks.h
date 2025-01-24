@@ -2,7 +2,6 @@
 #define BOOKMARKS_H
 
 #include <QtWidgets>
-#include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "File/fstree.h"
 #include "HoverDelegate.h"
@@ -12,8 +11,7 @@ class BookMarks : public QTreeWidget
 	Q_OBJECT
 
 public:
-    BookMarks(QWidget *parent, DataModel *dm, Metadata *metadata,
-              bool showImageCount, bool &combineRawJpg);
+    BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount, bool &combineRawJpg);
     void reloadBookmarks();
     void saveBookmarks(QSettings *setting);
     void updateCount();
@@ -35,7 +33,6 @@ private:
     void resizeColumns();
 
 	QModelIndex dndOrigSelection;
-    DataModel *dm;
     Metadata *metadata;
     HoverDelegate *delegate;
     QDir *dir;
@@ -64,7 +61,6 @@ signals:
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void deleteFiles(QStringList srcPaths);
     void refreshFSTree();
-    void refreshDataModel();
     void folderSelection(QString dPath, QString modifier, QString src);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);

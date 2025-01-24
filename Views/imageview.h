@@ -84,7 +84,7 @@ public:
     QString diagnostics();
 
 public slots:
-    bool loadImage(QString fPath, bool replace = false, QString src = "");
+    bool loadImage(QString fPath, QString src = "");
     void monitorCursorState();
     void copyImage();
     void thumbClick(float xPct, float yPct);

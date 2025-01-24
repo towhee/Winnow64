@@ -11,8 +11,6 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- Changing minimum cache size from 8 to 32GB crashed
-- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Eliminate use of G::currRootFolder
 - Review fillCache logic, make toCache struct with isCaching flag)
 - If filtering and change filter item for all iconview does not update
@@ -137,6 +135,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Changing minimum cache size from 8 to 32GB crashed
+- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Include cache progress in status bar again
 - Refresh tiff full image when toggle color management
 - Fix IssueLog initialization

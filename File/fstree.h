@@ -1,6 +1,5 @@
 #include <QtWidgets>
 #include <QHash>
-#include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
 #include "ui_foldershelp.h"
@@ -57,7 +56,7 @@ class FSTree : public QTreeView
 	Q_OBJECT
 
 public:
-    FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
+    FSTree(QWidget *parent, Metadata *metadata);
     void createModel();
     void setShowImageCount(bool showImageCount);
     int imageCount(QString path);
@@ -70,7 +69,6 @@ public:
 	QModelIndex getCurrentIndex();
     void scrollToCurrent();
     QString selectSrc = "";
-    QStringList getSelectedFolderPaths() const;
 
     bool combineRawJpg;
     QString hoverFolderName;
@@ -115,7 +113,6 @@ signals:
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
     void abortLoadDataModel();
-    void refreshDataModel();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);
@@ -129,6 +126,7 @@ signals:
 private:
     void selectRecursively(QString folderPath, bool toggle = false);
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
+    QStringList getSelectedFolderPaths() const;
     QSet<QPersistentModelIndex> nodesToExpand;
     QElapsedTimer expansionTimer;
     bool eventLoopRunning;
@@ -138,7 +136,6 @@ private:
     QFileSystemModel fileSystemModel;
     QItemSelectionModel* treeSelectionModel;
     Metadata *metadata;
-    DataModel *dm;
     HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;

@@ -1515,15 +1515,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
     emit refreshViewsOnCacheChange(decoder[id]->fPath, true, "ImageCache::cacheImage");
 
     // if current image signal ImageView::loadImage
-    if (decoder[id]->fPath == dm->currentFilePath) {
+    // if (decoder[id]->fPath == dm->currentFilePath) {
         // clear "Loading Image..." central msg in setCurrentPosition (not being used)
         // emit centralMsg("");
         // load in ImageView
-        emit loadImage(decoder[id]->fPath, true, "ImageCache::cacheImage");
-        // qDebug() << src << "replacing current image in imageview" << decoder[id]->fPath;
+        emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
         // revert central view (req'd? see setCurrentPosition)
         // emit imageCachePrevCentralView();
-    }
+    // }
 
     decoder[id]->status = ImageDecoder::Status::Ready;
     updateStatus("Update all rows", "ImageCache::cacheImage");
@@ -1531,7 +1530,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
 
 void ImageCache::fillCache(int id)
 {
-/*
+    /*
     Read all the image files from the target range and save the QImages in  the
     concurrent image cache hash icd->imCache (see cachedata.h).
 
@@ -1724,11 +1723,11 @@ void ImageCache::fillCache(int id)
     }
 
     // get next image to cache
-    // int toCacheKey = nextToCache(id);
-    // bool isNextToCache = toCacheKey != -1;
-    // bool isCacheUpToDate = toCache.isEmpty();
-    // bool isCacheKeyOk = isValidKey(toCacheKey);
-    // bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
+    int toCacheKey = nextToCache(id);
+    bool isNextToCache = toCacheKey != -1;
+    bool isCacheUpToDate = toCache.isEmpty();
+    bool isCacheKeyOk = isValidKey(toCacheKey);
+    bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
 
     if (debugCaching)
     {
@@ -1747,7 +1746,8 @@ void ImageCache::fillCache(int id)
     }
 
     // decode the next image in the target range
-    if (!abort && !toCache.isEmpty()) {
+    // if (!abort && !toCache.isEmpty()) {
+    if (okDecodeNextImage) {
         if (debugCaching)
         {
             QString fun = "ImageCache::fillCache okDecodeNextImage";

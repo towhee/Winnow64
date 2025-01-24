@@ -40,16 +40,13 @@ from the windows explorer or mac finder to be added as a bookmark.
 As an abbreviation in the program UI bookmarks are called favs.
 */
 
-BookMarks::BookMarks(QWidget *parent, DataModel *dm,
-                     Metadata *metadata,
-                     bool showImageCount,
+BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
                      bool &combineRawJpg)
                    : QTreeWidget(parent),
                      combineRawJpg(combineRawJpg),
                      delegate(new HoverDelegate(this))
 {
     if (G::isLogger) G::log("BookMarks::BookMarks");
-    this->dm = dm;
     this->metadata = metadata;
     this->showImageCount = showImageCount;
     viewport()->setObjectName("bookmarksViewPort");
@@ -577,12 +574,6 @@ void BookMarks::dropEvent(QDropEvent *event)
             emit deleteFiles(srcPaths);
         }
     }
-
-    if (dm->folderList.contains(dropDir)) {
-        emit refreshDataModel();
-    }
-    event->acceptProposedAction();
-
     // END MIRRORED CODE SECTION
 
     if (G::currRootFolder == dropDir) {

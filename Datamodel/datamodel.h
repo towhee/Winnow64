@@ -55,7 +55,7 @@ public:
     bool refreshMetadataForItem(int sfRow, int instance);
     void clearDataModel();
     void newInstance();
-    bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
+    bool hasFolderChanged();
     bool isQueueEmpty();
     bool contains(QString &path);
     void find(QString text);
@@ -154,7 +154,7 @@ public:
     int buildFiltersMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
     QElapsedTimer buildFiltersTimer;
 
-    // QList<QFileInfo> modifiedFiles;     // used by MW::refreshCurrentFolder
+    QList<QFileInfo> modifiedFiles;     // used by MW::refreshCurrentFolder
 
     /* errors are tracked by image (datamodel row) or general errors if not related to a
        specific image */

@@ -675,7 +675,7 @@ private slots:
     void reportState(QString title);
 
     void openFolder();
-    void refreshDataModel();
+    void refreshCurrentFolder();
     void openUsbFolder();
     void saveAsFile();
     void revealWinnets();
@@ -689,6 +689,21 @@ private slots:
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
+    // void invokeWorkspaceFromAction(QAction *workAction);
+    // void invokeWorkspace(const WorkspaceData &w, bool restore = true);
+    // void invokeRecentFolder(QAction *recentFolderActions);
+    // void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
+    // void snapshotWorkspace(WorkspaceData &wsd);
+    // void manageWorkspaces();
+    // void deleteWorkspace(int n);
+    // void renameWorkspace(int n, QString name);
+    // void reassignWorkspace(int n);
+    // void defaultWorkspace();
+    // QString reportWorkspaces();
+    // void reportWorkspaceNum(int n);
+    // void reportWorkspace(WorkspaceData &ws, QString src = "");
+    // void loadWorkspaces();
+    // void saveWorkspaces();
 
     void help();
     void helpShortcuts();
@@ -1309,9 +1324,7 @@ private:
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
     void renameSelectedFiles();
-    void dmInsert(QStringList pathList);
     void insertFiles(QStringList fPaths);
-    void dmRemove(QStringList pathList);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();
