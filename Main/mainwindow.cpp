@@ -2374,8 +2374,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             else {
                 if (!imageView->isFirstImageNewInstance) {
                     // int row = dm->proxyRowFromPath(fPath);
-                    QString msg = "imageView->loadImage failed.";
-                    qDebug() << "MW::fileSelectionChange" << msg;
+                    // QString msg = "imageView->loadImage failed.";
+                    // qWarning() << "MW::fileSelectionChange" << msg;
                     // G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
                 }
             }
