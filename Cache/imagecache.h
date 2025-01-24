@@ -139,7 +139,7 @@ private:
 
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
-    void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
+    void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     void updateToCacheTargets();
     bool resetInsideTargetRangeCacheState(); // Set IsCaching = false within current target range
     void resetOutsideTargetRangeCacheState();// define start and end key in the target range to cache
