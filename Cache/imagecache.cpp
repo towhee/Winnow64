@@ -275,7 +275,7 @@ bool ImageCache::resetInsideTargetRangeCacheState()
     isCaching and cached states orphaned.  Reset orphan cached state to false in
     the target range.
 
-    All decoders must be finished before calling this function in order to reeset
+    All decoders must be finished before calling this function in order to reset
     the isCaching and isCached flags.
 */
     QString src = "ImageCache::resetCacheStateInTargetRange";
@@ -315,7 +315,8 @@ bool ImageCache::resetInsideTargetRangeCacheState()
             emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
             emit setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
                            ImageDecoder::Status::Ready, instance, src);
-            if (!toCache.contains(sfRow)) toCache.append(sfRow);
+            if (!toCache.contains(sfRow)) toCacheAppend(sfRow);
+            // if (!toCache.contains(sfRow)) toCache.append(sfRow);
         }
     }
     return true;
@@ -477,7 +478,8 @@ void ImageCache::setTargetRange(int key)
                     QString fPath = dm->sf->index(aheadPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
                         if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
-                            toCache.append(aheadPos);
+                            toCacheAppend(aheadPos);
+                            // toCache.append(aheadPos);
                         }
                         isForward ? targetLast = aheadPos : targetFirst = aheadPos;
                         if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
@@ -498,7 +500,8 @@ void ImageCache::setTargetRange(int key)
                     QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
                         if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
-                            toCache.append(behindPos);
+                            toCacheAppend(behindPos);
+                            // toCache.append(behindPos);
                         }
                         isForward ? targetFirst = behindPos : targetLast = behindPos;
                         if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
@@ -579,6 +582,38 @@ void ImageCache::rename(QString oldPath, QString newPath)
         icd->imCache.insert(newPath, image);
     }
     // what about priorityList? rgh
+}
+
+void ImageCache::toCacheAppend(int sfRow)
+{
+    log("toCacheAppend", "sfRow = " + QString::number(sfRow));
+    toCache.append(sfRow);
+    toCacheStatus.insert(sfRow, Status::NotCached);
+}
+
+void ImageCache::toCacheRemove(int sfRow)
+{
+    log("toCacheRemove", "sfRow = " + QString::number(sfRow));
+    if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
+    if (toCacheStatus.contains(sfRow)) toCacheStatus.remove(sfRow);
+}
+
+bool ImageCache::isCaching(int sfRow)
+{
+    log("isCaching", "sfRow = " + QString::number(sfRow));
+    if (toCacheStatus.contains(sfRow))
+        return toCacheStatus[sfRow] == Status::Caching;
+    else
+        return false;
+}
+
+int ImageCache::toCacheDecoder(int sfRow)
+{
+    log("toCacheDecoder", "sfRow = " + QString::number(sfRow));
+    // if (toCacheStatus.contains(sfRow))
+    //     return toCacheStatus[sfRow].decoderId;
+    // else
+        return -1;
 }
 
 int ImageCache::nextToCache(int id)
@@ -1368,6 +1403,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     }
 
     // set isCaching
+    if (toCacheStatus.contains(sfRow)) toCacheStatus[sfRow] = Status::Caching;
     emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
     emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), id, instance, src);
     int attempts = dm->sf->index(sfRow, G::AttemptsColumn).data().toInt();
@@ -1444,8 +1480,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
     // cache the image
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
 
-    // remove from toCache
-    if (toCache.contains(cacheKey)) toCache.remove(toCache.indexOf(cacheKey));
+    // change toCacheStatus to Cached
+    if (toCacheStatus.contains(cacheKey)) toCacheStatus[cacheKey] = Status::Cached;
+    // if (toCache.contains(cacheKey)) toCache.remove(toCache.indexOf(cacheKey));
 
     // reset caching and cache flags
     emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
