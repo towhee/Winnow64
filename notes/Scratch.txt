@@ -1,222 +1,246 @@
-
-=====================================================================  Metadata Diagnostics for Current Image  =====================================================================
-
-File name = /Users/roryhill/Pictures/_TIFF_Test/2024-10-08_0278 Focus Stack.tif
-
-File byte order = Little Endian II
-
---------------------------------------------------------  IFD0  --------------------------------------------------------
-IFDOffset  Hex: 8   Dec: 8   Tag count: 24   Little Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0        10         A    256   100        3         1        5184   ImageWidth
-  1        22        16    257   101        3         1        3888   ImageHeight
-  2        34        22    258   102        3         3         302   BitsPerSample
-  3        46        2E    259   103        3         1           1   Compression
-  4        58        3A    262   106        3         1           2   PhotometricInterpretation
-  5        70        46    271   10F        2        21         308   Make
-  6        82        52    272   110        2         5         330   Model
-  7        94        5E    273   111        4       486         336   StripOffsets
-  8       106        6A    277   115        3         1           3   SamplesPerPixel
-  9       118        76    278   116        3         1           8   RowsPerStrip
- 10       130        82    279   117        4       486        2280   StripByteCounts
- 11       142        8E    282   11A        5         1        4224   XResolution
- 12       154        9A    283   11B        5         1        4232   YResolution
- 13       166        A6    296   128        3         1           2   ResolutionUnit
- 14       178        B2    305   131        2        53        4240   Software
- 15       190        BE    306   132        2        20        4294   ModifyDate
- 16       202        CA    315   13B        2        10        4314   Artist
- 17       214        D6    339   153        3         3        4324   SampleFormat
- 18       226        E2    700   2BC        1     12669        4330   ApplicationNotes / XMP
- 19       238        EE  33432  8298        2        15       17000   Copyright
- 20       250        FA  33723  83BB        4        52       17016   IPTC-NAA
- 21       262       106  34377  8649        7        14       17224   PhotoshopSettings
- 22       274       112  34665  8769        4         1       18178   ExifIFDOffset
- 23       286       11E  34675  8773        7       940       17238   ICC_Profile
-          298       12A    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
-Decode TIFF parameter values:
-1st StripOffset          18858
-1st StripByteCount       248832
-BitsPerSample            16
-PhotometricInterpation   2
-SamplesPerPixel          3
-RowsPerStrip             8
-Compression code         1
-Compression type         None
-PlanarConfiguration      1
-Predictor                0
-
---------------------------------------------------------  IRB  --------------------------------------------------------
-Offset        IRB Id   (1036 = embedded jpg thumbnail)
-17224           1034
-
-------------------------------------------------------  IFD Exif  ------------------------------------------------------
-IFDOffset  Hex: 4702   Dec: 18178   Tag count: 39   Little Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0     18180      4704  33434  829A        5         1       18652   ExposureTime
-  1     18192      4710  33437  829D        5         1       18660   FNumber
-  2     18204      471C  34850  8822        3         1           1   ExposureProgram
-  3     18216      4728  34855  8827        3         1         200   ISO
-  4     18228      4734  34864  8830        3         1           1   SensitivityType
-  5     18240      4740  34865  8831        4         1         200   StandardOutputSensitivity
-  6     18252      474C  36864  9000        7         4   825438768   ExifVersion
-  7     18264      4758  36867  9003        2        20       18668   DateTimeOriginal
-  8     18276      4764  36868  9004        2        20       18688   CreateDate
-  9     18288      4770  37121  9101        7         4      197121   ComponentsConfiguration
- 10     18300      477C  37377  9201       10         1       18708   ShutterSpeedValue
- 11     18312      4788  37378  9202        5         1       18716   ApertureValue
- 12     18324      4794  37380  9204       10         1       18724   ExposureCompensation
- 13     18336      47A0  37381  9205        5         1       18732   MaxApertureValue
- 14     18348      47AC  37383  9207        3         1           5   MeteringMode
- 15     18360      47B8  37384  9208        3         1           0   LightSource
- 16     18372      47C4  37385  9209        3         1          16   Flash
- 17     18384      47D0  37386  920A        5         1       18740   FocalLength
- 18     18396      47DC  40960  A000        7         4   808464688   FlashpixVersion
- 19     18408      47E8  40961  A001        3         1       65535   ColorSpace
- 20     18420      47F4  41486  A20E        5         1       18748   FocalPlaneXResolution
- 21     18432      4800  41487  A20F        5         1       18756   FocalPlaneYResolution
- 22     18444      480C  41488  A210        3         1           3   FocalPlaneResolutionUnit
- 23     18456      4818  41728  A300        7         1           3   FileSource
- 24     18468      4824  41730  A302        7         8       18764   CFAPattern
- 25     18480      4830  41985  A401        3         1           0   CustomRendered
- 26     18492      483C  41986  A402        3         1           1   ExposureMode
- 27     18504      4848  41987  A403        3         1           0   WhiteBalance
- 28     18516      4854  41988  A404        5         1       18772   DigitalZoomRatio
- 29     18528      4860  41989  A405        3         1         120   FocalLengthIn35mmFormat
- 30     18540      486C  41990  A406        3         1           0   SceneCaptureType
- 31     18552      4878  41991  A407        3         1           0   GainControl
- 32     18564      4884  41992  A408        3         1           0   Contrast
- 33     18576      4890  41993  A409        3         1           0   Saturation
- 34     18588      489C  41994  A40A        3         1           0   Sharpness
- 35     18600      48A8  42033  A431        2        10       18780   SerialNumber
- 36     18612      48B4  42034  A432        5         4       18790   LensInfo
- 37     18624      48C0  42036  A434        2        26       18822   LensModel
- 38     18636      48CC  42037  A435        2        10       18848   LensSerialNumber
-        18648      48D8    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
---------------------------------------------------  Winnow datamodel  --------------------------------------------------
-fPath ................... /Users/roryhill/Pictures/_TIFF_Test/2024-10-08_0278 Focus Stack.tif
-fName ................... 2024-10-08_0278 Focus Stack.tif
-type .................... TIF
-video ................... false
-size .................... 120951210
-createdDate ............. 2024-10-08T11:58:48.000
-modifiedDate ............ 2024-10-08T16:47:36.000
-year .................... 2024
-day ..................... 2024-10-08
-
-pick .................... true
-ingested ................ false
-metadataLoaded .......... true
-missingEmbeddedThumb .... true
-isSearch ................ false
-
-width ................... 5184
-height .................. 3888
-widthPreview ............ 5184
-heightPreview ........... 3888
-dimensions .............. 5184x3888
-megapixels .............. 20.15999984741211
-loadMsecPerMp ........... 0
-aspectRatio ............. 1.3300000429153442
-orientation ............. 1
-orientationOffset ....... 0
-rotationDegrees ......... 0
-
-make .................... OM Digital Solutions
-model ................... OM-1
-exposureTime ............ 1/30 sec
-aperture ................ f/2.8
-ISO ..................... 200
-exposureCompensation .... 0.0 EV
-focalLength ............. 60mm
-lens .................... OLYMPUS M.60mm F2.8 Macro
-shootingInfo ............ OM-1  60mm  1/30 sec at f/2.8, ISO 200
-gpsCoord ................
-keywords ................
-duration ................
-cameraSN ................
-lensSN ..................
-shutterCount ............ 0
-nikonLensCode ...........
-
-title ...................
-_title ..................
-creator ................. Rory Hill
-_creator ................ Rory Hill
-copyright ...............
-_copyright ..............
-email ...................
-_email ..................
-url .....................
-_url ....................
-label ...................
-_label ..................
-rating ..................
-_rating .................
-
-offsetFull .............. 8
-lengthFull .............. 0
-offsetThumb ............. 8
-lengthThumb ............. 0
-samplesPerPixel ......... 3
-isBigEndian ............. false
-ifd0Offset .............. 8
-isXmp ................... true
-xmpSegmentOffset ........ 4330
-xmpSegmentLength ........ 12669
-iccSegmentOffset ........ 17238
-iccSegmentLength ........ 940
-iccSpace ................ RGB
-
-
-=======================================  Metadata Diagnostics for Current Image  =======================================
-
-File name = /Users/roryhill/Pictures/_TIFF_Test/None_RGBRGB_MAC_NoPyrmid_16bit.tif
-
-File byte order = Big Endian MM
-
---------------------------------------------------------  IFD0  --------------------------------------------------------
-IFDOffset  Hex: 8   Dec: 8   Tag count: 21   Big Endian
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0        10         A    254    FE        4         1           0   NewSubfileType
-  1        22        16    256   100        3         1        1024   ImageWidth
-  2        34        22    257   101        3         1         768   ImageHeight
-  3        46        2E    258   102        3         3         266   BitsPerSample
-  4        58        3A    259   103        3         1           1   Compression
-  5        70        46    262   106        3         1           2   PhotometricInterpretation
-  6        82        52    273   111        4         1       24384   StripOffsets
-  7        94        5E    274   112        3         1           1   Orientation
-  8       106        6A    277   115        3         1           3   SamplesPerPixel
-  9       118        76    278   116        3         1         768   RowsPerStrip
- 10       130        82    279   117        4         1     4718592   StripByteCounts
- 11       142        8E    282   11A        5         1         272   XResolution
- 12       154        9A    283   11B        5         1         280   YResolution
- 13       166        A6    284   11C        3         1           1   PlanarConfiguration
- 14       178        B2    296   128        3         1           2   ResolutionUnit
- 15       190        BE    305   131        2        33         288   Software
- 16       202        CA    306   132        2        20         322   ModifyDate
- 17       214        D6    700   2BC        1     16761         342   ApplicationNotes / XMP
- 18       226        E2  33723  83BB        7        15       17104   IPTC-NAA
- 19       238        EE  34377  8649        1      7264       17120   PhotoshopSettings
- 20       250        FA  34665  8769        4         1     4742976   ExifIFDOffset
-          262       106    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
-Decode TIFF parameter values:
-1st StripOffset          24384
-1st StripByteCount       4718592
-BitsPerSample            16
-PhotometricInterpation   2
-SamplesPerPixel          3
-RowsPerStrip             768
-Compression              1
-PlanarConfiguration      1
-Predictor                0
-
-
-
-
-
-
-
-
+DATAMODEL OPTION
+MW::traverseFolderStressTest randomChangeDirection = false
+PopUp::showPopup "Press <font color=\"red\"><b>ESC</b></font> to stop stress test" 0
+ 24,892,022 cacheImage                                         decoder 12 row = 165  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09309.ARW
+      2,974 cacheImage                                         decoder 1  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+     28,036 cacheImage                                         decoder 13 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      3,488 cacheImage                                         decoder 7  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,237 cacheImage                                         decoder 18 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,252 cacheImage                                         decoder 15 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,544 cacheImage                                         decoder 9  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,540 cacheImage                                         decoder 12 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      1,877 cacheImage                                         decoder 2  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      8,216 cacheImage                                         decoder 8  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,890 cacheImage                                         decoder 19 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      1,794 cacheImage                                         decoder 4  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      2,401 cacheImage                                         decoder 16 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      1,664 cacheImage                                         decoder 6  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      1,845 cacheImage                                         decoder 3  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+      1,680 cacheImage                                         decoder 14 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+    605,763 cacheImage                                         decoder 11 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
+     26,578 cacheImage                                         decoder 13 row = 170  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09314.ARW
+      2,765 cacheImage                                         decoder 5  row = 171  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09315.ARW
+      1,713 cacheImage                                         decoder 9  row = 175  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09319.ARW
+      1,976 cacheImage                                         decoder 15 row = 174  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09318.ARW
+     10,543 cacheImage                                         decoder 0  row = 171  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09315.ARW
+      2,611 cacheImage                                         decoder 18 row = 173  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09317.ARW
+     11,092 cacheImage                                         decoder 7  row = 172  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09316.ARW
+     33,342 cacheImage                                         decoder 12 row = 176  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09320.ARW
+     12,340 cacheImage                                         decoder 2  row = 177  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09321.ARW
+     52,238 cacheImage                                         decoder 6  row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
+      7,992 cacheImage                                         decoder 3  row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
+     11,024 cacheImage                                         decoder 11 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
+     32,853 cacheImage                                         decoder 4  row = 180  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09324.ARW
+     25,659 cacheImage                                         decoder 17 row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
+     10,039 cacheImage                                         decoder 10 row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
+     46,587 cacheImage                                         decoder 16 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
+    417,139 cacheImage                                         decoder 14 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
+      8,484 cacheImage                                         decoder 1  row = 169  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09313.ARW
+      6,520 cacheImage                                         decoder 9  row = 185  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09329.ARW
+      5,375 cacheImage                                         decoder 0  row = 187  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09331.ARW
+      2,366 cacheImage                                         decoder 13 row = 183  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09327.ARW
+     25,129 cacheImage                                         decoder 5  row = 184  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09328.ARW
+      3,162 cacheImage                                         decoder 12 row = 190  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09334.ARW
+      1,912 cacheImage                                         decoder 7  row = 189  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09333.ARW
+      6,614 cacheImage                                         decoder 15 row = 186  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09330.ARW
+      8,063 cacheImage                                         decoder 18 row = 188  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09332.ARW
+      6,528 cacheImage                                         decoder 8  row = 178  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09322.ARW
+     34,520 cacheImage                                         decoder 2  row = 191  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09335.ARW
+      3,328 cacheImage                                         decoder 19 row = 179  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09323.ARW
+     16,736 cacheImage                                         decoder 6  row = 192  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09336.ARW
+     64,401 cacheImage                                         decoder 3  row = 193  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09337.ARW
+      8,032 cacheImage                                         decoder 11 row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
+      2,738 cacheImage                                         decoder 17 row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
+     28,233 cacheImage                                         decoder 4  row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
+     22,310 cacheImage                                         decoder 10 row = 195  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09339.ARW
+     47,776 cacheImage                                         decoder 16 row = 195  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09339.ARW
+    353,298 cacheImage                                         decoder 14 row = 196  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09340.ARW
+     10,425 cacheImage                                         decoder 1  row = 197  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09341.ARW
+     18,316 cacheImage                                         decoder 13 row = 200  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09344.ARW
+     30,877 cacheImage                                         decoder 0  row = 199  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09343.ARW
+      2,731 cacheImage                                         decoder 5  row = 201  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09345.ARW
+     55,553 cacheImage                                         decoder 9  row = 198  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09342.ARW
+      3,164 cacheImage                                         decoder 12 row = 202  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09346.ARW
+      1,946 cacheImage                                         decoder 7  row = 203  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09347.ARW
+     58,945 cacheImage                                         decoder 15 row = 204  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09348.ARW
+      9,304 cacheImage                                         decoder 3  row = 205  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09349.ARW
+      8,147 cacheImage                                         decoder 19 row = 204  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09348.ARW
+     42,745 cacheImage                                         decoder 6  row = 205  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09349.ARW
+      3,184 cacheImage                                         decoder 4  row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
+      1,992 cacheImage                                         decoder 17 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
+     58,752 cacheImage                                         decoder 11 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
+     59,071 cacheImage                                         decoder 10 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
+    330,180 cacheImage                                         decoder 14 row = 208  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09352.ARW
+      2,797 cacheImage                                         decoder 1  row = 209  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09353.ARW
+     33,738 cacheImage                                         decoder 13 row = 210  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09354.ARW
+     16,559 cacheImage                                         decoder 0  row = 211  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09355.ARW
+     10,780 cacheImage                                         decoder 9  row = 213  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09357.ARW
+     34,736 cacheImage                                         decoder 5  row = 212  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09356.ARW
+     55,370 cacheImage                                         decoder 7  row = 215  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09359.ARW
+     57,389 cacheImage                                         decoder 2  row = 216  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09360.ARW
+      2,689 cacheImage                                         decoder 3  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+      9,909 cacheImage                                         decoder 19 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+      2,649 cacheImage                                         decoder 8  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+     10,259 cacheImage                                         decoder 6  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+      7,507 cacheImage                                         decoder 15 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+     36,450 cacheImage                                         decoder 18 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
+      2,790 cacheImage                                         decoder 4  row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
+      5,978 cacheImage                                         decoder 11 row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
+     15,905 cacheImage                                         decoder 17 row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
+     60,415 cacheImage                                         decoder 16 row = 207  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09351.ARW
+     34,572 cacheImage                                         decoder 10 row = 219  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09363.ARW
+    292,258 cacheImage                                         decoder 14 row = 220  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09364.ARW
+      9,621 cacheImage                                         decoder 0  row = 223  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09367.ARW
+      6,771 cacheImage                                         decoder 1  row = 221  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09365.ARW
+      2,524 cacheImage                                         decoder 9  row = 224  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09368.ARW
+     42,925 cacheImage                                         decoder 5  row = 225  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09369.ARW
+     67,926 cacheImage                                         decoder 7  row = 226  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09370.ARW
+      7,875 cacheImage                                         decoder 12 row = 214  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09358.ARW
+     51,477 cacheImage                                         decoder 2  row = 227  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09371.ARW
+     51,506 cacheImage                                         decoder 3  row = 228  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09372.ARW
+      3,343 cacheImage                                         decoder 19 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
+      1,868 cacheImage                                         decoder 6  row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
+      1,620 cacheImage                                         decoder 15 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
+     27,507 cacheImage                                         decoder 18 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
+     31,807 cacheImage                                         decoder 16 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
+      3,045 cacheImage                                         decoder 17 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
+      2,523 cacheImage                                         decoder 4  row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
+     21,517 cacheImage                                         decoder 11 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
+     40,872 cacheImage                                         decoder 10 row = 231  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09375.ARW
+    233,285 cacheImage                                         decoder 14 row = 232  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09376.ARW
+     27,883 cacheImage                                         decoder 0  row = 233  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09377.ARW
+     26,664 cacheImage                                         decoder 9  row = 235  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09379.ARW
+     11,345 cacheImage                                         decoder 1  row = 234  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09378.ARW
+      4,685 cacheImage                                         decoder 13 row = 222  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09366.ARW
+    126,655 cacheImage                                         decoder 5  row = 236  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09380.ARW
+     46,194 cacheImage                                         decoder 2  row = 239  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09383.ARW
+     25,526 cacheImage                                         decoder 8  row = 240  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09384.ARW
+     38,762 cacheImage                                         decoder 3  row = 240  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09384.ARW
+     50,931 cacheImage                                         decoder 19 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
+      2,569 cacheImage                                         decoder 16 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
+      2,126 cacheImage                                         decoder 6  row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
+      1,746 cacheImage                                         decoder 17 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
+     14,728 cacheImage                                         decoder 15 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
+      7,727 cacheImage                                         decoder 4  row = 242  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09386.ARW
+     47,367 cacheImage                                         decoder 11 row = 242  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09386.ARW
+    230,069 cacheImage                                         decoder 14 row = 243  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09387.ARW
+     23,415 cacheImage                                         decoder 0  row = 244  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09388.ARW
+     31,811 cacheImage                                         decoder 1  row = 246  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09390.ARW
+     14,653 cacheImage                                         decoder 13 row = 247  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09391.ARW
+     12,038 cacheImage                                         decoder 5  row = 248  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09392.ARW
+     65,272 cacheImage                                         decoder 7  row = 237  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09381.ARW
+     31,752 cacheImage                                         decoder 12 row = 238  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09382.ARW
+     57,939 cacheImage                                         decoder 2  row = 249  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09393.ARW
+     61,271 cacheImage                                         decoder 8  row = 250  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09394.ARW
+     56,596 cacheImage                                         decoder 3  row = 251  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09395.ARW
+     19,817 cacheImage                                         decoder 18 row = 252  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09396.ARW
+     39,472 cacheImage                                         decoder 11 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+      2,800 cacheImage                                         decoder 17 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+      2,031 cacheImage                                         decoder 15 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+      1,692 cacheImage                                         decoder 16 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+      6,935 cacheImage                                         decoder 6  row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+     46,711 cacheImage                                         decoder 4  row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
+    194,485 cacheImage                                         decoder 14 row = 254  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09398.ARW
+     21,472 cacheImage                                         decoder 9  row = 245  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09389.ARW
+     29,335 cacheImage                                         decoder 0  row = 255  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09399.ARW
+     33,363 cacheImage                                         decoder 1  row = 256  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09400.ARW
+     59,029 cacheImage                                         decoder 13 row = 257  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09401.ARW
+     33,900 cacheImage                                         decoder 7  row = 259  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09403.ARW
+    115,160 cacheImage                                         decoder 12 row = 260  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09404.ARW
+     73,526 cacheImage                                         decoder 8  row = 262  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09406.ARW
+     46,991 cacheImage                                         decoder 18 row = 263  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09407.ARW
+      2,800 cacheImage                                         decoder 19 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
+     14,596 cacheImage                                         decoder 10 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
+     49,044 cacheImage                                         decoder 11 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
+      7,828 cacheImage                                         decoder 4  row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+      5,260 cacheImage                                         decoder 14 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+      2,684 cacheImage                                         decoder 15 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+      7,438 cacheImage                                         decoder 17 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+      2,910 cacheImage                                         decoder 16 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+    205,807 cacheImage                                         decoder 6  row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
+      3,125 cacheImage                                         decoder 9  row = 266  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09410.ARW
+     56,466 cacheImage                                         decoder 0  row = 267  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09411.ARW
+      7,872 cacheImage                                         decoder 1  row = 268  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09412.ARW
+     28,520 cacheImage                                         decoder 13 row = 269  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09413.ARW
+     30,730 cacheImage                                         decoder 7  row = 270  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09414.ARW
+     13,772 cacheImage                                         decoder 5  row = 258  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09402.ARW
+     58,966 cacheImage                                         decoder 12 row = 271  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09415.ARW
+     68,006 cacheImage                                         decoder 2  row = 261  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09405.ARW
+     35,151 cacheImage                                         decoder 8  row = 272  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09416.ARW
+      7,102 cacheImage                                         decoder 18 row = 273  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09417.ARW
+     86,315 cacheImage                                         decoder 3  row = 263  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09407.ARW
+     30,579 cacheImage                                         decoder 19 row = 274  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09418.ARW
+     17,109 cacheImage                                         decoder 10 row = 275  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09419.ARW
+     36,070 cacheImage                                         decoder 11 row = 276  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09420.ARW
+      3,126 cacheImage                                         decoder 17 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+      1,922 cacheImage                                         decoder 4  row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+      1,623 cacheImage                                         decoder 6  row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+     10,680 cacheImage                                         decoder 16 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+     17,107 cacheImage                                         decoder 14 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+    149,383 cacheImage                                         decoder 15 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
+     12,475 cacheImage                                         decoder 9  row = 278  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09422.ARW
+     54,039 cacheImage                                         decoder 0  row = 279  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09423.ARW
+     47,480 cacheImage                                         decoder 1  row = 280  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09424.ARW
+      7,686 cacheImage                                         decoder 13 row = 281  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09425.ARW
+     60,237 cacheImage                                         decoder 7  row = 282  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09426.ARW
+      2,852 cacheImage                                         decoder 5  row = 283  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09427.ARW
+     52,285 cacheImage                                         decoder 12 row = 283  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09427.ARW
+     65,578 cacheImage                                         decoder 2  row = 284  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09428.ARW
+     47,970 cacheImage                                         decoder 8  row = 285  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09429.ARW
+      7,491 cacheImage                                         decoder 18 row = 286  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09430.ARW
+     75,114 cacheImage                                         decoder 3  row = 286  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09430.ARW
+     38,345 cacheImage                                         decoder 19 row = 287  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09431.ARW
+      7,375 cacheImage                                         decoder 11 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
+     56,177 cacheImage                                         decoder 10 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
+      2,681 cacheImage                                         decoder 17 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
+      6,436 cacheImage                                         decoder 6  row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
+      5,037 cacheImage                                         decoder 15 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
+      2,485 cacheImage                                         decoder 16 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
+      5,234 cacheImage                                         decoder 4  row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
+    116,812 cacheImage                                         decoder 14 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
+     34,296 cacheImage                                         decoder 0  row = 291  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09435.ARW
+    124,669 cacheImage                                         decoder 1  row = 292  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09436.ARW
+     74,713 cacheImage                                         decoder 7  row = 294  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09438.ARW
+     37,723 cacheImage                                         decoder 12 row = 295  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09439.ARW
+     20,958 cacheImage                                         decoder 5  row = 295  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09439.ARW
+     59,598 cacheImage                                         decoder 2  row = 296  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09440.ARW
+     46,281 cacheImage                                         decoder 8  row = 297  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09441.ARW
+     29,737 cacheImage                                         decoder 18 row = 297  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09441.ARW
+     28,945 cacheImage                                         decoder 19 row = 299  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09443.ARW
+     69,146 cacheImage                                         decoder 3  row = 298  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09442.ARW
+     12,568 cacheImage                                         decoder 10 row = 300  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09444.ARW
+     43,919 cacheImage                                         decoder 11 row = 300  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09444.ARW
+      6,611 cacheImage                                         decoder 14 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+      8,989 cacheImage                                         decoder 17 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+      2,666 cacheImage                                         decoder 6  row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+     31,303 cacheImage                                         decoder 16 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+     17,139 cacheImage                                         decoder 4  row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+     17,380 cacheImage                                         decoder 15 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
+     43,612 cacheImage                                         decoder 0  row = 302  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09446.ARW
+     40,904 cacheImage                                         decoder 9  row = 290  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09434.ARW
+     82,315 cacheImage                                         decoder 1  row = 303  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09447.ARW
+      2,931 cacheImage                                         decoder 7  row = 304  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09448.ARW
+PopUp::reset
+PopUp::showPopup "207 images.<br>12.406 seconds elapsed.<br><br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup." 0
+MW::traverseFolderStressTest Executed stress test 207 times.   12406 ms elapsed   50 ms delay   16 images per second   59.9324 ms per image.
+    104,869 cacheImage                                         decoder 13 row = 293  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09437.ARW
+     49,283 cacheImage                                         decoder 12 row = 305  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09449.ARW
+     31,354 cacheImage                                         decoder 5  row = 306  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09450.ARW
+     30,260 cacheImage                                         decoder 2  row = 307  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09451.ARW
+     43,098 cacheImage                                         decoder 8  row = 308  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09452.ARW
+      5,282 cacheImage                                         decoder 19 row = 310  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09454.ARW
+     15,895 cacheImage                                         decoder 18 row = 309  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09453.ARW
+     66,007 cacheImage                                         decoder 3  row = 310  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09454.ARW
+     18,300 cacheImage                                         decoder 10 row = 311  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09455.ARW
+     50,575 cacheImage                                         decoder 11 row = 312  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09456.ARW
+      8,220 cacheImage                                         decoder 14 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
+      5,228 cacheImage                                         decoder 16 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
+      4,986 cacheImage                                         decoder 6  row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
+     12,096 cacheImage                                         decoder 17 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
+      8,168 cacheImage                                         decoder 4  row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
+     19,507 cacheImage                                         decoder 0  row = 314  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09458.ARW
+     29,709 cacheImage                                         decoder 15 row = 314  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09458.ARW
+     13,914 cacheImage                                         decoder 9  row = 315  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09459.ARW
+     85,217 cacheImage                                         decoder 1  row = 315  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09459.ARW
+      2,615 cacheImage                                         decoder 7  row = 316  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09460.ARW
+     69,528 cacheImage                                         decoder 13 row = 317  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09461.ARW

@@ -46,11 +46,14 @@ public:
     void rename(QString oldPath, QString newPath);
 
     void updateStatus(QString instruction, QString source); // update cached send signal
+    QString reportToCache();
     QString diagnostics();
     QString reportCacheParameters();
     QString reportCacheDecoders();
     QString reportCacheItemList(QString title = "");
     QString reportImCache();
+    QString reportImCacheRows();
+    QString reportToCacheRows();
     int col0Width = 50;
 
     int decoderCount = 1;
@@ -115,12 +118,15 @@ private:
 
     QVector<ImageDecoder*> decoder;     // all the decoders
     QList<int> toCache;
-    enum Status {
-        NotCached,
-        Caching,
-        Cached
+    enum Status {NotCached, Caching, Cached};
+    QStringList statusText{"NotCached", "Caching  ", "Cached   "};
+    struct CacheStatus {
+        Status status;
+        int decoderId;
+        int instance;
     };
-    QHash<int,Status> toCacheStatus;
+
+    QHash<int,CacheStatus> toCacheStatus;
 
 
     int key;                    // current image
@@ -148,9 +154,11 @@ private:
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     int nextToCache(int id);        // find highest priority not cached
+    void clear();
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);
     bool isCaching(int sfRow);
+    bool isCached(int sfRow);
     int toCacheDecoder(int sfRow);
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);

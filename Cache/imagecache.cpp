@@ -150,6 +150,8 @@ void ImageCache::clearImageCache(bool includeList)
     //if (debugCaching) qDebug() << "ImageCache::clearImageCache";
     log("ClearImageCache");
     gMutex.lock();
+    toCache.clear();
+    toCacheStatus.clear();
     icd->imCache.clear();
     gMutex.unlock();
     updateStatus("Clear", "ImageCache::clearImageCache");
@@ -240,7 +242,7 @@ void ImageCache::updateToCacheTargets()
 /*
     Called by setCurrentPosition and fillCache.
 */
-    log("updateTargets");
+    log("updateToCacheTargets");
 
     QString fun = "ImageCache::updateToCacheTargets";
     if (debugCaching)
@@ -259,6 +261,7 @@ void ImageCache::updateToCacheTargets()
 
     setTargetRange(key);
     resetOutsideTargetRangeCacheState();
+    // G::log("updateToCacheTargets", reportToCache());
     if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -279,6 +282,7 @@ bool ImageCache::resetInsideTargetRangeCacheState()
     the isCaching and isCached flags.
 */
     QString src = "ImageCache::resetCacheStateInTargetRange";
+    G::log("resetCacheStateInTargetRange");
     if (debugLog) log("resetCacheStateInTargetRange");
     if (debugCaching)
     {
@@ -296,27 +300,32 @@ bool ImageCache::resetInsideTargetRangeCacheState()
         if (sfRow >= dm->sf->rowCount()) return false;
 
         // isCaching: set to false
+        // if (toCacheStatus.contains(sfRow) && toCacheStatus[sfRow].status == Status::Caching) {
+        //     toCacheStatus[sfRow].status = Status::NotCached;
+        //     toCacheStatus[sfRow].decoderId = -1;
+        // }
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
             emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
             emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
         }
 
-        // in imCache: then isCached = false and remove from toCache
+        // in imCache: then isCached = true and remove from toCache
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         if (icd->imCache.contains(fPath)) {
             emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
-            if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
+            // if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
+            if (toCache.contains(sfRow)) toCacheRemove(sfRow);
             continue;
         }
 
-        // not in imCache:
-        else {
+        // not in imCache and not in toCache
+        else if (!icd->imCache.contains(fPath)) {
             emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
             emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), -1, instance, src);
             emit setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
                            ImageDecoder::Status::Ready, instance, src);
-            if (!toCache.contains(sfRow)) toCacheAppend(sfRow);
-            // if (!toCache.contains(sfRow)) toCache.append(sfRow);
+            // if (!toCache.contains(sfRow)) toCacheAppend(sfRow);
+            // toCache.append(sfRow);
         }
     }
     return true;
@@ -361,9 +370,10 @@ void ImageCache::resetOutsideTargetRangeCacheState()
     // trim toCache outside target range
     QMutableListIterator<int> i(toCache);
     while (i.hasNext()) {
-        int value = i.next();
-        if (value < targetFirst || value > targetLast) {
-            i.remove();
+        int sfRow = i.next();
+        if (sfRow < targetFirst || sfRow > targetLast) {
+            // i.remove();
+            if (toCache.contains(sfRow)) toCacheRemove(sfRow);
         }
     }
 
@@ -439,7 +449,7 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
@@ -452,7 +462,7 @@ void ImageCache::setTargetRange(int key)
     bool aheadDone = false;
     bool behindDone = false;
     // if (!restart)
-        toCache.clear();
+        // toCache.clear();
 
     int n = dm->sf->rowCount();
     if (key == n - 1) {isForward = false; targetLast = n - 1;}
@@ -479,7 +489,6 @@ void ImageCache::setTargetRange(int key)
                     if (sumMB < maxMB) {
                         if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
                             toCacheAppend(aheadPos);
-                            // toCache.append(aheadPos);
                         }
                         isForward ? targetLast = aheadPos : targetFirst = aheadPos;
                         if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
@@ -501,7 +510,6 @@ void ImageCache::setTargetRange(int key)
                     if (sumMB < maxMB) {
                         if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
                             toCacheAppend(behindPos);
-                            // toCache.append(behindPos);
                         }
                         isForward ? targetFirst = behindPos : targetLast = behindPos;
                         if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
@@ -586,14 +594,18 @@ void ImageCache::rename(QString oldPath, QString newPath)
 
 void ImageCache::toCacheAppend(int sfRow)
 {
-    log("toCacheAppend", "sfRow = " + QString::number(sfRow));
+    if (toCache.contains(sfRow)) {
+        QString msg = "sfRow = " + QString::number(sfRow) + "ALREADY IN toCache!!";
+         G::log("toCacheAppend", msg);
+    }
+    G::log("toCacheAppend", "sfRow = " + QString::number(sfRow));
     toCache.append(sfRow);
-    toCacheStatus.insert(sfRow, Status::NotCached);
+    toCacheStatus.insert(sfRow, {Status::NotCached, -1, instance});
 }
 
 void ImageCache::toCacheRemove(int sfRow)
 {
-    log("toCacheRemove", "sfRow = " + QString::number(sfRow));
+    G::log("toCacheRemove", "sfRow = " + QString::number(sfRow));
     if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
     if (toCacheStatus.contains(sfRow)) toCacheStatus.remove(sfRow);
 }
@@ -602,17 +614,24 @@ bool ImageCache::isCaching(int sfRow)
 {
     log("isCaching", "sfRow = " + QString::number(sfRow));
     if (toCacheStatus.contains(sfRow))
-        return toCacheStatus[sfRow] == Status::Caching;
+        return toCacheStatus[sfRow].status == Status::Caching;
     else
         return false;
+}
+
+bool ImageCache::isCached(int sfRow)
+{
+    log("isCached", "sfRow = " + QString::number(sfRow));
+    QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    return icd->imCache.contains(fPath);
 }
 
 int ImageCache::toCacheDecoder(int sfRow)
 {
     log("toCacheDecoder", "sfRow = " + QString::number(sfRow));
-    // if (toCacheStatus.contains(sfRow))
-    //     return toCacheStatus[sfRow].decoderId;
-    // else
+    if (toCacheStatus.contains(sfRow))
+        return toCacheStatus[sfRow].decoderId;
+    else
         return -1;
 }
 
@@ -667,8 +686,11 @@ int ImageCache::nextToCache(int id)
         return -1;
     }
 
+    G::log("nextToCache", reportToCache());
+
     for (int i = 0; i < toCache.count(); ++i) {
         int sfRow = toCache.at(i);
+
         QString sRow = QString::number(sfRow).leftJustified(4);
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
 
@@ -713,6 +735,17 @@ int ImageCache::nextToCache(int id)
             continue;
         }
 
+        // /* toCache
+        // isCaching and not the same decoder
+        if (toCacheStatus.contains(sfRow)) {
+            if (toCacheStatus[sfRow].status == Status::Caching) {
+                if (id != toCacheStatus[sfRow].decoderId) {
+                    continue;
+                }
+            }
+        } //*/
+
+        /* datamodel
         // isCaching and not the same decoder
         if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool() &&
             (id != dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt()))
@@ -721,14 +754,62 @@ int ImageCache::nextToCache(int id)
                 msg = "row " + sRow + " isCaching and not the same decoder";
                 sDebug(sId, msg);
             }
+            if (debugThis)
+            {
+                bool toCache_Caching = toCacheStatus[sfRow].status == Status::Caching;
+                int toCache_DecoderId = toCacheStatus[sfRow].decoderId;
+                int dmDecoderId = dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt();
+                bool match = (toCache_Caching == true) && (toCache_DecoderId == dmDecoderId);
+                if (!match)
+                qDebug().noquote()
+                    << "ImageCache::nextToCache"
+                    << "sfRow =" << QString::number(sfRow).leftJustified(4)
+                    << "dmIsCaching = true"
+                    << "toCache status =" << statusText.at(toCacheStatus[sfRow].status)
+                    << "Decoder = " << QString::number(id).leftJustified(2)
+                    << "Previous decoder: "
+                    << "dmDecoderId =" << QString::number(dmDecoderId).leftJustified(2)
+                    << "toCache_DecoderId =" << QString::number(toCache_DecoderId).leftJustified(2)
+                    << "Match =" << match
+                    ;
+            }
             continue;
-        }
+        }//*/
+
+        /*
+        if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
+            bool toCache_Caching = toCacheStatus[sfRow].status == Caching;
+            int toCache_DecoderId = toCacheStatus[sfRow].decoderId;
+            int dmDecoderId = dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt();
+            bool match = toCache_Caching == true && toCache_DecoderId == dmDecoderId;
+            qDebug().noquote()
+                << "ImageCache::nextToCache"
+                << "sfRow =" << QString::number(sfRow).leftJustified(4)
+                << "dmIsCaching = true"
+                << "toCache status =" << statusText.at(toCacheStatus[sfRow].status)
+                << "Decoder = " << QString::number(id).leftJustified(2)
+                << "Previous decoder: "
+                << "dmDecoderId =" << QString::number(dmDecoderId).leftJustified(2)
+                << "toCache_DecoderId =" << QString::number(toCache_DecoderId).leftJustified(2)
+                << "Match =" << match
+                ;
+        } //*/
 
         // next item to cache
         if (debugThis) {
             msg = "row " + sRow + " success";
             sDebug(sId, msg);
         }
+
+        // moved to decodeNextImage
+        // toCacheStatus[sfRow].status = Status::Caching;
+        // toCacheStatus[sfRow].decoderId = id;
+        // toCacheStatus[sfRow].instance = instance;
+
+        QString msg = "decoder " + QString::number(id).leftJustified(2);
+        msg += " row = " + QString::number(sfRow).leftJustified(4) + "\n";
+        G::log("nextToCache", msg);
+
         return sfRow;
     }
 
@@ -740,6 +821,9 @@ int ImageCache::nextToCache(int id)
             << "Failed"
             ;
     }
+
+    G::log("nextToCache", "nothing found to cache\n");
+
     return -1;
 }
 
@@ -1138,6 +1222,80 @@ QString ImageCache::reportImCache()
     return reportString;
 }
 
+QString ImageCache::reportImCacheRows()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    QList<int> imCacheRows;
+    auto it = icd->imCache.begin();
+    while (it != icd->imCache.end()) {
+        QString fPath = it.key();
+        int sfRow = dm->proxyRowFromPath(fPath);
+        imCacheRows.append(sfRow);
+        ++it;
+    }
+    rpt << "Cached:  ";
+    // sort imCacheRows
+    std::sort(imCacheRows.begin(), imCacheRows.end());
+    foreach(int sfRow, imCacheRows) {
+        rpt << QString::number(sfRow) << " ";
+    }
+    return reportString;
+}
+
+QString ImageCache::reportToCacheRows()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "toCache: ";
+    for (int i = 0; i < toCache.length(); ++i) {
+        int sfRow = toCache.at(i);
+        rpt << QString::number(sfRow);
+        if (toCacheStatus[sfRow].status == Status::Caching) rpt << "c";
+        rpt << " ";
+    }
+    return reportString;
+}
+
+QString ImageCache::reportToCache()
+{
+    QString blank = " ";
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << "targetFirst = " << QString::number(targetFirst);
+    rpt << " targetLast = " << QString::number(targetLast);
+    rpt << "\n";
+    // rpt << blank.leftJustified(63);
+    // rpt << "sfRow    decoder   status      dmIsCaching   isCached";
+    // for (int i = 0; i < toCache.length(); i++) {
+    //     rpt << "\n";
+    //     rpt << blank.leftJustified(63);
+    //     int sfRow = toCache.at(i);
+    //     rpt << QString::number(sfRow).leftJustified(9);
+    //     rpt << QString::number(toCacheStatus[sfRow].decoderId).leftJustified(10);
+    //     rpt << statusText.at(toCacheStatus[sfRow].status).leftJustified(12);
+    //     bool dmIsCaching = dm->sf->index(sfRow, G::IsCachingColumn).data().toBool();
+    //     rpt << QVariant(dmIsCaching).toString().leftJustified(14);
+    //     rpt << QVariant(isCached(sfRow)).toString();
+    // }
+    // rpt << "\n";
+    rpt << blank.leftJustified(63);
+    rpt << reportToCacheRows();
+    rpt << "\n";
+    rpt << blank.leftJustified(63);
+    rpt << reportImCacheRows();
+    // rpt << "\n";
+    // rpt << reportImCache();
+    return reportString;
+}
+
 void ImageCache::initImageCache(int &cacheMaxMB,
                                 int &cacheMinMB,
                                 bool &isShowCacheStatus,
@@ -1184,7 +1342,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
         updateStatus("Clear", "ImageCache::initImageCache");
     }
 
-    // populate the new folder image list
+    clearImageCache();
 
     isInitializing = false;
 
@@ -1210,7 +1368,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB,
     // gMutex.unlock();
 }
 
-void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString source)
+void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString src)
 {
 /*
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
@@ -1219,7 +1377,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     The image cache is now ready to run by calling setCachePosition().
 */
     QString fun = "ImageCache::rebuildImageCacheParameters";
-    log("rebuildImageCacheParameters");
+    G::log("rebuildImageCacheParameters", "src = " + src);
     if (debugCaching)
     {
         qDebug().noquote()
@@ -1237,7 +1395,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     key = 0;
     if (isShowCacheStatus) updateStatus("Update all rows", fun);
 
-    setCurrentPosition(currentImageFullPath, fun);
+    // setCurrentPosition(currentImageFullPath, fun);
 }
 
 void ImageCache::refreshImageCache()
@@ -1250,7 +1408,7 @@ void ImageCache::refreshImageCache()
         qDebug() << "ImageCache::refreshImageCache";
 
     gMutex.lock();
-    icd->imCache.clear();
+    clearImageCache();
     gMutex.unlock();
 
     if (isRunning()) {
@@ -1306,7 +1464,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 */
     int sfRow = dm->proxyRowFromPath(fPath);
     QString fun = "ImageCache::setCurrentPosition";
-    log(fun, "row = " + QString::number(sfRow));
+    G::log(fun, "row = " + QString::number(sfRow) + " src = " + src);
     // log("setCurrentPosition", "row = " + QString::number(sfRow));
     if (debugCaching) {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -1402,8 +1560,15 @@ void ImageCache::decodeNextImage(int id, int sfRow)
         return;
     }
 
+    // remove from toCache
+    // if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+
     // set isCaching
-    if (toCacheStatus.contains(sfRow)) toCacheStatus[sfRow] = Status::Caching;
+    if (toCacheStatus.contains(sfRow)) {
+        toCacheStatus[sfRow].status = Status::Caching;
+        toCacheStatus[sfRow].decoderId = id;
+        toCacheStatus[sfRow].instance = instance;
+    }
     emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
     emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), id, instance, src);
     int attempts = dm->sf->index(sfRow, G::AttemptsColumn).data().toInt();
@@ -1442,7 +1607,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     if (!abort) decoder[id]->decode(sfRow, instance);
 }
 
-void ImageCache::cacheImage(int id, int cacheKey)
+void ImageCache::cacheImage(int id, int sfRow)
 {
 /*
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
@@ -1451,16 +1616,16 @@ void ImageCache::cacheImage(int id, int cacheKey)
     {
     QString src = "ImageCache::cacheImage";
     QString comment = "decoder " + QString::number(id).leftJustified(3) +
-                      "row = " + QString::number(cacheKey).leftJustified(5) +
-                      "decoder[id]->fPath =" + decoder[id]->fPath;
+                      "row = " + QString::number(sfRow).leftJustified(5) +
+                      "fPath = " + decoder[id]->fPath;
     log("cacheImage", comment);
-    // if (debugCaching)
+    if (debugCaching)
     {
         QString fun = "ImageCache::cacheImage";
         qDebug().noquote()
                << fun.leftJustified(col0Width, ' ')
                << "decoder" << QString::number(id).leftJustified(2)
-               << "row =" << QString::number(cacheKey).leftJustified((4))
+               << "row =" << QString::number(sfRow).leftJustified((4))
                << "G::mode =" << G::mode
                << "errMsg =" << decoder[id]->errMsg
                << "decoder[id]->fPath =" << decoder[id]->fPath
@@ -1473,23 +1638,30 @@ void ImageCache::cacheImage(int id, int cacheKey)
     // check if null image
     if (decoder[id]->image.width() <= 0) {
         QString msg = "Decoder returned a null image.";
-        G::issue("Warning", msg, "ImageCache::cacheImage", cacheKey, decoder[id]->fPath);
+        G::issue("Warning", msg, "ImageCache::cacheImage", sfRow, decoder[id]->fPath);
         return;
     }
+
+    gMutex.lock();
 
     // cache the image
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
 
+    // // remove from toCache
+    if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+
+    gMutex.unlock();
+
     // change toCacheStatus to Cached
-    if (toCacheStatus.contains(cacheKey)) toCacheStatus[cacheKey] = Status::Cached;
+    // if (toCacheStatus.contains(sfRow)) toCacheStatus[sfRow].status = Status::Cached;
     // if (toCache.contains(cacheKey)) toCache.remove(toCache.indexOf(cacheKey));
 
     // reset caching and cache flags
-    emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
-    emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), true, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), true, instance, src);
 
     // reset attempts rgh review re nextToCache check (not working)
-    emit setValueSf(dm->sf->index(cacheKey, G::AttemptsColumn), 0, instance, src);
+    emit setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), 0, instance, src);
 
     // refresh thumbs (and main image if is current)
     emit refreshViewsOnCacheChange(decoder[id]->fPath, true, "ImageCache::cacheImage");
@@ -1499,7 +1671,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
         // clear "Loading Image..." central msg in setCurrentPosition (not being used)
         // emit centralMsg("");
         // load in ImageView
-        emit loadImage(decoder[id]->fPath, true, "ImageCache::cacheImage");
+        // emit loadImage(decoder[id]->fPath, true, "ImageCache::cacheImage");
         qDebug() << src << "replacing current image in imageview" << decoder[id]->fPath;
         // revert central view (req'd? see setCurrentPosition)
         // emit imageCachePrevCentralView();
@@ -1582,6 +1754,8 @@ void ImageCache::fillCache(int id)
 
     // check if aborted
     if (abort || decoder[id]->status == ImageDecoder::Status::Abort) {
+        if (toCacheStatus.contains(cacheKey) && toCacheStatus[cacheKey].status == Status::Caching)
+            toCacheStatus[cacheKey].status = NotCached;
         emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
         decoder[id]->status = ImageDecoder::Status::Ready;
         return;
@@ -1615,6 +1789,8 @@ void ImageCache::fillCache(int id)
     else {
         cacheKey = decoder[id]->sfRow;
         // cacheKey = dm->proxyRowFromPath(decoder[id]->fPath);
+        if (toCacheStatus.contains(cacheKey) && toCacheStatus[cacheKey].status == Status::Caching)
+            toCacheStatus[cacheKey].status = NotCached;
         emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
         /* more direct version
         // dm->sf->setData(dm->sf->index(cacheKey, G::IsCachingColumn), false);
@@ -1645,6 +1821,8 @@ void ImageCache::fillCache(int id)
         }
         // if decoder failed to load an image
         if (decoder[id]->status != ImageDecoder::Status::Success) {
+            if (toCacheStatus.contains(cacheKey) && toCacheStatus[cacheKey].status == Status::Caching)
+                toCacheStatus[cacheKey].status = NotCached;
             emit setValueSf(dm->sf->index(cacheKey, G::IsCachingColumn), false, instance, src);
             emit setValueSf(dm->sf->index(cacheKey, G::IsCachedColumn), false, instance, src);
             cacheKey = -1;
@@ -1658,7 +1836,7 @@ void ImageCache::fillCache(int id)
                " Status = " + decoder[id]->statusText.at(decoder[id]->status));
     }
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         if (cacheKey == -1) {
             QString fun = "ImageCache::fillCache";
@@ -1680,10 +1858,10 @@ void ImageCache::fillCache(int id)
         }
     }
 
-    // returning decoder add decoded QImage to imCache.
+    // returning decoder: add decoded QImage to imCache.
     if (cacheKey != -1) {
         if (decoder[id]->status == ImageDecoder::Status::Success) {
-            // if (debugCaching)
+            if (debugCaching)
             {
                 QString fun = "ImageCache::fillCache cache";
                 qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -1710,7 +1888,7 @@ void ImageCache::fillCache(int id)
     bool isCacheKeyOk = isValidKey(toCacheKey);
     bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         QString fun = "ImageCache::fillCache dispatch";
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -1728,7 +1906,7 @@ void ImageCache::fillCache(int id)
 
     // decode the next image in the target range
     if (okDecodeNextImage) {
-        // if (debugCaching)
+        if (debugCaching)
         {
             QString fun = "ImageCache::fillCache okDecodeNextImage";
             qDebug().noquote()
@@ -1773,11 +1951,9 @@ void ImageCache::fillCache(int id)
                         << "toCache:" << toCache
                         ;
                 }
-                // gMutex.lock();
-                resetInsideTargetRangeCacheState();
+                // resetInsideTargetRangeCacheState();
                 resetOutsideTargetRangeCacheState();
                 setTargetRange(dm->currentSfRow);
-                // return;
             }
         }
 
@@ -1793,6 +1969,9 @@ void ImageCache::fillCache(int id)
         {
             // turn off caching activity lights on statusbar
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+
+            G::log("allDecodersDone");
+            reportToCache();
 
             if (debugCaching)
             {

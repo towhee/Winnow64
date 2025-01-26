@@ -88,7 +88,7 @@ void PopUp::showPopup(const QString &text,
                  float opacity,
                  Qt::Alignment alignment)
 {
-    qDebug() << "PopUp::showPopup" << text << msDuration;
+    // qDebug() << "PopUp::showPopup" << text << msDuration;
     hideTimer->stop();
     // okayToHide = true;
     // hide();
@@ -124,7 +124,7 @@ void PopUp::showPopup(const QString &text,
 
 void PopUp::reset()
 {
-    qDebug() << "PopUp::reset";
+    // qDebug() << "PopUp::reset";
     okayToHide = true;
     openAndNoTimeout = false;
     hideTimer->stop();
