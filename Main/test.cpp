@@ -239,12 +239,13 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
                   + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
+    /*
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
              << msPerImage << "ms delay  "
              << imagePerSec << "images per second  "
              << elapsedMsPerImage << "ms per image."
-                ;
+                ; //*/
     return;
 }
 //*/
@@ -391,18 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug()
-        << "G::isRory =" << G::isRory
-        << "isShowCacheProgressBar =" << isShowCacheProgressBar
-        << "cacheBarProgressWidth =" << cacheBarProgressWidth
-        ;
-    return;
-
-    // G::popUp->showPopup("Test");
-    QString msg = "Test issue log file missing.";
-    QString issueLogPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-                           "/Log/WinnowErrorLog.txt";
-    G::issue("Error", msg, "MW::showEvent", -1, issueLogPath);
+    int sfRow = 0;
+    QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
