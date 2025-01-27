@@ -19,7 +19,7 @@ the view is at 100%, the same as the original image.
 
 Moving is accomplished by adjusting the viewport scrollbars.
 
- */
+*/
 
 ImageView::ImageView(QWidget *parent,
                      QWidget *centralWidget,

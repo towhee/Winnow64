@@ -392,8 +392,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int sfRow = 0;
-    QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    qDebug() << G::isEmbellish;
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
