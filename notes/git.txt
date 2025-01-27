@@ -1,4 +1,4 @@
-HOW USE GITHUB TO MAKE CHANGES TO PROGRAM
+GITHUB DESKTOP PROCEDURE TO MAKE CHANGES TO PROGRAM
 
 1.  Make a new branch from master with datename ie 2025-01-26
 
@@ -6,6 +6,13 @@ HOW USE GITHUB TO MAKE CHANGES TO PROGRAM
 
 3.  Make program changes and commits as needed.
 
+4.  Switch to master.
+
+5.  Select Branch > Merge into Current Branch... in the menu.
+
+6.  Select the branch to merge ie 2025-01-26.
+
+--------------------------------------------------------------------------------------------
 
 From GitHub Menu > Repository > Open in Git Bash
 
