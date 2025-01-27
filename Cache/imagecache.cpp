@@ -1410,10 +1410,6 @@ void ImageCache::refreshImageCache()
     if (debugCaching)
         qDebug() << "ImageCache::refreshImageCache";
 
-    // gMutex.lock();
-    // clearImageCache();
-    // gMutex.unlock();
-
     if (isRunning()) {
         stop("ImageCache::refreshImageCache");
     }
@@ -1453,7 +1449,6 @@ void ImageCache::datamodelFolderCountChange(QString src)
     if (debugCaching)
         qDebug() << "ImageCache::datamodelFolderCountChange";
 
-    // setTargetRange();
     if (isRunning()) {
         stop("ImageCache::datamodelFolderCountChange");
     }
