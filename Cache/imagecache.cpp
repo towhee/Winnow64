@@ -1277,20 +1277,22 @@ QString ImageCache::reportToCache()
     rpt << "targetFirst = " << QString::number(targetFirst);
     rpt << " targetLast = " << QString::number(targetLast);
     rpt << "\n";
-    // rpt << blank.leftJustified(63);
-    // rpt << "sfRow    decoder   status      dmIsCaching   isCached";
-    // for (int i = 0; i < toCache.length(); i++) {
-    //     rpt << "\n";
-    //     rpt << blank.leftJustified(63);
-    //     int sfRow = toCache.at(i);
-    //     rpt << QString::number(sfRow).leftJustified(9);
-    //     rpt << QString::number(toCacheStatus[sfRow].decoderId).leftJustified(10);
-    //     rpt << statusText.at(toCacheStatus[sfRow].status).leftJustified(12);
-    //     bool dmIsCaching = dm->sf->index(sfRow, G::IsCachingColumn).data().toBool();
-    //     rpt << QVariant(dmIsCaching).toString().leftJustified(14);
-    //     rpt << QVariant(isCached(sfRow)).toString();
-    // }
-    // rpt << "\n";
+    /*
+    rpt << blank.leftJustified(63);
+    rpt << "sfRow    decoder   status      dmIsCaching   isCached";
+    for (int i = 0; i < toCache.length(); i++) {
+        rpt << "\n";
+        rpt << blank.leftJustified(63);
+        int sfRow = toCache.at(i);
+        rpt << QString::number(sfRow).leftJustified(9);
+        rpt << QString::number(toCacheStatus[sfRow].decoderId).leftJustified(10);
+        rpt << statusText.at(toCacheStatus[sfRow].status).leftJustified(12);
+        bool dmIsCaching = dm->sf->index(sfRow, G::IsCachingColumn).data().toBool();
+        rpt << QVariant(dmIsCaching).toString().leftJustified(14);
+        rpt << QVariant(isCached(sfRow)).toString();
+    }
+    rpt << "\n";
+    //*/
     rpt << blank.leftJustified(63);
     rpt << reportToCacheRows();
     rpt << "\n";
