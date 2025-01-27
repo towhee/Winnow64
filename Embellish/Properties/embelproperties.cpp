@@ -2093,7 +2093,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     qDebug() << "EmbelProperties::itemChangeTemplate" << "loadImage..."
              << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
     //*/
-    mw3->imageView->loadImage(mw3->dm->currentFilePath, false, "EmbelProperties::itemChangeTemplate");
+    mw3->imageView->loadImage(mw3->dm->currentFilePath, true, "EmbelProperties::itemChangeTemplate");
     mw3->imageView->setAlignment(Qt::AlignCenter);
 }
 
