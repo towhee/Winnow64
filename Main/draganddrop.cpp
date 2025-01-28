@@ -18,10 +18,6 @@ void MW::dropEvent(QDropEvent *event)
 
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
-        // prevent drop onto folder already active in Winnow
-//        if (QFileInfo(fPath).dir() == G::currRootFolder) {
-//            return;
-//        }
         handleDrop(fPath);
     }
 }
@@ -72,11 +68,6 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
     if (!isValidPath(destDir)) {
         msgBox.critical(this, tr("Error"), tr("Can not move or copy images to this folder."));
         selectCurrentViewDir();
-        return;
-    }
-
-    if (destDir == G::currRootFolder) {
-        msgBox.critical(this, tr("Error"), tr("Destination folder is same as source."));
         return;
     }
 

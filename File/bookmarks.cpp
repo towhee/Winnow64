@@ -581,18 +581,12 @@ void BookMarks::dropEvent(QDropEvent *event)
     if (dm->folderList.contains(dropDir)) {
         emit refreshDataModel();
     }
+    else {
+        select(dropDir);
+    }
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION
-
-    if (G::currRootFolder == dropDir) {
-        // QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-        //emit folderSelection(dropDir, "Add");
-        // signal select(dropDir) to FSTree
-    }
-    else {
-        select(G::currRootFolder);
-    }
 
     // update bookmarks folder count
     updateCount();
