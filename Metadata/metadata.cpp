@@ -1187,7 +1187,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     clearMetadata();
     p.instance = instance;
     m.fPath = fPath;
-    m.currRootFolder = fileInfo.absoluteDir().absolutePath();
     m.size = fileInfo.size();
 
     // check if format with metadata
@@ -1239,8 +1238,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         return false;
     }
-
-    m.currRootFolder = fileInfo.absoluteDir().absolutePath();
 
     QString s = m.model;
     s += "  " + m.focalLength;

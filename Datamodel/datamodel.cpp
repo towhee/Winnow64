@@ -992,7 +992,6 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     // file info (calling Metadata not required)
     m.row = sfRow;
-    m.currRootFolder = G::currRootFolder;
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();

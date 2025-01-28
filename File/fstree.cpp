@@ -665,18 +665,19 @@ void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int en
 
     QString toBeRemoved = fsModel->index(start, 0, parent).data(G::PathRole).toString();
 
+    /*
     qDebug() << "FSTree::onRowsAboutToBeRemoved"
-             << "Current folder =" << G::currRootFolder
+             << "Current folder =" << currentFolderPath()
              << "Current FSTree folder =" << this->currentIndex().data().toString()
              << "parent =" << parent
              << "start =" << start
              << "end =" << end
              << "To be deleted folder =" << toBeRemoved
-        ;
+        ; //*/
 
     // Clear the selection to prevent automatic selection of the next folder
-    if (G::currRootFolder == toBeRemoved) {
-        qDebug() << "FSTree::onRowsAboutToBeRemoved clear selection";
+    if (selectedFolderPaths().contains(toBeRemoved)) {
+        // qDebug() << "FSTree::onRowsAboutToBeRemoved clear selection";
         clearSelection();
         setCurrentIndex(QModelIndex());
     }

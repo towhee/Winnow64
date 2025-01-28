@@ -2964,8 +2964,8 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    // qDebug().noquote() << src << "dm->folderQueue.count() =" << dm->folderQueue.count();
 
+    // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
 
     int count = 0;
