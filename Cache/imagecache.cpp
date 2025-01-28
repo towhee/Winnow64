@@ -368,12 +368,15 @@ void ImageCache::resetOutsideTargetRangeCacheState()
     }
 
     // trim toCache outside target range
+    for (int i = 0; i < toCache.count(); ++i) {
+
+    }
     QMutableListIterator<int> i(toCache);
     while (i.hasNext()) {
         int sfRow = i.next();
         if (sfRow < targetFirst || sfRow > targetLast) {
-            // i.remove();
-            if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+            i.remove();
+            toCacheStatus.remove(sfRow);
         }
     }
 
@@ -608,8 +611,10 @@ void ImageCache::toCacheAppend(int sfRow)
 void ImageCache::toCacheRemove(int sfRow)
 {
     // G::log("toCacheRemove", "sfRow = " + QString::number(sfRow));
-    if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
-    if (toCacheStatus.contains(sfRow)) toCacheStatus.remove(sfRow);
+    toCache.removeOne(sfRow);
+    toCacheStatus.remove(sfRow);
+    // if (toCache.contains(sfRow)) toCache.remove(toCache.indexOf(sfRow));
+    // if (toCacheStatus.contains(sfRow)) toCacheStatus.remove(sfRow);
 }
 
 bool ImageCache::isCaching(int sfRow)
