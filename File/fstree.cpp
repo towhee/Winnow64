@@ -413,7 +413,7 @@ void FSTree::refreshModel()
     }
     fsModel->refresh();
     setFocus();
-    select(G::currRootFolder);
+    select(currentFolderPath());
 }
 
 bool FSTree::isShowImageCount()

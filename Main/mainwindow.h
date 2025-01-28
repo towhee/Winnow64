@@ -588,7 +588,6 @@ private slots:
     void tableHasScrolled();
     void loadEntireMetadataCache(QString source);
     void updateAllFilters();
-    void addNewBookmarkFromMenu();
     void addNewBookmarkFromContextMenu();
     void reportMetadata();
     void checkDirState(const QString &dirPath);
@@ -750,7 +749,6 @@ private:
         QList<QAction *> ingestHistoryFolderActions;
     // QAction *subFoldersAction;
     QAction *collapseFoldersAction;
-    QAction *addBookmarkAction;
     QAction *addBookmarkActionFromContext;
     QAction *removeBookmarkAction;
     QAction *refreshBookmarkAction;
