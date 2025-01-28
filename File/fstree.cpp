@@ -622,7 +622,16 @@ QModelIndex FSTree::getCurrentIndex()
     return idx;
 }
 
-QStringList FSTree::getSelectedFolderPaths() const
+QString FSTree::currentFolderPath()
+{
+/*
+    Used by MW::addNewBookmarkFromMenu
+*/
+    if (G::isLogger) G::log("FSTree::getCurrentIndex");
+    return getCurrentIndex().data(QFileSystemModel::FilePathRole).toString();
+}
+
+QStringList FSTree::selectedFolderPaths() const
 {
 /*
     Used by toggle folder in mousePressEvent
@@ -938,8 +947,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // toggle folder
     if (isCtrl) {
-        int folders = getSelectedFolderPaths().count();
-        bool folderWasSelected = getSelectedFolderPaths().contains(dPath);
+        int folders = selectedFolderPaths().count();
+        bool folderWasSelected = selectedFolderPaths().contains(dPath);
         resetDataModel = false;
         recurse = false;
         // ignore if click on only folder selected

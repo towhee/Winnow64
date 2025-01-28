@@ -1235,13 +1235,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 }
             }
 
-            //enableEjectUsbMenu(G::currRootFolder);
-            // if (G::currRootFolder == "") {
-            //     addBookmarkAction->setEnabled(false);
-            //     revealFileActionFromContext->setEnabled(false);
-            //     copyFolderPathFromContextAction->setEnabled(false);
-            // }
-
             // disable if not click on folder
             if (mouseOverFolderPath == "") {
                 copyFolderPathFromContextAction->setEnabled(false);
@@ -2021,110 +2014,6 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     // qDebug().noquote() << fun << folderPath;
 
     dm->enqueueFolderSelection(folderPath, op, recurse);
-}
-
-void MW::loadNewInstance(QString folderPath)
-{
-/*
-    Reset all objects that involved the prior folder(s) selection
-    - all filters
-    - embellishing
-    - status
-    - view mode
-
-*/
-    QString fun = "MW::loadNewInstance";
-    if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
-    // qDebug() << "MW::primaryFolderSelection" << folderPath;
-
-    // reset all
-    stop("MW::loadNewInstance()");
-    dm->newInstance();
-
-    setCentralMessage("");
-
-    // block repeated clicks to folders or bookmarks while processing this one.
-    QSignalBlocker bookmarkBlocker(bookmarks);
-    QSignalBlocker fsTreeBlocker(fsTree);
-
-    // if (folderPath.length()) G::currRootFolder = folderPath;
-    // else G::currRootFolder = getSelectedPath();
-    // settings->setValue("lastDir", G::currRootFolder);
-
-
-    setCentralMessage("Loading information for folder " + G::currRootFolder);
-
-    // watch current folder in case it is deleted externally
-    folderWatcher.startWatching(G::currRootFolder, 1000);
-
-    buildFilters->reset();
-    dm->forceBuildFilters = false;
-    // // building filters msg
-    // filters->filtersBuilt = false;
-    // filters->loadingDataModel(false);
-    // // Prevent build filter if taking too long
-    // dm->forceBuildFilters = false;
-    // // clear filters
-    // uncheckAllFilters();
-    // buildFilters->reset();
-
-    // // do not embellish
-    // if (turnOffEmbellish) embelProperties->doNotEmbellish();
-
-    // ImageView set zoom = fit for the first image of a new folder
-    imageView->isFirstImageNewInstance = true;
-
-    // used by updateStatus
-    isCurrentFolderOkay = false;
-    pickMemSize = "";
-
-    // stop slideshow if a new folder is selected
-    if (G::isSlideShow && !G::isStressTest) slideShow();
-
-    // if previously in compare mode switch to loupe mode
-    if (asCompareAction->isChecked()) {
-        asCompareAction->setChecked(false);
-        asLoupeAction->setChecked(true);
-        updateState();
-    }
-
-    // if at welcome or message screen and then select a folder
-    if (centralLayout->currentIndex() == StartTab ||
-        centralLayout->currentIndex() == MessageTab)
-    {
-        if (prevMode == "Loupe") asLoupeAction->setChecked(true);
-        else if (prevMode == "Grid") asGridAction->setChecked(true);
-        else if (prevMode == "Table") asTableAction->setChecked(true);
-        else if (prevMode == "Compare") asLoupeAction->setChecked(true);
-        else {
-            prevMode = "Loupe";
-            asLoupeAction->setChecked(true);
-        }
-    }
-
-    // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(folderPath, true /*report*/, false /*isRemembered*/)) {
-        stop("Invalid folder");
-        setWindowTitle(winnowWithVersion);
-        if (G::isLogger)
-            if (G::isFileLogger) Utilities::log(fun, "Invalid folder " + G::currRootFolder);
-        return;
-    }
-
-    // // sync the folders tree with the current folder
-    // fsTree->scrollToCurrent();
-
-    // update menu
-    enableEjectUsbMenu(G::currRootFolder);
-
-    // update metadata read status light
-    updateMetadataThreadRunStatus(true, true, true, fun);
-
-    // testTime.restart();     // ms to fully load folder and read all the metadata and icons
-
-
-    bookmarkBlocker.unblock();
-    fsTreeBlocker.unblock();
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -5343,7 +5232,18 @@ void MW::showNewImageWarning(QWidget *parent)
 void MW::addNewBookmarkFromMenu()
 {
     if (G::isLogger) G::log("MW::addNewBookmarkFromMenu");
-    addBookmark(G::currRootFolder);
+
+    int n = fsTree->selectedFolderPaths().count();
+    QString nStr = QString::number(n);
+
+    switch(n) {
+    case 1:
+        addBookmark(fsTree->currentFolderPath());
+    case 0:
+        G::popUp->showPopup("No folder selected");
+    default:
+        G::popUp->showPopup(nStr + " folders selected");
+    }
 }
 
 void MW::addNewBookmarkFromContextMenu()
@@ -5367,7 +5267,6 @@ void MW::openFolder()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
     fsTree->select(dirPath);
-    // folderSelectionChange();
 }
 
 void MW::refreshDataModel()

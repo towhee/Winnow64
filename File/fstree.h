@@ -70,7 +70,8 @@ public:
 	QModelIndex getCurrentIndex();
     void scrollToCurrent();
     QString selectSrc = "";
-    QStringList getSelectedFolderPaths() const;
+    QString currentFolderPath();
+    QStringList selectedFolderPaths() const;
 
     bool combineRawJpg;
     QString hoverFolderName;
