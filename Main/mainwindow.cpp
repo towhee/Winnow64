@@ -1183,7 +1183,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             eraseUsbActionFromContextMenu->setEnabled(true);
             ejectAction->setEnabled(true);
             ejectActionFromContextMenu->setEnabled(true);
-            addBookmarkAction->setEnabled(true);
             addBookmarkActionFromContext->setEnabled(true);
             pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
 
@@ -1243,7 +1242,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 eraseUsbActionFromContextMenu->setEnabled(false);
                 ejectAction->setEnabled(false);
                 ejectActionFromContextMenu->setEnabled(false);
-                addBookmarkAction->setEnabled(false);
                 addBookmarkActionFromContext->setEnabled(false);
                 // pasteFilesAction->setEnabled(false);
             }
@@ -2967,6 +2965,8 @@ void MW::loadDone()
     }
     QString src = "MW::loadDone";
     // qDebug().noquote() << src << "dm->folderQueue.count() =" << dm->folderQueue.count();
+
+    fsTree->scrollToCurrent();
 
     int count = 0;
     /*
@@ -5227,23 +5227,6 @@ void MW::showNewImageWarning(QWidget *parent)
     if (G::isLogger) G::log("MW::showNewImageWarning");
     QMessageBox msgBox;
     msgBox.warning(parent, tr("Warning"), tr("Cannot perform action with temporary image."));
-}
-
-void MW::addNewBookmarkFromMenu()
-{
-    if (G::isLogger) G::log("MW::addNewBookmarkFromMenu");
-
-    int n = fsTree->selectedFolderPaths().count();
-    QString nStr = QString::number(n);
-
-    switch(n) {
-    case 1:
-        addBookmark(fsTree->currentFolderPath());
-    case 0:
-        G::popUp->showPopup("No folder selected");
-    default:
-        G::popUp->showPopup(nStr + " folders selected");
-    }
 }
 
 void MW::addNewBookmarkFromContextMenu()

@@ -218,12 +218,6 @@ void MW::createFileActions()
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
 
-    addBookmarkAction = new QAction(tr("Add Bookmark"), this);
-    addBookmarkAction->setObjectName("addBookmark");
-    addBookmarkAction->setShortcutVisibleInContextMenu(true);
-    addAction(addBookmarkAction);
-    connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmarkFromMenu);
-
     addBookmarkActionFromContext = new QAction(tr("Add Bookmark"), this);
     addBookmarkActionFromContext->setObjectName("addBookmark");
     addBookmarkActionFromContext->setShortcutVisibleInContextMenu(true);
@@ -1711,8 +1705,6 @@ void MW::createFileMenu()
     fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(includeSidecarsAction);
-    // fileMenu->addAction(subFoldersAction);
-    fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
     fileMenu->addAction(renameAction);
     fileMenu->addAction(saveAsFileAction);
@@ -2252,7 +2244,6 @@ void MW::renameEjectUsbMenu(QString path)
 
 void MW::renameAddBookmarkAction(QString folderName)
 {
-    addBookmarkAction->setText("Add Bookmark " +  Utilities::enquote(folderName));
     addBookmarkActionFromContext->setText("Add Bookmark " +  Utilities::enquote(folderName));
 }
 

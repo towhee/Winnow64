@@ -392,10 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << G::currRootFolder;
-    qDebug() << fsTree->currentFolderPath();
-    qDebug() << fsTree->selectedFolderPaths().at(0);
-
+    // fsTree->refreshModel();
+    fsTree->scrollToCurrent();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
