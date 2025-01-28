@@ -1203,6 +1203,9 @@ void FSTree::dropEvent(QDropEvent *event)
     if (dm->folderList.contains(dropDir)) {
         emit refreshDataModel();
     }
+    else {
+        select(dropDir);
+    }
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION

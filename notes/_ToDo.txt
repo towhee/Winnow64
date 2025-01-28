@@ -11,11 +11,8 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Eliminate use of G::currRootFolder
 - Cleanup MW::loadDone
-- Auto open last folder sometimes not caching images
-- Review fillCache logic, make toCache struct with isCaching flag)
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read
@@ -138,8 +135,11 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix ImageCache::resetOutsideTargetRangeCacheState crash
 - Auto open last folder Folders not scroll to current
+- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Change color management spinning beachball
+- Review fillCache logic, make toCache struct with isCaching flag)
 - Include cache progress in status bar again
 - Refresh tiff full image when toggle color management
 - Fix IssueLog initialization
