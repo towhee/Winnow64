@@ -13,6 +13,8 @@ WHAT'S NEW
 BUGS / TO DO
 - FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Eliminate use of G::currRootFolder
+- Auto open last folder sometimes not caching images
+- Auto open last folder Folders not scroll to current
 - Review fillCache logic, make toCache struct with isCaching flag)
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)

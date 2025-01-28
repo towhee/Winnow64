@@ -412,7 +412,6 @@ public slots:
     void handleStartupArgs(const QString &msg);
     void folderSelectionChange(QString folderPath = "", QString op = "Add",
                                bool resetDataModel = true, bool recurse = false);
-    void loadNewInstance(QString folderPath);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void tryLoadImageAgain(QString fPath);
