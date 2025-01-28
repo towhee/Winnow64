@@ -13,8 +13,8 @@ WHAT'S NEW
 BUGS / TO DO
 - FSTree include datamodel, use dm->folderList instead of G::currRootFolder
 - Eliminate use of G::currRootFolder
+- Cleanup MW::loadDone
 - Auto open last folder sometimes not caching images
-- Auto open last folder Folders not scroll to current
 - Review fillCache logic, make toCache struct with isCaching flag)
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
@@ -138,6 +138,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Auto open last folder Folders not scroll to current
 - Change color management spinning beachball
 - Include cache progress in status bar again
 - Refresh tiff full image when toggle color management
