@@ -51,7 +51,23 @@ void MW::pasteFiles(QString folderPath)
         return;
     }
 
-    if (folderPath == "") folderPath = G::currRootFolder;
+    if (folderPath == "") {
+        int n = dm->folderList.count();
+        QString nStr = QString::number(n);
+        if (n == 0) {
+            QString msg = "No folder selected, paste cancelled.";
+            G::popUp->showPopup(msg, 2000);
+            return;
+        }
+        if (n > 1) {
+            QString msg = "More than 1 folder selected, paste cancelled.";
+            G::popUp->showPopup(msg, 2000);
+            return;
+        }
+
+        folderPath = dm->folderList.at(0);
+    }
+
     const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
     QList<QUrl> urls;
     QStringList newPaths;
@@ -83,8 +99,10 @@ void MW::pasteFiles(QString folderPath)
     fsTree->fsModel->refresh(folderPath);
     bookmarks->updateCount();
 
-    // refresh folder to show pasted images
-    if (folderPath == G::currRootFolder) folderAndFileSelectionChange(dm->currentFilePath, "pasteFiles");;
+    // refresh folder to show pasted images rgh check this
+    if (dm->folderList.contains(folderPath)) {
+        folderAndFileSelectionChange(dm->currentFilePath, "pasteFiles");
+    }
 
     // popup msg
     QString mImages;
@@ -126,7 +144,8 @@ void MW::copyImagePathFromContext()
 
 void MW::renameSelectedFiles()
 {
-    QString folderPath = G::currRootFolder;
+    // rgh redo to make folder agnostic (change RenameFileDlg?)
+    QString folderPath = dm->folderList.at(0);
     QStringList selection;
     if (!dm->getSelection(selection)) return;
     // Check all files are in the same folder
@@ -505,8 +524,9 @@ void MW::deleteFolder()
     if (G::isLogger) G::log("MW::deleteFolder");
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
+    // rgh allow deletion of multiple folders with ample warnings
     if (senderObject == "deleteActiveFolder") {
-        dirToDelete = G::currRootFolder;
+        dirToDelete = dm->folderList.at(0);
     }
     else if (senderObject == "deleteFSTreeFolder") {
         dirToDelete = mouseOverFolderPath;
@@ -550,7 +570,7 @@ void MW::deleteFolder()
 
     QModelIndex currIdx = fsTree->currentIndex();
 
-    if (G::currRootFolder == dirToDelete) {
+    if (dm->folderList.contains(dirToDelete)) {
         stop("deleteFolder");
     }
 
@@ -566,9 +586,21 @@ void MW::deleteFolder()
     }
 
     // do not highlight next folder
-    if (G::currRootFolder == dirToDelete) fsTree->setCurrentIndex(QModelIndex());
-    else fsTree->setCurrentIndex(currIdx);
+    fsTree->setCurrentIndex(QModelIndex());
 
+    // show msg if this wsa the active folder and there are no images now
+    if (dm->folderList.contains(dirToDelete)) {
+        if (dm->folderList.count() == 1) {
+            // stop();
+            // reset();
+            dm->clear();
+            dm->clearAllIcons();
+            setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
+        }
+        // if (dm->folderList.count() > 1) {
+        //     folderSelectionChange(dirToDelete, "Remove", false, false);
+        // }
+    }
 }
 
 void MW::deleteAllImageMemCard(QString rootPath, QString name)
@@ -613,9 +645,11 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     QString msg = "All images removed from " + name;
     G::popUp->showPopup(msg);
 
-    if (G::currRootFolder.contains(rootPath)) {
-        fsTree->select(rootPath);
-    }
+    // rgh check what to do
+
+    // if (G::currRootFolder.contains(rootPath)) {
+    //     fsTree->select(rootPath);
+    // }
 }
 
 void MW::eraseMemCardImages()

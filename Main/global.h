@@ -21,7 +21,6 @@
 #define EXISTS if (p.file.exists())
 
 //#define "CLASSFUNCTION" QString::fromUtf8(metaObject()->className()) + "::" + __func__
-//#define OK !currRootFolder.isEmpty()
 
 namespace G
 {
@@ -238,6 +237,8 @@ namespace G
     extern qreal actDevicePixelRatio;           // current monitor
     extern qreal sysDevicePixelRatio;           // current monitor
 
+    extern QString trash;
+
     extern int maxIconSize;
     extern int minIconSize;
     extern int maxIconChunk;
@@ -280,7 +281,6 @@ namespace G
     extern int backgroundShade;
     extern QString css;
 
-    extern QString currRootFolder;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;

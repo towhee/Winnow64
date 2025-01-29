@@ -28,8 +28,9 @@ void MW::reportState(QString title)
         << "\nPOSITION:"
         << "\nG::mode                                " << G::mode
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
-        << "\nG::currRootFolder                      " << G::currRootFolder
-        << "\ncurrentViewDirPath                     " << G::currRootFolder
+        // rgh maybe just list all selected folders, or do we even care
+        << "\nG::currRootFolder                      " << dm->folderList.at(0)
+        << "\nccurrentFilePath                       " << dm->currentFilePath
         << "\ncurrentRow                             " << dm->currentSfRow
         << "\ncurrentSfIdx                           " << dm->currentSfIdx
         << "\ncurrentDmIdx                           " << dm->currentDmIdx
@@ -216,7 +217,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(!isFullScreen());
-    rpt << "\n" << "currentViewDir = " << G::s(G::currRootFolder);
+    rpt << "\n" << "dm->currentPrimaryFolderPath = " << G::s(dm->currentPrimaryFolderPath);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(dm->currentSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);

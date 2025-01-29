@@ -114,11 +114,13 @@ void MW::setupPlatform()
         Win::collectScreensInfo();
         Win::availableMemory();
         Win::setTitleBarColor(winId(), G::backgroundColor);
+        G::trash = "Recycle Bin";
     #endif
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
         Mac::availableMemory();
         Mac::joinAllSpaces(window()->winId());
+        G::trash = "Trash";
     #endif
 }
 
