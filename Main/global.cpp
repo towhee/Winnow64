@@ -71,6 +71,9 @@ int displayVirtualVerticalPixels;   // current monitor
 qreal actDevicePixelRatio;          // current monitor
 qreal sysDevicePixelRatio;          // current monitor
 
+// Mac = Trash PC = recycle bin
+QString trash;
+
 // application parameters
 QString strFontSize;                // app font point size
 int fontSize;
@@ -130,7 +133,6 @@ int minIconSize = 40;
 int maxIconChunk = 25000;
 
 // status
-QString currRootFolder;
 bool ignoreScrollSignal;
 bool isSlideShow;
 bool isRunningColorAnalysis;

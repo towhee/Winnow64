@@ -12,7 +12,11 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Eliminate use of G::currRootFolder
+- Startup folder sometimes imagecache not happening
+- Rethink copy, passte, delete incl MW::deleteFolder with possible multi folder selections
 - Cleanup MW::loadDone
+- Check all drop operations
+- Review all rgh comments
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read

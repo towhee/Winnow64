@@ -1915,10 +1915,10 @@ void MW::handleStartupArgs(const QString &args)
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
 
-       /* debug
+        /* debug
         qDebug() << "MW::handleStartUpArgs"
                  << "fDir" << fDir
-                 << "G::currRootFolder" << G::currRootFolder
+                 << "dm->currentPrimaryFolderPath" << dm->currentPrimaryFolderPath
                  << "first path =" << embellishedPaths.at(0)
             ; //*/
 
@@ -1985,6 +1985,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
+    // rgh when is this req'd?
     if (folderPath == "") folderPath = dm->currentPrimaryFolderPath;
 
     // save the current datamodel selection before removing a folder from datamodel
@@ -1995,7 +1996,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
         // // deal with filters
         // if (filters->isAnyFilter()) {
         //     G::popUp->showPopup("Filters cleared");
-        G::currRootFolder = folderPath;
+        dm->currentPrimaryFolderPath = folderPath;
         stop(fun + " reset DataModel");
         reset(fun);
         // sync bookmarks if exists
@@ -2286,7 +2287,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // handle drop
     if (src == "handleDropOnCentralView") {
-        if (folder == G::currRootFolder) {
+        if (dm->folderList.contains(folder)) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
                 sel->setCurrentPath(fPath);
             }
@@ -2343,7 +2344,9 @@ bool MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + G::currRootFolder);
+    // rgh how refer to what we are stopping when multi folders may be in datamodel
+    // just use dm->currentPrimaryFolderPath ?
+    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + dm->currentPrimaryFolderPath);
 
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
@@ -2360,10 +2363,10 @@ bool MW::stop(QString src)
              << "G::stop =" << G::stop
              << "dm->abortLoadingModel =" << dm->abortLoadingModel
              << "thread =" << QThread::currentThreadId()
-             << "G::currRootFolder =" << G::currRootFolder;
+             << "G::currRootFolder =" << dm->currentPrimaryFolderPath;  // rgh ??
     //*/
     // dm->newInstance();
-    QString oldFolder = G::currRootFolder;
+    QString oldFolder = dm->currentPrimaryFolderPath;  // rgh what we want?
 
     // show qDebug info
     bool isDebugStopping = false;
@@ -2481,19 +2484,20 @@ bool MW::reset(QString src)
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
 
-   if (!G::dmEmpty /*|| !G::stop*/) {
+    if (!G::dmEmpty /*|| !G::stop*/) {
        //qDebug() << "MW::reset G::dmEmpty == false";
        return false;
-   }
+    }
 
     //qDebug() << "MW::reset src =" << src;
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
+    // rgh redo for multi-folders
+    if (!isFolderValid(dm->currentPrimaryFolderPath, true /*report*/, false /*isRemembered*/)) {
         stop("Invalid folder");
         setWindowTitle(winnowWithVersion);
         if (G::isLogger)
-            if (G::isFileLogger) Utilities::log("MW::reset", "Invalid folder " + G::currRootFolder);
+            if (G::isFileLogger) Utilities::log("MW::reset", "Invalid folder " + dm->currentPrimaryFolderPath);
         return false;
     }
 
@@ -2506,8 +2510,6 @@ bool MW::reset(QString src)
     G::dmEmpty = true;
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
-    G::currRootFolder = "";
-    //qDebug() << "MW::reset" << "G::currRootFolder = Blank";
 
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
@@ -2546,7 +2548,7 @@ bool MW::reset(QString src)
     pickMemSize = "";
 
     // update menu
-    enableEjectUsbMenu(G::currRootFolder);
+    enableEjectUsbMenu(dm->currentPrimaryFolderPath);  // rgh is this what we want
 
     // update metadata read status light
     updateMetadataThreadRunStatus(true, true, true, "MW::reset");
@@ -3339,10 +3341,10 @@ void MW::checkDirState(const QString &dirPath)
     if (G::isLogger) G::log("MW::checkDirState");
     if (G::isInitializing) return;
 
-    if (!QDir().exists(G::currRootFolder)) {
-        qDebug() << "MW::checkDirState" << "G::currRootFolder = Blank";
-        G::currRootFolder = "";
-    }
+    // if (!QDir().exists(G::currRootFolder)) {
+    //     qDebug() << "MW::checkDirState" << "G::currRootFolder = Blank";
+    //     // G::currRootFolder = "";
+    // }
 }
 
 QString MW::getSelectedPath()
@@ -4687,10 +4689,12 @@ void MW::ingest()
     /*
     qDebug() << "MW::ingest"
              << "prevSourceFolder" << prevSourceFolder
-             << "currentViewDirPath" << G::currRootFolder
+             << "currentViewDirPath" << dm->currentPrimaryFolderPath
              << "baseFolderDescription" << baseFolderDescription
                 ;  //*/
-    if (prevSourceFolder != G::currRootFolder) baseFolderDescription = "";
+
+    // what we want ie dm->currentPrimaryFolderPath
+    if (prevSourceFolder != dm->currentPrimaryFolderPath) baseFolderDescription = "";
 
     QString folderPath;        // req'd by backgroundIngest
     QString folderPath2;       // req'd by backgroundIngest
@@ -4819,7 +4823,7 @@ void MW::ingest()
             G::isRunningBackgroundIngest = true;
         }
 
-        prevSourceFolder = G::currRootFolder;
+        prevSourceFolder = dm->currentPrimaryFolderPath;    // rgh what we want?
         /*
         qDebug() << "MW::ingest"
                  << "gotoIngestFolder =" << gotoIngestFolder
@@ -4865,7 +4869,7 @@ void MW::ejectUsb(QString path)
 
     // if current folder is on the USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
-    QStorageInfo currentDrive(G::currRootFolder);
+    QStorageInfo currentDrive(dm->currentPrimaryFolderPath); // rgh this what we want?
     bool ejectDriveIsCurrent = currentDrive.rootPath() == ejectDrive.rootPath();
     // /*
     qDebug() << "MW::ejectUsb"
@@ -4920,7 +4924,8 @@ void MW::ejectUsb(QString path)
 void MW::ejectUsbFromMainMenu()
 {
     if (G::isLogger) G::log("MW::ejectUsbFromMainMenu");
-    ejectUsb(G::currRootFolder);
+    // rgh chk and fix this
+    ejectUsb(dm->currentPrimaryFolderPath);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -5211,8 +5216,12 @@ void MW::getSubfolders(QString fPath)
 
 void MW::selectCurrentViewDir()
 {
+/*
+    Called by MW::dropOp rgh // eliminate?
+*/
     if (G::isLogger) G::log("MW::selectCurrentViewDir");
-    fsTree->select(G::currRootFolder);
+    // rgh this likely no longer makes any sense
+    fsTree->select(dm->folderList.at(0));
     // QModelIndex idx = fsTree->fsModel->index(G::currRootFolder);
     // if (idx.isValid()){
     //     fsTree->expand(idx);
