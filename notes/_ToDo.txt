@@ -11,9 +11,9 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- Eliminate use of G::currRootFolder
+- Folder _Tiff Problems thumbnails not right
 - Startup folder sometimes imagecache not happening
-- Rethink copy, passte, delete incl MW::deleteFolder with possible multi folder selections
+- Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
 - Cleanup MW::loadDone
 - Check all drop operations
 - Review all rgh comments
@@ -139,6 +139,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Eliminate use of G::currRootFolder
 - Fix ImageCache::resetOutsideTargetRangeCacheState crash
 - Auto open last folder Folders not scroll to current
 - FSTree include datamodel, use dm->folderList instead of G::currRootFolder

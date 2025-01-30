@@ -128,7 +128,6 @@ private:
 
     QHash<int,CacheStatus> toCacheStatus;
 
-
     int key;                    // current image
     int prevKey;                // used to establish direction of travel
     // int toCacheKey;             // next file to cache
@@ -148,8 +147,8 @@ private:
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void updateToCacheTargets();
-    bool resetInsideTargetRangeCacheState(); // Set IsCaching = false within current target range
-    void resetOutsideTargetRangeCacheState();// define start and end key in the target range to cache
+    bool isOrphans(); // Set IsCaching = false within current target range
+    void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
