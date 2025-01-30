@@ -74,11 +74,12 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             }
             int hdrLength = p.file.pos() - blockLengthPos - 2;
             if (!foundJpeg) {
+                /*
                 qDebug() << "IRB::readThumb not found"
                          << "IRB ID 1036 offset =" << p.offset
                          << "dataBlockLength =" << dataBlockLength
                          << "searched =" << hdrLength << "bytes"
-                            ;
+                            ; //*/
                 return;
             }
             m.offsetThumb = static_cast<quint32>(p.file.pos()) - 2;
@@ -86,7 +87,7 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             m.thumbFormat = G::ImageFormat::Jpg;
             m.isEmbeddedThumbMissing = false;
             if (p.report) p.rpt << "Embedded IRB Jpg thumbnail found.\n";
-            // /*
+            /*
             qDebug() << "IRB::readThumb"
                      << m.row
                      << "IRB ID 1036 offset =" << p.offset

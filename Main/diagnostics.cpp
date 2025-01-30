@@ -221,7 +221,7 @@ QString MW::diagnostics()
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(dm->currentSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
-//    rpt << "\n" << "currentDmIdx = row" << G::s(currDmIdx.row()) << " col " << G::s(currDmIdx.column());
+    // rpt << "\n" << "currentDmIdx = row" << G::s(currDmIdx.row()) << " col " << G::s(currDmIdx.column());
     rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
     rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
     rpt << "\n" << "sortColumn = " << G::s(sortColumn);
