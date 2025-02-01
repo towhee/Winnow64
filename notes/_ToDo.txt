@@ -11,6 +11,8 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- /Users/roryhill/Temp/Focus_Stack/2022-02-21_0001_Focus Stack.tif thumb is corrupted?
+- Read svg files ie downloads/glyphs.svg
 - Folder _Tiff Problems thumbnails not right
 - Startup folder sometimes imagecache not happening
 - Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections

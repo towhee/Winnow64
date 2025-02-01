@@ -184,7 +184,10 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     int uturnCounter = 0;
     int uturnMax;
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
-    int uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
+    qDebug() << "uturnMax =" << uturnMax;
+    int uturnAmount;
+    if (uturnMax > 10) uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
+    else uturnAmount = dm->sf->rowCount();
     QElapsedTimer folderTime;
     folderTime.start();
     QElapsedTimer t;

@@ -1,246 +1,188 @@
-DATAMODEL OPTION
-MW::traverseFolderStressTest randomChangeDirection = false
-PopUp::showPopup "Press <font color=\"red\"><b>ESC</b></font> to stop stress test" 0
- 24,892,022 cacheImage                                         decoder 12 row = 165  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09309.ARW
-      2,974 cacheImage                                         decoder 1  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-     28,036 cacheImage                                         decoder 13 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      3,488 cacheImage                                         decoder 7  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,237 cacheImage                                         decoder 18 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,252 cacheImage                                         decoder 15 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,544 cacheImage                                         decoder 9  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,540 cacheImage                                         decoder 12 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      1,877 cacheImage                                         decoder 2  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      8,216 cacheImage                                         decoder 8  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,890 cacheImage                                         decoder 19 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      1,794 cacheImage                                         decoder 4  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      2,401 cacheImage                                         decoder 16 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      1,664 cacheImage                                         decoder 6  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      1,845 cacheImage                                         decoder 3  row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-      1,680 cacheImage                                         decoder 14 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-    605,763 cacheImage                                         decoder 11 row = 168  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09312.ARW
-     26,578 cacheImage                                         decoder 13 row = 170  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09314.ARW
-      2,765 cacheImage                                         decoder 5  row = 171  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09315.ARW
-      1,713 cacheImage                                         decoder 9  row = 175  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09319.ARW
-      1,976 cacheImage                                         decoder 15 row = 174  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09318.ARW
-     10,543 cacheImage                                         decoder 0  row = 171  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09315.ARW
-      2,611 cacheImage                                         decoder 18 row = 173  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09317.ARW
-     11,092 cacheImage                                         decoder 7  row = 172  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09316.ARW
-     33,342 cacheImage                                         decoder 12 row = 176  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09320.ARW
-     12,340 cacheImage                                         decoder 2  row = 177  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09321.ARW
-     52,238 cacheImage                                         decoder 6  row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
-      7,992 cacheImage                                         decoder 3  row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
-     11,024 cacheImage                                         decoder 11 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
-     32,853 cacheImage                                         decoder 4  row = 180  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09324.ARW
-     25,659 cacheImage                                         decoder 17 row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
-     10,039 cacheImage                                         decoder 10 row = 181  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09325.ARW
-     46,587 cacheImage                                         decoder 16 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
-    417,139 cacheImage                                         decoder 14 row = 182  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09326.ARW
-      8,484 cacheImage                                         decoder 1  row = 169  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09313.ARW
-      6,520 cacheImage                                         decoder 9  row = 185  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09329.ARW
-      5,375 cacheImage                                         decoder 0  row = 187  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09331.ARW
-      2,366 cacheImage                                         decoder 13 row = 183  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09327.ARW
-     25,129 cacheImage                                         decoder 5  row = 184  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09328.ARW
-      3,162 cacheImage                                         decoder 12 row = 190  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09334.ARW
-      1,912 cacheImage                                         decoder 7  row = 189  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09333.ARW
-      6,614 cacheImage                                         decoder 15 row = 186  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09330.ARW
-      8,063 cacheImage                                         decoder 18 row = 188  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09332.ARW
-      6,528 cacheImage                                         decoder 8  row = 178  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09322.ARW
-     34,520 cacheImage                                         decoder 2  row = 191  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09335.ARW
-      3,328 cacheImage                                         decoder 19 row = 179  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09323.ARW
-     16,736 cacheImage                                         decoder 6  row = 192  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09336.ARW
-     64,401 cacheImage                                         decoder 3  row = 193  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09337.ARW
-      8,032 cacheImage                                         decoder 11 row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
-      2,738 cacheImage                                         decoder 17 row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
-     28,233 cacheImage                                         decoder 4  row = 194  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09338.ARW
-     22,310 cacheImage                                         decoder 10 row = 195  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09339.ARW
-     47,776 cacheImage                                         decoder 16 row = 195  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09339.ARW
-    353,298 cacheImage                                         decoder 14 row = 196  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09340.ARW
-     10,425 cacheImage                                         decoder 1  row = 197  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09341.ARW
-     18,316 cacheImage                                         decoder 13 row = 200  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09344.ARW
-     30,877 cacheImage                                         decoder 0  row = 199  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09343.ARW
-      2,731 cacheImage                                         decoder 5  row = 201  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09345.ARW
-     55,553 cacheImage                                         decoder 9  row = 198  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09342.ARW
-      3,164 cacheImage                                         decoder 12 row = 202  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09346.ARW
-      1,946 cacheImage                                         decoder 7  row = 203  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09347.ARW
-     58,945 cacheImage                                         decoder 15 row = 204  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09348.ARW
-      9,304 cacheImage                                         decoder 3  row = 205  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09349.ARW
-      8,147 cacheImage                                         decoder 19 row = 204  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09348.ARW
-     42,745 cacheImage                                         decoder 6  row = 205  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09349.ARW
-      3,184 cacheImage                                         decoder 4  row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
-      1,992 cacheImage                                         decoder 17 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
-     58,752 cacheImage                                         decoder 11 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
-     59,071 cacheImage                                         decoder 10 row = 206  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09350.ARW
-    330,180 cacheImage                                         decoder 14 row = 208  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09352.ARW
-      2,797 cacheImage                                         decoder 1  row = 209  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09353.ARW
-     33,738 cacheImage                                         decoder 13 row = 210  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09354.ARW
-     16,559 cacheImage                                         decoder 0  row = 211  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09355.ARW
-     10,780 cacheImage                                         decoder 9  row = 213  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09357.ARW
-     34,736 cacheImage                                         decoder 5  row = 212  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09356.ARW
-     55,370 cacheImage                                         decoder 7  row = 215  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09359.ARW
-     57,389 cacheImage                                         decoder 2  row = 216  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09360.ARW
-      2,689 cacheImage                                         decoder 3  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-      9,909 cacheImage                                         decoder 19 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-      2,649 cacheImage                                         decoder 8  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-     10,259 cacheImage                                         decoder 6  row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-      7,507 cacheImage                                         decoder 15 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-     36,450 cacheImage                                         decoder 18 row = 217  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09361.ARW
-      2,790 cacheImage                                         decoder 4  row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
-      5,978 cacheImage                                         decoder 11 row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
-     15,905 cacheImage                                         decoder 17 row = 218  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09362.ARW
-     60,415 cacheImage                                         decoder 16 row = 207  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09351.ARW
-     34,572 cacheImage                                         decoder 10 row = 219  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09363.ARW
-    292,258 cacheImage                                         decoder 14 row = 220  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09364.ARW
-      9,621 cacheImage                                         decoder 0  row = 223  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09367.ARW
-      6,771 cacheImage                                         decoder 1  row = 221  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09365.ARW
-      2,524 cacheImage                                         decoder 9  row = 224  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09368.ARW
-     42,925 cacheImage                                         decoder 5  row = 225  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09369.ARW
-     67,926 cacheImage                                         decoder 7  row = 226  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09370.ARW
-      7,875 cacheImage                                         decoder 12 row = 214  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09358.ARW
-     51,477 cacheImage                                         decoder 2  row = 227  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09371.ARW
-     51,506 cacheImage                                         decoder 3  row = 228  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09372.ARW
-      3,343 cacheImage                                         decoder 19 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
-      1,868 cacheImage                                         decoder 6  row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
-      1,620 cacheImage                                         decoder 15 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
-     27,507 cacheImage                                         decoder 18 row = 229  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09373.ARW
-     31,807 cacheImage                                         decoder 16 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
-      3,045 cacheImage                                         decoder 17 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
-      2,523 cacheImage                                         decoder 4  row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
-     21,517 cacheImage                                         decoder 11 row = 230  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09374.ARW
-     40,872 cacheImage                                         decoder 10 row = 231  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09375.ARW
-    233,285 cacheImage                                         decoder 14 row = 232  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09376.ARW
-     27,883 cacheImage                                         decoder 0  row = 233  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09377.ARW
-     26,664 cacheImage                                         decoder 9  row = 235  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09379.ARW
-     11,345 cacheImage                                         decoder 1  row = 234  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09378.ARW
-      4,685 cacheImage                                         decoder 13 row = 222  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09366.ARW
-    126,655 cacheImage                                         decoder 5  row = 236  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09380.ARW
-     46,194 cacheImage                                         decoder 2  row = 239  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09383.ARW
-     25,526 cacheImage                                         decoder 8  row = 240  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09384.ARW
-     38,762 cacheImage                                         decoder 3  row = 240  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09384.ARW
-     50,931 cacheImage                                         decoder 19 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
-      2,569 cacheImage                                         decoder 16 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
-      2,126 cacheImage                                         decoder 6  row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
-      1,746 cacheImage                                         decoder 17 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
-     14,728 cacheImage                                         decoder 15 row = 241  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09385.ARW
-      7,727 cacheImage                                         decoder 4  row = 242  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09386.ARW
-     47,367 cacheImage                                         decoder 11 row = 242  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09386.ARW
-    230,069 cacheImage                                         decoder 14 row = 243  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09387.ARW
-     23,415 cacheImage                                         decoder 0  row = 244  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09388.ARW
-     31,811 cacheImage                                         decoder 1  row = 246  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09390.ARW
-     14,653 cacheImage                                         decoder 13 row = 247  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09391.ARW
-     12,038 cacheImage                                         decoder 5  row = 248  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09392.ARW
-     65,272 cacheImage                                         decoder 7  row = 237  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09381.ARW
-     31,752 cacheImage                                         decoder 12 row = 238  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09382.ARW
-     57,939 cacheImage                                         decoder 2  row = 249  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09393.ARW
-     61,271 cacheImage                                         decoder 8  row = 250  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09394.ARW
-     56,596 cacheImage                                         decoder 3  row = 251  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09395.ARW
-     19,817 cacheImage                                         decoder 18 row = 252  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09396.ARW
-     39,472 cacheImage                                         decoder 11 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-      2,800 cacheImage                                         decoder 17 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-      2,031 cacheImage                                         decoder 15 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-      1,692 cacheImage                                         decoder 16 row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-      6,935 cacheImage                                         decoder 6  row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-     46,711 cacheImage                                         decoder 4  row = 253  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09397.ARW
-    194,485 cacheImage                                         decoder 14 row = 254  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09398.ARW
-     21,472 cacheImage                                         decoder 9  row = 245  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09389.ARW
-     29,335 cacheImage                                         decoder 0  row = 255  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09399.ARW
-     33,363 cacheImage                                         decoder 1  row = 256  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09400.ARW
-     59,029 cacheImage                                         decoder 13 row = 257  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09401.ARW
-     33,900 cacheImage                                         decoder 7  row = 259  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09403.ARW
-    115,160 cacheImage                                         decoder 12 row = 260  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09404.ARW
-     73,526 cacheImage                                         decoder 8  row = 262  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09406.ARW
-     46,991 cacheImage                                         decoder 18 row = 263  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09407.ARW
-      2,800 cacheImage                                         decoder 19 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
-     14,596 cacheImage                                         decoder 10 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
-     49,044 cacheImage                                         decoder 11 row = 264  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09408.ARW
-      7,828 cacheImage                                         decoder 4  row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-      5,260 cacheImage                                         decoder 14 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-      2,684 cacheImage                                         decoder 15 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-      7,438 cacheImage                                         decoder 17 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-      2,910 cacheImage                                         decoder 16 row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-    205,807 cacheImage                                         decoder 6  row = 265  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09409.ARW
-      3,125 cacheImage                                         decoder 9  row = 266  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09410.ARW
-     56,466 cacheImage                                         decoder 0  row = 267  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09411.ARW
-      7,872 cacheImage                                         decoder 1  row = 268  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09412.ARW
-     28,520 cacheImage                                         decoder 13 row = 269  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09413.ARW
-     30,730 cacheImage                                         decoder 7  row = 270  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09414.ARW
-     13,772 cacheImage                                         decoder 5  row = 258  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09402.ARW
-     58,966 cacheImage                                         decoder 12 row = 271  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09415.ARW
-     68,006 cacheImage                                         decoder 2  row = 261  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09405.ARW
-     35,151 cacheImage                                         decoder 8  row = 272  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09416.ARW
-      7,102 cacheImage                                         decoder 18 row = 273  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09417.ARW
-     86,315 cacheImage                                         decoder 3  row = 263  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09407.ARW
-     30,579 cacheImage                                         decoder 19 row = 274  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09418.ARW
-     17,109 cacheImage                                         decoder 10 row = 275  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09419.ARW
-     36,070 cacheImage                                         decoder 11 row = 276  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09420.ARW
-      3,126 cacheImage                                         decoder 17 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-      1,922 cacheImage                                         decoder 4  row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-      1,623 cacheImage                                         decoder 6  row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-     10,680 cacheImage                                         decoder 16 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-     17,107 cacheImage                                         decoder 14 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-    149,383 cacheImage                                         decoder 15 row = 277  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09421.ARW
-     12,475 cacheImage                                         decoder 9  row = 278  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09422.ARW
-     54,039 cacheImage                                         decoder 0  row = 279  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09423.ARW
-     47,480 cacheImage                                         decoder 1  row = 280  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09424.ARW
-      7,686 cacheImage                                         decoder 13 row = 281  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09425.ARW
-     60,237 cacheImage                                         decoder 7  row = 282  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09426.ARW
-      2,852 cacheImage                                         decoder 5  row = 283  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09427.ARW
-     52,285 cacheImage                                         decoder 12 row = 283  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09427.ARW
-     65,578 cacheImage                                         decoder 2  row = 284  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09428.ARW
-     47,970 cacheImage                                         decoder 8  row = 285  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09429.ARW
-      7,491 cacheImage                                         decoder 18 row = 286  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09430.ARW
-     75,114 cacheImage                                         decoder 3  row = 286  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09430.ARW
-     38,345 cacheImage                                         decoder 19 row = 287  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09431.ARW
-      7,375 cacheImage                                         decoder 11 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
-     56,177 cacheImage                                         decoder 10 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
-      2,681 cacheImage                                         decoder 17 row = 288  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09432.ARW
-      6,436 cacheImage                                         decoder 6  row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
-      5,037 cacheImage                                         decoder 15 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
-      2,485 cacheImage                                         decoder 16 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
-      5,234 cacheImage                                         decoder 4  row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
-    116,812 cacheImage                                         decoder 14 row = 289  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09433.ARW
-     34,296 cacheImage                                         decoder 0  row = 291  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09435.ARW
-    124,669 cacheImage                                         decoder 1  row = 292  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09436.ARW
-     74,713 cacheImage                                         decoder 7  row = 294  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09438.ARW
-     37,723 cacheImage                                         decoder 12 row = 295  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09439.ARW
-     20,958 cacheImage                                         decoder 5  row = 295  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09439.ARW
-     59,598 cacheImage                                         decoder 2  row = 296  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09440.ARW
-     46,281 cacheImage                                         decoder 8  row = 297  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09441.ARW
-     29,737 cacheImage                                         decoder 18 row = 297  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09441.ARW
-     28,945 cacheImage                                         decoder 19 row = 299  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09443.ARW
-     69,146 cacheImage                                         decoder 3  row = 298  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09442.ARW
-     12,568 cacheImage                                         decoder 10 row = 300  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09444.ARW
-     43,919 cacheImage                                         decoder 11 row = 300  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09444.ARW
-      6,611 cacheImage                                         decoder 14 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-      8,989 cacheImage                                         decoder 17 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-      2,666 cacheImage                                         decoder 6  row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-     31,303 cacheImage                                         decoder 16 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-     17,139 cacheImage                                         decoder 4  row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-     17,380 cacheImage                                         decoder 15 row = 301  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09445.ARW
-     43,612 cacheImage                                         decoder 0  row = 302  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09446.ARW
-     40,904 cacheImage                                         decoder 9  row = 290  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09434.ARW
-     82,315 cacheImage                                         decoder 1  row = 303  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09447.ARW
-      2,931 cacheImage                                         decoder 7  row = 304  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09448.ARW
-PopUp::reset
-PopUp::showPopup "207 images.<br>12.406 seconds elapsed.<br><br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup." 0
-MW::traverseFolderStressTest Executed stress test 207 times.   12406 ms elapsed   50 ms delay   16 images per second   59.9324 ms per image.
-    104,869 cacheImage                                         decoder 13 row = 293  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09437.ARW
-     49,283 cacheImage                                         decoder 12 row = 305  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09449.ARW
-     31,354 cacheImage                                         decoder 5  row = 306  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09450.ARW
-     30,260 cacheImage                                         decoder 2  row = 307  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09451.ARW
-     43,098 cacheImage                                         decoder 8  row = 308  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09452.ARW
-      5,282 cacheImage                                         decoder 19 row = 310  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09454.ARW
-     15,895 cacheImage                                         decoder 18 row = 309  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09453.ARW
-     66,007 cacheImage                                         decoder 3  row = 310  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09454.ARW
-     18,300 cacheImage                                         decoder 10 row = 311  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09455.ARW
-     50,575 cacheImage                                         decoder 11 row = 312  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09456.ARW
-      8,220 cacheImage                                         decoder 14 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
-      5,228 cacheImage                                         decoder 16 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
-      4,986 cacheImage                                         decoder 6  row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
-     12,096 cacheImage                                         decoder 17 row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
-      8,168 cacheImage                                         decoder 4  row = 313  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09457.ARW
-     19,507 cacheImage                                         decoder 0  row = 314  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09458.ARW
-     29,709 cacheImage                                         decoder 15 row = 314  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09458.ARW
-     13,914 cacheImage                                         decoder 9  row = 315  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09459.ARW
-     85,217 cacheImage                                         decoder 1  row = 315  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09459.ARW
-      2,615 cacheImage                                         decoder 7  row = 316  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09460.ARW
-     69,528 cacheImage                                         decoder 13 row = 317  decoder[id]->fPath =/Volumes/Untitled/DCIM/100MSDCF/DSC09461.ARW
+32 FSTree::select                                     /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 3 MW::folderSelectionChange                          op = Add recurse = false fsTree->selectionCount() = 1 folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 3 MW::stop                                           src = MW::folderSelectionChange reset DataModel terminating folder /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+21 VideoView::stop
+232 MetaRead::stop
+427 MW::stop DONE                                      src = MW::folderSelectionChange reset DataModel
+18 MW::reset                                          Source: MW::folderSelectionChange
+ 1 BuildFilters::stop
+ 1 BuildFilters::reset
+ 1 Filters::reset
+32 Filters::removeChildrenDynamicFilters
+2,332 Filters::clearAll
+45,045 DataModel::clearDataModel
+516 DataModel::newInstance
+11 BookMarks::select                                  /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 1 DataModel::enqueueFolderSelection                  op = Add recurse = false folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 6 DataModel::enqueueOp                               Add /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 0 DataModel::processNextFolder                       folderOperation.first = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora folderOperation.second = true
+4,903 DataModel::addFolder                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+19 MW::loadChanged                                    Add dm->folderList.count = 1 folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 1 MW::loadFolder                                      isFirstFolderPathWithImages = true folderAndFileChangePath =  folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+477 BookMarks::select                                  /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 2 MetaRead::initialize                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+57,260 ImageCache::initImageCache
+ 3 MW::reset                                          Source: MW::loadFolder0
+ 1 Selection::select(row)                             row = 0
+ 1 Selection::select(QModelIndex)                     row = 0 src =
+
+ 0 Selection::setCurrentIndex                         row = 0 clearSelection = true
+293 Selection::updateCurrentIndex                      row = 0
+94 MW::load                                           row = 0 isFileSelectionChange = true G::iconChunkLoaded = false src = Selection::setCurrentIndex
+107 MetaRead::setStartRow                              row = 0 src = MW::load isRunning = false dm->currentFolderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 1 MetaRead::run                                      MW::load
+43,061 MetaRead::dispatchReaders
+13 Reader::run                                        Finished
+ 7 Reader::run                                        Finished
+ 8 Reader::run                                        Finished
+ 6 Reader::run                                        Finished
+11 Reader::run                                        Finished
+ 7 Reader::run                                        Finished
+ 1 Reader::run                                        Finished
+15 Reader::run                                        Finished
+ 5 Reader::run                                        Finished
+ 8 Reader::run                                        Finished
+ 7 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+ 6 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+20 Reader::run                                        Finished
+10 Reader::run                                        Finished
+13 Reader::run                                        Finished
+13 Reader::run                                        Finished
+40 Reader::run                                        Finished
+1,775 Reader::run                                        Finished
+732,717 MetaRead::dispatch                                 fileSelectionChange row = 0
+13 Reader::run                                        Finished
+12 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+18 Reader::run                                        Finished
+11 Reader::run                                        Finished
+14 Reader::run                                        Finished
+ 8 Reader::run                                        Finished
+ 7 Reader::run                                        Finished
+20 Reader::run                                        Finished
+10 Reader::run                                        Finished
+ 8 Reader::run                                        Finished
+ 6 Reader::run                                        Finished
+12 Reader::run                                        Finished
+10 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+30 Reader::run                                        Finished
+16 Reader::run                                        Finished
+19 Reader::run                                        Finished
+10 Reader::run                                        Finished
+127,788 Reader::run                                        Finished
+15 Reader::run                                        Finished
+ 8 Reader::run                                        Finished
+15 Reader::run                                        Finished
+13 Reader::run                                        Finished
+ 5 Reader::run                                        Finished
+16 Reader::run                                        Finished
+10 Reader::run                                        Finished
+10 Reader::run                                        Finished
+34 Reader::run                                        Finished
+20 Reader::run                                        Finished
+14 Reader::run                                        Finished
+33 Reader::run                                        Finished
+17 Reader::run                                        Finished
+10 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+59 Reader::run                                        Finished
+31 Reader::run                                        Finished
+35 Reader::run                                        Finished
+ 2 Reader::run                                        Finished
+2,183 Reader::run                                        Finished
+146 Reader::run                                        Finished
+238 Reader::run                                        Finished
+ 5 Reader::run                                        Finished
+ 9 Reader::run                                        Finished
+11 Reader::run                                        Finished
+ 6 Reader::run                                        Finished
+ 3 Reader::run                                        Finished
+ 3 Reader::run                                        Finished
+ 6 Reader::run                                        Finished
+386 Reader::run                                        Finished
+
+2,255 MW::fileSelectionChange                            row = 0 Src = MetaRead::dispatch G::fileSelectionChangeSource =
+14 VideoView::stop
+23 ImageView::loadImage                               row = 0 Src:MW::fileSelectionChange isFirstImageNewInstance = true /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora/2022-04-14_0002.arw
+54 ImageCache::setCurrentPosition                     row = 0
+124 ImageCache::updateToCacheTargets
+32 ImageCache::launchDecoders launch:                 decoder 0  status = Ready
+20 ImageCache::launchDecoders launch:                 decoder 1  status = Ready
+22 ImageCache::launchDecoders launch:                 decoder 2  status = Ready
+20 ImageCache::launchDecoders launch:                 decoder 3  status = Ready
+25 ImageCache::launchDecoders launch:                 decoder 4  status = Ready
+61 ImageCache::launchDecoders launch:                 decoder 5  status = Ready
+34 ImageCache::launchDecoders launch:                 decoder 6  status = Ready
+23 ImageCache::launchDecoders launch:                 decoder 7  status = Ready
+24 ImageCache::launchDecoders launch:                 decoder 8  status = Ready
+48 ImageCache::launchDecoders launch:                 decoder 9  status = Ready
+29 ImageCache::launchDecoders launch:                 decoder 10 status = Ready
+35 ImageCache::launchDecoders launch:                 decoder 11 status = Ready
+40 ImageCache::launchDecoders launch:                 decoder 12 status = Ready
+49 ImageCache::launchDecoders launch:                 decoder 13 status = Ready
+31 ImageCache::launchDecoders launch:                 decoder 14 status = Ready
+63 ImageCache::launchDecoders launch:                 decoder 15 status = Ready
+40 ImageCache::launchDecoders launch:                 decoder 16 status = Ready
+189 ImageCache::launchDecoders launch:                 decoder 17 status = Ready
+41 ImageCache::launchDecoders launch:                 decoder 18 status = Ready
+80 ImageCache::launchDecoders launch:                 decoder 19 status = Ready
+266 Reader::run                                        Finished
+105 Reader::run                                        Finished
+171,189 Reader::run                                        Finished
+93 MetaRead::dispatchFinished                         WeAreDone
+25 MW::loadDone                                       3074462093809 ms 73 images from /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+79 MW::reset                                          Source: MW::loadDone0
+ 7 MW::reset                                          Source: MW::loadDone1
+ 1 BuildFilters::reset
+ 0 Filters::reset
+ 1 Filters::removeChildrenDynamicFilters
+16 Filters::clearAll
+ 1 BuildFilters::build                                afteraction = 0
+ 0 Filters::startBuildFilters
+128 Filters::removeChildrenDynamicFilters
+1,278 BuildFilters::run                                  afteraction = 0
+384 BuildFilters::done                                 afteraction = 0
+ 1 MW::filterChange  Src:                             MW::loadConcurrentDone
+192,714 DataModel::newInstance
+75 BuildFilters::update                               filters->filtersBuilt = true
+228 BuildFilters::run                                  afteraction = 0
+ 2 MetaRead::initialize                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
+ 1 rebuildImageCacheParameters                        src = MW::filterChange
+53 Selection::select(QModelIndex)                     row = 0 src = MW::filterChange
+
+ 0 Selection::setCurrentIndex                         row = 0 clearSelection = true
+77 Selection::updateCurrentIndex                      row = 0
+ 1 MW::load                                           row = 0 isFileSelectionChange = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
+481 MW::fileSelectionChange                            row = 0 Src = MW::load G::fileSelectionChangeSource =
+30 VideoView::stop
+ 3 BuildFilters::done                                 afteraction = 0
+ 7 ImageView::loadImage                               row = 0 Src:MW::fileSelectionChange isFirstImageNewInstance = true /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora/2022-04-14_0002.arw
+73 ImageCache::setCurrentPosition                     row = 0
+80 ImageCache::updateToCacheTargets
+77 ImageCache::launchDecoders launch:                 decoder 0  status = Ready
+75 ImageCache::launchDecoders launch:                 decoder 1  status = Ready
+46 ImageCache::launchDecoders launch:                 decoder 2  status = Ready
+37 ImageCache::launchDecoders launch:                 decoder 3  status = Ready
+37 ImageCache::launchDecoders launch:                 decoder 4  status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 5  status = Ready
+37 ImageCache::launchDecoders launch:                 decoder 6  status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 7  status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 8  status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 9  status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 10 status = Ready
+37 ImageCache::launchDecoders launch:                 decoder 11 status = Ready
+37 ImageCache::launchDecoders launch:                 decoder 12 status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 13 status = Ready
+35 ImageCache::launchDecoders launch:                 decoder 14 status = Ready
+35 ImageCache::launchDecoders launch:                 decoder 15 status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 16 status = Ready
+36 ImageCache::launchDecoders launch:                 decoder 17 status = Ready
+35 ImageCache::launchDecoders launch:                 decoder 18 status = Ready
+98,360 ImageCache::launchDecoders launch:                 decoder 19 status = Ready
+ 2 MW::updateIconRange                                src =
+64 IconView::updateVisible                            Thumbnails src = MW::updateIconRange
+528,048 MW::reset                                          Source: MW::loadDone2
+505,425 MetaRead::dispatchFinished                         QuitAfterTimeout

@@ -1974,7 +1974,8 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 */
     if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     QString fun = "MW::folderSelectionChange";
-    if (G::isLogger || G::isFlowLogger) {
+    // if (G::isLogger || G::isFlowLogger)
+    {
         QString msg = "op = " + op +
                 " recurse = " + QVariant(recurse).toString() +
                 " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
@@ -2346,7 +2347,8 @@ bool MW::stop(QString src)
 */
     // rgh how refer to what we are stopping when multi folders may be in datamodel
     // just use dm->currentPrimaryFolderPath ?
-    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "src = " + src + " terminating folder " + dm->currentPrimaryFolderPath);
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MW::stop", "src = " + src + " terminating folder " + dm->currentPrimaryFolderPath);
 
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
