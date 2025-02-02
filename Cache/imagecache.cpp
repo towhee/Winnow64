@@ -146,7 +146,6 @@ ImageCache::ImageCache(QObject *parent,
         connect(decoder[id], &ImageDecoder::done, this, &ImageCache::fillCache);
     }
     abort = false;
-    debugMultiFolders = false;   // rgh remove soon
     debugCaching = false;        // turn on local qDebug
     debugLog = false;            // invoke log without G::isLogger or G::isFlowLogger
 }
@@ -184,7 +183,7 @@ void ImageCache::stop(QString src)
             << "isRunning =" << isRunning()
             ;
     }
-    // if (debugLog || G::isLogger)
+    if (debugLog || G::isLogger)
         log("stop", "isRunning = " + QVariant(isRunning()).toString());
 
     if (isRunning()) {
@@ -209,7 +208,6 @@ void ImageCache::stop(QString src)
 
 bool ImageCache::allDecodersReady()
 {
-    // rgh confirm this is right
     for (int id = 0; id < decoderCount; ++id) {
         if (decoder[id]->isRunning()) return false;
         if (decoder[id]->status != ImageDecoder::Status::Ready) return false;
@@ -266,7 +264,7 @@ void ImageCache::updateToCacheTargets()
             ;
     }
 
-    QMutexLocker locker(&gMutex);
+     QMutexLocker locker(&gMutex);  // req'd to prevent toCacheAppend() crash
     if (!abort) setDirection();
     if (!abort) setTargetRange(key);
     if (!abort) trimOutsideTargetRange();
@@ -284,6 +282,8 @@ void ImageCache::updateToCacheTargets()
 bool ImageCache::isOrphans()
 {
 /*
+    Not being used.
+
     Rapidly updating the cache can result in aborted decoder threads that leave
     isCaching and cached states orphaned.  Reset orphan cached state to false in
     the target range.
@@ -302,8 +302,6 @@ bool ImageCache::isOrphans()
             << fun.leftJustified(col0Width, ' ')
             ;
     }
-
-    QMutexLocker locker(&gMutex);
 
     bool orphansFound = false;
 
@@ -550,8 +548,8 @@ void ImageCache::removeCachedImage(QString fPath)
 {
 /*
     Called by MW::insertFiles.  If the inserted file is a replacement of an existing
-    image with the same name, then remove the existing image from imCache.  Reset
-    isCached, isCaching and attempts.
+    image with the same name, then remove the existing image from imCache.  Refresh the
+    thumbView and gridView.
 */
     QString src = "ImageCache::removeCachedImage";
     if (debugLog || G::isLogger) log("removeCachedImage", fPath);
@@ -566,9 +564,8 @@ void ImageCache::removeCachedImage(QString fPath)
             ;
     }
 
-    // QMutexLocker locker(&gMutex);
+    QMutexLocker locker(&gMutex);
 
-    // rgh confirm this is working
     icd->imCache.remove(fPath);
     emit refreshViewsOnCacheChange(fPath, false, "ImageCache::setTargetRange");
 }
@@ -1631,7 +1628,7 @@ void ImageCache::cacheImage(int id, int sfRow)
         return;
     }
 
-    gMutex.lock();
+    gMutex.lock();  // req'd to prevent toCacheAppend() crash
 
     // cache the image
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
@@ -1654,17 +1651,6 @@ void ImageCache::cacheImage(int id, int sfRow)
 
     // refresh thumbs (and main image if is current)
     emit refreshViewsOnCacheChange(decoder[id]->fPath, true, "ImageCache::cacheImage");
-
-    // if current image signal ImageView::loadImage
-    if (decoder[id]->fPath == dm->currentFilePath) {
-        // clear "Loading Image..." central msg in setCurrentPosition (not being used)
-        // emit centralMsg("");
-        // load in ImageView
-        // emit loadImage(decoder[id]->fPath, true, "ImageCache::cacheImage");
-        qDebug() << src << "replacing current image in imageview" << decoder[id]->fPath;
-        // revert central view (req'd? see setCurrentPosition)
-        // emit imageCachePrevCentralView();
-    }
 
     decoder[id]->status = ImageDecoder::Status::Ready;
     updateStatus("Update all rows", "ImageCache::cacheImage");
@@ -1878,20 +1864,20 @@ void ImageCache::fillCache(int id)
     // get next image to cache
     int toCacheKey = nextToCache(id);
     bool isNextToCache = toCacheKey != -1;
-    bool isCacheUpToDate = cacheUpToDate();
+    // bool isCacheUpToDate = cacheUpToDate();
     bool isCacheKeyOk = isValidKey(toCacheKey);
     // bool instanceOk = decoder[id]->instance == dm->instance;
     // bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
     bool okDecodeNextImage = !abort && isNextToCache && isCacheKeyOk;
 
-    // if (debugLog || G::isLogger || G::isFlowLogger)
+    if (debugLog || G::isLogger || G::isFlowLogger)
     {
         log("fillCache dispatch",
             "decoder " + QString::number(id).leftJustified(3) +
             "row = " + QString::number(toCacheKey).leftJustified(5) +
             "instance = " + QString::number(instance).leftJustified(5) +
             "decoder status = " + decoder[id]->statusText.at(decoder[id]->status).leftJustified(8) +
-            "isCacheUpToDate = " + QVariant(isCacheUpToDate).toString().leftJustified(6) +
+            // "isCacheUpToDate = " + QVariant(isCacheUpToDate).toString().leftJustified(6) +
             "isNextToCache = " + QVariant(isNextToCache).toString().leftJustified(6) +
             "isValidKey(toCacheKey) = " + QVariant(isValidKey(toCacheKey)).toString().leftJustified(6) +
             "okDecodeNextImage = " + QVariant(okDecodeNextImage).toString().leftJustified(6)
