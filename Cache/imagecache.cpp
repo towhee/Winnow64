@@ -6,56 +6,66 @@
             CCC         CCCCCCCCCC
                   TTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     .......................*...........................................
-    . = all the thumbnails in dm->sf (filtered datamodel)
+
+    . = all the thumbnails in dm->sf (rows in filtered datamodel)
     * = the current thumbnail selected
     T = all the images targeted to cache.  The sum of T fills the assigned
         memory available for the cache ie 3000 MB
     C = the images currently cached, which can be fragmented if the user
         is jumping around, selecting images willy-nilly
 
+Data structures:
+
+    The image data structures are in a separate class ImageCacheData to facilitate
+    concurrent data access. The image cache for QImages reside in the hash table imCache.
+    This table is written to by cacheImage() and read by ImageView.  imCache is in a
+    separate class ImageCacheData, in an instance pointed to by *icd.  This is likely
+    unnecessary but has not been refactored.
+
+    The list toCache and hash toCacheStatus keep track of the datamodel rows to be cached,
+    based on additions in the target range, and removals when cached.
+
 Procedure every time a new thumbnail is selected:
 
-    1. Assign a priority to cache for each image based on the direction of travel and the
-    target weighting strategy.
+    1. Determine the direction of travel.  In this example we are moving forward.
 
-    2. Define the target weighting caching strategy ahead and behind. In the illustration
-    we are caching 2 ahead for every 1 behind.
+    2. Based on the target weighting caching strategy ahead and behind, set the target
+    range. In the illustration we are caching 2 ahead for every 1 behind.  The target
+    range is complete when there isn't any more room in the image cache.
 
-    3. Based on the priority and the cache maximum size, assign images to target for
-    caching.
+    3. Add each row in the target range to the list toCache if not been cached, and is
+    not in toCache.  Remove any images outside the target range from the image cache.
 
     4. Add images that are targeted and not already cached. If the cache is full before
     all targets have been cached then remove any cached images outside the target range
     that may have been left over from a previous thumbnail selection. The targeted images
     are read by multiple decoders, which signal fillCache with a QImage.
 
-Data structures:
-
-    The main data structures are in a separate class ImageCacheData to facilitate
-    concurrent data access. The image cache for QImages reside in the hash table imCache.
-    This table is written to by fillCache and read by ImageView.
-
-    ImageDecoders, each in their own thread, signal ImageCache::fillCache for each QImage.
-    They form queued connections so that only one decoder at a time can add images to
-    imCache.
-
-    The caching process uses the cache size, isCaching, isCached, decoder id, decoder
-    return status and metadata read attempted fields from the datamodel to manage the
-    priorities and target range.
+Building the cache:
 
     A number of ImageDecoders are created when ImageCache is created. Each ImageDecoder
-    runs in a separate thread. The decoders convert an image file into a QImage and then
-    signal this function (fillCache) with their id so the QImage can be inserted into the
-    image cache. The ImageDecoders are launched from ImageCache::launchDecoders.
+    runs in a separate thread. The decoders convert an image file into a QImage.
+
+    The ImageDecoders are launched from ImageCache::launchDecoders, dispatched from
+    fillCache, return a QImage back to fillCache, the QImage is inserted into imCache and
+    then are dispatched again.
+
+    To return the QImage to fillCache, the ImageDecoders, each in their own thread,
+    signal ImageCache::fillCache for each QImage. They form queued connections so that
+    only one decoder at a time can add images to imCache.
+
+    The caching process uses the toCache list, toCacheStatus hash, imCache size, and
+    datamodel fields to manage the priorities and target range.
 
     The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the
     decoder is created and when the QImage has been inserted into the image cache the
-    status is set to Ready. When the decoder is called from CacheImage the status is set
-    to Busy. Finally, when the decoder finishes the decoding in ImageDecoder::run the
+    status is set to Ready. When the decoder is dispatched from fillCache the status is
+    set to Busy. Finally, when the decoder finishes the decoding in ImageDecoder::run the
     status is set to Done. Each decoder signals ImageCache::fillCache when the image has
-    been converted into a QImage. Here the QImage is added to the imCache. If there are
-    more targeted images to be cached, the next one is assigned to the decoder, which is
-    run again. The decoders keep running until all the targeted images have been cached.
+    been converted into a QImage. Back in fillCache the QImage is added to the imCache.
+    If there are more targeted images to be cached, the next one is assigned to the
+    decoder, which is run again. The decoders keep running until all the targeted images
+    have been cached.
 
     If there is a file selection change, cache size change, color manage change or
     sort/filter change the image cache parameters are updated and this function is called
@@ -70,15 +80,16 @@ Data structures:
     datamodel instance.
 
     Every time a new image is selected, setCurrentPosition is called. The target range is
-    updated and fillCache is called by each ImageDecoder. When the ImageDecoder has
-    loaded a QImage it is sent back to fillCache and added to the ImCache hash.
+    updated and launchDecoders calls fillCache for each ImageDecoder. When the
+    ImageDecoder has loaded a QImage, the QImage it is passed back to fillCache and added
+    to the ImCache hash.
 
     Each decoder follows this basic pattern:
     - launch
       - fillCache
-        - starting
+        - if starting
           - nextToCache
-        - returning with QImage
+        - if returning with QImage
           - cacheImage
           - nextToCache
 
@@ -89,7 +100,7 @@ Data structures:
         - fillCache
         - cacheImage
       - no
-        - cacheUpToDate (checks for orphans and item list completed)
+        - cacheUpToDate (checks for orphans and toCache list completed)
           - no
             - restart
           - yes
@@ -280,7 +291,6 @@ bool ImageCache::isOrphans()
     All decoders must be finished before calling this function in order to reset
     the isCaching and isCached flags.
 */
-    return false;   // rgh debugging
 
     QString src = "ImageCache::isOrphans";
     // G::log("resetCacheStateInTargetRange");
@@ -611,7 +621,8 @@ void ImageCache::toCacheAppend(int sfRow)
     if (G::isLogger) G::log("toCacheAppend", "sfRow = " + QString::number(sfRow));
     if (abort) return;
     toCache.append(sfRow);
-    if (!toCacheStatus.contains(sfRow)) toCacheStatus.insert(sfRow, {Status::NotCached, -1, instance});
+    // if (!toCacheStatus.contains(sfRow))
+    toCacheStatus.insert(sfRow, {Status::NotCached, -1, instance});
 }
 
 void ImageCache::toCacheRemove(int sfRow)
@@ -651,14 +662,25 @@ int ImageCache::toCacheDecoder(int sfRow)
 bool ImageCache::cacheUpToDate()
 {
 /*
-    Determine if all images in the target range are cached or being cached.  This is only
-    used for reporting / diagnostics.
+    Determine if all images in the target range are cached or being cached.  This is used
+    to terminate launching decoders in fillCache .
 */
+    if (toCache.isEmpty()) return true;
+
+    foreach (CacheStatus cs, toCacheStatus) {
+        if (cs.status != Status::Caching) return false;
+    }
+
+    /*
     for (int sfRow = targetFirst; sfRow <= targetLast; ++sfRow) {
-        if (!icd->imCache.contains(dm->sf->index(sfRow, 0).data(G::PathRole).toString())) {
+        if (!icd->imCache.contains(dm->sf->index(sfRow, 0).data(G::PathRole).toString()) &&
+            toCacheStatus.contains(sfRow) &&
+            toCacheStatus[sfRow].status != Status::Caching)
+        {
             return false;
         }
     }
+    */
     return true;
 }
 
@@ -1472,56 +1494,6 @@ int ImageCache::nextToCache(int id)
             }
         } //*/
 
-        /* datamodel
-        // isCaching and not the same decoder
-        if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool() &&
-            (id != dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt()))
-        {
-            if (debugThis) {
-                msg = "row " + sRow + " isCaching and not the same decoder";
-                sDebug(sId, msg);
-            }
-            if (debugThis)
-            {
-                bool toCache_Caching = toCacheStatus[sfRow].status == Status::Caching;
-                int toCache_DecoderId = toCacheStatus[sfRow].decoderId;
-                int dmDecoderId = dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt();
-                bool match = (toCache_Caching == true) && (toCache_DecoderId == dmDecoderId);
-                if (!match)
-                qDebug().noquote()
-                    << "ImageCache::nextToCache"
-                    << "sfRow =" << QString::number(sfRow).leftJustified(4)
-                    << "dmIsCaching = true"
-                    << "toCache status =" << statusText.at(toCacheStatus[sfRow].status)
-                    << "Decoder = " << QString::number(id).leftJustified(2)
-                    << "Previous decoder: "
-                    << "dmDecoderId =" << QString::number(dmDecoderId).leftJustified(2)
-                    << "toCache_DecoderId =" << QString::number(toCache_DecoderId).leftJustified(2)
-                    << "Match =" << match
-                    ;
-            }
-            continue;
-        }//*/
-
-        /*
-        if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
-            bool toCache_Caching = toCacheStatus[sfRow].status == Caching;
-            int toCache_DecoderId = toCacheStatus[sfRow].decoderId;
-            int dmDecoderId = dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt();
-            bool match = toCache_Caching == true && toCache_DecoderId == dmDecoderId;
-            qDebug().noquote()
-                << "ImageCache::nextToCache"
-                << "sfRow =" << QString::number(sfRow).leftJustified(4)
-                << "dmIsCaching = true"
-                << "toCache status =" << statusText.at(toCacheStatus[sfRow].status)
-                << "Decoder = " << QString::number(id).leftJustified(2)
-                << "Previous decoder: "
-                << "dmDecoderId =" << QString::number(dmDecoderId).leftJustified(2)
-                << "toCache_DecoderId =" << QString::number(toCache_DecoderId).leftJustified(2)
-                << "Match =" << match
-                ;
-        } //*/
-
         // next item to cache
         if (debugThis) {
             msg = "row " + sRow + " success";
@@ -1906,9 +1878,11 @@ void ImageCache::fillCache(int id)
     // get next image to cache
     int toCacheKey = nextToCache(id);
     bool isNextToCache = toCacheKey != -1;
-    bool isCacheUpToDate = toCache.isEmpty();
+    bool isCacheUpToDate = cacheUpToDate();
     bool isCacheKeyOk = isValidKey(toCacheKey);
-    bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
+    // bool instanceOk = decoder[id]->instance == dm->instance;
+    // bool okDecodeNextImage = !abort && !isCacheUpToDate && isNextToCache && isCacheKeyOk;
+    bool okDecodeNextImage = !abort && isNextToCache && isCacheKeyOk;
 
     // if (debugLog || G::isLogger || G::isFlowLogger)
     {
@@ -1953,12 +1927,13 @@ void ImageCache::fillCache(int id)
         // is this the last active decoder?       make final check for orphans
         bool allDecodersDone = allDecodersReady();
 
+        // This has been replaced with cacheUpToDate() used above.
         /* Both MetaRead and ImageCache are running at the same time, and sometimes
         ImageCache catches up to MetaRead and the datamodel has not been loaded/updated
         for the next item to cache. For MetaRead updates to be executed ImageCache must
         be stopped as ImageCache is blocking the updates. */
 
-        // if this is the last active decoder, restart if cacheUpToDate == false
+        /* if this is the last active decoder, restart if cacheUpToDate == false
         if (!abort && instance == dm->instance && allDecodersDone && retry < 5) {
             if (isOrphans() && retry++ < 5) {
                 if (debugCaching)
@@ -1976,6 +1951,7 @@ void ImageCache::fillCache(int id)
         }
 
         // Ok, now we are really done or quit after retrying or aborted
+        */
         retry = 0;
 
         // update cache progress in status bar
