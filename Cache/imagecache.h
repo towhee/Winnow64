@@ -62,26 +62,14 @@ public:
     QString source;                 // temp for debugging
 
 signals:
-    // not being used:
-    void stopped(QString src);
-    void setValueDm(QModelIndex dmIdx, QVariant value,
-                  int instance, QString scr = "ImageCache",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
-    // not being used:
-    void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-
-    void loadImage(QString fPath, bool replace, QString src);
-    // not sure what this does: connects to MW::imageCachePrevCentralView in setandupdate.cpp
-    void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
                          float currMB, int maxMB, int targetFirst, int targetLast,
                          QString source = "");
     void centralMsg(QString msg);
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
-    void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
-    void dummyDecoder(int id);
+    void refreshViews(QString fPath, bool isCached, QString src);
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -101,23 +89,20 @@ private:
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load
     bool abort;
+
+    // rgh retry not being used
     int retry = 0;
-    bool isInitializing;
-    // bool cacheSizeHasChanged = false;
-    // bool filterOrSortHasChanged = false;
     int maxAttemptsToCacheImage = 10;
-    // bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
-    bool isFinalCheckCompleted = false;
-    int fileIsOpen = ImageDecoder::Status::FileOpen;
-    // int inValidImage = ImageDecoder::Status::Invalid;
+
+    bool isInitializing;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
     Metadata *metadata;
 
     QVector<ImageDecoder*> decoder;     // all the decoders
-    enum Status {NotCached, Caching, Cached};
-    QStringList statusText{"NotCached", "Caching  ", "Cached   "};
+    enum Status {NotCached, Caching, Cached, Failed};
+    QStringList statusText{"NotCached", "Caching  ", "Cached   ", "Failed   "};
     struct CacheStatus {
         Status status;
         int decoderId;
@@ -126,7 +111,6 @@ private:
     QList<int> toCache;
     QHash<int,CacheStatus> toCacheStatus;
 
-    bool positionHasChanged;
     int key;                    // current image
     int prevKey;                // used to establish direction of travel
     // int toCacheKey;             // next file to cache
@@ -137,7 +121,6 @@ private:
     int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
     int maxMB;                  // maximum MB available to cache
     int minMB;                  // minimum MB available to cache
-    // int folderMB;               // MB required for all files in folder // rgh req'd?
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
     bool isShowCacheStatus;     // show in app status bar
@@ -147,10 +130,8 @@ private:
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool allDecodersReady();        // All decoder status is ready
-    void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     int nextToCache(int id);        // find highest priority not cached
-    void clear();
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);
     void memChk();                  // still room in system memory for cache?
@@ -159,10 +140,7 @@ private:
     void updateTargets(bool dotForward, bool isAhead, int &pos,
                        int &amount, bool &isDone, float &sumMB);
     void setTargetRange(int key);
-    void addCacheItem(int key);
     void log(const QString function, const QString comment = "");
-
-    QElapsedTimer t;
 };
 
 #endif // IMAGECACHE_H
