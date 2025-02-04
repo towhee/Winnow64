@@ -1353,6 +1353,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
+    QMutexLocker locker(&mutex);
     mLock = true;
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
