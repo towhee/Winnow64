@@ -3511,14 +3511,6 @@ void MW::setImageCacheParameters()
         metaReadThread->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
     }
 
-
-    // metaReadThread->showProgressInStatusbar =
-    //         G::showProgress == G::ShowProgress::MetaCache ||
-    //         G::showProgress == G::ShowProgress::ImageCache;
-
-    // cache progress bar
-    // progressLabel->setVisible(isShowCacheProgressBar);
-
     // thumbnail cache status indicators
     thumbView->refreshThumbs();
     gridView->refreshThumbs();

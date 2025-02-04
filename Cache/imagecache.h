@@ -39,7 +39,6 @@ public:
                                int &cacheWtAhead);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stop(QString src);
-    void clearImageCache(bool includeList = true);
     bool cacheUpToDate();           // target range all cached
     float getImCacheSize();         // add up total MB cached
     void removeFromCache(QStringList &pathList);
@@ -146,7 +145,6 @@ private:
     void launchDecoders(QString src);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
-    bool isOrphans(); // Set IsCaching = false within current target range
     void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool allDecodersReady();        // All decoder status is ready
     void setKeyToCurrent();         // cache key from currentFilePath
@@ -155,9 +153,6 @@ private:
     void clear();
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);
-    bool isCaching(int sfRow);
-    bool isCached(int sfRow);
-    int toCacheDecoder(int sfRow);
     void memChk();                  // still room in system memory for cache?
     bool isValidKey(int key);
 
