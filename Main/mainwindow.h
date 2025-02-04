@@ -422,8 +422,8 @@ public slots:
     void filterLastDay();
     void searchTextEdit();
     void handleDrop(QString fPath);
-//    void handleDrop(QDropEvent *event);
-//    void handleDrop(const QMimeData *mimeData);
+    // void handleDrop(QDropEvent *event);
+    // void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setProgress(int value);
     void setStatus(QString state);
@@ -437,7 +437,6 @@ public slots:
     void slideShowResetDelay();
     void slideShowResetSequence();
     void slideshowHelpMsg();
-    void imageCachePrevCentralView();
     void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
     void invokeCurrentWorkspace();
     void invokeWorkspaceFromAction(QAction *workAction);

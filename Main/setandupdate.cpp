@@ -503,12 +503,6 @@ void MW::setCombineRawJpg()
     G::popUp->close();
 }
 
-void MW::imageCachePrevCentralView()
-{
-    if (G::isLogger) G::log("MW::imageCachePrevCentralView");
-    centralLayout->setCurrentIndex(prevCentralView);
-}
-
 void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
 {
 /*

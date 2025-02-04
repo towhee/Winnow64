@@ -372,19 +372,10 @@ void MW::createImageCache()
     a restart at the new place.
     */
 
-//    icd = new ImageCacheData(this);
     imageCache = new ImageCache(this, icd, dm);
 
     /* Image caching is triggered from the metadataReadThread to avoid the two threads
        running simultaneously and colliding */
-
-    // LINEAR LOAD PROCESS CONNECTIONS
-
-    // load image cache for a new folder
-//    connect(metadataCacheThread, SIGNAL(loadImageCache()),
-//            this, SLOT(loadImageCacheForNewFolder()));
-//    connect(metadataCacheThread, &MetadataCache::loadImageCache,
-//            this, &MW::loadImageCacheForNewFolder);
 
     connect(imageCache, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -400,11 +391,7 @@ void MW::createImageCache()
             this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
-    connect(imageCache, &ImageCache::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
-
-    // Signal from ImageCache::run() update central view
-    connect(imageCache, &ImageCache::imageCachePrevCentralView,
-            this, &MW::imageCachePrevCentralView);
+    connect(imageCache, &ImageCache::refreshViews, this, &MW::refreshViewsOnCacheChange);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
@@ -415,17 +402,7 @@ void MW::createImageCache()
             this, &MW::setCentralMessage);
 
     // set values in the datamodel
-    connect(imageCache, &ImageCache::setValueDm, dm, &DataModel::setValueDm);
     connect(imageCache, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
-    connect(imageCache, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
-
-    // // start image cache
-    // connect(infoView, &InfoView::setCurrentPosition,
-    //         imageCacheThread, &ImageCache::setCurrentPosition);
-    // add to image cache list
-//    connect(infoView, &InfoView::addToImageCache,
-//            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-
 }
 
 void MW::createThumbView()
@@ -652,7 +629,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
     connect(imageView, &ImageView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
-    connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
+    // connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
 void MW::createCompareView()
