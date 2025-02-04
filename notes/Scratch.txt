@@ -1,188 +1,51 @@
-32 FSTree::select                                     /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 3 MW::folderSelectionChange                          op = Add recurse = false fsTree->selectionCount() = 1 folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 3 MW::stop                                           src = MW::folderSelectionChange reset DataModel terminating folder /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
-21 VideoView::stop
-232 MetaRead::stop
-427 MW::stop DONE                                      src = MW::folderSelectionChange reset DataModel
-18 MW::reset                                          Source: MW::folderSelectionChange
- 1 BuildFilters::stop
- 1 BuildFilters::reset
- 1 Filters::reset
-32 Filters::removeChildrenDynamicFilters
-2,332 Filters::clearAll
-45,045 DataModel::clearDataModel
-516 DataModel::newInstance
-11 BookMarks::select                                  /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 1 DataModel::enqueueFolderSelection                  op = Add recurse = false folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 6 DataModel::enqueueOp                               Add /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 0 DataModel::processNextFolder                       folderOperation.first = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora folderOperation.second = true
-4,903 DataModel::addFolder                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
-19 MW::loadChanged                                    Add dm->folderList.count = 1 folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 1 MW::loadFolder                                      isFirstFolderPathWithImages = true folderAndFileChangePath =  folderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
-477 BookMarks::select                                  /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 2 MetaRead::initialize                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
-57,260 ImageCache::initImageCache
- 3 MW::reset                                          Source: MW::loadFolder0
- 1 Selection::select(row)                             row = 0
- 1 Selection::select(QModelIndex)                     row = 0 src =
+My Qt and c++ app, Winnow, reads the images in a folder.
+It uses a class DataModel : public QStandardItemModel to keep track of information about each image in the folder.
+It uses class ImageCache : public QThread to cache a QImage for each image into QHash<QString, QImage> imCache.
+In the main gui thread the user can traverse thumbnails of each image in the folder.
+As the position changes in the folder, it is sent to ImageCache::setCurrentPosition.
+ImageCache::setTargetRange limits the size of imCache to maxSize, caching the images closest to the current position in a priority order.
+ImageCache structures to keep track of what to cache next:
+    int key; // the datamodel row for the image
+    enum Status {NotCached, Caching, Cached};
+    struct CacheStatus {
+        Status status;
+        int decoderId;
+        int instance;
+    };
+    QList<int> toCache;
+    QHash<int,CacheStatus> toCacheStatus;
+class ImageDecoder : public QThread creates a QImage from an image file.
+ImageCache::ImageCache creates multiple instances of ImageDecoder.
+    QVector<ImageDecoder*> decoder;     // all the decoders
+ImageCache::launchDecoders calls ImageCache::fillCache for each ImageDecoder.
+ImageCache::fillCache checks the ImageDecoder, and if it has a QImage it inserts it into imCache and removes it from toCache and toCacheStatus.
+ImageCache::fillCache then gets the next image from toCache and sends it to the ImageDecoder.
+Each ImageDecoder signals ImageCache::fillCache with the QImage when it is done.
+The ImageCache::fillCache / ImageDecoder cycle continues until toCache is empty.
+void ImageCache::setCurrentPosition(QString fPath, QString src)
+{
+    key = dm->proxyRowFromPath(fPath);
+    if (isRunning()) {
+        setTargetRange();
+    }
+    else {
+        start(QThread::LowestPriority);
+    }
+}
 
- 0 Selection::setCurrentIndex                         row = 0 clearSelection = true
-293 Selection::updateCurrentIndex                      row = 0
-94 MW::load                                           row = 0 isFileSelectionChange = true G::iconChunkLoaded = false src = Selection::setCurrentIndex
-107 MetaRead::setStartRow                              row = 0 src = MW::load isRunning = false dm->currentFolderPath = /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 1 MetaRead::run                                      MW::load
-43,061 MetaRead::dispatchReaders
-13 Reader::run                                        Finished
- 7 Reader::run                                        Finished
- 8 Reader::run                                        Finished
- 6 Reader::run                                        Finished
-11 Reader::run                                        Finished
- 7 Reader::run                                        Finished
- 1 Reader::run                                        Finished
-15 Reader::run                                        Finished
- 5 Reader::run                                        Finished
- 8 Reader::run                                        Finished
- 7 Reader::run                                        Finished
- 9 Reader::run                                        Finished
- 6 Reader::run                                        Finished
- 9 Reader::run                                        Finished
-20 Reader::run                                        Finished
-10 Reader::run                                        Finished
-13 Reader::run                                        Finished
-13 Reader::run                                        Finished
-40 Reader::run                                        Finished
-1,775 Reader::run                                        Finished
-732,717 MetaRead::dispatch                                 fileSelectionChange row = 0
-13 Reader::run                                        Finished
-12 Reader::run                                        Finished
- 9 Reader::run                                        Finished
-18 Reader::run                                        Finished
-11 Reader::run                                        Finished
-14 Reader::run                                        Finished
- 8 Reader::run                                        Finished
- 7 Reader::run                                        Finished
-20 Reader::run                                        Finished
-10 Reader::run                                        Finished
- 8 Reader::run                                        Finished
- 6 Reader::run                                        Finished
-12 Reader::run                                        Finished
-10 Reader::run                                        Finished
- 9 Reader::run                                        Finished
-30 Reader::run                                        Finished
-16 Reader::run                                        Finished
-19 Reader::run                                        Finished
-10 Reader::run                                        Finished
-127,788 Reader::run                                        Finished
-15 Reader::run                                        Finished
- 8 Reader::run                                        Finished
-15 Reader::run                                        Finished
-13 Reader::run                                        Finished
- 5 Reader::run                                        Finished
-16 Reader::run                                        Finished
-10 Reader::run                                        Finished
-10 Reader::run                                        Finished
-34 Reader::run                                        Finished
-20 Reader::run                                        Finished
-14 Reader::run                                        Finished
-33 Reader::run                                        Finished
-17 Reader::run                                        Finished
-10 Reader::run                                        Finished
- 9 Reader::run                                        Finished
-59 Reader::run                                        Finished
-31 Reader::run                                        Finished
-35 Reader::run                                        Finished
- 2 Reader::run                                        Finished
-2,183 Reader::run                                        Finished
-146 Reader::run                                        Finished
-238 Reader::run                                        Finished
- 5 Reader::run                                        Finished
- 9 Reader::run                                        Finished
-11 Reader::run                                        Finished
- 6 Reader::run                                        Finished
- 3 Reader::run                                        Finished
- 3 Reader::run                                        Finished
- 6 Reader::run                                        Finished
-386 Reader::run                                        Finished
+void ImageCache::run()
+{
+    setTargetRange();
+    launchDecoders();
+}
 
-2,255 MW::fileSelectionChange                            row = 0 Src = MetaRead::dispatch G::fileSelectionChangeSource =
-14 VideoView::stop
-23 ImageView::loadImage                               row = 0 Src:MW::fileSelectionChange isFirstImageNewInstance = true /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora/2022-04-14_0002.arw
-54 ImageCache::setCurrentPosition                     row = 0
-124 ImageCache::updateToCacheTargets
-32 ImageCache::launchDecoders launch:                 decoder 0  status = Ready
-20 ImageCache::launchDecoders launch:                 decoder 1  status = Ready
-22 ImageCache::launchDecoders launch:                 decoder 2  status = Ready
-20 ImageCache::launchDecoders launch:                 decoder 3  status = Ready
-25 ImageCache::launchDecoders launch:                 decoder 4  status = Ready
-61 ImageCache::launchDecoders launch:                 decoder 5  status = Ready
-34 ImageCache::launchDecoders launch:                 decoder 6  status = Ready
-23 ImageCache::launchDecoders launch:                 decoder 7  status = Ready
-24 ImageCache::launchDecoders launch:                 decoder 8  status = Ready
-48 ImageCache::launchDecoders launch:                 decoder 9  status = Ready
-29 ImageCache::launchDecoders launch:                 decoder 10 status = Ready
-35 ImageCache::launchDecoders launch:                 decoder 11 status = Ready
-40 ImageCache::launchDecoders launch:                 decoder 12 status = Ready
-49 ImageCache::launchDecoders launch:                 decoder 13 status = Ready
-31 ImageCache::launchDecoders launch:                 decoder 14 status = Ready
-63 ImageCache::launchDecoders launch:                 decoder 15 status = Ready
-40 ImageCache::launchDecoders launch:                 decoder 16 status = Ready
-189 ImageCache::launchDecoders launch:                 decoder 17 status = Ready
-41 ImageCache::launchDecoders launch:                 decoder 18 status = Ready
-80 ImageCache::launchDecoders launch:                 decoder 19 status = Ready
-266 Reader::run                                        Finished
-105 Reader::run                                        Finished
-171,189 Reader::run                                        Finished
-93 MetaRead::dispatchFinished                         WeAreDone
-25 MW::loadDone                                       3074462093809 ms 73 images from /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
-79 MW::reset                                          Source: MW::loadDone0
- 7 MW::reset                                          Source: MW::loadDone1
- 1 BuildFilters::reset
- 0 Filters::reset
- 1 Filters::removeChildrenDynamicFilters
-16 Filters::clearAll
- 1 BuildFilters::build                                afteraction = 0
- 0 Filters::startBuildFilters
-128 Filters::removeChildrenDynamicFilters
-1,278 BuildFilters::run                                  afteraction = 0
-384 BuildFilters::done                                 afteraction = 0
- 1 MW::filterChange  Src:                             MW::loadConcurrentDone
-192,714 DataModel::newInstance
-75 BuildFilters::update                               filters->filtersBuilt = true
-228 BuildFilters::run                                  afteraction = 0
- 2 MetaRead::initialize                               /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora
- 1 rebuildImageCacheParameters                        src = MW::filterChange
-53 Selection::select(QModelIndex)                     row = 0 src = MW::filterChange
+void ImageCache::launchDecoders(QString src)
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (decoder[id]->isRunning()) continue;
+        fillCache(id);
+    }
+}
 
- 0 Selection::setCurrentIndex                         row = 0 clearSelection = true
-77 Selection::updateCurrentIndex                      row = 0
- 1 MW::load                                           row = 0 isFileSelectionChange = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
-481 MW::fileSelectionChange                            row = 0 Src = MW::load G::fileSelectionChangeSource =
-30 VideoView::stop
- 3 BuildFilters::done                                 afteraction = 0
- 7 ImageView::loadImage                               row = 0 Src:MW::fileSelectionChange isFirstImageNewInstance = true /Users/roryhill/Pictures/2022/202204/2022-04-14_Nora/2022-04-14_0002.arw
-73 ImageCache::setCurrentPosition                     row = 0
-80 ImageCache::updateToCacheTargets
-77 ImageCache::launchDecoders launch:                 decoder 0  status = Ready
-75 ImageCache::launchDecoders launch:                 decoder 1  status = Ready
-46 ImageCache::launchDecoders launch:                 decoder 2  status = Ready
-37 ImageCache::launchDecoders launch:                 decoder 3  status = Ready
-37 ImageCache::launchDecoders launch:                 decoder 4  status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 5  status = Ready
-37 ImageCache::launchDecoders launch:                 decoder 6  status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 7  status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 8  status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 9  status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 10 status = Ready
-37 ImageCache::launchDecoders launch:                 decoder 11 status = Ready
-37 ImageCache::launchDecoders launch:                 decoder 12 status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 13 status = Ready
-35 ImageCache::launchDecoders launch:                 decoder 14 status = Ready
-35 ImageCache::launchDecoders launch:                 decoder 15 status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 16 status = Ready
-36 ImageCache::launchDecoders launch:                 decoder 17 status = Ready
-35 ImageCache::launchDecoders launch:                 decoder 18 status = Ready
-98,360 ImageCache::launchDecoders launch:                 decoder 19 status = Ready
- 2 MW::updateIconRange                                src =
-64 IconView::updateVisible                            Thumbnails src = MW::updateIconRange
-528,048 MW::reset                                          Source: MW::loadDone2
-505,425 MetaRead::dispatchFinished                         QuitAfterTimeout
+My problem is how to make sure setTargetRange() is always running in the ImageCache thread.  I think that isRunning() == false after
+ImageCache::run() even though the ImageCache::fillCache / ImageDecoder cycle is running.

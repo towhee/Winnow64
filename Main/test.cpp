@@ -395,14 +395,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QList<int> toCache{0,1,2,3,4,5,6,7,8,9};
-    int targetFirst = 3;
-    int targetLast = 6;
-    auto it = toCache.begin();  // Ensures a mutable iterator
-    toCache.erase(std::remove_if(it, toCache.end(), [&](int sfRow) {
-                      return sfRow < targetFirst || sfRow > targetLast;
-                  }), toCache.end());
-    qDebug() << toCache;
+    bounceFoldersStressTest(100, 3);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
