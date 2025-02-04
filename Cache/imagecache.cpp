@@ -515,8 +515,8 @@ void ImageCache::setTargetRange(int key)
     //     toCache.clear();
     //     toCacheStatus.clear();
     // }
-    toCache.clear();
-    toCacheStatus.clear();
+    // toCache.clear();
+    // toCacheStatus.clear();
 
     float sumMB = 0;
     int aheadAmount = 2;
