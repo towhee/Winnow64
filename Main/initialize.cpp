@@ -8,7 +8,6 @@ void MW::initialize()
     setWindowTitle(winnowWithVersion);
     G::stop = false;
     G::removingFolderFromDM = false;
-    G::dmEmpty = true;
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
@@ -263,7 +262,6 @@ void MW::createDataModel()
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
     connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
-    connect(buildFilters, &BuildFilters::stopped, this, &MW::reset);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
@@ -299,7 +297,6 @@ void MW::createFrameDecoder()
     if (G::isLogger) G::log("MW::createFrameDecoder");
     frameDecoder = new FrameDecoder(this);
     connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
-    connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     thumb = new Thumb(dm, metadata, frameDecoder);
 }

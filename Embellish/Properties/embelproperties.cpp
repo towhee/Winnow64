@@ -2049,7 +2049,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     }
 
     QString msg = "An image must be selected in order to show embellishments";
-    if (G::dmEmpty) emit centralMsg(msg);
+    if (mw3->dm->rowCount() == 0) emit centralMsg(msg);
 
     // update Embellish menu
     if (!isRemote) emit templateChanged(templateId);

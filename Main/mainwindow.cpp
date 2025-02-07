@@ -2008,6 +2008,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
         //     G::popUp->showPopup("Filters cleared");
         dm->currentPrimaryFolderPath = folderPath;
         stop(fun + " reset DataModel");
+        // should only reset here
         reset(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
@@ -2460,9 +2461,6 @@ bool MW::stop(QString src)
     }
 
     dm->abortLoad();
-    G::dmEmpty = true;
-
-    // reset("MW::stop");
 
     // QMutexLocker locker(&G::gMutex);
     G::stop = false;
@@ -2485,7 +2483,8 @@ bool MW::stop(QString src)
 bool MW::reset(QString src)
 {
 /*
-    Resets everything prior to aa instance / new folder heirarchy change.
+    Resets everything prior to an instance / new folder heirarchy change.  Should only
+    be called from folderSelectionChange and resetDataModel == true.
 */
 
     // if (!G::stop || G::removingFolderFromDM) {
@@ -2495,12 +2494,7 @@ bool MW::reset(QString src)
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
 
-    if (!G::dmEmpty /*|| !G::stop*/) {
-       //qDebug() << "MW::reset G::dmEmpty == false";
-       return false;
-    }
-
-    //qDebug() << "MW::reset src =" << src;
+    qDebug() << "MW::reset src =" << src;
 
     // confirm folder exists and is readable, report if not and do not process
     // rgh redo for multi-folders
@@ -2518,7 +2512,6 @@ bool MW::reset(QString src)
 
     buildFilters->stop();
 
-    G::dmEmpty = true;
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
@@ -2748,6 +2741,8 @@ void MW::loadFolder(QString folderPath)
     - Selection::selectRow
 
     - See top of MainWindow for program flow
+
+    - Do not use reset as it clears the datamodel
 */
 {
     QString fun = "MW::loadFolder";
@@ -2780,7 +2775,6 @@ void MW::loadFolder(QString folderPath)
 
         // read metadata using MetaRead
         metaRead->initialize();     // only when new instance / new primary folder
-        // if (reset(src + QString::number(count++))) return;
     }
 
     // if there was a folder and file change
@@ -2810,7 +2804,6 @@ void MW::loadFolder(QString folderPath)
     // set image cache parameters
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    // if (reset(src + QString::number(count++))) return;
     imageCache->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
 
@@ -2819,7 +2812,7 @@ void MW::loadFolder(QString folderPath)
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-    if (reset(src + QString::number(count++))) return;
+    // if (reset(src + QString::number(count++))) return;
 
     isCurrentFolderOkay = true;
     updateStatus(true, "", fun);
@@ -2992,7 +2985,7 @@ void MW::loadDone()
                 ;
                 //*/
 
-    if (reset(src + QString::number(count++))) return;
+    // if (reset(src + QString::number(count++))) return;
 
     // missing thumbnails
     /*
@@ -3039,7 +3032,7 @@ void MW::loadDone()
     sortMenu->setEnabled(true);
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
-    if (reset(src + QString::number(count++))) return;
+    // if (reset(src + QString::number(count++))) return;
 
     // if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
     //     // qDebug() << src << "buildFilters->build()";
@@ -3067,7 +3060,6 @@ void MW::loadDone()
     // updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
 
     // resize table columns with all data loaded
-    if (reset(src + QString::number(count++))) return;
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 

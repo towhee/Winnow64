@@ -172,7 +172,6 @@ namespace G
     // flow
     extern bool stop;
     extern bool removingFolderFromDM;
-    extern bool dmEmpty;
     extern bool isInitializing;
 
     // datamodel

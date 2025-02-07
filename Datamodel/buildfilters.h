@@ -49,7 +49,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void stopped(QString src);
     void updateProgress(int progress);
     void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();

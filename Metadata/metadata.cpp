@@ -1162,10 +1162,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 {
     if (G::isLogger)
         G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
-    // qDebug() << "Metadata::loadImageMetadata G::dmEmpty =" << G::dmEmpty;
 
     // check abort
-    if (G::dmEmpty && !isRemote) return false;
+    if (G::stop) return false;
+    // if (G::dmEmpty && !isRemote) return false;
 
     // check instance up-to-date
     if (instance != G::dmInstance && !isRemote) {
