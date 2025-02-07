@@ -134,6 +134,19 @@ void BuildFilters::abortIfRunning()
     abort = false;
 }
 
+void BuildFilters::rebuild()
+{
+    if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::build");
+    filters->filtersBuilt = false;
+    filters->save();
+    reset(false);
+    dm->sf->suspend(false, "MW::filterChange");
+    dm->sf->filterChange("MW::filterChange");
+    build();
+    filters->restore();
+}
+
 void BuildFilters::build(AfterAction newAction)
 {
 /*

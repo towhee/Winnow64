@@ -98,7 +98,10 @@ Logger::Logger()
 void Logger::log(const QString functionName, const QString comment)
 {
     QMutexLocker locker(&mutex);
-    QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
+    qint64 nsec = t.nsecsElapsed();
+    QString microSec = "";
+    // less than 10 seconds
+    if (nsec < 10000000000)  microSec = QString("%L1").arg(nsec / 1000);
     QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
     QString e = microSec.rightJustified(11, ' ') + " ";
     QString f = prevFunctionName.leftJustified(51, ' ');

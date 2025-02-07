@@ -211,6 +211,8 @@ void MW::saveAsFile()
 void MW::dmInsert(QStringList pathList)
 {
     QString src = "MW::dmInsert";
+    // if (G::isLogger)
+        G::log(src);
     foreach(QString fPath, pathList) {
         // replace existing image with the same name
         if (dm->isPath(fPath)) {
@@ -239,11 +241,24 @@ void MW::dmInsert(QStringList pathList)
             qDebug() << src << "insert" << fPath;
             dm->insert(fPath);
             ImageMetadata m = dm->imMetadata(fPath, false);
+            // filters->save();
+            // clearAllFilters();
+            // dm->sf->suspend(false, "MW::filterChange");
+            // dm->sf->filterChange("MW::filterChange");  // crash (removed wait in SortFilter::filterChange)
+            buildFilters->rebuild();
+            // filters->restore();
+            sel->select(dm->currentFilePath);
         }
     }
-    // selection triggers thumbnail and imagecache updates
     // imageView->currentImageHasChanged = true;
-    sel->select(dm->currentSfIdx);
+    // rebuild the filters to include new or changed images
+    // buildFilters->build();
+    // filterChange(src);
+    // updateAllFilters();
+    // update current to account for insertions
+    // dm->setCurrent(dm->currentFilePath, dm->instance);
+    // selection triggers thumbnail and imagecache updates
+    // sel->select(dm->currentFilePath);
 }
 
 void MW::insertFiles(QStringList pathList)
@@ -347,15 +362,15 @@ void MW::dmRemove(QStringList pathList)
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
     the rows, updates dm->fPathRow.
     */
-    filters->save();
-    clearAllFilters();
+    // filters->save();
+    // clearAllFilters();
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPath = pathList.at(i);
         dm->remove(fPath);
     }
 
     // cleanup G::rowsWithIcon
-    metaReadThread->cleanupIcons();
+    metaRead->cleanupIcons();
 
     // remove deleted files from imageCache
     imageCache->removeFromCache(pathList);
@@ -363,8 +378,8 @@ void MW::dmRemove(QStringList pathList)
     G::ignoreScrollSignal = false;
 
     // rebuild filters
-    buildFilters->build();
-    filters->restore();
+    buildFilters->rebuild();
+    // filters->restore();
 
     // // update current index
     // int sfRow;

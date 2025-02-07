@@ -961,9 +961,11 @@ void Filters::save()
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::save");
-    qDebug() << "Filters::save";
+    // qDebug() << "Filters::save";
 
     QMutexLocker locker(&mutex);
+
+    itemStates.clear();
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -1012,7 +1014,7 @@ void Filters::restore()
         for (QTreeWidgetItem* child : children) {
             if (child->text(0) == state.item) {
                 child->setCheckState(0, Qt::Checked);
-                /*
+                // /*
                 qDebug().noquote() << state.parent.leftJustified(15)
                                    << child->text(0); //*/
                 break;
@@ -1021,6 +1023,15 @@ void Filters::restore()
     }
     searchTrue->setText(0, searchText);
     // emit filterChange("Filters::restore");
+}
+
+void Filters::reportSaved()
+{
+    for (const auto& state : itemStates) {
+        qDebug().noquote() << state.parent.leftJustified(15)
+                           << state.item;
+    }
+
 }
 
 void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState state)

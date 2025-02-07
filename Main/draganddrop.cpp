@@ -5,7 +5,36 @@
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
-    event->acceptProposedAction();
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void MW::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    if (G::isLogger) G::log("MW::dragEnterEvent");
+    dragLabel->hide();
+}
+
+void MW::dragMoveEvent(QDragMoveEvent *event)
+{
+    if (G::isLogger) G::log("MW::dragMoveEvent");
+    if (event->mimeData()->hasUrls()) {
+        QString text = "Show image in source folder ";
+        dragLabel->setText(text);
+        dragLabel->adjustSize();
+        // Get global cursor position and move label near it
+        QPoint globalPos = QCursor::pos();
+        int xOffset = -dragLabel->width()/2;
+        dragLabel->move(globalPos + QPoint(xOffset, 10)); // Offset slightly from cursor
+        dragLabel->show();
+
+        event->accept(); // Accept the event
+    }
+    else {
+        event->ignore();
+    }
+    // event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
@@ -19,6 +48,7 @@ void MW::dropEvent(QDropEvent *event)
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         handleDrop(fPath);
+        dragLabel->hide();
     }
 }
 

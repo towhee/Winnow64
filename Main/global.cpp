@@ -258,6 +258,7 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
     logger.log(functionName, comment);
     return;
+    /*
     static QMutex mutex;
     QMutexLocker locker(&mutex);
     static QString prevFunctionName = "";
@@ -285,6 +286,7 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
     prevFunctionName = functionName;
     prevComment = comment;
     t.restart();
+    //*/
 }
 
 //*** ISSUES ******************************************************************************

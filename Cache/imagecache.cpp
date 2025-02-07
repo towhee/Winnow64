@@ -506,6 +506,13 @@ void ImageCache::removeCachedImage(QString fPath)
     emit refreshViews(fPath, false, "ImageCache::setTargetRange");
 }
 
+void ImageCache::addToCache(QStringList &pathList)
+{
+/*
+    Called when insert image(s).  Runs on GUI thread.  rgh not req'd.
+*/
+}
+
 void ImageCache::removeFromCache(QStringList &pathList)
 {
 /*
@@ -1095,7 +1102,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB,
     wtAhead = cacheWtAhead;
 }
 
-void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString src)
+void ImageCache::filterChange(QString &currentImageFullPath, QString src)
 {
 /*
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
@@ -1118,29 +1125,39 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     // do not use mutex - spins forever
 
+    // // reset the image cache
+    // icd->imCache.clear();
+    // toCache.clear();
+    // toCacheStatus.clear();
+
     // update instance
     instance = dm->instance;
-    // key = 0;
-    // if (isShowCacheStatus) updateStatus("Update all rows", fun);
+
+    if (isShowCacheStatus) updateStatus("Update all rows", fun);
+
+    refreshImageCache();
 
     // setCurrentPosition(currentImageFullPath, fun);
 }
 
 void ImageCache::refreshImageCache()
 {
-/*
-    Reload all images in the cache.
-*/
     if (debugLog || G::isLogger || G::isFlowLogger) log("refreshImageCache");
-    if (debugCaching)
-        qDebug() << "ImageCache::refreshImageCache";
+    if (isRunning()) {
+        QMetaObject::invokeMethod(this, "updateToCache", Qt::QueuedConnection);
+    }
+    start(QThread::LowestPriority);
+}
 
+void ImageCache::reloadImageCache()
+{
+/*
+    Reload all images in the cache.  Used by colorManageChange.
+*/
+    if (debugLog || G::isLogger || G::isFlowLogger) log("reloadImageCache");
     if (isRunning()) {
         stop("ImageCache::refreshImageCache");
     }
-    icd->imCache.clear();
-    toCache.clear();
-    toCacheStatus.clear();
     start(QThread::LowestPriority);
 }
 
@@ -1151,7 +1168,7 @@ void ImageCache::colorManageChange()
 */
     if (debugCaching) qDebug() << "ImageCache::colorManageChange";
     if (debugLog || G::isLogger || G::isFlowLogger) log("colorManageChange");
-    refreshImageCache();
+    reloadImageCache();
 }
 
 void ImageCache::cacheSizeChange()
@@ -1278,10 +1295,10 @@ int ImageCache::nextToCache(int id)
 */
     auto sDebug = [](const QString& sId, const QString& msg) {
         QString fun = "ImageCache::nextToCache";
-        QString s = "";
-        qDebug().noquote()
-            << fun.leftJustified(50, ' ')
-            << sId << msg;
+        G::log(fun, sId + msg);
+        // qDebug().noquote()
+        //     << fun.leftJustified(50, ' ')
+        //     << sId << msg;
     };
 
     if (debugLog || G::isLogger)
@@ -1290,7 +1307,7 @@ int ImageCache::nextToCache(int id)
     QString fun = "ImageCache::nextToCache";
     bool debugThis = false;
     QString msg;
-    QString sId = "id = " + QString::number(id).leftJustified(2);
+    QString sId = "decoder " + QString::number(id).leftJustified(3);
 
     if (debugCaching)
     {
@@ -1320,13 +1337,13 @@ int ImageCache::nextToCache(int id)
     for (int i = 0; i < toCache.count(); ++i) {
         int sfRow = toCache.at(i);
 
-        QString sRow = QString::number(sfRow).leftJustified(4);
+        QString sRow = QString::number(sfRow).leftJustified(6);
         QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
 
-        if (debugThis) {
-            msg = "row = " + sRow + " checking" ;
-            sDebug(sId, msg);
-        }
+        // if (debugThis) {
+        //     msg = "row = " + sRow + " checking" ;
+        //     sDebug(sId, msg);
+        // }
 
         // out of range
         if (sfRow >= dm->sf->rowCount()) {
@@ -1364,15 +1381,23 @@ int ImageCache::nextToCache(int id)
             continue;
         }
 
-        // wrong instance
-        if (toCacheStatus[sfRow].instance != instance) {
-            continue;
-        }
+        // // wrong instance
+        // if (toCacheStatus[sfRow].instance != instance) {
+        //     if (debugThis){
+        //         msg = "row " + sRow + " wrong instance";
+        //         sDebug(sId, msg);
+        //     }
+        //     continue;
+        // }
 
         // isCaching and not the same decoder
         if (toCacheStatus.contains(sfRow)) {
             if (toCacheStatus[sfRow].status == Status::Caching) {
                 if (id != toCacheStatus[sfRow].decoderId) {
+                    if (debugThis){
+                        msg = "row " + sRow + " isCaching and not the same decoder";
+                        sDebug(sId, msg);
+                    }
                     continue;
                 }
             }
@@ -1766,7 +1791,8 @@ void ImageCache::fillCache(int id)
             // "isCacheUpToDate = " + QVariant(isCacheUpToDate).toString().leftJustified(6) +
             "isNextToCache = " + QVariant(isNextToCache).toString().leftJustified(6) +
             "isValidKey(toCacheKey) = " + QVariant(isValidKey(toCacheKey)).toString().leftJustified(6) +
-            "okDecodeNextImage = " + QVariant(okDecodeNextImage).toString().leftJustified(6)
+            "okDecodeNextImage = " + QVariant(okDecodeNextImage).toString().leftJustified(6) +
+            "toCache: " + reportToCacheRows()
         );
     }
 
