@@ -783,6 +783,52 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
     QTreeView::selectionChanged(selected, deselected);
 }
 
+void FSTree::saveState(ViewState& state) const
+{
+    // // Save the current scroll position
+    // const auto* scrollArea = qobject_cast<const QAbstractScrollArea*>(this);
+    // if (scrollArea) {
+    //     // state.scrollPosition = scrollArea->scrollPosition();
+    // }
+
+    // // Save the current selection
+    // const auto& selectionModel = treeSelectionModel;
+    // if (selectionModel) {
+    //     const auto selectedIndexes = selectionModel->selectedIndexes();
+    //     state.selectedIndexes.clear();
+    //     for (const auto& index : selectedIndexes) {
+    //         if (index.isValid()) {
+    //             state.selectedIndexes << index;
+    //         }
+    //     }
+    // }
+}
+
+bool FSTree::restoreState(const ViewState& state) const
+{
+    // // Restore the scroll position
+    // const auto* scrollArea = qobject_cast<QAbstractScrollArea*>(this);
+    // if (scrollArea && !state.scrollPosition.isNull()) {
+    //     // scrollArea->scrollTo(state.scrollPosition);
+    // }
+
+    // // Restore the selection
+    // const auto& selectionModel = treeSelectionModel;
+    // if (selectionModel) {
+    //     selectionModel->clearSelection(); // Clear any existing selection
+    //     QItemSelection selection;
+    //     for (const auto& index : state.selectedIndexes) {
+    //         if (index.isValid()) { // Ensure the index is still valid before selecting it
+    //             // selection.select(index);
+    //         }
+    //     }
+    //     selectionModel->select(selection, QItemSelectionModel::Select);
+    // }
+
+    return true; // Return success
+}
+
+
 void FSTree::keyPressEvent(QKeyEvent *event){
     // prevent default key actions
 }

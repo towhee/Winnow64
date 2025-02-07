@@ -292,7 +292,8 @@ void DataModel::clearDataModel()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
     // clear the model
     if (mLock) return;
-    if (isDebug) qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
+    // if (isDebug)
+        qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
     setModelProperties();
     // clear the fPath index of datamodel rows
@@ -465,11 +466,8 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
     folder will be added to the datamodel, if Remove then the images in the folder will
     be removed from the datamodel.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("DataModel::enqueueOp", op + " " + folderPath);
-    /*
-    qDebug() << "DataModel::enqueueOp"
-             << "op =" << op
-             << "folderPath =" << folderPath;//*/
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("DataModel::enqueueOp", op + " " + folderPath);
 
     if (op == "Toggle") {
         if (folderList.contains(folderPath)) {
@@ -506,13 +504,8 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
     QString msg = "op = " + op +
                   " recurse = " + QVariant(recurse).toString() +
                   " folderPath = " + folderPath;
-    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
-    /*
-    qDebug() << fun
-             << "op =" << op
-             << "recurse =" << recurse
-             << "folderPath =" << folderPath
-        ;//*/
+    // if (G::isLogger || G::isFlowLogger)
+        G::log(fun, msg);
 
     if (recurse) {
         enqueueOp(folderPath, op);
@@ -520,7 +513,8 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
         while (it.hasNext()) {
             QString dPath = it.next();
             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-                 enqueueOp(dPath, op);
+                // G::log(fun, "subfolder: " + dPath);
+                enqueueOp(dPath, op);
             }
         }
     }
@@ -559,7 +553,8 @@ void DataModel::processNextFolder()
     QString fun = "DataModel::processNextFolder";
     QString msg = "folderOperation.first = " + folderOperation.first + " " +
                   "folderOperation.second = " + QVariant(folderOperation.second).toString();
-    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, msg);
     }
 
     // add images from model
@@ -601,7 +596,7 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
 
-    /*
+    // /*
     qDebug().noquote()
              << fun << "folder =" << folderPath
              << "folderQueue(count) =" << folderQueue.count()
@@ -784,13 +779,11 @@ bool DataModel::endLoad(bool success)
     loadingModel = false;
     sf->suspend(false);
     if (success) {
-        G::dmEmpty = false;
         checkChunkSize = iconChunkSize > rowCount();
         return true;
     }
     else {
         clear();
-        G::dmEmpty = true;
         filters->loadingDataModelFailed();
         return false;
     }
@@ -1152,7 +1145,7 @@ void DataModel::addAllMetadata()
             emit updateProgress(1.0 * row / rowCount() * 100);
             if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
         }
-        if (abortLoadingModel || G::dmEmpty) {
+        if (abortLoadingModel || G::stop) {
             endLoad(false);
             setAllMetadataLoaded(false);
             return;

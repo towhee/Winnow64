@@ -406,7 +406,7 @@ void IconView::updateVisible(QString src)
 
 */
 
-    if (G::isInitializing || G::dmEmpty) return;
+    if (G::isInitializing || G::stop) return;
     if (G::isLogger || G::isFlowLogger)
         G::log("IconView::updateVisible", objectName() + " src = " + src);
     if (isDebug)
@@ -1115,7 +1115,7 @@ bool IconView::event(QEvent *event) {
 
 void IconView::showEvent(QShowEvent *event)
 {
-    if (G::isInitializing || G::dmEmpty) return;
+    if (G::isInitializing || G::stop) return;
     QString src = "IconView::showEvent";
     m2->updateIconRange(true, src);
     QListView::showEvent(event);

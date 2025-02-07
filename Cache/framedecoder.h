@@ -16,7 +16,6 @@ public:
     FrameDecoder(QObject *parent = nullptr);
 
 signals:
-    void stopped(QString src);
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
     void frameImage(QString path, QImage image, QString source);

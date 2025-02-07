@@ -129,6 +129,12 @@ signals:
 
 private:
     void selectRecursively(QString folderPath, bool toggle = false);
+    struct ViewState {
+        QPointF scrollPosition;
+        QList<QModelIndex> selectedIndexes;
+    };
+    void saveState(ViewState& state) const;
+    bool restoreState(const ViewState& state) const;
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QSet<QPersistentModelIndex> nodesToExpand;
     QElapsedTimer expansionTimer;

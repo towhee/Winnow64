@@ -36,7 +36,6 @@ QMutex gMutex;
 bool isInitializing;            // flag program starting / initializing
 bool stop = false;              // flag to stop everything involving DM loading new dataset
 bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
-bool dmEmpty;                   // DM is stopped and/or empty.  Flag to abort
                                 // all new folder processes.
 // datamodel status
 bool allMetadataLoaded;         // all metadata attempted
