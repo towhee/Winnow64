@@ -60,6 +60,7 @@ signals:
 
 public slots:
     void build(BuildFilters::AfterAction newAction = NoAfterAction);
+    void rebuild();
     void update();
     void updateCategory(BuildFilters::Category category,
                         BuildFilters::AfterAction newAction = NoAfterAction);

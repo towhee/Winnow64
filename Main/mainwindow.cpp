@@ -353,21 +353,29 @@ Image change
     ImageCache::setTargetRange
     ImageCache::run
 
-Filter change
+Filter change √
     MW::filterChange
-    MW::loadEntireMetadataCache
-    DataModel::addAllMetadata               (instead of MetadataCache::loadAllMetadata)
+    DataModel::newInstance
+    ImageCache::stop
     SortFilter::filterChange
-    DataModel::filteredItemCount
-    ImageCache::rebuildImageCacheParameters
+    BuildFilters::update
+    IconView::refreshThumbs
+    MetaRead::initialize
+    ImageCache::filterChange
     thumbView->selectThumb
-    fileSelectionChange                     (same as image change above)
+    MW::scrollToCurrentRowIfNotVisible
 
 Sort change
     MW::sortThumbnails
     thumbView->sortThumbs
     ImageCache::rebuildImageCacheParameters
     MW::scrollToCurrentRow
+
+Images inserted
+
+Images deleted
+
+Images modified
 
 ***********************************************************************************************
 
@@ -1176,7 +1184,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::ContextMenu) {
 
             // default enable
-            qDebug() << "MW::eventFilter QEvent::ContextMenu";
+            // qDebug() << "MW::eventFilter QEvent::ContextMenu";
             copyFolderPathFromContextAction->setEnabled(true);
             revealFileActionFromContext->setEnabled(true);
             deleteFSTreeFolderAction->setEnabled(true);
@@ -1204,13 +1212,14 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
                     mouseOverFolderPath = idx0.data(QFileSystemModel::FilePathRole).toString();
+                    /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "folderName =" << folderName
                              << "mouseOverFolderPath =" << mouseOverFolderPath
                              // << "event =" << event
                              // << "obj->objectName() =" << obj->objectName()
                              // << " =" <<
-                                ;
+                                ; //*/
                 }
             }
 
@@ -2404,13 +2413,13 @@ bool MW::stop(QString src)
     G::t.restart();
     }
 
-    metaReadThread->stop();
+    metaRead->stop();
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop metaReadThread", QString::number(G::t.elapsed()) + " ms");
     if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
-                 << "isRunning =" << (metaReadThread->isRunning() ? "true " : "false")
+                 << "isRunning =" << (metaRead->isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
     }
     G::t.restart();
@@ -2770,7 +2779,7 @@ void MW::loadFolder(QString folderPath)
         imageView->isFirstImageNewInstance = true;
 
         // read metadata using MetaRead
-        metaReadThread->initialize();     // only when new instance / new primary folder
+        metaRead->initialize();     // only when new instance / new primary folder
         // if (reset(src + QString::number(count++))) return;
     }
 
@@ -2838,7 +2847,8 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    if (G::isLogger || G::isFlowLogger) {
+    // if (G::isLogger || G::isFlowLogger)
+    {
         G::log("MW::load", "row = " + QString::number(sfRow)
         + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
         + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString()
@@ -2863,7 +2873,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::load");
-        metaReadThread->setStartRow(sfRow, isFileSelectionChange, "MW::load");
+        metaRead->setStartRow(sfRow, isFileSelectionChange, "MW::load");
     }
     else if (isFileSelectionChange)
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
@@ -3508,7 +3518,7 @@ void MW::setImageCacheParameters()
     }
     else {
         G::showProgress = G::ShowProgress::MetaCache;
-        metaReadThread->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
+        metaRead->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
     }
 
     // thumbnail cache status indicators
@@ -5262,19 +5272,20 @@ void MW::refreshDataModel()
     reload the folders and reselect the current image.  If the image count has not
     changed, check if there have been any images modified.  If so, reload the modified
     images, and if necessary, redisplay the current image.
+
+    Called by FSTree::dropEvent or BookMarks::dropEvent.
+
 */
-    QString fun = "MW::refreshCurrentFolder";
+    QString fun = "MW::refreshDataModel";
     if (G::isLogger) G::log(fun);
     QString src = "fun";
-    isRefreshingDM = true;
-
-    // use dm->currentFilePath ??
-    refreshCurrentPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    isRefreshingDM = true;  // rgh not being used, under review
 
     QStringList added;
     QStringList removed;
     QStringList modified;
 
+    // find changes between datamodel and files in folders
     if (!dm->sourceModified(added, removed, modified)) {
         G::popUp->showPopup("There have been no changes to any images in the folder.", 2000);
         return;
@@ -5288,6 +5299,7 @@ void MW::refreshDataModel()
         dmRemove(removed);
     }
 
+    // rgh review this working
     if (modified.count()) {
         foreach (QString fPath, modified) {
             QFileInfo info = QFileInfo(fPath);
@@ -5296,6 +5308,7 @@ void MW::refreshDataModel()
 
             QDateTime t1 = dm->index(dmRow, G::ModifiedColumn).data().toDateTime();
             QDateTime t2 = info.lastModified();
+            /*
             qint64 diff = t1.msecsTo(t2);
             qDebug().noquote() << fun << "modified"
                                << "t1 =" << t1
@@ -5303,6 +5316,7 @@ void MW::refreshDataModel()
                                << "t2 - t1 =" << diff
                                   ;
             continue;
+            //*/
 
             // update file size and modified date
             dm->updateFileData(info);
@@ -5344,19 +5358,13 @@ void MW::refreshDataModel()
 void MW::refreshCurrentAfterReload()
 {
 /*
-    This slot is triggered after the metadataCache thread has run and isRefreshingDM = true to
+    This slot is triggered after the metaRead thread has run and isRefreshingDM = true to
     complete the refresh current folder process by selecting the previously selected thumb.
 */
     if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
-    int sfRow = dm->proxyRowFromPath(refreshCurrentPath);
-    /*
-    qDebug() << "MW::refreshCurrentAfterReload" << refreshCurrentPath
-             << "dmRow =" << dmRow
-             << "sfRow =" << sfRow;
-                //*/
-    thumbView->iconViewDelegate->currentRow = sfRow;
-    gridView->iconViewDelegate->currentRow = sfRow;
-    sel->setCurrentRow(sfRow);
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    sel->setCurrentRow(dm->currentSfRow);
     isRefreshingDM = false;
 }
 
@@ -5611,7 +5619,7 @@ void MW::generateMeanStack()
         int sfRow = dm->rowFromPath(fPath);
         qDebug() << "MW::generateMeanStack" << sfRow << dmRow << fPath;
         // metadataCacheThread->loadIcon(sfRow);
-        imageCache->rebuildImageCacheParameters(fPath, "MW::generateMeanStack");
+        imageCache->filterChange(fPath, "MW::generateMeanStack");
         sel->setCurrentPath(fPath);
         // update FSTree image count
         fsTree->refreshModel();

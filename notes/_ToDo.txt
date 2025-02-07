@@ -11,12 +11,18 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
-- Read svg files ie downloads/glyphs.svg
-- Folder "_Tiff Problems" thumbnails not right
 - Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
+- MW::deleteFiles filter/sort work? Does gridView refresh?
+- MW::insertFiles filter/sort work?
+- pbase2048 folder filters showing 4 no year in all but cannot filter on them
+- Sorting... popup not closing
+- Check missing thumbnails process is working
 - Cleanup MW::loadDone
 - Check all drop operations
 - Review all rgh comments
+- Add back redo in ImageCache::fillCache
+- Read svg files ie downloads/glyphs.svg
+- Folder "_Tiff Problems" thumbnails not right
 - If filtering and change filter item for all iconview does not update
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read
@@ -24,8 +30,6 @@ BUGS / TO DO
 - Retain datamodel selection when removing folders from datamodel
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
-- MW::deleteFiles filter/sort work?
-- MW::insertFiles filter/sort work?
 - CR2/CR3 shutter count
 - DataModel could fileInfoList be local - req'd as class variable after model built?
 - When select folder using include subfolders make sure it is and remains selected in FSTree

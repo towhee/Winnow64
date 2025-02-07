@@ -28,6 +28,12 @@ void MW::initialize()
     ingestHistoryFolders = new QStringList;
     hasGridBeenActivated = true;
 
+    // drag text
+    dragLabel->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
+    dragLabel->setAttribute(Qt::WA_TranslucentBackground);
+    dragLabel->setStyleSheet("background: rgba(0, 0, 0, 150); color: white; padding: 5px; border-radius: 5px;");
+    dragLabel->hide();
+
     // window
     isDragDrop = false;
     setAcceptDrops(true);
@@ -324,38 +330,38 @@ void MW::createMDCache()
     dm->setChunkSize(dm->defaultIconChunkSize);
 
     // Runs multiple reader threads to load metadata and thumbnails
-    metaReadThread = new MetaRead(this, dm, metadata, frameDecoder, imageCache);
+    metaRead = new MetaRead(this, dm, metadata, frameDecoder, imageCache);
     // metaReadThread->iconChunkSize = dm->iconChunkSize;
     // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead
-    connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
+    connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stop);
 
     // update thumbView in case scrolling has occurred
-    connect(metaReadThread, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
+    connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // update gridView in case scrolling has occurred
-    connect(metaReadThread, &MetaRead::updateScroll, gridView, &IconView::repaintView,
+    connect(metaRead, &MetaRead::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
     // loading image metadata into datamodel, okay to select
-    connect(metaReadThread, &MetaRead::okToSelect, sel, &Selection::okToSelect);
+    connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
     // message metadata reading completed
-    connect(metaReadThread, &MetaRead::done, this, &MW::loadDone);
+    connect(metaRead, &MetaRead::done, this, &MW::loadDone);
     // Signal to change selection, fileSelectionChange, update ImageCache
-    connect(metaReadThread, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
+    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
-    connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+    connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
     // update loading metadata in central window
-    connect(metaReadThread, &MetaRead::centralMsg, this, &MW::setCentralMessage);
+    connect(metaRead, &MetaRead::centralMsg, this, &MW::setCentralMessage);
     // update filters MetaRead progress
-    connect(metaReadThread, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
+    connect(metaRead, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
     // update loading metadata in statusbar
-    connect(metaReadThread, &MetaRead::updateProgressInStatusbar,
+    connect(metaRead, &MetaRead::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
     // save time to read image metadata and icon to the datamodel
-    connect(metaReadThread, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
+    connect(metaRead, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
     // reset imagecache targets after folder added or removed from datamodel
-    connect(metaReadThread, &MetaRead::dispatchIsFinished,
+    connect(metaRead, &MetaRead::dispatchIsFinished,
             imageCache, &ImageCache::datamodelFolderCountChange);
 
 }

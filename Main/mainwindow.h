@@ -378,6 +378,8 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
     void changeEvent(QEvent *event) override;
 
 signals:
@@ -500,7 +502,7 @@ private slots:
     void metadataChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
-    void filterSyncActionsWithFilters();
+    void syncActionsWithFilters();
     void filterChange(QString source = "");
     void quickFilter();
     void quickFilterComplete();
@@ -1090,7 +1092,7 @@ private:
     PropertyEditor *propertyEditor;
     QHeaderView *headerView;
     CompareImages *compareImages;
-    MetaRead *metaReadThread;
+    MetaRead *metaRead;
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;
     Thumb *thumb;
@@ -1114,6 +1116,7 @@ private:
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
     Stack *meanStack;
+    QLabel *dragLabel = new QLabel(this);
 
     QStandardItemModel *imageModel;
 
@@ -1147,7 +1150,6 @@ private:
 
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;
-    QString refreshCurrentPath;
 
     bool simulateJustInstalled;
     bool isSettings = false;

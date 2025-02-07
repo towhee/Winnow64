@@ -102,6 +102,7 @@ public slots:
     void reset();
     void save();
     void restore();
+    void reportSaved();
     void disableEmptyCat();
     void invertFilters();
     void clearAll();

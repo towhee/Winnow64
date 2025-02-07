@@ -387,15 +387,36 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     // filterChange();
 
-    filters->save();
-    clearAllFilters();
+    filters->restore();
     // QString fPath = dm->currentFilePath;
     // metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bounceFoldersStressTest(100, 3);
+    // bounceFoldersStressTest(100, 3);
+
+    QString text = "Show image in folder ";
+    QFont font("Arial", 14, QFont::Bold);
+    QFontMetrics metrics(font);
+    int width = metrics.horizontalAdvance(text) + 20;
+    int height = metrics.height() + 10;
+
+    QPixmap pixmap(width, height);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setFont(font);
+    painter.setPen(Qt::white);
+    painter.drawText(10, height - 5, text);
+    painter.end();
+
+    const QPixmap pm = pixmap;
+    qDebug() << pm;
+    // pm.save("/Users/roryhill/Pictures/_test0/cursor");
+    // const QPixmap pixmap(":/images/icon16/filter.png");
+    QCursor customCursor(pm);
+    setCursor(customCursor); // Apply custom cursor to the widget
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

@@ -37,10 +37,11 @@ public:
                         bool &isShowCacheStatus, int &cacheWtAhead);
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
                                int &cacheWtAhead);
-    void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
+    void filterChange(QString &currentImageFullPath, QString source = "");
     void stop(QString src);
     bool cacheUpToDate();           // target range all cached
     float getImCacheSize();         // add up total MB cached
+    void addToCache(QStringList &pathList);
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
 
@@ -81,6 +82,7 @@ public slots:
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
     void refreshImageCache();
+    void reloadImageCache();
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
 

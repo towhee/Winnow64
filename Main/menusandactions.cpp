@@ -2235,7 +2235,7 @@ void MW::renameEjectUsbMenu(QString path)
         enabled = false;
         text = "Eject Memory Card";
     }
-    qDebug() << "MW::renameEjectUsbMenu" << path << drive;
+    // qDebug() << "MW::renameEjectUsbMenu" << path << drive;
     ejectAction->setEnabled(enabled);
     ejectActionFromContextMenu->setEnabled(enabled);
     ejectAction->setText(text);

@@ -351,7 +351,7 @@ bool DataModel::lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2)
 int DataModel::insert(QString fPath)
 {
 /*
-    Called by MW::insertFile.
+    Called by MW::dmInsert. (fileOperations.cpp)
 
     Insert a new image into the data model.  Use when a new image is created by embel
     export or meanStack to quickly refresh the active folder with the just saved image.
@@ -393,6 +393,10 @@ int DataModel::insert(QString fPath)
 
     // update fPathRow hash
     rebuildRowFromPathHash();
+
+    // update current row
+    setCurrent(currentFilePath, instance);
+    qDebug() << "DataModel::insert" << currentSfIdx;
 
     // add the file data to datamodel
     addFileDataForRow(dmRow, insertFileInfo);
@@ -2276,13 +2280,13 @@ void DataModel::rebuildRowFromPathHash()
 bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
 {
 /*
-    Called from MW::refreshCurrentFolder. Determine if the eligible file count has
-    changed and/or any images have been modified. If a file has been modified since the
-    datamodel was loaded then it is added to the modifiedFiles list.
+    Called from MW::refreshDataModel. Determine if the eligible file count has changed
+    and/or any images have been modified. If a file has been modified since the datamodel
+    was loaded then it is added to the modifiedFiles list.
 */
-    if (G::isLogger) G::log("DataModel::hasFolderChanged");
-    // if (isDebug)
-        qDebug() << "DataModel::hasFolderChanged"
+    if (G::isLogger) G::log("DataModel::sourceModified");
+    if (isDebug)
+        qDebug() << "DataModel::sourceModified"
                  << "instance =" << instance
                  << folderList;
 

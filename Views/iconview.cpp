@@ -1298,7 +1298,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
         QString row = "row = " + QString::number(indexAt(event->pos()).row()) + " ";
         G::log("IconView::mouseDoubleClickEvent", row + objectName());
     }
-    // /*
+    /*
     qDebug() << "IconView::mouseDoubleClickEvent"
              << event
              << "btn =" << event->button()
@@ -1309,6 +1309,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
     // required to rapidly toggle ctrl click select/deselect without a delay
     if (event->modifiers() & Qt::ControlModifier) {
+        /*
         qDebug() << "IconView::mouseDoubleClickEvent ControlModifier"
                  << event
                  << "btn =" << event->button()
@@ -1321,6 +1322,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
     // show/play when not in loupe mode
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
+        /*
         qDebug() << "IconView::mouseDoubleClickEvent mode != Loupe"
                  << event
                  << "btn =" << event->button()

@@ -240,7 +240,6 @@ QString MW::diagnostics()
     rpt << "\n" << "isUpdatingState = " << G::s(isUpdatingState);
     rpt << "\n" << "isFilterChange = " << G::s(isFilterChange);
     rpt << "\n" << "isRefreshingDM = " << G::s(isRefreshingDM);
-    rpt << "\n" << "refreshCurrentPath = " << G::s(refreshCurrentPath);
     rpt << "\n" << "simulateJustInstalled = " << G::s(simulateJustInstalled);
     rpt << "\n" << "isSettings = " << G::s(isSettings);
     rpt << "\n" << "isStressTest = " << G::s(G::isStressTest);
@@ -276,7 +275,7 @@ void MW::diagnosticsMetadata() {
     diagnosticsReport(metadata->diagnostics(dm->currentFilePath), "Winnow Diagnostics: Metadata");
 }
 void MW::diagnosticsXMP() {} // dummy for now
-void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics(), "Winnow Diagnostics: MetaRead");}
+void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}

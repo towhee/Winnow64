@@ -331,7 +331,7 @@ void MW::resortImageCache()
     if (G::isLogger) G::log("MW::resortImageCache");
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
-    imageCache->rebuildImageCacheParameters(currentFilePath, "MW::resortImageCache");
+    imageCache->filterChange(currentFilePath, "MW::resortImageCache");
     // change to ImageCache
     imageCache->setCurrentPosition(dm->currentFilePath, "MW::resortImageCache");
 //    emit setImageCachePosition(dm->currentFilePath);
