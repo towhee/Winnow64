@@ -785,14 +785,8 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 
 void FSTree::saveState(ViewState& state) const
 {
-    // // Save the current scroll position
-    // const auto* scrollArea = qobject_cast<const QAbstractScrollArea*>(this);
-    // if (scrollArea) {
-    //     // state.scrollPosition = scrollArea->scrollPosition();
-    // }
-
     // // Save the current selection
-    // const auto& selectionModel = treeSelectionModel;
+    // const auto& selectionModel = this->selectionModel();
     // if (selectionModel) {
     //     const auto selectedIndexes = selectionModel->selectedIndexes();
     //     state.selectedIndexes.clear();
@@ -806,12 +800,6 @@ void FSTree::saveState(ViewState& state) const
 
 bool FSTree::restoreState(const ViewState& state) const
 {
-    // // Restore the scroll position
-    // const auto* scrollArea = qobject_cast<QAbstractScrollArea*>(this);
-    // if (scrollArea && !state.scrollPosition.isNull()) {
-    //     // scrollArea->scrollTo(state.scrollPosition);
-    // }
-
     // // Restore the selection
     // const auto& selectionModel = treeSelectionModel;
     // if (selectionModel) {
@@ -819,7 +807,7 @@ bool FSTree::restoreState(const ViewState& state) const
     //     QItemSelection selection;
     //     for (const auto& index : state.selectedIndexes) {
     //         if (index.isValid()) { // Ensure the index is still valid before selecting it
-    //             // selection.select(index);
+    //             selection.select(index); // too few arguments
     //         }
     //     }
     //     selectionModel->select(selection, QItemSelectionModel::Select);
@@ -869,8 +857,8 @@ void FSTree::leaveEvent(QEvent *event)
     // not being used
     wheelSpinningOnEntry = false;
 
-    // req'd ?
     QTreeView::leaveEvent(event);
+    viewport()->update();
 }
 
 void FSTree::wheelStopped()
@@ -1045,10 +1033,6 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
     QModelIndex idx = indexAt(event->pos());
     // same row, column 0 (folder name)
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
-    /*
-    qDebug() << "FSTree::mouseMoveEvent"
-             << "idx.row() =" << idx.row();
-    //*/
     if (idx0.isValid()) {
         hoverFolderName = idx0.data().toString();
         delegate->setHoveredIndex(idx0);
@@ -1086,9 +1070,29 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
     event->acceptProposedAction();
 }
 
+void FSTree::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
+
+    event->accept();
+    viewport()->update();
+}
+
 void FSTree::dragMoveEvent(QDragMoveEvent *event)
 {
-    setCurrentIndex(indexAt(event->pos()));
+    QModelIndex idx = indexAt(event->pos());
+    // same row, column 0 (folder name)
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    if (idx0.isValid()) {
+        hoverFolderName = idx0.data().toString();
+        delegate->setHoveredIndex(idx0);
+    } else {
+        hoverFolderName = "";
+        delegate->setHoveredIndex(QModelIndex());  // No row hovered
+    }
+
+    event->accept();
+    viewport()->update();  // Refresh view
 }
 
 

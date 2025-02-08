@@ -466,7 +466,7 @@ void MW::sortChange(QString source)
 //    sel->select(idx);
 
     scrollToCurrentRowIfNotVisible();
-    // G::popUp->reset();
+    G::popUp->reset();
 
 }
 
