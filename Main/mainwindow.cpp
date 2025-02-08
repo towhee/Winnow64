@@ -3510,7 +3510,8 @@ void MW::setImageCacheParameters()
     }
     else {
         G::showProgress = G::ShowProgress::MetaCache;
-        metaRead->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
+        metaRead->showProgressInStatusbar = true;
+        // metaRead->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
     }
 
     // thumbnail cache status indicators

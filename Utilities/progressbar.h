@@ -22,6 +22,7 @@ public:
     void setMetaProgressStyle(bool onTopOfCache);
 
     QColor progressCurrentColor = QColor(158,200,158);           // Light green
+    // QColor progressBgColor = QColor(30,30,30);                // Dark gray
     QColor progressBgColor = QColor(150,150,150);                // Light gray
     QColor progressAppBgColor = QColor(85,85,85);                // Darker gray
     QColor progressAddFileInfoColor = QColor(85,100,115);        // Slate blue
@@ -29,10 +30,11 @@ public:
     QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
-    QColor progressMetadateCacheColor = QColor(Qt::lightGray);   // Dark green
+    QColor progressMetaReadCacheColor = QColor(Qt::lightGray);   // Dark green
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;
+    QLinearGradient metaReadColorGradient;
     QLinearGradient imageCacheColorGradient;
     QLinearGradient currentColorGradient;
     QLinearGradient targetColorGradient;

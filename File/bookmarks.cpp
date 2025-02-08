@@ -396,6 +396,7 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
 {
     if (G::isLogger) G::log("BookMarks::dragLeaveEvent");
+    delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
     QApplication::restoreOverrideCursor(); // Restore the original cursor when drag leaves
     QWidget::dragLeaveEvent(event);
     emit status(true);
@@ -404,7 +405,19 @@ void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("BookMarks::dragMoveEvent");
-    setCurrentIndex(indexAt(event->pos()));
+    QModelIndex idx = indexAt(event->pos());
+    // same row, column 0 (folder name)
+    QModelIndex idx0 = idx.sibling(idx.row(), 0);
+    if (idx0.isValid()) {
+        hoverFolderName = idx0.data().toString();
+        delegate->setHoveredIndex(idx0);
+    } else {
+        hoverFolderName = "";
+        delegate->setHoveredIndex(QModelIndex());  // No row hovered
+    }
+
+    event->accept();
+    viewport()->update();  // Refresh view
 }
 
 void BookMarks::dropEvent(QDropEvent *event)
