@@ -14,9 +14,43 @@ ImageCache structures to keep track of what to cache next:
     };
     QList<int> toCache;
     QHash<int,CacheStatus> toCacheStatus;
+ImageCache constructor:
+ImageCache::ImageCache(QObject *parent,
+                       ImageCacheData *icd,
+                       DataModel *dm)
+    : QThread(parent)
+{
+    // data is kept in ImageCacheData icd, a hash table
+    this->icd = icd;
+    this->dm = dm;
+    // new metadata to avoid thread collisions?
+    metadata = new Metadata;
+
+    // create n decoder threads
+    decoderCount = QThread::idealThreadCount();
+    decoderCount = decoderCount;
+    for (int id = 0; id < decoderCount; ++id) {
+        ImageDecoder *d = new ImageDecoder(this, id, dm, metadata);
+        d->status = ImageDecoder::Status::Ready;
+        decoder.append(d);
+        connect(decoder[id], &ImageDecoder::done, this, &ImageCache::fillCache);
+    }
+}
 class ImageDecoder : public QThread creates a QImage from an image file.
-ImageCache::ImageCache creates multiple instances of ImageDecoder.
-    QVector<ImageDecoder*> decoder;     // all the decoders
+ImageDecoder::ImageDecoder(QObject *parent,
+                           int id,
+                           DataModel *dm,
+                           Metadata *metadata)
+    : QThread(parent)
+{
+    threadId = id;
+    status = Status::Ready;
+    fPath = "";
+    sfRow = -1;
+    instance = 0;
+    this->dm = dm;
+    this->metadata = metadata;
+}
 ImageCache::launchDecoders calls ImageCache::fillCache for each ImageDecoder.
 ImageCache::fillCache checks the ImageDecoder, and if it has a QImage it inserts it into imCache and removes it from toCache and toCacheStatus.
 ImageCache::fillCache then gets the next image from toCache and sends it to the ImageDecoder.
@@ -26,7 +60,8 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 {
     key = dm->proxyRowFromPath(fPath);
     if (isRunning()) {
-        setTargetRange();
+        // Use signal-slot mechanism to ensure execution in ImageCache thread
+        QMetaObject::invokeMethod(this, "updateToCache", Qt::QueuedConnection);
     }
     else {
         start(QThread::LowestPriority);
@@ -37,6 +72,25 @@ void ImageCache::run()
 {
     setTargetRange();
     launchDecoders();
+    exec();
+
+    while (!abort) {}
+    abort = false;
+}
+
+void ImageCache::stop(QString src)
+{
+if (isRunning()) {
+    gMutex.lock();
+    abort = true;
+    condition.wakeOne();
+    quit();
+    gMutex.unlock();
+
+    // Stop all decoder threads first
+    for (int id = 0; id < decoderCount; ++id) {
+        decoder[id]->stop();
+    }
 }
 
 void ImageCache::launchDecoders(QString src)
@@ -47,5 +101,22 @@ void ImageCache::launchDecoders(QString src)
     }
 }
 
-My problem is how to make sure setTargetRange() is always running in the ImageCache thread.  I think that isRunning() == false after
+void ImageCache::fillCache(int id)
+{
+    int cacheKey = decoder[id]->sfRow;  // = -1 if not a returning decoder
+    if (cacheKey != -1) {
+        cacheImage(id, cacheKey);
+    }
+    bool isNextToCache = toCacheKey != -1;
+    bool isCacheKeyOk = isValidKey(toCacheKey);
+    bool okDecodeNextImage = !abort && isNextToCache && isCacheKeyOk;
+    // reun decoder for the next image to decode into a QImage
+    if (okDecodeNextImage) decodeNextImage(id, toCacheKey);
+    // if no decoders running then we are finished
+    if (allDecodersReady()) abort = true;
+}
+
+My problem is how to make sure setTargetRange() and fillCache() are always running in the ImageCache thread.  I think that isRunning() == false after
 ImageCache::run() even though the ImageCache::fillCache / ImageDecoder cycle is running.
+
+To solve this, please modify to use moveToThread instead of subclassing QThread for both ImageCache and ImageDecoder.
