@@ -5,6 +5,7 @@
 #include <QMainWindow>
 #include <QPainter>
 #include <QLabel>
+#include "Main/global.h"
 
 class ProgressBar : public QWidget
 {
@@ -21,6 +22,8 @@ public:
     void recoverProgressState();
     void setMetaProgressStyle(bool onTopOfCache);
 
+    int meta = G::backgroundShade + 50;
+
     QColor progressCurrentColor = QColor(158,200,158);           // Light green
     // QColor progressBgColor = QColor(30,30,30);                // Dark gray
     QColor progressBgColor = QColor(150,150,150);                // Light gray
@@ -30,7 +33,10 @@ public:
     QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
-    QColor progressMetaReadCacheColor = QColor(Qt::lightGray);   // Dark green
+    // QColor progressMetaReadCacheColor = G::appleBlue;
+    // QColor progressMetaReadCacheColor = QColor(meta,meta,meta);
+    // QColor progressMetaReadCacheColor = QColor(Qt::red);
+    QColor progressMetaReadCacheColor = QColor(Qt::yellow);   // Dark green
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;

@@ -11,6 +11,8 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- Videos should show as cached in progress bar: bookmark 2024-10-15_Mall
+- Compare at 100% cannot mouse to a compare item without zoom to fit happening
 - Prev and next folders
 - Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
 - MW::deleteFiles filter/sort work? Does gridView refresh?

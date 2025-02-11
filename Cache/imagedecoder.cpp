@@ -34,7 +34,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     instance = 0;
     this->dm = dm;
     this->metadata = metadata;
-    isDebug = false;
+    isDebug = true;
     isLog = false;
 }
 
@@ -63,18 +63,23 @@ bool ImageDecoder::quit()
 
 void ImageDecoder::decode(int row, int instance)
 {
+    if (isRunning()) {
+        stop();
+    }
     sfRow = row ;
     status = Status::Busy;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     this->instance = instance;
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
-    /*
+    // /*
+    QString fun = "ImageDecoder::decode";
     qDebug().noquote()
-             << "ImageDecoder::decode                              "
-             << "decoder" << QVariant(threadId).toString().leftJustified(3)
-             << "sfRow =" << QString::number(sfRow).leftJustified(4)
-             << fPath; //*/
+        << fun.leftJustified(50)
+        << "decoder" << QVariant(threadId).toString().leftJustified(3)
+        << "row =" << QString::number(sfRow).leftJustified(4)
+        << "isRunning =" << isRunning()
+        << fPath; //*/
     start(QThread::LowestPriority);
 }
 
@@ -90,7 +95,14 @@ bool ImageDecoder::load()
                "sfRow = " + QString::number(sfRow) + "  " + fPath);
     QString fun = "ImageDecoder::load";
     if (isDebug)
-        qDebug() << fun << fPath;
+    {
+        QString fun = "ImageDecoder::load";
+        qDebug().noquote()
+            << fun.leftJustified(50)
+            << "decoder" <<  QString::number(threadId).leftJustified(3)
+            << "row =" << QString::number(sfRow).leftJustified(4)
+            ;
+    }
 
     // blank fPath when caching is cycling, waiting to finish.
     if (fPath == "") {
@@ -404,11 +416,6 @@ void ImageDecoder::setReady()
 void ImageDecoder::rotate()
 {
     if (G::isLogger) G::log("ImageDecoder::rotate", "sfRow = " + QString::number(sfRow));
-    if (isDebug) {
-        // mutex.lock();
-        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
-        // mutex.unlock();
-    }
     QTransform trans;
     int degrees = 0;
     int orientation = dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
@@ -453,9 +460,7 @@ void ImageDecoder::colorManage()
 {
     if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "sfRow = " + QString::number(sfRow));
     if (isDebug) {
-        // mutex.lock();
-        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
-        // mutex.unlock();
+        // G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
     }
     if (metadata->iccFormats.contains(ext)) {
         // QMutexLocker locker(&mutex);
@@ -466,60 +471,108 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-    if (abort) return;
+    if (isDebug)
+    {
+    QString fun = "ImageDecoder::run";
+    qDebug().noquote()
+        << fun.leftJustified(50)
+        << "decoder" << QVariant(threadId).toString().leftJustified(3)
+        << "row =" << QString::number(sfRow).leftJustified(4)
+        << "errMsg =" << errMsg
+        << "decoder[id]->fPath =" << fPath
+        ;
+    }
 
-    if (isLog) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+    if (abort) {
+        if (isDebug)
+        {
+            QString fun = "ImageDecoder::run aborted";
+            qDebug().noquote()
+                << fun.leftJustified(50)
+                << "decoder" << QVariant(threadId).toString().leftJustified(3)
+                << "sfRow =" << QString::number(sfRow).leftJustified(4)
+                << "errMsg =" << errMsg
+                << "decoder[id]->fPath =" << fPath
+                ;
+        }
+        return;
+    }
+
+    // if (isLog) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
 
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
         G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         emit done(threadId);
+        if (isDebug)
+        {
+            QString fun = "ImageDecoder::run instance clash";
+            qDebug().noquote()
+                << fun.leftJustified(50)
+                << "decoder" << QVariant(threadId).toString().leftJustified(3)
+                << "sfRow =" << QString::number(sfRow).leftJustified(4)
+                << "errMsg =" << errMsg
+                << "decoder[id]->fPath =" << fPath
+                ;
+        }
         return;
     }
 
     QElapsedTimer t;
     t.start();
 
-    if (abort) return;
+    // if (abort) {
+    //     return;
+    // }
 
     if (load()) {
-        if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
+        // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (isDebug)
         {
-        qDebug().noquote()
-            << "ImageDecoder::run                    "
-            << "decoder" <<  QString::number(threadId).leftJustified(2)
-            << "sfRow =" <<  QString::number(sfRow).leftJustified(4)
-            << "DecoderToUse:" << decodersText.at(decoderToUse)
-            << "ms =" << t.elapsed()
-            << fPath;
+            QString fun = "ImageDecoder::run loaded";
+            qDebug().noquote()
+                << fun.leftJustified(50)
+                << "decoder" <<  QString::number(threadId).leftJustified(3)
+                << "row =" <<  QString::number(sfRow).leftJustified(4)
+                << "DecoderToUse:" << decodersText.at(decoderToUse)
+                << "ms =" << t.elapsed()
+                << fPath;
         }
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
-        status = Status::Success;
+        if (image.isNull()) status = Status::Failed;
+        else status = Status::Success;
     }
     else {
         if (isDebug)
-        qDebug() << "ImageDecoder::run load failed"
-                 << "sfRow =" << sfRow
-                 << "status =" << statusText.at(status)
-                 << "errMsg =" << errMsg
-                    ; //*/
+        {
+            QString fun = "ImageDecoder::run load failed";
+            qDebug() << fun.left(50)
+                     << "row =" << sfRow
+                     << "status =" << statusText.at(status)
+                     << "errMsg =" << errMsg
+                        ; //*/
+        }
     }
 
     if (isDebug) {
-        // mutex.lock();
-        G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
-        // mutex.unlock();
+        // G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");
     }
-    /* debug
-        qDebug() << "ImageDecoder::run"
-                 << "Id =" << threadId
-                 << "sfRow =" << sfRow
+
+    if (isDebug)
+    {
+        QString fun = "ImageDecoder::run done";
+        qDebug().noquote()
+                 << fun.leftJustified(50)
+                 << "decoder" <<  QString::number(threadId).leftJustified(3)
+                 << "row =" << QString::number(sfRow).leftJustified(4)
                  << "status =" << statusText.at(status)
+                 << "w =" << image.width()
+                 << "h =" << image.height()
                  << "decoder->fPath =" << fPath
                     ; //*/
+    }
     if (!abort) emit done(threadId);
 }
 

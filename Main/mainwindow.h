@@ -112,7 +112,11 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.41_beta" ;
+    /*
+    alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
+    xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
+    */
+    QString versionNumber = "1.41_gamma" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
