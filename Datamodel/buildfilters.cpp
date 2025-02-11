@@ -830,7 +830,6 @@ void BuildFilters::appendUniqueItems()
     map.clear();
 
     // years
-    qDebug() << "BuildFilters::appendUniqueItems" << G::allMetadataLoaded;
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         QString yr = dm->index(row, G::YearColumn).data().toString().trimmed();

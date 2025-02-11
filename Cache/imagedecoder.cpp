@@ -34,7 +34,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     instance = 0;
     this->dm = dm;
     this->metadata = metadata;
-    isDebug = true;
+    isDebug = false;
     isLog = false;
 }
 
@@ -74,12 +74,15 @@ void ImageDecoder::decode(int row, int instance)
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
     // /*
     QString fun = "ImageDecoder::decode";
-    qDebug().noquote()
-        << fun.leftJustified(50)
-        << "decoder" << QVariant(threadId).toString().leftJustified(3)
-        << "row =" << QString::number(sfRow).leftJustified(4)
-        << "isRunning =" << isRunning()
-        << fPath; //*/
+    // if (isDebug)
+    {
+        qDebug().noquote()
+            << fun.leftJustified(50)
+            << "decoder" << QVariant(threadId).toString().leftJustified(3)
+            << "row =" << QString::number(sfRow).leftJustified(4)
+            << "isRunning =" << isRunning()
+            << fPath;
+    }
     start(QThread::LowestPriority);
 }
 
