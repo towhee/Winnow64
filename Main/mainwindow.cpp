@@ -2494,7 +2494,7 @@ bool MW::reset(QString src)
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
 
-    qDebug() << "MW::reset src =" << src;
+    // qDebug() << "MW::reset src =" << src;
 
     // confirm folder exists and is readable, report if not and do not process
     // rgh redo for multi-folders
@@ -2795,11 +2795,11 @@ void MW::loadFolder(QString folderPath)
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // reset metadata progress
-    if (G::showProgress == G::ShowProgress::MetaCache) {
+    // if (G::showProgress == G::ShowProgress::MetaCache) {
         cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
         isShowCacheProgressBar = true;
         progressLabel->setVisible(true);
-    }
+    // }
 
     // set image cache parameters
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
@@ -2840,7 +2840,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::load", "row = " + QString::number(sfRow)
         + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
@@ -2848,7 +2848,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2868,8 +2868,9 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
         updateMetadataThreadRunStatus(true, true, "MW::load");
         metaRead->setStartRow(sfRow, isFileSelectionChange, "MW::load");
     }
-    else if (isFileSelectionChange)
+    else if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
+    }
 }
 
 void MW::loadChanged(const QString folderPath, const QString op)
@@ -2940,7 +2941,6 @@ void MW::loadChanged(const QString folderPath, const QString op)
     }
 
     if (op == "Add") {
-    // if (folderPath == dm->folderList.at(0)) {
         if (dm->rowCount()) {
             loadFolder(folderPath);
         }
@@ -2971,6 +2971,11 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
+    qDebug() << src;
+    // if (dm->isAllMetadataAttempted()) {
+    //     G::allMetadataLoaded = true;
+    // }
+    // G::allMetadataLoaded = true;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -2985,11 +2990,9 @@ void MW::loadDone()
                 ;
                 //*/
 
-    // if (reset(src + QString::number(count++))) return;
-
     // missing thumbnails
     /*
-    qDebug() << "MW::LoadConcurrentDone"
+    qDebug() << "MW::LoadDone"
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                 ; //*/
@@ -3032,8 +3035,6 @@ void MW::loadDone()
     sortMenu->setEnabled(true);
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
-    // if (reset(src + QString::number(count++))) return;
-
     // if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
     //     // qDebug() << src << "buildFilters->build()";
     //     buildFilters->build();
@@ -3042,7 +3043,11 @@ void MW::loadDone()
     // filterChange();
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
-    // qDebug() << src << "dm->folderList.count() =" << dm->folderList.count();
+    qDebug() << src
+             << "dm->folderList.count() =" << dm->folderList.count()
+             << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
+             << "!filterDock->visibleRegion().isNull() =" << !filterDock->visibleRegion().isNull()
+                ;
     if (dm->folderList.count() >= 1 &&
         dm->isQueueEmpty() &&
         !filterDock->visibleRegion().isNull())
@@ -3053,6 +3058,7 @@ void MW::loadDone()
         buildFilters->recount();
         // filters->restore();
         filterChange("MW::loadConcurrentDone");
+        filters->setEnabled(true);
         // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
 

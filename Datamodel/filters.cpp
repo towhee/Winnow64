@@ -837,7 +837,7 @@ void Filters::loadingDataModelFailed()
 void Filters::startBuildFilters(bool isReset)
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    if (debugFilters)
+    // if (debugFilters)
         qDebug() << "Filters::startBuildFilters"
                  << "G::allMetadataLoaded =" << G::allMetadataLoaded
                     ;
@@ -860,7 +860,7 @@ void Filters::startBuildFilters(bool isReset)
 void Filters::finishedBuildFilters()
 {
     if (G::isLogger) G::log("Filters::finishedBuildFilters");
-    if (debugFilters)
+    // if (debugFilters)
     {
         qDebug() << "Filters::finishedBuildFilters";
         qDebug() << "\n";

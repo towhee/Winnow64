@@ -1,6 +1,5 @@
 #include "progressbar.h"
 #include <QDebug>
-#include "Main/global.h"
 #include "Main/mainwindow.h"
 
 
@@ -36,6 +35,8 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
 
     htOffset = 9;               // the offset from the top of pnt to the progress bar
     ht = 8;                     // the height of the progress bar
+    metaHtOffset = 7;
+    metaHt = 2;
     setMinimumWidth(1);
 
     bgGradient = getGradient(progressBgColor);
@@ -184,23 +185,27 @@ void ProgressBar::setMetaProgressStyle(bool onTopOfCache)
 /*
     This is set from initialize.cpp, based on G::showProgress value.
 */
-    if (onTopOfCache) {
-        metaHtOffset = htOffset-1;
-        metaHt = 1;
-    }
-    else  {
-        metaHtOffset = htOffset;
-        metaHt = ht;
-    }
+    // if (onTopOfCache) {
+    //     metaHtOffset = htOffset-1;
+    //     metaHt = 1;
+    // }
+    // else  {
+    //     metaHtOffset = htOffset;
+    //     metaHt = ht;
+    // }
 }
 
 void ProgressBar::updateMetadataCacheProgress(int item, int items)
 {
-    if ((metaHt != 1)) {
-        // updateImageCacheProgress(item, item+1, items, metaReadColorGradient);
-        updateImageCacheProgress(item, item+1, items, bgGradient);
-        return;
-    }
+    // if ((metaHt != 1)) {
+    //     // updateImageCacheProgress(item, item+1, items, metaReadColorGradient);
+    //     updateImageCacheProgress(item, item+1, items, bgGradient);
+    //     return;
+    // }
+
+    metaHt = 2;
+    metaHtOffset = htOffset - metaHt;
+
     QPainter pnt(m1->progressPixmap);
     int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
@@ -210,8 +215,9 @@ void ProgressBar::updateMetadataCacheProgress(int item, int items)
 
     // Done range
     QRect doneRect(pxStart, metaHtOffset, pxWidth, metaHt);
-    if (metaHt == 1) pnt.fillRect(doneRect, progressMetaReadCacheColor);
-    else pnt.fillRect(doneRect, bgGradient);
+    pnt.fillRect(doneRect, progressMetaReadCacheColor);
+    // if (metaHt == 1) pnt.fillRect(doneRect, progressMetaReadCacheColor);
+    // else pnt.fillRect(doneRect, bgGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 

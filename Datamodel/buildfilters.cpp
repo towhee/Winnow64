@@ -172,7 +172,7 @@ void BuildFilters::build(AfterAction newAction)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::build"
@@ -765,7 +765,6 @@ void BuildFilters::appendUniqueItems()
     // general map to count unique instances (reused for each category)
     QMap<QString,int> map;
     int rows = dm->rowCount();
-//    double progressInc = 8.5;  // 100% / 12 categories
     double progressInc = 7.7;   // 100% / 13 categories (incl search)
 
     // Use QMap to count untiltered
@@ -831,8 +830,11 @@ void BuildFilters::appendUniqueItems()
     map.clear();
 
     // years
+    qDebug() << "BuildFilters::appendUniqueItems" << G::allMetadataLoaded;
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        QString yr = dm->index(row, G::YearColumn).data().toString().trimmed();
+        if (yr == "") qDebug() << "row" << row << "is blank";
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->years);

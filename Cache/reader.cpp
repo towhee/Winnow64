@@ -21,13 +21,13 @@ Reader::Reader(QObject *parent,
 
     bool isBlockingQueuedConnection = false;
     if (isBlockingQueuedConnection) {
-        // Try QueuedConnection
-        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
-        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
-    } else {
         // Try Qt::BlockingQueuedConnection: (can be slow)
         connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
         connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+    } else {
+        // Try QueuedConnection
+        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
+        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
     }
 
     isDebug = false;
@@ -153,14 +153,13 @@ bool Reader::readMetadata()
     metadata->m.metadataAttempted = true;
     metadata->m.metadataLoaded = isMetaLoaded;
 
-    // block until datamodel updated for row with image metadata
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
 
     #ifdef TIMER
     t3 = t.restart();
     #endif
 
-    if (!dm->isMetadataLoaded(dmRow)) {
+    if (!isMetaLoaded) {
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);

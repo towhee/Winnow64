@@ -1160,25 +1160,30 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                                  bool isReport, bool isLoadXmp, QString source,
                                  bool isRemote)
 {
+    QString fPath = fileInfo.filePath();
+
     if (G::isLogger)
-        G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
+        G::log("Metadata::loadImageMetadata", fPath + "  Source: " + source);
 
     // check abort
-    if (G::stop) return false;
+    if (G::stop) {
+        QString msg = "Aborted.";
+        G::issue("Comment", msg, "Metadata::loadImageMetadata");
+        return false;
+    }
     // if (G::dmEmpty && !isRemote) return false;
 
     // check instance up-to-date
     if (instance != G::dmInstance && !isRemote) {
         QString msg = "Instance clash.";
-        G::issue("Comment", msg, "Metadata::loadImageMetadata", m.row);
+        G::issue("Comment", msg, "Metadata::loadImageMetadata", -1, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
         return false;
     }
 
     // check if already loaded
-    QString fPath = fileInfo.filePath();
     if (fPath == "") {
-        QString msg = "File does not exist.  Src: " + source;
+        QString msg = "Null file sent from " + source;
         G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata File not exist", fPath);
         return false;

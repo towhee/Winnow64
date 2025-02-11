@@ -466,7 +466,7 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
     folder will be added to the datamodel, if Remove then the images in the folder will
     be removed from the datamodel.
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("DataModel::enqueueOp", op + " " + folderPath);
 
     if (op == "Toggle") {
@@ -504,7 +504,7 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
     QString msg = "op = " + op +
                   " recurse = " + QVariant(recurse).toString() +
                   " folderPath = " + folderPath;
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
 
     if (recurse) {
@@ -596,7 +596,7 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
 
-    // /*
+    /*
     qDebug().noquote()
              << fun << "folder =" << folderPath
              << "folderQueue(count) =" << folderQueue.count()
@@ -1381,20 +1381,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
     }
 
-//    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
-//    setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
-//    setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
-//    search += m.createdDate.toString("yyyy-MM-dd");
-
     setData(index(row, G::WidthColumn), QString::number(m.width));
     setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
-
-    // QString msg = "row = " + QString::number(row) +
-    //               " width = " + QString::number(m.width);
-    // G::log("DataModel::addMetadataForItem", msg);
 
     /*
     double ar = aspectRatio(m.width, m.height, m.orientation);
@@ -1528,6 +1519,13 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (row == 0) emit updateClassification();
     mLock = false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
+
+    if (isAllMetadataAttempted()) {
+        // qDebug() << "DataModel::addMetadataForItem isAllMetadataAttempted = true";
+        // G::allMetadataLoaded = true;
+        // emit done();
+    }
+
     return true;
 }
 

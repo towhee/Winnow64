@@ -131,6 +131,7 @@ void LibTiff::rptFields(TiffFields &f)
 
 void LibTiff::listDirectories(ImageMetadata &m)
 {
+    qDebug() << "LibTiff::listDirectories";
     TIFF *tif = TIFFOpen(m.fPath.toStdString().c_str(), "r");  // sets directory 0
     if (!tif) {
         qDebug().noquote()
@@ -172,6 +173,7 @@ void LibTiff::listDirectories(ImageMetadata &m)
 
 QImage LibTiff::testLibtiff(QString fPath, int row)
 {
+    qDebug() << "LibTiff::testLibtiff";
     TIFF *tif = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tif) {
         qDebug().noquote()

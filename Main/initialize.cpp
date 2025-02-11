@@ -227,7 +227,7 @@ void MW::createDataModel()
     cacheProgressBar = new ProgressBar(this);
     // bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;
     // cacheProgressBar->setMetaProgressStyle(onTopOfCache);
-    cacheProgressBar->setMetaProgressStyle(false);
+    cacheProgressBar->setMetaProgressStyle(true);
 
     // loadSettings not run yet
     if (isSettings && settings->contains("combineRawJpg"))
@@ -244,6 +244,7 @@ void MW::createDataModel()
     else dm->showThumbNailSymbolHelp = true;
 
     connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
+    connect(dm, &DataModel::done, this, &MW::loadDone);
     connect(dm, &DataModel::addedFolderToDM, this, &MW::loadChanged);
     connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);

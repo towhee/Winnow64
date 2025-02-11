@@ -111,6 +111,7 @@ private:
     int iconLimit;                  // iconChunkSize * expansionFactor
     int redoCount = 0;
     int redoMax = 5;
+    int headStart;                  // rgh use delay timer instead??
     
     // bool isDispatching;
     bool success;

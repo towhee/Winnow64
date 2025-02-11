@@ -282,6 +282,8 @@ void MetaRead::initialize()
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
     metaReadItems = dmRowCount;
+    headStart = 2 * readerCount;
+    if (headStart > dmRowCount) headStart = dmRowCount;
     instance = dm->instance;
     isAhead = true;
     aIsDone = false;
@@ -773,7 +775,19 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        // trigger fileSelectionChange which starts ImageCache if this row = startRow
+        /*
+        // trigger fileSelectionChange which starts ImageCache if this row = headStart amount
+        if (fileSelectionChanged && metaReadCount == headStart) {
+            QModelIndex  sfIdx = dm->sf->index(startRow, 0);  // rghZ already a filter??
+            if (instance == dm->instance) {
+                QModelIndex idx2 = QModelIndex();
+                bool clearSelection = false;
+                QString src = "MetaRead::dispatch";
+                emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
+            }
+        }
+        //*/
+        // /*
         if (fileSelectionChanged && dmRow == startRow) {
             QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
 
@@ -805,10 +819,11 @@ void MetaRead::dispatch(int id)
             }
             if (!abort) {
                 // emit fileSelectionChange(r->dmIdx);
-                int msDelay = 500;
+                int msDelay = 1000;
                 emitFileSelectionChangeWithDelay(r->dmIdx, msDelay);
             }
         }
+        //*/
 
         if (isDebug)  // returning reader, row has been processed by reader
         {
@@ -1102,13 +1117,20 @@ void MetaRead::dispatchFinished(QString src)
     // Is this req'd, causing problems
     // emit dispatchIsFinished(src);
 
+    // // wait for all metadata to be loaded
+    // int n = 0;
+    // while (!dm->isAllMetadataLoaded()) {
+    //     msleep(100);
+    //     if (++n > 5) break;
+    // }
+
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {
         G::allMetadataLoaded = true;
-        // signal MW::loadConcurrentDone
+        // signal MW::loadDone
         emit done();
     }
-    G::iconChunkLoaded = true;      // RGH change to = dm->allIconChunkLoaded(first, last) ??
+    G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
 }
 
 void MetaRead::run()
