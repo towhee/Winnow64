@@ -860,7 +860,7 @@ void Filters::startBuildFilters(bool isReset)
 void Filters::finishedBuildFilters()
 {
     if (G::isLogger) G::log("Filters::finishedBuildFilters");
-    // if (debugFilters)
+    if (debugFilters)
     {
         qDebug() << "Filters::finishedBuildFilters";
         qDebug() << "\n";

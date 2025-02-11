@@ -169,6 +169,8 @@ namespace G
     extern QWaitCondition waitCondition;
     extern QMutex gMutex;
 
+    extern QThread* guiThread;
+
     // flow
     extern bool stop;
     extern bool removingFolderFromDM;
@@ -353,6 +355,8 @@ namespace G
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
     extern bool instanceClash(int instance, QString src);
+
+    extern bool isGuiThread();
 
     extern int popUpProgressCount;
     extern int popUpLoadFolderStep;

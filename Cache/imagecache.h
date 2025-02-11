@@ -77,6 +77,7 @@ protected:
 
 public slots:
     void fillCache(int id);
+    void returningDecoder(int id);
     void setCurrentPosition(QString path, QString src);
     void datamodelFolderCountChange(QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -91,6 +92,7 @@ private:
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load
     bool abort;
+    bool isDecoders = false;
 
     // rgh retry not being used
     int retry = 0;

@@ -32,6 +32,8 @@ ShowProgress showProgress = MetaCache;  // None, MetaCache, ImageCache
 QWaitCondition waitCondition;
 QMutex gMutex;
 
+QThread* guiThread;;            // use to check
+
 // flow
 bool isInitializing;            // flag program starting / initializing
 bool stop = false;              // flag to stop everything involving DM loading new dataset
@@ -371,6 +373,11 @@ bool instanceClash(int instance, QString src)
                       ;
     }
     return clash;
+}
+
+bool isGuiThread()
+{
+    return QThread::currentThread() == guiThread;
 }
 
 } // end NameSpace G
