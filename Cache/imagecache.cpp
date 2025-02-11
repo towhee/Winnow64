@@ -1958,6 +1958,7 @@ void ImageCache::launchDecoders(QString src)
         // get to work decoding
         if (decoder[id]->status == ImageDecoder::Status::Ready) {
             decoder[id]->fPath = "";
+            decoder[id]->sfRow = -1;
             if (debugLog)
             {
                 QString msg = "id = " + QString::number(id).leftJustified(2) +
