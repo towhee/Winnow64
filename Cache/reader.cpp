@@ -134,6 +134,7 @@ bool Reader::readMetadata()
         << fun.leftJustified(30)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "isGUI" << G::isGuiThread()
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }

@@ -394,6 +394,8 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
+    void startImageCache();
+    void initImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
     void setImageCachePosition(QString, QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();        // not being used
@@ -401,7 +403,7 @@ signals:
     void needToShow();          // not being used
     void abortMetaRead();       // not being used
     void abortMDCache();        // not being used
-    void abortImageCache(QString src);     // not being used
+    void abortImageCache();     // not being used
     void abortBuildFilters();   // not being used
     void abortFrameDecoder();   // not being used
     void abortEmbelExport();
@@ -1098,6 +1100,7 @@ private:
     CompareImages *compareImages;
     MetaRead *metaRead;
     ImageCache *imageCache;
+    QThread imageCacheThread;
     FrameDecoder *frameDecoder;
     Thumb *thumb;
     InfoView *infoView;

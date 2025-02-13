@@ -377,15 +377,32 @@ void MW::createImageCache()
     */
 
     imageCache = new ImageCache(this, icd, dm);
+    // imageCache->moveToThread(&imageCacheThread);
 
     /* Image caching is triggered from the metadataReadThread to avoid the two threads
        running simultaneously and colliding */
 
-    connect(imageCache, SIGNAL(updateIsRunning(bool,bool)),
-            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
+    connect(&imageCacheThread, &QThread::finished,
+            imageCache, &QObject::deleteLater);
 
-    // signal to stop the ImageCache
-    connect(this, &MW::abortImageCache, imageCache, &ImageCache::stop);
+    // Signal to ImageCache start
+    connect(this, &MW::startImageCache,
+            imageCache, &ImageCache::start);
+
+    // signal to abort the ImageCache
+    connect(this, &MW::abortImageCache,
+            imageCache, &ImageCache::abortProcessing);
+
+    // Signal to initialize ImageCache
+    connect(this, &MW::initImageCache,
+            imageCache, &ImageCache::initImageCache);
+
+    connect(imageCache, &ImageCache::updateIsRunning,
+            this, &MW::updateImageCachingThreadRunStatus);
+
+    // Signal to ImageCache new image selection
+    connect(this, &MW::setImageCachePosition,
+            imageCache, &ImageCache::setCurrentPosition);
 
     // // signal stopped when abort completed
     // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
@@ -395,18 +412,19 @@ void MW::createImageCache()
             this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
-    connect(imageCache, &ImageCache::refreshViews, this, &MW::refreshViewsOnCacheChange);
-
-    // Signal to ImageCache new image selection
-    connect(this, &MW::setImageCachePosition,
-            imageCache, &ImageCache::setCurrentPosition);
+    connect(imageCache, &ImageCache::refreshViews,
+            this, &MW::refreshViewsOnCacheChange);
 
     // Send message to setCentralMsg
     connect(imageCache, &ImageCache::centralMsg,
             this, &MW::setCentralMessage);
 
     // set values in the datamodel
-    connect(imageCache, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
+    connect(imageCache, &ImageCache::setValueSf,
+            dm, &DataModel::setValueSf);
+
+    imageCache->start();
+    qDebug() << imageCache->isRunning();
 }
 
 void MW::createThumbView()

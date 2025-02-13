@@ -26,19 +26,18 @@
 #include "Utilities/mac.h"
 #endif
 
-class ImageCache : public QThread
+class ImageCache : public QObject
 {
     Q_OBJECT
 public:
     ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm);
     ~ImageCache() override;
 
-    void initImageCache(int &cacheSizeMB, int &cacheMinMB,
-                        bool &isShowCacheStatus, int &cacheWtAhead);
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
                                int &cacheWtAhead);
     void filterChange(QString &currentImageFullPath, QString source = "");
-    void stop(QString src);
+    bool isRunning() const;
+
     bool cacheUpToDate();           // target range all cached
     float getImCacheSize();         // add up total MB cached
     void addToCache(QStringList &pathList);
@@ -63,6 +62,11 @@ public:
     QString source;                 // temp for debugging
 
 signals:
+    // void startProcessing();
+    void stopDecoder();  // decoders
+    void abortDecoder();
+    void requestFillCache(int id);
+    void decode(int sfRow, int instance);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
     void showCacheStatus(QString instruction,
@@ -72,10 +76,13 @@ signals:
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
     void refreshViews(QString fPath, bool isCached, QString src);
 
-protected:
-    void run() Q_DECL_OVERRIDE;
-
 public slots:
+    void start();
+    void stop(QString src);
+    void startProcessing();
+    void abortProcessing();
+    void initImageCache(int cacheSizeMB, int cacheMinMB,
+                        bool isShowCacheStatus, int cacheWtAhead);
     void fillCache(int id);
     void returningDecoder(int id);
     void setCurrentPosition(QString path, QString src);
@@ -87,11 +94,18 @@ public slots:
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
 
+private slots:
+    void dispatch();  // Main processing loop
+
 private:
+    QThread imageCacheThread;  // Separate thread for ImageCache
+    QAtomicInt running {0}; // 0 = not running, 1 = running
+
     QMutex gMutex;
     QWaitCondition condition;
     int instance;                   // incremented on every DataModel::load
     bool abort;
+    int abortDelay = 1000;
     bool isDecoders = false;
 
     // rgh retry not being used
@@ -104,7 +118,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
 
-    QVector<ImageDecoder*> decoder;     // all the decoders
+    QVector<ImageDecoder*> decoders;     // all the decoders
     enum Status {NotCached, Caching, Cached, Failed};
     QStringList statusText{"NotCached", "Caching  ", "Cached   ", "Failed   "};
     struct CacheStatus {
