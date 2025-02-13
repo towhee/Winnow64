@@ -395,7 +395,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
-    cacheProgressBar->resetMetadataProgress(widgetCSS.widgetBackgroundColor);
+    // fileSelectionChange(dm->sf->index(0,0), QModelIndex(), true, "MW::test");
+
+    // imageCache->start();
+    qDebug() << imageCache->isRunning();
+
+    // emit setImageCachePosition("", "");
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

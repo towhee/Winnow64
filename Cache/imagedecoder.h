@@ -14,18 +14,15 @@
 #include "ImageFormats/Heic/heic.h"
 #endif
 
-class ImageDecoder : public QThread
+class ImageDecoder : public QObject
 {
     Q_OBJECT
 public:
-    ImageDecoder(QObject *parent,
-                 int id,
-                 DataModel *dm,
-                 Metadata *metadata);
-    void decode(int sfRow, int instance);
+    ImageDecoder(int id, DataModel *dm, Metadata *metadata);
+    ~ImageDecoder() override;
     bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
+    bool isRunning() const;
     void setReady();
-    void stop();
 
     int threadId;
     int sfRow;
@@ -86,13 +83,17 @@ public:
         "Rory"
     };
 
-protected:
-    void run() Q_DECL_OVERRIDE;
+public slots:
+    void decode(int sfRow, int instance);
+    void abortProcessing();
+    void stop();
 
 signals:
     void done(int threadId, bool positionChange = false);
 
 private:
+    QThread decoderThread;
+    QAtomicInt running {0}; // 0 = not running, 1 = running
     QMutex mutex;
     QWaitCondition condition;
     bool load();

@@ -90,7 +90,7 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm,
     // add disconnect in destructor...
 
     int id = 0; // dummy variable req'd by ImageDecoder
-    imageDecoder = new ImageDecoder(this, id, dm, metadata);
+    imageDecoder = new ImageDecoder(id, dm, metadata);
 
     ui->setupUi(this);
     setStyleSheet(G::css);

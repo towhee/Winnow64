@@ -749,6 +749,9 @@ void MW::closeEvent(QCloseEvent *event)
 
     stop("MW::closeEvent");
 
+    // imageCacheThread.quit();
+    // imageCacheThread.wait();
+
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -2223,7 +2226,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        /*
+        // /*
         qDebug() << "MW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
@@ -2427,7 +2430,8 @@ bool MW::stop(QString src)
     }
     G::t.restart();
 
-    imageCache->stop("MW::stop");
+    // imageCache->stop("MW::stop");
+    emit abortImageCache();
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
@@ -2806,8 +2810,7 @@ void MW::loadFolder(QString folderPath)
     // set image cache parameters
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    imageCache->initImageCache(netCacheMBSize, cacheMinMB,
-        isShowCacheProgressBar, cacheWtAhead);
+    emit initImageCache(netCacheMBSize, cacheMinMB,isShowCacheProgressBar, cacheWtAhead);
 
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
