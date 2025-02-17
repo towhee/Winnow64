@@ -31,7 +31,7 @@ ImageDecoder::ImageDecoder(int id,
     // connect(this, &ImageDecoder::done, &decoderThread, &QThread::quit);
 
     threadId = id;
-    status = Status::Ready;
+    // status = Status::Ready;
     fPath = "";
     sfRow = -1;
     instance = 0;
@@ -79,14 +79,14 @@ void ImageDecoder::decode(int row, int instance)
 {
     abort = false;
     sfRow = row ;
-    status = Status::Busy;
+    status = Status::Undefined;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     this->instance = instance;
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
 
     QString fun = "ImageDecoder::decode";
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(50)
@@ -135,7 +135,6 @@ void ImageDecoder::decode(int row, int instance)
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         if (image.isNull()) status = Status::Failed;
-        else status = Status::Success;
     }
     else {
         if (isDebug)
@@ -149,10 +148,9 @@ void ImageDecoder::decode(int row, int instance)
         }
     }
 
-    if (!abort) emit done(threadId);
+    if (abort) setIdle();
+    else emit done(threadId);
 }
-
-// all code below runs in separate thread
 
 bool ImageDecoder::load()
 {
@@ -356,6 +354,7 @@ bool ImageDecoder::load()
         if (decoderToUse == LibTiff) {
             class LibTiff libTiff;
             image = libTiff.readTiffToQImage(fPath);
+            // is valid? Assign status = Status::Invalid
         }
         #endif
 
@@ -472,14 +471,29 @@ bool ImageDecoder::load()
         return false;
     }
 
-    status = Status::Success;
     imFile.close();
+    status = Status::Success;
     return true;
 }
 
-void ImageDecoder::setReady()
+void ImageDecoder::setIdle()
 {
-    status = Status::Ready;
+    idle = true;
+}
+
+void ImageDecoder::setBusy()
+{
+    idle = false;
+}
+
+bool ImageDecoder::isIdle()
+{
+    return idle;
+}
+
+bool ImageDecoder::isBusy()
+{
+    return !idle;
 }
 
 void ImageDecoder::rotate()

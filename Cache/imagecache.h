@@ -33,6 +33,8 @@ public:
     ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm);
     ~ImageCache() override;
 
+    QThread imageCacheThread;  // Separate thread for ImageCache
+
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
                                int &cacheWtAhead);
     void filterChange(QString &currentImageFullPath, QString source = "");
@@ -78,7 +80,7 @@ signals:
 
 public slots:
     void start();
-    void stop(QString src);
+    void stop();
     void startProcessing();
     void abortProcessing();
     void initImageCache(int cacheSizeMB, int cacheMinMB,
@@ -98,7 +100,7 @@ private slots:
     void dispatch();  // Main processing loop
 
 private:
-    QThread imageCacheThread;  // Separate thread for ImageCache
+    // QThread imageCacheThread;  // Separate thread for ImageCache
     QAtomicInt running {0}; // 0 = not running, 1 = running
 
     QMutex gMutex;
@@ -123,6 +125,7 @@ private:
     QStringList statusText{"NotCached", "Caching  ", "Cached   ", "Failed   "};
     struct CacheStatus {
         Status status;
+        QString msg;
         int decoderId;
         int instance;
     };
@@ -147,8 +150,9 @@ private:
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
-    bool allDecodersReady();        // All decoder status is ready
+    bool allDecodersIdle();        // All decoder status is ready
     void setDirection();            // caching direction
+    bool okToDecode(int sfRow, QString &msg);
     int nextToCache(int id);        // find highest priority not cached
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);

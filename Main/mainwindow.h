@@ -403,7 +403,8 @@ signals:
     void needToShow();          // not being used
     void abortMetaRead();       // not being used
     void abortMDCache();        // not being used
-    void abortImageCache();     // not being used
+    void abortImageCache();
+    void stopImageCache();
     void abortBuildFilters();   // not being used
     void abortFrameDecoder();   // not being used
     void abortEmbelExport();

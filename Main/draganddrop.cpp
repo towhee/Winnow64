@@ -19,6 +19,12 @@ void MW::dragLeaveEvent(QDragLeaveEvent *event)
 void MW::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragMoveEvent");
+
+    // Cannot show in source folder as this is already the source
+    if (event->source()->objectName() == "Thumbnails") return;
+    if (event->source()->objectName() == "Grid") return;
+
+    // show the dragLabel to show images from the source folder
     if (event->mimeData()->hasUrls()) {
         QString text = "Show image in source folder ";
         dragLabel->setText(text);
