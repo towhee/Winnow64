@@ -292,7 +292,7 @@ void DataModel::clearDataModel()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
     // clear the model
     if (mLock) return;
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
     setModelProperties();
@@ -863,6 +863,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 
     • PickColumn
     • IngestedColumn
+    • VideoColumn
     • MetadataAttemptedColumn
     • MetadataLoadedColumn
     • IconLoadedColumn

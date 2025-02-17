@@ -389,7 +389,11 @@ void MW::createImageCache()
     connect(this, &MW::startImageCache,
             imageCache, &ImageCache::start);
 
-    // signal to abort the ImageCache
+    // signal to stop (quit) the ImageCache
+    connect(this, &MW::stopImageCache,
+            imageCache, &ImageCache::stop);
+
+    // Signal to abort the ImageCache
     connect(this, &MW::abortImageCache,
             imageCache, &ImageCache::abortProcessing);
 
@@ -424,7 +428,6 @@ void MW::createImageCache()
             dm, &DataModel::setValueSf);
 
     imageCache->start();
-    qDebug() << imageCache->isRunning();
 }
 
 void MW::createThumbView()

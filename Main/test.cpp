@@ -398,7 +398,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // fileSelectionChange(dm->sf->index(0,0), QModelIndex(), true, "MW::test");
 
     // imageCache->start();
-    qDebug() << imageCache->isRunning();
+    qDebug() << dm->sf->index(0, G::VideoColumn).data();
+    // qDebug() << imageCache->decoders[0]->isIdle();
 
     // emit setImageCachePosition("", "");
 

@@ -749,8 +749,9 @@ void MW::closeEvent(QCloseEvent *event)
 
     stop("MW::closeEvent");
 
-    // imageCacheThread.quit();
-    // imageCacheThread.wait();
+    // stop imageCache thread
+    imageCache->imageCacheThread.quit();
+    imageCache->imageCacheThread.wait();
 
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -871,6 +872,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         */
 
         G::popUp->reset();
+        dragLabel->hide();
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
         // stop loading a new folder
@@ -2220,7 +2222,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 ;
     //*/
     if (!(G::isSlideShow && isSlideShowRandom)
-        && !isVideo
+        // && !isVideo
         && (!workspaceChanged)
         && (G::mode != "Compare")
         && (G::useImageCache)
@@ -2976,7 +2978,7 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    qDebug() << src;
+    // qDebug() << src;
     // if (dm->isAllMetadataAttempted()) {
     //     G::allMetadataLoaded = true;
     // }
@@ -3048,11 +3050,11 @@ void MW::loadDone()
     // filterChange();
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
-    qDebug() << src
-             << "dm->folderList.count() =" << dm->folderList.count()
-             << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
-             << "!filterDock->visibleRegion().isNull() =" << !filterDock->visibleRegion().isNull()
-                ;
+    // qDebug() << src
+    //          << "dm->folderList.count() =" << dm->folderList.count()
+    //          << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
+    //          << "!filterDock->visibleRegion().isNull() =" << !filterDock->visibleRegion().isNull()
+    //             ;
     if (dm->folderList.count() >= 1 &&
         dm->isQueueEmpty() &&
         !filterDock->visibleRegion().isNull())

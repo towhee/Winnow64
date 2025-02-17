@@ -22,7 +22,10 @@ public:
     ~ImageDecoder() override;
     bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
     bool isRunning() const;
-    void setReady();
+    void setIdle();
+    void setBusy();
+    bool isIdle();
+    bool isBusy();
 
     int threadId;
     int sfRow;
@@ -32,9 +35,7 @@ public:
     QString errMsg;
 
     enum Status {
-        Ready,
-        Busy,
-        Pending,
+        Undefined,
         Success,
         Abort,
         Invalid,
@@ -48,9 +49,7 @@ public:
     } status;
 
     QStringList statusText {
-        "Ready",
-        "Busy",
-        "Pending",
+        "Undefined",
         "Success",
         "Abort",
         "Invalid",
@@ -101,6 +100,7 @@ private:
     void decodeUsingQt();
     void rotate();
     void colorManage();
+    bool idle = true;
     bool abort = false;
     DataModel *dm;
     Metadata *metadata;
