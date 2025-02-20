@@ -395,13 +395,34 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
-    // fileSelectionChange(dm->sf->index(0,0), QModelIndex(), true, "MW::test");
+    // debug() << imageCache->decoders[0]->isIdle();
 
-    // imageCache->start();
-    qDebug() << dm->sf->index(0, G::VideoColumn).data();
-    // qDebug() << imageCache->decoders[0]->isIdle();
+    struct CacheItem {
+        bool isCaching;
+        QString msg;
+        int decoderId;
+        int instance;
+    };
 
-    // emit setImageCachePosition("", "");
+    QList<CacheItem> toCache;
+
+    for (int i = 0; i < 10; i++) {
+        CacheItem item;
+        item.isCaching = i < 5;
+        item.msg = "item " + QString::number(i);
+        item.decoderId = i;
+        int instance = i;
+        toCache.append(item);
+    }
+
+    for (int i = 0; i < 10; i++) {
+        qDebug().noquote()
+            << toCache.at(i).isCaching
+            << toCache.at(i).msg
+            << toCache.at(i).decoderId
+            << toCache.at(i).instance
+            ;
+    }
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

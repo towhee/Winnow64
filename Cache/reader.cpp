@@ -164,6 +164,15 @@ bool Reader::readMetadata()
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
+        if (isDebug)
+        {
+            qDebug().noquote()
+            << fun.leftJustified(30)
+            << "id =" << QString::number(threadId).leftJustified(2, ' ')
+            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << msg
+                ;
+        }
     }
 
     return isMetaLoaded;
@@ -213,6 +222,14 @@ void Reader::readIcon()
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
     G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
+    if (isDebug)
+    {
+        qDebug().noquote()
+        << fun.leftJustified(30)
+        << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << msg
+            ;
+    }
 }
 
 void Reader::run()
@@ -239,6 +256,18 @@ void Reader::run()
         ;//*/
 
     #endif
+
+    QString fun = "Reader::run emit done";
+    if (isDebug)
+    {
+        qDebug().noquote()
+        << fun.leftJustified(30)
+        << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
+            ;
+    }
+
     emit done(threadId);
     if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");
 }

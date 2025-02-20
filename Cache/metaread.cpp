@@ -112,6 +112,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         G::log("MetaRead::setStartRow", s);
     }
 
+    // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
     // has metadata already been read for this row
@@ -142,6 +143,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     lastRow = sfRowCount - 1;
     if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
     else startRow = 0;
+    headStartCount = 0;
+    imageCacheTriggered = false;
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
@@ -282,7 +285,7 @@ void MetaRead::initialize()
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
     metaReadItems = dmRowCount;
-    headStart = 2 * readerCount;
+    headStart = readerCount;
     if (headStart > dmRowCount) headStart = dmRowCount;
     instance = dm->instance;
     isAhead = true;
@@ -663,6 +666,7 @@ void MetaRead::dispatch(int id)
            - call reader[n] to read metadata and icon into datamodel
            - if last row then quit after delay
 */
+    qDebug() << "MetaRead::dispatch id =" << id;
 
     // terse pointer to reader[id]
     r = reader[id];
@@ -739,6 +743,7 @@ void MetaRead::dispatch(int id)
 
         // progress counter
         metaReadCount++;
+        headStartCount++;
 
         // it is not ok to select while the datamodel is being built.
         if (metaReadCount == 1) emit okToSelect(true);
@@ -776,20 +781,24 @@ void MetaRead::dispatch(int id)
         }
 
         /*
-        // trigger fileSelectionChange which starts ImageCache if this row = headStart amount
-        if (fileSelectionChanged && metaReadCount == headStart) {
-            QModelIndex  sfIdx = dm->sf->index(startRow, 0);  // rghZ already a filter??
+        // trigger fileSelectionChange which starts ImageCache if headStart amount exceeded
+        if (fileSelectionChanged &&
+            !imageCacheTriggered &&
+            ((headStartCount > headStart) || (aIsDone && bIsDone)))
+        {
+            imageCacheTriggered = true;
+            QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);
             if (instance == dm->instance) {
                 QModelIndex idx2 = QModelIndex();
                 bool clearSelection = false;
                 QString src = "MetaRead::dispatch";
                 emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
             }
-        }
-        //*/
+        } //*/
+
         // /*
         if (fileSelectionChanged && dmRow == startRow) {
-            QModelIndex  sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
+            QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
 
             if (isDebug)  // returning reader, row has been processed by reader
             {
@@ -819,7 +828,7 @@ void MetaRead::dispatch(int id)
             }
             if (!abort) {
                 // emit fileSelectionChange(r->dmIdx);
-                int msDelay = 1000;
+                int msDelay = 500;
                 emitFileSelectionChangeWithDelay(r->dmIdx, msDelay);
             }
         }
@@ -853,7 +862,6 @@ void MetaRead::dispatch(int id)
             emit updateProgressInStatusbar(dmRow, dm->rowCount());
             // emit updateProgressInStatusbar(dmRow, dmRowCount);
             int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
-            // int progress = 1.0 * metaReadCount / dmRowCount * 100;
             emit updateProgressInFilter(progress);
         }
 
@@ -941,6 +949,7 @@ void MetaRead::dispatch(int id)
     if (isNewStartRowWhileStillReading) {
         a = startRow;
         b = startRow - 1;
+        if (fileSelectionChanged) headStartCount = 0;
         isNewStartRowWhileStillReading = false;
         // if (a == dm->sf->rowCount() - 1) isAhead = false;
         if (isDebug)
