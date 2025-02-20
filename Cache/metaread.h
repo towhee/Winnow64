@@ -112,6 +112,8 @@ private:
     int redoCount = 0;
     int redoMax = 5;
     int headStart;                  // rgh use delay timer instead??
+    int headStartCount;
+    bool imageCacheTriggered;
     
     // bool isDispatching;
     bool success;

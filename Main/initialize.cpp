@@ -389,7 +389,7 @@ void MW::createImageCache()
     connect(this, &MW::startImageCache,
             imageCache, &ImageCache::start);
 
-    // signal to stop (quit) the ImageCache
+    // Signal to stop (quit) the ImageCache
     connect(this, &MW::stopImageCache,
             imageCache, &ImageCache::stop);
 
@@ -397,16 +397,28 @@ void MW::createImageCache()
     connect(this, &MW::abortImageCache,
             imageCache, &ImageCache::abortProcessing);
 
+    // Signal to ImageCache filterChange
+    connect(this, &MW::imageCacheFilterChange,
+            imageCache, &ImageCache::filterChange);
+
+    // Signal to ImageCache color manage change
+    connect(this, &MW::imageCacheColorManageChange,
+            imageCache, &ImageCache::colorManageChange);
+
     // Signal to initialize ImageCache
     connect(this, &MW::initImageCache,
             imageCache, &ImageCache::initImageCache);
 
-    connect(imageCache, &ImageCache::updateIsRunning,
-            this, &MW::updateImageCachingThreadRunStatus);
+    // Signal to update imageCache parameters
+    connect(this, &MW::imageCacheChangeParam,
+            imageCache, &ImageCache::updateImageCacheParam);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
             imageCache, &ImageCache::setCurrentPosition);
+
+    connect(imageCache, &ImageCache::updateIsRunning,
+            this, &MW::updateImageCachingThreadRunStatus);
 
     // // signal stopped when abort completed
     // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);

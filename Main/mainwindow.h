@@ -396,7 +396,10 @@ signals:
     void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();
     void initImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
+    void imageCacheChangeParam(int maxMB, int minMB, bool showStatus, int wtAhead);
     void setImageCachePosition(QString, QString);
+    void imageCacheFilterChange(QString, QString);
+    void imageCacheColorManageChange();
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();        // not being used
     void aSyncGo(int);          // rgh req'd?

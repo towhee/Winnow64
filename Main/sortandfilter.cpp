@@ -65,7 +65,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    // qDebug() << "MW::filterChange" << "called from:" << source;
+    qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -80,7 +80,9 @@ void MW::filterChange(QString source)
     dm->newInstance();
 
     // stop ImageCache
-    emit abortImageCache();
+    qDebug() << "MW::filterChange" << "emit abortImageCache()";
+    // emit abortImageCache();
+    // imageCache->abortProcessing();
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
@@ -138,7 +140,8 @@ void MW::filterChange(QString source)
 
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
-    imageCache->filterChange(fPath, "MW::filterChange");
+    // emit imageCacheFilterChange(fPath, "MW::filterChange");
+    // imageCache->filterChange(fPath, "MW::filterChange");
 
     // select after filtration
     if (newSelectReqd) {
@@ -458,7 +461,7 @@ void MW::sortChange(QString source)
     // sync image cache with datamodel filtered proxy unless sort has been triggered by a
     // filter change, which will do its own rebuildImageCacheParameters
     if (source != "filterChange")
-        imageCache->filterChange(fPath, "SortChange");
+        emit imageCacheFilterChange(fPath, "SortChange");
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.

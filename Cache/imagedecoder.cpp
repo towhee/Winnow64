@@ -48,6 +48,12 @@ ImageDecoder::~ImageDecoder()
 
 void ImageDecoder::stop()
 {
+    QString fun = "ImageDecoder::stop";
+    // if (isDebug)
+    {
+        qDebug().noquote()
+            << fun.leftJustified(50);
+    }
     abort = true;
     decoderThread.quit();
     decoderThread.wait();
@@ -67,6 +73,12 @@ bool ImageDecoder::quit()
 
 void ImageDecoder::abortProcessing()
 {
+    QString fun = "ImageDecoder::abortProcessing";
+    // if (isDebug)
+    {
+        qDebug().noquote()
+        << fun.leftJustified(50);
+    }
     abort = true;
 }
 
@@ -77,11 +89,13 @@ bool ImageDecoder::isRunning() const
 
 void ImageDecoder::decode(int row, int instance)
 {
+    setBusy();
     abort = false;
     sfRow = row ;
     status = Status::Undefined;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     this->instance = instance;
+    image = QImage();
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
 
@@ -95,13 +109,18 @@ void ImageDecoder::decode(int row, int instance)
             << fPath;
     }
 
+    if (G::isGuiThread()) qDebug().noquote()
+            << fun.leftJustified(50)
+            << "RUNNING IN GUI THREAD";
+
     // instance check
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
         G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
+        setIdle();
         emit done(threadId);
-        if (isDebug)
+        // if (isDebug)
         {
             QString fun = "ImageDecoder::decode instance clash";
             qDebug().noquote()
@@ -121,7 +140,7 @@ void ImageDecoder::decode(int row, int instance)
     // decode
     if (!abort && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
-        if (isDebug)
+        // if (isDebug)
         {
             QString fun = "ImageDecoder::decode loaded";
             qDebug().noquote()
@@ -137,7 +156,7 @@ void ImageDecoder::decode(int row, int instance)
         if (image.isNull()) status = Status::Failed;
     }
     else {
-        if (isDebug)
+        // if (isDebug)
         {
             QString fun = "ImageDecoder::decode load failed";
             qDebug() << fun.left(50)
@@ -148,8 +167,8 @@ void ImageDecoder::decode(int row, int instance)
         }
     }
 
-    if (abort) setIdle();
-    else emit done(threadId);
+    setIdle();
+    if (!abort) emit done(threadId);
 }
 
 bool ImageDecoder::load()

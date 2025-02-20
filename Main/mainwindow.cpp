@@ -2229,7 +2229,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
        )
     {
         // /*
-        qDebug() << "MW::fileSelectionChange setImageCachePosition"
+        qDebug() << "\nMW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
@@ -2776,7 +2776,7 @@ void MW::loadFolder(QString folderPath)
         }
     }
 
-    // first folder containing images
+    // first folder containing images when multiple folders selected
     if (folderPath == dm->firstFolderPathWithImages) {
         // ImageView set zoom = fit for the first image of a new folder
         imageView->isFirstImageNewInstance = true;
@@ -3064,7 +3064,7 @@ void MW::loadDone()
         buildFilters->build();
         buildFilters->recount();
         // filters->restore();
-        filterChange("MW::loadConcurrentDone");
+        // filterChange("MW::loadConcurrentDone");
         filters->setEnabled(true);
         // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
@@ -3531,14 +3531,14 @@ void MW::setImageCacheParameters()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    imageCache->cacheSizeChange();
+    // imageCache->cacheSizeChange();
 
     bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
-    imageCache->updateImageCacheParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
+    emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
 
-    // set position in image cache
-    if (dm->currentFilePath.length() && G::useImageCache)
-        imageCache->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
+    // // set position in image cache
+    // if (dm->currentFilePath.length() && G::useImageCache)
+    //     imageCache->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()

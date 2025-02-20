@@ -35,9 +35,6 @@ public:
 
     QThread imageCacheThread;  // Separate thread for ImageCache
 
-    void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
-                               int &cacheWtAhead);
-    void filterChange(QString &currentImageFullPath, QString source = "");
     bool isRunning() const;
 
     bool cacheUpToDate();           // target range all cached
@@ -85,9 +82,12 @@ public slots:
     void abortProcessing();
     void initImageCache(int cacheSizeMB, int cacheMinMB,
                         bool isShowCacheStatus, int cacheWtAhead);
+    void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
+                               bool isShowCacheStatus, int cacheWtAhead);
     void fillCache(int id);
     void returningDecoder(int id);
     void setCurrentPosition(QString path, QString src);
+    void filterChange(QString currentImageFullPath, QString source = "");
     void datamodelFolderCountChange(QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
@@ -120,17 +120,20 @@ private:
     DataModel *dm;
     Metadata *metadata;
 
-    QVector<ImageDecoder*> decoders;     // all the decoders
-    enum Status {NotCached, Caching, Cached, Failed};
-    QStringList statusText{"NotCached", "Caching  ", "Cached   ", "Failed   "};
-    struct CacheStatus {
-        Status status;
+    QVector<ImageDecoder*> decoders;      // all the decoders
+    QVector<QThread*> decoderThreads;     // all the decoder threads
+    QVector<bool> cycling;              // all the decoders activity
+    // enum Status {NotCached, Caching, Cached, Failed};
+    // QStringList statusText{"NotCached", "Caching  ", "Cached   ", "Failed   "};
+    struct CacheItem {
+        // Status status;
+        bool isCaching;
         QString msg;
         int decoderId;
         int instance;
     };
     QList<int> toCache;
-    QHash<int,CacheStatus> toCacheStatus;
+    QHash<int,CacheItem> toCacheStatus;
 
     int key;                    // current image
     int prevKey;                // used to establish direction of travel
@@ -152,7 +155,7 @@ private:
     void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool allDecodersIdle();        // All decoder status is ready
     void setDirection();            // caching direction
-    bool okToDecode(int sfRow, QString &msg);
+    bool okToDecode(int sfRow, int id, QString &msg);
     int nextToCache(int id);        // find highest priority not cached
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);

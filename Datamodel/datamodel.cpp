@@ -985,7 +985,11 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
                           << "row =" << row
                           << currentPrimaryFolderPath;
 
-    QMutexLocker locker(&mutex);
+    // QMutexLocker hangs if tiff file in the first folder selected after start program
+    static int counter = 0;
+    if (counter) QMutexLocker locker(&mutex);
+    counter++;
+
     metadata->m.row = row;  // req'd?
 
     // file info (calling Metadata not required)
