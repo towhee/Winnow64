@@ -898,7 +898,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     // setData(index(row, G::MSToReadColumn), 0);
     // setData(index(row, G::MSToReadColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::IsCachedColumn), false);
+    // setData(index(row, G::IsCachedColumn), false); // see addMetadataForItem
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -1306,6 +1306,23 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     return true;
 }
 
+void DataModel::imageCacheWaiting(int sfRow)
+{
+    qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
+    int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
+    imageCacheWaitingForRow = dmRow;
+    if (metadataLoaded(dmRow)) {
+        qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
+        imageCacheWaitingForRow = -1;
+        emit rowLoaded();
+    }
+    // else {
+    //     qDebug() << "DataModel::imageCacheWaiting not loaded" << "row =" << sfRow << "emit rowLoaded()";
+    //     imageCacheWaitingForRow = -1;
+    //     emit rowLoaded();
+    // }
+}
+
 bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 {
 /*
@@ -1529,6 +1546,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         // qDebug() << "DataModel::addMetadataForItem isAllMetadataAttempted = true";
         // G::allMetadataLoaded = true;
         // emit done();
+    }
+
+    // signal ImageCache that row is loaded
+    // if (imageCacheWaitingForRow > -1)
+        qDebug() << "DataModel::addMetadataForItem row =" << row
+                 << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
+            ;
+    if (row == imageCacheWaitingForRow) {
+        qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
+        emit rowLoaded();
+        imageCacheWaitingForRow = -1;
     }
 
     return true;
@@ -2157,6 +2185,29 @@ void DataModel::clearAllIcons() // not being used
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
     }
+}
+
+void DataModel::setCached(int sfRow, bool isCached, int instance)
+{
+    // Do not use mutex here 2025-02-22
+    QString src = "DataModel::setCached";
+    QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
+    if (instance != this->instance) {
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, src, sfIdx.row());
+        qDebug() << src << sfRow << errMsg;
+        return ;
+    }
+    if (!sfIdx.isValid()) {
+        errMsg = "Invalid sfIdx.  Src: " + src;
+        G::issue("Warning", errMsg, src, sfIdx.row());
+        qDebug() << src << sfRow << errMsg;
+        return;
+    }
+    qDebug() << src << sfRow << "isCached =" << isCached;
+    sf->setData(sfIdx, isCached);
+    QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
+    emit refreshViewsOnCacheChange(fPath, isCached, src);
 }
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)

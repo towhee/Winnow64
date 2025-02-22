@@ -285,7 +285,7 @@ void MetaRead::initialize()
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
     metaReadItems = dmRowCount;
-    headStart = readerCount;
+    headStart = readerCount * 2;
     if (headStart > dmRowCount) headStart = dmRowCount;
     instance = dm->instance;
     isAhead = true;
@@ -617,10 +617,12 @@ void MetaRead::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int ms
     bool clearSelection = false;
     QString src = "MetaRead::dispatch";
     QTimer::singleShot(msDelay, this, [this, sfIdx, idx2, clearSelection, src]() {
-        /*
-        qDebug() << "MetaRead::emitFileSelectionChangeWithDelay"
-                 << "instance =" << instance
-                 << "dm->instance =" << dm->instance; //*/
+        // /*
+        qDebug() << "MetaRead::emitFileSelectionChangeWithDelay            "
+                 << "row =" << sfIdx.row()
+                 << "   instance =" << instance
+                 << "dm->instance =" << dm->instance
+            ; //*/
         if (instance == dm->instance) {
             emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
         }
@@ -666,7 +668,7 @@ void MetaRead::dispatch(int id)
            - call reader[n] to read metadata and icon into datamodel
            - if last row then quit after delay
 */
-    qDebug() << "MetaRead::dispatch id =" << id;
+    // qDebug() << "MetaRead::dispatch id =" << id;
 
     // terse pointer to reader[id]
     r = reader[id];
@@ -748,7 +750,7 @@ void MetaRead::dispatch(int id)
         // it is not ok to select while the datamodel is being built.
         if (metaReadCount == 1) emit okToSelect(true);
 
-        // /*
+        /*
         // time to read item (performance testing only)
         QModelIndex tIdx = dm->index(dmRow, G::MSToReadColumn);
         emit setMsToRead(tIdx, r->msToRead, r->instance,
@@ -780,13 +782,12 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        /*
-        // trigger fileSelectionChange which starts ImageCache if headStart amount exceeded
-        if (fileSelectionChanged &&
-            !imageCacheTriggered &&
+        // /* trigger fileSelectionChange which starts ImageCache if headStart amount exceeded
+        if (fileSelectionChanged && !imageCacheTriggered &&
             ((headStartCount > headStart) || (aIsDone && bIsDone)))
         {
-            imageCacheTriggered = true;
+            imageCacheTriggered = true;   // rgh req'd
+            QModelIndex dmIdx = dm->index(startRow, 0);
             QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);
             if (instance == dm->instance) {
                 QModelIndex idx2 = QModelIndex();
@@ -796,7 +797,7 @@ void MetaRead::dispatch(int id)
             }
         } //*/
 
-        // /*
+        /* trigger fileSelectionChange which starts ImageCache after time delay
         if (fileSelectionChanged && dmRow == startRow) {
             QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
 
@@ -816,7 +817,7 @@ void MetaRead::dispatch(int id)
             {
                 G::log("MetaRead::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
             }
-            if (isDebug) // fileSelectionChange
+            // if (isDebug) // fileSelectionChange
             {
                 bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
                 qDebug().noquote()

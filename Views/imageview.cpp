@@ -157,6 +157,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isCurrent = (fPath == currentImagePath);
 
     if (isDebug)
+    {
         qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
          << "isCurrent =" << isCurrent
@@ -164,6 +165,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
          << " Src:" << src
          << fPath
             ; //*/
+    }
     if (G::isLogger || G::isFlowLogger)
     {
         QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
@@ -247,10 +249,11 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
     int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
-    bool isCached = false;
-    isCached = src == "ImageCache::cacheImage" || dm->sf->index(sfRow, G::IsCachedColumn).data().toBool();
+    // bool isCached = false;
+    // isCached = src == "ImageCache::cacheImage" || dm->sf->index(sfRow, G::IsCachedColumn).data().toBool();
+    // bool isCached = icd->imCache.contains(fPath);
 
-    if (isCached) {
+    if (icd->imCache.contains(fPath)) {
         QImage image; // confirm the cached image is in the image cache
         if (isDebug)
         qDebug() << "ImageView::loadImage  get cached fPath " << fPath;

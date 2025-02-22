@@ -833,7 +833,7 @@ void BuildFilters::appendUniqueItems()
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         QString yr = dm->index(row, G::YearColumn).data().toString().trimmed();
-        if (yr == "") qDebug() << "row" << row << "is blank";
+        // if (yr == "") qDebug() << "row" << row << "is blank";
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->years);

@@ -178,7 +178,9 @@ signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
+    void rowLoaded();
     void updateStatus(bool keepBase, QString s, QString source);
+    void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
 public slots:
 //    void unfilteredItemSearchCount();
@@ -197,6 +199,7 @@ public slots:
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);
     void setCurrentSF(QModelIndex sfIdx, int instance);
+    void setCached(int sfRow, bool isCached, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
     // void errDM(Issue issue);
@@ -205,6 +208,7 @@ public slots:
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     void processNextFolder();
+    void imageCacheWaiting(int sfRow);
 
 private slots:
 
@@ -264,6 +268,8 @@ private:
     ImageMetadata mCopy;
     int line;
     int rowCountChk;
+
+    int imageCacheWaitingForRow = -1;
 
     QString errMsg;
 

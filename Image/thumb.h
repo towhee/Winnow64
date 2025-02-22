@@ -17,6 +17,7 @@ public:
     explicit Thumb(DataModel *dm, Metadata *metadata,
                    FrameDecoder *frameDecoder);
     bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
+    void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
     bool abort = false;
@@ -56,6 +57,7 @@ private:
     void checkOrientation(QString &fPath, QImage &image);
 
     // status flags
+    bool isPresetOffset = false;
     bool isThumbOffset;
     bool isThumbLength;
     bool isDimensions;

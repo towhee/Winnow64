@@ -396,33 +396,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
     // debug() << imageCache->decoders[0]->isIdle();
-
-    struct CacheItem {
-        bool isCaching;
-        QString msg;
-        int decoderId;
-        int instance;
-    };
-
-    QList<CacheItem> toCache;
-
-    for (int i = 0; i < 10; i++) {
-        CacheItem item;
-        item.isCaching = i < 5;
-        item.msg = "item " + QString::number(i);
-        item.decoderId = i;
-        int instance = i;
-        toCache.append(item);
-    }
-
-    for (int i = 0; i < 10; i++) {
-        qDebug().noquote()
-            << toCache.at(i).isCaching
-            << toCache.at(i).msg
-            << toCache.at(i).decoderId
-            << toCache.at(i).instance
-            ;
-    }
+    qDebug() << "MW::test ABORT ABORT ABORT";
+    emit abortImageCache();
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
