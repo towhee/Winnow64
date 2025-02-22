@@ -181,7 +181,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
     setCurrentIndex(sfIdx);
 }
 
-void Selection::okToSelect(bool isOk)
+void Selection::okToSelect(bool isOk) // not being used
 /*
     It is not ok to select while the datamodel is being built.
 */

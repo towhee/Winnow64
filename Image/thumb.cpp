@@ -254,9 +254,9 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     // ImageMetadata m = dm->imMetadata(fPath);
     // Tiff tiff("Thumb::loadFromTiff");
 
-     // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
-     bool getThumb = true;
-    if (isThumbOffset && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) {
+    // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
+    bool getThumb = true;
+    if (isEmbeddedThumb && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) {
         if (image.isNull()) {
             QString msg = "Tiff::decode returned a null image.";
             G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
@@ -330,6 +330,14 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     #endif
 }
 
+void Thumb::presetOffset(uint offset, uint length)
+{
+    if (G::isLogger) G::log("Thumb::presetOffset");
+    offsetThumb = offset;
+    lengthThumb = length;
+    isPresetOffset = true;
+}
+
 bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 {
 /*
@@ -375,12 +383,15 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     }
 
     // get relevent metadata
-    isDimensions = dm->index(dmRow, G::WidthColumn).data().toInt() > 0;
-    isAspectRatio = dm->index(dmRow, G::AspectRatioColumn).data().toInt() > 0;
-    isThumbOffset = dm->index(dmRow, G::OffsetThumbColumn).data().toInt() > 0;
-    isThumbLength = dm->index(dmRow, G::LengthThumbColumn).data().toInt() > 0;
-    offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
-    lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+    // isDimensions = dm->index(dmRow, G::WidthColumn).data().toInt() > 0;
+    // isAspectRatio = dm->index(dmRow, G::AspectRatioColumn).data().toInt() > 0;
+    // have offsets been preset
+
+    // isThumbLength = dm->index(dmRow, G::LengthThumbColumn).data().toInt() > 0;
+    if (!isPresetOffset) {
+        offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
+        lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+    }
     isEmbeddedThumb = offsetThumb && lengthThumb;
     /*
     qDebug() << "Thumb::loadThumb"

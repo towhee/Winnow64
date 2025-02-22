@@ -521,11 +521,12 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::refreshViewsOnCacheChange", msg);
     }
-    /*
+    // /*
     qDebug() << "MW::refreshViewsOnCacheChange"
              << "sfRow =" << sfRow
              << "isCached =" << isCached
              << "isCurrent =" << isCurrent
+             << "src =" << src
                 ; //*/
 
     if (sfRow == -1) {

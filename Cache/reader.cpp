@@ -154,6 +154,10 @@ bool Reader::readMetadata()
     metadata->m.metadataAttempted = true;
     metadata->m.metadataLoaded = isMetaLoaded;
 
+    // req'd to readIcon, in case it runs before datamodel has been up[dated
+    offsetThumb = metadata->m.offsetThumb;
+    lengthThumb = metadata->m.lengthThumb;
+
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
 
     #ifdef TIMER
@@ -196,9 +200,12 @@ void Reader::readIcon()
     int dmRow = dmIdx.row();
     QString msg;
     QImage image;
+
+    // pass embedded thumb offset and length in case datamodel not updated
+    thumb->presetOffset(offsetThumb, lengthThumb);
+
     // get thumbnail or err.png or generic video
     loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
-
 
     #ifdef TIMER
     t4 = t.restart();

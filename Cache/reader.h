@@ -79,6 +79,10 @@ private:
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;
     Thumb *thumb;
+
+    uint offsetThumb;
+    uint lengthThumb;
+
     int metaReadCount;
     bool isVideo;
     bool isDebug;

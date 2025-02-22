@@ -100,7 +100,7 @@ void ImageDecoder::decode(int row, int instance)
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
 
     QString fun = "ImageDecoder::decode";
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(50)
@@ -140,7 +140,7 @@ void ImageDecoder::decode(int row, int instance)
     // decode
     if (!abort && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
-        // if (isDebug)
+        if (isDebug)
         {
             QString fun = "ImageDecoder::decode loaded";
             qDebug().noquote()

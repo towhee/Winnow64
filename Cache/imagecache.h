@@ -65,6 +65,8 @@ signals:
     void stopDecoder();  // decoders
     void abortDecoder();
     void requestFillCache(int id);
+    void waitingForRow(int sfRow);
+    void setCached(int sfRow, bool isCached, int instance);
     void decode(int sfRow, int instance);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
@@ -165,6 +167,7 @@ private:
     void updateTargets(bool dotForward, bool isAhead, int &pos,
                        int &amount, bool &isDone, float &sumMB);
     void setTargetRange(int key);
+    bool waitForMetaRead(int sfRow, int ms);
     void log(const QString function, const QString comment = "");
 };
 

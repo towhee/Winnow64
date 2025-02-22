@@ -252,6 +252,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
+    connect(dm, &DataModel::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
@@ -417,8 +418,17 @@ void MW::createImageCache()
     connect(this, &MW::setImageCachePosition,
             imageCache, &ImageCache::setCurrentPosition);
 
+    // Signal ImageCache is processing
     connect(imageCache, &ImageCache::updateIsRunning,
             this, &MW::updateImageCachingThreadRunStatus);
+
+    // Signal datamodel to signal back when some row is loaded
+    connect(imageCache, &ImageCache::setCached,
+            dm, &DataModel::setCached);
+
+    // Signal datamodel to signal back when some row is loaded
+    connect(imageCache, &ImageCache::waitingForRow,
+            dm, &DataModel::imageCacheWaiting);
 
     // // signal stopped when abort completed
     // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
