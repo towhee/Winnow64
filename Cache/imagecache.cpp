@@ -505,7 +505,7 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    /* ChatGPT version
+    // /* ChatGPT version
     QString fun = "ImageCache::setTargetRange";
 
     float sumMB = 0;
@@ -527,12 +527,6 @@ void ImageCache::setTargetRange(int key)
 
         // Handle "ahead" direction
         for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
-            // if (abort.load()) return;
-            if (!waitForMetaRead(aheadPos)) {
-                // abort.store(true);
-                abort = true;
-                return;
-            }
 
             bool isValidRow = false;
             bool isVideo = false;
@@ -558,7 +552,6 @@ void ImageCache::setTargetRange(int key)
                 sumMB += cacheSize;
                 if (sumMB < maxMB) {
                     if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
-                        // if (abort.load()) return;
                         toCacheAppend(aheadPos);
                     }
                     isForward ? targetLast = aheadPos : targetFirst = aheadPos;
@@ -569,11 +562,6 @@ void ImageCache::setTargetRange(int key)
 
         // Handle "behind" direction
         for (int b = 0; b < behindAmount && !behindDone; ++b) {
-            // if (abort.load()) return;
-            if (!waitForMetaRead(behindPos)) {
-                // abort.store(true);
-                return;
-            }
 
             bool isValidRow = false;
             bool isVideo = false;
@@ -599,7 +587,6 @@ void ImageCache::setTargetRange(int key)
                 sumMB += cacheSize;
                 if (sumMB < maxMB) {
                     if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
-                        // if (abort.load()) return;
                         toCacheAppend(behindPos);
                     }
                     isForward ? targetFirst = behindPos : targetLast = behindPos;
@@ -617,7 +604,7 @@ void ImageCache::setTargetRange(int key)
     }
     //*/
 
-    // /* Rory version
+    /* Rory version
 
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');

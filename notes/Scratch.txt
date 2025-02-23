@@ -1,7 +1,21 @@
-0 Thumb::loadThumb                                   /Users/roryhill/Pictures/2021-09-25/2021-09-27_1319.arw
-19 DataModel::rowFromPath
-221 Thumb::loadFromJpgData                             /Users/roryhill/Pictures/2021-09-25/2021-09-27_1319.arw
-0 Thumb::checkOrientation                            /Users/roryhill/Pictures/2021-09-25/2021-09-27_1319.arw
-4 DataModel::rowFromPath
+0   QtCore                        	       0x1050dc80c QArrayDataPointer<QRingChunk>::constEnd() const + 0 (qarraydatapointer.h:112) [inlined]
+1   QtCore                        	       0x1050dc80c QList<QRingChunk>::end() const + 0 (qlist.h:591) [inlined]
+2   QtCore                        	       0x1050dc80c QList<QRingChunk>::constLast() const + 0 (qlist.h:612) [inlined]
+3   QtCore                        	       0x1050dc80c QRingBuffer::chop(long long) + 36 (qringbuffer.cpp:170)
+4   QtCore                        	       0x104f76e48 QIODevicePrivate::QRingBufferRef::chop(long long) + 8 (qiodevice_p.h:73) [inlined]
+5   QtCore                        	       0x104f76e48 QIODevicePrivate::read(char*, long long, bool) + 608 (qiodevice.cpp:1099)
+6   QtCore                        	       0x104f771d8 QIODevice::read(long long) + 300 (qiodevice.cpp:1206)
+7   Winnow                        	       0x102735654 IFD::readIFD(MetadataParameters&, bool) + 104 (ifd.cpp:41)
+8   Winnow                        	       0x1025c2794 Tiff::parseIFDs(MetadataParameters&, ImageMetadata&, IFD*, unsigned int&, int&, QString) + 344 (tiff.cpp:564)
+9   Winnow                        	       0x1025bfda0 Tiff::parse(MetadataParameters&, ImageMetadata&, IFD*, IRB*, IPTC*, Exif*, GPS*) + 5304 (tiff.cpp:377)
+10  Winnow                        	       0x102748a30 Metadata::parseTIF() + 500 (metadata.cpp:768)
+11  Winnow                        	       0x1027460f8 Metadata::readMetadata(bool, QString const&, QString) + 3116 (metadata.cpp:1117)
+12  Winnow                        	       0x10274b5b0 Metadata::loadImageMetadata(QFileInfo const&, int, bool, bool, bool, bool, QString, bool) + 2232 (metadata.cpp:1237)
+13  Winnow                        	       0x10238cf78 DataModel::imMetadata(QString, bool) + 3420 (datamodel.cpp:1030)
+14  Winnow                        	       0x102542474 Thumb::loadFromTiff(QString&, QImage&, int) + 704 (thumb.cpp:198)
 
-/Users/roryhill/Pictures/2021-09-25/2021-09-27_1308.arw
+0   QtCore                        	       0x104fa923c QFileDevice::seek(long long) + 76 (qfiledevice.cpp:378)
+1   Winnow                        	       0x102681d90 Metadata::readMetadata(bool, QString const&, QString) + 2244 (metadata.cpp:1104)
+2   Winnow                        	       0x1026875b0 Metadata::loadImageMetadata(QFileInfo const&, int, bool, bool, bool, bool, QString, bool) + 2232 (metadata.cpp:1237)
+3   Winnow                        	       0x1022c8f78 DataModel::imMetadata(QString, bool) + 3420 (datamodel.cpp:1030)
+4   Winnow                        	       0x10247e474 Thumb::loadFromTiff(QString&, QImage&, int) + 704 (thumb.cpp:198)
