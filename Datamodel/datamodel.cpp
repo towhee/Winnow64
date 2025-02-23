@@ -917,6 +917,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    // temp until read metadata and calc size for QImage
+    setData(index(row, G::CacheSizeColumn), fileInfo.size());
     setData(index(row, G::CompareColumn), false);
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
     setData(index(row, G::CreatedColumn), s);
