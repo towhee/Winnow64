@@ -584,7 +584,7 @@ void ImageCache::setTargetRange(int key)
         }
     }
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote()
         << fun << "targetFirst =" << targetFirst << "targetLast =" << targetLast

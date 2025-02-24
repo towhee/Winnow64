@@ -1320,97 +1320,116 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     /* DOCK TAB TOOLTIPS
-       Show a tooltip for docked widget tabs.  Call filterDockTabMousePress if filter tab.
+       Call filterDockTabMousePress if filter tab.
+       Show a tooltip for docked widget tabs. // not used
     */
     {
-//         static int prevTabIndex = -1;
-//         QString tabBarClassName = "QTabBar";
-//         #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
-//         tabBarClassName = "QMainWindowTabBar";
-//         #endif
-//         if (QString(obj->metaObject()->className()) == tabBarClassName) {
-
-//             qDebug() << event << obj;
-
-//             /*
-//             // Set rich text label to tabified dock widgets tabbar tabs
-//             if (event->type() == QEvent::ChildAdded) {
-//                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-//                 if (tabBarContainsDocks(tabBar)) {
-//                     if (!dockTabBars.contains(tabBar)) {
-//                         dockTabBars.append(tabBar);
-//                         tabBarAssignRichText(tabBar);
-//                         // qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
-//                     }
-//                 }
-//             }  //*/
-
-//             // Set tab tooltip and maybe use tooltip so can identify if change tab text
-//             if (event->type() == QEvent::ChildAdded) {
-//                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-//                 QFont glyphs;
-//                 int id = QFontDatabase::addApplicationFont("/Users/roryhill/Downloads/glyphs.ttf");
-//                 QString family = QFontDatabase::applicationFontFamilies(id).at(0);
-//                 glyphs = QFont(family);
-//                 tabBar->setFont(glyphs);
-//                 for (int i = 0; i < tabBar->count(); ++i) {
-//                     if (tabBar->tabText(i) == folderDockTabText) {
-//                         tabBar->setTabToolTip(i, "System Folders Panel (F3)");
-//                     }
-//                     if (tabBar->tabText(i) == favDockTabText) {
-//                         tabBar->setTabToolTip(i, "Bookmarks Panel (F4)");
-//                     }
-//                     if (tabBar->tabText(i) == filterDockTabText) {
-//                         // tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
-//                         // tabBar->setTabData(i, filterDockTabText);
-//                         tabBar->setTabToolTip(i, "Filter Panel (F5)");
-//                         // tabBar->setTabText(i, "Filters");  not working
-//                     }
-//                     if (tabBar->tabText(i) == metadataDockTabText) {
-//                         tabBar->setTabToolTip(i, "Metadata Panel (F6)");
-//                     }
-//                     if (tabBar->tabText(i) == embelDockTabText) {
-//                         tabBar->setTabToolTip(i, "Embellish Panel (F8)");
-//                     }
-//                  }
-//             }
-
-//             // build filters when filter tab mouse clicked
-//             if (event->type() == QEvent::MouseButtonPress) {
-//                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-//                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//                 int i = tabBar->tabAt(e->pos());
-//                 if (tabBar->tabText(i) == filterDockTabText) {
-//                     filterDockTabMousePress();
-//                 }
-//                 /*
-//                 // if rename tab text then use tooltips to id tab
-//                 if (tabBar->tabToolTip(i) == "Filter Panel (F5)") {
-//                     filterDockTabMousePress();
-//                     qDebug() << "PRESSED";
-//                 }
-//                 //*/
-//             }
-
-//             // show tool tip for tab
-//             if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
-//                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
-//                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//                 int i = tabBar->tabAt(e->pos());
-//                 QToolTip::showText(e->globalPos(), tabBar->tabToolTip(i));
-
-//             }
-//             if (event->type() == QEvent::Leave) {
-//                 prevTabIndex = -1;
-//             }
-
-//             /* remove tab event
-// \            if (event->type() == QEvent::ChildRemoved) {
-//                 qDebug() << event << obj;
-//             }
-//             //*/
-//         }
+        static int prevTabIndex = -1;
+        QString tabBarClassName = "QTabBar";
+        #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+        tabBarClassName = "QMainWindowTabBar";
+        #endif
+        if (QString(obj->metaObject()->className()) == tabBarClassName) {
+            // build filters when filter tab mouse clicked
+            if (event->type() == QEvent::MouseButtonPress) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                int i = tabBar->tabAt(e->pos());
+                if (tabBar->tabText(i) == filterDockTabText) {
+                    filterDockTabMousePress();
+                }
+            }
+        }
     }
+    /*
+        {
+            static int prevTabIndex = -1;
+            QString tabBarClassName = "QTabBar";
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+            tabBarClassName = "QMainWindowTabBar";
+#endif
+            if (QString(obj->metaObject()->className()) == tabBarClassName) {
+
+            qDebug() << event << obj;
+
+            // // Set rich text label to tabified dock widgets tabbar tabs
+            // if (event->type() == QEvent::ChildAdded) {
+            //     QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+            //     if (tabBarContainsDocks(tabBar)) {
+            //         if (!dockTabBars.contains(tabBar)) {
+            //             dockTabBars.append(tabBar);
+            //             tabBarAssignRichText(tabBar);
+            //             // qDebug() << "Event ChildAdded" << "dockTabBars =" << dockTabBars;
+            //         }
+            //     }
+            // }
+
+            // Set tab tooltip and maybe use tooltip so can identify if change tab text
+            if (event->type() == QEvent::ChildAdded) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QFont glyphs;
+                int id = QFontDatabase::addApplicationFont("/Users/roryhill/Downloads/glyphs.ttf");
+                QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+                glyphs = QFont(family);
+                tabBar->setFont(glyphs);
+                for (int i = 0; i < tabBar->count(); ++i) {
+                    if (tabBar->tabText(i) == folderDockTabText) {
+                        tabBar->setTabToolTip(i, "System Folders Panel (F3)");
+                    }
+                    if (tabBar->tabText(i) == favDockTabText) {
+                        tabBar->setTabToolTip(i, "Bookmarks Panel (F4)");
+                    }
+                    if (tabBar->tabText(i) == filterDockTabText) {
+                        // tabBar->setTabIcon(i, QIcon(":/images/branch-closed-winnow.png"));
+                        // tabBar->setTabData(i, filterDockTabText);
+                        tabBar->setTabToolTip(i, "Filter Panel (F5)");
+                        // tabBar->setTabText(i, "Filters");  not working
+                    }
+                    if (tabBar->tabText(i) == metadataDockTabText) {
+                        tabBar->setTabToolTip(i, "Metadata Panel (F6)");
+                    }
+                    if (tabBar->tabText(i) == embelDockTabText) {
+                        tabBar->setTabToolTip(i, "Embellish Panel (F8)");
+                    }
+                 }
+            }
+
+            // build filters when filter tab mouse clicked
+            if (event->type() == QEvent::MouseButtonPress) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                int i = tabBar->tabAt(e->pos());
+                if (tabBar->tabText(i) == filterDockTabText) {
+                    filterDockTabMousePress();
+                }
+
+                // // if rename tab text then use tooltips to id tab
+                // if (tabBar->tabToolTip(i) == "Filter Panel (F5)") {
+                //     filterDockTabMousePress();
+                //     qDebug() << "PRESSED";
+                // }
+
+            }
+
+            // show tool tip for tab
+            if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QMouseEvent *e = static_cast<QMouseEvent *>(event);
+                int i = tabBar->tabAt(e->pos());
+                QToolTip::showText(e->globalPos(), tabBar->tabToolTip(i));
+
+            }
+            if (event->type() == QEvent::Leave) {
+                prevTabIndex = -1;
+            }
+
+            // // remove tab event
+            // if (event->type() == QEvent::ChildRemoved) {
+            //     qDebug() << event << obj;
+            // }
+        }
+    }
+    */
 
     /* THUMBDOCK SPLITTER
 
@@ -2823,6 +2842,8 @@ void MW::loadFolder(QString folderPath)
     isCurrentFolderOkay = true;
     updateStatus(true, "", fun);
 
+    filters->loadingDataModel(false);   // isLoaded = false
+
     // set selection and current index, start metaReadThread
     sel->select(dm->currentSfRow);
 
@@ -3034,7 +3055,7 @@ void MW::loadDone()
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP
     It is also okay to filter.  */
 
-    filters->loadingDataModel(true);
+    // filters->loadingDataModel(true);
     reverseSortBtn->setEnabled(true);
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
