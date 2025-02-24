@@ -257,10 +257,12 @@ void MW::toggleFavDockVisibility() {
 void MW::toggleFilterDockVisibility() {
     if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
     if (G::isInitializing) return;
+
     QString dock = filterDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (filterDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
+    qDebug() << "MW::toggleFilterDockVisibility dockToggle =" << dockToggle;
 
     switch (dockToggle) {
     case SetFocus:
@@ -521,7 +523,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
         G::log("MW::refreshViewsOnCacheChange", msg);
     }
-    // /*
+    /*
     qDebug() << "MW::refreshViewsOnCacheChange"
              << "sfRow =" << sfRow
              << "isCached =" << isCached

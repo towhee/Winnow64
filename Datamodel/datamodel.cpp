@@ -1554,9 +1554,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     // signal ImageCache that row is loaded
     // if (imageCacheWaitingForRow > -1)
-        qDebug() << "DataModel::addMetadataForItem row =" << row
-                 << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
-            ;
+        // qDebug() << "DataModel::addMetadataForItem row =" << row
+        //          << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
+        //     ;
     if (row == imageCacheWaitingForRow) {
         qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
         emit rowLoaded();
@@ -2208,7 +2208,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
         qDebug() << src << sfRow << errMsg;
         return;
     }
-    qDebug() << src << sfRow << "isCached =" << isCached;
+    // qDebug() << src << sfRow << "isCached =" << isCached;
     sf->setData(sfIdx, isCached);
     QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
     emit refreshViewsOnCacheChange(fPath, isCached, src);

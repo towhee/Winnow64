@@ -172,7 +172,7 @@ void BuildFilters::build(AfterAction newAction)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::build"
@@ -284,7 +284,7 @@ void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::done", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::done"

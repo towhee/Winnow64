@@ -861,7 +861,6 @@ void MetaRead::dispatch(int id)
         // report progress
         if (showProgressInStatusbar) {
             emit updateProgressInStatusbar(dmRow, dm->rowCount());
-            // emit updateProgressInStatusbar(dmRow, dmRowCount);
             int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
             emit updateProgressInFilter(progress);
         }

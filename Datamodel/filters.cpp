@@ -623,17 +623,11 @@ void Filters::disableColorAllHeaders(bool disable)
 void Filters::updateProgress(int progress)
 {
     if (G::isLogger) G::log("Filters::updateProgress");
-    // if (debugFilters)
-    //     qDebug() << "Filters::updateProgress"
-                    ;
+    if (debugFilters)
+    {
+        qDebug() << "Filters::updateProgress" << progress;
+    }
     bfProgressBar->setValue(progress);
-//    if (progress < 0) {
-//        setHeaderLabel("");
-//        return;
-//    }
-//    QString s = "Updating filter: " + QString::number((int)progress) + "%";
-//    qDebug() << "Filters::updateProgress" << s;
-//    setHeaderLabel(s);
 }
 
 void Filters::setProgressBarStyle()
@@ -805,10 +799,12 @@ void Filters::invertFilters()
 void Filters::loadingDataModel(bool isLoaded)
 {
     if (G::isLogger) G::log("Filters::loadingDataModel");
-    if (debugFilters)
+    // if (debugFilters)
         qDebug() << "Filters::loadingDataModel  isLoaded =" << isLoaded
                     ;
     if (isLoaded) {
+        bfProgressBar->setValue(0);
+        bfProgressBar->setVisible(false);
         msgFrame->setVisible(false);
         filterLabel->setText("");
         filterLabel->setVisible(false);
@@ -819,6 +815,7 @@ void Filters::loadingDataModel(bool isLoaded)
         msgFrame->setVisible(true);
         filterLabel->setText("Filters disabled while loading all metadata...");
         filterLabel->setVisible(true);
+        bfProgressBar->setVisible(true);
         // Allow search to remain visible in case search selected in menu or F2 pressed
         // before or while filters are being built.
         collapseAllFiltersExceptSearch();
@@ -945,7 +942,7 @@ void Filters::reset()
     clearAll();
 
     // reset message frame
-    loadingDataModel(true);
+    // loadingDataModel(true);
 
     setEnabled(true);
     filterLabel->setVisible(false);
