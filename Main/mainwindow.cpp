@@ -2432,18 +2432,17 @@ bool MW::stop(QString src)
     }
     G::t.restart();
 
-    // imageCache->stop("MW::stop");
-    emit abortImageCache();
-    {
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop imageCacheThread:    "
-                 << "isRunning =" << (imageCache->isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
+    // emit abortImageCache();
+    // {
+    // if (isDebugStopping && G::isFlowLogger)
+    //     G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
+    // if (isDebugStopping  && !G::isFlowLogger)
+    //     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
+    //              << "isRunning =" << (imageCache->isRunning() ? "true " : "false")
+    //              << G::t.elapsed() << "ms";
 
-    G::t.restart();
-    }
+    // G::t.restart();
+    // }
 
     frameDecoder->stop();
     {

@@ -73,7 +73,7 @@ signals:
 public slots:
     void start();
     void stop();
-    // void startProcessing();
+    // void newInstance();
     void abortProcessing();
     void initImageCache(int cacheSizeMB, int cacheMinMB,
                         bool isShowCacheStatus, int cacheWtAhead);
@@ -142,6 +142,7 @@ private:
     bool isShowCacheStatus;     // show in app status bar
 
     void launchDecoders(QString src);
+    bool okToCache(int id, int sfRow);
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
@@ -153,6 +154,7 @@ private:
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);
     void memChk();                  // still room in system memory for cache?
+    bool instanceClash(bool id);
     bool isValidKey(int key);
 
     void updateTargets(bool dotForward, bool isAhead, int &pos,
