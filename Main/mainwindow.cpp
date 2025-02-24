@@ -5625,7 +5625,6 @@ void MW::generateMeanStack()
         int sfRow = dm->rowFromPath(fPath);
         qDebug() << "MW::generateMeanStack" << sfRow << dmRow << fPath;
         // metadataCacheThread->loadIcon(sfRow);
-        imageCache->filterChange(fPath, "MW::generateMeanStack");
         sel->setCurrentPath(fPath);
         // update FSTree image count
         fsTree->refreshModel();
