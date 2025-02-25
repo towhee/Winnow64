@@ -68,6 +68,10 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     This is the start for the core program flow (see top of mainwindow.cpp)
 */
 {
+    // G::popUp->reset();  // pipeline popup
+    // G::popUp->showPopup("Selection::setCurrentIndex", 0, true, 1);
+    // qApp->processEvents();
+
     if (dm->loadingModel) {
         QString msg = "Collecting image files in folder";
         G::popUp->showPopup(msg);

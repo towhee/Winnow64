@@ -265,16 +265,20 @@ void Reader::run()
     #endif
 
     QString fun = "Reader::run emit done";
-    if (isDebug)
+    // if (isDebug)
+    int ms = t.elapsed();
+    if (ms > 100)
     {
         qDebug().noquote()
+        << QString::number(ms).leftJustified(10)
         << fun.leftJustified(30)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-        << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
+        // << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
 
     emit done(threadId);
+    qApp->processEvents();
     if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");
 }

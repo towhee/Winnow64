@@ -2771,6 +2771,10 @@ void MW::loadFolder(QString folderPath)
     - Do not use reset as it clears the datamodel
 */
 {
+    // G::popUp->reset();  // pipeline popup
+    // G::popUp->showPopup("MW::loadFolder start", 0, true, 1);
+    // qApp->processEvents();
+
     QString fun = "MW::loadFolder";
     if (G::isLogger || G::isFlowLogger) {
         bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
@@ -2863,6 +2867,10 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
 */
 {
     if (G::stop || dm->abortLoadingModel) return;
+
+    // G::popUp->reset();  // pipeline popup
+    // G::popUp->showPopup("MW::load", 0, true, 1);
+    // qApp->processEvents();
 
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
@@ -2977,6 +2985,9 @@ void MW::loadChanged(const QString folderPath, const QString op)
         }
         return;
     }
+    // G::popUp->reset();  // pipeline popup
+    // G::popUp->showPopup("MW::loadChanged done", 0, true, 1);
+    // qApp->processEvents();
 }
 
 void MW::loadDone()
@@ -2998,7 +3009,7 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    // qDebug() << src;
+    qDebug() << src;
     // if (dm->isAllMetadataAttempted()) {
     //     G::allMetadataLoaded = true;
     // }
