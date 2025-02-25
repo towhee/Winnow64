@@ -136,6 +136,7 @@ private:
     QStringList err;
 
     bool debugLog;
+    QString msElapsed();
 
     QElapsedTimer t;
     QElapsedTimer tAbort;

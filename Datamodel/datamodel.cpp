@@ -583,8 +583,8 @@ void DataModel::addFolder(const QString &folderPath)
         G::log(fun, folderPath);
 
     // start message
-    QString msg = "Finding all image files...";
-    // G::popUp->showPopup(msg, 0, true, 1);
+    // QString msg = "Finding all image files...";
+    // G::popUp->showPopup(msg, 0, true, 1);   // pipeline popup
 
     // control
     QMutexLocker locker(&mutex);
@@ -617,7 +617,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     QString step = "Loading eligible image file information.<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
-    // G::popUp->reset();
+    // G::popUp->reset(); // pipeline popup
     // G::popUp->setProgressVisible(true);
     // G::popUp->setProgressMax(folderFileInfoList.count());
     // G::popUp->showPopup(step + escapeClause, 0, true, 1);
@@ -651,7 +651,7 @@ void DataModel::addFolder(const QString &folderPath)
                     ; //*/
         addFileDataForRow(row, fileInfo);
 
-        // G::popUp->setProgress(++counter);
+        // G::popUp->setProgress(++counter);   // pipeline popup
         // qApp->processEvents();
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
@@ -695,8 +695,10 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
-    // G::popUp->setProgressVisible(false);
+    // G::popUp->setProgressVisible(false);   // pipeline popup
     // G::popUp->reset();
+    // msg = "File info added to datamodel";
+    // G::popUp->showPopup(msg, 0, true, 1);
     // qApp->processEvents();
 
     if (oldRowCount == 0 && newRowCount > 0) {
@@ -1352,7 +1354,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
     mCopy = m;
-    if (G::isLogger) G::log("DataModel::addMetadataForItem");
+    if (G::isLogger) {
+        QString msg = "row = " + QString::number(m.row);
+        G::log("DataModel::addMetadataForItem", msg);
+    }
     /*
     qDebug() << "DataModel::addMetadataForItem"
              << "Instance =" << instance

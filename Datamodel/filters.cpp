@@ -798,8 +798,8 @@ void Filters::invertFilters()
 
 void Filters::loadingDataModel(bool isLoaded)
 {
-    if (G::isLogger) G::log("Filters::loadingDataModel");
-    // if (debugFilters)
+    if (G::isLogger) G::log("Filters::loadingDataModel", "isLoaded = " + QVariant(isLoaded).toString());
+    if (debugFilters)
         qDebug() << "Filters::loadingDataModel  isLoaded =" << isLoaded
                     ;
     if (isLoaded) {
