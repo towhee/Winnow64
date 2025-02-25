@@ -582,6 +582,10 @@ void DataModel::addFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
 
+    // start message
+    QString msg = "Finding all image files...";
+    // G::popUp->showPopup(msg, 0, true, 1);
+
     // control
     QMutexLocker locker(&mutex);
     abortLoadingModel = false;
@@ -611,9 +615,12 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
-    QString step = "Loading eligible images.\n\n";
-    QString escapeClause = "\n\nPress \"Esc\" to stop.";
-
+    QString step = "Loading eligible image file information.<br>";
+    QString escapeClause = "Press \"Esc\" to stop.";
+    // G::popUp->reset();
+    // G::popUp->setProgressVisible(true);
+    // G::popUp->setProgressMax(folderFileInfoList.count());
+    // G::popUp->showPopup(step + escapeClause, 0, true, 1);
     // test if raw file to match jpg when same file names and one is a jpg
     QString suffix;
     QString prevRawSuffix = "";
@@ -634,6 +641,7 @@ void DataModel::addFolder(const QString &folderPath)
              << "newRowCount =" << newRowCount
         ; //*/
 
+    int counter = 0;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         /*
         qDebug() << "DataModel::addFolder"
@@ -642,6 +650,9 @@ void DataModel::addFolder(const QString &folderPath)
                  << "folder =" << folderPath
                     ; //*/
         addFileDataForRow(row, fileInfo);
+
+        // G::popUp->setProgress(++counter);
+        // qApp->processEvents();
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
@@ -684,7 +695,9 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
-    // sf->suspend(false);
+    // G::popUp->setProgressVisible(false);
+    // G::popUp->reset();
+    // qApp->processEvents();
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
