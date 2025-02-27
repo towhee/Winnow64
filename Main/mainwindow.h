@@ -1246,7 +1246,7 @@ private:
     void createBookmarks();
     void createFrameDecoder();
     void createLinearMetaRead();
-    void createMDCache();
+    void createMetaRead();
     void createImageCache();
     void createCentralWidget();
     void createCompareView();

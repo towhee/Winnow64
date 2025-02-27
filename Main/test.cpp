@@ -396,8 +396,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
     // debug() << imageCache->decoders[0]->isIdle();
-    qDebug() << "MW::test ABORT ABORT ABORT";
-    emit abortImageCache();
+    qDebug() << metaRead->metaReadThread.isRunning();
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

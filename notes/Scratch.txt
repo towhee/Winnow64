@@ -1,45 +1,212 @@
-MS         ACTION                         THREAD  MODEL ROW
-5          MetaRead::dispatch reader      id = 0  row = 0
-0          MetaRead::dispatch reader      id = 1  row = 1
-0          MetaRead::dispatch reader      id = 2  row = 2
-0          MetaRead::dispatch reader      id = 3  row = 3
-1          MetaRead::dispatch reader      id = 4  row = 4
-0          MetaRead::dispatch reader      id = 5  row = 5
-0          MetaRead::dispatch reader      id = 6  row = 6
-0          MetaRead::dispatch reader      id = 7  row = 7
-0          MetaRead::dispatch reader      id = 8  row = 8
-0          MetaRead::dispatch reader      id = 9  row = 9
-0          MetaRead::dispatch reader      id = 10 row = 10
-0          MetaRead::dispatch reader      id = 11 row = 11
-1          MetaRead::dispatch reader      id = 12 row = 12
-0          MetaRead::dispatch reader      id = 13 row = 13
-0          MetaRead::dispatch reader      id = 14 row = 14
-0          MetaRead::dispatch reader      id = 15 row = 15
-0          MetaRead::dispatch reader      id = 16 row = 16
-0          MetaRead::dispatch reader      id = 17 row = 17
-0          MetaRead::dispatch reader      id = 18 row = 18
-0          MetaRead::dispatch reader      id = 19 row = 19
-4          Reader::run emit done          id = 1  row = 1
-4          Reader::run emit done          id = 2  row = 2
-4          Reader::run emit done          id = 3  row = 3
-4          Reader::run emit done          id = 0  row = 0
-4          Reader::run emit done          id = 4  row = 4
-4          Reader::run emit done          id = 5  row = 5
-4          Reader::run emit done          id = 7  row = 7
-4          Reader::run emit done          id = 6  row = 6
-4          Reader::run emit done          id = 8  row = 8
-4          Reader::run emit done          id = 9  row = 9
-4          Reader::run emit done          id = 10 row = 10
-4          Reader::run emit done          id = 11 row = 11
-4          Reader::run emit done          id = 12 row = 12
-4          Reader::run emit done          id = 13 row = 13
-4          Reader::run emit done          id = 14 row = 14
-4          Reader::run emit done          id = 15 row = 15
-4          Reader::run emit done          id = 16 row = 16
-4          Reader::run emit done          id = 17 row = 17
-4          Reader::run emit done          id = 18 row = 18
-4          Reader::run emit done          id = 19 row = 19
-10333      MetaRead::dispatch processed   id = 1  row = 1
+In the GUI thread
+
+QThread guiThread = QThread::currentThread();
+metaRead = new MetaRead(this, dm, metadata, frameDecoder, imageCache);
+metaRead->setStartRow(sfRow, isFileSelectionChange, "MW::load");
+
+MetaRead::MetaRead(QObject *parent,
+                   DataModel *dm,
+                   Metadata *metadata,
+                   FrameDecoder *frameDecoder,
+                   ImageCache *imageCache)
+    : QThread(parent)
+{
+    this->dm = dm;
+    this->metadata = metadata;
+    this->frameDecoder = frameDecoder;
+    this->imageCache = imageCache;
+    thumb = new Thumb(dm, metadata, frameDecoder);
+
+    readerCount = QThread::idealThreadCount();
+    for (int id = 0; id < readerCount; ++id) {
+        Reader *reader = new Reader(id, dm, imageCache);
+        QThread *thread = new QThread;
+        reader->readerThread = thread;
+        reader->moveToThread(thread);  // Move to MetaRead's thread
+        connect(reader, &Reader::done, this, &MetaRead::dispatch);
+        thread->start();
+        readers.append(reader);
+        readerThreads.append(thread);
+        cycling.append(false);
+    }
+
+    start();
+}
+
+void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
+{
+    // could be called by a scroll event, then no file selection change
+    this->fileSelectionChanged = fileSelectionChanged;
+
+    // has metadata already been read for this row
+    if (fileSelectionChanged) {
+        if (dm->isMetadataAttempted(sfRow)) {
+            emit fileSelectionChange(dm->sf->index(sfRow, 0));
+            if (G::allMetadataLoaded && G::iconChunkLoaded) {
+                return;
+            }
+        }
+    }
+
+    // load datamodel with metadata and icons
+    mutex.lock();
+    this->src = src;
+    sfRowCount = dm->sf->rowCount();
+    lastRow = sfRowCount - 1;
+    if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
+    else startRow = 0;
+    headStartCount = 0;
+    imageCacheTriggered = false;
+    aIsDone = false;
+    bIsDone = false;
+    if (startRow == 0) bIsDone = true;
+    isDone = false;
+    success = false;                        // used to update statusbar
+    // set icon range. G::iconChunkLoaded is set in MW::loadCurrent
+    firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
+    lastIconRow = dm->endIconRange;
+    mutex.unlock();
+
+    emit runStatus(true, true, false, "MetaRead::run");
+
+    if (isDispatching) {
+        mutex.lock();
+        isNewStartRowWhileStillReading = true;
+        mutex.unlock();
+    }
+    else {
+        mutex.lock();
+        isNewStartRowWhileStillReading = false;
+        a = startRow;
+        b = startRow - 1;
+        mutex.unlock();
+    }
+    QMetaObject::invokeMethod(this, "dispatchReaders", Qt::QueuedConnection);
+}
 
 
-MetaRead::dispatch processed
+void MetaRead::dispatchReaders()
+{
+    isDispatching = true;
+
+    for (int id = 0; id < readerCount; id++) {
+        dispatch(id);
+        if (abort) return;
+    }
+}
+
+void MetaRead::dispatchReaders()
+{
+    isDispatching = true;
+
+    for (int id = 0; id < readerCount; id++) {
+        if (!cycling.at(id)) {
+            reader[id]->status = Reader::Status::Ready;
+            reader[id]->fPath = "";
+            QMetaObject::invokeMethod(this, "dispatch", Qt::QueuedConnection,
+                                      Q_ARG(int, id));
+        }
+
+        if (abort) return;
+    }
+}
+
+void MetaRead::dispatch(int id)
+{
+    // terse pointer to reader[id]
+    r = reader[id];
+    r->pending = false;
+    cycling[id] = true;
+
+    // RETURNING READER
+    if (r->fPath != "" && r->instance == dm->instance) {
+        if (aIsDone && bIsDone) {
+            return;
+        }
+    }
+
+    // DISPATCH READER
+    if (isNewStartRowWhileStillReading) {
+        a = startRow;
+        b = startRow - 1;
+        if (fileSelectionChanged) headStartCount = 0;
+    }
+
+    if (nextRowToRead()) {
+        QModelIndex sfIdx = dm->sf->index(nextRow, 0);
+        QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
+        QString fPath = sfIdx.data(G::PathRole).toString();
+        // only read icons within the icon chunk range
+        bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
+        if (!abort) {
+            QThread::msleep(1);
+            r->read(dmIdx, fPath, instance, okReadIcon);
+        }
+    }
+
+    cycling[id] = false;
+
+    // if done in both directions fire delay to quit in case isDone fails
+    if (aIsDone && bIsDone && !isDone) {
+        if (!quitAfterTimeoutInitiated) {
+            quitAfterTimeoutInitiated = true;
+            // if pending readers not all processed in delay ms then quit anyway
+            int delay = 1000;
+            QTimer::singleShot(delay, this, &MetaRead::quitAfterTimeout);
+        }
+        r->status = Reader::Status::Ready;
+        return;
+    }
+}
+
+Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
+{
+    this->dm = dm;
+    metadata = new Metadata;
+    this->imageCache = imageCache;
+    threadId = id;
+    instance = 0;
+
+    frameDecoder = new FrameDecoder(this);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+
+    thumb = new Thumb(dm, metadata, frameDecoder);
+
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
+    connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+}
+
+void Reader::read(const QModelIndex dmIdx,
+                  const QString filePath,
+                  const int instance,
+                  const bool isReadIcon)
+{
+    abort = false;
+    this->dmIdx = dmIdx;
+    fPath = filePath;
+    this->instance = instance;
+    this->isReadIcon = isReadIcon;
+    isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
+    status = Status::Success;
+    pending = true;     // set to false when processed in MetaRead::dispatch
+    loadedIcon = false;
+
+    readMetadata();
+    readIcon();
+
+    emit done(threadId);
+}
+
+void Reader::stop()
+{
+    mutex.lock();
+    abort = true;
+    readerThread->quit();
+    readerThread->wait();
+    abort = false;
+    mutex.unlock();
+}
+
+
+
+

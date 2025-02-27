@@ -1,11 +1,7 @@
 #include "reader.h"
 #include "Main/global.h"
 
-Reader::Reader(QObject *parent,
-               int id,
-               DataModel *dm,
-               ImageCache *imageCache)
-    : QThread(parent)
+Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 {
     this->dm = dm;
     metadata = new Metadata;
@@ -17,7 +13,6 @@ Reader::Reader(QObject *parent,
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
 
     thumb = new Thumb(dm, metadata, frameDecoder);
-
 
     bool isBlockingQueuedConnection = false;
     if (isBlockingQueuedConnection) {
@@ -34,95 +29,32 @@ Reader::Reader(QObject *parent,
     debugLog = false;
 }
 
-void Reader::read(const QModelIndex dmIdx,
-                  const QString filePath,
-                  const int instance,
-                  const bool isReadIcon)
+void Reader::stop()
 {
-    if (isRunning()) stop();
-    t.restart();
+    if (isDebug) qDebug() << "Reader::stop" << threadId;
+    mutex.lock();
+    abort = true;
+    readerThread->quit();
+    readerThread->wait();
     abort = false;
-    this->dmIdx = dmIdx;
-    fPath = filePath;
-    this->instance = instance;
-    this->isReadIcon = isReadIcon;
-    isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
-    status = Status::Success;
-    pending = true;     // set to false when processed in MetaRead::dispatch
-    loadedIcon = false;
-
-    QString fun = "Reader::read";
-    if (isDebug)
-    {
-        qDebug().noquote()
-            << fun.leftJustified(30)
-            << "id =" << QString::number(threadId).leftJustified(2, ' ')
-            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-            // << "status =" << statusText.at(status)
-            // << "isRunning =" << isRunning()
-            // << "instanceOk() =" << instanceOk()
-            << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
-            ;
-    }
-    // if (instanceOk())
-        start();
+    mutex.unlock();
 }
 
-void Reader::stop()
-/*
-    Reader uses BlockingQueuedConnections to update the datamodel and imagecache.  This
-    conflicts with using wait() - use an event loop instead.
-*/
+void Reader::abortProcessing()
 {
-    if (isDebug)
-    {
-        qDebug() << "Reader::stop commencing"
-                 << threadId
-                 << "isRunning =" << isRunning()
-            ;
-    }
-
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        /*
-        // crashing when rapidly change folders
-        mutex.lock();
-        abort = true;
-        mutex.unlock();
-        // BlockingQueuedConnections conflicts with wait()
-        QEventLoop loop;
-        connect(this, &Reader::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-        //wait();
-        */
-    }
-
-    status = Status::Ready;
-    pending = false;
-    // fPath = "";
-
-    // if (isDebug)
-    // {
-    //     qDebug() << "Reader::stop done"
-    //              << threadId
-    //              << "status =" << statusText.at(status)
-    //              << "isRunning =" << isRunning()
-    //         ;
-    // }
+    mutex.lock();
+    abort = true;
+    mutex.unlock();
 }
 
 inline bool Reader::instanceOk()
 {
     if (instance != dm->instance)
-    /*
+        /*
     qDebug() << "Reader::instanceOk"
              << "reader instance =" << instance
              << "datamodel instance =" << dm->instance;//*/
-    return instance == dm->instance;
-    // return instance == G::dmInstance;
+        return instance == dm->instance;
 }
 
 bool Reader::readMetadata()
@@ -142,7 +74,8 @@ bool Reader::readMetadata()
     // read metadata from file into metadata->m
     int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
-    bool isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
+    bool isMetaLoaded;
+    if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
 
     #ifdef TIMER
@@ -159,6 +92,7 @@ bool Reader::readMetadata()
     lengthThumb = metadata->m.lengthThumb;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    if (abort) return false;
 
     #ifdef TIMER
     t3 = t.restart();
@@ -202,10 +136,10 @@ void Reader::readIcon()
     QImage image;
 
     // pass embedded thumb offset and length in case datamodel not updated
-    thumb->presetOffset(offsetThumb, lengthThumb);
+    if (!abort) thumb->presetOffset(offsetThumb, lengthThumb);
 
     // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
+    if (!abort) loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
 
     #ifdef TIMER
     t4 = t.restart();
@@ -217,7 +151,7 @@ void Reader::readIcon()
     // if !G::renderVideoThumb then generic Video image returned from Thumb
     if (isVideo && G::renderVideoThumb) return;
 
-    if (loadedIcon) {
+    if (!abort && loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         emit setIcon(dmIdx, pm, loadedIcon, instance, "MetaRead::readIcon");
         if (!pm.isNull()) return;
@@ -239,46 +173,38 @@ void Reader::readIcon()
     }
 }
 
-void Reader::run()
+void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isReadIcon)
 {
-    readMetadata();
-    readIcon();
+    t.restart();
+    abort = false;
+    this->dmIdx = dmIdx;
+    fPath = filePath;
+    this->instance = instance;
+    this->isReadIcon = isReadIcon;
+    isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
+    status = Status::Success;
+    pending = true;     // set to false when processed in MetaRead::dispatch
+    loadedIcon = false;
 
-    #ifdef TIMER
-    t5 = t.restart();
-    msToRead = t2 + t3 + t4 + t5;
-
-    int dmRow = dmIdx.row();
-
-    /*
-    qDebug().noquote()
-        << "Reader::run"
-        << "row =" << QString::number(dmRow).leftJustified(6)
-        << "msToRead =" << QString::number(msToRead).leftJustified(8)
-        << "meta  =" << QString::number(t2).leftJustified(6)
-        << "meta dm =" << QString::number(t3).leftJustified(6)
-        << "icon =" << QString::number(t4).leftJustified(6)
-        << "icon dm =" << QString::number(t5).leftJustified(6)
-        << dm->index(dmRow, G::NameColumn).data().toString()
-        ;//*/
-
-    #endif
-
-    QString fun = "Reader::run emit done";
+    QString fun = "Reader::read";
     // if (isDebug)
-    int ms = t.elapsed();
-    if (ms > 100)
     {
         qDebug().noquote()
-        << QString::number(ms).leftJustified(10)
         << fun.leftJustified(30)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-        // << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
+        << "isGUI =" << G::isGuiThread()
+        // << "status =" << statusText.at(status)
+        // << "isRunning =" << isRunning()
+        // << "instanceOk() =" << instanceOk()
+        << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
 
+    if (!abort) readMetadata();
+    if (!abort) readIcon();
+
+    if (abort) return;
     emit done(threadId);
-    qApp->processEvents();
-    if (G::isLogger || G::isFlowLogger) G::log("Reader::run", "Finished");
+    if (G::isLogger || G::isFlowLogger) G::log("Reader::read", "Finished");
 }
