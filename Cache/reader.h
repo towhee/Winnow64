@@ -13,22 +13,16 @@
 
 // #define TIMER    // uncomment to time execution
 
-class Reader : public QThread
+class Reader : public QObject
 {
     Q_OBJECT
 public:
-    Reader(QObject *parent,
-                 int id,
-                 DataModel *dm,
-                 ImageCache *imageCache);
+    Reader(int id, DataModel *dm, ImageCache *imageCache);
     //~Reader() override;
 
-    void read(const QModelIndex dmIdx,
-              const QString filePath,
-              const int instance,
-              const bool isReadIcon);
     void stop();
 
+    QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
     int instance = 0;
     bool isReadIcon = true;
@@ -58,15 +52,16 @@ public:
         "MetaIconFailed"
     };
 
-protected:
-    void run() Q_DECL_OVERRIDE;
-
 signals:
     void addToDatamodel(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     // void addToImageCache(ImageMetadata m, int instance);
     void done(int threadId);
+
+public slots:
+    void read(QModelIndex dmIdx, QString filePath, int instance, bool isReadIcon);
+    void abortProcessing();
 
 private:
     QMutex mutex;

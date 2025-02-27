@@ -2529,7 +2529,8 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 
 QModelIndex DataModel::proxyIndexFromModelIndex(QModelIndex dmIdx)
 {
-    return sf->mapFromSource(dmIdx);
+    if (dmIdx.isValid()) return sf->mapFromSource(dmIdx);
+    else return QModelIndex();
 }
 
 int DataModel::proxyRowFromModelRow(int dmRow)

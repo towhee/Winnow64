@@ -492,7 +492,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on DataModel, Metadata, ThumbView, Filters, BuildFilters
     createFrameDecoder();       // dependent on DataModel
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
-    createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
+    createMetaRead();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
     createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
@@ -749,6 +749,11 @@ void MW::closeEvent(QCloseEvent *event)
 
     stop("MW::closeEvent");
 
+    // stop metaRead thread
+    metaRead->metaReadThread.quit();
+    metaRead->metaReadThread.wait();
+    // stop all readers
+    metaRead->stopReaders();
     // stop imageCache thread
     imageCache->imageCacheThread.quit();
     imageCache->imageCacheThread.wait();
@@ -2440,13 +2445,13 @@ bool MW::stop(QString src)
     G::t.restart();
     }
 
-    metaRead->stop();
+    // metaRead->stop();
     {
     if (isDebugStopping && G::isFlowLogger)
         G::log("MW::stop metaReadThread", QString::number(G::t.elapsed()) + " ms");
     if (isDebugStopping  && !G::isFlowLogger)
         qDebug() << "MW::stop" << "Stop metaReadThread:      "
-                 << "isRunning =" << (metaRead->isRunning() ? "true " : "false")
+                 << "isRunning =" << (metaRead->metaReadThread.isRunning() ? "true " : "false")
                  << G::t.elapsed() << "ms";
     }
     G::t.restart();
@@ -2804,7 +2809,8 @@ void MW::loadFolder(QString folderPath)
         imageView->isFirstImageNewInstance = true;
 
         // read metadata using MetaRead
-        metaRead->initialize();     // only when new instance / new primary folder
+        // metaRead->initialize();     // only when new instance / new primary folder
+        QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
     }
 
     // if there was a folder and file change
@@ -2901,7 +2907,11 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
         frameDecoder->clear();
         updateMetadataThreadRunStatus(true, true, "MW::load");
-        metaRead->setStartRow(sfRow, isFileSelectionChange, "MW::load");
+        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                  Q_ARG(int, sfRow),
+                                  Q_ARG(bool, isFileSelectionChange),
+                                  Q_ARG(QString, "setStartRow")
+                                  );
     }
     else if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");

@@ -303,7 +303,7 @@ void MW::createFrameDecoder()
     thumb = new Thumb(dm, metadata, frameDecoder);
 }
 
-void MW::createMDCache()
+void MW::createMetaRead()
 {
 /*
     When a new folder is selected the metadataReadThread is started to load all the
@@ -334,7 +334,7 @@ void MW::createMDCache()
     // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead
-    connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stop);
+    connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stopReaders);
 
     // update thumbView in case scrolling has occurred
     connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
@@ -363,6 +363,7 @@ void MW::createMDCache()
     connect(metaRead, &MetaRead::dispatchIsFinished,
             imageCache, &ImageCache::datamodelFolderCountChange);
 
+    metaRead->metaReadThread.start();
 }
 
 void MW::createImageCache()

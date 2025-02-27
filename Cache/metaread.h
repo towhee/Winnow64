@@ -12,23 +12,25 @@
 #include "Cache/reader.h"
 #include "Cache/imagecache.h"
 
-class MetaRead : public QThread
+class MetaRead : public QObject
 {
     Q_OBJECT
 
 public:
     MetaRead(QObject *parent,
-              DataModel *dm,
-              Metadata *metadata,
-              FrameDecoder *frameDecoder,
-              ImageCache *imageCache);
+             DataModel *dm,
+             Metadata *metadata,
+             FrameDecoder *frameDecoder,
+             ImageCache *imageCache);
     ~MetaRead() override;
+
+    QThread metaReadThread;       // Separate thread for MetaRead
 
     int readerCount;
     QVector<Reader*> reader;        // all the decoders
 
     void syncInstance();
-    bool stop();
+    void stopReaders();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
@@ -40,6 +42,8 @@ public:
 
     bool showProgressInStatusbar = true;
     bool isDebug = false;
+
+    void test();
 
 signals:
     void stopped(QString src);
@@ -64,17 +68,17 @@ signals:
 
 public slots:
     void initialize();
+    void dispatchReaders();
     void dispatch(int id);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
     void quitAfterTimeout();
 
-protected:
-    void run() Q_DECL_OVERRIDE;
+// protected:
+//     void run() Q_DECL_OVERRIDE;
 
 private:
     void read(int startRow = 0, QString src = "");// decoder
 
-    void dispatchReaders();
     void dispatchFinished(QString src);
     bool allMetaIconLoaded();
     void redo();
@@ -94,6 +98,11 @@ private:
     bool abort;
 
     QEventLoop runloop;
+
+    QVector<Reader*> readers;
+    QVector<QThread*> readerThreads;
+    QVector<bool> cycling;                  // all the decoders activity
+    bool allReadersCycling();
 
     DataModel *dm;
     Metadata *metadata;
@@ -125,12 +134,13 @@ private:
     //QList<int> toRead;  // to be removed
 
     int startRow = 0;
+    int prevStartRow = -1;
     int lastRow;
     int nextRow = 0;
     int a = 0;
     int b = -1;
     bool isAhead;
-    bool isNewStartRowWhileStillReading;
+    bool isNewStartRowWhileDispatching;
     QString src;
 
     QStringList err;
