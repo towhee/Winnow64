@@ -308,6 +308,8 @@ void DataModel::clearDataModel()
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
     isProcessing = false;
+    // reset sum used to estimate endImageCacheTargetRange
+    sumImageCacheMB = 0;
 }
 
 void DataModel::newInstance()
@@ -930,10 +932,23 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::TypeColumn), s);
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::SizeColumn), fileInfo.size());
+    quint32 bytes = fileInfo.size();
+    setData(index(row, G::SizeColumn), bytes);
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // temp until read metadata and calc size for QImage
     setData(index(row, G::CacheSizeColumn), fileInfo.size());
+    if (sumImageCacheMB < imageCacheMaxMB) {
+        sumImageCacheMB += static_cast<double>(bytes) / (1 << 18);
+        endImageCacheTargetRange = row;
+        /*
+        qDebug().noquote()
+             << "DataModel::addFileDataForRow"
+             << "row =" << row
+             << "imageCacheMaxMB" << imageCacheMaxMB
+             << "bytes =" << bytes
+             << "sum =" << sumImageCacheMB;
+        //*/
+    }
     setData(index(row, G::CompareColumn), false);
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
     setData(index(row, G::CreatedColumn), s);
@@ -2122,6 +2137,7 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
     if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentPrimaryFolderPath;
 
     if (first < 0 || last > sf->rowCount()) return false;
+
     for (int row = first; row <= last; ++row) {
         // ignore video
         if (sf->index(row, G::VideoColumn).data().toBool()) continue;

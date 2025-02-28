@@ -131,8 +131,10 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
-    int startImageCacheTargetRange;
+    int startImageCacheTargetRange = 0;
     int endImageCacheTargetRange;
+    int imageCacheMaxMB;
+    double sumImageCacheMB = 0;
 
     int hugeThreshold = G::maxIconChunk;
     int firstVisibleIcon;

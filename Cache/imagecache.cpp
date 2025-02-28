@@ -1284,6 +1284,7 @@ void ImageCache::initImageCache(int cacheMaxMB,
     targetFirst = 0;
     targetLast = 0;
     directionChangeThreshold = 3;
+    firstDispatchNewDM = true;
 
     if (isShowCacheStatus) {
         updateStatus("Clear", "ImageCache::initImageCache");
@@ -1411,26 +1412,6 @@ void ImageCache::cacheSizeChange()
     // start(QThread::LowestPriority);
 }
 
-void ImageCache::datamodelFolderCountChange(QString src)
-{
-    if (debugLog || G::isLogger || G::isFlowLogger)
-        log("datamodelFolderCountChange", "src = " + src);
-    QString fun = "ImageCache::datamodelFolderCountChange";
-    // if (debugCaching)
-    {
-        qDebug().noquote() << fun.leftJustified(col0Width, ' ')
-                           << "src =" << src
-                           << "isRunning =" << imageCacheThread.isRunning();
-    }
-    if (imageCacheThread.isRunning()) {
-        // Use signal-slot mechanism to ensure execution in ImageCache thread
-        QMetaObject::invokeMethod(this, "updateToCache", Qt::QueuedConnection);
-    }
-    else {
-        // start(QThread::LowestPriority);
-    }
-}
-
 void ImageCache::setCurrentPosition(QString fPath, QString src)
 {
 /*
@@ -1445,7 +1426,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     QString fun = "ImageCache::setCurrentPosition";
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow
@@ -1458,6 +1439,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     static int prevInstance = -1;
 
     if (prevRow == currRow && prevInstance == instance) {
+        qDebug() << fun << "prevRow == currRow && prevInstance == instance so return without caching";
         return;
     }
     prevRow = currRow;
@@ -1474,6 +1456,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     }
 
     if (isInitializing) {
+        qDebug() << fun << "initializing so return without caching";
         return;
     }
 
@@ -1488,6 +1471,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     }
 
     abort = false;
+    qDebug() << fun << "calling dispatch  isGUI =" << G::isGuiThread();
     dispatch();
 }
 
@@ -2009,7 +1993,7 @@ void ImageCache::fillCache(int id)
 void ImageCache::launchDecoders(QString src)
 {
     QString fun = "ImageCache::launchDecoders";
-    if (debugCaching)
+    // if (debugCaching)
     {
     qDebug().noquote() << fun.leftJustified(col0Width, ' ')
                        << "decoderCount =" << decoderCount
@@ -2040,7 +2024,7 @@ void ImageCache::launchDecoders(QString src)
                 ;
             log("launchDecoders launch:", msg);
         }
-        if (debugCaching)
+        // if (debugCaching)
         {
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
@@ -2065,6 +2049,7 @@ void ImageCache::dispatch()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
+    qDebug() << "ImageCache::dispatch0 isGUI =" << G::isGuiThread();
     if (debugCaching || G::isLogger || G::isFlowLogger) log("dispatch");
 
     // req'd?
@@ -2078,17 +2063,34 @@ void ImageCache::dispatch()
 
     abort = false;
 
-    if (!imageCacheThread.isRunning()) imageCacheThread.start();
+    if (!imageCacheThread.isRunning()) {
+        qDebug() << "ImageCache::dispatch imageCacheThread.start()";
+        imageCacheThread.start();
+    }
 
+    qDebug() << "ImageCache::dispatch3";
     // check available memory (another app may have used or released some memory)
     memChk();
 
+    qDebug() << "ImageCache::dispatch4";
     // reset target range
+    QElapsedTimer t;
+    t.start();
     // if (!abort)
-        updateToCache();
+    if (firstDispatchNewDM) {
+        firstDispatchNewDM = false;
+        targetFirst = 0;
+        targetLast = dm->endImageCacheTargetRange;
+        isForward = true;
+        for (int i = 0; i <= targetLast; i++) toCacheAppend(i);
+    }
+    else updateToCache();
 
+    qDebug() << "ImageCache::dispatch5" << t.elapsed() << "ms";
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;
+
+    qDebug() << "ImageCache::dispatch6";
 
     // signal MW cache status
     emit updateIsRunning(true, true);   // (isRunning, showCacheLabel)
