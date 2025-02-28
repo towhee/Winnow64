@@ -82,7 +82,6 @@ public slots:
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
-    void datamodelFolderCountChange(QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
     void refreshImageCache();
@@ -140,6 +139,7 @@ private:
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
     bool isShowCacheStatus;     // show in app status bar
+    bool firstDispatchNewDM;
 
     void launchDecoders(QString src);
     bool okToCache(int id, int sfRow);

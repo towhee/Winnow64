@@ -100,7 +100,7 @@ void ImageDecoder::decode(int row, int instance)
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
 
     QString fun = "ImageDecoder::decode";
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(50)

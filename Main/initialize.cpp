@@ -359,9 +359,6 @@ void MW::createMetaRead()
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
     // save time to read image metadata and icon to the datamodel
     connect(metaRead, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
-    // reset imagecache targets after folder added or removed from datamodel
-    connect(metaRead, &MetaRead::dispatchIsFinished,
-            imageCache, &ImageCache::datamodelFolderCountChange);
 
     metaRead->metaReadThread.start();
 }

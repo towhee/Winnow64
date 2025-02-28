@@ -3577,6 +3577,9 @@ void MW::setImageCacheParameters()
     bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
     emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
 
+    // also store in datamodel
+    dm->imageCacheMaxMB = cacheNetMB;
+
     // // set position in image cache
     // if (dm->currentFilePath.length() && G::useImageCache)
     //     imageCache->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
