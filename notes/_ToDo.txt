@@ -11,6 +11,8 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- Fix MW::ejectUsb(QString path)
+- Fix MW::ejectUsbFromMainMenu
 - Remove remember last folder option or fix
 - Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
 - Crash when close Winnow while MetaRead still working

@@ -217,7 +217,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(!isFullScreen());
-    rpt << "\n" << "dm->currentPrimaryFolderPath = " << G::s(dm->currentPrimaryFolderPath);
+    rpt << "\n" << "dm->primaryFolderPath = " << G::s(dm->primaryFolderPath());
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(dm->currentSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
