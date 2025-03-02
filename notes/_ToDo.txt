@@ -11,6 +11,7 @@ WHAT'S NEW
 - Folder multi-select
 
 BUGS / TO DO
+- Remove remember last folder option or fix
 - Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
 - Crash when close Winnow while MetaRead still working
 - /Users/roryhill/Temp/Photos_to_be_curated/2024/202410/2024-10-19_Linley Valley crashes

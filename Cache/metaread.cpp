@@ -121,7 +121,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         QString s = "row = " + QString::number(sfRow) +
                     " fileSelectionChanged = " + QVariant(fileSelectionChanged).toString() +
                     " src = " + src + " isRunning = " + running;
-        s += " dm->currentFolderPath = " + dm->currentPrimaryFolderPath;
         G::log(fun, s);
     }
 
@@ -185,7 +184,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "fileSelectionChanged =" << fileSelectionChanged
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
              << "G::iconChunkLoaded =" << G::iconChunkLoaded
-             << "folder =" << dm->currentPrimaryFolderPath
              << "isRunning =" << metaReadThread.isRunning()
              << "isDispatching =" << isDispatching
              << "isDone =" << isDone
@@ -276,7 +274,7 @@ void MetaRead::initialize()
 {
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MetaRead::initialize", dm->currentPrimaryFolderPath);
+        G::log("MetaRead::initialize", dm->primaryFolderPath());
     }
     if (isDebug)
     {
@@ -284,7 +282,7 @@ void MetaRead::initialize()
         qDebug().noquote()
             << "\n"
             << fun.leftJustified(col0Width)
-            << dm->currentPrimaryFolderPath;
+            ;
     }
 
     abort = true;
@@ -971,7 +969,6 @@ void MetaRead::dispatch(int id)
                         << fun1.leftJustified(col0Width)
                         << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
                         << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                        << dm->currentPrimaryFolderPath
                         //<< "toRead =" << toRead
                         << "pending =" << pending()
                         ;

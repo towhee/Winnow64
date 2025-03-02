@@ -48,7 +48,7 @@ PROGRAM PIPELINE
           FSTree::select
         - MW::folderSelectionChange             // prep based on mouse click modifier
         - MW::stop                              // halt prior loading
-        - MW::reset                             // reset all parameters
+        - MW::reset                             // reset all parameters, new instance
         - MW::clearDataModel
         - DM::newInstance                       // if new primary folder
         - DM::enqueueFolderSelection
@@ -2005,7 +2005,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     If the source is FSTree then the op is defined by the mouse click modifier
     - NoModifier: Add folder and resetDataModel = true
     - Ctrl/cmd:   Toggle folder Add or Remove
-    - Alt/opt:    recurse = true
+    - Alt/opt:    recurse subfolders = true
 
     op = operation to perform:
     - Add
@@ -2014,7 +2014,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 */
     if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
     QString fun = "MW::folderSelectionChange";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         QString msg = "op = " + op +
                 " recurse = " + QVariant(recurse).toString() +
@@ -2026,34 +2026,25 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
-    // rgh when is this req'd?
-    if (folderPath == "") folderPath = dm->currentPrimaryFolderPath;
-
     // save the current datamodel selection before removing a folder from datamodel
     if (op == "Remove") sel->save(fun);
 
-    // folder selection cleared and new folder selected, datamodel to be cleared and reset
+    // folder selection cleared and new folder selected
     if (resetDataModel) {
-        // // deal with filters
-        // if (filters->isAnyFilter()) {
-        //     G::popUp->showPopup("Filters cleared");
         dm->currentPrimaryFolderPath = folderPath;
+        // stop existing processes
         stop(fun + " reset DataModel");
-        // should only reset here
+        // should only reset here, new datamodel instance
         reset(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
-        // }
-        // loadNewInstance(folderPath);
     }
     else {
         // stop building but do not clear filters
         buildFilters->abortIfRunning();
     }
 
-    // figure out folderWatcher.startWatching(G::currRootFolder, 1000);
-    // qDebug().noquote() << fun << folderPath;
-
+    // put folder in datamodel queue to add or remove
     dm->enqueueFolderSelection(folderPath, op, recurse);
 }
 
@@ -2283,7 +2274,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // Remember last folder (showWindow not completed when initiated)
-    if (dm->instance == 0 && dm->currentPrimaryFolderPath == lastDir) {
+    if (dm->instance == 0 && dm->primaryFolderPath() == lastDir) {
         fsTree->scrollToCurrent();
     }
 
@@ -2408,105 +2399,32 @@ bool MW::stop(QString src)
              << "thread =" << QThread::currentThreadId()
              << "G::currRootFolder =" << dm->currentPrimaryFolderPath;  // rgh ??
     //*/
-    // dm->newInstance();
-    QString oldFolder = dm->currentPrimaryFolderPath;  // rgh req'd?
 
-    // show qDebug info
-    bool isDebugStopping = false;
-
-    // measure performance
-    QElapsedTimer tStop;
-    tStop.restart();
-    G::t.restart();
-
-    // // stop slideshow
+    // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
-    // stop other threads
     videoView->stop();
-    {
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop videoView", QString::number(G::t.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop videoView:           "
-                 << G::t.elapsed() << "ms";
-        G::t.restart();
-    }
 
     buildFilters->abortIfRunning();
     // buildFilters->stop();
-    {
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop buildFilters", QString::number(G::t.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop buildFilters:        "
-                 << "isRunning =" << (buildFilters->isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
-    G::t.restart();
-    }
 
     // metaRead->stop();
-    {
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop metaReadThread", QString::number(G::t.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop metaReadThread:      "
-                 << "isRunning =" << (metaRead->metaReadThread.isRunning() ? "true " : "false")
-                 << G::t.elapsed() << "ms";
-    }
-    G::t.restart();
 
     // emit abortImageCache();
-    // {
-    // if (isDebugStopping && G::isFlowLogger)
-    //     G::log("MW::stop imageCacheThread", QString::number(G::t.elapsed()) + " ms");
-    // if (isDebugStopping  && !G::isFlowLogger)
-    //     qDebug() << "MW::stop" << "Stop imageCacheThread:    "
-    //              << "isRunning =" << (imageCache->isRunning() ? "true " : "false")
-    //              << G::t.elapsed() << "ms";
-
-    // G::t.restart();
-    // }
 
     frameDecoder->stop();
-    {
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop frameDecoder", QString::number(G::t.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop frameDecoder:        "
-                 << "                 "
-                 << G::t.elapsed() << "ms";
-
-    // total stop time
-    if (isDebugStopping && G::isFlowLogger)
-        G::log("MW::stop total", QString::number(tStop.elapsed()) + " ms");
-    if (isDebugStopping  && !G::isFlowLogger)
-        qDebug() << "MW::stop" << "Stop total:               "
-                 << "                 "
-                 << tStop.elapsed() << "ms";
-    }
-
-    if (src == "Escape key") {
-        setCentralMessage("Image loading has been aborted for\n" + oldFolder);
-        // if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
-    }
 
     dm->abortLoad();
 
-    // QMutexLocker locker(&G::gMutex);
     G::stop = false;
     G::removingFolderFromDM = false;
-    // G::waitCondition.wakeAll(); // Wake up the waiting thread
-
-    {
-        if (G::isFlowLogger) G::log("MW::stop DONE", "src = " + src);
-        // if (isDebugStopping && !G::isFlowLogger)
-        // {
-        //     qDebug() << "MW::stop" << "Stop DONE src =" << src;
-        // }
-    }
 
     setCentralMessage("");
+
+    if (src == "Escape key") {
+        setCentralMessage("Image loading has been aborted.");
+        if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
+    }
 
     return true;
 }
@@ -2515,17 +2433,10 @@ bool MW::reset(QString src)
 {
 /*
     Resets everything prior to an instance / new folder heirarchy change.  Should only
-    be called from folderSelectionChange and resetDataModel == true.
+    be called from folderSelectionChange if resetDataModel == true.
 */
 
-    // if (!G::stop || G::removingFolderFromDM) {
-    //     buildFilters->abortIfRunning();
-    //     return false;
-    // }
-
     if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
-
-    // qDebug() << "MW::reset src =" << src;
 
     // confirm folder exists and is readable, report if not and do not process
     // rgh redo for multi-folders
@@ -2581,9 +2492,6 @@ bool MW::reset(QString src)
     // used by updateStatus
     isCurrentFolderOkay = false;
     pickMemSize = "";
-
-    // update menu
-    enableEjectUsbMenu(dm->currentPrimaryFolderPath);  // rgh is this what we want
 
     // update metadata read status light
     updateMetadataThreadRunStatus(true, true, true, "MW::reset");
@@ -2759,6 +2667,89 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     return chunkSizeChanged;
 }
 
+void MW::loadChanged(const QString folderPath, const QString op)
+{
+/*
+    Signaled from DataModel::processNextFolder
+*/
+    QString fun = "MW::loadChanged";
+    QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
+                  " folderPath = " + folderPath;
+    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    /*
+    qDebug().noquote()
+            << fun
+            << "op =" << op
+            << "instance =" << instance
+            << "dm->instance =" << dm->instance
+            << "dm->folderList.count = =" << dm->folderList.count()
+            << "\n\tfolderPath =             " << folderPath
+            << "\n\tdm->currentFilePath =    " << dm->currentFilePath
+            << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
+               ;//*/
+
+    if (dm->folderList.isEmpty()) return;
+
+    isCurrentFolderOkay = true;
+    bool isPrimaryFolder = folderPath == dm->primaryFolderPath();
+
+    // format pickMemSize as bytes, KB, MB or GB
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+
+    updateStatus(true, "", fun);
+
+    // set icon range and G::iconChunkLoaded
+    dm->setIconRange(dm->currentSfRow);
+
+    // assign current image (datamodel current index)
+    if (folderAndFileChangePath.isEmpty()) {
+        if (dm->currentFilePath.isEmpty()) dm->setCurrent(dm->index(0, 0), instance);
+        else dm->setCurrent(dm->currentFilePath, dm->instance);
+    }
+    else {
+        dm->setCurrent(folderAndFileChangePath, dm->instance);
+        folderAndFileChangePath = "";
+    }
+
+    if (op == "Remove") {
+        /*
+        qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
+                 << dm->folderList.count() << dm->folderList;//*/
+        // update bookmarks if only one folder selected
+        if (dm->folderList.count() == 1) {
+            // new primary folder
+            QString newPrimaryFolder = dm->folderList.at(0);
+            qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
+            QSignalBlocker bookmarkBlocker(bookmarks);
+            bookmarks->select(newPrimaryFolder);
+            bookmarkBlocker.unblock();
+        }
+
+        sel->select(dm->currentSfRow);
+
+        if (dm->isAllMetadataAttempted()) {
+            G::allMetadataLoaded = true;
+            loadDone();
+        }
+        // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
+        return;
+    }
+
+    if (op == "Add") {
+        if (dm->rowCount()) {
+            loadFolder(folderPath);
+        }
+        else if (dm->isQueueEmpty()) {
+            updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
+            setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
+        }
+        return;
+    }
+    // G::popUp->reset();  // pipeline popup
+    // G::popUp->showPopup("MW::loadChanged done", 0, true, 1);
+    // qApp->processEvents();
+}
+
 void MW::loadFolder(QString folderPath)
 /*
     MW::loadFolder
@@ -2924,89 +2915,6 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     }
 }
 
-void MW::loadChanged(const QString folderPath, const QString op)
-{
-/*
-    Signaled from DataModel::processNextFolder
-*/
-    QString fun = "MW::loadChanged";
-    QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
-                  " folderPath = " + folderPath;
-    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
-    /*
-    qDebug().noquote()
-            << fun
-            << "op =" << op
-            << "instance =" << instance
-            << "dm->instance =" << dm->instance
-            << "dm->folderList.count = =" << dm->folderList.count()
-            << "\n\tfolderPath =             " << folderPath
-            << "\n\tdm->currentFilePath =    " << dm->currentFilePath
-            << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
-               ;//*/
-
-    if (dm->folderList.isEmpty()) return;
-
-    isCurrentFolderOkay = true;
-    bool isPrimaryFolder = folderPath == dm->currentPrimaryFolderPath;
-
-    // format pickMemSize as bytes, KB, MB or GB
-    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-
-    updateStatus(true, "", fun);
-
-    // set icon range and G::iconChunkLoaded
-    dm->setIconRange(dm->currentSfRow);
-
-    // assign current image (datamodel current index)
-    if (folderAndFileChangePath.isEmpty()) {
-        if (dm->currentFilePath.isEmpty()) dm->setCurrent(dm->index(0, 0), instance);
-        else dm->setCurrent(dm->currentFilePath, dm->instance);
-    }
-    else {
-        dm->setCurrent(folderAndFileChangePath, dm->instance);
-        folderAndFileChangePath = "";
-    }
-
-    if (op == "Remove") {
-        /*
-        qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
-                 << dm->folderList.count() << dm->folderList;//*/
-        // update bookmarks if only one folder selected
-        if (dm->folderList.count() == 1) {
-            // new primary folder
-            QString newPrimaryFolder = dm->folderList.at(0);
-            qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
-            QSignalBlocker bookmarkBlocker(bookmarks);
-            bookmarks->select(newPrimaryFolder);
-            bookmarkBlocker.unblock();
-        }
-
-        sel->select(dm->currentSfRow);
-
-        if (dm->isAllMetadataAttempted()) {
-            G::allMetadataLoaded = true;
-            loadDone();
-        }
-        // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
-        return;
-    }
-
-    if (op == "Add") {
-        if (dm->rowCount()) {
-            loadFolder(folderPath);
-        }
-        else if (dm->isQueueEmpty()) {
-            updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
-            setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
-        }
-        return;
-    }
-    // G::popUp->reset();  // pipeline popup
-    // G::popUp->showPopup("MW::loadChanged done", 0, true, 1);
-    // qApp->processEvents();
-}
-
 void MW::loadDone()
 {
 /*
@@ -3073,10 +2981,12 @@ void MW::loadDone()
     }
 
     // hide metadata read progress
-    if (G::showProgress == G::ShowProgress::MetaCache) {
-        isShowCacheProgressBar = false;
-        progressLabel->setVisible(false);
-    }
+    QTimer::singleShot(2000, this, [this]() {
+        cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+    });    // if (G::showProgress == G::ShowProgress::MetaCache) {
+    //     isShowCacheProgressBar = false;
+    //     progressLabel->setVisible(false);
+    // // }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,

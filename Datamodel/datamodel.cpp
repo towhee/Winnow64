@@ -750,6 +750,13 @@ void DataModel::removeFolder(const QString &folderPath)
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
+QString DataModel::primaryFolderPath()
+{
+    if (G::isLogger) G::log("DataModel::primaryFolderPath");
+    if (folderList.isEmpty()) return "";
+    return folderList.at(0);
+}
+
 // END MULTI-SELECT FOLDERS
 
 bool DataModel::contains(QString &path)
@@ -940,7 +947,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), bytes);
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // temp until read metadata and calc size for QImage
-    setData(index(row, G::CacheSizeColumn), fileInfo.size());
+    setData(index(row, G::CacheSizeColumn), bytes);
     if (sumImageCacheMB < imageCacheMaxMB) {
         if (!metadata->videoFormats.contains(ext)) {
             sumImageCacheMB += static_cast<double>(bytes) / (1 << 18);
@@ -952,7 +959,10 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
              << "row =" << row
              << "imageCacheMaxMB" << imageCacheMaxMB
              << "bytes =" << bytes
-             << "sum =" << sumImageCacheMB;
+             << "MB =" << static_cast<double>(bytes) / (1 << 18)
+             << "sum =" << sumImageCacheMB
+             << "endImageCacheTargetRange =" << endImageCacheTargetRange
+              ;
         //*/
     }
     setData(index(row, G::CompareColumn), false);
@@ -2357,6 +2367,13 @@ QString DataModel::pathFromProxyRow(int sfRow)
     return sf->index(sfRow,0).data(G::PathRole).toString();
 }
 
+QString DataModel::folderPathFromProxyRow(int sfRow)
+{
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
+    return QDir(fPath).absolutePath();
+}
+
 void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
@@ -2923,7 +2940,7 @@ QString DataModel::diagnosticsForCurrentRow()
 void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
 {
     if (G::isLogger) G::log("DataModel::getDiagnosticsForRow");
-    if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << folderPathFromProxyRow(row);
 
     if (rowCount() == 0) {
         G::popUp->showPopup("Empty folder or no folder selected");
