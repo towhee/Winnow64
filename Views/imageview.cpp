@@ -156,7 +156,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
@@ -260,7 +260,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
             pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
             isLoaded = true;
-            // if (isDebug)
+            if (isDebug)
                 qDebug() << "ImageView::loadImage"
                          << "w =" << pmItem->pixmap().width()
                          << "h =" << pmItem->pixmap().height()
@@ -268,7 +268,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                          << fPath;
     }
     else {
-        // if (isDebug)
+        if (isDebug)
         qDebug() << "ImageView::loadImage isCached = false";
         // report why no image cached (chk range in case filtering has just occurred)
         // if (icd->cacheItemList.count() > dmRow) {

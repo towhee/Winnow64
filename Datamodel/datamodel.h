@@ -81,13 +81,13 @@ public:
     bool subFolderImagesLoaded = false;
     bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
-    bool isAllMetadataAttempted();
+    // bool isAllMetadataAttempted();
     bool isAllMetadataLoaded();
     QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
     bool isAllIconsLoaded();
-    bool isAllIconChunkLoaded(int first, int last);
+    // bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
     bool isIconRangeLoaded();
     void setIconRange(int sfRow);
@@ -110,7 +110,7 @@ public:
     void removeFolder(const QString &folderPath);
 
     QMutex mutex;
-    bool isProcessing = false;
+    bool isProcessingFolders = false;
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
@@ -211,6 +211,8 @@ public slots:
     void searchStringChange(QString searchString);
     void processNextFolder();
     void imageCacheWaiting(int sfRow);
+    bool isAllMetadataAttempted();
+    bool isAllIconChunkLoaded(int first, int last);
 
 private slots:
 

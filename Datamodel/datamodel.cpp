@@ -307,7 +307,7 @@ void DataModel::clearDataModel()
     // reset missing thumb (jpg/tiff)
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
-    isProcessing = false;
+    isProcessingFolders = false;
     // reset sum used to estimate endImageCacheTargetRange
     sumImageCacheMB = 0;
 }
@@ -525,8 +525,8 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
     }
 
     // If not already processing, start the processing
-    if (!isProcessing) {
-        isProcessing = true;
+    if (!isProcessingFolders) {
+        isProcessingFolders = true;
         processNextFolder();
     }
 }
@@ -541,7 +541,7 @@ void DataModel::processNextFolder()
 */
     // QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
-        isProcessing = false;
+        isProcessingFolders = false;
         return;
     }
 
@@ -588,10 +588,13 @@ void DataModel::addFolder(const QString &folderPath)
     // QString msg = "Finding all image files...";
     // G::popUp->showPopup(msg, 0, true, 1);   // pipeline popup
 
+    G::allMetadataLoaded = false;
+    G::iconChunkLoaded = false;
+
     // control
     QMutexLocker locker(&mutex);
     abortLoadingModel = false;
-    currentPrimaryFolderPath = folderPath;
+
     folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
@@ -705,6 +708,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
+        currentPrimaryFolderPath = folderPath;
         setCurrent(index(0, 0), instance);
     }
 
@@ -938,7 +942,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // temp until read metadata and calc size for QImage
     setData(index(row, G::CacheSizeColumn), fileInfo.size());
     if (sumImageCacheMB < imageCacheMaxMB) {
-        sumImageCacheMB += static_cast<double>(bytes) / (1 << 18);
+        if (!metadata->videoFormats.contains(ext)) {
+            sumImageCacheMB += static_cast<double>(bytes) / (1 << 18);
+        }
         endImageCacheTargetRange = row;
         /*
         qDebug().noquote()
@@ -1342,11 +1348,11 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
 
 void DataModel::imageCacheWaiting(int sfRow)
 {
-    qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
+    // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
     int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
     imageCacheWaitingForRow = dmRow;
     if (metadataLoaded(dmRow)) {
-        qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
+        // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
         imageCacheWaitingForRow = -1;
         emit rowLoaded();
     }
