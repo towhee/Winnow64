@@ -396,7 +396,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
     // debug() << imageCache->decoders[0]->isIdle();
-    qDebug() << metaRead->metaReadThread.isRunning();
+    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

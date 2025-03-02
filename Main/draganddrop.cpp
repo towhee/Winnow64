@@ -63,7 +63,7 @@ void MW::handleDrop(QString fPath)
     if (G::isLogger) G::log("MW::handleDrop");
     QFileInfo info(fPath);
     QString incoming = info.dir().absolutePath();
-    if (incoming == dm->currentPrimaryFolderPath) {
+    if (dm->folderList.contains(incoming)) {
         QString ext = info.suffix().toLower();
         if (metadata->supportedFormats.contains(ext)) {
             sel->setCurrentPath(fPath);

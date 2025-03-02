@@ -96,6 +96,7 @@ public:
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath);
     QString pathFromProxyRow(int sfRow);
+    QString folderPathFromProxyRow(int sfRow);
     void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();
@@ -190,6 +191,7 @@ public slots:
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m, QString src);
+    QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance, qint64 duration);

@@ -2056,7 +2056,7 @@ void ImageCache::dispatch()
 
     // reset target range
     // if (!abort)
-    firstDispatchNewDM = false;
+    // firstDispatchNewDM = false;
     if (firstDispatchNewDM) {
         firstDispatchNewDM = false;
         targetFirst = 0;
