@@ -2252,7 +2252,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        // /*
+        /*
         qDebug() << "\nMW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
@@ -2809,7 +2809,7 @@ void MW::loadFolder(QString folderPath)
         imageView->isFirstImageNewInstance = true;
 
         // read metadata using MetaRead
-        // metaRead->initialize();     // only when new instance / new primary folder
+        // only when new instance / new primary folder
         QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
     }
 
@@ -2855,7 +2855,13 @@ void MW::loadFolder(QString folderPath)
     filters->loadingDataModel(false);   // isLoaded = false
 
     // set selection and current index, start metaReadThread
-    sel->select(dm->currentSfRow);
+    qDebug() << fun << folderPath << dm->currentPrimaryFolderPath;
+    if (folderPath == dm->currentPrimaryFolderPath) {
+        sel->select(dm->currentSfRow);
+    }
+    else {
+        load(0, false, "MW::loadFolder (not primary folder)");
+    }
 
     bookmarkBlocker.unblock();
 }
@@ -2878,9 +2884,6 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // G::popUp->showPopup("MW::load", 0, true, 1);
     // qApp->processEvents();
 
-    // set icon range and G::iconChunkLoaded
-    dm->setIconRange(sfRow);
-
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::load", "row = " + QString::number(sfRow)
@@ -2889,7 +2892,10 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
         + " src = " + src);
     }
 
-    // /*
+    // set icon range and G::iconChunkLoaded
+    dm->setIconRange(sfRow);
+
+    /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2942,6 +2948,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
     if (dm->folderList.isEmpty()) return;
 
     isCurrentFolderOkay = true;
+    bool isPrimaryFolder = folderPath == dm->currentPrimaryFolderPath;
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -3019,7 +3026,7 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    qDebug() << src;
+    // qDebug() << src;
     // if (dm->isAllMetadataAttempted()) {
     //     G::allMetadataLoaded = true;
     // }
@@ -3342,7 +3349,7 @@ void MW::updateImageCacheStatus(QString instruction,
         for (int i = 0; i < rows; ++i) {
             if (dm->sf->index(i, G::IsCachedColumn).data().toBool())
                 cacheProgressBar->updateImageCacheProgress(i, i, rows,
-                                  cacheProgressBar->imageCacheColorGradient);
+                                  cacheProgressBar->imageCacheGradient);
         }
 
         // cursor

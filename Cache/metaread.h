@@ -146,6 +146,7 @@ private:
     QStringList err;
 
     bool debugLog;
+    int col0Width = 40;
     QString msElapsed();
 
     QElapsedTimer t;

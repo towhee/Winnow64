@@ -22,27 +22,17 @@ public:
     void recoverProgressState();
     void setMetaProgressStyle(bool onTopOfCache);
 
-    int meta = G::backgroundShade + 50;
-
-    QColor progressCurrentColor = QColor(158,200,158);           // Light green
-    // QColor progressBgColor = QColor(30,30,30);                // Dark gray
-    QColor progressBgColor = QColor(150,150,150);                // Light gray
-    QColor progressAppBgColor = QColor(85,85,85);                // Darker gray
-    QColor progressAddFileInfoColor = QColor(85,100,115);        // Slate blue
-    QColor progressAddMetadataColor = QColor(100,100,150);       // Purple
-    QColor progressBuildFiltersColor = QColor(75,75,125);        // Darker purple
-    QColor progressTargetColor = QColor(125,125,125);            // Gray
-    QColor progressImageCacheColor = QColor(108,150,108);        // Green
-    // QColor progressMetaReadCacheColor = G::appleBlue;
-    // QColor progressMetaReadCacheColor = QColor(meta,meta,meta);
-    // QColor progressMetaReadCacheColor = QColor(Qt::red);
-    QColor progressMetaReadCacheColor = QColor(Qt::yellow);   // Dark green
+    QColor cursorColor;
+    QColor bgColor;
+    QColor targetColor;
+    QColor imageCacheColor;
+    QColor metaReadCacheColor;
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;
-    QLinearGradient metaReadColorGradient;
-    QLinearGradient imageCacheColorGradient;
-    QLinearGradient currentColorGradient;
+    QLinearGradient metaReadGradient;
+    QLinearGradient imageCacheGradient;
+    QLinearGradient cursorGradient;
     QLinearGradient targetColorGradient;
 
 public slots:

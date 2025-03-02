@@ -31,7 +31,8 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
 void Reader::stop()
 {
-    if (isDebug) qDebug() << "Reader::stop" << threadId;
+    QString fun = "Reader::stop";
+    if (isDebug) qDebug() << fun.leftJustified(col0Width) << threadId;
     mutex.lock();
     abort = true;
     readerThread->quit();
@@ -63,7 +64,7 @@ bool Reader::readMetadata()
     if (isDebug)
     {
         qDebug().noquote()
-        << fun.leftJustified(30)
+        << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
         << "isGUI" << G::isGuiThread()
@@ -105,7 +106,7 @@ bool Reader::readMetadata()
         if (isDebug)
         {
             qDebug().noquote()
-            << fun.leftJustified(30)
+            << fun.leftJustified(col0Width)
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
             << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
             << msg
@@ -122,7 +123,7 @@ void Reader::readIcon()
     if (isDebug)
     {
         qDebug().noquote()
-        << fun.leftJustified(30)
+        << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
@@ -166,7 +167,7 @@ void Reader::readIcon()
     if (isDebug)
     {
         qDebug().noquote()
-        << fun.leftJustified(30)
+        << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << msg
             ;
@@ -187,10 +188,10 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
     loadedIcon = false;
 
     QString fun = "Reader::read";
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
-        << fun.leftJustified(30)
+        << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
         << "isGUI =" << G::isGuiThread()
@@ -206,5 +207,5 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
 
     if (abort) return;
     emit done(threadId);
-    if (G::isLogger || G::isFlowLogger) G::log("Reader::read", "Finished");
+    if (G::isLogger) G::log("Reader::read", "Finished");
 }
