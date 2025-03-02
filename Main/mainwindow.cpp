@@ -2031,7 +2031,6 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 
     // folder selection cleared and new folder selected
     if (resetDataModel) {
-        dm->currentPrimaryFolderPath = folderPath;
         // stop existing processes
         stop(fun + " reset DataModel");
         // should only reset here, new datamodel instance
@@ -2380,7 +2379,7 @@ bool MW::stop(QString src)
     // rgh how refer to what we are stopping when multi folders may be in datamodel
     // just use dm->currentPrimaryFolderPath ?
     if (G::isLogger || G::isFlowLogger)
-        G::log("MW::stop", "src = " + src + " terminating folder " + dm->currentPrimaryFolderPath);
+        G::log("MW::stop", "src = " + src);
 
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
@@ -2440,13 +2439,13 @@ bool MW::reset(QString src)
 
     // confirm folder exists and is readable, report if not and do not process
     // rgh redo for multi-folders
-    if (!isFolderValid(dm->currentPrimaryFolderPath, true /*report*/, false /*isRemembered*/)) {
-        stop("Invalid folder");
-        setWindowTitle(winnowWithVersion);
-        if (G::isLogger)
-            if (G::isFileLogger) Utilities::log("MW::reset", "Invalid folder " + dm->currentPrimaryFolderPath);
-        return false;
-    }
+    // if (!isFolderValid(dm->currentPrimaryFolderPath, true /*report*/, false /*isRemembered*/)) {
+    //     stop("Invalid folder");
+    //     setWindowTitle(winnowWithVersion);
+    //     if (G::isLogger)
+    //         if (G::isFileLogger) Utilities::log("MW::reset", "Invalid folder " + dm->currentPrimaryFolderPath);
+    //     return false;
+    // }
 
     // block repeated clicks to folders or bookmarks during reset.
     QSignalBlocker bookmarkBlocker(bookmarks);
@@ -2846,8 +2845,8 @@ void MW::loadFolder(QString folderPath)
     filters->loadingDataModel(false);   // isLoaded = false
 
     // set selection and current index, start metaReadThread
-    qDebug() << fun << folderPath << dm->currentPrimaryFolderPath;
-    if (folderPath == dm->currentPrimaryFolderPath) {
+    // qDebug() << fun << folderPath << dm->primaryFolderPath();
+    if (folderPath == dm->primaryFolderPath()) {
         sel->select(dm->currentSfRow);
     }
     else {
@@ -2929,8 +2928,7 @@ void MW::loadDone()
     if (G::isLogger || G::isFlowLogger)
     {
         QString msg = QString::number(testTime.elapsed()) + " ms " +
-                      QString::number(dm->rowCount()) + " images from " +
-                      dm->currentPrimaryFolderPath;
+                      QString::number(dm->rowCount()) + " images";
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
@@ -4634,7 +4632,7 @@ void MW::ingest()
             TokenDlg, allowing the user to automate the construction of the entire destination
             file path.
 
-    3. Ingest (class)
+    3.  Ingest (class)
 
         Ingest duplicates the actual ingest process that runs in the IngestDlg, but runs in a
         separate thread after the IngestDlg closes.  Progress is updated in progressBar at the
@@ -4665,7 +4663,7 @@ void MW::ingest()
                 ;  //*/
 
     // what we want ie dm->currentPrimaryFolderPath
-    if (prevSourceFolder != dm->currentPrimaryFolderPath) baseFolderDescription = "";
+    if (prevSourceFolder != dm->primaryFolderPath()) baseFolderDescription = "";
 
     QString folderPath;        // req'd by backgroundIngest
     QString folderPath2;       // req'd by backgroundIngest
@@ -4794,7 +4792,7 @@ void MW::ingest()
             G::isRunningBackgroundIngest = true;
         }
 
-        prevSourceFolder = dm->currentPrimaryFolderPath;    // rgh what we want?
+        prevSourceFolder = dm->primaryFolderPath();    // rgh what we want?
         /*
         qDebug() << "MW::ingest"
                  << "gotoIngestFolder =" << gotoIngestFolder
@@ -4805,7 +4803,6 @@ void MW::ingest()
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
             fsTree->select(lastIngestLocation);
-            // folderSelectionChange();
             return;
         }
 
@@ -4833,14 +4830,16 @@ void MW::ejectUsb(QString path)
 /*
     If the current folder is on the drive to be ejected, attempts to read subsequent
     files will cause a crash. This is avoided by stopping any further activity in the
-    metadataReadThread and imageCacheThread, preventing any file reading attempts to a
+    metaReadThread and imageCacheThread, preventing any file reading attempts to a
     non-existent drive.
 */
     if (G::isLogger) G::log("MW::ejectUsb");
 
     // if current folder is on the USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
-    QStorageInfo currentDrive(dm->currentPrimaryFolderPath); // rgh this what we want?
+    QString dummy;  // place holder until fix
+    QStorageInfo currentDrive(dummy); // rgh this what we want?
+    // QStorageInfo currentDrive(dm->currentPrimaryFolderPath); // rgh this what we want?
     bool ejectDriveIsCurrent = currentDrive.rootPath() == ejectDrive.rootPath();
     // /*
     qDebug() << "MW::ejectUsb"
@@ -4896,7 +4895,7 @@ void MW::ejectUsbFromMainMenu()
 {
     if (G::isLogger) G::log("MW::ejectUsbFromMainMenu");
     // rgh chk and fix this
-    ejectUsb(dm->currentPrimaryFolderPath);
+    // ejectUsb(dm->currentPrimaryFolderPath);
 }
 
 void MW::ejectUsbFromContextMenu()

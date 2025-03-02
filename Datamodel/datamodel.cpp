@@ -708,7 +708,6 @@ void DataModel::addFolder(const QString &folderPath)
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
-        currentPrimaryFolderPath = folderPath;
         setCurrent(index(0, 0), instance);
     }
 
@@ -903,7 +902,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
         qDebug() << "DataModel::addFileDataForRow"
                           << "instance =" << instance
                           << "row =" << row
-                          << currentPrimaryFolderPath
+                          << fileInfo.filePath()
                              ;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
@@ -987,8 +986,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 bool DataModel::updateFileData(QFileInfo fileInfo)
 {
     if (G::isLogger) G::log("DataModel::updateFileData");
-    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentPrimaryFolderPath;
     QString fPath = fileInfo.filePath();
+    // qDebug() << "DataModel::updateFileData" << "Instance =" << instance << fPath;
     if (!fPathRow.contains(fPath)) return false;
     int row = fPathRow[fPath];
     if (!index(row,0).isValid()) return false;
@@ -1031,7 +1030,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
                           << "row =" << row
-                          << currentPrimaryFolderPath;
+                          << pathFromProxyRow(sfRow);
 
     // QMutexLocker hangs if tiff file in the first folder selected after start program
     // static int counter = 0;
@@ -1184,7 +1183,7 @@ void DataModel::addAllMetadata()
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "DataModel::addAllMetadata";
     if (isDebug) {
-        qDebug() << "DataModel::addAllMetadata" << "instance =" << instance << currentPrimaryFolderPath;
+        qDebug() << "DataModel::addAllMetadata" << "instance =" << instance;
     }
 //    G::t.restart();
 
@@ -1247,8 +1246,8 @@ bool DataModel::readMetadataForItem(int row, int instance)
     if (G::isLogger) G::log(fun, index(row, 0).data(G::PathRole).toString());
     if (isDebug) {
         qDebug() << fun << "instance =" << instance
-                          << "row =" << row
-                          << currentPrimaryFolderPath;
+                 << "row =" << row
+                 << pathFromProxyRow(row);
     }
 
     // might be called from previous folder during folder change
@@ -1308,7 +1307,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::PathRole).toString());
     if (isDebug) qDebug() << fun << "instance =" << instance
                           << "row =" << sfRow
-                          << currentPrimaryFolderPath;
+                          << pathFromProxyRow(sfRow);
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
@@ -1399,7 +1398,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (G::stop) return false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
-                          << currentPrimaryFolderPath;
+                          << pathFromProxyRow(m.row);
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
@@ -1620,7 +1619,7 @@ bool DataModel::metadataLoaded(int dmRow)
     if (G::isLogger) G::log("DataModel::metadataLoaded");
     if (isDebug) qDebug() << "DataModel::metadataLoaded" << "instance =" << instance
                           << "row =" << dmRow
-                          << currentPrimaryFolderPath;
+                          << folderPathFromModelRow(dmRow);
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
@@ -1772,7 +1771,7 @@ bool DataModel::missingThumbnails()
 double DataModel::aspectRatio(int w, int h, int orientation)
 {
     if (G::isLogger) G::log("DataModel::aspectRatio");
-    if (isDebug) qDebug() << "DataModel::aspectRatio" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::aspectRatio";
     if (w == 0 || h == 0) return 1.0;
     // portrait
     if (orientation == 6 || orientation == 8) return h * 1.0 / w;
@@ -1805,7 +1804,7 @@ void DataModel::setValueDm(QModelIndex dmIdx, QVariant value, int instance,
                      << "value =" << value
                  << "src =" << src
                  << "instance =" << instance
-                 << currentPrimaryFolderPath;
+                 << index(dmIdx.row(),0).data(G::PathRole).toString();
     }
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
@@ -1832,7 +1831,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
     if (G::stop) return;
     if (isDebug) qDebug() << "DataModel::setValueSf" << "instance =" << instance
                           << "row =" << sfIdx.row()
-                          << currentPrimaryFolderPath;
+                          << folderPathFromProxyRow(sfIdx.row());
     /*
     qDebug() << "DataModel::setValueSf"
              << "Instance =" << instance
@@ -2069,7 +2068,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromI
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
                  << "row =" << dmIdx.row()
-                 << currentPrimaryFolderPath;
+                 << folderPathFromProxyRow(proxyIndexFromModelIndex(dmIdx).row());
     }
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
@@ -2109,7 +2108,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
                           << "row =" << sfRow
-                          << currentPrimaryFolderPath;
+                          << folderPathFromProxyRow(sfRow);
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
@@ -2126,7 +2125,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
 
 int DataModel::iconCount()
 {
-    if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
@@ -2137,7 +2136,7 @@ int DataModel::iconCount()
 
 bool DataModel::isAllIconsLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
         if (itemFromIndex(index(row, 0))->icon().isNull()) {
             //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
@@ -2150,7 +2149,7 @@ bool DataModel::isAllIconsLoaded()
 
 bool DataModel::isAllIconChunkLoaded(int first, int last)
 {
-    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance;
 
     if (first < 0 || last > sf->rowCount()) return false;
 
@@ -2234,7 +2233,7 @@ void DataModel::setChunkSize(int chunkSize)
 
 void DataModel::clearAllIcons() // not being used
 {
-    if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance;
     QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
@@ -2267,25 +2266,25 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
     // if (isDebug)
-        qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance;
     G::allMetadataLoaded = isLoaded;
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)
 {
-    if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << folderPathFromProxyRow(sfRow);
     return index(sfRow, G::MetadataAttemptedColumn).data().toBool();
 }
 
 bool DataModel::isMetadataLoaded(int sfRow)
 {
-    if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << folderPathFromProxyRow(sfRow);
     return index(sfRow, G::MetadataLoadedColumn).data().toBool();
 }
 
 bool DataModel::isAllMetadataAttempted()
 {
-    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
             if (isDebug)
@@ -2298,7 +2297,7 @@ bool DataModel::isAllMetadataAttempted()
 
 bool DataModel::isAllMetadataLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
             if (isDebug)
@@ -2311,7 +2310,7 @@ bool DataModel::isAllMetadataLoaded()
 
 QList<int> DataModel::metadataNotLoaded()
 {
-    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance;
     QList<int> rows;
     for (int row = 0; row < rowCount(); ++row) {
         if (index(row, G::MetadataAttemptedColumn).data().toBool() &&
@@ -2337,7 +2336,7 @@ bool DataModel::isPath(QString fPath)
 
 int DataModel::rowFromPath(QString fPath)
 {
-    if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
     if (fPathRow.contains(fPath)) return fPathRow[fPath];
     else return -1;
@@ -2347,7 +2346,7 @@ int DataModel::proxyRowFromPath(QString fPath)
 {
     if (isDebug)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
-                 << fPath << currentPrimaryFolderPath;
+                 << fPath;
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
     // QMutexLocker locker(&mutex);
     int dmRow;
@@ -2374,10 +2373,17 @@ QString DataModel::folderPathFromProxyRow(int sfRow)
     return QDir(fPath).absolutePath();
 }
 
+QString DataModel::folderPathFromModelRow(int dmRow)
+{
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    QString fPath = index(dmRow,0).data(G::PathRole).toString();
+    return QDir(fPath).absolutePath();
+}
+
 void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
-    if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance;
     fPathRow.clear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
@@ -2454,8 +2460,7 @@ void DataModel::searchStringChange(QString searchString)
     if (G::isLogger) G::log("DataModel::searchStringChange");
     if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
-                  << "searchString =" << searchString
-                  << currentPrimaryFolderPath;
+                  << "searchString =" << searchString;
     // update datamodel search string match
     QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row)  {
@@ -2478,7 +2483,7 @@ void DataModel::rebuildTypeFilter()
     When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
 */
     if (G::isLogger) G::log("DataModel::rebuildTypeFilter");
-    if (isDebug) qDebug() << "DataModel::rebuildTypeFilter" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::rebuildTypeFilter" << "instance =" << instance;
     QStringList typeList;
     QMap<QString,int> map;
     for (int row = 0; row < rowCount(); row++) {
@@ -2515,8 +2520,7 @@ QModelIndex DataModel::indexFromPath(QString fPath)
     if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
     if (isDebug) {
         qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
-                 << "fPath =" << fPath
-                 << currentPrimaryFolderPath;
+                 << "fPath =" << fPath;
     }
     if (!fPathRow.contains(fPath)) {
         errMsg = "Not in fPathrow.";
@@ -2545,8 +2549,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
     if (isDebug) {
         qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
-                 << "fPath =" << fPath
-                 << currentPrimaryFolderPath;
+                 << "fPath =" << fPath;
     }
     if (!fPathRow.contains(fPath)) {
         errMsg = "Not in fPathrow.";
@@ -2577,7 +2580,7 @@ int DataModel::proxyRowFromModelRow(int dmRow)
     if (G::isLogger) G::log("DataModel::proxyRowFromModelRow");
     if (isDebug) qDebug() << "DataModel::proxyRowFromModelRow" << "instance =" << instance
                           << "row =" << dmRow
-                          << currentPrimaryFolderPath;
+                          << folderPathFromProxyRow(dmRow);
     return sf->mapFromSource(index(dmRow, 0)).row();
 }
 
@@ -2586,7 +2589,7 @@ int DataModel::modelRowFromProxyRow(int sfRow)
     if (G::isLogger) G::log("DataModel::modelRowFromProxyRow");
     if (isDebug) qDebug() << "DataModel::modelRowFromProxyRow" << "instance =" << instance
                           << "row =" << sfRow
-                          << currentPrimaryFolderPath;
+                          << folderPathFromProxyRow(sfRow);
     return sf->mapToSource(sf->index(sfRow, 0)).row();
 }
 
@@ -2706,7 +2709,7 @@ bool DataModel::getSelection(QStringList &list)
     are picks and a selection then a dialog offers the user a choice to use.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
-    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance;
 
     bool usePicks = false;
 
@@ -2762,7 +2765,7 @@ bool DataModel::getSelection(QStringList &list)
 QStringList DataModel::getSelectionOrPicks()
 {
     if (G::isLogger) G::log("DataModel::getSelectionOrPicks");
-    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance;
 
     QStringList picks;
 
@@ -2794,7 +2797,7 @@ QStringList DataModel::getSelectionOrPicks()
 bool DataModel::isPick()
 {
     if (G::isLogger) G::log("DataModel::isPick");
-    if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
         QModelIndex idx = index(row, G::PickColumn);
         if (idx.data(Qt::EditRole).toString() == "Picked") return true;
@@ -2808,7 +2811,7 @@ void DataModel::clearPicks()
     reset all the picks to false.
 */
     if (G::isLogger) G::log("DataModel::clearPicks");
-    if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance;
     QMutexLocker locker(&mutex);
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
@@ -2868,13 +2871,13 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
 QString DataModel::diagnostics()
 {
     if (G::isLogger) G::log("DataModel::diagnostics");
-    if (isDebug) qDebug() << "DataModel::diagnostics" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::diagnostics" << "instance =" << instance;
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
-    rpt << "\n" << G::sj("currentPrimaryFolderPath", 27) << G::s(currentPrimaryFolderPath);
+    rpt << "\n" << G::sj("currentPrimaryFolderPath", 27) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", 27) << G::s(firstFolderPathWithImages);
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
     rpt << "\n" << G::sj("currentDMRow", 27) << G::s(currentDmRow);
@@ -2914,7 +2917,7 @@ QString DataModel::diagnostics()
 QString DataModel::diagnosticsForCurrentRow()
 {
     if (G::isLogger) G::log("DataModel::diagnosticsForCurrentRow");
-    if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << currentPrimaryFolderPath;
+    if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << folderPathFromProxyRow(currentSfRow);
 
     if (rowCount() == 0) {
         G::popUp->showPopup("Empty folder or no folder selected");

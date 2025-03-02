@@ -97,6 +97,7 @@ public:
     int proxyRowFromPath(QString fPath);
     QString pathFromProxyRow(int sfRow);
     QString folderPathFromProxyRow(int sfRow);
+    QString folderPathFromModelRow(int dmRow);
     void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();
@@ -125,7 +126,6 @@ public:
     int instance = 0;                   // each new load of DataModel increments the instance
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
-    QString currentPrimaryFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentSfRow;                   // used in caching to check if new image selected
     int currentDmRow;                   // used in caching to check if new image selected
