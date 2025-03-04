@@ -551,8 +551,8 @@ void DataModel::processNextFolder()
     QString folderPath = folderOperation.first;
     bool addFolderImages = folderOperation.second;
 
-    {
     QString fun = "DataModel::processNextFolder";
+    {
     QString msg = "folderOperation.first = " + folderOperation.first + " " +
                   "folderOperation.second = " + QVariant(folderOperation.second).toString();
     if (G::isLogger || G::isFlowLogger)
@@ -562,6 +562,8 @@ void DataModel::processNextFolder()
     // add images from model
     if (addFolderImages) {
         addFolder(folderPath);
+        // qApp->processEvents();
+        qDebug() << "Read" << folderPath << G::t.restart() << "ms";
         // signal MW::loadChanged
         emit addedFolderToDM(folderOperation.first, "Add");
     }
@@ -647,6 +649,7 @@ void DataModel::addFolder(const QString &folderPath)
         ; //*/
 
     int counter = 0;
+    int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         /*
         qDebug() << "DataModel::addFolder"
@@ -656,6 +659,7 @@ void DataModel::addFolder(const QString &folderPath)
                     ; //*/
         addFileDataForRow(row, fileInfo);
 
+        if (row % countInterval == 0 && row > 0) updateLoadStatus(row);
         // G::popUp->setProgress(++counter);   // pipeline popup
         // qApp->processEvents();
 
@@ -844,7 +848,7 @@ bool DataModel::okManyImagesWarning()
     return false;
 }
 
-void DataModel::updateLoadStatus()
+void DataModel::updateLoadStatus(int row)
 {
     QString step = "Searching for eligible images.\n\n";
     QString escapeClause = "\n\nPress \"Esc\" to stop.";
@@ -852,9 +856,9 @@ void DataModel::updateLoadStatus()
     if (dir->isRoot()) root = "Drive ";
     else root = "Folder ";
     QString folder;
-    folderCount > 1 ? folder = " folders " : folder = " folder ";
-    QString imageCountStr = QString::number(rowCount()).leftJustified(6);
-    QString folderCountStr = QString::number(folderCount).leftJustified(5);
+    folderList.count() > 1 ? folder = " folders " : folder = " folder ";
+    QString imageCountStr = QString::number(row).leftJustified(6);
+    QString folderCountStr = QString::number(folderList.count()).leftJustified(5);
 
     QString s = step +
                 imageCountStr + " found so far in " +
@@ -865,8 +869,7 @@ void DataModel::updateLoadStatus()
     qApp->processEvents();
     /*
     qDebug() << "DataModel::updateLoadStatus"
-             << "imageCount =" << imageCount
-             << "G::stop =" << G::stop
+             << "imageCount =" << rowCount()
              << "abortLoadingModel =" << abortLoadingModel
              << "thread =" << QThread::currentThreadId()
         ;//*/
@@ -2218,10 +2221,10 @@ void DataModel::setIconRange(int sfRow)
     end = start + iconChunkSize;
     if (end >= rows) end = rows - 1;
     // G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
-    mutex.lock();
+    // mutex.lock();
     startIconRange = start;
     endIconRange = end;
-    mutex.unlock();
+    // mutex.unlock();
     G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 

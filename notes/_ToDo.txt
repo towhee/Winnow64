@@ -153,6 +153,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Review isCurrentFolderOkay in MW::loadChanged
 - Filters progress bar not running
 - Eliminate use of G::currRootFolder
 - Fix ImageCache::resetOutsideTargetRangeCacheState crash

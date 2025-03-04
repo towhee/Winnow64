@@ -195,7 +195,8 @@ namespace G
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;
-    extern bool useReadMetadata;
+    extern bool useReadMeta;
+    extern bool useFSTreeCount;
     extern bool useProcessEvents;
 
     extern QSettings *settings;

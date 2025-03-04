@@ -2012,15 +2012,19 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     - Remove
     - Toggle
 */
-    if (G::isLogger || G::isFlowLogger) G::logger.skipLine();
+    G::t.start();
+
     QString fun = "MW::folderSelectionChange";
     if (G::isLogger || G::isFlowLogger)
     {
-        QString msg = "op = " + op +
+        G::log("","");
+        {
+            QString msg = "op = " + op +
                 " recurse = " + QVariant(recurse).toString() +
                 " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
                 " folderPath = " + folderPath;
-        G::log(fun, msg);
+            G::log(fun, msg);
+        }
     }
 
     G::allMetadataLoaded = false;
@@ -2062,15 +2066,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     and delegate use of the current index must check the column.
 */
     // if starting program, return
+    QString fun = "MW::fileSelectionChange";
     if (current.row() == -1) {
         if (G::isLogger || G::isFlowLogger)
-            qDebug() << "MW::fileSelectionChange  Invalid row -1";
+            qDebug() << fun <<  "Invalid row";
         return;
     }
 
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MW::fileSelectionChange",
+        G::log(fun,
                "row = " + QString::number(current.row()) + " Src = " + src
                + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
         // can crash here
@@ -2079,12 +2084,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (G::stop) {
         if (G::isLogger || G::isFlowLogger)
-        qDebug() << "MW::fileSelectionChange G::stop = true so exit";
+        qDebug() << fun << "G::stop = true so exit";
         return;
     }
 
     /* debug
-    qDebug() << "MW::fileSelectionChange"
+    qDebug() << fun
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
@@ -2110,7 +2115,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // folder does not exist
     if (!currRootDir.exists()) {
-        if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange",
+        if (G::isLogger || G::isFlowLogger) G::log(fun,
             "Folder does not exist so exit");
         refreshFolders();
         // folderSelectionChange();
@@ -2144,7 +2149,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
        clicks on an item scrolling to center is disorienting so we do not scroll.
     */
 
-    QString source = "MW::fileSelectionChange";
+    QString source = fun;
     // Mouse clicks on a view item
     if (G::fileSelectionChangeSource.right(5) == "Click") {
         // if source is thumbView then only tableView could be visible
@@ -2204,10 +2209,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
         }
         else if (G::useImageView) {
-            if (imageView->loadImage(fPath, false, "MW::fileSelectionChange")) {
+            if (imageView->loadImage(fPath, false, fun)) {
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-                    loupeDisplay("MW::fileSelectionChange");
+                    loupeDisplay(fun);
                 }
             }
             else {
@@ -2246,7 +2251,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         qDebug() << "\nMW::fileSelectionChange setImageCachePosition"
                  << dm->currentFilePath
                     ; //*/
-       emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+        G::log(fun, "setImageCachePosition");
+        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
@@ -2674,7 +2680,8 @@ void MW::loadChanged(const QString folderPath, const QString op)
     QString fun = "MW::loadChanged";
     QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
                   " folderPath = " + folderPath;
-    if (G::isLogger || G::isFlowLogger) G::log(fun, msg);
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, msg);
     /*
     qDebug().noquote()
             << fun
@@ -2687,17 +2694,14 @@ void MW::loadChanged(const QString folderPath, const QString op)
             << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
                ;//*/
 
+    // may have removed all selected folders
     if (dm->folderList.isEmpty()) return;
 
     isCurrentFolderOkay = true;
-    bool isPrimaryFolder = folderPath == dm->primaryFolderPath();
-
-    // format pickMemSize as bytes, KB, MB or GB
-    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
 
     updateStatus(true, "", fun);
 
-    // set icon range and G::iconChunkLoaded
+    // set icon range and G::iconChunkLoaded (req'd by metaRead)
     dm->setIconRange(dm->currentSfRow);
 
     // assign current image (datamodel current index)
@@ -2714,11 +2718,11 @@ void MW::loadChanged(const QString folderPath, const QString op)
         /*
         qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
                  << dm->folderList.count() << dm->folderList;//*/
-        // update bookmarks if only one folder selected
+        // update bookmarks if only one folder remaining
         if (dm->folderList.count() == 1) {
             // new primary folder
             QString newPrimaryFolder = dm->folderList.at(0);
-            qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
+            // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
             QSignalBlocker bookmarkBlocker(bookmarks);
             bookmarks->select(newPrimaryFolder);
             bookmarkBlocker.unblock();
@@ -2735,6 +2739,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
     }
 
     if (op == "Add") {
+        // added folder(s) may be empty
         if (dm->rowCount()) {
             loadFolder(folderPath);
         }
@@ -2771,9 +2776,10 @@ void MW::loadFolder(QString folderPath)
     // qApp->processEvents();
 
     QString fun = "MW::loadFolder";
-    if (G::isLogger || G::isFlowLogger) {
+    if (G::isLogger || G::isFlowLogger)
+    {
         bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
-        QString msg = " isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
+        QString msg = "isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
                       " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString() +
                       " folderPath = " + folderPath;
         G::log(fun, msg);
@@ -2902,12 +2908,14 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
 
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
         frameDecoder->clear();
-        updateMetadataThreadRunStatus(true, true, "MW::load");
-        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
-                                  Q_ARG(int, sfRow),
-                                  Q_ARG(bool, isFileSelectionChange),
-                                  Q_ARG(QString, "setStartRow")
-                                  );
+        if (G::useReadMeta) {
+            updateMetadataThreadRunStatus(true, true, "MW::load");
+            QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                      Q_ARG(int, sfRow),
+                                      Q_ARG(bool, isFileSelectionChange),
+                                      Q_ARG(QString, "setStartRow")
+                                      );
+        }
     }
     else if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
@@ -2925,9 +2933,9 @@ void MW::loadDone()
 */
     // QSignalBlocker bookmarkBlocker(bookmarks);
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
-        QString msg = QString::number(testTime.elapsed()) + " ms " +
+        QString msg = /*QString::number(testTime.elapsed()) + " ms " +*/
                       QString::number(dm->rowCount()) + " images";
         G::log("MW::loadDone", msg);
     }
@@ -3033,6 +3041,7 @@ void MW::loadDone()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     //QApplication::beep();
+    G::log("MW::loadDone", "Done");
 }
 
 void MW::thumbHasScrolled()

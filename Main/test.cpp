@@ -396,7 +396,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
     // debug() << imageCache->decoders[0]->isIdle();
-    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+    // tableDisplay();
+    QString path = "/Volumes/Untitled/DCIM/100MSDCF";
+    folderSelectionChange(path, "Add", true, false);
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

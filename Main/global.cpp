@@ -8,7 +8,7 @@ QSettings *settings;
 // system messaging
 bool isTestLogger = false;
 bool isLogger = false;              // Writes log messages to file or console
-bool isFlowLogger = true;          // Writes key program flow points to file or console
+bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
@@ -52,7 +52,8 @@ bool useMissingThumbs = true;
 // limit functionality for testing
 bool useApplicationStateChanged = false;
 bool useZoomWindow = false;;
-bool useReadMetadata = true;
+bool useFSTreeCount = false;
+bool useReadMeta = true;
 bool useReadIcons = true;
 bool useImageCache = true;
 bool useImageView = true;
