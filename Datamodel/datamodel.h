@@ -264,7 +264,7 @@ private:
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
-    void updateLoadStatus();
+    void updateLoadStatus(int row);
     // bool tooManyImagesWarning();
 
     int folderCount;

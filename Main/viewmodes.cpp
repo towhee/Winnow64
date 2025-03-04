@@ -36,7 +36,8 @@ void MW::loupeDisplay(const QString src)
                  << "wasThumbDockVisible =" << QVariant(wasThumbDockVisible).toString()
                  << "G::isInitializing =" << G::isInitializing
                     ; //*/
-    if (G::isLogger || G::isFlowLogger) G::log("MW::loupeDisplay");
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::loupeDisplay", "src = " + src);
     G::mode = "Loupe";
     thumbDockVisibleAction->setEnabled(true);
     asLoupeAction->setChecked(true);
