@@ -9,6 +9,29 @@
 #ifndef FSTREE_H
 #define FSTREE_H
 
+class ImageCounter : public QThread {
+    Q_OBJECT
+
+public:
+    ImageCounter(const QString &path, Metadata &metadata,
+                 bool &combineRawJpg, QStringList *fileFilters,
+                 QObject *parent = nullptr);
+
+signals:
+    void countReady(const QString &path, int count);
+
+protected:
+    void run() override;
+
+private:
+    QString dPath;
+    Metadata &metadata;
+    bool combineRawJpg;
+    QStringList *fileFilters;
+
+    int computeImageCount(const QString &path);
+};
+
 class FSFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -25,6 +48,7 @@ protected:
 class FSModel : public QFileSystemModel
 {
     Q_OBJECT
+
 public:
     FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg);
 	bool hasChildren(const QModelIndex &parent) const;
@@ -32,21 +56,19 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
     void refresh();
-    // void refresh(const QModelIndex &index);
     void refresh(const QString &dPath);
     bool showImageCount;
     bool &combineRawJpg;
     bool forceRefresh = true;
     Metadata &metadata;
     int imageCountColumn = 4;
+    QStringList *fileFilters;
 
 signals:
     void update() const;        // const req'd but shows warning
 
 private:
     QDir *dir;
-    void insertCount(QString dPath, QString value);
-    void insertCombineCount(QString dPath, QString value);
     mutable QHash <QString, QString> count;
     mutable QHash <QString, QString> combineCount;
     mutable QModelIndex testIdx;

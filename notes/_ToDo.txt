@@ -9,6 +9,7 @@ WHAT'S NEW
 - Tweak mouse wheel / trackpad sensitivity algorithm
 - Help for film strip and status bar symbols
 - Folder multi-select
+- Fixed latency issue in FSTree image count
 
 BUGS / TO DO
 - Fix MW::ejectUsb(QString path)
@@ -19,6 +20,7 @@ BUGS / TO DO
 - /Users/roryhill/Temp/Photos_to_be_curated/2024/202410/2024-10-19_Linley Valley crashes
 - Videos should show as cached in progress bar: bookmark 2024-10-15_Mall
 - Disable Metadata dock when no file selection
+- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
 - Compare at 100% cannot mouse to a compare item without zoom to fit happening
 - Prev and next folders
@@ -153,6 +155,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fixed latency issue in FSTree image count
 - Review isCurrentFolderOkay in MW::loadChanged
 - Filters progress bar not running
 - Eliminate use of G::currRootFolder

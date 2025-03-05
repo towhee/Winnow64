@@ -1,1444 +1,304 @@
-MW::load  sfRow = 0     isFileSelectionChange =  true  src = Selection::setCurrentIndex G::allMetadataLoaded = false G::iconChunkLoaded = false dm->startIconRange = 0 dm->endIconRange = 38 dm->iconCount = 0
+fstree.cpp
 
-MetaRead::setStartRow  startRow = 0 firstIconRow = 0 lastIconRow = 38 iconChunkSize = 25000 fileSelectionChanged = true G::allMetadataLoaded = false G::iconChunkLoaded = false folder = "/Users/roryhill/Pictures/Coaster" isRunning = true isDispatching = false isDone = false instance = 0 / 0
-MetaRead::setStartRow isDispatching = true
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = false
-MetaRead::dispatchReaders                   reader = 5 dispatched
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = true  a = 0    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatchReaders                   reader = 9 dispatched
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = false
-MetaRead::dispatchReaders                   reader = 11 dispatched
-MetaRead::dispatch id = 1
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatchReaders id = 12 cycling = false
-MetaRead::dispatchReaders                   reader = 12 dispatched
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = true  a = 1    b = -1   isGUI = false
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatch reader      id = 1  row = 1
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatch id = 2
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1   isGUI = false
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatch reader      id = 2  row = 2
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-Reader::read                   id = 1  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 3
-MetaRead::dispatch id = 4
-Reader::read                   id = 2  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 4
-MetaRead::dispatch id = 5
-Reader::read                   id = 3  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-MetaRead::dispatch     reader starting      id = 5  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 5
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 6
-Reader::read                   id = 4  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 7
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 8
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader starting      id = 9  row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 9
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 10
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader starting      id = 11 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 11 row = 11
-Reader::read                   id = 7  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-MetaRead::dispatch id = 12
-Reader::read                   id = 8  row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-MetaRead::dispatch     reader starting      id = 12 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-Reader::read                   id = 5  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-Reader::read                   id = 6  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-Reader::read                   id = 10 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-Reader::read                   id = 11 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-Reader::read                   id = 9  row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-MetaRead::dispatch reader      id = 12 row = 12
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 13
-MetaRead::dispatch id = 14
-Reader::read                   id = 12 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 14
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 15 row = 15
-MetaRead::dispatch id = 16
-Reader::read                   id = 13 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 16
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 17
-Reader::read                   id = 16 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-Reader::read                   id = 15 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-MetaRead::dispatch id = 18
-Reader::read                   id = 14 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 18
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 19
-Reader::read                   id = 19 row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-Reader::read                   id = 17 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-Reader::read                   id = 18 row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 3    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 20
-Reader::read                   id = 3  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 4    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 21
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 2    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 22
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 10   aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 23
-Reader::read                   id = 4  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-Reader::read                   id = 2  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-Reader::read                   id = 10 row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 8    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 24
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 1    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-Reader::read                   id = 8  row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-MetaRead::dispatch reader      id = 1  row = 25
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 5    aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 26
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 19   aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 27
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 14   aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 28
-Reader::read                   id = 1  row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-Reader::read                   id = 5  row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-Reader::read                   id = 19 row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-MetaRead::dispatch id = 18
-Reader::read                   id = 14 row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch     reader returning     id = 18 row = 18   aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 29
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 15   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-Reader::read                   id = 18 row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch reader      id = 15 row = 30
-MetaRead::dispatch id = 7
-Reader::read                   id = 15 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch     reader returning     id = 7  row = 7    aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 31
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 9    aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-Reader::read                   id = 7  row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-MetaRead::dispatch reader      id = 9  row = 32
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 11   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-Reader::read                   id = 9  row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-MetaRead::dispatch reader      id = 11 row = 33
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 16   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 11 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 16 row = 34
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 13   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 35
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 6    aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 36
-MetaRead::dispatch id = 0
-Reader::read                   id = 13 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-Reader::read                   id = 16 row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-Reader::read                   id = 6  row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 37
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 12   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-Reader::read                   id = 0  row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-MetaRead::dispatch reader      id = 12 row = 38
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 20   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 17   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-Reader::read                   id = 12 row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch     reader returning     id = 2  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 23   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 21   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-QThread::wait: Thread tried to wait on itself
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = true
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = false
-MetaRead::dispatchReaders                   reader = 9 dispatched
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = false
-MetaRead::dispatchReaders                   reader = 11 dispatched
-MetaRead::dispatchReaders id = 12 cycling = false
-MetaRead::dispatchReaders                   reader = 12 dispatched
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-MetaRead::dispatchFinished "WeAreDone" G::allMetadataLoaded = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 0    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 1    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 1  row = 0
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = false a = 1    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 1
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = false a = 2    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 2
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-Reader::read                   id = 2  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-Reader::read                   id = 1  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 3
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 4
-MetaRead::dispatch id = 7
-Reader::read                   id = 3  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-Reader::read                   id = 4  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-MetaRead::dispatch reader      id = 7  row = 5
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 6
-Reader::read                   id = 6  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader starting      id = 9  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 7
-Reader::read                   id = 8  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-MetaRead::dispatch id = 10
-Reader::read                   id = 7  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-Reader::read                   id = 9  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 8
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader starting      id = 11 row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 11 row = 9
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader starting      id = 12 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-Reader::read                   id = 10 row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-Reader::read                   id = 11 row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-MetaRead::dispatch reader      id = 12 row = 10
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 11
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-Reader::read                   id = 12 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-Reader::read                   id = 13 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-MetaRead::dispatch reader      id = 14 row = 12
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 15 row = 13
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 14
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 15
-MetaRead::dispatch id = 18
-Reader::read                   id = 14 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-Reader::read                   id = 17 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 16
-Reader::read                   id = 15 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-Reader::read                   id = 18 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-Reader::read                   id = 16 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 17
-Reader::read                   id = 19 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 18
-Reader::read                   id = 0  row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 0    aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 19
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 3    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 20
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 4    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 21
-Reader::read                   id = 1  row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 1    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 22
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 2    aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 23
-Reader::read                   id = 2  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-Reader::read                   id = 6  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-Reader::read                   id = 4  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-Reader::read                   id = 3  row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 6    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 24
-Reader::read                   id = 8  row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 8    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 25
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 9    aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 11 row = 26
-Reader::read                   id = 10 row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 7    aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 27
-Reader::read                   id = 11 row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 5    aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 28
-Reader::read                   id = 9  row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-Reader::read                   id = 7  row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 10   aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 12 row = 29
-Reader::read                   id = 12 row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 15   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 30
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 11   aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-Reader::read                   id = 17 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch reader      id = 13 row = 31
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 14   aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-Reader::read                   id = 13 row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-MetaRead::dispatch reader      id = 16 row = 32
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 13   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-Reader::read                   id = 16 row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-MetaRead::dispatch reader      id = 15 row = 33
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 18   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 15 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 0  row = 34
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 16   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 35
-MetaRead::dispatch id = 14
-Reader::read                   id = 0  row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-MetaRead::dispatch     reader returning     id = 14 row = 12   aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-Reader::read                   id = 18 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-MetaRead::dispatch reader      id = 14 row = 36
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 21   aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-Reader::read                   id = 14 row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch reader      id = 6  row = 37
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 23   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-Reader::read                   id = 6  row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-MetaRead::dispatch reader      id = 3  row = 38
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 20   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-Reader::read                   id = 3  row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 17   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 19   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-QThread::wait: Thread tried to wait on itself
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = false
-MetaRead::dispatchReaders                   reader = 5 dispatched
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = false
-MetaRead::dispatchReaders                   reader = 9 dispatched
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = true
-MetaRead::dispatchReaders id = 12 cycling = false
-MetaRead::dispatchReaders                   reader = 12 dispatched
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 0    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 0    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 0
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = false a = 1    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 1
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 2
-Reader::read                   id = 1  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-Reader::read                   id = 2  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-Reader::read                   id = 3  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-MetaRead::dispatch reader      id = 4  row = 3
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader starting      id = 5  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 4
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 5
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 6
-Reader::read                   id = 4  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-Reader::read                   id = 5  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-Reader::read                   id = 7  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-MetaRead::dispatch id = 8
-Reader::read                   id = 6  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 7
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader starting      id = 9  row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 8
-MetaRead::dispatch id = 10
-Reader::read                   id = 8  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 9
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader starting      id = 12 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 12 row = 10
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 11
-Reader::read                   id = 9  row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 12
-Reader::read                   id = 13 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-Reader::read                   id = 12 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-Reader::read                   id = 10 row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 15 row = 13
-MetaRead::dispatch id = 16
-Reader::read                   id = 14 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 14
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 15
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 16
-Reader::read                   id = 16 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-MetaRead::dispatch id = 19
-Reader::read                   id = 17 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-Reader::read                   id = 15 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-Reader::read                   id = 18 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-MetaRead::dispatch reader      id = 19 row = 17
-Reader::read                   id = 19 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 2    aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 18
-Reader::read                   id = 3  row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 3    aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 19
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 0    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-Reader::read                   id = 4  row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-MetaRead::dispatch reader      id = 1  row = 20
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 21
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 4    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-Reader::read                   id = 0  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-MetaRead::dispatch reader      id = 5  row = 22
-Reader::read                   id = 1  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-MetaRead::dispatch id = 2
-Reader::read                   id = 5  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-MetaRead::dispatch     reader returning     id = 2  row = 1    aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 23
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 7    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 24
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 5    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-Reader::read                   id = 2  row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-MetaRead::dispatch reader      id = 6  row = 25
-Reader::read                   id = 8  row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-Reader::read                   id = 6  row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 10   aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 12 row = 26
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 8    aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-Reader::read                   id = 12 row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-MetaRead::dispatch reader      id = 9  row = 27
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 9    aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-Reader::read                   id = 9  row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-MetaRead::dispatch reader      id = 10 row = 28
-MetaRead::dispatch id = 7
-Reader::read                   id = 10 row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch     reader returning     id = 7  row = 6    aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 29
-MetaRead::dispatch id = 14
-Reader::read                   id = 7  row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch     reader returning     id = 14 row = 12   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 30
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 14   aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-Reader::read                   id = 14 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch reader      id = 16 row = 31
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 11   aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-Reader::read                   id = 16 row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-MetaRead::dispatch reader      id = 13 row = 32
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 13   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-Reader::read                   id = 13 row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-MetaRead::dispatch reader      id = 15 row = 33
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 15   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 15 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 17 row = 34
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 16   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-Reader::read                   id = 17 row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-MetaRead::dispatch reader      id = 18 row = 35
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 19   aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-Reader::read                   id = 18 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-MetaRead::dispatch reader      id = 4  row = 36
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 18   aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-Reader::read                   id = 4  row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch reader      id = 3  row = 37
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 21   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-Reader::read                   id = 3  row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-MetaRead::dispatch reader      id = 0  row = 38
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-Reader::read                   id = 0  row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 20   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 17   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 23   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-QThread::wait: Thread tried to wait on itself
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = false
-MetaRead::dispatchReaders                   reader = 5 dispatched
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = false
-MetaRead::dispatchReaders                   reader = 9 dispatched
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = false
-MetaRead::dispatchReaders                   reader = 11 dispatched
-MetaRead::dispatchReaders id = 12 cycling = true
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 0    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 0    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 0
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = false a = 1    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 1
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 2
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 4
-Reader::read                   id = 1  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-Reader::read                   id = 2  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-Reader::read                   id = 3  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-MetaRead::dispatch reader      id = 4  row = 3
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader starting      id = 5  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 4
-Reader::read                   id = 4  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 5
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 6
-Reader::read                   id = 5  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 7
-Reader::read                   id = 6  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader starting      id = 9  row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 8
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-Reader::read                   id = 7  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-Reader::read                   id = 8  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-Reader::read                   id = 9  row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-MetaRead::dispatch reader      id = 10 row = 9
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader starting      id = 11 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 11 row = 10
-MetaRead::dispatch id = 13
-Reader::read                   id = 10 row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-Reader::read                   id = 11 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 11
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 12
-MetaRead::dispatch id = 15
-Reader::read                   id = 13 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-Reader::read                   id = 14 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-MetaRead::dispatch reader      id = 15 row = 13
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 14
-Reader::read                   id = 15 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 15
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 16
-Reader::read                   id = 17 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 17
-Reader::read                   id = 18 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-Reader::read                   id = 16 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-Reader::read                   id = 19 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 2    aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 18
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 1    aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 19
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 20
-Reader::read                   id = 3  row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-Reader::read                   id = 2  row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-Reader::read                   id = 0  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 7    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 21
-Reader::read                   id = 8  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 3    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 22
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 4    aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-Reader::read                   id = 4  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-MetaRead::dispatch reader      id = 5  row = 23
-Reader::read                   id = 5  row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 5    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 24
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 9    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-Reader::read                   id = 6  row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-MetaRead::dispatch reader      id = 10 row = 25
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 10   aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-Reader::read                   id = 10 row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-MetaRead::dispatch reader      id = 11 row = 26
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 6    aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-Reader::read                   id = 11 row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-MetaRead::dispatch reader      id = 7  row = 27
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 0    aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-Reader::read                   id = 7  row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-MetaRead::dispatch reader      id = 1  row = 28
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 12   aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-Reader::read                   id = 1  row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch reader      id = 14 row = 29
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 16   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-Reader::read                   id = 14 row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch reader      id = 18 row = 30
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 8    aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-Reader::read                   id = 18 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch reader      id = 9  row = 31
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 15   aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-Reader::read                   id = 9  row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-MetaRead::dispatch reader      id = 17 row = 32
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 14   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-Reader::read                   id = 17 row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-MetaRead::dispatch reader      id = 16 row = 33
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 13   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 16 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 15 row = 34
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 11   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-Reader::read                   id = 15 row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-MetaRead::dispatch reader      id = 13 row = 35
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 19   aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-Reader::read                   id = 13 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-MetaRead::dispatch reader      id = 2  row = 36
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 20   aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 37
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 18   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-Reader::read                   id = 2  row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch reader      id = 3  row = 38
-MetaRead::dispatch id = 8
-Reader::read                   id = 0  row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-MetaRead::dispatch     reader returning     id = 8  row = 21   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-Reader::read                   id = 3  row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 17   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 23   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-QThread::wait: Thread tried to wait on itself
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = false
-MetaRead::dispatchReaders                   reader = 5 dispatched
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = false
-MetaRead::dispatchReaders                   reader = 9 dispatched
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = true
-MetaRead::dispatchReaders id = 12 cycling = false
-MetaRead::dispatchReaders                   reader = 12 dispatched
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 0    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 0    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 0
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = false a = 1    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 1
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 2
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 3
-Reader::read                   id = 1  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 5
-Reader::read                   id = 2  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-Reader::read                   id = 3  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-Reader::read                   id = 4  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-MetaRead::dispatch     reader starting      id = 5  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 4
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 5
-MetaRead::dispatch id = 7
-Reader::read                   id = 5  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 6
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 7
-Reader::read                   id = 6  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader starting      id = 9  row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 8
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 9
-Reader::read                   id = 7  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-MetaRead::dispatch id = 12
-Reader::read                   id = 9  row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-Reader::read                   id = 8  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-MetaRead::dispatch     reader starting      id = 12 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-Reader::read                   id = 10 row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-MetaRead::dispatch reader      id = 12 row = 10
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 11
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 12
-MetaRead::dispatch id = 15
-Reader::read                   id = 12 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 15 row = 13
-Reader::read                   id = 14 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-MetaRead::dispatch id = 16
-Reader::read                   id = 13 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-Reader::read                   id = 15 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-MetaRead::dispatch reader      id = 16 row = 14
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 15
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 16
-Reader::read                   id = 16 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 17
-Reader::read                   id = 17 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-Reader::read                   id = 18 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-Reader::read                   id = 19 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 18
-Reader::read                   id = 0  row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 4    aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 19
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 5    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 20
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 2    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 21
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 3    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-Reader::read                   id = 3  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-Reader::read                   id = 5  row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-Reader::read                   id = 6  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-MetaRead::dispatch reader      id = 4  row = 22
-Reader::read                   id = 4  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 0    aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 23
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 6    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 24
-MetaRead::dispatch id = 2
-Reader::read                   id = 1  row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-Reader::read                   id = 7  row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-MetaRead::dispatch     reader returning     id = 2  row = 1    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 25
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 8    aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 9  row = 26
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 9    aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-Reader::read                   id = 2  row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-Reader::read                   id = 9  row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-MetaRead::dispatch reader      id = 10 row = 27
-Reader::read                   id = 10 row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 13   aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 15 row = 28
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 10   aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-Reader::read                   id = 15 row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch reader      id = 12 row = 29
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 14   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-Reader::read                   id = 12 row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch reader      id = 16 row = 30
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 15   aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-Reader::read                   id = 16 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch reader      id = 17 row = 31
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 7    aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-Reader::read                   id = 17 row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-MetaRead::dispatch reader      id = 8  row = 32
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 12   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 33
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 11   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 8  row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-Reader::read                   id = 14 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 13 row = 34
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 16   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-Reader::read                   id = 13 row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-MetaRead::dispatch reader      id = 18 row = 35
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 18   aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 0  row = 36
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 17   aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-Reader::read                   id = 18 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-Reader::read                   id = 0  row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch reader      id = 19 row = 37
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 21   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 38
-Reader::read                   id = 19 row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-Reader::read                   id = 3  row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 19   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 20   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 23   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 9
-MetaRead::dispatch     reader returning     id = 9  row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-QThread::wait: Thread tried to wait on itself
-MetaRead::dispatchReaders readerCount = 20
-MetaRead::dispatchReaders id = 0 cycling = false
-MetaRead::dispatchReaders                   reader = 0 dispatched
-MetaRead::dispatchReaders id = 1 cycling = false
-MetaRead::dispatchReaders                   reader = 1 dispatched
-MetaRead::dispatchReaders id = 2 cycling = false
-MetaRead::dispatchReaders                   reader = 2 dispatched
-MetaRead::dispatchReaders id = 3 cycling = false
-MetaRead::dispatchReaders                   reader = 3 dispatched
-MetaRead::dispatchReaders id = 4 cycling = false
-MetaRead::dispatchReaders                   reader = 4 dispatched
-MetaRead::dispatchReaders id = 5 cycling = false
-MetaRead::dispatchReaders                   reader = 5 dispatched
-MetaRead::dispatchReaders id = 6 cycling = false
-MetaRead::dispatchReaders                   reader = 6 dispatched
-MetaRead::dispatchReaders id = 7 cycling = false
-MetaRead::dispatchReaders                   reader = 7 dispatched
-MetaRead::dispatchReaders id = 8 cycling = false
-MetaRead::dispatchReaders                   reader = 8 dispatched
-MetaRead::dispatchReaders id = 9 cycling = true
-MetaRead::dispatchReaders id = 10 cycling = false
-MetaRead::dispatchReaders                   reader = 10 dispatched
-MetaRead::dispatchReaders id = 11 cycling = false
-MetaRead::dispatchReaders                   reader = 11 dispatched
-MetaRead::dispatchReaders id = 12 cycling = false
-MetaRead::dispatchReaders                   reader = 12 dispatched
-MetaRead::dispatchReaders id = 13 cycling = false
-MetaRead::dispatchReaders                   reader = 13 dispatched
-MetaRead::dispatchReaders id = 14 cycling = false
-MetaRead::dispatchReaders                   reader = 14 dispatched
-MetaRead::dispatchReaders id = 15 cycling = false
-MetaRead::dispatchReaders                   reader = 15 dispatched
-MetaRead::dispatchReaders id = 16 cycling = false
-MetaRead::dispatchReaders                   reader = 16 dispatched
-MetaRead::dispatchReaders id = 17 cycling = false
-MetaRead::dispatchReaders                   reader = 17 dispatched
-MetaRead::dispatchReaders id = 18 cycling = false
-MetaRead::dispatchReaders                   reader = 18 dispatched
-MetaRead::dispatchReaders id = 19 cycling = false
-MetaRead::dispatchReaders                   reader = 19 dispatched
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader starting      id = 0  row = -1   aIsDone = false bIsDone = false a = 0    b = 0    isGUI = false
-MetaRead::dispatch reader      id = 0  row = 0
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader starting      id = 1  row = -1   aIsDone = false bIsDone = false a = 0    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 0
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader starting      id = 2  row = -1   aIsDone = false bIsDone = false a = 1    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 1
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader starting      id = 3  row = -1   aIsDone = false bIsDone = true  a = 2    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 2
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader starting      id = 4  row = -1   aIsDone = false bIsDone = true  a = 3    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 3
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader starting      id = 5  row = -1   aIsDone = false bIsDone = true  a = 4    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 5  row = 4
-Reader::read                   id = 0  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-MetaRead::dispatch id = 6
-Reader::read                   id = 1  row = 0    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg
-Reader::read                   id = 2  row = 1    isGUI = false /Users/roryhill/Pictures/Coaster/2005-10-11_0090.jpg
-Reader::read                   id = 3  row = 2    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0031.jpg
-MetaRead::dispatch     reader starting      id = 6  row = -1   aIsDone = false bIsDone = true  a = 5    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 5
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader starting      id = 7  row = -1   aIsDone = false bIsDone = true  a = 6    b = -1   isGUI = false
-Reader::read                   id = 5  row = 4    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0094.jpg
-Reader::read                   id = 4  row = 3    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0058.jpg
-Reader::read                   id = 6  row = 5    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0127.jpg
-MetaRead::dispatch reader      id = 7  row = 6
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader starting      id = 8  row = -1   aIsDone = false bIsDone = true  a = 7    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 8  row = 7
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader starting      id = 10 row = -1   aIsDone = false bIsDone = true  a = 8    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 8
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader starting      id = 11 row = -1   aIsDone = false bIsDone = true  a = 9    b = -1   isGUI = false
-MetaRead::dispatch reader      id = 11 row = 9
-Reader::read                   id = 7  row = 6    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0154.jpg
-MetaRead::dispatch id = 12
-Reader::read                   id = 10 row = 8    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0173.jpg
-Reader::read                   id = 8  row = 7    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0163.jpg
-Reader::read                   id = 11 row = 9    isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0224.jpg
-MetaRead::dispatch     reader starting      id = 12 row = -1   aIsDone = false bIsDone = true  a = 10   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 12 row = 10
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader starting      id = 13 row = -1   aIsDone = false bIsDone = true  a = 11   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 13 row = 11
-MetaRead::dispatch id = 14
-Reader::read                   id = 12 row = 10   isGUI = false /Users/roryhill/Pictures/Coaster/2006-04-27_0248.jpg
-MetaRead::dispatch     reader starting      id = 14 row = -1   aIsDone = false bIsDone = true  a = 12   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 12
-Reader::read                   id = 13 row = 11   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0005.jpg
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader starting      id = 15 row = -1   aIsDone = false bIsDone = true  a = 13   b = -1   isGUI = false
-Reader::read                   id = 14 row = 12   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0008.jpg
-MetaRead::dispatch reader      id = 15 row = 13
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader starting      id = 16 row = -1   aIsDone = false bIsDone = true  a = 14   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 14
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader starting      id = 17 row = -1   aIsDone = false bIsDone = true  a = 15   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 17 row = 15
-Reader::read                   id = 15 row = 13   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0021.jpg
-MetaRead::dispatch id = 18
-Reader::read                   id = 16 row = 14   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0025.jpg
-MetaRead::dispatch     reader starting      id = 18 row = -1   aIsDone = false bIsDone = true  a = 16   b = -1   isGUI = false
-Reader::read                   id = 17 row = 15   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0038.jpg
-MetaRead::dispatch reader      id = 18 row = 16
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader starting      id = 19 row = -1   aIsDone = false bIsDone = true  a = 17   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 19 row = 17
-Reader::read                   id = 18 row = 16   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-12_0040.jpg
-Reader::read                   id = 19 row = 17   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0079.jpg
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 5    aIsDone = false bIsDone = true  a = 18   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 6  row = 18
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 0    aIsDone = false bIsDone = true  a = 19   b = -1   isGUI = false
-Reader::read                   id = 6  row = 18   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0096.jpg
-MetaRead::dispatch reader      id = 0  row = 19
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 0    aIsDone = false bIsDone = true  a = 20   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 1  row = 20
-Reader::read                   id = 1  row = 20   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0102.jpg
-Reader::read                   id = 0  row = 19   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0098.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 2    aIsDone = false bIsDone = true  a = 21   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 3  row = 21
-Reader::read                   id = 3  row = 21   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0103.jpg
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 3    aIsDone = false bIsDone = true  a = 22   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 4  row = 22
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 10   aIsDone = false bIsDone = true  a = 23   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 12 row = 23
-MetaRead::dispatch id = 11
-Reader::read                   id = 12 row = 23   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0114.jpg
-MetaRead::dispatch     reader returning     id = 11 row = 9    aIsDone = false bIsDone = true  a = 24   b = -1   isGUI = false
-Reader::read                   id = 4  row = 22   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0112.jpg
-MetaRead::dispatch reader      id = 11 row = 24
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 1    aIsDone = false bIsDone = true  a = 25   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 2  row = 25
-Reader::read                   id = 11 row = 24   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0115.jpg
-Reader::read                   id = 2  row = 25   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0116.jpg
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 8    aIsDone = false bIsDone = true  a = 26   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 10 row = 26
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 4    aIsDone = false bIsDone = true  a = 27   b = -1   isGUI = false
-Reader::read                   id = 10 row = 26   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0119.jpg
-MetaRead::dispatch reader      id = 5  row = 27
-Reader::read                   id = 5  row = 27   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0121.jpg
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 6    aIsDone = false bIsDone = true  a = 28   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 7  row = 28
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 7    aIsDone = false bIsDone = true  a = 29   b = -1   isGUI = false
-Reader::read                   id = 7  row = 28   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0122.jpg
-MetaRead::dispatch reader      id = 8  row = 29
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 11   aIsDone = false bIsDone = true  a = 30   b = -1   isGUI = false
-Reader::read                   id = 8  row = 29   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0123.jpg
-MetaRead::dispatch reader      id = 13 row = 30
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 13   aIsDone = false bIsDone = true  a = 31   b = -1   isGUI = false
-Reader::read                   id = 13 row = 30   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0125.jpg
-MetaRead::dispatch reader      id = 15 row = 31
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 14   aIsDone = false bIsDone = true  a = 32   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 16 row = 32
-Reader::read                   id = 15 row = 31   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0126.jpg
-Reader::read                   id = 16 row = 32   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0130.jpg
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 12   aIsDone = false bIsDone = true  a = 33   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 14 row = 33
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 15   aIsDone = false bIsDone = true  a = 34   b = -1   isGUI = false
-Reader::read                   id = 14 row = 33   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0132.jpg
-MetaRead::dispatch reader      id = 17 row = 34
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 16   aIsDone = false bIsDone = true  a = 35   b = -1   isGUI = false
-MetaRead::dispatch reader      id = 18 row = 35
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 18   aIsDone = false bIsDone = true  a = 36   b = -1   isGUI = false
-Reader::read                   id = 17 row = 34   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0133.jpg
-Reader::read                   id = 18 row = 35   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0134.jpg
-MetaRead::dispatch reader      id = 6  row = 36
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 20   aIsDone = false bIsDone = true  a = 37   b = -1   isGUI = false
-Reader::read                   id = 6  row = 36   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0140.jpg
-MetaRead::dispatch reader      id = 1  row = 37
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 19   aIsDone = false bIsDone = true  a = 38   b = -1   isGUI = false
-Reader::read                   id = 1  row = 37   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0142.jpg
-MetaRead::dispatch reader      id = 0  row = 38
-Reader::read                   id = 0  row = 38   isGUI = false /Users/roryhill/Pictures/Coaster/2011-10-14_0164.jpg
-MetaRead::dispatch id = 3
-MetaRead::dispatch     reader returning     id = 3  row = 21   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 2
-MetaRead::dispatch     reader returning     id = 2  row = 25   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 12
-MetaRead::dispatch     reader returning     id = 12 row = 23   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 19
-MetaRead::dispatch     reader returning     id = 19 row = 17   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 4
-MetaRead::dispatch     reader returning     id = 4  row = 22   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 11
-MetaRead::dispatch     reader returning     id = 11 row = 24   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 7
-MetaRead::dispatch     reader returning     id = 7  row = 28   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 5
-MetaRead::dispatch     reader returning     id = 5  row = 27   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 16
-MetaRead::dispatch     reader returning     id = 16 row = 32   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 13
-MetaRead::dispatch     reader returning     id = 13 row = 30   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 15
-MetaRead::dispatch     reader returning     id = 15 row = 31   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 17
-MetaRead::dispatch     reader returning     id = 17 row = 34   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 18
-MetaRead::dispatch     reader returning     id = 18 row = 35   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 14
-MetaRead::dispatch     reader returning     id = 14 row = 33   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 8
-MetaRead::dispatch     reader returning     id = 8  row = 29   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 6
-MetaRead::dispatch     reader returning     id = 6  row = 36   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 0
-MetaRead::dispatch     reader returning     id = 0  row = 38   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 1
-MetaRead::dispatch     reader returning     id = 1  row = 37   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-MetaRead::dispatch id = 10
-MetaRead::dispatch     reader returning     id = 10 row = 26   aIsDone = true  bIsDone = true  a = 39   b = -1   isGUI = false
-REDO MAXED OUT
+#include "File/fstree.h"
 
-MW::fileSelectionChange setImageCachePosition "/Users/roryhill/Pictures/Coaster/2005-10-11_0082.jpg"
-"MW::loadDone"
-MetaRead::quitAfterTimeout
-MetaRead::dispatchFinished "QuitAfterTimeout" G::allMetadataLoaded = true
-ImageCache::fillCache Terminated
+extern QStringList mountedDrives;
+QStringList mountedDrives;
+
+/*------------------------------------------------------------------------------
+CLASS FSFilter subclassing QSortFilterProxyModel
+------------------------------------------------------------------------------*/
+
+FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
+{
+
+}
+
+void FSFilter::refresh()
+{
+    this->invalidateFilter();
+}
+
+bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+#ifdef Q_OS_WIN
+    ///*
+    if (!sourceParent.isValid()) {      // if is a drive
+        QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+        bool mounted = mountedDrives.contains(path);
+        if (!mounted) return false;     // do not accept unmounted drives
+    }
+    //*/
+    return true;
+#endif
+
+#ifdef Q_OS_MAC
+    if (sourceParent.row() == -1) return true;
+    if (!sourceParent.isValid()) return true;
+
+    QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
+    QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
+    QFileInfo info(fPath);
+    if (fParentPath == "/" && (fPath == "/Users" || fPath == "/Volumes")) return true;
+    if (fParentPath == "/") return false;
+    if (info.isHidden()) return false;
+    return true;
+#endif
+
+#ifdef Q_OS_LINIX
+    return true;
+#endif
+}
+
+/*------------------------------------------------------------------------------
+CLASS FSModel subclassing QFileSystemModel
+------------------------------------------------------------------------------*/
+
+/*
+   We are subclassing QFileSystemModel in order to add a column for imageCount
+   to the model and display the image count beside each folder in the TreeView.
+*/
+
+FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
+                 : QFileSystemModel(parent),
+                   combineRawJpg(combineRawJpg),
+                   metadata(metadata)
+{
+    QStringList *fileFilters = new QStringList;
+    dir = new QDir();
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata.supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    count.clear();
+    combineCount.clear();
+
+    this->iconProvider()->setOptions(QFileIconProvider::DontUseCustomDirectoryIcons);
+}
+
+bool FSModel::hasChildren(const QModelIndex &parent) const
+{
+    if (parent.column() > 0)
+                return false;
+
+        if (!parent.isValid()) // drives
+                return true;
+
+    // return false if item can't have children
+        if (parent.flags() &  Qt::ItemNeverHasChildren) {
+                return false;
+        }
+
+        // return if at least one child exists
+        return QDirIterator(filePath(parent), filter() | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags).hasNext();
+}
+
+int FSModel::columnCount(const QModelIndex &parent) const
+{
+    // add a column for the image count
+    return QFileSystemModel::columnCount(parent) + 1;
+}
+
+QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    // add header text for the additional image count column
+    if (orientation == Qt::Horizontal && section == imageCountColumn)
+    {
+        if (role == Qt::DisplayRole) return QVariant("#");
+        if (role == Qt::EditRole) return QVariant("#");
+        return QVariant();
+     }
+     else
+        return QFileSystemModel::headerData(section, orientation, role);
+}
+
+void FSModel::refresh()
+{
+    beginResetModel();
+    endResetModel();
+    return;
+}
+
+void FSModel::refresh(const QString &dPath)
+{
+    // used in MW::pasteFiles
+    const QModelIndex idx = index(dPath, imageCountColumn);
+    QList<int> roles;
+    roles << Qt::DisplayRole;
+    emit dataChanged(idx, idx, roles);
+    // qDebug() << "FSModel::refresh dPath" << dPath;
+}
+
+QVariant FSModel::data(const QModelIndex &index, int role) const
+{
+/*
+    Return image count for each folder by looking it up in the QHash count which is built
+    in FSTree::getImageCount and referenced here. This is much faster than performing the
+    image count "on-the-fly" here, which causes scroll latency.
+*/
+    if (index.column() == imageCountColumn) {
+        if (role == Qt::DisplayRole && showImageCount) {
+            QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
+
+            static quint64 counter = 0;
+            dir->setPath(dPath);
+            int n = 0;
+            QString nStr = "0";
+            if (combineRawJpg) {
+                if (!forceRefresh) {
+                    if (combineCount.contains(dPath))
+                        return combineCount.value(dPath);
+                }
+                // iterate through files in folder
+                QListIterator<QFileInfo> i(dir->entryInfoList());
+                while (i.hasNext()) {
+                    QFileInfo info = i.next();
+                    QString fPath = info.path();
+                    QString baseName = info.baseName();
+                    QString suffix = info.suffix().toLower();
+                    QString jpgPath = fPath + "/" + baseName + ".jpg";
+                    QString jpgPath1 = fPath + "/" + baseName + ".jpeg";
+                    if (metadata.hasJpg.contains(suffix)) {
+                        if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
+                        if (dir->entryInfoList().contains(QFileInfo(jpgPath1))) continue;
+                    }
+                    n++;
+                }
+                nStr = QString::number(n, 'f', 0);
+                if (combineCount.contains(dPath)) {
+                    // has the count changed?
+                    if (combineCount.value(dPath) != nStr) {
+                        // update hash value (insert adds or replaces in QHash)
+                        combineCount.insert(dPath, nStr);
+                        // signal changed value to bookmarks
+                        emit update();
+                    }
+                }
+                else {
+                    // add hash value
+                    combineCount.insert(dPath, nStr);
+                }
+            }
+            // not combineRawJpg
+            else {
+                // dir is filtered to only include eligible image files
+                n = dir->entryInfoList().size();
+                nStr = QString::number(n, 'f', 0);
+                if (count.contains(dPath)) {
+                    // has the count changed?
+                    if (count.value(dPath) != nStr) {
+                        // update hash value (insert adds or replaces in QHash)
+                        count.insert(dPath, nStr);
+                        // signal changed value to bookmarks
+                        emit update();
+                    }
+                }
+                else {
+                    // add hash value
+                    count.insert(dPath, nStr);
+                }
+            }
+            return nStr;
+        }
+        if (role == Qt::TextAlignmentRole) {
+            return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        else {
+            return QVariant();
+        }
+    }
+
+    // return tooltip for folder path
+    if (index.column() == 0) {
+        if (role == Qt::ToolTipRole) {
+            return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
+        }
+        else {
+            return QFileSystemModel::data(index, role);
+        }
+    }
+    // return parent class data
+    return QFileSystemModel::data(index, role);
+}
+
+/*------------------------------------------------------------------------------
+CLASS FSTree subclassing QTreeView
+------------------------------------------------------------------------------*/
+
+FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
+        : QTreeView(parent), delegate(new HoverDelegate(this))
+{
+    this->dm = dm;
+    this->metadata = metadata;
+    fileFilters = new QStringList;
+    dir = new QDir();
+    viewport()->setObjectName("fsTreeViewPort");
+    setObjectName("fsTree");
+
+    // create model and filter
+    createModel();
+
+    // setup treeview
+    for (int i = 1; i <= 3; ++i) {
+        hideColumn(i);
+    }
+
+    setItemDelegate(delegate);
+
+    setRootIsDecorated(true);
+    setSortingEnabled(false);
+    setHeaderHidden(true);
+    sortByColumn(0, Qt::AscendingOrder);
+    setIndentation(16);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    setMouseTracking(true);
+
+    setAcceptDrops(true);
+    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::InternalMove);
+
+    QStringList *fileFilters = new QStringList;
+    dir = new QDir();
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+}
+
+void FSTree::createModel()
+{
+/*
+    Create the model and filter in a separate function as it is also used to refresh
+    the folders by deleting the model and re-creating it.
+*/
+    fsModel = new FSModel(this, *metadata, combineRawJpg);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    fsModel->setRootPath("");
+
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+
+    fsFilter = new FSFilter(fsModel);
+    fsFilter->setSourceModel(fsModel);
+    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
+
+    // apply model to treeview
+    setModel(fsFilter);
+
+    QAbstractFileIconProvider *iconProvider = fsModel->iconProvider();
+    QIcon icon = fsModel->iconProvider()->icon(QFileIconProvider::Folder);
+}

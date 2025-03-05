@@ -5,6 +5,78 @@ extern QStringList mountedDrives;
 QStringList mountedDrives;
 
 /*------------------------------------------------------------------------------
+CLASS ImageCounter worker thread
+------------------------------------------------------------------------------*/
+
+ImageCounter::ImageCounter(const QString &path, Metadata &metadata,
+                           bool &combineRawJpg, QStringList *fileFilters,
+                           QObject *parent)
+    : QThread(parent),
+    dPath(path),
+    metadata(metadata),
+    combineRawJpg(combineRawJpg),
+    fileFilters(fileFilters)
+{}
+
+void ImageCounter::run()
+{
+    int count = computeImageCount(dPath);
+    qDebug() << "ImageCounter::run count =" << count << dPath;
+    emit countReady(dPath, count);
+}
+
+int ImageCounter::computeImageCount(const QString &path)
+{
+    QDirIterator it(path, *fileFilters, QDir::Files);
+    int count = 0;
+    QSet<QString> rawBaseNames;     // Stores base names of RAW files
+    QStringList jpgBaseNames;       // Stores all valid file names
+
+    if (combineRawJpg) {
+        while (it.hasNext()) {
+            it.next();
+            QString fileName = it.fileName().toLower();
+            int dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex == -1) {
+                continue;  // No extension, skip
+            }
+
+            QString baseName = fileName.left(dotIndex);
+            QString ext = fileName.mid(dotIndex + 1);
+
+            bool isRaw = metadata.hasJpg.contains(ext);
+            bool isJpg = ext == "jpeg" || ext == "jpg";
+
+            // count raw files
+            if (isRaw) {
+                rawBaseNames.insert(baseName);
+                count++;
+            }
+            // do not count jpg files yet
+            else if (isJpg) jpgBaseNames.append(baseName);
+            // count all other image files
+            else count++;
+        }
+
+        // check for jpg/raw matching pairs
+        for (const QString &baseName : jpgBaseNames) {
+            // count jpg files if no matching raw file
+            if (!rawBaseNames.contains(baseName)) {
+                count++;
+            }
+        }
+    }
+    else {
+        while (it.hasNext()) {
+            it.next();
+            count++;
+        }
+    }
+
+    return count;
+}
+
+/*------------------------------------------------------------------------------
 CLASS FSFilter subclassing QSortFilterProxyModel
 ------------------------------------------------------------------------------*/
 
@@ -72,7 +144,8 @@ FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
                    combineRawJpg(combineRawJpg),
                    metadata(metadata)
 {
-    QStringList *fileFilters = new QStringList;
+    fileFilters = new QStringList;
+    // QStringList *fileFilters = new QStringList;
     dir = new QDir();
 
     fileFilters->clear();
@@ -86,25 +159,6 @@ FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
 
     this->iconProvider()->setOptions(QFileIconProvider::DontUseCustomDirectoryIcons);
 }
-
-void FSModel::insertCount(QString dPath, QString value)
-// not being used
-{
-    count[dPath] = value;
-}
-
-void FSModel::insertCombineCount(QString dPath, QString value)
-// not being used
-{
-    combineCount[dPath] = value;
-}
-
-
-//bool FSModel::event(QEvent *event)
-//{
-//    qDebug() << "FSModel::event" << event;
-//    return QFileSystemModel::event(event);
-//}
 
 bool FSModel::hasChildren(const QModelIndex &parent) const
 {
@@ -160,97 +214,46 @@ void FSModel::refresh(const QString &dPath)
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
+// QVariant FSModel::data(const QModelIndex &index, int role)
 {
 /*
     Return image count for each folder by looking it up in the QHash count which is built
     in FSTree::getImageCount and referenced here. This is much faster than performing the
     image count "on-the-fly" here, which causes scroll latency.
 */
-    if (G::useFSTreeCount && index.column() == imageCountColumn) {
-        if (role == Qt::DisplayRole && showImageCount) {
-            QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
+    if (index.column() == imageCountColumn && showImageCount) {
+        if (role == Qt::DisplayRole) {
+            QString dPath = filePath(index);
+            // qDebug() << "FSModel::data" << dPath;
 
-            static quint64 counter = 0;
-            // qDebug() << "FSModel::data" << ++counter << dPath;
+            if (count.contains(dPath)) {
+                return count.value(dPath);  // Return cached value
+            }
 
-            /*
-            How to save/cast a const variable:
-            const QModelIndex *tIdx = &index;
-            if (dPath == "/Users/roryhill/Pictures/_test") {
-                QModelIndex ttIdx;
-                ttIdx = *const_cast<QModelIndex*>(tIdx);
-                testIdx = ttIdx;    // in hdr: mutable QModelIndex testIdx;
-            }
-            //*/
-            dir->setPath(dPath);
-            int n = 0;
-            QString nStr = "0";
-            if (combineRawJpg) {
-                if (!forceRefresh) {
-                    if (combineCount.contains(dPath))
-                        return combineCount.value(dPath);
-                }
-                // iterate through files in folder
-                QListIterator<QFileInfo> i(dir->entryInfoList());
-                while (i.hasNext()) {
-                    QFileInfo info = i.next();
-                    QString fPath = info.path();
-                    QString baseName = info.baseName();
-                    QString suffix = info.suffix().toLower();
-                    QString jpgPath = fPath + "/" + baseName + ".jpg";
-                    QString jpgPath1 = fPath + "/" + baseName + ".jpeg";
-                    if (metadata.hasJpg.contains(suffix)) {
-                        if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
-                        if (dir->entryInfoList().contains(QFileInfo(jpgPath1))) continue;
-                    }
-                    n++;
-                }
-                nStr = QString::number(n, 'f', 0);
-                if (combineCount.contains(dPath)) {
-                    // has the count changed?
-                    if (combineCount.value(dPath) != nStr) {
-                        // update hash value (insert adds or replaces in QHash)
-                        combineCount.insert(dPath, nStr);
-                        // signal changed value to bookmarks
-                        emit update();
-                    }
-                }
-                else {
-                    // add hash value
-                    combineCount.insert(dPath, nStr);
-                }
-            }
-            // not combineRawJpg
-            else {
-                // dir is filtered to only include eligible image files
-                n = dir->entryInfoList().size();
-                nStr = QString::number(n, 'f', 0);
-                if (count.contains(dPath)) {
-                    // has the count changed?
-                    if (count.value(dPath) != nStr) {
-                        // update hash value (insert adds or replaces in QHash)
-                        count.insert(dPath, nStr);
-                        // signal changed value to bookmarks
-                        emit update();
-                    }
-                }
-                else {
-                    // add hash value
-                    count.insert(dPath, nStr);
-                }
-            }
-            /*
-            qDebug() << "FSModel::data image count processed" << combineCount.value(dPath)
-                     << dPath << index << "count =" << nStr;
-                     //*/
-            return nStr;
+            // Start background count
+            ImageCounter *worker = new ImageCounter(dPath, metadata, combineRawJpg, fileFilters);
+
+            connect(worker, &ImageCounter::countReady,
+                    this, [this](const QString &path, int countValue)
+            {
+                // Convert 'this' from 'const FSModel*' to 'FSModel*'
+                auto *nc = const_cast<FSModel*>(this);
+                nc->count.insert(path, QString::number(countValue));
+                QModelIndex idx = nc->index(path, imageCountColumn);
+                QList<int> roles;
+                roles << Qt::DisplayRole;
+                emit nc->dataChanged(idx, idx, roles);
+            });
+
+            // worker->setParams(dPath, metadata, combineRawJpg);
+            worker->start(QThread::LowPriority);
         }
+
         if (role == Qt::TextAlignmentRole) {
             return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
         }
-        else {
-            return QVariant();
-        }
+
+        return QVariant();  // Show nothing until count is ready
     }
 
     // return tooltip for folder path
@@ -283,6 +286,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             return QFileSystemModel::data(index, role);
         }
     }
+
     // return parent class data
     return QFileSystemModel::data(index, role);
 }
