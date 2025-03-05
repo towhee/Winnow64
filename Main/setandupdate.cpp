@@ -447,20 +447,22 @@ void MW::setIngested()
 void MW::setCombineRawJpg()
 {
     if (G::isLogger) G::log("MW::setCombineRawJpg");
-    if (!G::allMetadataLoaded) {
+    if (dm->rowCount() && !G::allMetadataLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popUp->showPopup(msg, 2000);
         return;
     }
 
     QString msg;
-
-    // flag used in MW, dm and sf, fsTree, bookmarks
-    combineRawJpg = combineRawJpgAction->isChecked();
-
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
     G::popUp->showPopup(msg);
+    qApp->processEvents();
+
+    // flag used in MW, dm and sf, fsTree, bookmarks
+    combineRawJpg = combineRawJpgAction->isChecked();
+    settings->setValue("combineRawJpg", combineRawJpg);
+    updateStatusBar();
 
     dm->sf->combineRawJpg = combineRawJpg;
     fsTree->combineRawJpg = combineRawJpg;
@@ -472,17 +474,18 @@ void MW::setCombineRawJpg()
     /* Reopen the folder and go to the current file.  If the current file was a raw file
        and Raw+Jpg is checked then the raw file will no longer be in the DataModel. In
        this case the current file needs to be set to the jpg alternative. */
-    QString fPath = dm->currentFilePath;
-    QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
-    if (combineRawJpg && ext != "jpg") {
-        QString jpgVersion = Utilities::replaceSuffix(fPath, "jpg");
-        if (dm->contains(jpgVersion)) {
-            fPath = jpgVersion;
-//            fPath = "/Users/roryhill/Pictures/4K/2022-08-21_0020-arw_DxO_DeepPRIME.jpg";
+    if (dm->rowCount()) {
+        QString fPath = dm->currentFilePath;
+        QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
+        if (combineRawJpg && ext != "jpg") {
+            QString jpgVersion = Utilities::replaceSuffix(fPath, "jpg");
+            if (dm->contains(jpgVersion)) {
+                fPath = jpgVersion;
+            }
         }
+        qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
+        folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
     }
-    qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
-    folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
 
 //    // update the datamodel type column
 //    QString src = "setCombinedRawJpg";

@@ -146,7 +146,7 @@ void MW::updateStatusBar()
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
     // if (subFoldersAction->isChecked()) G::includeSubfolders = true;
-    rawJpgStatusLabel->setVisible(combineRawJpgAction->isChecked());
+    rawJpgStatusLabel->setVisible(combineRawJpg);
     slideShowStatusLabel->setVisible(G::isSlideShow);
 }
 

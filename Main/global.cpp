@@ -52,7 +52,7 @@ bool useMissingThumbs = true;
 // limit functionality for testing
 bool useApplicationStateChanged = false;
 bool useZoomWindow = false;;
-bool useFSTreeCount = false;
+bool useFSTreeCount = true;
 bool useReadMeta = true;
 bool useReadIcons = true;
 bool useImageCache = true;

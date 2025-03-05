@@ -606,6 +606,7 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+    qDebug() << "DataModel::addFolder" << folderPath << dir.entryInfoList().count();
 
     /*
     qDebug().noquote()
