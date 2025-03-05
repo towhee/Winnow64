@@ -1494,11 +1494,11 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
         return false;
     }
 
-    // max attempts exceeded
-    if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
-        msg = "Max attempts exceeded";
-        return false;
-    }
+    // // max attempts exceeded
+    // if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
+    //     msg = "Max attempts exceeded";
+    //     return false;
+    // }
 
     // isCaching
     if (toCacheStatus.contains(sfRow)) {
@@ -2054,9 +2054,8 @@ void ImageCache::dispatch()
     // check available memory (another app may have used or released some memory)
     memChk();
 
-    // reset target range
-    // if (!abort)
-    // firstDispatchNewDM = false;
+    // For new datamodel, use estimated range as not all metadata for the range
+    // may have been read yet by metaRead
     if (firstDispatchNewDM) {
         firstDispatchNewDM = false;
         targetFirst = 0;
@@ -2072,6 +2071,5 @@ void ImageCache::dispatch()
     // signal MW cache status
     emit updateIsRunning(true, true);   // (isRunning, showCacheLabel)
 
-    // if (!abort)
-        launchDecoders("ImageCache::dispatch");
+    if (!abort) launchDecoders("ImageCache::dispatch");
 }
