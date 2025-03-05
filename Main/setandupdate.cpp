@@ -453,14 +453,15 @@ void MW::setCombineRawJpg()
         return;
     }
 
+    // flag used in MW, dm and sf, fsTree, bookmarks
+    combineRawJpg = combineRawJpgAction->isChecked();
+
     QString msg;
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
     G::popUp->showPopup(msg);
     qApp->processEvents();
 
-    // flag used in MW, dm and sf, fsTree, bookmarks
-    combineRawJpg = combineRawJpgAction->isChecked();
     settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();
 

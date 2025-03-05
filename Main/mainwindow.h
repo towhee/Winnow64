@@ -1386,7 +1386,8 @@ private:
     void generateMeanStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
-    void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0, bool uturn = true);
+    void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,
+                                  bool uturn = true);
     void bounceFoldersStressTestFromMenu();
     void bounceFoldersStressTest(int msPerImage = 0, double secPerFolder = -1);
     template<typename T> void test2(T& io, int x);

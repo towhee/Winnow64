@@ -395,31 +395,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
-    // debug() << imageCache->decoders[0]->isIdle();
-    // tableDisplay();
+    traverseFolderStressTest(20, 0, true);
+
     // QString path = "/Volumes/Untitled/DCIM/100MSDCF";
     // folderSelectionChange(path, "Add", true, false);
-
-    combineRawJpg = true;
-
-    QString path = "/Users/roryhill/Pictures/Coaster";
-    int count = 0;
-    QStringList fileFilters;
-    foreach (const QString &str, metadata->supportedFormats) {
-        fileFilters.append("*." + str);
-    }
-    QDirIterator it(path, fileFilters, QDir::Files);
-    while (it.hasNext()) {
-        it.next();
-        count++;
-    }
-    qDebug() << count << path << metadata->supportedFormats;
-    // QDir dir(path);
-    // qDebug() << "dir.count() =" << dir.count();
-    // dir.setNameFilters(metadata->supportedFormats);
-    // dir.setFilter(QDir::Files);
-    // count = dir.entryInfoList().count();
-    // qDebug() << count << path << dir.entryInfoList();
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
