@@ -395,10 +395,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // bounceFoldersStressTest(100, 3);
-    traverseFolderStressTest(20, 0, true);
+    // traverseFolderStressTest(20, 0, true);
 
     // QString path = "/Volumes/Untitled/DCIM/100MSDCF";
     // folderSelectionChange(path, "Add", true, false);
+    QString path = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-03_0047_Zen2048.JPG";
+    folderAndFileSelectionChange(path);
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

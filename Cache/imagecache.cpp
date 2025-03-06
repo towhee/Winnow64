@@ -303,6 +303,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
     QElapsedTimer t;
     t.start();
 
+    // signal DataModel::imageCacheWaiting
     emit waitingForRow(sfRow);
 
     while(!isLoaded) {
@@ -607,6 +608,8 @@ void ImageCache::setTargetRange(int key)
     bool aheadDone = false;
     bool behindDone = false;
 
+    // bool abortSetTargetRange;
+
     int n = dm->sf->rowCount();
     if (key == n - 1) {isForward = false; targetLast = n - 1;}
     if (key == 0)     {isForward = true; targetFirst = 0;}
@@ -627,7 +630,7 @@ void ImageCache::setTargetRange(int key)
         if (abort) return;
         // Handle "ahead" direction
         for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
-            // if (!waitForMetaRead(aheadPos)) abort = false;
+            if (!waitForMetaRead(aheadPos, 10)) continue;
             if (isForward ? (aheadPos < n) : (aheadPos >= 0)) {
                 // if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
                 if (dm->sf->index(aheadPos, G::VideoColumn).data().toBool()) {
@@ -650,7 +653,7 @@ void ImageCache::setTargetRange(int key)
 
         // Handle "behind" direction
         for (int b = 0; b < behindAmount && !behindDone; ++b) {
-            // if (!waitForMetaRead(behindPos)) abort = false;
+            if (!waitForMetaRead(behindPos, 10)) continue;
             if (isForward ? (behindPos >= 0) : (behindPos < n)) {
                 // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
                 if (dm->sf->index(behindPos, G::VideoColumn).data().toBool()) {
@@ -2054,16 +2057,18 @@ void ImageCache::dispatch()
     // check available memory (another app may have used or released some memory)
     memChk();
 
-    // For new datamodel, use estimated range as not all metadata for the range
-    // may have been read yet by metaRead
-    if (firstDispatchNewDM) {
-        firstDispatchNewDM = false;
-        targetFirst = 0;
-        targetLast = dm->endImageCacheTargetRange;
-        isForward = true;
-        for (int i = 0; i <= targetLast; i++) toCacheAppend(i);
-    }
-    else updateToCache();
+    // // For new datamodel, use estimated range as not all metadata for the range
+    // // may have been read yet by metaRead
+    // if (firstDispatchNewDM && currRow == 0) {
+    //     firstDispatchNewDM = false;
+    //     targetFirst = 0;
+    //     targetLast = dm->endImageCacheTargetRange;
+    //     isForward = true;
+    //     for (int i = 0; i <= targetLast; i++) toCacheAppend(i);
+    // }
+    // else updateToCache();
+
+    updateToCache();
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;

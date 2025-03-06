@@ -2891,7 +2891,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
