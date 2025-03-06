@@ -21,7 +21,7 @@ ImageCounter::ImageCounter(const QString &path, Metadata &metadata,
 void ImageCounter::run()
 {
     int count = computeImageCount(dPath);
-    qDebug() << "ImageCounter::run count =" << count << dPath;
+    // qDebug() << "ImageCounter::run count =" << count << dPath;
     emit countReady(dPath, count);
 }
 

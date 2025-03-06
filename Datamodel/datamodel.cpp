@@ -1605,10 +1605,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
 
     // signal ImageCache that row is loaded
-    // if (imageCacheWaitingForRow > -1)
-        // qDebug() << "DataModel::addMetadataForItem row =" << row
-        //          << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
-        //     ;
+    if (imageCacheWaitingForRow > -1)
+        qDebug() << "DataModel::addMetadataForItem row =" << row
+                 << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
+            ;
     if (row == imageCacheWaitingForRow) {
         qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
         emit rowLoaded();
