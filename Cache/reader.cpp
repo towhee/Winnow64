@@ -12,7 +12,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     frameDecoder = new FrameDecoder(this);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
 
-    thumb = new Thumb(dm, metadata, frameDecoder);
+    thumb = new Thumb(dm, frameDecoder);
 
     bool isBlockingQueuedConnection = false;
     if (isBlockingQueuedConnection) {
@@ -45,6 +45,7 @@ void Reader::abortProcessing()
 {
     mutex.lock();
     abort = true;
+    thumb->abortProcessing();
     mutex.unlock();
 }
 
@@ -205,7 +206,16 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
     if (!abort) readMetadata();
     if (!abort) readIcon();
 
-    if (abort) return;
+    // if (abort) return;
     emit done(threadId);
     if (G::isLogger) G::log("Reader::read", "Finished");
+    fun = "Reader::read done and returning";
+    if (isDebug)
+    {
+        qDebug().noquote()
+        << fun.leftJustified(col0Width)
+        << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            ;
+    }
 }

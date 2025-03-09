@@ -145,7 +145,7 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
     // CTSL::HashMap<QString, QImage> imCache
     // if (icd->imCache.find(fPath, image)) {
     // QHash<QString, QImage> imCache
-    if (icd->imCache.contains(fPath)) {
+    if (icd->contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
     }

@@ -9,8 +9,14 @@ class ImageCacheData : public QObject
 public:
     explicit ImageCacheData(QObject *);
 
+    bool contains(const QString &key);
+    void insert(const QString &key, const QImage &image);
+    void remove(const QString &key);
+    void clear();
+
     // image cache hash
     QHash<QString, QImage> imCache;
 
+    QReadWriteLock rwLock;
 };
 #endif // CACHEDATA_H

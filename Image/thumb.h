@@ -14,8 +14,8 @@ class Thumb : public QObject
     Q_OBJECT
     QThread frameDecoderthread;
 public:
-    explicit Thumb(DataModel *dm, Metadata *metadata,
-                   FrameDecoder *frameDecoder);
+    explicit Thumb(DataModel *dm, FrameDecoder *frameDecoder);
+    void abortProcessing();
     bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
     void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
@@ -68,6 +68,7 @@ private:
     uint lengthThumb = 0;
 
     bool isDebug;
+    int col0Width = 40;
 };
 
 #endif // THUMB_H

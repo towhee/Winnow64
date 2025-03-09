@@ -73,9 +73,10 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     // qApp->processEvents();
 
     if (dm->loadingModel) {
-        QString msg = "Collecting image files in folder";
+        QString msg = "Collecting image files in folder, please wait a sec.";
         G::popUp->showPopup(msg);
-        // return;
+        qApp->processEvents();
+        return;
 
     }
 

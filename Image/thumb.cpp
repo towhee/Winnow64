@@ -7,12 +7,11 @@
    then entire image is read and scaled to thumbMax.
 */
 
-Thumb::Thumb(DataModel *dm, Metadata *metadata,
-             FrameDecoder *frameDecoder)
+Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
 {
     this->dm = dm;
-    this->metadata = metadata;
     this->frameDecoder = frameDecoder;
+    this->metadata = new Metadata;
 
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
@@ -24,9 +23,18 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     isDebug = false;
 }
 
+void Thumb::abortProcessing()
+{
+    abort = true;
+}
+
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log("Thumb::checkOrientation", fPath);
+    QString fun = "Thumb::checkOrientation";
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width);
+    if (G::isLogger) G::log(fun, fPath);
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->rowFromPath(fPath);
@@ -60,7 +68,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     if (isDebug)
     {
     qDebug().noquote()
-             << "Thumb::checkOrientation"
+             << fun.leftJustified(col0Width)
              << "orientation =" << orientation
              << "rotationDegrees   =" << rotationDegrees
              << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
@@ -71,6 +79,12 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 
 void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
 {
+    QString fun = "Thumb::setImageDimensions";
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "row =" << row;
+    G::log(fun, "row = " + QString::number(row));
     int w = image.width();
     int h = image.height();
     if (h == 0) {
@@ -97,23 +111,27 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 /*
     see top of FrameDecoder.cpp for documentation
 */
-    if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
-
+    QString fun = "Thumb::loadFromVideo";
     if (isDebug)
-    {
-    qDebug() << "Thumb::loadFromVideo                     "
-             << "row =" << dmRow
-             << fPath
-                ;
-    }
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "row =" << dmRow
+            << fPath
+            ;
+    if (G::isLogger) G::log(fun, fPath);
 
     QModelIndex dmIdx = dm->index(dmRow, 0);
-    emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, dm->instance);
+    if (!abort)
+        emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, dm->instance);
 }
 
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
     QString fun = "Thumb::loadFromEntireFile";
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "row =" << row << fPath;
     if (G::isLogger)
         G::log(fun, fPath);
     if (instance != dm->instance) return Status::Fail;
@@ -123,13 +141,14 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         G::log(fun, fPath + " isAlready open");
         return Status::Open;
     }
-    if (!image.load(fPath)) {
+
+    if (!abort && !image.load(fPath)) {
         QString msg = "Could not read thumb using QImage::load.";
         G::issue("Warning", msg, "Thumb::loadFromEntireFile", dmRow, fPath);
         return Status::Fail;
     }
 
-    setImageDimensions(fPath, image, row);
+    if (!abort) setImageDimensions(fPath, image, row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -144,14 +163,11 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
     QString fun = "Thumb::loadFromJpgData";
     if (G::isLogger) G::log(fun, fPath);
-
-    /*
-    qDebug() << "Thumb::loadFromJpgData"
-             << "offsetThumb =" << offsetThumb
-             << "lengthThumb =" << lengthThumb
-             << "fPath =" << fPath
-                ;
-                //*/
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << fPath
+            ;
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -160,11 +176,15 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
         return Status::Open;
     }
 
+    if (abort) return Status::Fail;
+
     if (imFile.open(QIODevice::ReadOnly)) {
         bool success = false;
-        if (imFile.seek(offsetThumb)) {
-            QByteArray buf = imFile.read(lengthThumb);
-            success =  image.loadFromData(buf, "JPEG");
+        if (!abort) {
+            if (imFile.seek(offsetThumb)) {
+                QByteArray buf = imFile.read(lengthThumb);
+                success =  image.loadFromData(buf, "JPEG");
+            }
         }
         imFile.close();
         if (image.isNull()) {
@@ -184,6 +204,14 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 {
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "row =" << row
+            << fPath
+            ;
+
+    if (abort) return Status::Fail;
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -196,7 +224,9 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
 
     ImageMetadata m = dm->imMetadata(fPath);
+    if (abort) return Status::Fail;
     Tiff tiff("Thumb::loadFromTiff");
+    if (abort) return Status::Fail;
     if (!tiff.read(fPath, &image, m.offsetThumb)) {
         QString errMsg = "Could not read because QtTiff read failed.";
         G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
@@ -209,6 +239,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     // fix missing embedded thumbnail
     QModelIndex sfIdx = dm->sf->index(row, G::MissingThumbColumn);
     bool isMissingThumb = sfIdx.data().toBool();
+    if (abort) return Status::Fail;
     if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
         if (G::backupBeforeModifying) {
             QString msg = "File(s) have been backed up before embedding thumbnail(s).<p>"
@@ -218,6 +249,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
             // emit G::relay->updateStatus(false, msg, "Thumb::loadFromTiff");  // this works
             Utilities::backup(fPath, "backup");
         }
+        if (abort) return Status::Fail;
         if (tiff.encodeThumbnail(fPath, image)) {
             emit setValueSf(sfIdx, false, dm->instance, "Thumb::loadFromTiff");
         }
@@ -225,9 +257,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 
     return Status::Success;
 
-
-
-
+    if (abort) return Status::Fail;
 
     if (tiff.read(fPath, &image, m.offsetThumb)) {
         // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
@@ -255,6 +285,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     // Tiff tiff("Thumb::loadFromTiff");
 
     // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
+    if (abort) return Status::Fail;
     bool getThumb = true;
     if (isEmbeddedThumb && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) {
         if (image.isNull()) {
@@ -267,6 +298,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 
      // try load entire tif using Winnow
      // qDebug() << "Thumb::loadFromTiff" << fPath;
+    if (abort) return Status::Fail;
      if (!tiff.decode(fPath, m.offsetFull, image)) {
          if (image.isNull()) {
              QString msg = "Could not read thumb using Tiff::decoder.";
@@ -284,8 +316,15 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
 
 Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log("Thumb::loadFromHeic", fPath);
+    QString fun = "Thumb::loadFromHeic";
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << fPath
+            ;
+    if (G::isLogger) G::log(fun, fPath);
 
+    if (abort) return Status::Fail;
     QFile imFile(fPath);
     if (imFile.isOpen()) {
         return Status::Open;
@@ -317,6 +356,7 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     #endif
 
     #ifdef Q_OS_MAC
+    if (abort) return Status::Fail;
     // Heic natively supported on Mac
     if (image.load(fPath)) {
         if (image.isNull()) {
@@ -332,7 +372,12 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 
 void Thumb::presetOffset(uint offset, uint length)
 {
-    if (G::isLogger) G::log("Thumb::presetOffset");
+    QString fun = "Thumb::presetOffset";
+    if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "offset =" << offset << "lengt =h" << length;
+    if (G::isLogger) G::log(fun);
     offsetThumb = offset;
     lengthThumb = length;
     isPresetOffset = true;
@@ -349,10 +394,14 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     Called by MW::fileSelectionChange when an icon has not been loaded and by
     MW::refreshCurrentFolder.
 */
-    if (G::isLogger) G::log("Thumb::loadThumb", fPath);
-    if (fPath.isEmpty()) qDebug() << "Thumb::loadThumb EMPTY FPATH";
+    QString fun = "Thumb::loadThumb";
     if (isDebug)
-        qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "Instance =" << instance << src << fPath;
+    if (G::isLogger) G::log(fun, fPath);
+
+    abort = false;
 
     dmRow = dm->rowFromPath(fPath);
 
@@ -370,7 +419,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     bool isVideo = metadata->videoFormats.contains(ext);
     if (isVideo) {
         if (G::renderVideoThumb) {
-            loadFromVideo(fPath, dmRow);
+            if (!abort) loadFromVideo(fPath, dmRow);
             return true;
         }
     }
@@ -411,6 +460,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     while ((status == Status::None || status == Status::Open) && attempts < maxAttempts) {
 
         if (G::stop) return false;
+        if (abort) return false;
 
         // try again after 100ms
         if (status == Status::Open) {
@@ -427,19 +477,19 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         if (ext == "heic") {
             status = loadFromHeic(fPath, image);
             if (status == Status::Success) {
-                setImageDimensions(fPath, image, dmRow);
+                if (!abort) setImageDimensions(fPath, image, dmRow);
                 break;
             }
         }
 
         if (ext == "tif" && G::useMyTiff) {
-            status = loadFromTiff(fPath, image, dmRow);
+            if (!abort) status = loadFromTiff(fPath, image, dmRow);
             if (status == Status::Success) break;
         }
 
         // all other image files
         // read the image file (supported by Qt), scaling to thumbnail size
-        status = loadFromEntireFile(fPath, image, dmRow);
+        if (!abort) status = loadFromEntireFile(fPath, image, dmRow);
         if (status == Status::Success) break;
 
     }
@@ -452,7 +502,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         image.convertTo(QImage::Format_RGB32);
 
         // rotate if there is orientation metadata
-        if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
+        if (!abort)
+            if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     }
 
     if (status == Status::Success) return true;

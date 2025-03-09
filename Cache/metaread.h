@@ -31,6 +31,7 @@ public:
 
     void syncInstance();
     void stopReaders();
+    void abortReaders();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();

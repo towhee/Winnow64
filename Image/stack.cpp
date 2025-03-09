@@ -81,9 +81,8 @@ QString Stack::mean()
     for (int i = 0; i < n; ++i) {
         if (abort) break;
         QString fPath = selection.at(i);
-        if (icd->imCache.contains(fPath)) {
-            // icd->imCache.find(fPath, image);  // CTSL::HashMap<QString, QImage> imCache
-            image = icd->imCache.value(fPath);   // QHash<QString, QImage> imCache
+        if (icd->contains(fPath)) {
+            image = icd->imCache.value(fPath);
         }
         else {
             pix->load(fPath, image, "Stack::doMean");
