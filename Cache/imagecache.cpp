@@ -288,7 +288,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
         }
         return true;
     }
-    if (dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+    if (dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
         if (debugCaching)
         {
             qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -308,7 +308,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
 
     while(!isLoaded) {
         if (!condition.wait(&gMutex, ms - t.elapsed())) break;
-        isLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+        isLoaded = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
         if (isLoaded) break;
     }
 
@@ -630,17 +630,15 @@ void ImageCache::setTargetRange(int key)
         if (abort) return;
         // Handle "ahead" direction
         for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
-            if (!waitForMetaRead(aheadPos, 10)) continue;
+            // if (!waitForMetaRead(aheadPos, 10)) continue;
             if (isForward ? (aheadPos < n) : (aheadPos >= 0)) {
-                // if (debugCaching) {qDebug() << "aheadPos =" << aheadPos;}
                 if (dm->sf->index(aheadPos, G::VideoColumn).data().toBool()) {
                     emit setCached(aheadPos, true, instance);
                 } else {
                     sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
                     QString fPath = dm->sf->index(aheadPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
-                        if (!toCache.contains(aheadPos) && !icd->imCache.contains(fPath)) {
-                            if (abort) return;
+                        if (!toCache.contains(aheadPos) && !icd->contains(fPath)) {
                             toCacheAppend(aheadPos);
                         }
                         isForward ? targetLast = aheadPos : targetFirst = aheadPos;
@@ -653,7 +651,7 @@ void ImageCache::setTargetRange(int key)
 
         // Handle "behind" direction
         for (int b = 0; b < behindAmount && !behindDone; ++b) {
-            if (!waitForMetaRead(behindPos, 10)) continue;
+            // if (!waitForMetaRead(behindPos, 10)) continue;
             if (isForward ? (behindPos >= 0) : (behindPos < n)) {
                 // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
                 if (dm->sf->index(behindPos, G::VideoColumn).data().toBool()) {
@@ -662,8 +660,7 @@ void ImageCache::setTargetRange(int key)
                     sumMB +=  dm->sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
                     QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
                     if (sumMB < maxMB) {
-                        if (!toCache.contains(behindPos) && !icd->imCache.contains(fPath)) {
-                            if (abort) return;
+                        if (!toCache.contains(behindPos) && !icd->contains(fPath)) {
                             toCacheAppend(behindPos);
                         }
                         isForward ? targetFirst = behindPos : targetLast = behindPos;
@@ -681,6 +678,64 @@ void ImageCache::setTargetRange(int key)
              << fun << "targetFirst =" << targetFirst << "targetLast =" << targetLast
              << toCache;
     }
+    //*/
+
+    /* Version combining ahead and behind (not working)
+
+    float sumMB = 0;
+    int aheadAmount = 2;
+    int behindAmount = 1;
+    int n = dm->sf->rowCount();
+    bool aheadDone = false, behindDone = false;
+
+    if (key == n - 1) { isForward = false; targetLast = n - 1; }
+    if (key == 0)     { isForward = true; targetFirst = 0; }
+
+    int aheadPos = key;
+    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    int aheadCount = 0, behindCount = 0;
+    bool processAhead = true;
+
+    while (sumMB < maxMB && (!aheadDone || !behindDone) && !abort) {
+        int pos;
+        if (processAhead && !aheadDone && aheadCount < aheadAmount) {
+            pos = aheadPos;
+            isForward ? ++aheadPos : --aheadPos;
+            aheadCount++;
+        } else if (!processAhead && !behindDone && behindCount < behindAmount) {
+            pos = behindPos;
+            isForward ? --behindPos : ++behindPos;
+            behindCount++;
+        } else {
+            aheadCount = 0;
+            behindCount = 0;
+            continue;
+        }
+        processAhead = !processAhead;  // this looks wrong
+
+        if (!waitForMetaRead(pos, 10)) continue;
+        if (pos < 0 || pos >= n) {
+            if (processAhead) aheadDone = true;
+            else behindDone = true;
+            continue;
+        }
+
+        if (dm->sf->index(pos, G::VideoColumn).data().toBool()) {
+            emit setCached(pos, true, instance);
+            continue;
+        }
+
+        sumMB += dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+        QString fPath = dm->sf->index(pos, 0).data(G::PathRole).toString();
+        if (sumMB < maxMB && !toCache.contains(pos) && !icd->imCache.contains(fPath)) {
+            if (abort) return;
+            toCacheAppend(pos);
+        }
+
+        if (processAhead) targetLast = pos;
+        else targetFirst = pos;
+    }
+
     //*/
 }
 
@@ -736,7 +791,7 @@ void ImageCache::rename(QString oldPath, QString newPath)
 */
 {
     if (debugLog || G::isLogger) log("rename");
-    if (icd->imCache.contains(oldPath)) {
+    if (icd->contains(oldPath)) {
         QImage image = icd->imCache.take(oldPath);  // Remove the old key-value pair
         icd->imCache.insert(newPath, image);
     }
@@ -882,6 +937,7 @@ QString ImageCache::reportCacheParameters()
     rpt << "directionChangeThreshold = " << directionChangeThreshold << "\n";
     rpt << "wtAhead                  = " << wtAhead << "\n";
     rpt << "isForward                = " << (isForward ? "true" : "false") << "\n";
+    rpt << "\n";
     rpt << "targetFirst              = " << targetFirst << "\n";
     rpt << "targetLast               = " << targetLast << "\n";
 
@@ -1004,7 +1060,7 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::IsCachingColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::IsCachedColumn).data().toBool() ? "true" : "false")
             << rptStatus.at(dm->sf->index(sfRow, G::DecoderReturnStatusColumn).data().toInt())
-            << (icd->imCache.contains(fPath) ? "true" : "false")
+            << (icd->contains(fPath) ? "true" : "false")
             << (dm->index(sfRow, G::MetadataAttemptedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::MetadataLoadedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
@@ -1251,7 +1307,8 @@ void ImageCache::initImageCache(int cacheMaxMB,
     if (!G::useImageCache) return;   // rgh isolate image cache
 
     QString fun = "ImageCache::initImageCache";
-    if (debugCaching) {
+    // if (debugCaching)
+    {
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
             << "dm->instance =" << dm->instance
@@ -1261,7 +1318,7 @@ void ImageCache::initImageCache(int cacheMaxMB,
     QMutexLocker locker(&gMutex);   // req'd 2025-02-19
 
     // reset the image cache
-    icd->imCache.clear();
+    icd->clear();
     toCache.clear();
     toCacheStatus.clear();
 
@@ -1340,7 +1397,7 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
     // do not use mutex - spins forever
 
     // // reset the image cache
-    // icd->imCache.clear();
+    // icd->clear();
     // toCache.clear();
     // toCacheStatus.clear();
 
@@ -1382,7 +1439,7 @@ void ImageCache::reloadImageCache()
     // QMutexLocker locker(&gMutex);   // req'd 2025-02-19
     abort = false;
     // reset the image cache
-    icd->imCache.clear();
+    icd->clear();
     toCache.clear();
     toCacheStatus.clear();
     dispatch();
@@ -1492,7 +1549,7 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
 
     // already in imCache
     QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-    if (icd->imCache.contains(fPath)) {
+    if (icd->contains(fPath)) {
         msg = "Already in imCache";
         return false;
     }
@@ -1726,17 +1783,18 @@ void ImageCache::cacheImage(int id, int sfRow)
     }
     }
 
-    gMutex.lock();  // req'd to prevent toCacheAppend() crash
+    // gMutex.lock();  // req'd to prevent toCacheAppend() crash
 
     // cache the image
-    icd->imCache.insert(decoders[id]->fPath, decoders[id]->image);
+    icd->insert(decoders[id]->fPath, decoders[id]->image);
+    // icd->imCache.insert(decoders[id]->fPath, decoders[id]->image);
 
     // // remove from toCache
     if (toCache.contains(sfRow)) toCacheRemove(sfRow);
 
-    gMutex.unlock();
+    // gMutex.unlock();
 
-    // if (!icd->imCache.contains(decoders[id]->fPath))
+    // if (!icd->has(decoders[id]->fPath))
     //     qDebug() << src << "INSERT FAILED for row" << sfRow;
 
     // reset caching and cache flags
@@ -2044,7 +2102,7 @@ void ImageCache::dispatch()
     }
     if (debugCaching)
     {
-        qDebug().noquote() << "ImageCache::dispatch  abort =" << abort;
+        qDebug().noquote() << "ImageCache::dispatch  row =" << currRow;
     }
 
     abort = false;
@@ -2068,7 +2126,14 @@ void ImageCache::dispatch()
     // }
     // else updateToCache();
 
+    QElapsedTimer t;
+    t.start();
     updateToCache();
+    qDebug() << "ImageCache::dispatch" << t.elapsed() << "ms"
+             << "row =" << currRow
+             << "targetFirst =" << targetFirst
+             << "targetLast =" << targetLast
+        ;
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;

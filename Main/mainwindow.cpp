@@ -2395,6 +2395,9 @@ bool MW::stop(QString src)
     G::stop = true;
     sel->okToSelect(false);
     dm->abortLoadingModel = true;
+
+    metaRead->abortReaders();
+
     // qApp->processEvents();  // can cause spinning ball from hell
     /*
     qDebug() << "MW::stop"
@@ -4401,9 +4404,9 @@ void MW::setRotation(int degrees)
         // CTSL::HashMap<QString, QImage> imCache
         // if (icd->imCache.find(fPath, image)) {
         // QHash<QString, QImage> imCache
-        if (icd->imCache.contains(fPath)) {
+        if (icd->contains(fPath)) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
-            icd->imCache.insert(fPath, image);
+            icd->insert(fPath, image);
         }
 
         // update exif in image
@@ -5307,7 +5310,7 @@ void MW::refreshDataModel()
             }
 
             // update image cache in case image has changed
-            if (icd->imCache.contains(fPath)) icd->imCache.remove(fPath);
+            if (icd->contains(fPath)) icd->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
                 if (imageView->loadImage(fPath, true, fun)) {
                     updateClassification();

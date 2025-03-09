@@ -1,0 +1,108 @@
+0   libsystem_kernel.dylib        	       0x1962fa5b8 sigprocmask + 8
+1   libsystem_c.dylib             	       0x1962448e4 abort + 92
+2   QtCore                        	       0x1051cdff4 qAbort() + 12 (qglobal.cpp:161)
+3   QtCore                        	       0x1051d1570 qt_message_fatal(QtMsgType, QMessageLogContext const&, QString const&) + 12 (qlogging.cpp:2059)
+4   QtCore                        	       0x1054b5900 QMessageLogger::fatal(char const*, ...) const + 68 (qlogging.cpp:939)
+5   QtCore                        	       0x1054b52ac qt_assert(char const*, char const*, int) + 60 (qassert.cpp:68)
+6   Winnow                        	       0x1027c5890 QHashPrivate::Span<QHashPrivate::Node<unsigned int, IFDData>>::atOffset(unsigned long) + 80 (qhash.h:326)
+7   Winnow                        	       0x1027c5794 QHashPrivate::Data<QHashPrivate::Node<unsigned int, IFDData>>::Bucket::nodeAtOffset(unsigned long) + 36 (qhash.h:503)
+8   Winnow                        	       0x1029b41b8 QHashPrivate::Data<QHashPrivate::Node<unsigned int, IFDData>>::findBucket(unsigned int const&) const + 196 (qhash.h:692)
+9   Winnow                        	       0x1029b3e60 QHashPrivate::Data<QHashPrivate::Node<unsigned int, IFDData>>::findOrInsert(unsigned int const&) + 84 (qhash.h:730)
+10  Winnow                        	       0x1029b3d10 QHash<unsigned int, IFDData>::iterator QHash<unsigned int, IFDData>::emplace_helper<IFDData const&>(unsigned int&&, IFDData const&) + 44 (qhash.h:1347)
+11  Winnow                        	       0x1029b3b3c QHash<unsigned int, IFDData>::iterator QHash<unsigned int, IFDData>::emplace<IFDData const&>(unsigned int&&, IFDData const&) + 120 (qhash.h:1328)
+12  Winnow                        	       0x1029b3aa8 QHash<unsigned int, IFDData>::iterator QHash<unsigned int, IFDData>::emplace<IFDData const&>(unsigned int const&, IFDData const&) + 52 (qhash.h:1319)
+13  Winnow                        	       0x1029b2148 QHash<unsigned int, IFDData>::insert(unsigned int const&, IFDData const&) + 40 (qhash.h:1297)
+14  Winnow                        	       0x1029b18e4 IFD::readIFD(MetadataParameters&, bool) + 1628 (ifd.cpp:80)
+15  Winnow                        	       0x10283eacc Tiff::parseIFDs(MetadataParameters&, ImageMetadata&, IFD*, unsigned int&, int&, QString) + 344 (tiff.cpp:564)
+16  Winnow                        	       0x10283c0d8 Tiff::parse(MetadataParameters&, ImageMetadata&, IFD*, IRB*, IPTC*, Exif*, GPS*) + 5304 (tiff.cpp:377)
+17  Winnow                        	       0x1029c46bc Metadata::parseTIF() + 500 (metadata.cpp:768)
+18  Winnow                        	       0x1029c1d84 Metadata::readMetadata(bool, QString const&, QString) + 3096 (metadata.cpp:1117)
+19  Winnow                        	       0x1029c723c Metadata::loadImageMetadata(QFileInfo const&, int, bool, bool, bool, bool, QString, bool) + 2232 (metadata.cpp:1237)
+20  Winnow                        	       0x102607e80 DataModel::imMetadata(QString, bool) + 3408 (datamodel.cpp:1071)
+21  Winnow                        	       0x1027be198 Thumb::loadFromTiff(QString&, QImage&, int) + 1068 (thumb.cpp:226)
+22  Winnow                        	       0x1027bf968 Thumb::loadThumb(QString&, QImage&, int, QString) + 2536 (thumb.cpp:486)
+23  Winnow                        	       0x1025e645c Reader::readIcon() + 1120 (reader.cpp:144)
+24  Winnow                        	       0x1025e6fdc Reader::read(QModelIndex, QString, int, bool) + 1276 (reader.cpp:207)
+25  Winnow                        	       0x102a6dbe0 Reader::qt_static_metacall(QObject*, QMetaObject::Call, int, void**) + 724 (moc_reader.cpp:232)
+
+0   QtCore                        	       0x10308d23c QFileDevice::seek(long long) + 76 (qfiledevice.cpp:378)
+1   QtCore                        	       0x10309adc0 QIODevicePrivate::read(char*, long long, bool) + 472 (qiodevice.cpp:1072)
+2   QtCore                        	       0x10309b1d8 QIODevice::read(long long) + 300 (qiodevice.cpp:1206)
+3   Winnow                        	       0x1004b2d68 Tiff::parse(MetadataParameters&, ImageMetadata&, IFD*, IRB*, IPTC*, Exif*, GPS*) + 356 (tiff.cpp:206)
+4   Winnow                        	       0x10063c6ac Metadata::parseTIF() + 500 (metadata.cpp:768)
+5   Winnow                        	       0x100639d74 Metadata::readMetadata(bool, QString const&, QString) + 3096 (metadata.cpp:1117)
+6   Winnow                        	       0x10063f22c Metadata::loadImageMetadata(QFileInfo const&, int, bool, bool, bool, bool, QString, bool) + 2232 (metadata.cpp:1237)
+7   Winnow                        	       0x10027fe78 DataModel::imMetadata(QString, bool) + 3408 (datamodel.cpp:1071)
+8   Winnow                        	       0x10043617c Thumb::loadFromTiff(QString&, QImage&, int) + 1068 (thumb.cpp:226)
+9   Winnow                        	       0x10043794c Thumb::loadThumb(QString&, QImage&, int, QString) + 2536 (thumb.cpp:486)
+10  Winnow                        	       0x10025e454 Reader::readIcon() + 1120 (reader.cpp:144)
+11  Winnow                        	       0x10025efd4 Reader::read(QModelIndex, QString, int, bool) + 1276 (reader.cpp:207)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#ifndef CACHEDATA_H
+#define CACHEDATA_H
+
+#include <QtWidgets>
+
+class ImageCacheData : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ImageCacheData(QObject *);
+
+    bool has(const QString &key);
+
+    // image cache hash
+    QHash<QString, QImage> imCache;
+
+    QMutex mutex;
+};
+#endif // CACHEDATA_H
+
+#include "Cache/cachedata.h"
+
+ImageCacheData::ImageCacheData(QObject *) {}
+
+bool ImageCacheData::has(const QString &key)
+{
+    // mutex.lock();  // causes deadlock
+    return imCache.contains(key);
+    // mutex.unlock();
+}
+
+In GUI thread:
+
+ImageCacheData *icd = new ImageCacheData(this);
+
+Later in GUI thread:
+
+icd->imCache.contains(fPath)  can cause a rare EXC_BAD_ACCESS (SIGSEGV) crash

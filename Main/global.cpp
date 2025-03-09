@@ -310,7 +310,7 @@ QMutex issueListMutex;
 void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
 {
     if (!isIssueLogger) return;
-    // QMutexLocker locker(&issueListMutex);
+    QMutexLocker locker(&issueListMutex);
 
     QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
     if (issue->TypeDesc.contains(type)) {

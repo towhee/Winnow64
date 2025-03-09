@@ -132,6 +132,8 @@ public:
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
 
+    const QStringList raw = {"arw", "cr2", "cr3", "dng","nef", "orf", "raf", "sr2", "rw2"};
+    const QStringList jpg = {"jpg", "jpeg"};
     int startImageCacheTargetRange = 0;
     int endImageCacheTargetRange;
     int imageCacheMaxMB;

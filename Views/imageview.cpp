@@ -249,11 +249,8 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
     int sfRow = dm->proxyRowFromPath(fPath);
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
-    // bool isCached = false;
-    // isCached = src == "ImageCache::cacheImage" || dm->sf->index(sfRow, G::IsCachedColumn).data().toBool();
-    // bool isCached = icd->imCache.contains(fPath);
 
-    if (icd->imCache.contains(fPath)) {
+    if (icd->contains(fPath)) {
         QImage image; // confirm the cached image is in the image cache
         if (isDebug)
         qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
@@ -270,11 +267,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     else {
         if (isDebug)
         qDebug() << "ImageView::loadImage isCached = false";
-        // report why no image cached (chk range in case filtering has just occurred)
-        // if (icd->cacheItemList.count() > dmRow) {
-        //     if (G::mode == "Loupe")
-        //         emit setCentralMessage(icd->cacheItemList.at(dmRow).errMsg);
-        // }
     }
 
     /* When the program is opening or resizing it is possible this function could be called
@@ -1441,13 +1433,7 @@ void ImageView::copyImage()
     qDebug() << "ImageView::copyImage";
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
-        // CTSL::HashMap<QString, QImage> imCache
-        // QImage image;
-        // if (icd->imCache.find(dm->currentFilePath, image)) {
-        //     pm = QPixmap::fromImage(image);
-        // }
-        // QHash<QString, QImage> imCache;
-        if (icd->imCache.contains(dm->currentFilePath)) {
+       if (icd->contains(dm->currentFilePath)) {
             pm = QPixmap::fromImage(icd->imCache.value(dm->currentFilePath));
         }
         else {

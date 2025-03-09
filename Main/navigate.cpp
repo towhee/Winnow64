@@ -42,6 +42,7 @@ void MW::mouseSideKeyPress(int direction)
 
 void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
 {
+    qDebug() << "\nKEY RIGHT\n";
     // qDebug() << "MW::keyRight";
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));
@@ -56,6 +57,7 @@ void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
 
 void MW::keyLeft()
 {
+    qDebug() << "\nKEY LEFT\n";
     if (G::isLogger || G::isFlowLogger) {
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
@@ -106,6 +108,7 @@ void MW::keyHome()
 /*
 
 */
+    qDebug() << "\nKEY HOME\n";
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("Home");

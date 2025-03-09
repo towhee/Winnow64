@@ -394,13 +394,54 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // bounceFoldersStressTest(100, 3);
+    bounceFoldersStressTest(100, 0.5); return;
     // traverseFolderStressTest(20, 0, true);
 
     // QString path = "/Volumes/Untitled/DCIM/100MSDCF";
     // folderSelectionChange(path, "Add", true, false);
-    QString path = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-03_0047_Zen2048.JPG";
-    folderAndFileSelectionChange(path);
+
+    // QString path = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-03_0047_Zen2048.JPG";
+    // folderAndFileSelectionChange(path);
+    int i = 0;
+    int p = 5;
+    int n = 15;
+    qDebug() << p;
+    for (int i = 1; i <= n; ++i) {
+        if (i % 3 == 1) {
+            p -= (i + 1) / 3 * 2 - 1; // Decrement 1st in cycle
+        } else if (i % 3 == 2) {
+            p -= (i + 1) / 3 * 2; // Decrement 2nd in cycle
+        } else {
+            p += (i / 3) + 1; // Increment 3rd in cycle
+        }
+        qDebug() << p;
+    }
+    return;
+
+    QString fName = "fName";
+    QString bytes = "bytes";
+    QString cacheSize = "cacheSize";
+    QString ratio = "ratio";
+    qDebug().noquote()
+             << fName.leftJustified(30)
+             << bytes.rightJustified(15)
+             << cacheSize.rightJustified(15)
+             << ratio.rightJustified(15)
+        ;
+    for (int i = 0; i < dm->rowCount(); i++) {
+        QString fName = dm->sf->index(i, G::NameColumn).data().toString();
+        quint64 bytes = dm->sf->index(i, G::SizeColumn).data().toLongLong();
+        float cacheSize = dm->sf->index(i, G::CacheSizeColumn).data().toFloat();
+        int mb = static_cast<double>(bytes) / (1 << 20);
+        float ratio = cacheSize / mb;
+
+        qDebug().noquote()
+                 << fName.leftJustified(30)
+                 << QString::number(bytes).rightJustified(15)
+                 << QString::number(cacheSize).rightJustified(15)
+                 << QString::number(ratio, 'f', 1).rightJustified(15)
+            ;
+    }
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

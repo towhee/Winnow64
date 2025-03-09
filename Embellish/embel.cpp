@@ -589,7 +589,7 @@ void Embel::addImageToScene()
     // }
 
     // QHash<QString, QImage> imCache
-    if (icd->imCache.contains(fPath)) {
+    if (icd->contains(fPath)) {
         pm = QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w);
     }
     else {
@@ -838,7 +838,7 @@ void Embel::updateImage()       // all effects bundled in style
         // }
 
         // QHash<QString, QImage> imCache
-        if (icd->imCache.contains(fPath)) {
+        if (icd->contains(fPath)) {
             pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w));
         }
 

@@ -1101,7 +1101,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (gps == nullptr) gps = new GPS;
         // check for heic with jpg extension
         if (ext == "jpg" && Utilities::getString(p.file, 4, 8) == "ftypheic") ext = "heic";
-        p.file.seek(0);
+        // p.file.seek(0);
         if (ext == "arw")  parsed = parseSony();
         if (ext == "cr2")  parsed = parseCanon();
         if (ext == "cr3")  parsed = parseCanonCR3();

@@ -249,9 +249,9 @@ void MW::updateProgressBarWidth()
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
-                                       bool success, QString calledBy)
+                                       bool success, QString src)
 {
-    if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
+    if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus", "src = " + src);
     /*
     qDebug() << "MW::updateMetadataThreadRunStatus"
              << "isRunning =" << isRunning
@@ -280,7 +280,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
     }
     metadataThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
-    calledBy = "";  // suppress compiler warning
+    src = "";  // suppress compiler warning
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)

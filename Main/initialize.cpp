@@ -300,7 +300,7 @@ void MW::createFrameDecoder()
     frameDecoder = new FrameDecoder(this);
     connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    thumb = new Thumb(dm, metadata, frameDecoder);
+    thumb = new Thumb(dm, frameDecoder);
 }
 
 void MW::createMetaRead()
@@ -1038,7 +1038,7 @@ void MW::createStatusBar()
     int runLabelWidth = 13;
     //metadataThreadRunningLabel = new QLabel;
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
-    updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
+    // updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
     QString tip = "Metadata and Icon caching:\n";
     tip += "\n";

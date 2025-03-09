@@ -27,6 +27,7 @@ public:
                       quint16 tagId, quint16 tagType, quint32 tagCount, quint32 tagValue);
     QList<quint32> getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd = false);
     QHash<uint, IFDData> ifdDataHash;
+    QMutex mutex;
 };
 
 #endif // IFD_H

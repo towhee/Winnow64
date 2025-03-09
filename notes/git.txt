@@ -12,6 +12,10 @@ GITHUB DESKTOP PROCEDURE TO MAKE CHANGES TO PROGRAM
 
 6.  Select the branch to merge ie 2025-01-26.
 
+GITHUB DESKTOP CHECKOUT COMMIT
+
+Add some notes for this
+
 --------------------------------------------------------------------------------------------
 
 From GitHub Menu > Repository > Open in Git Bash
