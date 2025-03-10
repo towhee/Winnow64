@@ -805,7 +805,9 @@ void MetaRead::dispatch(int id)
         {
             imageCacheTriggered = true;
             // QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // crash 2025-03-08
-            QModelIndex sfIdx = dm->sf->mapFromSource(r->dmIdx);
+            // QModelIndex sfIdx = dm->sf->mapFromSource(r->dmIdx); // crash
+            // model and proxy rows the same in metaRead
+            QModelIndex sfIdx = dm->sf->index(r->dmIdx.row(),0);
             bool clearSelection = false;
             QString src = "MetaRead::dispatch";
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);

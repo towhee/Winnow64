@@ -952,10 +952,11 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
     // estimate cacheSize until read metadata and calc size for QImage
-    float cacheSize = static_cast<double>(bytes) / (1 << 20);;
-    if (raw.contains(ext)) cacheSize *= 3.5;
-    if (ext == "jpg" || ext == "jpeg") cacheSize *= 15;
-    setData(index(row, G::CacheSizeColumn), cacheSize);
+    float mb = static_cast<double>(bytes) / (1 << 20);;
+    if (raw.contains(ext)) mb *= 3.5;
+    if (ext == "jpg" || ext == "jpeg") mb *= 15;
+    setData(index(row, G::CacheSizeColumn), mb);
+    emit setCacheImageSize(row, mb);
 
     setData(index(row, G::CompareColumn), false);
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
@@ -1561,10 +1562,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
         m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
         // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-        float sizeMB;
-        if (w == 0 || h == 0) sizeMB = m.size / 1000000;
-        else sizeMB = static_cast<float>(w * h * 1.0 / 262144);
-        setData(index(row, G::CacheSizeColumn), sizeMB);
+        float mb;
+        if (w == 0 || h == 0) mb = m.size / 1000000;
+        else mb = static_cast<float>(w * h * 1.0 / 262144);
+        setData(index(row, G::CacheSizeColumn), mb);
+        emit setCacheImageSize(row, mb);
     }
 
     // check for missing thumbnail in jpg/tiif
@@ -2334,7 +2336,7 @@ int DataModel::proxyRowFromPath(QString fPath)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
                  << fPath;
     if (G::isLogger) G::log("DataModel::proxyRowFromPath");
-    // QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutex);
     int dmRow;
     int sfRow = -1;
     if (fPathRow.contains(fPath)) {
@@ -2557,6 +2559,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 
 QModelIndex DataModel::proxyIndexFromModelIndex(QModelIndex dmIdx)
 {
+    QMutexLocker locker(&mutex);
     if (dmIdx.isValid()) return sf->mapFromSource(dmIdx);
     else return QModelIndex();
 }
