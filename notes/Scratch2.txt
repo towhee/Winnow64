@@ -1,3 +1,35 @@
+0   QtCore                        	       0x105da4bd8 QModelIndex::operator==(QModelIndex const&) const + 0 (qabstractitemmodel.h:144) [inlined]
+1   QtCore                        	       0x105da4bd8 bool qHashEquals<QModelIndex>(QModelIndex const&, QModelIndex const&) + 0 (qhashfunctions.h:190) [inlined]
+2   QtCore                        	       0x105da4bd8 QHashPrivate::Data<QHashPrivate::Node<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>>::findBucket(QModelIndex const&) const + 12 (qhash.h:693) [inlined]
+3   QtCore                        	       0x105da4bd8 QHash<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>::find(QModelIndex const&) const + 12 (qhash.h:1286) [inlined]
+4   QtCore                        	       0x105da4bd8 QHash<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>::constFind(QModelIndex const&) const + 176 (qhash.h:1293)
+5   QtCore                        	       0x105da474c QSortFilterProxyModelPrivate::create_mapping(QModelIndex const&) const + 56 (qsortfilterproxymodel.cpp:478)
+6   QtCore                        	       0x105dacd24 QSortFilterProxyModel::rowCount(QModelIndex const&) const + 100 (qsortfilterproxymodel.cpp:2204)
+7   Winnow                        	       0x102dd8d28 DataModel::valueSf(int, int, int) + 92 (datamodel.cpp:1774)
+8   Winnow                        	       0x102d6c95c ImageCache::setTargetRange(int) + 2200 (imagecache.cpp:671)
+0   QtCore                        	       0x10363cbd8 QModelIndex::operator==(QModelIndex const&) const + 0 (qabstractitemmodel.h:144) [inlined]
+1   QtCore                        	       0x10363cbd8 bool qHashEquals<QModelIndex>(QModelIndex const&, QModelIndex const&) + 0 (qhashfunctions.h:190) [inlined]
+2   QtCore                        	       0x10363cbd8 QHashPrivate::Data<QHashPrivate::Node<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>>::findBucket(QModelIndex const&) const + 12 (qhash.h:693) [inlined]
+3   QtCore                        	       0x10363cbd8 QHash<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>::find(QModelIndex const&) const + 12 (qhash.h:1286) [inlined]
+4   QtCore                        	       0x10363cbd8 QHash<QModelIndex, QSortFilterProxyModelPrivate::Mapping*>::constFind(QModelIndex const&) const + 176 (qhash.h:1293)
+5   QtCore                        	       0x10363c74c QSortFilterProxyModelPrivate::create_mapping(QModelIndex const&) const + 56 (qsortfilterproxymodel.cpp:478)
+6   QtCore                        	       0x103644d24 QSortFilterProxyModel::rowCount(QModelIndex const&) const + 100 (qsortfilterproxymodel.cpp:2204)
+7   Winnow                        	       0x100629520 ImageCache::okToDecode(int, int, QString&) + 300 (imagecache.cpp:1553)
+8   Winnow                        	       0x100629f70 ImageCache::nextToCache(int) + 1680 (imagecache.cpp:1669)
+9   Winnow                        	       0x10061c9e0 ImageCache::fillCache(int) + 2552 (imagecache.cpp:1947)
+
+Below probably resolved.
+
+0   Winnow                        	       0x100c3503c QString::size() const + 12 (qstring.h:472)
+1   Winnow                        	       0x100c352ac operator==(QString const&, QString const&) + 28 (qstring.h:941)
+2   Winnow                        	       0x100c34e84 bool qHashEquals<QString>(QString const&, QString const&) + 32 (qhashfunctions.h:190)
+3   Winnow                        	       0x100cdda94 QHashPrivate::Data<QHashPrivate::Node<QString, int>>::findNode(QString const&) const + 204 (qhash.h:713)
+4   Winnow                        	       0x100caf584 QHash<QString, int>::contains(QString const&) const + 84 (qhash.h:1007)
+5   Winnow                        	       0x100cb2c50 DataModel::proxyRowFromPath(QString) + 396 (datamodel.cpp:2340)
+6   Winnow                        	       0x100c4e96c ImageCache::getImCacheSize() + 384 (imagecache.cpp:258)
+7   Winnow                        	       0x100c51d34 ImageCache::updateStatus(QString, QString) + 44 (imagecache.cpp:871)
+8   Winnow                        	       0x100c4d9ec ImageCache::fillCache(int) + 6880 (imagecache.cpp:2015)
+
 0   libsystem_kernel.dylib        	       0x1962fa5b8 sigprocmask + 8
 1   libsystem_c.dylib             	       0x1962448e4 abort + 92
 2   QtCore                        	       0x1051cdff4 qAbort() + 12 (qglobal.cpp:161)

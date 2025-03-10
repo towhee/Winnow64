@@ -184,6 +184,7 @@ signals:
     void centralMsg(QString message);
     void updateProgress(int progress);
     void rowLoaded();
+    void setCacheImageSize(int sfRow, float mb);
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 

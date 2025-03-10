@@ -1,0 +1,5 @@
+Qt, c++.
+QVector<float> cacheSize;
+cacheSize.clear();
+cacheSize.resize(50);
+

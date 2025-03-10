@@ -394,27 +394,42 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bounceFoldersStressTest(100, 0.5); return;
+    // bounceFoldersStressTest(100, 0.5); return;
+
     // traverseFolderStressTest(20, 0, true);
 
-    // QString path = "/Volumes/Untitled/DCIM/100MSDCF";
-    // folderSelectionChange(path, "Add", true, false);
+    int key = 10;
+    bool isForward = true;
+    int maxMB;
+    int targetFirst, targetLast;
 
-    // QString path = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-03_0047_Zen2048.JPG";
-    // folderAndFileSelectionChange(path);
+    bool aheadDone = false;
+    bool behindDone = false;
+    float sumMB = 0;
+
+    int n = 20;  //dm->sf->rowCount();
+    if (key == n - 1) {isForward = false; targetLast = n - 1;}
+    if (key == 0)     {isForward = true; targetFirst = 0;}
+    int aheadPos = key;
+    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    int pos;
+
     int i = 0;
-    int p = 5;
-    int n = 15;
-    qDebug() << p;
-    for (int i = 1; i <= n; ++i) {
-        if (i % 3 == 1) {
-            p -= (i + 1) / 3 * 2 - 1; // Decrement 1st in cycle
-        } else if (i % 3 == 2) {
-            p -= (i + 1) / 3 * 2; // Decrement 2nd in cycle
+    while (sumMB < maxMB && !(aheadDone && behindDone)) {
+        bool isAhead = ++i % 3;
+        if (isForward) {
+            if (isAhead && !aheadDone) pos = aheadPos++;
+            else if (!behindDone) pos = behindPos--;
+            if (aheadPos == n) aheadDone = true;
+            if (behindPos == -1) behindDone = true;
         } else {
-            p += (i / 3) + 1; // Increment 3rd in cycle
+            if (isAhead && !aheadDone) pos = aheadPos--;
+            else if (!behindDone) pos = behindPos++;
+            if (aheadPos == -1) aheadDone = true;
+            if (behindPos == n) behindDone = true;
         }
-        qDebug() << p;
+
+        qDebug() << pos;
     }
     return;
 

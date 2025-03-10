@@ -79,6 +79,7 @@ public slots:
                         bool isShowCacheStatus, int cacheWtAhead);
     void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
+    void setCacheImageSize(int sfRow, float mb);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
@@ -125,6 +126,7 @@ private:
     };
     QList<int> toCache;
     QHash<int,CacheItem> toCacheStatus;
+    QVector<float> imageSize;
 
     int currRow;                    // current image
     int prevRow;                // used to establish direction of travel
