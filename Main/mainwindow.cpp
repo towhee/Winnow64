@@ -2392,8 +2392,8 @@ bool MW::stop(QString src)
     sel->okToSelect(false);
     dm->abort = true;
 
-    frameDecoder->stop();
-    videoView->stop();
+    // frameDecoder->stop();
+    // videoView->stop();
     metaRead->abortReaders();
     imageCache->abortProcessing();
 
@@ -2478,7 +2478,7 @@ bool MW::reset(QString src)
     gridView->setUpdatesEnabled(false);
     tableView->setUpdatesEnabled(false);
     tableView->setSortingEnabled(false);
-    frameDecoder->clear();
+    // frameDecoder->clear();
     thumbView->setUpdatesEnabled(true);
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
@@ -2910,7 +2910,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     } //*/
 
     if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
-        frameDecoder->clear();
+        // frameDecoder->clear();
         if (G::useReadMeta) {
             updateMetadataThreadRunStatus(true, true, "MW::load");
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
@@ -5634,7 +5634,7 @@ void MW::mediaReadSpeed()
 void MW::findDuplicates()
 {
     if (G::isLogger) G::log("MW::findDuplicates");
-    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata, frameDecoder);
+    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata, frameDecoderInGui);
     findDuplicatesDlg->setStyleSheet(G::css);
     // minimize dialog size fitting contents
     findDuplicatesDlg->resize(100, 100);

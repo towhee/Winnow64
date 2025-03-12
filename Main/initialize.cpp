@@ -297,10 +297,10 @@ void MW::createFrameDecoder()
     Manage a number of FrameDecoder threads that send thumbnails to the DataModel.
 */
     if (G::isLogger) G::log("MW::createFrameDecoder");
-    frameDecoder = new FrameDecoder(this);
-    connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    thumb = new Thumb(dm, frameDecoder);
+    frameDecoderInGui = new FrameDecoder(this);
+    connect(this, &MW::abortFrameDecoder, frameDecoderInGui, &FrameDecoder::stop);
+    connect(frameDecoderInGui, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    thumb = new Thumb(dm, frameDecoderInGui);
 }
 
 void MW::createMetaRead()
@@ -329,7 +329,7 @@ void MW::createMetaRead()
     dm->setChunkSize(dm->defaultIconChunkSize);
 
     // Runs multiple reader threads to load metadata and thumbnails
-    metaRead = new MetaRead(this, dm, metadata, frameDecoder, imageCache);
+    metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);
     // metaReadThread->iconChunkSize = dm->iconChunkSize;
     // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 

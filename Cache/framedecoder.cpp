@@ -42,16 +42,18 @@ FrameDecoder::FrameDecoder(QObject *parent)
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
-    abort = false;  // version 1.33
+    abort = false;
     isDebugging = false;
 }
 
 void FrameDecoder::stop()
 {
-    if (status == Status::Idle) {
-        // emit stopped("FrameDecoder");
-        return;
-    }
+    if (G::isLogger) G::log("FrameDecoder::stop");
+    qDebug() << "FrameDecoder::stop  isGuiThread =" << G::isGuiThread();
+    // if (status == Status::Idle) {
+    //     // emit stopped("FrameDecoder");
+    //     return;
+    // }
     abort = true;
 }
 

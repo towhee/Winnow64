@@ -1105,7 +1105,7 @@ private:
     MetaRead *metaRead;
     ImageCache *imageCache;
     QThread imageCacheThread;
-    FrameDecoder *frameDecoder;
+    FrameDecoder *frameDecoderInGui;
     Thumb *thumb;
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;

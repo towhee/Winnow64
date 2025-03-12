@@ -68,7 +68,7 @@
 MetaRead::MetaRead(QObject *parent,
                    DataModel *dm,
                    Metadata *metadata,
-                   FrameDecoder *frameDecoder,
+                   // FrameDecoder *frameDecoder,
                    ImageCache *imageCache)
     : QObject(nullptr)
 {
