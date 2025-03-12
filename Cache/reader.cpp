@@ -9,8 +9,13 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     threadId = id;
     instance = 0;
 
+    // frameDecoder = new FrameDecoder(nullptr);
     frameDecoder = new FrameDecoder(this);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    // QThread *frameDecoderThread = new QThread;
+    // frameDecoder->moveToThread(frameDecoderThread);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon,
+            dm, &DataModel::setIconFromVideoFrame, Qt::QueuedConnection);
+    // frameDecoderThread->start();
 
     thumb = new Thumb(dm, frameDecoder);
 
