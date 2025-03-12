@@ -63,7 +63,7 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWi
 void VideoView::load(QString fPath)
 {
     if (G::isLogger || G::isFlowLogger || isDebug)
-        qDebug() << "VideoView::load" << fPath;
+        G::log("VideoView::load", fPath);
     video->load(fPath);
     play();
     pause();
@@ -72,7 +72,8 @@ void VideoView::load(QString fPath)
 void VideoView::play()
 {
     if (G::isLogger || isDebug)
-        qDebug() << "VideoView::play" << video->mediaPlayer->source();
+        G::log("VideoView::play",
+               "src = " + video->mediaPlayer->source().toDisplayString());
     mousePos = QCursor::pos();
     emit hideMouseCursor();
     if (position >= duration) video->setPosition(0);
@@ -84,7 +85,7 @@ void VideoView::play()
 void VideoView::pause()
 {
     if (G::isLogger || isDebug)
-        qDebug() << "VideoView::pause";
+        G::log("VideoView::pause");
     emit showMouseCursor();
     video->pause();
     t->stop();
@@ -97,6 +98,7 @@ void VideoView::stop()
         G::log("VideoView::stop");
     emit showMouseCursor();
     video->stop();
+    t->stop();
     QGuiApplication::restoreOverrideCursor();
     // QGuiApplication::restoreOverrideCursor();
     // QGuiApplication::restoreOverrideCursor();
@@ -104,7 +106,7 @@ void VideoView::stop()
 
 void VideoView::scrubMoved(int ms)
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::scrubMoved";
+    if (G::isLogger || isDebug) G::log("VideoView::scrubMoved");
     int currentState = video->playOrPause();  // 0 = playing  1 = paused
     video->setPosition(ms);                   // auto calls play after position change
     if (currentState == VideoWidget::PlayState::Paused)
@@ -113,7 +115,7 @@ void VideoView::scrubMoved(int ms)
 
 void VideoView::scrubPressed()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::scrubPressed";
+    if (G::isLogger || isDebug) G::log("VideoView::scrubPressed");
     int currentState = video->playOrPause();  // 0 = playing  1 = paused
     video->setPosition(scrub->value());       // auto calls play after position change
     if (currentState == VideoWidget::PlayState::Paused)
@@ -122,7 +124,7 @@ void VideoView::scrubPressed()
 
 void VideoView::durationChanged(qint64 duration_ms)
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::durationChanged";
+    if (G::isLogger || isDebug) G::log("VideoView::durationChanged");
     duration = duration_ms / 1000;
     scrub->setMaximum(duration_ms);
     updatePositionLabel();
@@ -130,7 +132,8 @@ void VideoView::durationChanged(qint64 duration_ms)
 
 void VideoView::positionChanged()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::positionChanged";
+    // if (G::isLogger || isDebug)
+        G::log("VideoView::positionChanged");
     position = video->mediaPlayer->position() / 1000;
     if (!scrub->isSliderDown()) {
         scrub->setValue(video->mediaPlayer->position());
@@ -143,7 +146,7 @@ void VideoView::positionChanged()
 
 void VideoView::updatePositionLabel()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::updatePositionLabel";
+    if (G::isLogger || isDebug) G::log("VideoView::updatePositionLabel");
     QString tStr;
     if (position || duration) {
         QTime currentTime((position / 3600) % 60, (position / 60) % 60,
@@ -160,7 +163,7 @@ void VideoView::updatePositionLabel()
 
 void VideoView::playOrPause()
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::playOrPause";
+    if (G::isLogger || isDebug) G::log("VideoView::playOrPause");
     //qDebug() << "";
     switch (video->playOrPause()) {
     case VideoWidget::PlayState::Playing:  // 1
@@ -176,7 +179,7 @@ void VideoView::playOrPause()
 
 void VideoView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger || isDebug) qDebug() << "VideoView::wheelEvent";
+    if (G::isLogger || isDebug) G::log("VideoView::wheelEvent");
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;

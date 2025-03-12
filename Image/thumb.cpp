@@ -38,13 +38,22 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->rowFromPath(fPath);
-    int orientation = dm->index(row, G::OrientationColumn).data().toInt();
+    QVariant orientation;
+    // orientation = dm->index(row, G::OrientationColumn).data().toInt();  // crash 2025-03-11
+    QMetaObject::invokeMethod(
+        dm,
+        "valueSf",
+        Qt::BlockingQueuedConnection,
+        Q_RETURN_ARG(QVariant, orientation),
+        Q_ARG(int, row),
+        Q_ARG(int, G::OrientationColumn)
+        );
     int degrees = 0;
     int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
     /*
     qDebug() << "Thumb::checkOrientation"
              << "orientation =" << orientation << fPath; //*/
-    switch (orientation) {
+    switch (orientation.toInt()) {
         case 3:
             degrees = rotationDegrees + 180;
             if (degrees > 360) degrees = degrees - 360;

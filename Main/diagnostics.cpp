@@ -163,7 +163,7 @@ QString MW::diagnostics()
     rpt << "\n";
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::iconChunkLoaded = " << G::s(G::iconChunkLoaded);
-    rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
+    rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abort);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);
 

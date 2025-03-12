@@ -93,11 +93,6 @@ public:
     void setIconRange(int sfRow);
     void setChunkSize(int chunkSize);
     bool isPath(QString fPath);
-    int rowFromPath(QString fPath);
-    int proxyRowFromPath(QString fPath);
-    QString pathFromProxyRow(int sfRow);
-    QString folderPathFromProxyRow(int sfRow);
-    QString folderPathFromModelRow(int dmRow);
     void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();
@@ -167,7 +162,7 @@ public:
 
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
-    bool abortLoadingModel;
+    bool abort;
 
     bool showThumbNailSymbolHelp = true;
     void setShowThumbNailSymbolHelp(bool showHelp);
@@ -184,7 +179,7 @@ signals:
     void centralMsg(QString message);
     void updateProgress(int progress);
     void rowLoaded();
-    void setCacheImageSize(int sfRow, float mb);
+    void resizeImageSize(int rows); // ImageCache QVector imageSize
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
@@ -218,6 +213,11 @@ public slots:
     void imageCacheWaiting(int sfRow);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
+    int rowFromPath(QString fPath);
+    int proxyRowFromPath(QString fPath);
+    QString pathFromProxyRow(int sfRow);
+    QString folderPathFromProxyRow(int sfRow);
+    QString folderPathFromModelRow(int dmRow);
 
 private slots:
 

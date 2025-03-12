@@ -46,6 +46,7 @@ void Reader::abortProcessing()
     mutex.lock();
     abort = true;
     thumb->abortProcessing();
+    // frameDecoder->stop();
     mutex.unlock();
 }
 

@@ -394,7 +394,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // bounceFoldersStressTest(100, 0.5); return;
+    videoView->stop(); return;
+    bounceFoldersStressTest(100, 0.5); return;
 
     // traverseFolderStressTest(20, 0, true);
 

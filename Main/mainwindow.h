@@ -395,7 +395,7 @@ signals:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();
-    void initImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
+    void initializeImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
     void imageCacheChangeParam(int maxMB, int minMB, bool showStatus, int wtAhead);
     void setImageCachePosition(QString, QString);
     void imageCacheFilterChange(QString, QString);

@@ -2196,12 +2196,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update loupe/video view
-    if (G::useMultimedia) videoView->stop();
+    videoView->stop();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                 if (G::useMultimedia) {
-                    // qDebug() << "MW::fileSelectionChange play video";
+                    qDebug() << "MW::fileSelectionChange play video";
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
                     videoView->play();
@@ -2247,11 +2247,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        /*
-        qDebug() << "\nMW::fileSelectionChange setImageCachePosition"
-                 << dm->currentFilePath
-                    ; //*/
-        G::log(fun, "setImageCachePosition");
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
@@ -2385,7 +2380,8 @@ bool MW::stop(QString src)
     // rgh how refer to what we are stopping when multi folders may be in datamodel
     // just use dm->currentPrimaryFolderPath ?
     if (G::isLogger || G::isFlowLogger)
-        G::log("MW::stop", "src = " + src);
+        G::log("MW::stop", "intance = " + QString::number(dm->instance) +
+               " src = " + src);
 
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
@@ -2394,9 +2390,12 @@ bool MW::stop(QString src)
     // stop flags
     G::stop = true;
     sel->okToSelect(false);
-    dm->abortLoadingModel = true;
+    dm->abort = true;
 
+    frameDecoder->stop();
+    videoView->stop();
     metaRead->abortReaders();
+    imageCache->abortProcessing();
 
     // qApp->processEvents();  // can cause spinning ball from hell
     /*
@@ -2411,7 +2410,6 @@ bool MW::stop(QString src)
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
-    videoView->stop();
 
     buildFilters->abortIfRunning();
     // buildFilters->stop();
@@ -2420,7 +2418,6 @@ bool MW::stop(QString src)
 
     // emit abortImageCache();
 
-    frameDecoder->stop();
 
     dm->abortLoad();
 
@@ -2839,7 +2836,10 @@ void MW::loadFolder(QString folderPath)
     // set image cache parameters
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    emit initImageCache(netCacheMBSize, cacheMinMB,isShowCacheProgressBar, cacheWtAhead);
+    // imageCache->initialize(netCacheMBSize, cacheMinMB,
+    //                        isShowCacheProgressBar, cacheWtAhead);
+    emit initializeImageCache(netCacheMBSize, cacheMinMB,
+                              isShowCacheProgressBar, cacheWtAhead);
 
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
@@ -2877,7 +2877,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
-    if (G::stop || dm->abortLoadingModel) return;
+    if (G::stop || dm->abort) return;
 
     // G::popUp->reset();  // pipeline popup
     // G::popUp->showPopup("MW::load", 0, true, 1);
@@ -2894,7 +2894,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /*
+    /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2936,7 +2936,7 @@ void MW::loadDone()
 */
     // QSignalBlocker bookmarkBlocker(bookmarks);
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         QString msg = /*QString::number(testTime.elapsed()) + " ms " +*/
                       QString::number(dm->rowCount()) + " images";
@@ -3042,9 +3042,6 @@ void MW::loadDone()
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-
-    //QApplication::beep();
-    G::log("MW::loadDone", "Done");
 }
 
 void MW::thumbHasScrolled()
