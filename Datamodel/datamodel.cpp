@@ -562,10 +562,8 @@ void DataModel::processNextFolder()
     // add images from model
     if (addFolderImages) {
         addFolder(folderPath);
-        // qApp->processEvents();
-        qDebug() << "Read" << folderPath << G::t.restart() << "ms";
         // signal MW::loadChanged
-        emit addedFolderToDM(folderOperation.first, "Add");
+        if (!abort) emit addedFolderToDM(folderOperation.first, "Add");
     }
 
     // remove images from model
@@ -595,7 +593,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     // control
     QMutexLocker locker(&mutex);
-    abortLoadingModel = false;
+    abort = false;
 
     folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
@@ -606,8 +604,6 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    qDebug() << "DataModel::addFolder" << folderPath << dir.entryInfoList().count();
-
     /*
     qDebug().noquote()
              << fun << "folder =" << folderPath
@@ -643,6 +639,8 @@ void DataModel::addFolder(const QString &folderPath)
     int oldRowCount = rowCount();
     int newRowCount = rowCount() + folderFileInfoList.count();
     setRowCount(newRowCount);
+    // Adjust ImageCache imageSize QVector
+    emit resizeImageSize(newRowCount);
     if (!columnCount()) setColumnCount(G::TotalColumns);
     /*
     qDebug() << "DataModel::addFolder"
@@ -652,6 +650,7 @@ void DataModel::addFolder(const QString &folderPath)
     int counter = 0;
     int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
+        if (abort) return;
         /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
@@ -799,7 +798,7 @@ void DataModel::abortLoad()
 {
     if (G::isLogger) G::log("DataModel::abortLoad", "instance = " + QString::number(instance));
     if (isDebug) qDebug() << "DataModel::abortLoad" << "instance =" << instance;
-    if (loadingModel) abortLoadingModel = true;
+    if (loadingModel) abort = true;
 }
 
 bool DataModel::endLoad(bool success)
@@ -952,11 +951,10 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
     // estimate cacheSize until read metadata and calc size for QImage
-    float mb = static_cast<double>(bytes) / (1 << 20);;
+    float mb = static_cast<double>(bytes) / (1 << 20);
     if (raw.contains(ext)) mb *= 3.5;
     if (ext == "jpg" || ext == "jpeg") mb *= 15;
     setData(index(row, G::CacheSizeColumn), mb);
-    emit setCacheImageSize(row, mb);
 
     setData(index(row, G::CompareColumn), false);
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
@@ -1190,7 +1188,7 @@ void DataModel::addAllMetadata()
             emit updateProgress(1.0 * row / rowCount() * 100);
             if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
         }
-        if (abortLoadingModel || G::stop) {
+        if (abort || G::stop) {
             endLoad(false);
             setAllMetadataLoaded(false);
             return;
@@ -1566,7 +1564,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         if (w == 0 || h == 0) mb = m.size / 1000000;
         else mb = static_cast<float>(w * h * 1.0 / 262144);
         setData(index(row, G::CacheSizeColumn), mb);
-        emit setCacheImageSize(row, mb);
     }
 
     // check for missing thumbnail in jpg/tiif
@@ -2271,7 +2268,7 @@ bool DataModel::isMetadataLoaded(int sfRow)
 
 bool DataModel::isAllMetadataAttempted()
 {
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
@@ -2880,7 +2877,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("loadingModel", 27) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("basicFileInfoLoaded", 27) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
-    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abortLoadingModel);
+    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abort);
     rpt << "\n" << G::sj("dmRowCount", 27) << G::s(rowCount());
     rpt << "\n" << G::sj("sfRowCount", 27) << G::s(sf->rowCount());
     rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);

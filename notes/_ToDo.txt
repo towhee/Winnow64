@@ -12,6 +12,9 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
+- Rapidly selecting folders can corrupt ImageCache toCache list
+- When opt select folder (recurse) status Pos: 1 of x is not updated
+- Update cache progress when unfilter
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Remove remember last folder option or fix
@@ -155,6 +158,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- In "/Users/roryhill/Pictures/_test1" heic files not shown in cache progress bar when advance thru them
 - Fixed latency issue in FSTree image count
 - Review isCurrentFolderOkay in MW::loadChanged
 - Filters progress bar not running

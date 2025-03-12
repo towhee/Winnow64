@@ -172,7 +172,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
     lastIconRow = dm->endIconRange;
 
-    // if (isDebug)
+    if (isDebug)
     {
     qDebug().noquote()
              << "\n"
@@ -896,7 +896,7 @@ void MetaRead::dispatch(int id)
                 Qt::BlockingQueuedConnection,
                 Q_RETURN_ARG(bool, metaAttempted)
                 );
-            qDebug() << fun + "isAllMetadataAttempted";
+            // qDebug() << fun + "isAllMetadataAttempted";
             bool iconAttempted;
             QMetaObject::invokeMethod(
                 dm,
@@ -906,7 +906,7 @@ void MetaRead::dispatch(int id)
                 Q_ARG(int, dm->startIconRange),
                 Q_ARG(int, dm->endIconRange)
             );
-            qDebug() << fun + "isAllIconChunkLoaded";
+            // qDebug() << fun + "isAllIconChunkLoaded";
 
             // bool metaAttempted = dm->isAllMetadataAttempted();
             // bool iconAttempted = dm->isAllIconChunkLoaded(dm->startIconRange, dm->endIconRange);
@@ -1100,7 +1100,7 @@ void MetaRead::dispatchReaders()
 {
     QString fun = "MetaRead::dispatchReaders";
     if (debugLog && (G::isLogger || G::isFlowLogger)) G::log(fun);
-    // if (isDebug)
+    if (isDebug)
     {
     qDebug().noquote()
              << fun.leftJustified(col0Width)
@@ -1125,10 +1125,6 @@ void MetaRead::dispatchReaders()
             readers[id]->instance = dm->instance;
             cycling[id] = true;
             if (!abort) dispatch(id);
-            /*
-            QMetaObject::invokeMethod(this, "dispatch", Qt::QueuedConnection,
-                                      Q_ARG(int, id));
-            */
             if (isDebug)
             {
                 qDebug().noquote()

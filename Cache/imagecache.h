@@ -75,11 +75,10 @@ public slots:
     void stop();
     // void newInstance();
     void abortProcessing();
-    void initImageCache(int cacheSizeMB, int cacheMinMB,
+    void initialize(int cacheSizeMB, int cacheMinMB,
                         bool isShowCacheStatus, int cacheWtAhead);
     void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
-    void setCacheImageSize(int sfRow, float mb);
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");

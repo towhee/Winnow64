@@ -405,16 +405,12 @@ void MW::createImageCache()
             imageCache, &ImageCache::colorManageChange);
 
     // Signal to initialize ImageCache
-    connect(this, &MW::initImageCache,
-            imageCache, &ImageCache::initImageCache);
+    connect(this, &MW::initializeImageCache,
+            imageCache, &ImageCache::initialize);
 
     // Signal to update imageCache parameters
     connect(this, &MW::imageCacheChangeParam,
             imageCache, &ImageCache::updateImageCacheParam);
-
-    // Signal from DataModel with the image cache size req'd for a QImage
-    connect(dm, &DataModel::setCacheImageSize,
-            imageCache, &ImageCache::setCacheImageSize);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,

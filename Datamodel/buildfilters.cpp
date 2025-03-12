@@ -170,7 +170,7 @@ void BuildFilters::build(AfterAction newAction)
     tab or triggering a query from the filter menu.  This avoids building Filters until
     they are required.
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
     {

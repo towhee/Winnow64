@@ -522,6 +522,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     int sfRow = dm->proxyRowFromPath(fPath);
     bool isCurrent = sfRow == dm->currentSfRow;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
     if (G::isLogger) {
         QString msg = "Row " + QString::number(sfRow) + " " + fPath;
@@ -541,7 +542,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         return;
     }
 
-    if (isCached && isCurrent) {
+    if (isCached && isCurrent && !isVideo) {
         // qDebug() << "MW::refreshViewsOnCacheChange call imageView->loadImage" << fPath;
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, "MW::updateCachedStatus");

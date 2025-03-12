@@ -95,13 +95,15 @@ Building the cache:
 
 Image size in cache:
 
-    The memory required to cache an image is determined while the metadata is being read
-    in DataModel and emitted to ImageCache so that the initial target range can be built.
-    This is done using the preview image width and height.  However, for images where
-    the width and height cannot be predeterined (ie PNG), the initial file size is used
-    as an estimate, and the actual QImage size is calculated just prior to adding the
-    image to the image cache; setting the width, height and sizeMB; and updating the
-    target range and currMB cached.
+    The QImage MB memory (mb) required to cache an image is first estimated in the
+    datamodel when the file data is loaded, and replaced by MetaRead when the metadata is
+    read if it is available. The mb for each image is required to set the target range
+    when building the ImageCache. Since MetaRead and ImageCache can be loading
+    simultaneously, the ImageCache setTargetRange function might need the mb before
+    MetaRead has loaded, and uses the estimate.
+
+    The concurrent operations make it risky to directly call the datamodel cache size
+    form ImageCache, which is in a separate thread.  Use QMetaObject::invokeMethod.
 */
 
 
@@ -204,32 +206,10 @@ bool ImageCache::instanceClash(bool id)
 void ImageCache::abortProcessing()
 {
     abort = true;
-
-    /* ChatGPT
-    static QElapsedTimer timer;
-    static bool firstRun = true;
-
-    QString fun = "ImageCache::abortProcessing";
-    // if (debugCaching)
-    {
-        qDebug().noquote()
-        << fun.leftJustified(col0Width, ' ')
-        << "firstRun =" << firstRun
-            ;
+    for (int id = 0; id < decoderCount; ++id) {
+        cycling[id] = false;
+        QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::QueuedConnection);
     }
-
-    if (firstRun) {
-        timer.start();  // Start the timer on the first run
-        firstRun = false;
-        abort = true;
-    }
-
-    if (!abort && timer.elapsed() < abortDelay) {
-        QTimer::singleShot(0, this, &ImageCache::startProcessing);
-    } else {
-        firstRun = true;  // Reset when stopping
-    }
-    //*/
 }
 
 bool ImageCache::isRunning() const
@@ -254,19 +234,8 @@ float ImageCache::getImCacheSize()
     float cacheMB = 0;
 
     for (auto it = icd->imCache.constBegin(); it != icd->imCache.constEnd(); ++it) {
-        QString fPath = it.key();
-        // int sfRow = dm->proxyRowFromPath(fPath);
-        int sfRow;
-        QMetaObject::invokeMethod(
-            dm,
-            "proxyRowFromPath",
-            Qt::BlockingQueuedConnection,
-            Q_RETURN_ARG(int, sfRow),
-            Q_ARG(QString, fPath)
-            );
-        if (sfRow < imageSize.count()) cacheMB +=  imageSize.at(sfRow);
-        // cacheMB += dm->valueSf(sfRow, G::CacheSizeColumn).toFloat();
-        // cacheMB += dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat();
+        float mb = static_cast<float>(it.value().sizeInBytes()) / (1 << 20);
+        cacheMB += mb;
     }
 
     if (debugCaching)
@@ -493,8 +462,12 @@ void ImageCache::setTargetRange(int key)
 
     Each item in the target range is added to the toCache list.
 
-    • The direction of travel (dot) dotForward boolean is calculated to indicate whether
+    • The direction of travel (dot) isForward boolean is calculated to indicate whether
       the caching should proceed forward or backward from the current position (key).
+
+    • The terms ahead and behind are relative to the direction of travel.  If the direction
+      of travel is forward, then ahead refers to rows greater than the key, while if the
+      direction of travel is not forward, then ahead refers to rows less than the key.
 
     • aheadPos and behindPos specify positions ahead and behind the key, respectively.
 
@@ -504,24 +477,21 @@ void ImageCache::setTargetRange(int key)
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
 */
-    // /* Rory version
-
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
     // if (G::isLogger) G::log(fun, "maxMB = " + QString::number(maxMB));
 
     if (debugCaching)
+    {
     qDebug() << "setTargetRange"
              << "key =" << key
              << "threadId =" << QThread::currentThread();
+    }
 
-    int aheadAmount = 2;
-    int behindAmount = 1;
-
+    // initialize
     bool aheadDone = false;
     bool behindDone = false;
     float sumMB = 0;
-
     int n = dm->sf->rowCount();
     if (key == n - 1) {isForward = false; targetLast = n - 1;}
     if (key == 0)     {isForward = true; targetFirst = 0;}
@@ -537,64 +507,12 @@ void ImageCache::setTargetRange(int key)
             ;
     }
 
-    /* Iterate while there is space in the cache
-    while (sumMB < maxMB && (!aheadDone || !behindDone)) {
-        if (abort) return;
-        // Handle "ahead" direction
-        for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
-            // if (!waitForMetaRead(aheadPos, 10)) continue;
-            if (isForward ? (aheadPos < n) : (aheadPos >= 0)) {
-                if (dm->valueSf(aheadPos, G::VideoColumn).toBool()) {
-                    emit setCached(aheadPos, true, instance);
-                } else {
-                    sumMB +=  imageSize.at(aheadPos);
-                    // sumMB +=  dm->valueSf(aheadPos, G::CacheSizeColumn).toFloat();
-                    QString fPath = dm->valueSf(aheadPos, 0, G::PathRole).toString();
-                    // QString fPath = dm->pathFromProxyRow(aheadPos);
-                    // QString fPath = dm->sf->index(aheadPos, 0).data(G::PathRole).toString();
-                    if (sumMB < maxMB) {
-                        if (!toCache.contains(aheadPos) && !icd->contains(fPath)) {
-                            toCacheAppend(aheadPos);
-                        }
-                        isForward ? targetLast = aheadPos : targetFirst = aheadPos;
-                    }
-                }
-                isForward ? aheadPos++ : aheadPos--;
-            }
-            else aheadDone = true;
-        }
-
-        // Handle "behind" direction
-        for (int b = 0; b < behindAmount && !behindDone; ++b) {
-            // if (!waitForMetaRead(behindPos, 10)) continue;
-            if (isForward ? (behindPos >= 0) : (behindPos < n)) {
-                // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
-                if (dm->valueSf(behindPos, G::VideoColumn).toBool()) {
-                    emit setCached(behindPos, true, instance);
-                } else {
-                    sumMB +=  imageSize.at(aheadPos);
-                    // sumMB +=  dm->valueSf(behindPos, G::CacheSizeColumn).toFloat();
-                    QString fPath = dm->valueSf(behindPos, 0, G::PathRole).toString();
-                    // QString fPath = dm->pathFromProxyRow(behindPos);
-                    // QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
-                    if (sumMB < maxMB) {
-                        if (!toCache.contains(behindPos) && !icd->contains(fPath)) {
-                            toCacheAppend(behindPos);
-                        }
-                        isForward ? targetFirst = behindPos : targetLast = behindPos;
-                    }
-                }
-                isForward ? behindPos-- : behindPos++;
-            }
-            else  behindDone = true;
-        }
-    }
-    //*/
-
     // Iterate while there is space in the cache
-    int pos;
+    int pos = 0;
     int i = 0;
     while (sumMB < maxMB && !(aheadDone && behindDone)) {
+        if (abort) return;
+        // next target position (pos): 2 ahead, 1 behind sequence
         i++;
         bool isAhead = i % 3;
         if (isForward) {
@@ -608,10 +526,22 @@ void ImageCache::setTargetRange(int key)
             if (aheadPos == -1) aheadDone = true;
             if (behindPos == n) behindDone = true;
         }
+
+        // update toCache targets
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
             emit setCached(pos, true, instance);
         } else {
-            sumMB +=  imageSize.at(pos);
+            // see "Image size in cache" at top of imagecache.cpp
+            QVariant mb;
+            QMetaObject::invokeMethod(
+                dm,
+                "valueSf",
+                Qt::BlockingQueuedConnection,
+                Q_RETURN_ARG(QVariant, mb),
+                Q_ARG(int, pos),
+                Q_ARG(int, G::CacheSizeColumn)
+            );
+            sumMB += mb.toFloat();
             QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
             if (sumMB < maxMB) {
                 if (!toCache.contains(pos) && !icd->contains(fPath)) {
@@ -856,6 +786,7 @@ QString ImageCache::reportCacheDecoders()
     rpt << "  Key  ";
     rpt << "  DM Instance ";
     rpt << "  isIdle    ";
+    rpt << "  isCycling    ";
     rpt << "\n";
     for (int id = 0; id < decoderCount; ++id) {
         rpt << QString::number(id).rightJustified(4);
@@ -866,6 +797,8 @@ QString ImageCache::reportCacheDecoders()
         rpt << QString::number(instance).rightJustified(13);
         rpt << "   ";
         rpt << QVariant(decoders[id]->isIdle()).toString();
+        rpt << "          ";
+        rpt << QVariant(cycling.at(id)).toString();
         rpt << "\n";
     }
     rpt << "\n";
@@ -905,7 +838,6 @@ QString ImageCache::reportCacheItemList(QString title)
             rpt.setFieldAlignment(QTextStream::AlignRight);
             rpt.setFieldWidth(9);
             rpt
-                //                << "Updated"
                 << "Key"
                 << "Decoder"
                 << "Target"
@@ -917,12 +849,7 @@ QString ImageCache::reportCacheItemList(QString title)
                 << "Attempt"
                 << "MetaLoad"
                 << "Video"
-                ;
-            rpt.setFieldWidth(11);
-            rpt << "SizeMB";
-            rpt.setFieldWidth(9);
-            rpt
-                << "Size"
+                << "SizeMB"
                 << "Offset"
                 << "Length"
                 ;
@@ -955,12 +882,7 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::MetadataAttemptedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::MetadataLoadedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
-            ;
-        rpt.setFieldWidth(11);
-        rpt << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 3);
-        rpt.setFieldWidth(9);
-        rpt
-            << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 3)
+            << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 2)
             << dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt()
             << dm->sf->index(sfRow, G::LengthFullColumn).data().toInt()
             ;
@@ -1041,7 +963,7 @@ QString ImageCache::reportImCache()
         int sfRow;
         int w;
         int h;
-        int mb;
+        float mb;
         QString fPath;
     } imRptItem;
     QList<ImRptItem> rptList;
@@ -1052,7 +974,7 @@ QString ImageCache::reportImCache()
         image = icd->imCache.value(keys.at(i));    // QHash<QString, QImage> imCache
         imRptItem.w = image.width();
         imRptItem.h = image.height();
-        imRptItem.mb = static_cast<int>(imRptItem.w * imRptItem.h * 1.0 / 262144);
+        imRptItem.mb = static_cast<float>(imRptItem.w * imRptItem.h * 1.0 / 262144);
         rptList.append(imRptItem);
     }
     // sort
@@ -1073,6 +995,7 @@ QString ImageCache::reportImCache()
     // rpt << "Priority";
     rpt.setFieldWidth(6);
     rpt << "sfRow" << "W" << "H";
+    rpt.setFieldWidth(9);
     rpt << "MB";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -1095,7 +1018,8 @@ QString ImageCache::reportImCache()
         rpt << rptList.at(i).sfRow;
         rpt << rptList.at(i).w;
         rpt << rptList.at(i).h;
-        rpt << rptList.at(i).mb;
+        rpt.setFieldWidth(9);
+        rpt << QString::number(rptList.at(i).mb, 'f', 2);
         rpt.reset();
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt << "  ";
@@ -1189,16 +1113,16 @@ QString ImageCache::reportToCache()
     return reportString;
 }
 
-void ImageCache::initImageCache(int cacheMaxMB,
+void ImageCache::initialize(int cacheMaxMB,
                                 int cacheMinMB,
                                 bool isShowCacheStatus,
                                 int cacheWtAhead)
 {
-    if (G::isLogger || G::isFlowLogger) log("initImageCache");
     if (!G::useImageCache) return;   // rgh isolate image cache
+    QString fun = "ImageCache::initialize";
+    if (G::isLogger || G::isFlowLogger) log(fun);
 
-    QString fun = "ImageCache::initImageCache";
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
@@ -1212,8 +1136,6 @@ void ImageCache::initImageCache(int cacheMaxMB,
     icd->clear();
     toCache.clear();
     toCacheStatus.clear();
-    imageSize.clear();
-    imageSize.resize(dm->sf->rowCount());
 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
@@ -1232,7 +1154,7 @@ void ImageCache::initImageCache(int cacheMaxMB,
     // the amount of memory to allocate to the cache
     maxMB = cacheMaxMB;
     minMB = cacheMinMB;
-    isShowCacheStatus = isShowCacheStatus;
+    this->isShowCacheStatus = isShowCacheStatus;
     wtAhead = cacheWtAhead;
     targetFirst = 0;
     targetLast = 0;
@@ -1244,8 +1166,9 @@ void ImageCache::initImageCache(int cacheMaxMB,
     }
 
     isInitializing = false;
+    abort = false;
 
-    source = "ImageCache::initImageCache";
+    source = "ImageCache::initializeImageCache";
 }
 
 void ImageCache::updateImageCacheParam(int cacheSizeMB,
@@ -1357,11 +1280,6 @@ void ImageCache::cacheSizeChange()
 */
     QString fun = "ImageCache::cacheSizeChange";
     refreshImageCache();
-}
-
-void ImageCache::setCacheImageSize(int sfRow, float mb)
-{
-    if (sfRow < imageSize.count()) imageSize[sfRow] = mb;
 }
 
 void ImageCache::setCurrentPosition(QString fPath, QString src)
@@ -1634,14 +1552,11 @@ void ImageCache::decodeNextImage(int id, int sfRow)
 
     if (!decoderThreads[id]->isRunning()) decoderThreads[id]->start();
 
-    // if (!abort)
-    bool success = QMetaObject::invokeMethod(decoders[id], "decode",
+    bool success = false;
+    if (!abort)
+        success = QMetaObject::invokeMethod(decoders[id], "decode",
                                   Qt::QueuedConnection,
                                   Q_ARG(int, sfRow), Q_ARG(int, instance));
-
-    // bool success = QMetaObject::invokeMethod(decoders[id], "decode",
-    //                           Qt::DirectConnection,
-    //                           Q_ARG(int, sfRow), Q_ARG(int, instance));
 
     if (!success) {
         QString fun = "ImageCache::decodeNextImage";
@@ -1651,7 +1566,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
             << "row =" << QString::number(sfRow).leftJustified(4)
             << "invokeMethod failed!"
             ;
-        fillCache(id);
+        if (!abort) fillCache(id);
     }
 }
 
@@ -1682,14 +1597,14 @@ void ImageCache::cacheImage(int id, int sfRow)
     }
 
     // cache the image
-    icd->insert(decoders[id]->fPath, decoders[id]->image);
+    if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
 
     // // remove from toCache
-    if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+    if (!abort) if (toCache.contains(sfRow)) toCacheRemove(sfRow);
 
-    emit setCached(sfRow, true, instance);
+    if (!abort) emit setCached(sfRow, true, instance);
 
-    updateStatus("Update all rows", "ImageCache::cacheImage");
+    if (!abort) updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 
 bool ImageCache::okToCache(int id, int sfRow)
@@ -1824,7 +1739,7 @@ void ImageCache::fillCache(int id)
                                << "isRunning =" << imageCacheThread.isRunning()
                 ;
         }
-        cacheImage(id, cacheRow);
+        if (!abort) cacheImage(id, cacheRow);
     }
 
     // get next image toˇ· cache
@@ -1927,6 +1842,7 @@ void ImageCache::launchDecoders(QString src)
     }
 
     for (int id = 0; id < decoderCount; ++id) {
+        if (abort) return;
         if (toCache.isEmpty()) break;
         if (id >= dm->sf->rowCount()) break;
         if (cycling.at(id)) {
@@ -1961,7 +1877,7 @@ void ImageCache::launchDecoders(QString src)
         }
 
         cycling[id] = true;
-        decodeNextImage(id, sfRow);
+        if (!abort) decodeNextImage(id, sfRow);
     }
 }
 
@@ -1988,6 +1904,7 @@ void ImageCache::dispatch()
 
     abort = false;
 
+    // rgh req'd?
     if (!imageCacheThread.isRunning()) {
         qDebug() << "ImageCache::dispatch imageCacheThread.start()";
         imageCacheThread.start();
@@ -1996,25 +1913,7 @@ void ImageCache::dispatch()
     // check available memory (another app may have used or released some memory)
     memChk();
 
-    // // For new datamodel, use estimated range as not all metadata for the range
-    // // may have been read yet by metaRead
-    // if (firstDispatchNewDM && currRow == 0) {
-    //     firstDispatchNewDM = false;
-    //     targetFirst = 0;
-    //     targetLast = dm->endImageCacheTargetRange;
-    //     isForward = true;
-    //     for (int i = 0; i <= targetLast; i++) toCacheAppend(i);
-    // }
-    // else updateToCache();
-
-    QElapsedTimer t;
-    t.start();
     updateToCache();
-    qDebug() << "ImageCache::dispatch" << t.elapsed() << "ms"
-             << "row =" << currRow
-             << "targetFirst =" << targetFirst
-             << "targetLast =" << targetLast
-        ;
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;

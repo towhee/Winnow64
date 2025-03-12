@@ -74,7 +74,8 @@ bool ImageDecoder::quit()
 void ImageDecoder::abortProcessing()
 {
     QString fun = "ImageDecoder::abortProcessing";
-    // if (isDebug)
+    if (G::isLogger) G::log(fun, "id = " + QString::number(threadId));
+    if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(50);
@@ -108,10 +109,6 @@ void ImageDecoder::decode(int row, int instance)
             << "row =" << QString::number(sfRow).leftJustified(4)
             << fPath;
     }
-
-    if (G::isGuiThread()) qDebug().noquote()
-            << fun.leftJustified(50)
-            << "RUNNING IN GUI THREAD";
 
     // instance check
     if (instance != dm->instance) {

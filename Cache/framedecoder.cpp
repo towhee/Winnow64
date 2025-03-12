@@ -121,13 +121,16 @@ void FrameDecoder::getNextThumbNail(QString src)
                  << "  src =" << src
             ;
     }
-    mediaPlayer->setSource(queue.at(0).fPath);
-    mediaPlayer->play();
+    if (!abort) mediaPlayer->setSource(queue.at(0).fPath);
+    if (!abort) mediaPlayer->play();
 }
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log("FrameDecoder::frameChanged");
+
+    if (abort) return;
+
     bool validFrame = false;
 
     static int attempts = 0;
@@ -161,28 +164,24 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     if (!validFrame) return;
 
     QString path = queue.at(0).fPath;
-    //qDebug() << "FrameDecoder::frameChanged" << path << prevPath << frameAlreadyDone;
-    // if (path != prevPath && !frameAlreadyDone)
-    // {
-        int ls = queue.at(0).longSide;
-        if (queue.at(0).source == "dmThumb") {
-            // set the icon in datamodel
-            if (queue.at(0).dmIdx.isValid()) {
-                QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
-                qint64 duration = mediaPlayer->duration();
-                emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
-            }
+    int ls = queue.at(0).longSide;
+    if (queue.at(0).source == "dmThumb") {
+        // set the icon in datamodel
+        if (queue.at(0).dmIdx.isValid()) {
+            QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
+            qint64 duration = mediaPlayer->duration();
+            emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
         }
-        else {
-            // autonomous source
-            QString source = queue.at(0).source;
-            // qDebug() << "FrameDecoder::frameChanged  ls =" << ls;
-            if (ls > 0)
-                emit frameImage(queue.at(0).fPath, im.scaled(ls, ls, Qt::KeepAspectRatio), source);
-            else
-                emit frameImage(queue.at(0).fPath, im, source);
-        }
-    // }
+    }
+    else {
+        // autonomous source
+        QString source = queue.at(0).source;
+        // qDebug() << "FrameDecoder::frameChanged  ls =" << ls;
+        if (ls > 0)
+            emit frameImage(queue.at(0).fPath, im.scaled(ls, ls, Qt::KeepAspectRatio), source);
+        else
+            emit frameImage(queue.at(0).fPath, im, source);
+    }
 
     if (validFrame || attempts > 10) {
         mediaPlayer->stop();
@@ -192,7 +191,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         if (!queue.isEmpty()) queue.remove(0);
         // exhaust QVideoSink frameChanged signals after mediaPlayer is stopped
         // if (G::useProcessEvents && !isStressTest) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
-        getNextThumbNail("frameChanged");
+        if (!abort) getNextThumbNail("frameChanged");
     }
 }
 
