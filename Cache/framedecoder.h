@@ -13,10 +13,10 @@ class FrameDecoder : public QObject
     Q_OBJECT
 
 public:
-    FrameDecoder(QObject *parent = nullptr);
+    FrameDecoder(/*QObject *parent = nullptr*/);
 
 signals:
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
+    void setFrameIcon(QModelIndex dmIdx, QPixmap pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
     void frameImage(QString path, QImage image, QString source);
 

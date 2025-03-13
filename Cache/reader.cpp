@@ -9,16 +9,12 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     threadId = id;
     instance = 0;
 
-    // frameDecoder = new FrameDecoder(nullptr);
-    frameDecoder = new FrameDecoder(this);
-    // QThread *frameDecoderThread = new QThread;
-    // frameDecoder->moveToThread(frameDecoderThread);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon,
-            dm, &DataModel::setIconFromVideoFrame, Qt::QueuedConnection);
-    // frameDecoderThread->start();
+    thumb = new Thumb(dm);
 
-    thumb = new Thumb(dm, frameDecoder);
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
+    connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
 
+    /*
     bool isBlockingQueuedConnection = false;
     if (isBlockingQueuedConnection) {
         // Try Qt::BlockingQueuedConnection: (can be slow)
@@ -29,6 +25,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
         connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
         connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
     }
+    //*/
 
     isDebug = false;
     debugLog = false;

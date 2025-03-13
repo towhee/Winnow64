@@ -297,10 +297,10 @@ void MW::createFrameDecoder()
     Manage a number of FrameDecoder threads that send thumbnails to the DataModel.
 */
     if (G::isLogger) G::log("MW::createFrameDecoder");
-    frameDecoderInGui = new FrameDecoder(this);
+    frameDecoderInGui = new FrameDecoder();
     connect(this, &MW::abortFrameDecoder, frameDecoderInGui, &FrameDecoder::stop);
     connect(frameDecoderInGui, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    thumb = new Thumb(dm, frameDecoderInGui);
+    thumb = new Thumb(dm);
 }
 
 void MW::createMetaRead()
