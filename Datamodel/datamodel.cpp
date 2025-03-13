@@ -1979,7 +1979,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
 */
     //lastFunction = "";  // if req'd inclose in mutex
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame         "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
@@ -1989,14 +1989,14 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         ;
 
     if (G::stop) return;
-    if (!dmIdx.isValid()) {
-        errMsg = "Invalid dmIdx.";
-        G::issue("Warning", errMsg, "DataModel::setIconFromVideoFrame");
-        return;
-    }
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmIdx.row());
+        return;
+    }
+    if (!dmIdx.isValid()) {
+        errMsg = "Invalid dmIdx.";
+        G::issue("Warning", errMsg, "DataModel::setIconFromVideoFrame");
         return;
     }
     //qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
