@@ -7,18 +7,16 @@
    then entire image is read and scaled to thumbMax.
 */
 
-Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
+Thumb::Thumb(DataModel *dm)
 {
     this->dm = dm;
-    this->frameDecoder = frameDecoder;
-    this->metadata = new Metadata;
+    metadata = new Metadata;
 
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
 
     connect(this, &Thumb::setValueDm, dm, &DataModel::setValueDm, Qt::QueuedConnection);
     connect(this, &Thumb::setValueSf, dm, &DataModel::setValueSf, Qt::QueuedConnection);
-    connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
     isDebug = false;
 }
@@ -128,6 +126,10 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
             << fPath
             ;
     if (G::isLogger) G::log(fun, fPath);
+
+    frameDecoder = new FrameDecoder();
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
     QModelIndex dmIdx = dm->index(dmRow, 0);
     if (!abort)
@@ -382,10 +384,10 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 void Thumb::presetOffset(uint offset, uint length)
 {
     QString fun = "Thumb::presetOffset";
-    if (isDebug)
+    // if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
-            << "offset =" << offset << "lengt =h" << length;
+            << "offset =" << offset << "length =" << length << "isGUI =" << G::isGuiThread();
     if (G::isLogger) G::log(fun);
     offsetThumb = offset;
     lengthThumb = length;

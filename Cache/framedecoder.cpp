@@ -33,7 +33,7 @@
        - loop until queue is empty
 */
 
-FrameDecoder::FrameDecoder(QObject *parent)
+FrameDecoder::FrameDecoder(/*QObject *parent*/)  : QObject(nullptr)
 {
     if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
     status = Status::Idle;
@@ -152,7 +152,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     }
 
     attempts++;
-    if (isDebugging)
+    // if (isDebugging)
     {
         qDebug() << "FrameDecoder::frameChanged               "
                  << "row =" << queue.at(0).dmIdx.row()
@@ -160,6 +160,8 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
                  << "attempts =" << attempts
                  << "validFrame =" << validFrame
                  << "queue size =" << queue.size()
+                 << "source =" << queue.at(0).source
+                 << "isGUI =" << G::isGuiThread()
             ;
     }
 
@@ -172,6 +174,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         if (queue.at(0).dmIdx.isValid()) {
             QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
             qint64 duration = mediaPlayer->duration();
+            qDebug() << "FrameDecoder::frameChanged  setFrameIcon";
             emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
         }
     }

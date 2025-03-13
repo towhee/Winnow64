@@ -14,7 +14,7 @@ class Thumb : public QObject
     Q_OBJECT
     QThread frameDecoderthread;
 public:
-    explicit Thumb(DataModel *dm, FrameDecoder *frameDecoder);
+    explicit Thumb(DataModel *dm);
     void abortProcessing();
     bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
     void presetOffset(uint offset, uint length);

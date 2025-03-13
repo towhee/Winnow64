@@ -1962,7 +1962,9 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     setData(dmIdx, value, role);
 }
 
-void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
+// void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
+//                                       qint64 duration)
+void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance,
                                       qint64 duration)
 {
 /*
@@ -1977,7 +1979,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     //lastFunction = "";  // if req'd inclose in mutex
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame         "
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
