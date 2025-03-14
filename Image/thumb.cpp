@@ -24,6 +24,7 @@ Thumb::Thumb(DataModel *dm)
 void Thumb::abortProcessing()
 {
     abort = true;
+    if (frameDecoder) frameDecoder->stop();
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)

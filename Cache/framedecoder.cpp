@@ -33,7 +33,7 @@
        - loop until queue is empty
 */
 
-FrameDecoder::FrameDecoder(/*QObject *parent*/)  : QObject(nullptr)
+FrameDecoder::FrameDecoder()  : QObject(nullptr)
 {
     if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
     status = Status::Idle;

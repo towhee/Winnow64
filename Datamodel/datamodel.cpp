@@ -1984,7 +1984,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
-                 << dmIdx.data(G::PathRole).toString()
                  << "\n"
         ;
 

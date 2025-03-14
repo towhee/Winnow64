@@ -11,8 +11,8 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
     thumb = new Thumb(dm);
 
-    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
-    connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    connect(this, &Reader::setIcon, dm, &DataModel::setIcon);
 
     /*
     bool isBlockingQueuedConnection = false;
@@ -48,7 +48,6 @@ void Reader::abortProcessing()
     mutex.lock();
     abort = true;
     thumb->abortProcessing();
-    // frameDecoder->stop();
     mutex.unlock();
 }
 

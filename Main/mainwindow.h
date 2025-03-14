@@ -1105,8 +1105,6 @@ private:
     MetaRead *metaRead;
     ImageCache *imageCache;
     QThread imageCacheThread;
-    FrameDecoder *frameDecoderInGui;
-    Thumb *thumb;
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;
     IngestDlg *ingestDlg;
@@ -1244,7 +1242,6 @@ private:
     void createHelpActions();
     void createMiscActions();
     void createBookmarks();
-    void createFrameDecoder();
     void createLinearMetaRead();
     void createMetaRead();
     void createImageCache();
