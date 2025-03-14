@@ -43,9 +43,8 @@ class FindDuplicatesDlg : public QDialog
     Q_OBJECT
 
 public:
-    explicit FindDuplicatesDlg(QWidget *parent, DataModel *dm,
-                               Metadata *metadata, FrameDecoder *frameDecoder);
-    ~FindDuplicatesDlg();
+    explicit FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata);
+    ~FindDuplicatesDlg() override;
 
 protected:
     void resizeEvent(QResizeEvent*) override;

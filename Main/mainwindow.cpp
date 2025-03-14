@@ -490,7 +490,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelection();          // dependent on DataModel, ThumbView, GridView, TableView
     createInfoString();         // dependent on QSetting, DataModel, //EmbelProperties?
     createInfoView();           // dependent on DataModel, Metadata, ThumbView, Filters, BuildFilters
-    createFrameDecoder();       // dependent on DataModel
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createMetaRead();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
@@ -888,8 +887,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isCopyingFiles) G::stopCopyingFiles = true;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
-        // quit adding thumbnails
-        else if (thumb->insertingThumbnails) thumb->abort = true;
         // abort Embellish export process
         else if (G::isProcessingExportedImages) emit abortEmbelExport();
         // abort color analysis
@@ -2186,6 +2183,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
         // qDebug() << source << "reloading thumb for row" << current.row();
         QImage image;
+        Thumb *thumb = new Thumb(dm);
         bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
         if (ok) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
@@ -2193,6 +2191,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
             dm->setIcon(dmIdx, pm, ok, dm->instance, source);
         }
+        delete thumb;
     }
 
     // update loupe/video view
@@ -5317,6 +5316,7 @@ void MW::refreshDataModel()
             // update thumbnail in case image has changed
             QImage image;
             QPixmap pm;
+            Thumb *thumb = new Thumb(dm);
             bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, fun);
             if (thumbLoaded)
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -5324,6 +5324,7 @@ void MW::refreshDataModel()
                 pm = QPixmap(":/images/error_image256.png");
             QModelIndex dmIdx = dm->index(dmRow, 0);
             dm->setIcon(dmIdx, pm, thumbLoaded, dm->instance, src);
+            delete thumb;
         }
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
         refreshCurrentAfterReload();
@@ -5634,7 +5635,7 @@ void MW::mediaReadSpeed()
 void MW::findDuplicates()
 {
     if (G::isLogger) G::log("MW::findDuplicates");
-    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata, frameDecoderInGui);
+    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
     findDuplicatesDlg->setStyleSheet(G::css);
     // minimize dialog size fitting contents
     findDuplicatesDlg->resize(100, 100);

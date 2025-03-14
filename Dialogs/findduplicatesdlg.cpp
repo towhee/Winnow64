@@ -77,14 +77,13 @@ Comparison terms:
 
 */
 
-FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm,
-                                     Metadata *metadata, FrameDecoder *frameDecoder) :
+FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
     QDialog(parent),
     ui(new Ui::FindDuplicatesDlg),
     dm(dm),
-    metadata(metadata),
-    frameDecoder(frameDecoder)
+    metadata(metadata)
 {
+    frameDecoder = new FrameDecoder;
     autonomousImage = new AutonomousImage(metadata, frameDecoder);
     connect(frameDecoder, &FrameDecoder::frameImage, this, &FindDuplicatesDlg::setImageFromVideoFrame);
     // add disconnect in destructor...
