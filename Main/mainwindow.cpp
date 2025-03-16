@@ -2694,10 +2694,11 @@ void MW::loadChanged(const QString folderPath, const QString op)
                ;//*/
 
     // may have removed all selected folders
-    if (dm->folderList.isEmpty()) return;
+    // if (dm->folderList.isEmpty()) return;
 
     isCurrentFolderOkay = true;
 
+    qDebug() << fun << "rows =" << dm->sf->rowCount() << "folderPath =" << folderPath;
     updateStatus(true, "", fun);
 
     // set icon range and G::iconChunkLoaded (req'd by metaRead)
@@ -2785,7 +2786,6 @@ void MW::loadFolder(QString folderPath)
     }
 
     QString src = "MW::loadFolder";
-    int count = 0;
 
     // block repeated clicks to folders or bookmarks while processing this one.
     QSignalBlocker bookmarkBlocker(bookmarks);
@@ -2796,16 +2796,6 @@ void MW::loadFolder(QString folderPath)
         if (dm->rowCount()) {
             settings->setValue("lastDir", folderPath);
         }
-    }
-
-    // first folder containing images when multiple folders selected
-    if (folderPath == dm->firstFolderPathWithImages) {
-        // ImageView set zoom = fit for the first image of a new folder
-        imageView->isFirstImageNewInstance = true;
-
-        // read metadata using MetaRead
-        // only when new instance / new primary folder
-        QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
     }
 
     // if there was a folder and file change
@@ -2826,40 +2816,52 @@ void MW::loadFolder(QString folderPath)
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // reset metadata progress
-    // if (G::showProgress == G::ShowProgress::MetaCache) {
-        cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
-        isShowCacheProgressBar = true;
-        progressLabel->setVisible(true);
-    // }
-
-    // set image cache parameters
-    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    // imageCache->initialize(netCacheMBSize, cacheMinMB,
-    //                        isShowCacheProgressBar, cacheWtAhead);
-    emit initializeImageCache(netCacheMBSize, cacheMinMB,
-                              isShowCacheProgressBar, cacheWtAhead);
+    cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
+    isShowCacheProgressBar = true;
+    progressLabel->setVisible(true);
 
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
+    filters->loadingDataModel(false);   // isLoaded = false
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-    // if (reset(src + QString::number(count++))) return;
 
     isCurrentFolderOkay = true;
     updateStatus(true, "", fun);
 
-    filters->loadingDataModel(false);   // isLoaded = false
 
-    // set selection and current index, start metaReadThread
-    // qDebug() << fun << folderPath << dm->primaryFolderPath();
-    if (folderPath == dm->primaryFolderPath()) {
-        sel->select(dm->currentSfRow);
+    // first folder containing images when multiple folders selected
+    if (folderPath == dm->firstFolderPathWithImages) {
+        qDebug() << fun
+                 << "dm->currentSfRow =" << dm->currentSfRow
+                 << "folderPath =" << folderPath
+                 << "dm->firstFolderPathWithImages =" << dm->firstFolderPathWithImages;
+
+        // ImageView set zoom = fit for the first image of a new folder
+        imageView->isFirstImageNewInstance = true;
+
+        // initialize metaRead only when new instance and first folder loaded
+        QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
+
+        // initialize imageCache
+        int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
+        if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+        emit initializeImageCache(netCacheMBSize, cacheMinMB,
+                                  isShowCacheProgressBar, cacheWtAhead);
+
+        // sel->select(dm->currentSfRow);
     }
-    else {
-        load(0, false, "MW::loadFolder (not primary folder)");
-    }
+
+    // // set selection and current index, start metaReadThread
+    // if (folderPath == dm->primaryFolderPath()) {
+    //     sel->select(dm->currentSfRow);
+    // }
+    // else {
+    //     load(0, false, "MW::loadFolder (not primary folder)");
+    // }
+
+    sel->select(dm->currentSfRow);
 
     bookmarkBlocker.unblock();
 }
@@ -2893,11 +2895,11 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
-                 << "isFileSelectionChange = " << QVariant(isFileSelectionChange).toString().leftJustified(5)
+                 << "isFileSelectionChange =" << QVariant(isFileSelectionChange).toString().leftJustified(5)
                  << "src =" << src
                  << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
                  << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)

@@ -92,7 +92,7 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "row =" << row;
-    G::log(fun, "row = " + QString::number(row));
+    if (G::isLogger) G::log(fun, "row = " + QString::number(row));
     int w = image.width();
     int h = image.height();
     if (h == 0) {
@@ -385,7 +385,7 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 void Thumb::presetOffset(uint offset, uint length)
 {
     QString fun = "Thumb::presetOffset";
-    // if (isDebug)
+    if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "offset =" << offset << "length =" << length << "isGUI =" << G::isGuiThread();

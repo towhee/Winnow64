@@ -1122,7 +1122,7 @@ void ImageCache::initialize(int cacheMaxMB,
     QString fun = "ImageCache::initialize";
     if (G::isLogger || G::isFlowLogger) log(fun);
 
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
@@ -1212,18 +1212,16 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
 
     // do not use mutex - spins forever
 
-    // // reset the image cache
-    // icd->clear();
-    // toCache.clear();
-    // toCacheStatus.clear();
-
     // update instance
     instance = dm->instance;
 
-    // if (isShowCacheStatus) updateStatus("Update all rows", fun);
-    // refreshImageCache();
+    // reset the image cache
+    icd->clear();
+    toCache.clear();
+    toCacheStatus.clear();
+    updateStatus("Clear", "filterChange");
 
-    // setCurrentPosition(currentImageFullPath, fun);
+    setCurrentPosition(currentImageFullPath, fun);
 }
 
 void ImageCache::refreshImageCache()
@@ -1240,7 +1238,7 @@ void ImageCache::refreshImageCache()
     // }
 
     abort = false;
-    QMetaObject::invokeMethod(this, "updateToCache", Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(this, "updateToCache", Qt::QueuedConnection);
     dispatch();
 }
 
@@ -1296,7 +1294,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     QString fun = "ImageCache::setCurrentPosition";
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow
@@ -1352,6 +1350,7 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
         return false;
     }
 
+    /*
     // // out of range
     // if (sfRow >= dm->sf->rowCount()) {
     //     msg = "Out of range";
@@ -1363,18 +1362,19 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
     //     return false;
     // }
 
+    // // max attempts exceeded
+    // if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
+    //     msg = "Max attempts exceeded";
+    //     return false;
+    // }
+    */
+
     // already in imCache
     QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
     if (icd->contains(fPath)) {
         msg = "Already in imCache";
         return false;
     }
-
-    // // max attempts exceeded
-    // if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt() > maxAttemptsToCacheImage) {
-    //     msg = "Max attempts exceeded";
-    //     return false;
-    // }
 
     // isCaching
     if (toCacheStatus.contains(sfRow)) {

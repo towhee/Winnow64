@@ -394,7 +394,8 @@ void MW::createImageCache()
 
     // Signal to initialize ImageCache
     connect(this, &MW::initializeImageCache,
-            imageCache, &ImageCache::initialize);
+            imageCache, &ImageCache::initialize,
+            Qt::BlockingQueuedConnection);
 
     // Signal to update imageCache parameters
     connect(this, &MW::imageCacheChangeParam,
