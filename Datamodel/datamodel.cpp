@@ -591,7 +591,6 @@ void DataModel::addFolder(const QString &folderPath)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
-    // control
     QMutexLocker locker(&mutex);
     abort = false;
 
@@ -604,12 +603,14 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    /*
+    // /*
     qDebug().noquote()
-             << fun << "folder =" << folderPath
-             << "folderQueue(count) =" << folderQueue.count()
-             << "folderFileInfoList(count) =" << folderFileInfoList.count()
-        ;//*/
+            << fun << "folder =" << folderPath
+            << "folderQueue(count) =" << folderQueue.count()
+            << "folderFileInfoList(count) =" << folderFileInfoList.count()
+        ;
+    for (const QFileInfo &i : folderFileInfoList) qDebug() << i.fileName();
+    //*/
 
     if (combineRawJpg) {
         // make sure, if raw+jpg pair, that raw file is first to make combining easier
@@ -2046,19 +2047,20 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromI
 */
     // QMutexLocker locker(&mutex);
     if (G::isLogger) G::log("DataModel::setIcon");
+    if (fromInstance != instance) {
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
+        return;
+    }
     if (isDebug)
     {
+        // must come after instance check
         qDebug() << "DataModel::setIcon"
                  << "src =" << src
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
                  << "row =" << dmIdx.row()
                  << folderPathFromProxyRow(proxyIndexFromModelIndex(dmIdx).row());
-    }
-    if (fromInstance != instance) {
-        errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
-        return;
     }
     if (loadingModel) {
         // errMsg = "Model is still loading..";

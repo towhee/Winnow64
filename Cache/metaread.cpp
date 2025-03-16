@@ -958,6 +958,7 @@ void MetaRead::dispatch(int id)
                     }
                     else {
                         qWarning() << "REDO MAXED OUT";
+                        dispatchFinished("WeAreDone");
                     }
                 }
             }

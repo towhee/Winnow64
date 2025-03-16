@@ -13,19 +13,19 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     // check if instance clash (old folder signal)
 
-    // QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    QString fPath;
-    int row = thumbView->currentIndex().row();
-    QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
-    if (value.isValid()) fPath = value.toString();
-    else return;
+    // // QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    // QString fPath;
+    // int row = thumbView->currentIndex().row();
+    // QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
+    // if (value.isValid()) fPath = value.toString();
+    // else return;
 
-    int sfRow = dm->proxyRowFromPath(fPath);
-    if ((sfRow == -1) && (dm->instance > -1) && (fPath != "")) {
-        QString msg = "File not found.  Probable instance clash.";
-        G::issue("Warning", msg, "MW::updateStatus", sfRow, fPath);
-        return;
-    }
+    // int sfRow = dm->proxyRowFromPath(fPath);
+    // if ((sfRow == -1) && (dm->instance > -1) && (fPath != "")) {
+    //     QString msg = "File not found.  Probable instance clash.";
+    //     G::issue("Warning", msg, "MW::updateStatus", sfRow, fPath);
+    //     return;
+    // }
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {
@@ -181,11 +181,11 @@ QString MW::getPosition()
 */
     if (G::isLogger) G::log("MW::getPosition");
     QString fileCount = "";
-    QModelIndex idx = thumbView->currentIndex();
-    if (!idx.isValid()) return "";
+    // QModelIndex idx = thumbView->currentIndex();
+    // if (!idx.isValid()) return "";
     long rowCount = dm->sf->rowCount();
     if (rowCount <= 0) return "";
-    int row = idx.row() + 1;
+    int row = dm->currentSfRow + 1;
     fileCount = QString::number(row) + " of "
         + QString::number(rowCount);
     // if (subFoldersAction->isChecked()) fileCount += " including subfolders";

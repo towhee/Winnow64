@@ -132,7 +132,7 @@ void VideoView::durationChanged(qint64 duration_ms)
 
 void VideoView::positionChanged()
 {
-    // if (G::isLogger || isDebug)
+    if (G::isLogger || isDebug)
         G::log("VideoView::positionChanged");
     position = video->mediaPlayer->position() / 1000;
     if (!scrub->isSliderDown()) {

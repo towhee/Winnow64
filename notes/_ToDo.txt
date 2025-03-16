@@ -12,14 +12,13 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- Rapidly selecting folders can corrupt ImageCache toCache list
-- When opt select folder (recurse) status Pos: 1 of x is not updated and not fileSelectionChange
-- Update cache progress when unfilter
+- Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
+- When multi-select folders update cacheMaxMB to account for more metadata and icons
+- Drag copy not updating FSTree count column
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Check FindDuplicatesDlg still works (removed MW::createFrameDecoder)
 - Remove remember last folder option or fix
-- Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
 - Crash when close Winnow while MetaRead still working
 - /Users/roryhill/Temp/Photos_to_be_curated/2024/202410/2024-10-19_Linley Valley crashes
 - Videos should show as cached in progress bar: bookmark 2024-10-15_Mall
@@ -159,6 +158,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- When opt select folder (recurse) status Pos: 1 of x is not updated and not fileSelectionChange
+- Update cache progress when unfilter
+- Rapidly selecting folders can corrupt ImageCache toCache list
 - Eliminate MW::createFrameDecoder
 - In "/Users/roryhill/Pictures/_test1" heic files not shown in cache progress bar when advance thru them
 - Fixed latency issue in FSTree image count

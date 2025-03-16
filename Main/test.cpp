@@ -394,6 +394,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    updateImageCacheStatus("Clear", 1,1,1,1,""); return;
     videoView->stop(); return;
     bounceFoldersStressTest(100, 0.5); return;
 

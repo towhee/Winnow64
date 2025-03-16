@@ -49,11 +49,7 @@ FrameDecoder::FrameDecoder()  : QObject(nullptr)
 void FrameDecoder::stop()
 {
     if (G::isLogger) G::log("FrameDecoder::stop");
-    qDebug() << "FrameDecoder::stop  isGuiThread =" << G::isGuiThread();
-    // if (status == Status::Idle) {
-    //     // emit stopped("FrameDecoder");
-    //     return;
-    // }
+    // qDebug() << "FrameDecoder::stop  isGuiThread =" << G::isGuiThread();
     abort = true;
 }
 
@@ -152,7 +148,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     }
 
     attempts++;
-    // if (isDebugging)
+    if (isDebugging)
     {
         qDebug() << "FrameDecoder::frameChanged               "
                  << "row =" << queue.at(0).dmIdx.row()
@@ -174,7 +170,6 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         if (queue.at(0).dmIdx.isValid()) {
             QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
             qint64 duration = mediaPlayer->duration();
-            qDebug() << "FrameDecoder::frameChanged  setFrameIcon";
             emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
         }
     }
