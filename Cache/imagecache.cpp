@@ -1303,15 +1303,15 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         << "isRunning =" << imageCacheThread.isRunning();
     }
 
-    static int prevRow = -1;
-    static int prevInstance = -1;
+    // static int prevRow = -1;
+    // static int prevInstance = -1;
 
-    if (prevRow == currRow && prevInstance == instance) {
-        qDebug() << fun << "prevRow == currRow && prevInstance == instance so return without caching";
-        return;
-    }
-    prevRow = currRow;
-    prevInstance = instance;
+    // if (prevRow == currRow && prevInstance == instance) {
+    //     qDebug() << fun << "prevRow == currRow && prevInstance == instance so return without caching";
+    //     return;
+    // }
+    // prevRow = currRow;
+    // prevInstance = instance;
 
     if (G::dmInstance != instance) {
         if (debugCaching)

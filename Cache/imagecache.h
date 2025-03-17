@@ -55,7 +55,6 @@ public:
 
     bool debugCaching = false;
     bool debugLog = false;
-    QString source;                 // temp for debugging
 
 signals:
     void waitingForRow(int sfRow);

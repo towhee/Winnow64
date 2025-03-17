@@ -2895,7 +2895,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /*
+    /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2935,8 +2935,6 @@ void MW::loadDone()
     - update filters
     - resize tableView columns
 */
-    // QSignalBlocker bookmarkBlocker(bookmarks);
-
     if (G::isLogger || G::isFlowLogger)
     {
         QString msg = /*QString::number(testTime.elapsed()) + " ms " +*/
@@ -2987,7 +2985,6 @@ void MW::loadDone()
        )
     {
         chkMissingEmbeddedThumbnails("FromLoading");
-        // if (reset(src + QString::number(count++))) return;
     }
 
     // hide metadata read progress
@@ -3037,8 +3034,10 @@ void MW::loadDone()
         // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
 
-    // if (reset(src + QString::number(count++))) return;
-    // updateMetadataThreadRunStatus(false, true, "MW::loadConcurrentMDone");
+    // updateMetadataThreadRunStatus(false, true, "MW::loadDone");
+
+    // update image cache in case not already done during metaRead
+    emit setImageCachePosition(dm->currentFilePath, "MW::loadDone");
 
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
