@@ -426,7 +426,6 @@ public slots:
                                bool resetDataModel = true, bool recurse = false);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
-    void tryLoadImageAgain(QString fPath);
     void currentFolderDeletedExternally(QString path);
     bool stop(QString src = "");
     bool reset(QString src = "");

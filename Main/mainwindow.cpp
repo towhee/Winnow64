@@ -2280,21 +2280,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::isLogger) G::log("MW::fileSelectionChange", "Finished " + fPath);
 }
 
-void MW::tryLoadImageAgain(QString fPath)
-{
-/*
-    Not being used.
-
-    This is triggered from ImageView::loadImage when attempting to load a cache image
-    that is still being cached.  After a delay, try to load ImageView again.
-*/
-    if (G::isLogger) G::log("MW::tryLoadImageAgain", fPath);
-    QTimer::singleShot(500, [this, fPath]() {
-                        if (!imageView->isBusy)
-                            imageView->loadImage(fPath, true, "MW::tryLoadImageAgain");
-                      });
-}
-
 void MW::folderAndFileSelectionChange(QString fPath, QString src)
 {
 /*
