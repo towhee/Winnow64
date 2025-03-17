@@ -130,17 +130,17 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // has metadata already been read for this row
     if (fileSelectionChanged) {
         if (dm->isMetadataAttempted(sfRow)) {
-            return;
+            // return;
         }
     }
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "startRow =" << startRow
             << "isDispatching =" << isDispatching
-            << "isRunning =" << metaReadThread.isRunning()
+            << "imageCacheTriggered =" << imageCacheTriggered
             << "fileSelectionChanged =" << fileSelectionChanged
             << "G::allMetadataLoaded =" << G::allMetadataLoaded
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
@@ -154,7 +154,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // prevent redundant calls
     if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
     else startRow = 0;
-    if (instance == dm->instance && prevStartRow == startRow) return;
+    // if (instance == dm->instance && prevStartRow == startRow) return;
     prevStartRow = startRow;
 
     // load datamodel with metadata and icons
@@ -795,7 +795,7 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        // /*trigger fileSelectionChange which starts ImageCache if headStart amount exceeded
+        // /*trigger MW::fileSelectionChange which starts ImageCache
         if (fileSelectionChanged &&
             !imageCacheTriggered &&
             instance == dm->instance &&
