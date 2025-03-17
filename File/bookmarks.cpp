@@ -320,6 +320,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
                 "folder."
                 ;
         G::popUp->showPopup(msg, 5000);
+        qApp->processEvents();
         return;
     }
 
@@ -332,18 +333,18 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // include subfolders images
+    // popup to inform modifiers are not used in bookmarks
     if (event->modifiers() & Utilities::modifiersMask) {
         QString msg =
-            "Please note that using modifier keys for multi-folder selection<br>"
-            "only works in the folder panel."
+            "Modifier keys for multi-folder selection<br>"
+            "only works in the Folder panel."
             ;
         G::popUp->showPopup(msg, 2000);
         qApp->processEvents();
     }
 
-    // trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
-    // FSTree, which signals MW::folderSelectionChange
+    /* trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
+       FSTree, which signals MW::folderSelectionChange  */
     QTreeWidget::mousePressEvent(event);
 }
 

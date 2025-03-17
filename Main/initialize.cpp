@@ -642,7 +642,6 @@ void MW::createImageView()
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
 
-    connect(imageView, &ImageView::tryAgain, this, &MW::tryLoadImageAgain);
     connect(imageView, &ImageView::togglePick, this, &MW::togglePick);
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
