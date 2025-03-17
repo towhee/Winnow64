@@ -355,19 +355,7 @@ void MW::createImageCache()
 {
     if (G::isLogger) G::log("MW::createImageCache");
 
-    /* When a new folder is selected the metadataReadThread is started to load all the
-    metadata and thumbs for each image. If the user scrolls during the cache process then the
-    metadataReadThread is restarted at the first visible thumb to speed up the display of the
-    thumbs for the user. However, if every scroll event triggered a restart it would be
-    inefficient, so this timer is used to wait for a pause in the scrolling before triggering
-    a restart at the new place.
-    */
-
     imageCache = new ImageCache(this, icd, dm);
-    // imageCache->moveToThread(&imageCacheThread);
-
-    /* Image caching is triggered from the metadataReadThread to avoid the two threads
-       running simultaneously and colliding */
 
     connect(&imageCacheThread, &QThread::finished,
             imageCache, &QObject::deleteLater);

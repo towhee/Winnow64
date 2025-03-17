@@ -823,11 +823,11 @@ bool DataModel::endLoad(bool success)
 
 bool DataModel::okManyImagesWarning()
 {
-    if (G::isLogger) G::log("DataModel::tooManyImagesWarning");
+    if (G::isLogger) G::log("DataModel::okManyImagesWarning");
     QString title = "Too Many Images";
     QString max = QString::number(G::maxIconChunk);
     QString folders;
-    G::includeSubfolders ? folders = "folder" : folders = "folders";
+    folderList.count() == 1 ? folders = "folder" : folders = "folders";
     QString msg =
         "There are more than " + max + " images in the " + folders + ".  If you choose " +
         "to continue you may experience sluggish responses or system hangs.\n\n" +

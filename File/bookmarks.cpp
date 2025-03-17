@@ -333,8 +333,13 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     }
 
     // include subfolders images
-    if (event->modifiers() & Qt::AltModifier) {
-        G::includeSubfolders = true;
+    if (event->modifiers() & Utilities::modifiersMask) {
+        QString msg =
+            "Please note that using modifier keys for multi-folder selection<br>"
+            "only works in the folder panel."
+            ;
+        G::popUp->showPopup(msg, 2000);
+        qApp->processEvents();
     }
 
     // trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates

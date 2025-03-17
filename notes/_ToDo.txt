@@ -12,8 +12,6 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
-- When multi-select folders update cacheMaxMB to account for more metadata and icons
 - Drag copy not updating FSTree count column
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
@@ -158,6 +156,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
 - When opt select folder (recurse) status Pos: 1 of x is not updated and not fileSelectionChange
 - Update cache progress when unfilter
 - Rapidly selecting folders can corrupt ImageCache toCache list

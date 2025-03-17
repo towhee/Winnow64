@@ -50,6 +50,7 @@ public:
     static bool isScreenValid(const QScreen *screen);
 
     // keyboard
+    static const Qt::KeyboardModifiers modifiersMask;
     static bool modifiers(Qt::KeyboardModifiers modifiers, Qt::KeyboardModifiers val);
 
     // Convert
@@ -97,7 +98,6 @@ public slots:
     static void hideCursor();
 
 private:
-    static const Qt::KeyboardModifiers modifiersMask;
 };
 
 #endif // UTILITIES_H

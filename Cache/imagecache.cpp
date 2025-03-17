@@ -1114,9 +1114,9 @@ QString ImageCache::reportToCache()
 }
 
 void ImageCache::initialize(int cacheMaxMB,
-                                int cacheMinMB,
-                                bool isShowCacheStatus,
-                                int cacheWtAhead)
+                            int cacheMinMB,
+                            bool isShowCacheStatus,
+                            int cacheWtAhead)
 {
     if (!G::useImageCache) return;   // rgh isolate image cache
     QString fun = "ImageCache::initialize";
@@ -1162,13 +1162,11 @@ void ImageCache::initialize(int cacheMaxMB,
     firstDispatchNewDM = true;
 
     if (isShowCacheStatus) {
-        updateStatus("Clear", "ImageCache::initImageCache");
+        updateStatus("Clear", "ImageCache::initializeImageCache");
     }
 
     isInitializing = false;
     abort = false;
-
-    source = "ImageCache::initializeImageCache";
 }
 
 void ImageCache::updateImageCacheParam(int cacheSizeMB,
@@ -1303,6 +1301,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         << "isRunning =" << imageCacheThread.isRunning();
     }
 
+    // prev check prevents update when add a folder to datamodel
     // static int prevRow = -1;
     // static int prevInstance = -1;
 
