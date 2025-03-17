@@ -295,9 +295,7 @@ namespace G
     extern bool backupBeforeModifying;
     extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
-//    extern bool embedTifJpgThumb;
     extern bool renderVideoThumb;
-    extern bool includeSubfolders;
     extern bool isFilter;
 
     extern bool isRunningBackgroundIngest;

@@ -147,9 +147,7 @@ bool modifySourceFiles;
 bool backupBeforeModifying;
 bool autoAddMissingThumbnails;
 bool useSidecar;
-//    bool embedTifJpgThumb;
 bool renderVideoThumb;
-bool includeSubfolders;
 bool isFilter;
 bool isRemote;
 

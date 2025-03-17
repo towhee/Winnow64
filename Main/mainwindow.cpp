@@ -5400,7 +5400,6 @@ void MW::openUsbFolder()
 
     refreshFolders();
     bookmarks->selectionModel()->clear();
-    G::includeSubfolders = true;
     QString fPath = usbMap[drive].rootPath;
     if (isFolderValid(fPath, true, false)) {
         fsTree->select(fPath, "USBDrive", "MW::openUSBFolder");
