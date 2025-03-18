@@ -527,11 +527,14 @@ void ImageCache::setTargetRange(int key)
             if (behindPos == n) behindDone = true;
         }
 
+
         // update toCache targets
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
             emit setCached(pos, true, instance);
-        } else {
+        }
+        else {
             // see "Image size in cache" at top of imagecache.cpp
+            // this lowers performance
             // QVariant mb;
             // QMetaObject::invokeMethod(
             //     dm,
@@ -542,16 +545,24 @@ void ImageCache::setTargetRange(int key)
             //     Q_ARG(int, G::CacheSizeColumn)
             // );
             // sumMB += mb.toFloat();
+
+            // fast but risky, can crash when stress testing bounce folders
             sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
+
             QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
             if (sumMB < maxMB) {
                 if (!toCache.contains(pos) && !icd->contains(fPath)) {
+                    G::log(fun + " before toCacheAppend", "row = " + QString::number(pos));
                     toCacheAppend(pos);
+                    G::log(fun + " after toCacheAppend", "row = " + QString::number(pos));
                 }
                 pos < key ? targetFirst = pos : targetLast = pos;
             }
         }
+        G::log(fun, "row = " + QString::number(pos));
     }
+
+    G::log(fun, "Done");
 
     if (debugCaching)
     {
