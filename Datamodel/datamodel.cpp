@@ -603,7 +603,7 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    // /*
+    /*
     qDebug().noquote()
             << fun << "folder =" << folderPath
             << "folderQueue(count) =" << folderQueue.count()
@@ -640,13 +640,7 @@ void DataModel::addFolder(const QString &folderPath)
     int oldRowCount = rowCount();
     int newRowCount = rowCount() + folderFileInfoList.count();
     setRowCount(newRowCount);
-    // Adjust ImageCache imageSize QVector
-    emit resizeImageSize(newRowCount);
     if (!columnCount()) setColumnCount(G::TotalColumns);
-    /*
-    qDebug() << "DataModel::addFolder"
-             << "newRowCount =" << newRowCount
-        ; //*/
 
     int counter = 0;
     int countInterval = 100;
@@ -1445,18 +1439,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
-
-    /*
-    double ar = aspectRatio(m.width, m.height, m.orientation);
-    qDebug().noquote()
-             << "DataModel::addMetadataForItem"
-             << QString::number(row).rightJustified(4)
-             << "aspect ratio =" << QString::number(ar, 'f', 2)
-             << "\tw =" << QString::number(m.width).rightJustified(4)
-             << "h =" << QString::number(m.height).rightJustified(4)
-             << "orientation =" << m.orientation
-             << m.fPath;
-    //*/
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -1470,10 +1452,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
     setData(index(row, G::CameraMakeColumn), m.make, Qt::ToolTipRole);
-     search += m.make;
+    search += m.make;
     setData(index(row, G::CameraModelColumn), m.model);
     setData(index(row, G::CameraModelColumn), m.model, Qt::ToolTipRole);
-     search += m.model;
+    search += m.model;
     setData(index(row, G::ShutterspeedColumn), m.exposureTimeNum);
     setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::ApertureColumn), m.apertureNum);
@@ -1485,7 +1467,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::ExposureCompensationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LensColumn), m.lens);
     setData(index(row, G::LensColumn), m.lens, Qt::ToolTipRole);
-     search += m.lens;
+    search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::FocusXColumn), m.focusX);
@@ -1496,29 +1478,29 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::KeywordsColumn), Utilities::stringListToString(m.keywords), Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
-     search += m.shootingInfo;
+    search += m.shootingInfo;
     setData(index(row, G::TitleColumn), m.title);
     setData(index(row, G::TitleColumn), m.title, Qt::ToolTipRole);
-     search += m.title;
+    search += m.title;
     setData(index(row, G::_TitleColumn), m._title);
 //    if (index(row, G::CreatorColumn).data().toString() != "") m.creator = index(row, G::CreatorColumn).data().toString();
     setData(index(row, G::CreatorColumn), m.creator);
     setData(index(row, G::CreatorColumn), m.creator, Qt::ToolTipRole);
-     search += m.creator;
+    search += m.creator;
     setData(index(row, G::_CreatorColumn), m._creator);
 //    if (index(row, G::CopyrightColumn).data().toString() != "") m.copyright = index(row, G::CopyrightColumn).data().toString();
     setData(index(row, G::CopyrightColumn), m.copyright);
     setData(index(row, G::CopyrightColumn), m.copyright, Qt::ToolTipRole);
-     search += m.copyright;
+    search += m.copyright;
     setData(index(row, G::_CopyrightColumn), m._copyright);
 //    if (index(row, G::EmailColumn).data().toString() != "") m.email = index(row, G::EmailColumn).data().toString();
     setData(index(row, G::EmailColumn), m.email);
     setData(index(row, G::EmailColumn), m.email, Qt::ToolTipRole);
-     search += m.email;
+    search += m.email;
     setData(index(row, G::_EmailColumn), m._email);
 //    if (index(row, G::UrlColumn).data().toString() != "") m.url = index(row, G::UrlColumn).data().toString();
     setData(index(row, G::UrlColumn), m.url);
-     search += m.url;
+    search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::OffsetFullColumn), m.offsetFull);
@@ -1586,12 +1568,13 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
 
     // signal ImageCache that row is loaded
-    if (imageCacheWaitingForRow > -1)
-        qDebug() << "DataModel::addMetadataForItem row =" << row
-                 << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
-            ;
+    // if (imageCacheWaitingForRow > -1)
+    //     qDebug() << "DataModel::addMetadataForItem row =" << row
+    //              << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
+    //         ;
+
     if (row == imageCacheWaitingForRow) {
-        qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
+        // qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
         emit rowLoaded();
         imageCacheWaitingForRow = -1;
     }

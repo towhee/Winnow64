@@ -134,7 +134,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         }
     }
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)

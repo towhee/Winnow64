@@ -32,20 +32,24 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     QString fun = "Thumb::checkOrientation";
     if (isDebug)
         qDebug().noquote()
-            << fun.leftJustified(col0Width);
+            << fun.leftJustified(col0Width)
+            << "isGuiThread =" << G::isGuiThread()
+            ;
     if (G::isLogger) G::log(fun, fPath);
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->rowFromPath(fPath);
     QVariant orientation;
-    // orientation = dm->index(row, G::OrientationColumn).data().toInt();  // crash 2025-03-11
-    QMetaObject::invokeMethod(
-        dm,
-        "valueSf",
-        Qt::BlockingQueuedConnection,
-        Q_RETURN_ARG(QVariant, orientation),
-        Q_ARG(int, row),
-        Q_ARG(int, G::OrientationColumn)
+    // Dead lock detected in BlockingQueuedConnection when invoke used from GUI thread
+    if (G::isGuiThread())
+        orientation = dm->index(row, G::OrientationColumn).data().toInt();  // crash 2025-03-11
+    else QMetaObject::invokeMethod(
+            dm,
+            "valueSf",
+            Qt::BlockingQueuedConnection,
+            Q_RETURN_ARG(QVariant, orientation),
+            Q_ARG(int, row),
+            Q_ARG(int, G::OrientationColumn)
         );
     int degrees = 0;
     int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();

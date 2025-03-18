@@ -10,6 +10,7 @@ void MW::initialize()
     G::removingFolderFromDM = false;
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
+    G::isLoadingFolder = false;
     G::actDevicePixelRatio = 1;
     G::dpi = 72;
     G::ptToPx = G::dpi / 72;

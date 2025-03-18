@@ -1,5 +1,78 @@
-Qt, c++.
-QVector<float> cacheSize;
-cacheSize.clear();
-cacheSize.resize(50);
+QString fun = "ImageCache::setTargetRange";
+fun = fun.leftJustified(col0Width, ' ');
+// if (G::isLogger) G::log(fun, "maxMB = " + QString::number(maxMB));
 
+if (debugCaching)
+qDebug() << "setTargetRange"
+         << "key =" << key
+         << "threadId =" << QThread::currentThread();
+
+float sumMB = 0;
+int aheadAmount = 2;
+int behindAmount = 1;
+bool aheadDone = false;
+bool behindDone = false;
+
+// bool abortSetTargetRange;
+
+int n = dm->sf->rowCount();
+if (key == n - 1) {isForward = false; targetLast = n - 1;}
+if (key == 0)     {isForward = true; targetFirst = 0;}
+int aheadPos = key;
+int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+
+if (debugCaching)
+{
+    if (G::isGuiThread())
+    qDebug().noquote() << fun.leftJustified(col0Width, ' ')
+                       << "current position =" << key << "n =" << n
+                       << "RUNNING IN GUI THREAD"
+        ;
+}
+
+// Iterate while there is space in the cache
+while (sumMB < maxMB && (!aheadDone || !behindDone)) {
+    if (abort) return;
+    // Handle "ahead" direction
+    for (int a = 0; a < aheadAmount && !aheadDone; ++a) {
+        // if (!waitForMetaRead(aheadPos, 10)) continue;
+        if (isForward ? (aheadPos < n) : (aheadPos >= 0)) {
+            if (dm->sf->index(aheadPos, G::VideoColumn).data().toBool()) {
+                emit setCached(aheadPos, true, instance);
+            } else {
+                sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
+                QString fPath = dm->sf->index(aheadPos, 0).data(G::PathRole).toString();
+                if (sumMB < maxMB) {
+                    if (!toCache.contains(aheadPos) && !icd->contains(fPath)) {
+                        toCacheAppend(aheadPos);
+                    }
+                    isForward ? targetLast = aheadPos : targetFirst = aheadPos;
+                }
+            }
+            isForward ? aheadPos++ : aheadPos--;
+        }
+        else aheadDone = true;
+    }
+
+    // Handle "behind" direction
+    for (int b = 0; b < behindAmount && !behindDone; ++b) {
+        // if (!waitForMetaRead(behindPos, 10)) continue;
+        if (isForward ? (behindPos >= 0) : (behindPos < n)) {
+            // if (debugCaching) {qDebug() << "behindPos =" << behindPos;}
+            if (dm->sf->index(behindPos, G::VideoColumn).data().toBool()) {
+                emit setCached(behindPos, true, instance);
+            } else {
+                sumMB +=  dm->sf->index(behindPos, G::CacheSizeColumn).data().toFloat();
+                QString fPath = dm->sf->index(behindPos, 0).data(G::PathRole).toString();
+                if (sumMB < maxMB) {
+                    if (!toCache.contains(behindPos) && !icd->contains(fPath)) {
+                        toCacheAppend(behindPos);
+                    }
+                    isForward ? targetFirst = behindPos : targetLast = behindPos;
+                }
+            }
+            isForward ? behindPos-- : behindPos++;
+        }
+        else  behindDone = true;
+    }
+}

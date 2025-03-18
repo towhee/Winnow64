@@ -14,7 +14,8 @@ GITHUB DESKTOP PROCEDURE TO MAKE CHANGES TO PROGRAM
 
 GITHUB DESKTOP CHECKOUT COMMIT
 
-Add some notes for this
+The project code is set to the commit and can be run.  The commit is set as a separate
+branch.  When finished, just reselect master as the current branch.
 
 --------------------------------------------------------------------------------------------
 

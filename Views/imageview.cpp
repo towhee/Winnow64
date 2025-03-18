@@ -253,20 +253,20 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (icd->contains(fPath)) {
         QImage image; // confirm the cached image is in the image cache
         if (isDebug)
-        qDebug() << "ImageView::loadImage  get cached fPath " << fPath;
+            qDebug() << "ImageView::loadImage  row =" << sfRow << fPath;
 
-            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
-            isLoaded = true;
-            if (isDebug)
-                qDebug() << "ImageView::loadImage"
-                         << "w =" << pmItem->pixmap().width()
-                         << "h =" << pmItem->pixmap().height()
-                         << "isNull =" << pmItem->pixmap().isNull()
-                         << fPath;
+        pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
+        isLoaded = true;
+        if (isDebug)
+            qDebug() << "ImageView::loadImage"
+                     << "w =" << pmItem->pixmap().width()
+                     << "h =" << pmItem->pixmap().height()
+                     << "isNull =" << pmItem->pixmap().isNull()
+                     << fPath;
     }
     else {
         if (isDebug)
-        qDebug() << "ImageView::loadImage isCached = false";
+            qDebug() << "ImageView::loadImage isCached = false";
     }
 
     /* When the program is opening or resizing it is possible this function could be called

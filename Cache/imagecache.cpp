@@ -532,16 +532,17 @@ void ImageCache::setTargetRange(int key)
             emit setCached(pos, true, instance);
         } else {
             // see "Image size in cache" at top of imagecache.cpp
-            QVariant mb;
-            QMetaObject::invokeMethod(
-                dm,
-                "valueSf",
-                Qt::BlockingQueuedConnection,
-                Q_RETURN_ARG(QVariant, mb),
-                Q_ARG(int, pos),
-                Q_ARG(int, G::CacheSizeColumn)
-            );
-            sumMB += mb.toFloat();
+            // QVariant mb;
+            // QMetaObject::invokeMethod(
+            //     dm,
+            //     "valueSf",
+            //     Qt::BlockingQueuedConnection,
+            //     Q_RETURN_ARG(QVariant, mb),
+            //     Q_ARG(int, pos),
+            //     Q_ARG(int, G::CacheSizeColumn)
+            // );
+            // sumMB += mb.toFloat();
+            sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
             QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
             if (sumMB < maxMB) {
                 if (!toCache.contains(pos) && !icd->contains(fPath)) {
@@ -1122,7 +1123,7 @@ void ImageCache::initialize(int cacheMaxMB,
     QString fun = "ImageCache::initialize";
     if (G::isLogger || G::isFlowLogger) log(fun);
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
@@ -1292,7 +1293,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     QString fun = "ImageCache::setCurrentPosition";
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow
@@ -1313,7 +1314,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     // prevInstance = instance;
 
     if (G::dmInstance != instance) {
-        if (debugCaching)
+        // if (debugCaching)
         {
             QString msg = "Instance clash from " + src;
             G::issue("Comment", msg, "ImageCache::setCurrentPosition", currRow, fPath);
@@ -1894,6 +1895,7 @@ void ImageCache::dispatch()
 
     // req'd?
     if (dm->sf->rowCount() == 0) {
+        // qDebug() << "ImageCache::dispatch dm->sf->rowCount() == 0 so return";
         return;
     }
     if (debugCaching)
@@ -1905,7 +1907,7 @@ void ImageCache::dispatch()
 
     // rgh req'd?
     if (!imageCacheThread.isRunning()) {
-        qDebug() << "ImageCache::dispatch imageCacheThread.start()";
+        // qDebug() << "ImageCache::dispatch imageCacheThread.start()";
         imageCacheThread.start();
     }
 
@@ -1915,7 +1917,10 @@ void ImageCache::dispatch()
     updateToCache();
 
     // if cache is up-to-date our work is done
-    if (cacheUpToDate()) return;
+    if (cacheUpToDate()) {
+        // qDebug() << "ImageCache::dispatch cacheUpToDate == true so return";
+        return;
+    }
 
     // signal MW cache status
     emit updateIsRunning(true, true);   // (isRunning, showCacheLabel)
