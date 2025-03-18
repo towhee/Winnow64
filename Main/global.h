@@ -283,6 +283,7 @@ namespace G
     extern int backgroundShade;
     extern QString css;
 
+    extern bool isLoadingFolder;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;

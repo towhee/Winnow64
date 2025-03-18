@@ -2246,7 +2246,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (G::useImageCache)
        )
     {
-        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+        // emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+        imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
@@ -2373,8 +2374,9 @@ bool MW::stop(QString src)
 
     // stop flags
     G::stop = true;
-    sel->okToSelect(false);
+    // sel->okToSelect(false);
     dm->abort = true;
+    G::isLoadingFolder = true;
 
     // frameDecoder->stop();
     // videoView->stop();
@@ -2683,7 +2685,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
 
     isCurrentFolderOkay = true;
 
-    qDebug() << fun << "rows =" << dm->sf->rowCount() << "folderPath =" << folderPath;
+    // qDebug() << fun << "rows =" << dm->sf->rowCount() << "folderPath =" << folderPath;
     updateStatus(true, "", fun);
 
     // set icon range and G::iconChunkLoaded (req'd by metaRead)
@@ -2818,10 +2820,11 @@ void MW::loadFolder(QString folderPath)
 
     // first folder containing images when multiple folders selected
     if (folderPath == dm->firstFolderPathWithImages) {
+        /*
         qDebug() << fun
                  << "dm->currentSfRow =" << dm->currentSfRow
                  << "folderPath =" << folderPath
-                 << "dm->firstFolderPathWithImages =" << dm->firstFolderPathWithImages;
+                 << "dm->firstFolderPathWithImages =" << dm->firstFolderPathWithImages; //*/
 
         // ImageView set zoom = fit for the first image of a new folder
         imageView->isFirstImageNewInstance = true;
@@ -2906,7 +2909,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
                                       );
         }
     }
-    else if (isFileSelectionChange) {
+    if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
     }
 }

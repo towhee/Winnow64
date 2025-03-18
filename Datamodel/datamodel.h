@@ -179,7 +179,6 @@ signals:
     void centralMsg(QString message);
     void updateProgress(int progress);
     void rowLoaded();
-    void resizeImageSize(int rows); // ImageCache QVector imageSize
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
