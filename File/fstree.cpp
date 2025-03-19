@@ -891,8 +891,9 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // if (G::isLogger) G::log("FSTree::mousePressEvent");
     // qDebug() << "FSTree::mousePressEvent" << event;
 
-    if (G::stop) {
-        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+    if (G::stop || G::isModifyingDatamodel) {
+        // G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        qDebug() << "FSTree::mousePressEvent busy so ignore";
         return;
     }
 
