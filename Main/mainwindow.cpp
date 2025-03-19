@@ -2085,7 +2085,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
+    {
     qDebug() << fun
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
@@ -2103,6 +2104,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              // << "icon row =" << thumbView->currentIndex().row()
                 ;
                 //*/
+    }
 
     if (!rememberLastDir) {
         if (!isCurrentFolderOkay || G::isInitializing || isFilterChange) {
@@ -2115,7 +2117,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (G::isLogger || G::isFlowLogger) G::log(fun,
             "Folder does not exist so exit");
         refreshFolders();
-        // folderSelectionChange();
         return;
     }
 
@@ -2139,7 +2140,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     settings->setValue("lastFileSelection", fPath);
 
     /* SCROLL CONTROL:
-
        When an item (icon or row) is selected the default behavior is to scroll the item
        to the center of the view (thumbView, gridView or tableView) so the user does not
        have to scroll as they move through the images. However, when the user mouse
@@ -2169,9 +2169,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         tableView->scrollToCurrent();
     }
 
-    // G::ignoreScrollSignal = false;
-    // G::fileSelectionChangeSource = "";
-
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
@@ -2200,7 +2197,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (isVideo) {
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                 if (G::useMultimedia) {
-                    qDebug() << "MW::fileSelectionChange play video";
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
                     videoView->play();
@@ -2214,40 +2210,20 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                     loupeDisplay(fun);
                 }
             }
-            else {
-                if (!imageView->isFirstImageNewInstance) {
-                    // int row = dm->proxyRowFromPath(fPath);
-                    // QString msg = "imageView->loadImage failed.";
-                    // qWarning() << "MW::fileSelectionChange" << msg;
-                    // G::issue("Warning", msg, "MW::fileSelectionChange", row, fPath);
-                }
-            }
         }
     }
 
-    // G::ignoreScrollSignal = false;
     G::fileSelectionChangeSource = "";
 
     // update ImageCache
-
-    /*
-    qDebug() << "MW::fileSelectionChange" << "isVideo" << isVideo
-             // << "isNoModifier =" << (key == Qt::NoModifier)
-             // << "isShiftModifier =" << (key == Qt::ShiftModifier)
-             // << "isControlModifier =" << (key == Qt::ControlModifier)
-             // << "isAltModifier =" << (key == Qt::AltModifier)
-             // << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
-                ;
-    //*/
     if (!(G::isSlideShow && isSlideShowRandom)
-        // && !isVideo
         && (!workspaceChanged)
         && (G::mode != "Compare")
         && (G::useImageCache)
        )
     {
-        // emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
-        imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
+        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+        // imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
@@ -2374,7 +2350,7 @@ bool MW::stop(QString src)
 
     // stop flags
     G::stop = true;
-    // sel->okToSelect(false);
+    sel->okToSelect(false);
     dm->abort = true;
     G::isLoadingFolder = true;
 
@@ -2841,14 +2817,6 @@ void MW::loadFolder(QString folderPath)
         // sel->select(dm->currentSfRow);
     }
 
-    // // set selection and current index, start metaReadThread
-    // if (folderPath == dm->primaryFolderPath()) {
-    //     sel->select(dm->currentSfRow);
-    // }
-    // else {
-    //     load(0, false, "MW::loadFolder (not primary folder)");
-    // }
-
     sel->select(dm->currentSfRow);
 
     bookmarkBlocker.unblock();
@@ -2883,7 +2851,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /*
+    // /*
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2898,7 +2866,9 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
                     ;
     } //*/
 
-    if (!G::allMetadataLoaded || !G::iconChunkLoaded) {
+    bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
+
+    if (!metaLoaded) {
         // frameDecoder->clear();
         if (G::useReadMeta) {
             updateMetadataThreadRunStatus(true, true, "MW::load");
@@ -2909,7 +2879,11 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
                                       );
         }
     }
-    if (isFileSelectionChange) {
+
+    /* Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
+       results in an approx 2 second delay showing the new folder in the thumbView
+       and the first image in the loupe view */
+    if (isFileSelectionChange && !imageView->isFirstImageNewInstance) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
     }
 }

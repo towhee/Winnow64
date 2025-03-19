@@ -995,9 +995,9 @@ void MW::createStatusBar()
     progressLabel->setPixmap(*progressPixmap);
 
     // progress tooltip
-    QString progressToolTip = "Image cache status for current folder:\n";
-    progressToolTip += "  • LightGray:  \tbackground for all images in folder\n";
-    progressToolTip += "  • DarkGray:   \timages targeted to be cached\n";
+    QString progressToolTip = "Image cache status for current folder(s):\n";
+    progressToolTip += "  • DarkGray:   \tbackground for all images in folder\n";
+    progressToolTip += "  • Red:        \tmetadata loaded (visible while loading)\n";
     progressToolTip += "  • Green:      \timages that are cached\n";
     progressToolTip += "  • LightGreen: \tcurrent image";
     progressToolTip += "\n\nMouse click on cache status progress to open cache preferences.";
