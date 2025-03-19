@@ -394,72 +394,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    updateImageCacheStatus("Clear", 1,1,1,1,""); return;
-    videoView->stop(); return;
-    bounceFoldersStressTest(100, 0.5); return;
-
-    // traverseFolderStressTest(20, 0, true);
-
-    int key = 10;
-    bool isForward = true;
-    int maxMB;
-    int targetFirst, targetLast;
-
-    bool aheadDone = false;
-    bool behindDone = false;
-    float sumMB = 0;
-
-    int n = 20;  //dm->sf->rowCount();
-    if (key == n - 1) {isForward = false; targetLast = n - 1;}
-    if (key == 0)     {isForward = true; targetFirst = 0;}
-    int aheadPos = key;
-    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
-    int pos;
-
-    int i = 0;
-    while (sumMB < maxMB && !(aheadDone && behindDone)) {
-        bool isAhead = ++i % 3;
-        if (isForward) {
-            if (isAhead && !aheadDone) pos = aheadPos++;
-            else if (!behindDone) pos = behindPos--;
-            if (aheadPos == n) aheadDone = true;
-            if (behindPos == -1) behindDone = true;
-        } else {
-            if (isAhead && !aheadDone) pos = aheadPos--;
-            else if (!behindDone) pos = behindPos++;
-            if (aheadPos == -1) aheadDone = true;
-            if (behindPos == n) behindDone = true;
-        }
-
-        qDebug() << pos;
-    }
-    return;
-
-    QString fName = "fName";
-    QString bytes = "bytes";
-    QString cacheSize = "cacheSize";
-    QString ratio = "ratio";
-    qDebug().noquote()
-             << fName.leftJustified(30)
-             << bytes.rightJustified(15)
-             << cacheSize.rightJustified(15)
-             << ratio.rightJustified(15)
-        ;
-    for (int i = 0; i < dm->rowCount(); i++) {
-        QString fName = dm->sf->index(i, G::NameColumn).data().toString();
-        quint64 bytes = dm->sf->index(i, G::SizeColumn).data().toLongLong();
-        float cacheSize = dm->sf->index(i, G::CacheSizeColumn).data().toFloat();
-        int mb = static_cast<double>(bytes) / (1 << 20);
-        float ratio = cacheSize / mb;
-
-        qDebug().noquote()
-                 << fName.leftJustified(30)
-                 << QString::number(bytes).rightJustified(15)
-                 << QString::number(cacheSize).rightJustified(15)
-                 << QString::number(ratio, 'f', 1).rightJustified(15)
-            ;
-    }
-
+    QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-17_0010_Zen2048.JPG";
+    folderAndFileSelectionChange(fPath, "");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
