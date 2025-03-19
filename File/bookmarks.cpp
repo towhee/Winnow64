@@ -306,9 +306,11 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 */
     if (G::isLogger) G::log("BookMarks::mousePressEvent");
     // ignore rapid mouse press if still processing MW::stop
-    if (G::stop) {
+    if (G::stop || G::isModifyingDatamodel) {
         qApp->beep();
-        G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);
+        // G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);
+        qDebug() << "BookMarks::mousePressEvent busy so ignore";
+        // qApp->processEvents();
         return;
     }
     // do not allow if there is a background ingest in progress

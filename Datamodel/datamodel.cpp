@@ -789,7 +789,7 @@ void DataModel::find(QString text)
     }
 }
 
-void DataModel::abortLoad()
+void DataModel::abortLoad()  // not being used
 {
     if (G::isLogger) G::log("DataModel::abortLoad", "instance = " + QString::number(instance));
     if (isDebug) qDebug() << "DataModel::abortLoad" << "instance =" << instance;
@@ -902,6 +902,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
                           << "row =" << row
                           << fileInfo.filePath()
                              ;
+
+    // qApp->processEvents();   // process mouse events in fsTree and bookmarks
+
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
     QString folderName = fileInfo.dir().dirName();
@@ -1378,6 +1381,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
                           << pathFromProxyRow(m.row);
+
+    // qApp->processEvents();   // process mouse events in fsTree and bookmarks
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {

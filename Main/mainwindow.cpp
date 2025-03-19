@@ -2026,6 +2026,10 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
+    G::isModifyingDatamodel = true;
+    // block repeated clicks to folders or bookmarks while processing this one.
+    bookmarks->setEnabled(false);
+    fsTree->setEnabled(false);
 
     // save the current datamodel selection before removing a folder from datamodel
     if (op == "Remove") sel->save(fun);
@@ -2350,9 +2354,7 @@ bool MW::stop(QString src)
 
     // stop flags
     G::stop = true;
-    sel->okToSelect(false);
     dm->abort = true;
-    G::isLoadingFolder = true;
 
     // frameDecoder->stop();
     // videoView->stop();
@@ -2374,14 +2376,6 @@ bool MW::stop(QString src)
 
 
     buildFilters->abortIfRunning();
-    // buildFilters->stop();
-
-    // metaRead->stop();
-
-    // emit abortImageCache();
-
-
-    dm->abortLoad();
 
     G::stop = false;
     G::removingFolderFromDM = false;
@@ -2416,8 +2410,8 @@ bool MW::reset(QString src)
     // }
 
     // block repeated clicks to folders or bookmarks during reset.
-    QSignalBlocker bookmarkBlocker(bookmarks);
-    QSignalBlocker fsTreeBlocker(fsTree);
+    // QSignalBlocker bookmarkBlocker(bookmarks);
+    // QSignalBlocker fsTreeBlocker(fsTree);
 
     buildFilters->stop();
 
@@ -2500,8 +2494,8 @@ bool MW::reset(QString src)
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
-    bookmarkBlocker.unblock();
-    fsTreeBlocker.unblock();
+    // bookmarkBlocker.unblock();
+    // fsTreeBlocker.unblock();
     return true;
 }
 
@@ -2692,6 +2686,7 @@ void MW::loadChanged(const QString folderPath, const QString op)
         }
 
         sel->select(dm->currentSfRow);
+        G::isModifyingDatamodel = false;
 
         if (dm->isAllMetadataAttempted()) {
             G::allMetadataLoaded = true;
@@ -2707,9 +2702,12 @@ void MW::loadChanged(const QString folderPath, const QString op)
             loadFolder(folderPath);
         }
         else if (dm->isQueueEmpty()) {
+            G::isModifyingDatamodel = false;
             updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
             setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
         }
+        bookmarks->setEnabled(true);
+        fsTree->setEnabled(true);
         return;
     }
     // G::popUp->reset();  // pipeline popup
@@ -2751,7 +2749,7 @@ void MW::loadFolder(QString folderPath)
     QString src = "MW::loadFolder";
 
     // block repeated clicks to folders or bookmarks while processing this one.
-    QSignalBlocker bookmarkBlocker(bookmarks);
+    // QSignalBlocker bookmarkBlocker(bookmarks);
 
     // primary folder
     if (dm->folderList.count() == 1) {
@@ -2819,7 +2817,9 @@ void MW::loadFolder(QString folderPath)
 
     sel->select(dm->currentSfRow);
 
-    bookmarkBlocker.unblock();
+    G::isModifyingDatamodel = false;
+
+    // bookmarkBlocker.unblock();
 }
 
 void MW::load(int sfRow, bool isFileSelectionChange, QString src)

@@ -10,7 +10,7 @@ void MW::initialize()
     G::removingFolderFromDM = false;
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
-    G::isLoadingFolder = false;
+    G::isModifyingDatamodel = false;
     G::actDevicePixelRatio = 1;
     G::dpi = 72;
     G::ptToPx = G::dpi / 72;
@@ -1022,6 +1022,7 @@ void MW::createStatusBar()
     tip += "  • Green:    \tAll cached\n";
     tip += "  • Red:      \tCaching in progress\n";
     tip += "  • Orange:   \tCaching had a hickup\n";
+    tip += "  • Gray:     \tEmpty folder, no images to cache\n";
     metadataThreadRunningLabel->setToolTip(tip);
 
     // label to show imageThreadRunning status

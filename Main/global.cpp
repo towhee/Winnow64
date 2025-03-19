@@ -135,7 +135,7 @@ int minIconSize = 40;
 int maxIconChunk = 25000;
 
 // status
-bool isLoadingFolder;
+bool isModifyingDatamodel;
 bool ignoreScrollSignal;
 bool isSlideShow;
 bool isRunningColorAnalysis;
