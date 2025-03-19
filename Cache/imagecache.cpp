@@ -527,7 +527,6 @@ void ImageCache::setTargetRange(int key)
             if (behindPos == n) behindDone = true;
         }
 
-
         // update toCache targets
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
             emit setCached(pos, true, instance);
@@ -552,21 +551,16 @@ void ImageCache::setTargetRange(int key)
             QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
             if (sumMB < maxMB) {
                 if (!toCache.contains(pos) && !icd->contains(fPath)) {
-                    G::log(fun + " before toCacheAppend", "row = " + QString::number(pos));
                     toCacheAppend(pos);
-                    G::log(fun + " after toCacheAppend", "row = " + QString::number(pos));
                 }
                 pos < key ? targetFirst = pos : targetLast = pos;
             }
         }
-        G::log(fun, "row = " + QString::number(pos));
     }
-
-    G::log(fun, "Done");
 
     if (debugCaching)
     {
-    qDebug().noquote()
+        qDebug().noquote()
              << fun << "targetFirst =" << targetFirst << "targetLast =" << targetLast
              << toCache;
     }

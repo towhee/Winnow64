@@ -545,7 +545,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     if (isCached && isCurrent && !isVideo) {
         // qDebug() << "MW::refreshViewsOnCacheChange call imageView->loadImage" << fPath;
         centralLayout->setCurrentIndex(prevCentralView);
-        imageView->loadImage(fPath, "MW::updateCachedStatus");
+        imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         updateClassification();
     }
 
