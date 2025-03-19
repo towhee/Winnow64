@@ -1963,14 +1963,14 @@ void MW::handleStartupArgs(const QString &args)
         // folder already open
         bool folderAlreadyOpen = dm->folderList.contains(fDir);
         if (useDynamicInsertion && folderAlreadyOpen) {
-            // imageView->currentImageHasChanged = true;
+            imageView->currentImageHasChanged = true;
             insertFiles(embellishedPaths);
             // update filter counts
-            // buildFilters->recount();
-            //filterChange("MW::handleStartupArgs_remoteEmbellish");
+            buildFilters->recount();
+            filterChange("MW::handleStartupArgs_remoteEmbellish");
             // select first new embellished image
-            // QString fPath = embellishedPaths.at(0);
-            // sel->select(fPath);
+            QString fPath = embellishedPaths.at(0);
+            sel->select(fPath);
         }
         // open the folder
         else {
