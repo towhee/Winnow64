@@ -417,7 +417,8 @@ void DataModel::remove(QString fPath)
     file has been deleted by Winnow.  Also update fPathRow.
 */
     if (G::isLogger) G::log("DataModel::remove");
-    if (isDebug) qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
+    // if (isDebug)
+        qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
 
     // remove row from datamodel
     int row;
@@ -427,6 +428,9 @@ void DataModel::remove(QString fPath)
             QModelIndex par = QModelIndex();
             // do not use a mutex here
             beginRemoveRows(par, row, row);
+            qDebug() << "DataModel::remove"
+                     << "row =" << row
+                     << fPath;
             removeRow(row);
             endRemoveRows();
             break;
