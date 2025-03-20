@@ -2505,8 +2505,13 @@ void MW::nullFiltration()
     The datamodel sortfilter proxy has 0 rows. Report and clear.
 */
     if (G::isLogger) G::log("MW::nullFiltration");
-    updateStatus(false, "No images match the filtration", "MW::nullFiltration");
-    setCentralMessage("No images match the filtration");
+    QString msg;
+    if (dm->rowCount()) msg = "No images match the filtration.";
+    else if (dm->folderList.count() == 1)
+        msg = "No images in the folder.";
+    else msg = "No images in the folders.";
+    updateStatus(false, msg, "MW::nullFiltration");
+    setCentralMessage(msg);
     infoView->clearInfo();
     imageView->clear();
     progressLabel->setVisible(false);
