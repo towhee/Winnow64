@@ -30,7 +30,7 @@ void MW::createFileActions()
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
-    refreshCurrentAction = new QAction(tr("Refresh Current Folder"), this);
+    refreshCurrentAction = new QAction(tr("Refresh Current Folder(s)"), this);
     refreshCurrentAction->setObjectName("refreshFolder");
     refreshCurrentAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshCurrentAction);

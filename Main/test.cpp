@@ -385,17 +385,17 @@ void MW::ingestTest(QWidget* target)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    // filterChange();
+    fsTree->refreshModel();
 
-    filters->restore();
     // QString fPath = dm->currentFilePath;
     // metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-03-17_0010_Zen2048.JPG";
-    folderAndFileSelectionChange(fPath, "");
+    // fsTree->updateCount(); return;
+    QString folderPath = "/Users/roryhill/Pictures/_test1a";
+    fsTree->updateCount(folderPath);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
