@@ -55,8 +55,8 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
-    void refresh();
-    void refresh(const QString &dPath);
+    void clearCount();
+    void updateCount(const QString &dPath);
     bool showImageCount;
     bool &combineRawJpg;
     bool forceRefresh = true;
@@ -82,6 +82,8 @@ public:
     FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
     void createModel();
     void setShowImageCount(bool showImageCount);
+    void updateCount();
+    void updateCount(const QString &dPath);
     int imageCount(QString path);
     bool isShowImageCount();
     qlonglong selectionCount();

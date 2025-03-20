@@ -5218,6 +5218,9 @@ void MW::refreshDataModel()
     QString src = "fun";
     isRefreshingDM = true;  // rgh not being used, under review
 
+    // update counts in fsTree just in case
+    for (QString folderPath : dm->folderList) fsTree->updateCount(folderPath);
+
     QStringList added;
     QStringList removed;
     QStringList modified;

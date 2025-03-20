@@ -73,6 +73,7 @@ int ImageCounter::computeImageCount(const QString &path)
         }
     }
 
+    qDebug() << "ImageCounter::computeImageCount" << count << path;
     return count;
 }
 
@@ -196,25 +197,34 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
-void FSModel::refresh()
+void FSModel::clearCount()
 {
-    beginResetModel();
-    endResetModel();
-    return;
+    // remove current count
+    if (combineRawJpg) {
+        combineCount.clear();
+    }
+    else {
+        count.clear();
+    }
 }
 
-void FSModel::refresh(const QString &dPath)
+void FSModel::updateCount(const QString &dPath)
 {
     // used in MW::pasteFiles
+
+    // remove current count
+    if (combineRawJpg) combineCount.remove(dPath);
+    else count.remove(dPath);
+
+    // update data
     const QModelIndex idx = index(dPath, imageCountColumn);
     QList<int> roles;
     roles << Qt::DisplayRole;
     emit dataChanged(idx, idx, roles);
-    // qDebug() << "FSModel::refresh dPath" << dPath;
+    qDebug() << "FSModel::refresh dPath" << idx << dPath;
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
-// QVariant FSModel::data(const QModelIndex &index, int role)
 {
 /*
     Return image count for each folder by looking it up in the QHash count which is built
@@ -224,7 +234,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn && showImageCount) {
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
-            // qDebug() << "FSModel::data" << dPath;
+            qDebug() << "FSModel::data" << index << dPath;
 
             if (count.contains(dPath)) {
                 return count.value(dPath);  // Return cached value
@@ -415,7 +425,8 @@ void FSTree::refreshModel()
             }
         }
     }
-    fsModel->refresh();
+    fsModel->clearCount();
+    fsFilter->refresh();
     setFocus();
     select(currentFolderPath());
 }
@@ -436,6 +447,24 @@ int FSTree::imageCount(QString path)
     int count = idx4.data().toInt();
     // qDebug() << row << col << idx0.data() << idx4.data().toString() << idx0 << idx4;
     return count;
+}
+
+void FSTree::updateCount()
+{
+/*
+    Updates all visible image counts
+*/
+    fsModel->clearCount();
+    fsFilter->refresh();
+    setFocus();
+}
+
+void FSTree::updateCount(const QString &dPath)
+{
+/*
+    Updates image count for the dPath folder
+*/
+    fsModel->updateCount(dPath);
 }
 
 void FSTree::setShowImageCount(bool showImageCount)

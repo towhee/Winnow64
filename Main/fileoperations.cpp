@@ -96,7 +96,7 @@ void MW::pasteFiles(QString folderPath)
     buildFilters->recount();
 
     // update folder counts
-    fsTree->fsModel->refresh(folderPath);
+    fsTree->updateCount(folderPath);
     bookmarks->updateCount();
 
     // refresh folder to show pasted images rgh check this
