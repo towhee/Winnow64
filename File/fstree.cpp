@@ -73,7 +73,6 @@ int ImageCounter::computeImageCount(const QString &path)
         }
     }
 
-    qDebug() << "ImageCounter::computeImageCount" << count << path;
     return count;
 }
 
@@ -199,20 +198,14 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 void FSModel::clearCount()
 {
-    // remove current count
-    if (combineRawJpg) {
-        combineCount.clear();
-    }
-    else {
-        count.clear();
-    }
+    // remove all count
+    if (combineRawJpg) combineCount.clear();
+    else count.clear();
 }
 
 void FSModel::updateCount(const QString &dPath)
 {
-    // used in MW::pasteFiles
-
-    // remove current count
+    // remove count for folder dPath
     if (combineRawJpg) combineCount.remove(dPath);
     else count.remove(dPath);
 
@@ -221,7 +214,6 @@ void FSModel::updateCount(const QString &dPath)
     QList<int> roles;
     roles << Qt::DisplayRole;
     emit dataChanged(idx, idx, roles);
-    qDebug() << "FSModel::refresh dPath" << idx << dPath;
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
@@ -234,7 +226,6 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn && showImageCount) {
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
-            qDebug() << "FSModel::data" << index << dPath;
 
             if (count.contains(dPath)) {
                 return count.value(dPath);  // Return cached value
