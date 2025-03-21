@@ -165,10 +165,7 @@ void ImageCache::start()
 void ImageCache::stop()
 {
 /*
-    Note that initImageCache and updateImageCache both check if isRunning and stop a
-    running thread before starting again. Use this function to stop the image caching
-    thread without a new one starting when there has been a folder change or when closing
-    the program. The cache status label in the status bar will be hidden.
+    Called when quitting Winnow.
 */
     QString fun = "ImageCache::stop";
     if (debugCaching)
@@ -181,21 +178,21 @@ void ImageCache::stop()
     if (debugLog || G::isLogger)
         log("stop", "isRunning = " + QVariant(imageCacheThread.isRunning()).toString());
 
-    if (imageCacheThread.isRunning()) {
-        abort = true;
-        imageCacheThread.quit();
-        imageCacheThread.wait();
+    abort = true;
 
-        // Stop all decoder threads first
-        for (int id = 0; id < decoderCount; ++id) {
-            QMetaObject::invokeMethod(decoders[id], "stop", Qt::QueuedConnection);
-        }
+    // Stop all decoder threads first
+    for (int id = 0; id < decoderCount; ++id) {
+        QMetaObject::invokeMethod(decoders[id], "stop", Qt::BlockingQueuedConnection);
+        // decoders[id]->stop();
     }
 
-    abort = false;
+    if (imageCacheThread.isRunning()) {
+        imageCacheThread.quit();
+        imageCacheThread.wait();
+    }
 
     // turn off caching activity lights on statusbar
-    emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+    // emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 }
 
 bool ImageCache::instanceClash(bool id)

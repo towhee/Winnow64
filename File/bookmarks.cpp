@@ -79,6 +79,8 @@ BookMarks::BookMarks(QWidget *parent, DataModel *dm,
 
     setMouseTracking(true);
 
+    rapidClick.start();
+
     // Repaint when hover changes: Lambda function to call update
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
         this->viewport()->update();});
@@ -306,6 +308,12 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 */
     if (G::isLogger) G::log("BookMarks::mousePressEvent");
     // ignore rapid mouse press if still processing MW::stop
+    qint64 ms = rapidClick.elapsed();
+    if (ms < 500) {
+        event->ignore();
+        return;
+    }
+    rapidClick.restart();
     if (G::stop || G::isModifyingDatamodel) {
         qApp->beep();
         // G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);

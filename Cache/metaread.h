@@ -29,12 +29,13 @@ public:
     int readerCount;
     QVector<Reader*> reader;        // all the decoders
 
-    void syncInstance();
+    void stop();
     void stopReaders();
     void abortReaders();
-    QString diagnostics();
+    void syncInstance();
     QString reportMetaCache();
     void cleanupIcons();
+    QString diagnostics();
 
     bool isDispatching;
 

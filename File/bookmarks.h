@@ -43,6 +43,7 @@ private:
     int imageCountColumn = 2;
     int imageCountColumnWidth;
     QTreeWidgetItem *rightClickItem;
+    QElapsedTimer rapidClick;
 
 //    virtual bool event(QEvent *event) override;
 

@@ -14,19 +14,6 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon);
 
-    /*
-    bool isBlockingQueuedConnection = false;
-    if (isBlockingQueuedConnection) {
-        // Try Qt::BlockingQueuedConnection: (can be slow)
-        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
-    } else {
-        // Try QueuedConnection
-        connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::QueuedConnection);
-        connect(this, &Reader::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
-    }
-    //*/
-
     isDebug = false;
     debugLog = false;
 }
@@ -35,12 +22,16 @@ void Reader::stop()
 {
     QString fun = "Reader::stop";
     if (isDebug) qDebug() << fun.leftJustified(col0Width) << threadId;
-    mutex.lock();
-    abort = true;
-    readerThread->quit();
-    readerThread->wait();
-    abort = false;
-    mutex.unlock();
+    {
+        QMutexLocker locker(&mutex);
+        abort = true;
+        thumb->abortProcessing();
+    } // Unlock mutex before waiting
+
+    if (readerThread->isRunning()) {
+        readerThread->quit();
+        readerThread->wait();
+    }
 }
 
 void Reader::abortProcessing()
@@ -209,7 +200,7 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
     if (!abort) readIcon();
 
     // if (abort) return;
-    emit done(threadId);
+    if (!abort) emit done(threadId);
     if (G::isLogger) G::log("Reader::read", "Finished");
     fun = "Reader::read done and returning";
     if (isDebug)

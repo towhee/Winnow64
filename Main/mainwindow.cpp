@@ -748,14 +748,8 @@ void MW::closeEvent(QCloseEvent *event)
 
     stop("MW::closeEvent");
 
-    // stop metaRead thread
-    metaRead->metaReadThread.quit();
-    metaRead->metaReadThread.wait();
-    // stop all readers
-    metaRead->stopReaders();
-    // stop imageCache thread
-    imageCache->imageCacheThread.quit();
-    imageCache->imageCacheThread.wait();
+    metaRead->stop();
+    imageCache->stop();
 
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -2089,7 +2083,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     {
     qDebug() << fun
              << "src =" << src
@@ -2107,8 +2101,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              // << "isCurrentFolderOkay =" << isCurrentFolderOkay
              // << "icon row =" << thumbView->currentIndex().row()
                 ;
-                //*/
-    }
+
+    } //*/
 
     if (!rememberLastDir) {
         if (!isCurrentFolderOkay || G::isInitializing || isFilterChange) {
@@ -2881,10 +2875,11 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
         }
     }
 
-    /* Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
+    /* No delay now, but leaving comment just in case...
+       Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
        results in an approx 2 second delay showing the new folder in the thumbView
-       and the first image in the loupe view */
-    if (isFileSelectionChange /*&& !imageView->isFirstImageNewInstance*/) {
+       and the first image in the loupe view.  Also must check if first file is a video*/
+    if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
     }
 }
@@ -2905,11 +2900,6 @@ void MW::loadDone()
         G::log("MW::loadDone", msg);
     }
     QString src = "MW::loadDone";
-    // qDebug() << src;
-    // if (dm->isAllMetadataAttempted()) {
-    //     G::allMetadataLoaded = true;
-    // }
-    // G::allMetadataLoaded = true;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();

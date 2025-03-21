@@ -328,6 +328,8 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
 
     setMouseTracking(true);
 
+    rapidClick.start();
+
     setAcceptDrops(true);
     setDragEnabled(true);
     setDragDropMode(QAbstractItemView::InternalMove);
@@ -914,6 +916,13 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     if (G::stop || G::isModifyingDatamodel) {
         // G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
         qDebug() << "FSTree::mousePressEvent busy so ignore";
+        return;
+    }
+
+    // ignore rapid mouse press if still processing MW::stop
+    qint64 ms = rapidClick.elapsed();
+    if (ms < 500) {
+        event->ignore();
         return;
     }
 
