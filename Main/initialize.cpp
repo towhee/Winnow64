@@ -323,7 +323,7 @@ void MW::createMetaRead()
     // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
 
     // signal to stop MetaRead
-    connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stopReaders);
+    // connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stopReaders);
 
     // update thumbView in case scrolling has occurred
     connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
@@ -995,7 +995,7 @@ void MW::createStatusBar()
     progressLabel->setPixmap(*progressPixmap);
 
     // progress tooltip
-    QString progressToolTip = "Image cache status for current folder(s):\n";
+    QString progressToolTip = "Cache status for current folder(s):\n";
     progressToolTip += "  • DarkGray:   \tbackground for all images in folder\n";
     progressToolTip += "  • Red:        \tmetadata loaded (visible while loading)\n";
     progressToolTip += "  • Green:      \timages that are cached\n";

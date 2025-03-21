@@ -163,6 +163,7 @@ private:
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QSet<QPersistentModelIndex> nodesToExpand;
     QElapsedTimer expansionTimer;
+    QElapsedTimer rapidClick;
     bool eventLoopRunning;
     QPersistentModelIndex justExpandedIndex;
     QModelIndex dndOrigSelection;

@@ -404,7 +404,6 @@ signals:
     void closeZoomDlg();        // not being used
     void aSyncGo(int);          // rgh req'd?
     void needToShow();          // not being used
-    void abortMetaRead();       // not being used
     void abortMDCache();        // not being used
     void abortImageCache();
     void stopImageCache();

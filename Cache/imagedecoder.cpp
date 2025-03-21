@@ -49,15 +49,17 @@ ImageDecoder::~ImageDecoder()
 void ImageDecoder::stop()
 {
     QString fun = "ImageDecoder::stop";
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(50);
     }
+
     abort = true;
-    decoderThread.quit();
-    decoderThread.wait();
-    abort = false;
+    if (decoderThread.isRunning()) {
+        decoderThread.quit();
+        decoderThread.wait();
+    }
 }
 
 bool ImageDecoder::quit()

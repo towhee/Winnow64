@@ -20,8 +20,6 @@ public:
     Reader(int id, DataModel *dm, ImageCache *imageCache);
     //~Reader() override;
 
-    void stop();
-
     QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
     int instance = 0;
@@ -62,6 +60,7 @@ signals:
 public slots:
     void read(QModelIndex dmIdx, QString filePath, int instance, bool isReadIcon);
     void abortProcessing();
+    void stop();
 
 private:
     QMutex mutex;

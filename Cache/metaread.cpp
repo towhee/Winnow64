@@ -224,6 +224,19 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     dispatchReaders();
 }
 
+void MetaRead::stop()
+{
+    QString fun = "MetaRead::stop";
+    if (G::isLogger || G::isFlowLogger) G::log(fun);
+
+    abort = true;
+    stopReaders();
+
+    metaReadThread.quit();
+    metaReadThread.wait();
+
+}
+
 void MetaRead::stopReaders()
 /*
     MetaRead::run dispatches all the readers and returns immediately.  The isDispatched flag
@@ -241,9 +254,11 @@ void MetaRead::stopReaders()
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
-        readers[id]->stop();
+        // readers[id]->stop();
+        QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
     }
 }
+
 void MetaRead::abortReaders()
 {
 /*

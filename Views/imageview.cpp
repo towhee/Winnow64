@@ -156,7 +156,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "\nImageView::loadImage:"
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
@@ -201,7 +201,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) {
-        // qWDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
+        // qDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
         QString msg = "Processing exported images.  Canceled loadImage.";
         G::issue("Warning", msg, "ImageView::loadImage");
         return false;
@@ -327,7 +327,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (isLoaded) return true;
     else {
         if (isDebug)
-        qDebug() << "ImageView::loadImage isLoaded = false";
+            qDebug() << "ImageView::loadImage isLoaded = false";
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);
