@@ -30,7 +30,10 @@ void Reader::stop()
 
     if (readerThread->isRunning()) {
         readerThread->quit();
-        readerThread->wait();
+        // prevent thread waiting on itself if called from same thread
+        if (QThread::currentThread() != readerThread) {
+            readerThread->wait();
+        }
     }
 }
 

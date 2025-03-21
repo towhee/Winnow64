@@ -12,12 +12,12 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
+- Disable Metadata dock when no file selection
 - Check missing thumbnails working
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Check FindDuplicatesDlg still works (removed MW::createFrameDecoder)
 - /Users/roryhill/Temp/Photos_to_be_curated/2024/202410/2024-10-19_Linley Valley crashes
-- Disable Metadata dock when no file selection
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
 - Compare at 100% cannot mouse to a compare item without zoom to fit happening
@@ -153,6 +153,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Thread tried to wait on itself (reader)
 - Crash when close Winnow while MetaRead still working
 - Remove remember last folder option
 - Drag copy not updating FSTree count column

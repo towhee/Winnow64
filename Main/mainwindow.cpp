@@ -748,6 +748,7 @@ void MW::closeEvent(QCloseEvent *event)
 
     stop("MW::closeEvent");
 
+    // metaRead->stopReaders();
     metaRead->stop();
     imageCache->stop();
 
