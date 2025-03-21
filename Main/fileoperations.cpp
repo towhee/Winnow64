@@ -356,12 +356,12 @@ void MW::deleteSelectedFiles()
 
 void MW::dmRemove(QStringList pathList)
 {
-    /*
+/*
     Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
     is the same as dm: no filtering.  We save the filter, clear filters, remove all the
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
     the rows, updates dm->fPathRow.
-    */
+*/
     qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
 
     filters->save();
@@ -458,14 +458,6 @@ void MW::deleteFiles(QStringList paths)
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
 
-    // if all images in folder were deleted
-    // if (sldm.count() == dm->sf->rowCount()) {
-    //     bookmarks->updateBookmarks();
-    //     stop("deleteFiles");
-    //     // fsTree->select(dm->currentPrimaryFolderPath);
-    //     return;
-    // }
-
     dmRemove(sldm);
 
     // update current index
@@ -478,9 +470,6 @@ void MW::deleteFiles(QStringList paths)
         sel->select(sfIdx, Qt::NoModifier,"MW::deleteFiles");
     }
 
-    // /* Just in case deletion was from a bookmark folder then force update for image count.
-    //    This is required if fsTree is hidden, and consequently, is not receiving signals.
-    //    As a result, fsTree does not update its data and does not signal back to Bookmarks. */
     fsTree->updateCount();
     bookmarks->updateCount();
 }

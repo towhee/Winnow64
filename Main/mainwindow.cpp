@@ -2841,10 +2841,6 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
 {
     if (G::stop || dm->abort) return;
 
-    // G::popUp->reset();  // pipeline popup
-    // G::popUp->showPopup("MW::load", 0, true, 1);
-    // qApp->processEvents();
-
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::load", "row = " + QString::number(sfRow)
@@ -2856,7 +2852,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /*
+    /* debug
     {
         qDebug().noquote()
                  << "MW::load  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2888,7 +2884,7 @@ void MW::load(int sfRow, bool isFileSelectionChange, QString src)
     /* Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
        results in an approx 2 second delay showing the new folder in the thumbView
        and the first image in the loupe view */
-    if (isFileSelectionChange && !imageView->isFirstImageNewInstance) {
+    if (isFileSelectionChange /*&& !imageView->isFirstImageNewInstance*/) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::load");
     }
 }

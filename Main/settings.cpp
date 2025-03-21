@@ -446,7 +446,8 @@ bool MW::loadSettings()
     // files
     if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();
     if (settings->contains("colorManage")) G::colorManage = settings->value("colorManage").toBool();
-    if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
+    // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
+    rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
     if (settings->contains("lastDir")) lastDir = settings->value("lastDir").toString();
 

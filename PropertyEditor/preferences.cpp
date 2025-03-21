@@ -458,7 +458,7 @@ void Preferences::addItems()
     i.key = "rememberLastDir";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Check for app update at startup
     i.name = "checkIfUpdate";
