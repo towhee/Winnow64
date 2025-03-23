@@ -234,7 +234,6 @@ void MetaRead::stop()
 
     metaReadThread.quit();
     metaReadThread.wait();
-
 }
 
 void MetaRead::stopReaders()
@@ -1205,7 +1204,7 @@ void MetaRead::dispatchFinished(QString src)
     if (!G::allMetadataLoaded) {
         G::allMetadataLoaded = true;
         // G::iconChunkLoaded = true;
-        // signal MW::loadDone
+        // signal MW::folderChangeCompleted
         emit done();
     }
     G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??

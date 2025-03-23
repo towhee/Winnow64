@@ -408,7 +408,8 @@ void InfoView::showOrHide()
     looks for the field in ok. It then shows or hides the table row based on the ok
     show flag.
 */
-    if (G::isLogger) G::log("InfoView::showOrHide");    bool okToShow;
+    if (G::isLogger) G::log("InfoView::showOrHide");
+    bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();

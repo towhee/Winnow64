@@ -704,6 +704,65 @@ quint32 Utilities::swapEndian32(quint32 x)
     return (b[0] | b[1] | b[2] | b[3]);
 }
 
+quint64 Utilities::qvariantBytes(QVariant data)
+{
+    qint64 bytes = 0;
+    if (!data.isNull()) {
+        switch (data.typeId()) { // Qt 6+ uses typeId(), Qt 5 uses type()
+        case QMetaType::QString:
+            bytes += data.toString().size() * sizeof(QChar);
+            break;
+        case QMetaType::QByteArray:
+            bytes += data.toByteArray().size();
+            break;
+        case QMetaType::Int:
+        case QMetaType::Bool:
+        case QMetaType::Double:
+        case QMetaType::Float:
+        case QMetaType::LongLong:
+        case QMetaType::ULongLong:
+            bytes += sizeof(data);
+            break;
+        case QMetaType::QImage:
+        {
+            QImage img = data.value<QImage>();
+            bytes += img.width() * img.height() * (img.depth() / 8);
+        }
+        break;
+        case QMetaType::QIcon:
+        {
+            QIcon icon = data.value<QIcon>();
+            QList<QSize> sizes = icon.availableSizes();
+            for (const QSize &size : sizes) {
+                int w = size.width();
+                int h = size.height();
+                bytes += w * h * 4; // Assuming 32-bit (RGBA) storage
+            }
+        }
+        break;
+        case QMetaType::QVariantList:
+        {
+            QVariantList list = data.toList();
+            for (const QVariant &v : list) {
+                bytes += sizeof(QVariant) + v.toByteArray().size();
+            }
+        }
+        break;
+        case QMetaType::QVariantMap:
+        {
+            QVariantMap map = data.toMap();
+            for (auto it = map.begin(); it != map.end(); ++it) {
+                bytes += it.key().size() * sizeof(QChar) + it.value().toByteArray().size();
+            }
+        }
+        break;
+        default:
+            bytes += sizeof(QVariant); // Fallback approximation
+        }
+    }
+    return bytes;
+}
+
 //void Utilities::bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits)
 //{
 //    bits = get32(bytes);

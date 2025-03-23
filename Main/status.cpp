@@ -9,23 +9,9 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (!G::useUpdateStatus) return;
     if (G::stop) return;
 
-    if (G::isLogger) G::log("MW::updateStatus");
-
-    // check if instance clash (old folder signal)
-
-    // // QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    // QString fPath;
-    // int row = thumbView->currentIndex().row();
-    // QVariant value = dm->valueSf(row, G::PathColumn, G::PathRole);
-    // if (value.isValid()) fPath = value.toString();
-    // else return;
-
-    // int sfRow = dm->proxyRowFromPath(fPath);
-    // if ((sfRow == -1) && (dm->instance > -1) && (fPath != "")) {
-    //     QString msg = "File not found.  Probable instance clash.";
-    //     G::issue("Warning", msg, "MW::updateStatus", sfRow, fPath);
-    //     return;
-    // }
+    QString fun = "MW::updateStatus";
+    if (G::isLogger)
+        G::log(fun);
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {

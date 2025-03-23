@@ -287,6 +287,33 @@ void DataModel::setModelProperties()
     // "🔎" was title for search column
 }
 
+qint64 DataModel::rowBytesUsed(int dmRow)
+{
+    qint64 bytes = 0;
+    QHash<int, QByteArray> roles = roleNames(); // Get all available roles
+    // qDebug() << "DataModel::rowBytesUsed" << "roles:" << roles;
+    for (int col = 0; col < columnCount(); ++col) {
+        QModelIndex dmIdx = index(dmRow, col);
+        for (int role : roles.keys()) {
+            QVariant data = this->data(dmIdx, role);
+            if (!data.isNull()) {
+                bytes += Utilities::qvariantBytes(data);
+                if (isDebug)
+                {
+                qDebug().noquote()
+                    << "DataModel::rowBytesUsed"
+                    << horizontalHeaderItem(col)->text().leftJustified(25)
+                    << "col =" << QString::number(col).rightJustified(2)
+                    << "role =" << QString::number(role).rightJustified(1)
+                    << "bytes =" << QString::number(Utilities::qvariantBytes(data)).rightJustified(12)
+                    << "sumbytes =" << bytes;
+                }
+            }
+        }
+    }
+    return bytes;
+}
+
 void DataModel::clearDataModel()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
@@ -310,6 +337,8 @@ void DataModel::clearDataModel()
     isProcessingFolders = false;
     // reset sum used to estimate endImageCacheTargetRange
     sumImageCacheMB = 0;
+    // reset memory used by model
+    bytesUsed = 0;
 }
 
 void DataModel::newInstance()
@@ -567,7 +596,9 @@ void DataModel::processNextFolder()
     if (addFolderImages) {
         addFolder(folderPath);
         // signal MW::loadChanged
-        if (!abort) emit addedFolderToDM(folderOperation.first, "Add");
+        if (!abort/* && folderQueue.empty()*/) {
+            emit addedFolderToDM(folderOperation.first, "Add");
+        }
     }
 
     // remove images from model
@@ -578,8 +609,8 @@ void DataModel::processNextFolder()
     }
 
     // Continue with the next folder operation
-    QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
-    // processNextFolder();
+    // QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
+    processNextFolder();
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -715,7 +746,7 @@ void DataModel::addFolder(const QString &folderPath)
     }
 
     // huge image count
-    if (newRowCount > hugeThreshold) {
+    if (newRowCount > hugeIconThreshold) {
         iconChunkSize = 100;
     }
 
@@ -1588,6 +1619,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         imageCacheWaitingForRow = -1;
     }
 
+    bytesUsed += rowBytesUsed(row);
+
     return true;
 }
 
@@ -2181,7 +2214,7 @@ bool DataModel::isIconRangeLoaded()
 
 void DataModel::setIconRange(int sfRow)
 /*
-    Called by MW::load and MW::updateIconRange.
+    Called by MW::update and MW::updateIconRange.
 */
 {
     // if (iconChunkSize >= rowCount()) {
