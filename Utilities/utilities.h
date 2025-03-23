@@ -85,6 +85,9 @@ public:
     static int integer(int x);
     static quint32 swapEndian32(quint32 x);
 
+    // Memory
+    static quint64 qvariantBytes(QVariant data);
+
     // Bit operations
     static QBitArray bytes2Bits(QByteArray bytes);
 //    static void bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits);

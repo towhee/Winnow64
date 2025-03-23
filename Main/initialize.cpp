@@ -245,9 +245,8 @@ void MW::createDataModel()
     else dm->showThumbNailSymbolHelp = true;
 
     connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
-    connect(dm, &DataModel::done, this, &MW::loadDone);
-    connect(dm, &DataModel::addedFolderToDM, this, &MW::loadChanged);
-    connect(dm, &DataModel::removedFolderFromDM, this, &MW::loadChanged);
+    connect(dm, &DataModel::addedFolderToDM, this, &MW::folderChanged);
+    connect(dm, &DataModel::removedFolderFromDM, this, &MW::folderChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -334,7 +333,7 @@ void MW::createMetaRead()
     // loading image metadata into datamodel, okay to select
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::done, this, &MW::loadDone);
+    connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
     // Signal to change selection, fileSelectionChange, update ImageCache
     connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
     // update statusbar metadata active light
@@ -552,7 +551,7 @@ void MW::createSelection()
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
     connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
-    connect(sel, &Selection::loadConcurrent, this, &MW::load);
+    connect(sel, &Selection::loadConcurrent, this, &MW::update);
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);

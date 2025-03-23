@@ -393,9 +393,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // fsTree->updateCount(); return;
-    QString folderPath = "/Users/roryhill/Pictures/_test1a";
-    fsTree->updateCount(folderPath);
+    qDebug() << dm->bytesUsed << Utilities::formatMemory(dm->bytesUsed, 2);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

@@ -12,7 +12,8 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- Disable Metadata dock when no file selection
+- Is MW::isCurrentFolderOkay req'd
+- Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
 - Check missing thumbnails working
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
@@ -27,7 +28,7 @@ BUGS / TO DO
 - MW::insertFiles filter/sort work?
 - pbase2048 folder filters showing 4 no year in all but cannot filter on them
 - Check missing thumbnails process is working
-- Cleanup MW::loadDone
+- Cleanup MW::folderChangeCompleted
 - Check all drop operations
 - Review all rgh comments
 - Add back redo in ImageCache::fillCache
@@ -153,6 +154,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Disable Metadata dock when no file selection
 - Thread tried to wait on itself (reader)
 - Crash when close Winnow while MetaRead still working
 - Remove remember last folder option

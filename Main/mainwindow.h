@@ -584,10 +584,10 @@ private slots:
                                 float currMB, int maxMB, int tFirst, int tLast,
                                 QString source);
     // caching
-    void loadFolder(QString folderPath);
-    void load(int sfRow, bool isCurrent = true, QString src = "");
-    void loadChanged(const QString folderPath, const QString op);
-    void loadDone();
+    void addFolder(QString folderPath);
+    void update(int sfRow, bool isCurrent = true, QString src = "");
+    void folderChanged(const QString folderPath, const QString op);
+    void folderChangeCompleted();
 
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);

@@ -53,6 +53,7 @@ public:
     // bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
     bool refreshMetadataForItem(int sfRow, int instance);
+    qint64 rowBytesUsed(int dmRow);
     void clearDataModel();
     void newInstance();
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
@@ -126,6 +127,7 @@ public:
     int currentDmRow;                   // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
+    qint64 bytesUsed = 0;
 
     const QStringList raw = {"arw", "cr2", "cr3", "dng","nef", "orf", "raf", "sr2", "rw2"};
     const QStringList jpg = {"jpg", "jpeg"};
@@ -134,7 +136,7 @@ public:
     int imageCacheMaxMB;
     double sumImageCacheMB = 0;
 
-    int hugeThreshold = G::maxIconChunk;
+    int hugeIconThreshold = G::maxIconChunk;
     int firstVisibleIcon;
     int lastVisibleIcon;
     int visibleIcons;
@@ -172,7 +174,6 @@ public:
 
 signals:
     void stop(QString src);
-    void done();
     void addedFolderToDM(QString folderName, QString op);
     void removedFolderFromDM(QString folderName, QString op);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
