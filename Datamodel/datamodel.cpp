@@ -780,6 +780,9 @@ void DataModel::removeFolder(const QString &folderPath)
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
+    // update current
+    setCurrent(currentFilePath, instance);
+
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
