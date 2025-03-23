@@ -393,7 +393,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << dm->bytesUsed << Utilities::formatMemory(dm->bytesUsed, 2);
+    fsTree->setEnabled(false);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

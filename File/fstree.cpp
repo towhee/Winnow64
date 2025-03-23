@@ -1074,6 +1074,9 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
         hoverFolderName = "";
         delegate->setHoveredIndex(QModelIndex());  // No row hovered
     }
+
+    if (!isEnabled()) setEnabled(true);
+
     QTreeView::mouseMoveEvent(event);
 }
 

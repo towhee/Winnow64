@@ -892,6 +892,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // else if (filters->buildingFilters) buildFilters->stop();
         // exit full screen mode
         else if (fullScreenAction->isChecked()) escapeFullScreen();
+        // FSTree or Bookmarks disabled
+        else if (!fsTree->isEnabled()) fsTree->setEnabled(true);
+        else if (!bookmarks->isEnabled()) bookmarks->setEnabled(true);
     }
 
     if (G::isSlideShow) {
@@ -2650,6 +2653,11 @@ void MW::folderChanged(const QString folderPath, const QString op)
             << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
                ;//*/
 
+    if (dm->isQueueEmpty()) {
+        bookmarks->setEnabled(true);
+        fsTree->setEnabled(true);
+    }
+
     if (op == "Remove") {
         /*
         qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
@@ -2687,13 +2695,8 @@ void MW::folderChanged(const QString folderPath, const QString op)
             setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
             infoView->setEnabled(false);
         }
-        bookmarks->setEnabled(true);
-        fsTree->setEnabled(true);
         return;
     }
-    // G::popUp->reset();  // pipeline popup
-    // G::popUp->showPopup("MW::loadChanged done", 0, true, 1);
-    // qApp->processEvents();
 }
 
 void MW::addFolder(QString folderPath)
