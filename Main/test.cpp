@@ -385,7 +385,7 @@ void MW::ingestTest(QWidget* target)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    fsTree->refreshModel();
+    infoView->enable(true);
 
     // QString fPath = dm->currentFilePath;
     // metadata->testNewFileFormat(fPath);
@@ -393,7 +393,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->setEnabled(false);
+    infoView->enable(false);
+    // infoView->setEnabled(false);
+    // fsTree->setEnabled(false);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

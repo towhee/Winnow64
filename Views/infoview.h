@@ -10,6 +10,19 @@
 #include "Views/iconview.h"
 #include "Utilities/utilities.h"
 
+class InfoDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit InfoDelegate(QObject *parent = nullptr);
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override;
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    void setTextColor(const QColor &color);
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+private:
+    QColor textColor = G::textColor;
+};
+
 class InfoView : public QTreeView
 {
 	Q_OBJECT
@@ -20,6 +33,7 @@ public:
     void updateInfo(const int &row);
     void clearInfo();
     void refreshLayout();
+    void enable(bool isEnable);
 
     // datamodel for metadata to show or hide
     QStandardItemModel *ok;
@@ -110,6 +124,7 @@ protected:
 private:
     void setupOk();
 
+    InfoDelegate *infoDelegate;
     QModelIndex selectedEntry;
 	QMenu *infoMenu;
 	QAction *copyAction;

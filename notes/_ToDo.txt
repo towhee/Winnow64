@@ -12,7 +12,6 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- Retain datamodel selection when removing folders from datamodel
 - When infoView is disabled text is still white
 - Is MW::isCurrentFolderOkay req'd
 - Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
@@ -152,6 +151,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Retain datamodel selection when removing folders from datamodel
 - FSTree sometimes disabled
 - If filtering and change filter item for all iconview does not update
 - Folder "_Tiff Problems" thumbnails not right
