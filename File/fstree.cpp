@@ -347,10 +347,6 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
 
-    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
-    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
-    // connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
-
     // prevent select next folder when a folder is moved to trash/recycle
     connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
             this, &FSTree::onRowsAboutToBeRemoved);

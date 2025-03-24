@@ -1,79 +1,80 @@
 #include "Views/infoview.h"
 #include "Main/global.h"
 
-class InfoDelegate : public QStyledItemDelegate
+InfoDelegate::InfoDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+
+QSize InfoDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-public:
-    explicit InfoDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
+    index.isValid();          // suppress compiler warning
+    int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+    return QSize(option.rect.width(), height);
+}
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
-    {
-//        qDebug() << "InfoDelegate::sizeHint" << index;
-        static int count = 0;
-        count++;
-        index.isValid();          // suppress compiler warning
-        int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
-        return QSize(option.rect.width(), height);
+void InfoDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    int leftOffset = 4;
+    int rightOffset = 19;
+    int topOffset = 1;
+    QPoint topLeft(option.rect.left() - leftOffset, option.rect.top() + topOffset);
+    QPoint bottomRight(option.rect.right() + rightOffset, option.rect.bottom());
+    QRect editRect(topLeft, bottomRight);
+    editor->setGeometry(editRect);
+}
+
+void InfoDelegate::setTextColor(const QColor &color)
+{
+    textColor = color;
+}
+
+void InfoDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    painter->save();
+
+    int y1 = option.rect.top();
+    int y2 = option.rect.bottom();
+
+    int a = G::backgroundShade + 5;
+    int b = G::backgroundShade - 15;
+
+    QLinearGradient categoryBackground;
+    categoryBackground.setStart(0, y1);
+    categoryBackground.setFinalStop(0, y2);
+    categoryBackground.setColorAt(0, QColor(a,a,a));
+    categoryBackground.setColorAt(1, QColor(b,b,b));
+
+    int hOffset = 11;
+    int vOffset = 1;
+    QPoint topLeft(option.rect.left() + hOffset, option.rect.top() - vOffset);
+    QPoint bottomRight(option.rect.bottomRight());
+    QRect textRect(topLeft, bottomRight);
+
+    if (index.parent() == QModelIndex() && index.column() == 0) {
+        painter->fillRect(option.rect, categoryBackground);
+        QPen catPen(Qt::white);
+        painter->setPen(catPen);
     }
+    QString text = index.data().toString();
+    QFont font = painter->font();
+    font.setPointSize(G::strFontSize.toInt());
+    painter->setFont(font);
 
-    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    {
-        int leftOffset = 4;
-        int rightOffset = 19;
-        int topOffset = 1;
-        QPoint topLeft(option.rect.left() - leftOffset, option.rect.top() + topOffset);
-        QPoint bottomRight(option.rect.right() + rightOffset, option.rect.bottom());
-        QRect editRect(topLeft, bottomRight);
-        editor->setGeometry(editRect);
-    }
+    QString elidedText;
+    if (index.column() == 0)
+        elidedText = text;
+    else
+        elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    {
-        painter->save();
+    // painter->setPen(QColor(G::textShade,G::textShade,G::textShade));
+    painter->setPen(textColor);
+    painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
 
-        int y1 = option.rect.top();
-        int y2 = option.rect.bottom();
+    painter->setPen(QColor(75,75,75));
+    painter->drawRect(option.rect);
 
-        int a = G::backgroundShade + 5;
-        int b = G::backgroundShade - 15;
+    painter->restore();
+}
 
-        QLinearGradient categoryBackground;
-        categoryBackground.setStart(0, y1);
-        categoryBackground.setFinalStop(0, y2);
-        categoryBackground.setColorAt(0, QColor(a,a,a));
-        categoryBackground.setColorAt(1, QColor(b,b,b));
 
-        int hOffset = 11;
-        int vOffset = 1;
-        QPoint topLeft(option.rect.left() + hOffset, option.rect.top() - vOffset);
-        QPoint bottomRight(option.rect.bottomRight());
-        QRect textRect(topLeft, bottomRight);
-
-        if (index.parent() == QModelIndex() && index.column() == 0) {
-            painter->fillRect(option.rect, categoryBackground);
-            QPen catPen(Qt::white);
-            painter->setPen(catPen);
-        }
-        QString text = index.data().toString();
-        QFont font = painter->font();
-        font.setPointSize(G::strFontSize.toInt());
-        painter->setFont(font);
-
-        QString elidedText;
-        if (index.column() == 0)
-            elidedText = text;
-        else
-            elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
-
-        painter->setPen(QColor(G::textShade,G::textShade,G::textShade));
-        painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
-
-        painter->setPen(QColor(75,75,75));
-        painter->drawRect(option.rect);
-
-        painter->restore();
-    }
-};
 
 
 /*
@@ -98,7 +99,6 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     ok = new QStandardItemModel(this);
     setupOk();
     setModel(ok);
-//    selectionModel()->setModel(ok);
 
     setRootIsDecorated(true);
     setIndentation(0);
@@ -116,9 +116,11 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     setColumn0Width();
     setTabKeyNavigation(false);
 
-    setItemDelegate(new InfoDelegate(this));
+    infoDelegate = new InfoDelegate(this);
+    setItemDelegate(infoDelegate);
 
-    // setStyleSheet - see InfoView::mousePressEvent
+    // setStyleSheet - see InfoView::mousePressEvent also for editing style
+    // otherwise see custon delegate InfoDelegate
 
     // InfoView menu
 	infoMenu = new QMenu("");
@@ -138,6 +140,14 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &InfoView::selChanged);
     connect(this, &QAbstractItemView::activated, this, &InfoView::styleBackground);
     //*/
+}
+
+void InfoView::enable(bool isEnable)
+{
+    QColor textColor = isEnable ? G::textColor : G::disabledColor;
+    infoDelegate->setTextColor(textColor);
+    update();
+    setEnabled(isEnable);
 }
 
 void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QVector<int> &roles)
@@ -604,7 +614,6 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                               selectedCount + " selected images.";
                 G::popUp->showPopup(msg, 3000);
             }
-            // qDebug() << "InfoView::mousePressEvent" << "selected =" << selectedCount;
 
             // alternating colors
             int row = idx.row();
@@ -612,6 +621,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
             int b = G::backgroundShade;
             QColor altBackground(b,b,b);
             if (row % 2 != 0) altBackground = QColor(a,a,a);
+            // match alternating row background when editing
             setStyleSheet(
                 "QLineEdit {"
                     "border: none;"

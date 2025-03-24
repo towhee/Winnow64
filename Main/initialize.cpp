@@ -1295,7 +1295,7 @@ void MW::createMetadataDock()
     metadataDock->setWidget(infoView);
     connect(metadataDock, &DockWidget::focus, this, &MW::focusOnDock);
 
-    /* Experimenting touse rich text in QTabWidget for docks
+    /* Experimenting to use rich text in QTabWidget for docks
     RichTextTabBar *tabBar = new RichTextTabBar();
     RichTextTabWidget *tabWidget = new RichTextTabWidget(metadataDock);
     tabWidget->setRichTextTabBar(tabBar);

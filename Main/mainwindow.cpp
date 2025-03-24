@@ -2687,13 +2687,13 @@ void MW::folderChanged(const QString folderPath, const QString op)
         // added folder(s) may be empty
         if (dm->rowCount()) {
             addFolder(folderPath);
-            infoView->setEnabled(true);
+            infoView->enable(true);  // not setEnabled() because infoView uses a delegate
         }
         else if (dm->isQueueEmpty()) {
             G::isModifyingDatamodel = false;
             updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
             setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
-            infoView->setEnabled(false);
+            infoView->enable(false);  // not setEnabled() because infoView uses a delegate
         }
         return;
     }
@@ -3224,7 +3224,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
         enableStatusBarBtns();
-        infoView->setEnabled(false);
+        infoView->enable(false);  // not setEnabled() because infoView uses a delegate
         setCentralMessage("Bookmarked folder no longer exists.");
     }
 }
@@ -3665,6 +3665,7 @@ void MW::setFontSize(int fontPixelSize)
     bookmarks->setStyleSheet(css);
     fsTree->setStyleSheet(css);
     filters->setStyleSheet(css);
+    infoView->setStyleSheet(css);
     tableView->setStyleSheet(css);
     statusLabel->setStyleSheet(css);
     folderTitleBar->setStyle();
