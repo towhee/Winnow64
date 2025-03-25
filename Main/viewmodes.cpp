@@ -310,7 +310,7 @@ void MW::compareDisplay()
     if (n > 16) {
         QString msg = QString::number(n);
         msg += " images have been selected.  Only the first 16 will be compared.";
-        G::popUp->showPopup(msg, 2000);
+        G::popUp->showPopup(msg, 4000);
     }
 
     /* If thumbdock was visible and enter grid mode, make selection, and then

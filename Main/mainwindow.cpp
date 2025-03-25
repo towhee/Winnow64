@@ -982,7 +982,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* ALL EVENTS (G::showAllEvents) */
     {
-        if (G::showAllEvents)
+        // if (G::showAllEvents)
         {
             if (event->type()
                                      != QEvent::Paint
@@ -1149,6 +1149,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
        setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
     */
+    /*
+    PREVENTING MACOS MINIMIZE (SEEMS TO NOT BE REQ'D)
     {
         if (obj->objectName() == "MW") {
             // try using raise()
@@ -1166,6 +1168,27 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+    CHATGPT SUGGESTED CODE:
+    static bool dragging = false; // Track dragging state
+
+    if (obj->objectName() == "MW") {
+        if (event->type() == QEvent::NonClientAreaMouseButtonPress) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                dragging = true;  // User started dragging
+            }
+        }
+        if (event->type() == QEvent::NonClientAreaMouseButtonRelease) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                dragging = false;  // User released the window
+            }
+        }
+        if (dragging && event->type() == QEvent::Move) {
+            raise();  // Keep window on top only while dragging
+        }
+    }
+    */
 
     /* EMBEL DOCK TITLE
 
