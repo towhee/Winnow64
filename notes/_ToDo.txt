@@ -20,7 +20,6 @@ BUGS / TO DO
 - Check FindDuplicatesDlg still works (removed MW::createFrameDecoder)
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
-- Compare at 100% cannot mouse to a compare item without zoom to fit happening
 - Prev and next folders
 - Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
 - MW::deleteFiles filter/sort work? Does gridView refresh?
@@ -146,6 +145,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- MacOS Minimise yellow button not working
+- Compare at 100% cannot mouse to a compare item without zoom to fit happening
 - Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
 - When infoView is disabled text is still white
 - Retain datamodel selection when removing folders from datamodel
