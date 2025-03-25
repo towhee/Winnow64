@@ -9,7 +9,16 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 
+// #include <sys/mount.h>
+// #include <IOKit/IOKitLib.h>
+// #include <IOKit/storage/IOMedia.h>
+// #include <IOKit/storage/IOBlockStorageDevice.h>
+// #include <IOKit/usb/IOUSBLib.h>
+
+
 #include "Main/global.h"                // req'd by availableMemory
+#include <QtCore>
+// #include <QStringList>
 
 class Mac
 {
@@ -20,6 +29,7 @@ public:
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);
+    static QStringList listMountedVolumes();
 
 private:
     typedef struct {
