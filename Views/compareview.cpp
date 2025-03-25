@@ -134,17 +134,7 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
     bool isLoaded = false;
 
     // load the image from the image cache if available
-    /*
-    // before changed imCache to concurrent icd->imCache
-    if (imageCacheThread->imCache.contains(fPath)) {
-        pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
-        isLoaded = true;
-    }
-    */
     QImage image;
-    // CTSL::HashMap<QString, QImage> imCache
-    // if (icd->imCache.find(fPath, image)) {
-    // QHash<QString, QImage> imCache
     if (icd->contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
@@ -403,6 +393,11 @@ void CompareView::scale(bool okayToPropagate)
     local zoomTo.
 */
     if (G::isLogger) G::log("CompareView::scale");
+    qDebug() << "CompareView::scale before"
+             << "zoom =" << zoom
+             << "zoomFit =" << zoomFit
+             << "isZoom =" << isZoom;
+
     // rescale to new zoom factor
     matrix.reset();
     double highDpiZoom = zoom / G::actDevicePixelRatio;
@@ -419,9 +414,14 @@ void CompareView::scale(bool okayToPropagate)
         // signal slave instances
         emit zoomFromPct(scrollPosPct, imageIndex, isZoom);
     }
-    isZoom = (zoom > zoomFit);
+    isZoom = (zoom > zoomFit * 1.02);
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
+
+    qDebug() << "CompareView::scale after "
+             << "zoom =" << zoom
+             << "zoomFit =" << zoomFit
+             << "isZoom =" << isZoom;
 
     // reposition classification icons ("thumbs up", ratings and color class)
     placeClassificationBadge();
@@ -472,7 +472,6 @@ void CompareView::resizeEvent(QResizeEvent *event)
     if (G::isLogger) G::log("CompareView::resizeEvent");
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(event->size(), pmItem->boundingRect());
-    zoom = zoomFit;
     scale(false);
 }
 
@@ -622,16 +621,16 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 
             // only propagate if shift modifier was not engaged during pan
             if (propagate) emit cleanupAfterPan(deltaPanPct, imageIndex);
-//            qDebug() << G::t.restart() << "\t" << "Propagating instance end of pan:   propagate =" << propagate;
-//            qDebug() << G::t.restart() << "\t" << "startOfPanPct" << startOfPanPct
-//                     << "endOfPanPct" << endOfPanPct
-//                     << "deltaPanPct" << deltaPanPct;
         }
 
         if (isZoom) setCursor((Qt::OpenHandCursor));
         else setCursor(Qt::ArrowCursor);
         return;
     }
+    qDebug() << "CompareView::mouseReleaseEvent"
+             << "zoom =" << zoom
+             << "zoomFit =" << zoomFit
+             << "isZoom =" << isZoom;
 
     if (!isZoom && zoom < zoomFit * 0.98)
         zoom = zoomFit;
@@ -650,13 +649,14 @@ void CompareView::enterEvent(QEnterEvent *event)
     select();
     // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom, /* hasFocus */ true);
-//    QGraphicsView::enterEvent(event); // qt6.2
+    QGraphicsView::enterEvent(event); // qt6.2
 }
 
 void CompareView::leaveEvent(QEvent *event)
 {
     if (G::isLogger) G::log("CompareView::leaveEvent");
     deselect();
+    // emit zoomChange(zoom, /* hasFocus */ true);
     QGraphicsView::leaveEvent(event);
 }
 
@@ -668,10 +668,16 @@ void CompareView::select()
     // req'd for IconViewDelegate to show current item
     dm->currentSfIdx = imageIndex;
     dm->currentSfRow = imageIndex.row();
+
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    sel->select(imageIndex, Qt::NoModifier,"CompareView::select");
-    // prevent user selection in thumbView while comparing
+    thumbView->setCurrentIndex(imageIndex);
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+
+    // thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
+    // sel->select(imageIndex, Qt::NoModifier,"CompareView::select");
+    // // prevent user selection in thumbView while comparing
+    // thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "

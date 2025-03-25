@@ -12,14 +12,12 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- When infoView is disabled text is still white
 - Is MW::isCurrentFolderOkay req'd
-- Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
-- Check missing thumbnails working
+- Check missing thumbnails process is working
+- Check all drop operations
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Check FindDuplicatesDlg still works (removed MW::createFrameDecoder)
-- /Users/roryhill/Temp/Photos_to_be_curated/2024/202410/2024-10-19_Linley Valley crashes
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
 - Compare at 100% cannot mouse to a compare item without zoom to fit happening
@@ -27,9 +25,6 @@ BUGS / TO DO
 - Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
 - MW::deleteFiles filter/sort work? Does gridView refresh?
 - MW::insertFiles filter/sort work?
-- pbase2048 folder filters showing 4 no year in all but cannot filter on them
-- Check missing thumbnails process is working
-- Check all drop operations
 - Review all rgh comments
 - Add back redo in ImageCache::fillCache
 - Read svg files ie downloads/glyphs.svg
@@ -151,6 +146,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
+- When infoView is disabled text is still white
 - Retain datamodel selection when removing folders from datamodel
 - FSTree sometimes disabled
 - If filtering and change filter item for all iconview does not update

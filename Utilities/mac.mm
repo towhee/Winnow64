@@ -4,6 +4,11 @@
 #import <ApplicationServices/ApplicationServices.h>
 #import <AppKit/NSSharingService.h>
 #import <Cocoa/Cocoa.h>
+#import <sys/mount.h>
+#import <IOKit/IOBSD.h>
+#import <IOKit/usb/IOUSBLib.h>
+#import <IOKit/storage/IOMedia.h>
+#import <IOKit/storage/IOBlockStorageDevice.h>
 
 // Define an AppDelegate class
 @interface AppDelegate : NSObject <NSApplicationDelegate>
@@ -177,4 +182,135 @@ void Mac::share(QList<QUrl> &urls, WId wId)
     NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:nsFileUrls];
     [picker setDelegate:delegate];
     [picker showRelativeToRect:rect ofView:view preferredEdge:NSMaxYEdge];
+}
+
+// Helper function to check if a device is a USB storage device
+bool isUsbDevice(const QString& bsdName) {
+    bool isUsb = false;
+    CFMutableDictionaryRef matchingDict = IOServiceMatching(kIOMediaClass);
+    if (!matchingDict) return false;
+
+    io_iterator_t iterator;
+    if (IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iterator) == KERN_SUCCESS) {
+        io_registry_entry_t media;
+        while ((media = IOIteratorNext(iterator))) {
+            CFTypeRef bsdNameRef = IORegistryEntryCreateCFProperty(media, CFSTR(kIOBSDNameKey), kCFAllocatorDefault, 0);
+            if (bsdNameRef && CFGetTypeID(bsdNameRef) == CFStringGetTypeID()) {
+                QString mediaBsdName = QString::fromCFString(static_cast<CFStringRef>(bsdNameRef));
+                CFRelease(bsdNameRef);
+
+                if (mediaBsdName == bsdName) {
+                    io_registry_entry_t parent;
+                    if (IORegistryEntryGetParentEntry(media, kIOServicePlane, &parent) == KERN_SUCCESS) {
+                        if (IOObjectConformsTo(parent, kIOUSBDeviceClassName)) {
+                            isUsb = true;
+                        }
+                        IOObjectRelease(parent);
+                    }
+                }
+            }
+            if (bsdNameRef) CFRelease(bsdNameRef);
+            IOObjectRelease(media);
+            if (isUsb) break;
+        }
+        IOObjectRelease(iterator);
+    }
+    return isUsb;
+}
+
+
+QStringList Mac::listMountedVolumes()
+{
+    // if (G::isLogger)
+        G::log("Mac::listMountedVolumes");
+    QStringList usbVolumes;
+    struct statfs *mnts;
+    int mountCount = getmntinfo(&mnts, MNT_NOWAIT);
+
+    if (mountCount == 0) {
+        return usbVolumes; // No mounted volumes
+    }
+
+    for (int i = 0; i < mountCount; i++) {
+        QString devicePath = QString::fromUtf8(mnts[i].f_mntfromname);
+        QString mountPoint = QString::fromUtf8(mnts[i].f_mntonname);
+
+        // Extract BSD name from device path (e.g., "/dev/disk2s1" -> "disk2s1")
+        if (devicePath.startsWith("/dev/disk")) {
+            QString bsdName = devicePath.mid(5); // Remove "/dev/"
+
+            // Check if it's a USB device
+            if (isUsbDevice(bsdName)) {
+                QString volumeName = mountPoint.section('/', -1); // Extract last part of path
+                usbVolumes.append(volumeName + " (" + mountPoint + ")");
+            }
+        }
+    }
+    return usbVolumes;
+
+  /*
+    if (G::isLogger) G::log("Mac::listMountedVolumes");
+
+    QStringList usbList;
+    CFMutableDictionaryRef matchingDict;
+    io_iterator_t iter;
+    io_service_t service;
+
+    // Match all USB devices
+    matchingDict = IOServiceMatching(kIOUSBDeviceClassName);
+    if (!matchingDict) {
+        G::issue("Error", "IOServiceMatching failed for USB devices", "Mac::listUsbDevices");
+        return usbList;
+    }
+
+    // Get iterator of matching devices
+    kern_return_t kr = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iter);
+    if (kr != KERN_SUCCESS) {
+        G::issue("Error", "IOServiceGetMatchingServices failed", "Mac::listMountedVolumes");
+        return usbList;
+    }
+
+    // Iterate through devices
+    while ((service = IOIteratorNext(iter))) {
+        CFStringRef cfVendor, cfProduct;
+        uint16_t vendorID, productID;
+        io_name_t deviceName;
+
+        // Get vendor name
+        cfVendor = (CFStringRef)IORegistryEntryCreateCFProperty(service, CFSTR(kUSBVendorString), kCFAllocatorDefault, 0);
+        cfProduct = (CFStringRef)IORegistryEntryCreateCFProperty(service, CFSTR(kUSBProductString), kCFAllocatorDefault, 0);
+
+        IORegistryEntryGetName(service, deviceName);
+
+        // Get vendor ID and product ID
+        CFNumberRef vendorIDRef = (CFNumberRef)IORegistryEntryCreateCFProperty(service, CFSTR(kUSBVendorID), kCFAllocatorDefault, 0);
+        CFNumberRef productIDRef = (CFNumberRef)IORegistryEntryCreateCFProperty(service, CFSTR(kUSBProductID), kCFAllocatorDefault, 0);
+        if (vendorIDRef) {
+            CFNumberGetValue(vendorIDRef, kCFNumberSInt16Type, &vendorID);
+            CFRelease(vendorIDRef);
+        }
+        if (productIDRef) {
+            CFNumberGetValue(productIDRef, kCFNumberSInt16Type, &productID);
+            CFRelease(productIDRef);
+        }
+
+        // Convert to QString
+        QString vendor = cfVendor ? QString::fromCFString(cfVendor) : "Unknown Vendor";
+        QString product = cfProduct ? QString::fromCFString(cfProduct) : "Unknown Product";
+        QString name = QString(deviceName);
+        QString deviceInfo = QString("%1 (%2) - VID: %3, PID: %4")
+            .arg(vendor, product)
+            .arg(vendorID, 4, 16, QChar('0'))
+            .arg(productID, 4, 16, QChar('0'));
+
+        usbList.append(deviceInfo);
+
+        if (cfVendor) CFRelease(cfVendor);
+        if (cfProduct) CFRelease(cfProduct);
+        IOObjectRelease(service);
+    }
+
+    IOObjectRelease(iter);
+    return usbList;
+*/
 }
