@@ -357,7 +357,6 @@ public:
 
     bool remoteAccess = false;
     bool showImageCount = true;
-    bool isCurrentFolderOkay;
     bool copyOp;
     bool isDragDrop;
     QString dragDropFilePath;

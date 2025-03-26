@@ -385,7 +385,6 @@ void MW::ingestTest(QWidget* target)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    qDebug() << isCurrentFolderOkay;
 
     // QString fPath = dm->currentFilePath;
     // metadata->testNewFileFormat(fPath);

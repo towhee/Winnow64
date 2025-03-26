@@ -12,7 +12,6 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- Is MW::isCurrentFolderOkay req'd
 - Check missing thumbnails process is working
 - Check all drop operations
 - Fix MW::ejectUsb(QString path)
@@ -144,6 +143,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Eliminated MW::isCurrentFolderOkay flag
 - MacOS Minimise yellow button not working
 - Compare at 100% cannot mouse to a compare item without zoom to fit happening
 - Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked

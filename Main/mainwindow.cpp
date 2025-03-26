@@ -152,7 +152,6 @@ Flow Flags:
     dm->basicFileInfoLoaded  // not used
     G::isLinearLoading       // not used
     G::ignoreScrollSignal
-    isCurrentFolderOkay      // folder must exist and have eligible images
     isFilterChange
 
 Current model row:
@@ -2125,7 +2124,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
              // << "G::isLinearLoadDone =" << G::isLinearLoadDone
              // << "isFirstImageNewInstance =" << imageView->isFirstImageNewInstance
-             // << "isCurrentFolderOkay =" << isCurrentFolderOkay
              // << "icon row =" << thumbView->currentIndex().row()
                 ;
 
@@ -2471,7 +2469,6 @@ bool MW::reset(QString src)
     dm->newInstance();
 
     // used by updateStatus
-    isCurrentFolderOkay = false;
     pickMemSize = "";
     updateStatus(false, "", "MW::reset");
 
@@ -2783,8 +2780,6 @@ void MW::addFolder(QString folderPath)
     filters->loadingDataModel(false);   // isLoaded = false
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-
-    isCurrentFolderOkay = true;
 
     // first folder containing images when multiple folders selected
     if (folderPath == dm->firstFolderPathWithImages) {

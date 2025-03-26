@@ -13,7 +13,6 @@ void MW::reportState(QString title)
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
-        << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
         << "\nimageView->isFirstImageNewInstance     " << imageView->isFirstImageNewInstance
 
 //        << "\nisDragDrop                             " << isDragDrop
@@ -226,7 +225,6 @@ QString MW::diagnostics()
     rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
     rpt << "\n" << "sortColumn = " << G::s(sortColumn);
     rpt << "\n" << "showImageCount = " << G::s(showImageCount);
-    rpt << "\n" << "isCurrentFolderOkay = " << G::s(isCurrentFolderOkay);
     rpt << "\n" << "G::isSlideShow = " << G::s(G::isSlideShow);
     rpt << "\n" << "copyOp = " << G::s(copyOp);
     rpt << "\n" << "isDragDrop = " << G::s(isDragDrop);
