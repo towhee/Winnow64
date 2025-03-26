@@ -982,7 +982,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* ALL EVENTS (G::showAllEvents) */
     {
-        // if (G::showAllEvents)
+        if (G::showAllEvents)
         {
             if (event->type()
                                      != QEvent::Paint
@@ -2446,7 +2446,6 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    updateStatus(false, "", "MW::reset");
     cacheProgressBar->clearImageCacheProgress();
     progressLabel->setVisible(false);
     filterStatusLabel->setVisible(false);
@@ -2474,6 +2473,7 @@ bool MW::reset(QString src)
     // used by updateStatus
     isCurrentFolderOkay = false;
     pickMemSize = "";
+    updateStatus(false, "", "MW::reset");
 
     // update metadata read status light
     updateMetadataThreadRunStatus(true, true, true, "MW::reset");
@@ -3248,7 +3248,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         enableSelectionDependentMenus();
         enableStatusBarBtns();
         infoView->enable(false);  // not setEnabled() because infoView uses a delegate
-        setCentralMessage("Bookmarked folder no longer exists.");
+        setCentralMessage("Bookmarked folder no longer exists or is not available.");
     }
 }
 
@@ -5066,7 +5066,6 @@ void MW::metadataChanged(QStandardItem* item)
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::metadataChanged");
     // if new folder is invalid no relevent data has changed
-    if (!isCurrentFolderOkay) return;
      if (G::useInfoView) if (infoView->ignoreDataChange) return;
 
     QModelIndex par = item->index().parent();

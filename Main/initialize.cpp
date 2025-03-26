@@ -694,6 +694,7 @@ void MW::createInfoView()
     if (G::isLogger) G::log("MW::createInfoView");
     infoView = new InfoView(this, dm, metadata, thumbView, filters, buildFilters);
     infoView->setMaximumWidth(folderMaxWidth);
+    infoView->enable(false);
 
     if (isSettings) {
         /* read InfoView okToShow fields */
