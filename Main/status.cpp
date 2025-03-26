@@ -47,7 +47,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     else base = "";
 
     // define base status text
-    if (keepBase/* && isCurrentFolderOkay*/) {
+    if (keepBase) {
         // base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel") {
             base += "Zoom: " + getZoom();
