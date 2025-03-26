@@ -259,7 +259,7 @@ bool ImageDecoder::load()
             return false;
         }
 
-        // try to read the data
+        // can we read the file
         if (!imFile.seek(offsetFull)) {
             errMsg = "Could not read embedded JPG because offset is invalid.";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
@@ -268,6 +268,7 @@ bool ImageDecoder::load()
             return false;
         }
 
+        // read the embedded image into buf
         QByteArray buf = imFile.read(lengthFull);
         if (buf.length() == 0) {
             errMsg = "Could not read embedded JPG because buffer length = 0.";

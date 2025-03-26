@@ -7,7 +7,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
     if (!G::useUpdateStatus) return;
-    if (G::stop) return;
 
     QString fun = "MW::updateStatus";
     if (G::isLogger)
@@ -33,7 +32,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString base = "";
     QString spacer = "   ";
 
-
     // update G::availableMemory
 #ifdef Q_OS_WIN
     Win::availableMemory();
@@ -49,7 +47,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     else base = "";
 
     // define base status text
-    if (keepBase && isCurrentFolderOkay) {
+    if (keepBase/* && isCurrentFolderOkay*/) {
         // base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel") {
             base += "Zoom: " + getZoom();

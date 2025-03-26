@@ -42,7 +42,6 @@ BUGS / TO DO
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
-- Change msg for x files to x images and y xmp sidecars
 - Add rotation to image modification
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - When copy or move images, should the filter be maintained?  Popup?
