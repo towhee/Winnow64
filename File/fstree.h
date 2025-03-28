@@ -70,8 +70,6 @@ signals:
 private:
     QDir *dir;
     mutable QHash <QString, QString> count;
-    mutable QHash <QString, QString> combineCount;
-    mutable QModelIndex testIdx;
 };
 
 class FSTree : public QTreeView

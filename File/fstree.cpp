@@ -73,6 +73,9 @@ int ImageCounter::computeImageCount(const QString &path)
         }
     }
 
+    qDebug() << "ImageCounter::computeImageCount"
+             << "count = " << count << dPath;
+
     return count;
 }
 
@@ -155,7 +158,6 @@ FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
     dir->setFilter(QDir::Files);
 
     count.clear();
-    combineCount.clear();
 
     this->iconProvider()->setOptions(QFileIconProvider::DontUseCustomDirectoryIcons);
 }
@@ -198,16 +200,13 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 void FSModel::clearCount()
 {
-    // remove all count
-    if (combineRawJpg) combineCount.clear();
-    else count.clear();
+    count.clear();
 }
 
 void FSModel::updateCount(const QString &dPath)
 {
     // remove count for folder dPath
-    if (combineRawJpg) combineCount.remove(dPath);
-    else count.remove(dPath);
+    count.remove(dPath);
 
     // update data
     const QModelIndex idx = index(dPath, imageCountColumn);
@@ -226,6 +225,10 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn && showImageCount) {
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
+
+            QString x = "null";
+            if (count.contains(dPath)) x = count.value(dPath);
+            qDebug() << "FSModel::data count =" << x << dPath;
 
             if (count.contains(dPath)) {
                 return count.value(dPath);  // Return cached value
@@ -443,7 +446,9 @@ void FSTree::updateCount()
 /*
     Updates all visible image counts
 */
+    qDebug() << "FSTree::updateCount";
     fsModel->clearCount();
+    // fsModel->refresh();
     fsFilter->refresh();
     setFocus();
 }

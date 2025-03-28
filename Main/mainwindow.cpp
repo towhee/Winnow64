@@ -4433,7 +4433,7 @@ void MW::refreshFolders()
     if (G::isLogger) G::log("MW::refreshFolders");
     bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
-    fsTree->setShowImageCount(showImageCount);
+    fsTree->updateCount();
     return;
 
     // make folder panel visible and set focus
