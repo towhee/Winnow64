@@ -3199,10 +3199,12 @@ void MW::updateImageCacheStatus(QString instruction,
         cacheProgressBar->updateImageCacheProgress(tFirst, tLast, rows,
                                          cacheProgressBar->targetColorGradient);
         // cached
-        for (int i = 0; i < rows; ++i) {
-            if (dm->sf->index(i, G::IsCachedColumn).data().toBool())
+        for (int i = tFirst; i <= tLast; ++i) {
+            if (i >= rows) break;
+            if (dm->sf->index(i, G::IsCachedColumn).data().toBool()) {
                 cacheProgressBar->updateImageCacheProgress(i, i, rows,
                                   cacheProgressBar->imageCacheGradient);
+            }
         }
 
         // cursor

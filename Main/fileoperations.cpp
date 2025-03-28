@@ -495,7 +495,8 @@ void MW::currentFolderDeletedExternally(QString path)
 
 void MW::deleteFolder()
 {
-    if (G::isLogger) G::log("MW::deleteFolder");
+    // if (G::isLogger)
+        G::log("MW::deleteFolder");
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
     // rgh allow deletion of multiple folders with ample warnings
