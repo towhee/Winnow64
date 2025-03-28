@@ -684,9 +684,12 @@ void DataModel::addFolder(const QString &folderPath)
         /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
+                 << "size =" << fileInfo.size()
                  << "file =" << fileInfo.fileName()
                  << "folder =" << folderPath
                     ; //*/
+        if (fileInfo.size() == 0) continue;
+
         addFileDataForRow(row, fileInfo);
 
         if (row % countInterval == 0 && row > 0) updateLoadStatus(row);
@@ -1991,8 +1994,6 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     setData(dmIdx, value, role);
 }
 
-// void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
-//                                       qint64 duration)
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance,
                                       qint64 duration)
 {
@@ -2027,10 +2028,8 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         G::issue("Warning", errMsg, "DataModel::setIconFromVideoFrame");
         return;
     }
-    //qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
 
     int row = dmIdx.row();
-    //qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
 
     QMutexLocker locker(&mutex);
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
