@@ -1625,6 +1625,8 @@ bool ImageCache::okToCache(int id, int sfRow)
 
     if (instanceClash(id)) return false;
 
+    if (sfRow >= dm->sf->rowCount()) return false;
+
     // set isCaching to false
     emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
     if (toCacheStatus.contains(sfRow))
@@ -1718,6 +1720,7 @@ void ImageCache::fillCache(int id)
     QString src = "";
 
     int cacheRow = decoders[id]->sfRow;
+
 
     if (debugCaching)
     {

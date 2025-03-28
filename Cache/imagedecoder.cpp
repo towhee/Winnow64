@@ -92,6 +92,9 @@ bool ImageDecoder::isRunning() const
 
 void ImageDecoder::decode(int row, int instance)
 {
+    // range check
+    if (row >= dm->sf->rowCount()) return;
+
     setBusy();
     abort = false;
     sfRow = row ;
