@@ -116,7 +116,6 @@ private:
     QVector<QThread*> decoderThreads;       // all the decoder threads
     QVector<bool> cycling;                  // all the decoders activity
     struct CacheItem {
-        // Status status;
         bool isCaching;
         QString msg;
         int decoderId;
@@ -126,7 +125,7 @@ private:
     QHash<int,CacheItem> toCacheStatus;
     QVector<float> imageSize;
 
-    int currRow;                    // current image
+    int currRow;                // current image
     int prevRow;                // used to establish direction of travel
 
     bool isForward;             // direction of travel for caching algorithm

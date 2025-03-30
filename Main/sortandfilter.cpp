@@ -665,9 +665,10 @@ void MW::setRating()
     buildFilters->updateCategory(BuildFilters::RatingEdit);
 
     // was this rating filtered
-    if (filters->isRatingChecked(rating)) sel->clear();
-
-    filterChange("MW::setRating");
+    if (filters->isRatingChecked(rating)) {
+        sel->clear();
+        filterChange("MW::setRating");
+    }
 
     // update ImageView classification badge
     updateClassification();
@@ -846,24 +847,21 @@ void MW::setColorClass()
        - suspend proxy updates
        - update filter category
        - if cat checked clear selection
-       - update proxy (filterChange) */
+       - update proxy (filterChange)
+    */
 
     // update category list in filters
     dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
 
     // // was this rating filtered
-    if (filters->isLabelChecked(colorClass)) sel->clear();
-
-    filterChange("MW::setColorClass");
+    if (filters->isLabelChecked(colorClass)) {
+        sel->clear();
+        filterChange("MW::setColorClass");
+    }
 
     // update ImageView classification badge
     updateClassification();
-
-    // if (G::useSidecar) {
-    //     G::popUp->setProgressVisible(false);
-    //     G::popUp->reset();
-    // }
 
     // auto advance
     if (G::autoAdvance) sel->next();
