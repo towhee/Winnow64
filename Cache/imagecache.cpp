@@ -1436,15 +1436,16 @@ int ImageCache::nextToCache(int id)
         << "toCache:" << toCache
             ;
     }
-
-    // // ImageCache instance out-of-date
-    // if (instance != dm->instance) {
-    //     if (debugThis) {
-    //         msg = "Instance clash";
-    //         sDebug(sId, msg);
-    //     }
-    //     return -1;
-    // }
+    /*
+    // ImageCache instance out-of-date
+    if (instance != dm->instance) {
+        if (debugThis) {
+            msg = "Instance clash";
+            sDebug(sId, msg);
+        }
+        return -1;
+    }
+    */
 
     QMutexLocker locker(&gMutex);   // req'd 2025-02-03
 
@@ -1621,6 +1622,9 @@ void ImageCache::cacheImage(int id, int sfRow)
 
 bool ImageCache::okToCache(int id, int sfRow)
 {
+/*
+    Called bY fillCache.  Returns true to add  image to image cache.
+*/
     QString src = "ImageCache::okToCache";
 
     if (instanceClash(id)) return false;
@@ -1638,6 +1642,7 @@ bool ImageCache::okToCache(int id, int sfRow)
 
     if (!toCache.contains(sfRow)) return false;
 
+    // if Imagedecoder failed then remove from toCache
     if (decoders[id]->status != ImageDecoder::Status::Success) {
         if (debugCaching)
         {
@@ -1655,6 +1660,7 @@ bool ImageCache::okToCache(int id, int sfRow)
             emit setValueSf(dm->sf->index(sfRow, G::DecoderErrMsgColumn),
                             decoders[id]->errMsg, instance, src);
         }
+        if (toCache.contains(sfRow)) toCacheRemove(sfRow);
         return false;
     }
 

@@ -73,8 +73,10 @@ int ImageCounter::computeImageCount(const QString &path)
         }
     }
 
+    /*
     qDebug() << "ImageCounter::computeImageCount"
              << "count = " << count << dPath;
+    */
 
     return count;
 }
@@ -226,15 +228,11 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
 
-            QString x = "null";
-            if (count.contains(dPath)) x = count.value(dPath);
-            qDebug() << "FSModel::data count =" << x << dPath;
-
             if (count.contains(dPath)) {
                 return count.value(dPath);  // Return cached value
             }
 
-            // Start background count
+            // Cache background count
             ImageCounter *worker = new ImageCounter(dPath, metadata, combineRawJpg, fileFilters);
 
             connect(worker, &ImageCounter::countReady,
