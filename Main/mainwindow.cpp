@@ -2970,6 +2970,7 @@ void MW::folderChangeCompleted()
         // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
 
+    updateStatus(true, "", "MW::folderCahngeCompleted");
     // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
 
     // update image cache in case not already done during metaRead
