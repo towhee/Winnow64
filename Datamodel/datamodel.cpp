@@ -670,12 +670,12 @@ void DataModel::addFolder(const QString &folderPath)
 
     // sf->suspend(true);
 
-    // datamodel size
+    // // datamodel size
     int row = rowCount();
     int oldRowCount = rowCount();
-    int newRowCount = rowCount() + folderFileInfoList.count();
-    setRowCount(newRowCount);
-    if (!columnCount()) setColumnCount(G::TotalColumns);
+    int newRowCount = oldRowCount;
+    // // setRowCount(newRowCount);
+    // if (!columnCount()) setColumnCount(G::TotalColumns);
 
     int counter = 0;
     int countInterval = 100;
@@ -688,11 +688,17 @@ void DataModel::addFolder(const QString &folderPath)
                  << "file =" << fileInfo.fileName()
                  << "folder =" << folderPath
                     ; //*/
-        if (fileInfo.size() == 0) continue;
 
+        // do not include zero size files
+        if (fileInfo.size() == 0) {
+            continue;
+        }
+
+        setRowCount(row + 1);
+        if (!columnCount()) setColumnCount(G::TotalColumns);
         addFileDataForRow(row, fileInfo);
 
-        if (row % countInterval == 0 && row > 0) updateLoadStatus(row);
+        if (row % countInterval == 0 && row > 0) updateLoadStatus(newRowCount);
         // G::popUp->setProgress(++counter);   // pipeline popup
         // qApp->processEvents();
 
@@ -742,6 +748,8 @@ void DataModel::addFolder(const QString &folderPath)
     // msg = "File info added to datamodel";
     // G::popUp->showPopup(msg, 0, true, 1);
     // qApp->processEvents();
+
+    newRowCount = row;
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;

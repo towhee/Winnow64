@@ -2806,7 +2806,7 @@ void MW::addFolder(QString folderPath)
 void MW::update(int sfRow, bool isFileSelectionChange, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.  If all
-    metadata and icons have been read then fileSelectionChange is called.
+    metadata and icons have been read then folderChangeCompleted is called.
 
     Called after a scroll event in IconView or TableView by thumbHasScrolled,
     gridHasScrolled or tableHasScrolled.  updateIconRange has been called.
@@ -2870,7 +2870,7 @@ void MW::folderChangeCompleted()
 {
 /*
     Signalled by MetaRead::run when finished reading all metadata.
-    Called by loadChange when a folder has been removed.
+    Called by folderChanged when a folder has been removed.
     - check for missing thumbnails.
     - update filters
     - resize tableView columns

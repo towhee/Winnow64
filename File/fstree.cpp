@@ -75,7 +75,7 @@ int ImageCounter::computeImageCount(const QString &path)
 
     /*
     qDebug() << "ImageCounter::computeImageCount"
-             << "count = " << count << dPath;
+             << "count = " << count << path;
     */
 
     return count;
@@ -118,15 +118,19 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
     QFileInfo info(fPath);
     /*
-    qDebug() << G::t.restart() << "\t" << "fPath" << fPath
-             << "fParentPath" << fParentPath
-             << "absolutePath" << info.absolutePath()
-             << "absoluteFilePath" << info.absoluteFilePath()
-             << "isHidden" << info.isHidden();
-    */
+    qDebug().noquote()
+        << "size" << info.size()
+        << "isHidden" << info.isHidden()
+        << "fPath" << fPath
+        << "fParentPath" << fParentPath
+        << "absolutePath" << info.absolutePath()
+        << "absoluteFilePath" << info.absoluteFilePath()
+        ;
+    //*/
     if (fParentPath == "/" && (fPath == "/Users" || fPath == "/Volumes")) return true;
     if (fParentPath == "/") return false;
     if (info.isHidden()) return false;
+
     return true;
 #endif
 
