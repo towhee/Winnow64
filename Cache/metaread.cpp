@@ -809,7 +809,16 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        // /*trigger MW::fileSelectionChange which starts ImageCache
+        qDebug().noquote()
+            << "MetaRead::dispatch     startRow         "
+            << "dmRow =" << dmRow
+            << "startRow =" << startRow
+            << "instance =" << instance
+            << "dm->instance =" << dm->instance
+            << "imageCacheTriggered =" << imageCacheTriggered
+            ;
+
+        // trigger MW::fileSelectionChange which starts ImageCache
         if (fileSelectionChanged &&
             !imageCacheTriggered &&
             instance == dm->instance &&
@@ -825,7 +834,7 @@ void MetaRead::dispatch(int id)
             bool clearSelection = false;
             QString src = "MetaRead::dispatch";
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
-            // qDebug() << src << "emit fileSelectionChange" << startRow;
+            qDebug() << src << "emit fileSelectionChange" << startRow;
         }
         //*/
 
@@ -1085,30 +1094,28 @@ void MetaRead::dispatch(int id)
     // }
 
 
-    // // if done in both directions fire delay to quit in case isDone fails
-    // if (aIsDone && bIsDone && !isDone) {
-    //     if (!quitAfterTimeoutInitiated) {
-    //         if (isDebug)
-    //         {
-    //             qDebug().noquote()
-    //                 << "MetaRead::dispatch     aIsDone && bIsDone "
-    //                 << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
-    //         quitAfterTimeoutInitiated = true;
-    //         // isDispatching = false;
-    //         // if pending readers not all processed in delay ms then quit anyway
-    //         int delay = 1000;
-    //         // if (isDebug)
-    //         {
-    //             qDebug()
-    //                 << "MetaRead::dispatch     aIsDone && bIsDone  quitAfterTimeoutInitiated in"
-    //                 << delay << "ms";
-    //         }
-    //         QTimer::singleShot(delay, this, &MetaRead::quitAfterTimeout);
-    //     }
-    //     r->status = Reader::Status::Ready;
-    //     cycling[id] = false;
-    //     return;
-    // }
+    // if done in both directions fire delay to quit in case isDone fails
+    if (aIsDone && bIsDone && !isDone) {
+        if (!quitAfterTimeoutInitiated) {
+            if (isDebug)
+            {
+                qDebug().noquote()
+                    << "MetaRead::dispatch     aIsDone && bIsDone "
+                    << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"; G::t.restart();}
+            quitAfterTimeoutInitiated = true;
+            // isDispatching = false;
+            // if pending readers not all processed in delay ms then quit anyway
+            int delay = 1000;
+            if (debugLog && (G::isLogger || G::isFlowLogger))
+            {
+                G::log("MetaRead::dispatch", "aIsDone && bIsDone  quitAfterTimeoutInitiated in 1000 ms");
+            }
+            QTimer::singleShot(delay, this, &MetaRead::quitAfterTimeout);
+        }
+        r->status = Reader::Status::Ready;
+        cycling[id] = false;
+        return;
+    }
 }
 
 void MetaRead::dispatchReaders()

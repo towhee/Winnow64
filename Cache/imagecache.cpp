@@ -515,13 +515,13 @@ void ImageCache::setTargetRange(int key)
         if (isForward) {
             if (isAhead && !aheadDone) pos = aheadPos++;
             else if (!behindDone) pos = behindPos--;
-            if (aheadPos == n) aheadDone = true;
-            if (behindPos == -1) behindDone = true;
+            if (aheadPos >= n) aheadDone = true;
+            if (behindPos < 0) behindDone = true;
         } else {
             if (isAhead && !aheadDone) pos = aheadPos--;
             else if (!behindDone) pos = behindPos++;
-            if (aheadPos == -1) aheadDone = true;
-            if (behindPos == n) behindDone = true;
+            if (aheadPos < 0) aheadDone = true;
+            if (behindPos >= n) behindDone = true;
         }
 
         // update toCache targets
@@ -1836,7 +1836,7 @@ void ImageCache::fillCache(int id)
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
 
             if (debugLog || G::isLogger || G::isFlowLogger)
-                G::log("allDecodersDone");
+                G::log("ImageCache::fillCache", "allDecodersDone");
 
             abort = false;
 
