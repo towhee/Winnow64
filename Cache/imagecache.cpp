@@ -348,6 +348,7 @@ void ImageCache::trimOutsideTargetRange()
             QString fPath = it.key();
             int sfRow = dm->proxyRowFromPath(fPath);
             // fPath not in datamodel if sfRow == -1
+            if (!isValidKey(sfRow)) continue;
             if (sfRow < targetFirst || sfRow > targetLast) {
                 if (debugCaching)
                 {
@@ -362,7 +363,6 @@ void ImageCache::trimOutsideTargetRange()
                 }
                 it = icd->imCache.erase(it); // Erase and move iterator forward
                 emit setCached(sfRow, false, instance);
-                // emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
                 // emit refreshViews(fPath, false, "ImageCache::trimOutsideTargetRange");
             }
             else {
@@ -375,9 +375,9 @@ void ImageCache::trimOutsideTargetRange()
     for (int sfRow : toCache) {
         if (sfRow < targetFirst || sfRow > targetLast) {
             toCacheStatus.remove(sfRow);
-            emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
-            emit setCached(sfRow, false, instance);
-            // emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+            if (isValidKey(sfRow)) {
+                emit setCached(sfRow, false, instance);
+            }
         }
     }
 
@@ -386,15 +386,6 @@ void ImageCache::trimOutsideTargetRange()
     toCache.erase(std::remove_if(it, toCache.end(), [&](int sfRow) {
                       return sfRow < targetFirst || sfRow > targetLast;
                   }), toCache.end());
-
-    // // cleanup datamodel outside target range
-    // for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
-    //     if (sfRow >= targetFirst && sfRow <= targetLast) continue;
-    //     if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool())
-    //         emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
-    //     if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool())
-    //         emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
-    // }
 
     if (debugCaching)
     {
