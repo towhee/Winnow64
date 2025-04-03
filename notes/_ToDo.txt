@@ -12,6 +12,7 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
+- When remove folder from FSTree selection the Selection::setCurrentIndex can be invalid index and crashes
 - Full Screen toggle not returning to previous size window
 - Check missing thumbnails process is working
 - Check all drop operations
@@ -144,6 +145,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Update row of rows in status bar when add multiple folders to existing datamodel
+- Zero size files resulting in slow crash
 - Orientation should be 8 for /Users/roryhill/Pictures/_test/2023-05-28_0002-Enhanced-NR.dng
 - Setting color or rating should not filter unless a color filter has been set
 - Endless loop if ImageDecoder not return success

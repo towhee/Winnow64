@@ -793,7 +793,7 @@ void DataModel::removeFolder(const QString &folderPath)
 
     // update current
     setCurrent(currentFilePath, instance);
-
+    qDebug() << fun << "current row =" << currentSfRow;
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
@@ -2276,7 +2276,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, src, sfIdx.row());
-        qDebug() << src << sfRow << errMsg;
+        qDebug() << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
     // qDebug() << src << sfRow << "isCached =" << isCached;
