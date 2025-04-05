@@ -58,6 +58,7 @@ public:
     void newInstance();
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
     bool isQueueEmpty();
+    bool isQueueRemoveEmpty();
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
@@ -108,15 +109,22 @@ public:
     void removeFolder(const QString &folderPath);
 
     QMutex mutex;
+    QReadWriteLock rwLock;
+
     bool isProcessingFolders = false;
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
-    QHash<QString, int> fPathRow;
-    QStringList imageFilePathList;
-    // all folders in the datamodel
-    QStringList folderList;
+    QStringList folderList;             // all folders in the datamodel
     QDir::SortFlags thumbsSortFlags;
+
+    // fPathRow hash and methods for concurrent access
+    QHash<QString, int> fPathRow;
+    bool fPathRowContains(const QString &path);
+    int  fPathRowValue(const QString &path);
+    void fPathRowSet(const QString &path, const int row);
+    void fPathRowRemove(const QString &path);
+    void fPathRowClear();
 
     // current status
     int instance = 0;                   // each new load of DataModel increments the instance
@@ -214,7 +222,7 @@ public slots:
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
     int rowFromPath(QString fPath);
-    int proxyRowFromPath(QString fPath);
+    int proxyRowFromPath(QString fPath, QString src = "");
     QString pathFromProxyRow(int sfRow);
     QString folderPathFromProxyRow(int sfRow);
     QString folderPathFromModelRow(int dmRow);

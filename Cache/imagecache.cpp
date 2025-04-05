@@ -104,6 +104,22 @@ Image size in cache:
 
     The concurrent operations make it risky to directly call the datamodel cache size
     form ImageCache, which is in a separate thread.  Use QMetaObject::invokeMethod.
+
+DataModel instance changes:
+
+    The datamodel instance is incremented every time MW::filderSelectionChange is
+    invoked and there are additions or removals to the datamodel.
+
+        If there is a reset declared in MW::filderSelectionChange then
+        ImageCache::initialize is called and the local instance is updated.
+
+        If there is a datamodel filterChange then ImageCache::filterChange is called
+        and the local instance is updated.
+
+        If updateToCache() is invoked and the local instance does not match the
+        datamodel instance then setTargetRange clears the toCache/toCacheStatus lists
+        and the local instace is updated in updateToCache().
+
 */
 
 
@@ -320,9 +336,19 @@ void ImageCache::updateToCache()
     }
 
     QMutexLocker locker(&gMutex);  // req'd to prevent toCacheAppend() crash
+
     if (!abort) setDirection();
+    // prevent additions or deletions to model
     if (!abort) setTargetRange(currRow);
     if (!abort) trimOutsideTargetRange();
+
+    // update datamodel cached status
+    for (int sfRow : removedFromCache) {
+        if (abort) break;
+        emit setCached(sfRow, false, instance);
+    }
+
+    if (instance != dm->instance) instance = dm->instance;
 
     if (debugCaching)
     {
@@ -333,75 +359,9 @@ void ImageCache::updateToCache()
     }
 }
 
-void ImageCache::trimOutsideTargetRange()
-/*
-    Any images in imCache that are no longer in the target range are removed.
-*/
-{
-    QString src = "ImageCache::trimOutsideTargetRange";
-    if (debugCaching) qDebug() << src;
-
-    // trim imCache outside target range
-    {
-        auto it = icd->imCache.begin();
-        while (it != icd->imCache.end()) {
-            QString fPath = it.key();
-            int sfRow = dm->proxyRowFromPath(fPath);
-            // fPath not in datamodel if sfRow == -1
-            if (!isValidKey(sfRow)) continue;
-            if (sfRow < targetFirst || sfRow > targetLast) {
-                if (debugCaching)
-                {
-                    qDebug().noquote()
-                        << src.leftJustified(col0Width, ' ')
-                        << "sfRow =" << sfRow
-                        << "isCached =" << dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
-                        << "targetFirst =" << targetFirst
-                        << "targetLast =" << targetLast
-                        << "fPath =" << fPath
-                        ;
-                }
-                it = icd->imCache.erase(it); // Erase and move iterator forward
-                emit setCached(sfRow, false, instance);
-                // emit refreshViews(fPath, false, "ImageCache::trimOutsideTargetRange");
-            }
-            else {
-                ++it; // move forward if no removal
-            }
-        }
-    }
-
-    // trim toCacheStatus outside target range
-    for (int sfRow : toCache) {
-        if (sfRow < targetFirst || sfRow > targetLast) {
-            toCacheStatus.remove(sfRow);
-            if (isValidKey(sfRow)) {
-                emit setCached(sfRow, false, instance);
-            }
-        }
-    }
-
-    // trim toCache outside target range
-    auto it = toCache.begin();  // Ensures a mutable iterator
-    toCache.erase(std::remove_if(it, toCache.end(), [&](int sfRow) {
-                      return sfRow < targetFirst || sfRow > targetLast;
-                  }), toCache.end());
-
-    if (debugCaching)
-    {
-        qDebug().noquote()
-            << src.leftJustified(col0Width, ' ')
-            << "toCache:" << toCache
-
-            ;
-    }
-
-    updateStatus("Update all rows", src);
-}
-
 void ImageCache::setDirection()
 {
-/*
+    /*
     If the direction of travel changes then delay reversing the caching direction until a
     directionChangeThreshold (ie 3rd) image is selected in the new direction of travel. This
     prevents needless caching if the user justs reverses direction to check out the previous
@@ -438,6 +398,84 @@ void ImageCache::setDirection()
     }
 }
 
+void ImageCache::trimOutsideTargetRange()
+/*
+    Any images in imCache that are no longer in the target range are removed.
+*/
+{
+    QString src = "ImageCache::trimOutsideTargetRange";
+    if (debugCaching) qDebug() << src;
+
+    removedFromCache.clear();
+
+    // trim imCache outside target range
+    auto it = icd->imCache.begin();
+    while (it != icd->imCache.end()) {
+        QString fPath = it.key();
+        int sfRow = dm->proxyRowFromPath(fPath, src);
+        // fPath not in datamodel if sfRow == -1
+        if (!isValidKey(sfRow)) {
+            // Erase and move iterator forward
+            it = icd->imCache.erase(it);
+            continue;
+        }
+        if (sfRow < targetFirst || sfRow > targetLast) {
+            if (debugCaching)
+            {
+                qDebug().noquote()
+                    << src.leftJustified(col0Width, ' ')
+                    << "sfRow =" << sfRow
+                    << "isCached =" << dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
+                    << "targetFirst =" << targetFirst
+                    << "targetLast =" << targetLast
+                    << "fPath =" << fPath
+                    ;
+            }
+            // Erase and move iterator forward
+            it = icd->imCache.erase(it);
+            // emit setCached(sfRow, false, instance);
+            // bulk update datamodel cached status in updateToCache()
+            removedFromCache.append(sfRow);
+        }
+        else {
+            ++it; // move forward if no removal
+        }
+    }
+
+    // folders were added or removed from datamodel and toCache/toCacheStatus
+    // have already been cleared and repopulated in setTargetRange
+    if (instance != dm->instance) return;
+
+    // trim toCacheStatus outside target range
+    for (int sfRow : toCache) {
+        if (sfRow < targetFirst || sfRow > targetLast) {
+            toCacheStatus.remove(sfRow);
+            if (isValidKey(sfRow) && !removedFromCache.contains(sfRow)) {
+                // emit setCached(sfRow, false, instance);
+                // bulk update datamodel cached status in updateToCache()
+                removedFromCache.append(sfRow);
+            }
+        }
+    }
+
+    // trim toCache outside target range
+    auto itt = toCache.begin();  // Ensures a mutable iterator
+    toCache.erase(std::remove_if(itt, toCache.end(), [&](int sfRow) {
+                      return sfRow < targetFirst || sfRow > targetLast;
+                  }), toCache.end());
+
+    if (debugCaching)
+    {
+        qDebug().noquote()
+            << src.leftJustified(col0Width, ' ')
+            << "toCache:" << toCache
+
+            ;
+    }
+
+    updateStatus("Update all rows", src);
+}
+
 void ImageCache::setTargetRange(int key)
 {
 /*
@@ -467,7 +505,7 @@ void ImageCache::setTargetRange(int key)
 */
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
-    // if (G::isLogger) G::log(fun, "maxMB = " + QString::number(maxMB));
+    if (G::isLogger) G::log(fun, "maxMB = " + QString::number(maxMB));
 
     if (debugCaching)
     {
@@ -485,6 +523,12 @@ void ImageCache::setTargetRange(int key)
     if (key == 0)     {isForward = true; targetFirst = 0;}
     int aheadPos = key;
     int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+
+    // folders were added or removed from datamodel
+    if (instance != dm->instance) {
+        toCache.clear();
+        toCacheStatus.clear();
+    }
 
     if (debugCaching)
     {
@@ -520,7 +564,7 @@ void ImageCache::setTargetRange(int key)
             emit setCached(pos, true, instance);
         }
         else {
-            // see "Image size in cache" at top of imagecache.cpp
+            /* see "Image size in cache" at top of imagecache.cpp
             // this lowers performance
             // QVariant mb;
             // QMetaObject::invokeMethod(
@@ -532,6 +576,7 @@ void ImageCache::setTargetRange(int key)
             //     Q_ARG(int, G::CacheSizeColumn)
             // );
             // sumMB += mb.toFloat();
+            //*/
 
             // fast but risky, can crash when stress testing bounce folders
             sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
@@ -563,7 +608,7 @@ void ImageCache::removeCachedImage(QString fPath)
 */
     QString src = "ImageCache::removeCachedImage";
     if (debugLog || G::isLogger) log("removeCachedImage", fPath);
-    int sfRow = dm->proxyRowFromPath(fPath);
+    int sfRow = dm->proxyRowFromPath(fPath, src);
     if (debugCaching)
     {
         QString fun = "ImageCache::removeCachedImage";
@@ -595,7 +640,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPathToRemove = pathList.at(i);
         icd->imCache.remove(fPathToRemove);
-        int sfRow = dm->proxyRowFromPath(fPathToRemove);
+        int sfRow = dm->proxyRowFromPath(fPathToRemove, "ImageCache::removeFromCache");
         toCacheRemove(sfRow);
     }
 }
@@ -964,7 +1009,7 @@ QString ImageCache::reportImCache()
     for (int i = 0; i < keys.length(); ++i) {
         imRptItem.hashKey = i;
         imRptItem.fPath = keys.at(i);
-        imRptItem.sfRow = dm->proxyRowFromPath(imRptItem.fPath);
+        imRptItem.sfRow = dm->proxyRowFromPath(imRptItem.fPath, "ImageCache::reportImCache");
         image = icd->imCache.value(keys.at(i));    // QHash<QString, QImage> imCache
         imRptItem.w = image.width();
         imRptItem.h = image.height();
@@ -1040,7 +1085,7 @@ QString ImageCache::reportImCacheRows()
     auto it = icd->imCache.begin();
     while (it != icd->imCache.end()) {
         QString fPath = it.key();
-        int sfRow = dm->proxyRowFromPath(fPath);
+        int sfRow = dm->proxyRowFromPath(fPath, "ImageCache::reportImCacheRows");
         imCacheRows.append(sfRow);
         ++it;
     }
@@ -1281,9 +1326,9 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     Do not use QMutexLocker. Can cause deadlock in updateTargets()
 
 */
-    currRow = dm->proxyRowFromPath(fPath);
-
     QString fun = "ImageCache::setCurrentPosition";
+    currRow = dm->proxyRowFromPath(fPath, fun);
+
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
     if (debugCaching)

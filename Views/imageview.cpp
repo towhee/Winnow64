@@ -247,7 +247,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     image in icd->imCache hash table. Also must check in case where an ejected drive has
     resulted in clearing icd->cacheItemList. */
 
-    int sfRow = dm->proxyRowFromPath(fPath);
+    int sfRow = dm->proxyRowFromPath(fPath, "ImageView::loadImage");
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
 
     if (icd->contains(fPath)) {
@@ -870,7 +870,8 @@ QPoint ImageView::scene2CW(QPointF pctPt)
 void ImageView::focus()
 {
     if (G::isLogger) G::log("ImageView::focus");
-    int row = dm->fPathRow[dm->currentFilePath];
+    // int row = dm->fPathRow[dm->currentFilePath];
+    int row = dm->fPathRowValue(dm->currentFilePath);
     int fX = dm->sf->index(row, G::FocusXColumn).data().toInt();
     int fY = dm->sf->index(row, G::FocusYColumn).data().toInt();
     int w = dm->sf->index(row, G::WidthColumn).data().toInt();

@@ -809,6 +809,7 @@ void MetaRead::dispatch(int id)
             }
         }
 
+        /*
         qDebug().noquote()
             << "MetaRead::dispatch     startRow         "
             << "dmRow =" << dmRow
@@ -816,7 +817,7 @@ void MetaRead::dispatch(int id)
             << "instance =" << instance
             << "dm->instance =" << dm->instance
             << "imageCacheTriggered =" << imageCacheTriggered
-            ;
+            ; //*/
 
         // trigger MW::fileSelectionChange which starts ImageCache
         if (fileSelectionChanged &&
@@ -834,7 +835,7 @@ void MetaRead::dispatch(int id)
             bool clearSelection = false;
             QString src = "MetaRead::dispatch";
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
-            qDebug() << src << "emit fileSelectionChange" << startRow;
+            // qDebug() << src << "emit fileSelectionChange" << startRow;
         }
         //*/
 

@@ -324,7 +324,8 @@ void DataModel::clearDataModel()
     clear();
     setModelProperties();
     // clear the fPath index of datamodel rows
-    fPathRow.clear();
+    // fPathRow.clear();
+    fPathRowClear();
     // clear the folder list
     folderList.clear();
     // reset firstFolderPathWithImages
@@ -493,6 +494,18 @@ bool DataModel::isQueueEmpty()
     return folderQueue.isEmpty();
 }
 
+bool DataModel::isQueueRemoveEmpty()
+{
+    QListIterator<QPair<QString, bool>> i(folderQueue);
+    while (i.hasNext()) {
+        QPair<QString, bool> folderOperation = i.next();
+        if (!folderOperation.second) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void DataModel::enqueueOp(const QString folderPath, const QString op)
 {
 /*
@@ -604,8 +617,10 @@ void DataModel::processNextFolder()
     // remove images from model
     else {
         removeFolder(folderPath);
-       // signal MW::loadChanged
-        emit removedFolderFromDM(folderOperation.first, "Remove");
+       // signal MW::loadChanged if last removal in queue
+        if (isQueueRemoveEmpty()) {
+            emit removedFolderFromDM(folderOperation.first, "Remove");
+        }
     }
 
     // Continue with the next folder operation
@@ -770,7 +785,6 @@ void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
-    qDebug() << fun << folderPath;
 
     folderList.removeAll(folderPath);
 
@@ -793,7 +807,6 @@ void DataModel::removeFolder(const QString &folderPath)
 
     // update current
     setCurrent(currentFilePath, instance);
-    qDebug() << fun << "current row =" << currentSfRow;
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
@@ -960,7 +973,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString ext = fileInfo.suffix().toLower();
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
-    fPathRow[fPath] = row;
+    // fPathRow[fPath] = row;
+    fPathRowSet(fPath, row);
 
     // string to hold aggregated text for searching
     QString search = fPath;
@@ -1027,8 +1041,10 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     if (G::isLogger) G::log("DataModel::updateFileData");
     QString fPath = fileInfo.filePath();
     // qDebug() << "DataModel::updateFileData" << "Instance =" << instance << fPath;
-    if (!fPathRow.contains(fPath)) return false;
-    int row = fPathRow[fPath];
+    // if (!fPathRow.contains(fPath)) return false;
+    if (!fPathRowContains(fPath)) return false;
+    // int row = fPathRow[fPath];
+    int row = fPathRowValue(fPath);
     if (!index(row,0).isValid()) return false;
 
     QMutexLocker locker(&mutex);
@@ -1063,8 +1079,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int sfRow = proxyRowFromPath(fPath);
-    int row = fPathRow[fPath];
+    int sfRow = proxyRowFromPath(fPath, "DataModel::imMetadata");
+    // int row = fPathRow[fPath];
+    int row = fPathRowValue(fPath);
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
@@ -1954,7 +1971,8 @@ void DataModel::setCurrent(QString fPath, int instance)
 
     // update current index parameters
     QMutexLocker locker(&mutex);
-    if (fPathRow.contains(fPath)) {
+    // if (fPathRow.contains(fPath)) {
+    if (fPathRowContains(fPath)) {
         currentDmIdx = indexFromPath(fPath);
         currentFilePath = fPath;
     } else {
@@ -1983,10 +2001,12 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
         qDebug() << "DataModel::setValuePath" << "instance =" << instance
                  << "col =" << col
                  << "fPath =" << fPath
-                 << "fPathRow[fPath] =" << fPathRow[fPath]
+                 // << "fPathRow[fPath] =" << fPathRow[fPath]
+                 << "fPathRowValue(fPath) =" << fPathRowValue(fPath)
                 ;
     }
-    QModelIndex dmIdx = index(fPathRow[fPath], col);
+    // QModelIndex dmIdx = index(fPathRow[fPath], col);
+    QModelIndex dmIdx = index(fPathRowValue(fPath), col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
@@ -2357,29 +2377,62 @@ bool DataModel::isPath(QString fPath)
     return false;
 }
 
+// fPathRow methods for concurrent access
+
+bool DataModel::fPathRowContains(const QString &path)
+{
+    QReadLocker locker(&rwLock);
+    return fPathRow.contains(path);
+}
+
+int DataModel::fPathRowValue(const QString &path)
+{
+    QReadLocker locker(&rwLock);
+    return fPathRow[path];
+}
+
+void DataModel::fPathRowSet(const QString &path, const int row)
+{
+    QWriteLocker locker(&rwLock);
+    fPathRow[path] = row;
+}
+
+void DataModel::fPathRowRemove(const QString &path)
+{
+    QWriteLocker locker(&rwLock);
+    fPathRow.remove(path);
+}
+
+void DataModel::fPathRowClear()
+{
+    QWriteLocker locker(&rwLock);
+    fPathRow.clear();
+}
+
 int DataModel::rowFromPath(QString fPath)
 {
     if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
-    if (fPathRow.contains(fPath)) return fPathRow[fPath];
+    if (fPathRowContains(fPath)) return fPathRowValue(fPath);
     else return -1;
 }
 
-int DataModel::proxyRowFromPath(QString fPath)
+int DataModel::proxyRowFromPath(QString fPath, QString src)
 {
     if (isDebug)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
                  << fPath;
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
+    if (G::isLogger) G::log("DataModel::proxyRowFromPath", "scr = " + src);
     QMutexLocker locker(&mutex);
     int dmRow;
     int sfRow = -1;
-    if (fPathRow.contains(fPath)) {
-        dmRow = fPathRow[fPath];
+    // if (fPathRow.contains(fPath)) {
+    if (fPathRowContains(fPath)) {
+        dmRow = fPathRowValue(fPath);
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
         if (sfIdx.isValid()) sfRow = sfIdx.row();
     }
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath done");
+    // if (G::isLogger) G::log("DataModel::proxyRowFromPath done");
     return sfRow;
 }
 
@@ -2407,10 +2460,13 @@ void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
     if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance;
-    fPathRow.clear();
+    QMutexLocker locker(&mutex);
+    // fPathRow.clear();
+    fPathRowClear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
-        fPathRow[fPath] = row;
+        // fPathRow[fPath] = row;
+        fPathRowSet(fPath, row);
     }
 }
 
@@ -2441,7 +2497,8 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
             QString fPath = info.filePath();
             srcImageFiles << fPath;
             // in datamodel?
-            if (!fPathRow.contains(fPath)) {
+            // if (!fPathRow.contains(fPath)) {
+            if (!fPathRowContains(fPath)) {
                 added << fPath;
             }
         }
@@ -2545,13 +2602,15 @@ QModelIndex DataModel::indexFromPath(QString fPath)
         qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
                  << "fPath =" << fPath;
     }
-    if (!fPathRow.contains(fPath)) {
+    // if (!fPathRow.contains(fPath)) {
+    if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
         if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
-    int dmRow = fPathRow[fPath];
+    // int dmRow = fPathRow[fPath];
+    int dmRow = fPathRowValue(fPath);
     QModelIndex dmIdx = index(dmRow, 0);
     if (dmIdx.isValid()) {
         return dmIdx;
@@ -2574,13 +2633,15 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
         qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
                  << "fPath =" << fPath;
     }
-    if (!fPathRow.contains(fPath)) {
+    // if (!fPathRow.contains(fPath)) {
+    if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
         if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
-    int dmRow = fPathRow[fPath];
+    // int dmRow = fPathRow[fPath];
+    int dmRow = fPathRowValue(fPath);
     QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
     if (sfIdx.isValid()) {
         return sfIdx;

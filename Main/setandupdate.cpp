@@ -519,7 +519,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     If the image is the current one, then imageView is called.
 
 */
-    int sfRow = dm->proxyRowFromPath(fPath);
+    int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
     bool isCurrent = sfRow == dm->currentSfRow;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();

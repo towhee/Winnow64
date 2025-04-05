@@ -1002,6 +1002,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             // to do: deal with toggle
             if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifers: Opt + Cmd, Recurse");
             resetDataModel = false;
+            // resetDataModel = true;
             recurse = true;
             emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
             bool toggle = true;
