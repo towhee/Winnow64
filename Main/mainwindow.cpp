@@ -2051,6 +2051,9 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     bookmarks->setEnabled(false);
     fsTree->setEnabled(false);
 
+    // only done here and if sort/filter operation
+    dm->newInstance();
+
     // save the current datamodel selection before removing a folder from datamodel
     if (op == "Remove") sel->save(fun);
 
@@ -2058,7 +2061,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     if (resetDataModel) {
         // stop existing processes
         stop(fun + " reset DataModel");
-        // should only reset here, new datamodel instance
+        // should only reset here
         reset(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
@@ -2466,7 +2469,7 @@ bool MW::reset(QString src)
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
     dm->clearDataModel();
-    dm->newInstance();
+    // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // used by updateStatus
     pickMemSize = "";
@@ -2676,31 +2679,32 @@ void MW::folderChanged(const QString folderPath, const QString op)
     if (dm->isQueueEmpty()) {
         bookmarks->setEnabled(true);
         fsTree->setEnabled(true);
+        G::isModifyingDatamodel = false;
     }
 
     if (op == "Remove") {
         /*
         qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
                  << dm->folderList.count() << dm->folderList;//*/
-        // update bookmarks if only one folder remaining
-        if (dm->folderList.count() == 1) {
-            // new primary folder
-            QString newPrimaryFolder = dm->folderList.at(0);
-            // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
-            QSignalBlocker bookmarkBlocker(bookmarks);
-            bookmarks->select(newPrimaryFolder);
-            bookmarkBlocker.unblock();
-        }
+        if (dm->isQueueRemoveEmpty()) {
+            // update bookmarks if only one folder remaining
+            if (dm->folderList.count() == 1) {
+                // new primary folder
+                QString newPrimaryFolder = dm->folderList.at(0);
+                // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
+                QSignalBlocker bookmarkBlocker(bookmarks);
+                bookmarks->select(newPrimaryFolder);
+                bookmarkBlocker.unblock();
+            }
 
-        sel->select(dm->currentSfRow);
-        G::isModifyingDatamodel = false;
+            sel->select(dm->currentSfRow);
 
-        if (dm->isAllMetadataAttempted()) {
-            G::allMetadataLoaded = true;
-            folderChangeCompleted();
+            if (dm->isAllMetadataAttempted()) {
+                G::allMetadataLoaded = true;
+                folderChangeCompleted();
+            }
+            // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
         }
-        // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
-        return;
     }
 
     if (op == "Add") {
@@ -2710,7 +2714,6 @@ void MW::folderChanged(const QString folderPath, const QString op)
             infoView->enable(true);  // not setEnabled() because infoView uses a delegate
         }
         else if (dm->isQueueEmpty()) {
-            G::isModifyingDatamodel = false;
             updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
             setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
             infoView->enable(false);  // not setEnabled() because infoView uses a delegate
@@ -2821,6 +2824,7 @@ void MW::update(int sfRow, bool isFileSelectionChange, QString src)
     {
         G::log("MW::update", "row = " + QString::number(sfRow)
         + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
+        + " G::allMetadataLoaded = " + QVariant(G::allMetadataLoaded).toString()
         + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString()
         + " src = " + src);
     }
@@ -2886,7 +2890,7 @@ void MW::folderChangeCompleted()
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
 
-    G::isModifyingDatamodel = false;
+    // G::isModifyingDatamodel = false;
 
     /*
     qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"

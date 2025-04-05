@@ -123,6 +123,7 @@ private:
     };
     QList<int> toCache;
     QHash<int,CacheItem> toCacheStatus;
+    QList<int> removedFromCache;// items removed in trimOutsideTargetRange
     QVector<float> imageSize;
 
     int currRow;                // current image

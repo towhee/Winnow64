@@ -1265,22 +1265,24 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         QString src = "IconView::mouseReleaseEvent";
         // Capture the percent coordinates of the mouse click within the thumbnail
         // so that the full scale image can be zoomed to the same point.
-        QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
-        QPoint iconPt = event->pos() - iconRect.topLeft();
-        xPct = iconPt.x() * 1.0 / iconRect.width();
-        yPct = iconPt.y() * 1.0 / iconRect.height();
-        /* debug
-        qDebug() << "IconView::mouseReleaseEvent"
-                 << "\n currentIndex =" << currentIndex()
-                 << "\n iconRect     =" << iconRect
-                 << "\n mousePt      =" << event->pos()
-                 << "\n iconPt       =" << iconPt
-                 << "\n xPct         =" << xPct
-                 << "\n yPct         =" << yPct;
-        //*/
-        if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-            // signal ImageView
-            emit thumbClick(xPct, yPct);
+        if (dm->currentSfIdx.isValid()) {
+            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
+            QPoint iconPt = event->pos() - iconRect.topLeft();
+            xPct = iconPt.x() * 1.0 / iconRect.width();
+            yPct = iconPt.y() * 1.0 / iconRect.height();
+            /* debug
+            qDebug() << "IconView::mouseReleaseEvent"
+                     << "\n currentIndex =" << currentIndex()
+                     << "\n iconRect     =" << iconRect
+                     << "\n mousePt      =" << event->pos()
+                     << "\n iconPt       =" << iconPt
+                     << "\n xPct         =" << xPct
+                     << "\n yPct         =" << yPct;
+            //*/
+            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+                // signal ImageView
+                emit thumbClick(xPct, yPct);
+            }
         }
     }
 

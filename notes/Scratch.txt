@@ -1,1 +1,10 @@
 data: invalid display value column 4
+
+
+4,038 FrameDecoder::frameChanged
+34,295 FrameDecoder::frameChanged
+175,607 FrameDecoder::getFrame
+ 9,431 FrameDecoder::getFrame
+159,574 FrameDecoder::getFrame
+ 2,464 FrameDecoder::frameChanged
+   387 FrameDecoder::frameChanged
