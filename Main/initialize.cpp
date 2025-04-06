@@ -551,7 +551,7 @@ void MW::createSelection()
     if (G::isLogger) G::log("MW::createSelection");
     sel = new Selection(this, dm, thumbView, gridView, tableView);
     connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
-    connect(sel, &Selection::loadConcurrent, this, &MW::update);
+    connect(sel, &Selection::updateChange, this, &MW::updateChange);
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);

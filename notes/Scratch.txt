@@ -1,10 +1,110 @@
 data: invalid display value column 4
 
 
-4,038 FrameDecoder::frameChanged
-34,295 FrameDecoder::frameChanged
-175,607 FrameDecoder::getFrame
- 9,431 FrameDecoder::getFrame
-159,574 FrameDecoder::getFrame
- 2,464 FrameDecoder::frameChanged
-   387 FrameDecoder::frameChanged
+133,205 DataModel::aspectRatio
+  1,736 Thumb::setImageDimensions                          row = 168
+      0 Thumb::checkOrientation                            /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0003Neg.jpg
+     69 DataModel::rowFromPath
+     29 DataModel::setIcon
+     29 Reader::read                                       Finished
+      5 MetaRead::dispatch: return from reader             id =  0 row =  168
+     15 DataModel::modelIndexFromProxyIndex
+      0 Metadata::loadImageMetadata                        /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg  Source: Reader::readMetadata
+      2 Metadata::clearMetadata
+      8 Filters::updateProgress
+     69 Metadata::readMetadata                             /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg Source: Reader::readMetadata
+    181 Metadata::parseJPG                                 /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg
+     37 Xmp::Xmp
+     23 Xmp::initialize
+     20 Metadata::parseSidecar
+      0 Thumb::presetOffset
+      0 Thumb::loadThumb                                   /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg
+     23 DataModel::rowFromPath
+    310 Thumb::loadFromEntireFile                          /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg
+     12 DataModel::addMetadataForItem                      row = 169
+132,899 DataModel::aspectRatio
+  1,511 Thumb::setImageDimensions                          row = 169
+      0 Thumb::checkOrientation                            /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0004Neg.jpg
+     48 DataModel::rowFromPath
+      3 Reader::read                                       Finished
+      5 DataModel::setIcon
+      5 MetaRead::dispatch: return from reader             id =  0 row =  169
+     10 DataModel::modelIndexFromProxyIndex
+      0 Metadata::loadImageMetadata                        /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg  Source: Reader::readMetadata
+      4 Metadata::clearMetadata
+     31 Filters::updateProgress
+     70 Metadata::readMetadata                             /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg Source: Reader::readMetadata
+    167 Metadata::parseJPG                                 /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg
+     61 Xmp::Xmp
+     20 Xmp::initialize
+     21 Metadata::parseSidecar
+      0 Thumb::presetOffset
+      0 Thumb::loadThumb                                   /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg
+     22 DataModel::rowFromPath
+    229 Thumb::loadFromEntireFile                          /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg
+     11 DataModel::addMetadataForItem                      row = 170
+126,755 DataModel::aspectRatio
+    234 Thumb::setImageDimensions                          row = 170
+      0 Thumb::checkOrientation                            /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0005Neg.jpg
+     47 DataModel::rowFromPath
+      7 Reader::read                                       Finished
+      6 DataModel::setIcon
+     76 MetaRead::dispatch: return from reader             id =  0 row =  170
+     16 DataModel::modelIndexFromProxyIndex
+     20 Filters::updateProgress
+      0 Metadata::loadImageMetadata                        /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg  Source: Reader::readMetadata
+     18 Metadata::clearMetadata
+     74 Metadata::readMetadata                             /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg Source: Reader::readMetadata
+    176 Metadata::parseJPG                                 /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg
+     50 Xmp::Xmp
+     23 Xmp::initialize
+     19 Metadata::parseSidecar
+      0 Thumb::presetOffset
+      0 Thumb::loadThumb                                   /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg
+     22 DataModel::rowFromPath
+    131 Thumb::loadFromEntireFile                          /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg
+     11 DataModel::addMetadataForItem                      row = 171
+127,884 DataModel::aspectRatio
+    243 Thumb::setImageDimensions                          row = 171
+      0 Thumb::checkOrientation                            /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0006Neg.jpg
+     46 DataModel::rowFromPath
+      2 Reader::read                                       Finished
+      4 DataModel::setIcon
+      5 MetaRead::dispatch: return from reader             id =  0 row =  171
+      9 DataModel::modelIndexFromProxyIndex
+      0 Metadata::loadImageMetadata                        /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg  Source: Reader::readMetadata
+      5 Metadata::clearMetadata
+      2 Filters::updateProgress
+  1,121 Metadata::readMetadata                             /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg Source: Reader::readMetadata
+    225 Metadata::parseJPG                                 /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg
+     55 Xmp::Xmp
+     41 Xmp::initialize
+     22 Metadata::parseSidecar
+      0 Thumb::presetOffset
+      3 Thumb::loadThumb                                   /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg
+      3 DataModel::addMetadataForItem                      row = 172
+      0 DataModel::rowFromPath
+     25 DataModel::aspectRatio
+139,000 Thumb::loadFromEntireFile                          /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg
+  1,657 Thumb::setImageDimensions                          row = 172
+      0 Thumb::checkOrientation                            /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0007Neg.jpg
+     55 DataModel::rowFromPath
+      8 Reader::read                                       Finished
+      6 DataModel::setIcon
+      5 MetaRead::dispatch: return from reader             id =  0 row =  172
+     18 DataModel::modelIndexFromProxyIndex
+      0 Metadata::loadImageMetadata                        /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0008Neg.jpg  Source: Reader::readMetadata
+     17 Metadata::clearMetadata
+     21 Filters::updateProgress
+    308 Metadata::readMetadata                             /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0008Neg.jpg Source: Reader::readMetadata
+    218 Metadata::parseJPG                                 /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0008Neg.jpg
+     44 Xmp::Xmp
+     23 Xmp::initialize
+     23 Metadata::parseSidecar
+      0 Thumb::presetOffset
+      0 Thumb::loadThumb                                   /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0008Neg.jpg
+     34 DataModel::rowFromPath
+      0 Thumb::loadFromEntireFile                          /Users/roryhill/Photos/1990-1999/1993/1993-06-19/1993-06-19_0008Neg.jpg
+     11 DataModel::addMetadataForItem                      row = 173
+127,320 DataModel::aspectRatio
+    274 Thumb::setImageDimensions                          row = 173

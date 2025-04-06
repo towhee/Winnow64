@@ -2032,7 +2032,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         G::log("","");
         {
@@ -2553,7 +2553,7 @@ void MW::updateDefaultIconChunkSize(int size)
         dm->iconChunkSize = size;
     }
     bool isFileSelectionChange = false;
-    update(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
+    updateChange(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
 }
 
 bool MW::updateIconRange(bool sizeChange, QString src)
@@ -2648,7 +2648,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
         bool fileSelectionChange = false;
-        update(midVisible, fileSelectionChange, "MW::updateIconRange");
+        updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
     }
 
     return chunkSizeChanged;
@@ -2743,9 +2743,13 @@ void MW::addFolder(QString folderPath)
     if (G::isLogger || G::isFlowLogger)
     {
         bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
-        QString msg = "isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString() +
-                      " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString() +
-                      " folderPath = " + folderPath;
+        QString msg =
+            "isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString()
+            + " folderQueue.count = " + QVariant(dm->folderQueue.count()).toString()
+            + " isEmpty = " + QVariant(dm->isQueueEmpty()).toString()
+            + " folderPath = " + folderPath
+            + " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString()
+                        ;
         G::log(fun, msg);
     }
 
@@ -2798,15 +2802,24 @@ void MW::addFolder(QString folderPath)
         emit initializeImageCache(netCacheMBSize, cacheMinMB,
                                   isShowCacheProgressBar, cacheWtAhead);
 
-        sel->select(dm->currentSfRow);
+        // sel->select(dm->currentSfRow);
     }
+
     // trigger metaRead to update metadata in datamodel without file selection change
-    else if (dm->isQueueEmpty()) {
-        update(dm->currentSfRow, false, fun);
+    if (dm->isQueueEmpty()) {
+        // sel->select(dm->currentSfRow);
+        if (G::useReadMeta) {
+            updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+            QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                      Q_ARG(int, 0),
+                                      Q_ARG(bool, true),
+                                      Q_ARG(QString, src)
+                                      );
+        }
     }
 }
 
-void MW::update(int sfRow, bool isFileSelectionChange, QString src)
+void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 /*
     Starts or redirects MetaRead metadata and thumb loading at sfRow.  If all
     metadata and icons have been read then folderChangeCompleted is called.
@@ -2822,7 +2835,7 @@ void MW::update(int sfRow, bool isFileSelectionChange, QString src)
 
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MW::update", "row = " + QString::number(sfRow)
+        G::log("MW::updateChange", "row = " + QString::number(sfRow)
         + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
         + " G::allMetadataLoaded = " + QVariant(G::allMetadataLoaded).toString()
         + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString()
@@ -2832,10 +2845,10 @@ void MW::update(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /* debug
+    // /* debug
     {
         qDebug().noquote()
-                 << "MW::update  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
+                 << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
                  << "isFileSelectionChange =" << QVariant(isFileSelectionChange).toString().leftJustified(5)
                  << "src =" << src
                  << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
@@ -2850,23 +2863,22 @@ void MW::update(int sfRow, bool isFileSelectionChange, QString src)
     bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
 
     if (!metaLoaded) {
-        // frameDecoder->clear();
         if (G::useReadMeta) {
-            updateMetadataThreadRunStatus(true, true, "MW::update");
+            updateMetadataThreadRunStatus(true, true, "MW::updateChange");
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
                                       Q_ARG(bool, isFileSelectionChange),
-                                      Q_ARG(QString, "setStartRow")
+                                      Q_ARG(QString, src)
                                       );
         }
     }
 
-    /* No delay now, but leaving comment just in case...
+    /* No delay now, but leaving old comment just in case...
        Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
        results in an approx 2 second delay showing the new folder in the thumbView
        and the first image in the loupe view.  Also must check if first file is a video*/
     if (isFileSelectionChange) {
-        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::update");
+        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::updateChange");
     }
 }
 
@@ -3018,7 +3030,7 @@ void MW::thumbHasScrolled()
         if (tableView->isVisible()) {
             tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
-        update(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
+        updateChange(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -3065,7 +3077,7 @@ void MW::gridHasScrolled()
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(midVisibleCell, "MW::gridHasScrolled");
         }
-        update(midVisibleCell, false, "MW::gridHasScrolled");
+        updateChange(midVisibleCell, false, "MW::gridHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
@@ -3107,7 +3119,7 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         }
-        update(tableView->midVisibleRow, false, "MW::tableHasScrolled");
+        updateChange(tableView->midVisibleRow, false, "MW::tableHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }

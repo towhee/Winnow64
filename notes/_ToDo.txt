@@ -145,7 +145,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
-- Update row of rows in status bar when add multiple folders to existing datamodel
+- Update "row of rows" in status bar when add multiple folders to existing datamodel
 - Zero size files resulting in slow crash
 - Orientation should be 8 for /Users/roryhill/Pictures/_test/2023-05-28_0002-Enhanced-NR.dng
 - Setting color or rating should not filter unless a color filter has been set

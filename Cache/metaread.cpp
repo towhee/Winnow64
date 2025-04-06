@@ -112,10 +112,12 @@ MetaRead::~MetaRead()
 void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 {
 /*
-    Must use QMetaObject::invokeMethod when calling this function
+    Must use QMetaObject::invokeMethod when calling this function.  Invoked by
+    MW::updateChange().
 */
     QString fun = "MetaRead::setStartRow";
-    if (G::isLogger || G::isFlowLogger) {
+    if (G::isLogger || G::isFlowLogger)
+    {
         QString running;
         metaReadThread.isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(sfRow) +
@@ -809,7 +811,8 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        /*
+        // /*
+        QString src = "MetaRead::dispatch ";
         qDebug().noquote()
             << "MetaRead::dispatch     startRow         "
             << "dmRow =" << dmRow
@@ -835,7 +838,7 @@ void MetaRead::dispatch(int id)
             bool clearSelection = false;
             QString src = "MetaRead::dispatch";
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
-            // qDebug() << src << "emit fileSelectionChange" << startRow;
+            qDebug() << src << "emit fileSelectionChange" << startRow;
         }
         //*/
 

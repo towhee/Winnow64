@@ -429,7 +429,7 @@ int DataModel::insert(QString fPath)
 
     // update current row
     setCurrent(currentFilePath, instance);
-    qDebug() << "DataModel::insert" << currentSfIdx;
+    // qDebug() << "DataModel::insert" << currentSfIdx;
 
     // add the file data to datamodel
     addFileDataForRow(dmRow, insertFileInfo);
