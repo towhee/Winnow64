@@ -228,7 +228,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     in FSTree::getImageCount and referenced here. This is much faster than performing the
     image count "on-the-fly" here, which causes scroll latency.
 */
-    if (index.column() == imageCountColumn && showImageCount) {
+    if (index.column() == imageCountColumn /*&& showImageCount*/) {
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
 
@@ -236,7 +236,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                 return count.value(dPath);  // Return cached value
             }
 
-            // Cache background count
+            // Cache folder eligible image count
             ImageCounter *worker = new ImageCounter(dPath, metadata, combineRawJpg, fileFilters);
 
             connect(worker, &ImageCounter::countReady,
@@ -245,13 +245,8 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                 // Convert 'this' from 'const FSModel*' to 'FSModel*'
                 auto *nc = const_cast<FSModel*>(this);
                 nc->count.insert(path, QString::number(countValue));
-                QModelIndex idx = nc->index(path, imageCountColumn);
-                QList<int> roles;
-                roles << Qt::DisplayRole;
-                emit nc->dataChanged(idx, idx, roles);
             });
 
-            // worker->setParams(dPath, metadata, combineRawJpg);
             worker->start(QThread::LowPriority);
         }
 
@@ -267,34 +262,12 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
         }
-        /*
-        else if (role == Qt::DecorationRole) {
-            QFileInfo info = fileInfo(index);
-            qDebug() << "FSModel::data"
-                     << "isDir =" << info.isDir()
-                     << "isRoot =" << info.isRoot()
-                     << info.baseName();
-            if (info.isDir()) {
-                if (info.absoluteFilePath() == QDir::rootPath())
-                    return iconProvider()->icon(QFileIconProvider::Computer);
-                else if (info.isRoot())
-                    return iconProvider()->icon(QFileIconProvider::Drive);
-                else
-                   return iconProvider()->icon(QFileIconProvider::Folder);
-            }
-            else if (info.isFile())
-                return iconProvider()->icon(QFileIconProvider::File);
-            else
-                return iconProvider()->icon(QFileIconProvider::Drive);
-        }
-        //*/
         else {
             return QFileSystemModel::data(index, role);
         }
     }
 
-    // return parent class data
-    return QFileSystemModel::data(index, role);
+    return QVariant();
 }
 
 /*------------------------------------------------------------------------------

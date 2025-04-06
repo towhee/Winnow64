@@ -65,7 +65,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -80,7 +80,7 @@ void MW::filterChange(QString source)
     dm->newInstance();
 
     // stop ImageCache
-    qDebug() << "MW::filterChange" << "emit abortImageCache()";
+    // qDebug() << "MW::filterChange" << "emit abortImageCache()";
     // emit abortImageCache();
     // imageCache->abortProcessing();
 

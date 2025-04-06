@@ -211,7 +211,7 @@ void MW::saveAsFile()
 void MW::dmInsert(QStringList pathList)
 {
     QString src = "MW::dmInsert";
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log(src);
     foreach(QString fPath, pathList) {
         // replace existing image with the same name

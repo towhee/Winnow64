@@ -584,7 +584,7 @@ private slots:
                                 QString source);
     // caching
     void addFolder(QString folderPath);
-    void update(int sfRow, bool isCurrent = true, QString src = "");
+    void updateChange(int sfRow, bool isCurrent = true, QString src = "");
     void folderChanged(const QString folderPath, const QString op);
     void folderChangeCompleted();
 

@@ -86,7 +86,8 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
         return;
     }
 
-    if (G::isFlowLogger || isDebug){
+    // if (G::isFlowLogger || isDebug)
+    {
         G::log("");
         G::log("Selection::setCurrentIndex", "row = " + QString::number(sfIdx.row()) +
                " clearSelection = " + QVariant(clearSelection).toString());
@@ -115,7 +116,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     // thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
 
     // select the new image, load in ImageCache
-    emit loadConcurrent(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");
+    emit updateChange(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");
 }
 
 void Selection::updateCurrentIndex(QModelIndex sfIdx)
