@@ -187,7 +187,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     }
 
     if (G::useUpdateStatus && !G::allMetadataLoaded)
-        emit runStatus(true, true, false, fun); // isRunning, show, success, source
+        emit runStatus(true, true, true, fun); // isRunning, show, success, source
 
 
     if (instance == dm->instance) {
@@ -839,7 +839,7 @@ void MetaRead::dispatch(int id)
             bool clearSelection = false;
             QString src = "MetaRead::dispatch";
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
-            qDebug() << src << "emit fileSelectionChange" << startRow;
+            // qDebug() << src << "emit fileSelectionChange" << startRow;
         }
         //*/
 

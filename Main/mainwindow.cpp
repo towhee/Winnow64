@@ -2785,7 +2785,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /* debug
+    /* debug
     {
         qDebug().noquote()
                  << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2956,7 +2956,7 @@ void MW::thumbHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::thumbHasScrolled",
                "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString()
                + " thumbView->midVisibleCell = "

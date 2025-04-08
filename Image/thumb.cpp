@@ -388,6 +388,12 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 
 void Thumb::presetOffset(uint offset, uint length)
 {
+/*
+    MetaRead reads the metadata and then the thumbnail.  If the thumbnail is embedded
+    the offset and length are in the metadata, which is saved in the DataModel.  The
+    thumbnail is decoded next, but the DataModel may not yet have been updated, so the
+    MetaRead Reader presets the offset and length here.
+*/
     QString fun = "Thumb::presetOffset";
     if (isDebug)
         qDebug().noquote()
@@ -447,12 +453,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         QFile(fPath).setPermissions(newPermissions);
     }
 
-    // get relevent metadata
-    // isDimensions = dm->index(dmRow, G::WidthColumn).data().toInt() > 0;
-    // isAspectRatio = dm->index(dmRow, G::AspectRatioColumn).data().toInt() > 0;
-    // have offsets been preset
-
-    // isThumbLength = dm->index(dmRow, G::LengthThumbColumn).data().toInt() > 0;
+    // get offset and length (both zero if not embedded thumb)
     if (!isPresetOffset) {
         offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
         lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();

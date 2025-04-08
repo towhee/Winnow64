@@ -242,7 +242,6 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
              << "calledBy =" << calledBy
                 ;
              //*/
-    if (G::allMetadataLoaded) return;
 
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;}");
