@@ -129,13 +129,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    // has metadata already been read for this row
-    if (fileSelectionChanged) {
-        if (dm->isMetadataAttempted(sfRow)) {
-            // return;
-        }
-    }
-
     if (isDebug)
     {
         qDebug().noquote()
@@ -170,7 +163,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     if (startRow == 0) bIsDone = true;
     isDone = false;
     success = false;                        // used to update statusbar
-    // set icon range. G::iconChunkLoaded is set in MW::loadCurrent
+    // set icon range. G::iconChunkLoaded is set in MW::updateChange
     firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
     lastIconRow = dm->endIconRange;
 
@@ -193,8 +186,9 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             ;
     }
 
-    if (G::useUpdateStatus) emit runStatus(true, true, false, fun);
-                                        // isRunning, show, success, source
+    if (G::useUpdateStatus && !G::allMetadataLoaded)
+        emit runStatus(true, true, false, fun); // isRunning, show, success, source
+
 
     if (instance == dm->instance) {
         isNewStartRowWhileDispatching = isDispatching;
@@ -488,13 +482,17 @@ void MetaRead::cleanupIcons()
     }
 
     for (int i = 0; i < dm->startIconRange; i++) {
-        if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
+        if (abort) return;
+        if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
+            dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
         }
     }
     for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
-        if (!dm->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            dm->setData(dm->index(i, 0), QVariant(), Qt::DecorationRole);
+        if (abort) return;
+        if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
+            dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
         }
     }
 }
@@ -504,13 +502,16 @@ inline bool MetaRead::needToRead(int row)
     Returns true if either the metadata or icon (thumbnail) has not been loaded.
 */
 {
+    needMeta = needIcon = false;
     if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
-        return true;
+        needMeta = true;
     }
     if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) {
-        return true;
+        if (row >= firstIconRow && row <= lastIconRow) {
+            needIcon = true;
+        }
     }
-    return false;
+    return needMeta || needIcon;
 }
 
 bool MetaRead::nextA()
@@ -811,7 +812,7 @@ void MetaRead::dispatch(int id)
             }
         }
 
-        // /*
+        /*
         QString src = "MetaRead::dispatch ";
         qDebug().noquote()
             << "MetaRead::dispatch     startRow         "
@@ -906,7 +907,7 @@ void MetaRead::dispatch(int id)
         }
 
         // report progress in statusbar and top of filter dock
-        if (showProgressInStatusbar) {
+        if (showProgressInStatusbar && !G::allMetadataLoaded) {
             emit updateProgressInStatusbar(dmRow, dm->rowCount());
             int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
             emit updateProgressInFilter(progress);
@@ -1017,8 +1018,10 @@ void MetaRead::dispatch(int id)
 
     // DISPATCH READER
 
-    /* check if new start row while dispatch reading all metadata.  The user may have jumped
-       to the end of a large folder while metadata is being read.  Also could have scrolled. */
+    /* check if new start row while dispatch reading all metadata. The user may have
+    jumped to the end of a large folder while metadata is being read. Also could have
+    scrolled. */
+
     if (isNewStartRowWhileDispatching) {
         a = startRow;
         b = startRow - 1;
@@ -1041,10 +1044,7 @@ void MetaRead::dispatch(int id)
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
-        // QString fPath = dmIdx.data(G::PathRole).toString();
         QString fPath = sfIdx.data(G::PathRole).toString();
-        // only read icons within the icon chunk range
-        bool okReadIcon = (nextRow >= firstIconRow && nextRow <= lastIconRow);
         if (isDebug)
         {
             QString fun1 = fun + " invoke reader";
@@ -1055,14 +1055,15 @@ void MetaRead::dispatch(int id)
                 << fun.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 << "row =" << QString::number(sfIdx.row()).leftJustified(4, ' ')
-                // << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
-                // << "isReadIcon =" << QVariant(okReadIcon).toString().leftJustified(5, ' ')
-                // << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
-                // << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
-                // << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-                // << "a =" << QString::number(a).leftJustified(4, ' ')
-                // << "b =" << QString::number(b).leftJustified(4, ' ')
-                // << fPath
+                << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
+                << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
+                << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                << fPath
                 ;
         }
 
@@ -1073,10 +1074,13 @@ void MetaRead::dispatch(int id)
                                       Q_ARG(QModelIndex, dmIdx),
                                       Q_ARG(QString, fPath),
                                       Q_ARG(int, dm->instance),
-                                      Q_ARG(bool, okReadIcon)
+                                      Q_ARG(bool, needMeta),
+                                      Q_ARG(bool, needIcon)
                                       );
         }
     }
+
+    /*
     // nothing to read, we're finished
     // else {
     //     cycling[id] = false;
@@ -1096,7 +1100,7 @@ void MetaRead::dispatch(int id)
     //             ;
     //     }
     // }
-
+    */
 
     // if done in both directions fire delay to quit in case isDone fails
     if (aIsDone && bIsDone && !isDone) {
@@ -1206,7 +1210,8 @@ void MetaRead::dispatchFinished(QString src)
     bool running = false;
     bool show = true;
     success = allMetaIconLoaded();
-    if (G::useUpdateStatus) emit runStatus(running, show, success, fun);
+    if (G::useUpdateStatus && !G::allMetadataLoaded)
+        emit runStatus(running, show, success, fun);
     cleanupIcons();
     isDone = true;
     isDispatching = false;

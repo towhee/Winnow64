@@ -186,6 +186,10 @@ DataModel::DataModel(QObject *parent,
     emptyImg.load(":/images/no_image.png");
     setThumbnailLegend();
 
+    iconChunkSize = G::maxIconChunk;
+    defaultIconChunkSize = G::maxIconChunk;
+
+
     // set true for debug output
     isDebug = false;
 }
@@ -331,7 +335,7 @@ void DataModel::clearDataModel()
     // reset firstFolderPathWithImages
     firstFolderPathWithImages = "";
     // reset iconChunkSize
-    iconChunkSize = defaultIconChunkSize;
+    // iconChunkSize = defaultIconChunkSize;
     // reset missing thumb (jpg/tiff)
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
@@ -588,6 +592,7 @@ void DataModel::processNextFolder()
     // QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
         isProcessingFolders = false;
+        emit folderChange();
         return;
     }
 
@@ -609,18 +614,18 @@ void DataModel::processNextFolder()
     if (addFolderImages) {
         addFolder(folderPath);
         // signal MW::loadChanged
-        if (!abort/* && folderQueue.empty()*/) {
-            emit addedFolderToDM(folderOperation.first, "Add");
-        }
+        // if (!abort/* && folderQueue.empty()*/) {
+        //     emit addedFolderToDM(folderOperation.first, "Add");
+        // }
     }
 
     // remove images from model
     else {
         removeFolder(folderPath);
        // signal MW::loadChanged if last removal in queue
-        if (isQueueRemoveEmpty()) {
-            emit removedFolderFromDM(folderOperation.first, "Remove");
-        }
+        // if (isQueueRemoveEmpty()) {
+        //     emit removedFolderFromDM(folderOperation.first, "Remove");
+        // }
     }
 
     // Continue with the next folder operation
@@ -2140,7 +2145,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromI
 
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
-    setData(index(dmIdx.row(), G::IconLoadedColumn), ok);
+    setData(index(dmIdx.row(), G::IconLoadedColumn), true);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -2167,8 +2172,12 @@ bool DataModel::iconLoaded(int sfRow, int instance)
 
 int DataModel::iconCount()
 {
+/*
+    used for reporting / debugging only
+*/
     if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance;
     int count = 0;
+    QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
         if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
@@ -2244,7 +2253,7 @@ bool DataModel::isIconRangeLoaded()
 
 void DataModel::setIconRange(int sfRow)
 /*
-    Called by MW::update and MW::updateIconRange.
+    Called by MW::updateChange and MW::updateIconRange.
 */
 {
     // if (iconChunkSize >= rowCount()) {
@@ -2967,14 +2976,16 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
     rpt << "\n" << G::sj("currentDMRow", 27) << G::s(currentDmRow);
     rpt << "\n" << G::sj("currentSFRow", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("firstVisibleRow", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("lastVisibleRow", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("startIconRange", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("endIconRange", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("iconChunkSize", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("firstVisibleIcon", 27) << G::s(firstVisibleIcon);
+    rpt << "\n" << G::sj("lastVisibleIcon", 27) << G::s(lastVisibleIcon);
+    rpt << "\n" << G::sj("startIconRange", 27) << G::s(startIconRange);
+    rpt << "\n" << G::sj("endIconRange", 27) << G::s(endIconRange);
+    rpt << "\n" << G::sj("iconChunkSize", 27) << G::s(iconChunkSize);
+    rpt << "\n" << G::sj("defaultIconChunkSize", 27) << G::s(defaultIconChunkSize);
+    rpt << "\n" << G::sj("hugeIconThreshold", 27) << G::s(hugeIconThreshold);
     rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
-    rpt << "\n" << G::sj("loadingModel", 27) << G::s(hasDupRawJpg);
-    rpt << "\n" << G::sj("basicFileInfoLoaded", 27) << G::s(hasDupRawJpg);
+    rpt << "\n" << G::sj("loadingModel", 27) << G::s(loadingModel);
+    rpt << "\n" << G::sj("basicFileInfoLoaded", 27) << G::s(basicFileInfoLoaded);
     rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
     rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abort);
     rpt << "\n" << G::sj("dmRowCount", 27) << G::s(rowCount());
@@ -3048,6 +3059,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("isMetadataAttempted", 25) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
+    rpt << "\n  " << G::sj("isIconLoaded", 25) << G::s(index(row, G::IconLoadedColumn).data());
     rpt << "\n  " << G::sj("isMissingThumb", 25) << G::s(index(row, G::MissingThumbColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());

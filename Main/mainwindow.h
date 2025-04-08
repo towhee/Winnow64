@@ -392,7 +392,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
+    // void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();
     void initializeImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
     void imageCacheChangeParam(int maxMB, int minMB, bool showStatus, int wtAhead);
@@ -575,7 +575,6 @@ private slots:
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
-//    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
                                        bool success, QString src = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
@@ -583,10 +582,9 @@ private slots:
                                 float currMB, int maxMB, int tFirst, int tLast,
                                 QString source);
     // caching
-    void addFolder(QString folderPath);
-    void updateChange(int sfRow, bool isCurrent = true, QString src = "");
-    void folderChanged(const QString folderPath, const QString op);
+    void folderChanged(/*const QString folderPath, const QString op*/);
     void folderChangeCompleted();
+    void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
     void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);
