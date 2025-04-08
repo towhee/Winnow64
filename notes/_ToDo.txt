@@ -146,6 +146,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix icon chunking
 - Update "row of rows" in status bar when add multiple folders to existing datamodel
 - Zero size files resulting in slow crash
 - Orientation should be 8 for /Users/roryhill/Pictures/_test/2023-05-28_0002-Enhanced-NR.dng

@@ -117,7 +117,7 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     QString fun = "Reader::readIcon";
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(col0Width)
@@ -154,7 +154,6 @@ void Reader::readIcon()
     if (!abort && loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         emit setIcon(dmIdx, pm, loadedIcon, instance, "MetaRead::readIcon");
-        if (dm->rowCount() > 1000)
         if (!pm.isNull()) return;
     }
 

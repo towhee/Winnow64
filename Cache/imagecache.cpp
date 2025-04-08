@@ -1635,15 +1635,18 @@ void ImageCache::cacheImage(int id, int sfRow)
         }
     }
 
-    // image size in  MB
-    const int w = decoders[id]->image.width();
-    const int h = decoders[id]->image.height();
-    float mb = static_cast<float>(w * h * 1.0 / 262144);
+    // // image size in  MB
+    // const int w = decoders[id]->image.width();
+    // const int h = decoders[id]->image.height();
+    // float mb = static_cast<float>(w * h * 1.0 / 262144);
 
-    // do not add to cache if image cache is full
-    if (getImCacheSize() + mb > maxMB) {
-        return;
-    }
+    // quint64 x = getImCacheSize() + mb;
+    // qDebug() << "row =" << sfRow << "cacheImage size in MB =" << x << "maxMB =" << maxMB;
+
+    // // do not add to cache if image cache is full
+    // if (getImCacheSize() + mb > maxMB) {
+    //     return;
+    // }
 
     // cache the image
     if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);

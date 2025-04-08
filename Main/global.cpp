@@ -132,8 +132,7 @@ bool autoAdvance;
 // icons
 int maxIconSize = 256;
 int minIconSize = 40;
-int maxIconChunk = 500;
-// int maxIconChunk = 25000;
+int maxIconChunk = 25000;
 
 // status
 bool isModifyingDatamodel;
