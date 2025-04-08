@@ -143,6 +143,8 @@ private:
     int b = -1;
     bool isAhead;
     bool isNewStartRowWhileDispatching;
+    bool needMeta;
+    bool needIcon;
     QString src;
 
     QStringList err;

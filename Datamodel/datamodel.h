@@ -182,8 +182,9 @@ public:
 
 signals:
     void stop(QString src);
-    void addedFolderToDM(QString folderName, QString op);
-    void removedFolderFromDM(QString folderName, QString op);
+    void folderChange();
+    // void addedFolderToDM(QString folderName, QString op);
+    // void removedFolderFromDM(QString folderName, QString op);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);

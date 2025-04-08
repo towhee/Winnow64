@@ -245,8 +245,9 @@ void MW::createDataModel()
     else dm->showThumbNailSymbolHelp = true;
 
     connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
-    connect(dm, &DataModel::addedFolderToDM, this, &MW::folderChanged);
-    connect(dm, &DataModel::removedFolderFromDM, this, &MW::folderChanged);
+    connect(dm, &DataModel::folderChange, this, &MW::folderChanged);
+    // connect(dm, &DataModel::addedFolderToDM, this, &MW::folderChanged);
+    // connect(dm, &DataModel::removedFolderFromDM, this, &MW::folderChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -257,7 +258,7 @@ void MW::createDataModel()
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
-    connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
+    // connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters);
 
@@ -314,7 +315,7 @@ void MW::createMetaRead()
     // dm->defaultIconChunkSize = 200;
     // dm->defaultIconChunkSize = G::maxIconChunk;
 
-    dm->setChunkSize(dm->defaultIconChunkSize);
+    // dm->setChunkSize(dm->defaultIconChunkSize);
 
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);

@@ -548,7 +548,7 @@ void Selection::recover(QString src)
     if (G::isLogger || isDebug) G::log("Selection::recover");
     QItemSelection selection;
 
-    QMutexLocker locker(&mutex);
+    // QMutexLocker locker(&mutex);
 
     foreach (QModelIndex dmIdx, dmSelectedRows) {
         if (!dmIdx.isValid()) return;

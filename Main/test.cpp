@@ -392,8 +392,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QStringList usbDevices = Mac::listMountedVolumes();
-    for (QString s : usbDevices) qDebug() << s;
+    tableView->updateVisible("");
+    // qDebug() << G::allMetadataLoaded;
+    // QStringList usbDevices = Mac::listMountedVolumes();
+    // for (QString s : usbDevices) qDebug() << s;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

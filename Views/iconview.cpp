@@ -432,11 +432,12 @@ void IconView::updateVisible(QString src)
     firstVisibleCell = tlIdx.row();
     lastVisibleCell = brIdx.row();
     if (lastVisibleCell == -1) lastVisibleCell = dm->sf->rowCount() - 1;
-    midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
+    midVisibleCell = firstVisibleCell + (visibleCellCount / 2);
+    // midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     isFirstCellPartial = !viewport()->rect().contains(visualRect(tlIdx));
     isLastCellPartial = !viewport()->rect().contains(visualRect(brIdx));
-    if (isDebug)
+    // if (isDebug)
     {
     qDebug() << "IconView::updateVisible"
              << objectName()

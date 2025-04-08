@@ -117,7 +117,7 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     QString fun = "Reader::readIcon";
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(col0Width)
@@ -133,8 +133,10 @@ void Reader::readIcon()
     QString msg;
     QImage image;
 
-    // pass embedded thumb offset and length in case datamodel not updated
-    if (!abort) thumb->presetOffset(offsetThumb, lengthThumb);
+    // pass embedded thumb offset and length in case datamodel not updated yet
+    if (!abort) {
+        if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
+    }
 
     // get thumbnail or err.png or generic video
     if (!abort) loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
@@ -152,6 +154,7 @@ void Reader::readIcon()
     if (!abort && loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         emit setIcon(dmIdx, pm, loadedIcon, instance, "MetaRead::readIcon");
+        if (dm->rowCount() > 1000)
         if (!pm.isNull()) return;
     }
 
@@ -171,18 +174,20 @@ void Reader::readIcon()
     }
 }
 
-void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isReadIcon)
+void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
+                  bool needMeta, bool needIcon)
 {
     t.restart();
     abort = false;
     this->dmIdx = dmIdx;
     fPath = filePath;
     this->instance = instance;
-    this->isReadIcon = isReadIcon;
     isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
     status = Status::Success;
     pending = true;     // set to false when processed in MetaRead::dispatch
     loadedIcon = false;
+    offsetThumb = 0;
+    lengthThumb = 0;
 
     QString fun = "Reader::read";
     if (isDebug)
@@ -191,7 +196,9 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-        << "isGUI =" << G::isGuiThread()
+        << "okReadMeta =" << needMeta
+        << "okReadIcon =" << needIcon
+        // << "isGUI =" << G::isGuiThread()
         // << "status =" << statusText.at(status)
         // << "isRunning =" << isRunning()
         // << "instanceOk() =" << instanceOk()
@@ -199,8 +206,8 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance, bool isRead
             ;
     }
 
-    if (!abort) readMetadata();
-    if (!abort) readIcon();
+    if (!abort && needMeta) readMetadata();
+    if (!abort && needIcon) readIcon();
 
     // if (abort) return;
     if (!abort) emit done(threadId);

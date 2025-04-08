@@ -90,16 +90,13 @@ TableView::TableView(QWidget *parent, DataModel *dm)
 void TableView::updateVisible(QString src)
 {
     if (G::isLogger) G::log("TableView::updateVisible");
-    //    /*
-    //qDebug() << "TableView::updateVisible src =" << src;
-    //*/
     int lastRow = dm->sf->rowCount() - 1;
     if (rowHeight(0)) visibleRowCount = height() / rowHeight(0);
     else visibleRowCount = 0;
     firstVisibleRow = rowAt(0);
     lastVisibleRow = firstVisibleRow + visibleRowCount - 1;
     if (lastVisibleRow > lastRow) lastVisibleRow = lastRow;
-    midVisibleRow = lastVisibleRow / 2;
+    midVisibleRow = lastVisibleRow - visibleRowCount / 2;
     /*
     qDebug() << "TableView::updateVisible"
              << "firstVisibleRow =" << firstVisibleRow

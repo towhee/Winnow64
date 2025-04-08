@@ -2202,20 +2202,20 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
-    // failsafe to load thumbnail if MetaRead failed
-    if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
-        // qDebug() << source << "reloading thumb for row" << current.row();
-        QImage image;
-        Thumb *thumb = new Thumb(dm);
-        bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
-        if (ok) {
-            QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
-                                                         Qt::KeepAspectRatio));
-            QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
-            dm->setIcon(dmIdx, pm, ok, dm->instance, source);
-        }
-        delete thumb;
-    }
+    // // failsafe to load thumbnail if MetaRead failed
+    // if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
+    //     // qDebug() << source << "reloading thumb for row" << current.row();
+    //     QImage image;
+    //     Thumb *thumb = new Thumb(dm);
+    //     bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
+    //     if (ok) {
+    //         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
+    //                                                      Qt::KeepAspectRatio));
+    //         QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
+    //         dm->setIcon(dmIdx, pm, ok, dm->instance, source);
+    //     }
+    //     delete thumb;
+    // }
 
     // update loupe/video view
     videoView->stop();
@@ -2545,7 +2545,8 @@ void MW::updateDefaultIconChunkSize(int size)
     This is called from preferences when the default icon chunk size is changed. Settings
     are updated and if the current chunk size is smaller then it is updated.
 */
-    if (G::isLogger) G::log("MW::updateDefaultIconChunkSize");
+    // if (G::isLogger)
+        G::log("MW::updateDefaultIconChunkSize");
     // update settings
     // settings->setValue("iconChunkSize", size);
     dm->defaultIconChunkSize = size;
@@ -2626,147 +2627,88 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     dm->visibleIcons = visibleIcons;
 
     /* debug
-    qDebug()
+    qDebug().noquote()
          << "MW::updateIconRange" << "row =" << dm->currentSfRow << "src =" << src
          << "dm->iconChunkSize =" << dm->iconChunkSize
          << "chunkSizeChanged =" << chunkSizeChanged
          // << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
          // << "G::isInitializing =" << G::isInitializing
-         // << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-         // << "thumbView->lastVisibleCell  =" << thumbView->lastVisibleCell
+         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+         << "thumbView->lastVisibleCell  =" << thumbView->lastVisibleCell
          // << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
          // << "gridView->lastVisibleCell  =" << gridView->lastVisibleCell
          // << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
          // << "tableView->lastVisibleCell  =" << tableView->lastVisibleRow
-         // << "\n\tfirstVisible =" << firstVisible
-         // << "lastVisible =" << lastVisible
-         // << "\n\tdm->startIconRange =" << dm->startIconRange
-         // << "dm->endIconRange =" << dm->endIconRange
+         << "\n\tfirstVisible =" << firstVisible
+         << "lastVisible =" << lastVisible
+         << "\n\tdm->startIconRange =" << dm->startIconRange
+         << "dm->endIconRange =" << dm->endIconRange
             ;
 //        */
 
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
         bool fileSelectionChange = false;
+        G::iconChunkLoaded = false;
         updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
     }
 
     return chunkSizeChanged;
 }
 
-void MW::folderChanged(const QString folderPath, const QString op)
+void MW::folderChanged(/*const QString folderPath, const QString op*/)
 {
 /*
     Signaled from DataModel::processNextFolder
 */
     QString fun = "MW::folderChanged";
-    QString msg = op + " dm->folderList.count = " + QString::number(dm->folderList.count()) +
-                  " folderPath = " + folderPath;
+    QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    /*
+    // /*
+    if (dm->rowCount() > 1000)
     qDebug().noquote()
             << fun
-            << "op =" << op
+            << "row 1000 icon loaded =" << dm->index(1000, G::IconLoadedColumn).data().toBool()
             << "instance =" << instance
-            << "dm->instance =" << dm->instance
             << "dm->folderList.count = =" << dm->folderList.count()
-            << "\n\tfolderPath =             " << folderPath
-            << "\n\tdm->currentFilePath =    " << dm->currentFilePath
             << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
                ;//*/
 
-    if (dm->isQueueEmpty()) {
-        bookmarks->setEnabled(true);
-        fsTree->setEnabled(true);
-        G::isModifyingDatamodel = false;
+    bookmarks->setEnabled(true);
+    fsTree->setEnabled(true);
+    G::isModifyingDatamodel = false;
+
+    // datamodel is empty
+    if (dm->rowCount()) {
+        infoView->enable(true);  // not setEnabled() because infoView uses a delegate
     }
-
-    if (op == "Remove") {
-        /*
-        qDebug() << fun << "Remove  rowCount =" << dm->rowCount() << dm->sf->rowCount()
-                 << dm->folderList.count() << dm->folderList;//*/
-        if (dm->isQueueRemoveEmpty()) {
-            // update bookmarks if only one folder remaining
-            if (dm->folderList.count() == 1) {
-                // new primary folder
-                QString newPrimaryFolder = dm->folderList.at(0);
-                // qDebug() << fun << "Remove  bookmarks->select" << newPrimaryFolder;
-                QSignalBlocker bookmarkBlocker(bookmarks);
-                bookmarks->select(newPrimaryFolder);
-                bookmarkBlocker.unblock();
-            }
-
-            sel->select(dm->currentSfRow);
-
-            if (dm->isAllMetadataAttempted()) {
-                G::allMetadataLoaded = true;
-                folderChangeCompleted();
-            }
-            // imageCache->rebuildImageCacheParameters(dm->currentFilePath, "MW::loadConcurrentChanged");
-        }
-    }
-
-    if (op == "Add") {
-        // added folder(s) may be empty
-        if (dm->rowCount()) {
-            addFolder(folderPath);
-            infoView->enable(true);  // not setEnabled() because infoView uses a delegate
-        }
-        else if (dm->isQueueEmpty()) {
-            updateStatus(false, "No supported images in this folder", "MW::folderSelectionChange");
-            setCentralMessage("The folder \"" + folderPath + "\" does not have any eligible images");
-            infoView->enable(false);  // not setEnabled() because infoView uses a delegate
-        }
-        return;
-    }
-}
-
-void MW::addFolder(QString folderPath)
-/*
-    MW::loadFolder
-    - Estimate memory req'd for datamodel for new folder(s).
-    - The default image is the first one in the datamodel.  However, if
-      folderAndFileChangePath has been set by a drop operation or a
-      handleStartupArgs (ie embellish from Lightroom) then set the
-      target image accordingly.
-    - Update the icon range based on the target image.
-    - Set image cache parameters and build image cacheItemList.
-    - Selection::selectRow
-
-    - See top of MainWindow for program flow
-
-    - Do not use reset as it clears the datamodel
-*/
-{
-    QString fun = "MW::addFolder";
-    if (G::isLogger || G::isFlowLogger)
-    {
-        bool isFirstFolderPathWithImages = folderPath == dm->firstFolderPathWithImages;
-        QString msg =
-            "isFirstFolderPathWithImages = " + QVariant(isFirstFolderPathWithImages).toString()
-            + " folderQueue.count = " + QVariant(dm->folderQueue.count()).toString()
-            + " isEmpty = " + QVariant(dm->isQueueEmpty()).toString()
-            + " folderPath = " + folderPath
-            + " folderAndFileChangePath = " + QVariant(folderAndFileChangePath).toString()
-                        ;
-        G::log(fun, msg);
-    }
-
-    QString src = "MW::addFolder";
-
-    // set last folder
-    if (dm->folderList.count() == 1) {
-        if (dm->rowCount()) {
-            settings->setValue("lastDir", folderPath);
-            addRecentFolder(folderPath);
-        }
+    else {
+        updateStatus(false, "No supported images", "MW::folderChanged");
+        setCentralMessage("No eligible images.");
+        infoView->enable(false);  // not setEnabled() because infoView uses a delegate
     }
 
     // if there was a folder and file change
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
         folderAndFileChangePath = "";
+    }
+    // reset datamodel current index if it has been removed
+    else if (!dm->currentDmIdx.isValid()) {
+        dm->setCurrent(dm->index(0,0), dm->instance);
+        imageView->isFirstImageNewInstance = true;
+    }
+
+    // Only one folder selected
+    if (dm->folderList.count() == 1) {
+        // sync bookmarks without triggering another folderSelectionChange
+        QSignalBlocker bookmarkBlocker(bookmarks);
+        bookmarks->select(dm->folderList.at(0));
+        bookmarkBlocker.unblock();
+
+        settings->setValue("lastDir", dm->folderList.at(0));
+        addRecentFolder(dm->folderList.at(0));
     }
 
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
@@ -2775,6 +2717,14 @@ void MW::addFolder(QString folderPath)
     int rows = dm->rowCount();
     int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
+
+    // If no new images added to datamodel (only removals or blank folders)
+    if (dm->isAllMetadataAttempted()) {
+        G::allMetadataLoaded = true;
+        G::iconChunkLoaded = true;
+        folderChangeCompleted();
+        return;
+    }
 
     // reset metadata progress
     cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
@@ -2788,34 +2738,24 @@ void MW::addFolder(QString folderPath)
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
-    // first folder containing images when multiple folders selected
-    if (folderPath == dm->firstFolderPathWithImages) {
-        // ImageView set zoom = fit for the first image of a new folder
-        imageView->isFirstImageNewInstance = true;
+    // initialize metaRead only when new instance and first folder loaded
+    QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
 
-        // initialize metaRead only when new instance and first folder loaded
-        QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
+    // initialize imageCache
+    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
+    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+    emit initializeImageCache(netCacheMBSize, cacheMinMB,
+                              isShowCacheProgressBar, cacheWtAhead);
 
-        // initialize imageCache
-        int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-        if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-        emit initializeImageCache(netCacheMBSize, cacheMinMB,
-                                  isShowCacheProgressBar, cacheWtAhead);
-
-        // sel->select(dm->currentSfRow);
-    }
-
-    // trigger metaRead to update metadata in datamodel without file selection change
-    if (dm->isQueueEmpty()) {
-        // sel->select(dm->currentSfRow);
-        if (G::useReadMeta) {
-            updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-            QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
-                                      Q_ARG(int, 0),
-                                      Q_ARG(bool, true),
-                                      Q_ARG(QString, src)
-                                      );
-        }
+    // rev up metaRead
+    if (G::useReadMeta) {
+        updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+        dm->setIconRange(0);
+        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                  Q_ARG(int, 0),
+                                  Q_ARG(bool, true),
+                                  Q_ARG(QString, fun)
+                                  );
     }
 }
 
@@ -2855,7 +2795,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
                  << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
                  << "dm->startIconRange =" << dm->startIconRange
                  << "dm->endIconRange =" << dm->endIconRange
-                 << "dm->iconCount =" << dm->iconCount()
+                 // << "dm->iconCount =" << dm->iconCount()
                  // << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
     } //*/
@@ -2986,7 +2926,7 @@ void MW::folderChangeCompleted()
         // thumbView->sortThumbs(sortColumn, isReverseSort);
     }
 
-    updateStatus(true, "", "MW::folderCahngeCompleted");
+    updateStatus(true, "", "MW::folderChangeCompleted");
     // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
 
     // update image cache in case not already done during metaRead
@@ -3016,8 +2956,12 @@ void MW::thumbHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger || G::isFlowLogger)
-        G::log("MW::thumbasScrolled", "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString());
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MW::thumbHasScrolled",
+               "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString()
+               + " thumbView->midVisibleCell = "
+               + QVariant(thumbView->midVisibleCell).toString()
+               );
 
     if (G::isInitializing) return;
 

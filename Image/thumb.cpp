@@ -457,6 +457,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
         lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
     }
+    isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
     /*
     qDebug() << "Thumb::loadThumb"

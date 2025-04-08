@@ -23,7 +23,6 @@ public:
     QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
     int instance = 0;
-    bool isReadIcon = true;
     qint64 msToRead;
     QString fPath = "";
     QString errMsg = "";
@@ -58,7 +57,8 @@ signals:
     void done(int threadId);
 
 public slots:
-    void read(QModelIndex dmIdx, QString filePath, int instance, bool isReadIcon);
+    void read(QModelIndex dmIdx, QString filePath, int instance,
+              bool needMeta, bool needIcon);
     void abortProcessing();
     void stop();
 
