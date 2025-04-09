@@ -3,15 +3,11 @@
 
 #include <QtWidgets>
 #include <QMessageBox>
-#include <algorithm>                // req'd for sorting fileInfoList
 #include <QWaitCondition>           // req'd for removeFolder process
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
-//#include "Cache/framedecoder.h"
-#include "progressbar.h"            // rgh used??
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
-#include "Cache/cachedata.h"        // req'd by setTargetRange
 
 class SortFilter : public QSortFilterProxyModel
 {
@@ -50,7 +46,6 @@ public:
               bool &combineRawJpg);
 
     void setModelProperties();
-    // bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row, int instance);
     bool refreshMetadataForItem(int sfRow, int instance);
     qint64 rowBytesUsed(int dmRow);
@@ -231,11 +226,9 @@ public slots:
 private slots:
 
 private:
-    // QWidget *mw;
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
-    // QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
     static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 
@@ -243,7 +236,6 @@ private:
     void enqueueOp(const QString folderPath, const QString op);
     // QQueue<QPair<QString, bool>> folderQueue;
     QMutex queueMutex;
-    // bool isProcessing = false;
 
     enum ErrorType {
         General,

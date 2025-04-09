@@ -43,7 +43,8 @@ void Mac::initializeAppDelegate() {
 
 void Mac::availableMemory()
 {
-    if (G::isLogger) G::log("Mac::availableMemory");
+    if (G::isLogger)
+      G::log("Mac::availableMemory");
     vm_size_t page_size;
     mach_port_t mach_port;
     mach_msg_type_number_t count;
@@ -62,6 +63,20 @@ void Mac::availableMemory()
                                  (int64_t)vm_stats.wire_count) *  (int64_t)page_size;*/
         G::availableMemoryMB = static_cast<quint32>(free_memory / (1024 * 1024));
     }
+}
+
+qint64 Mac::getResidentMemoryUsageBytes()
+{
+  // if (G::isLogger)
+    G::log("Mac::getResidentMemoryUsageBytes");
+  struct task_basic_info info;
+    mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;
+    kern_return_t kr = task_info(mach_task_self(),
+                                 TASK_BASIC_INFO,
+                                 (task_info_t)&info,
+                                 &size);
+    if (kr != KERN_SUCCESS) return -1;
+    return static_cast<qint64>(info.resident_size);
 }
 
 void Mac::joinAllSpaces(WId wId)

@@ -1415,11 +1415,11 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
 
 void DataModel::imageCacheWaiting(int sfRow)
 {
-    // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
+    qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
     int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
     imageCacheWaitingForRow = dmRow;
     if (metadataLoaded(dmRow)) {
-        // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
+        qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
         imageCacheWaitingForRow = -1;
         emit rowLoaded();
     }

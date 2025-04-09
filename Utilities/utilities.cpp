@@ -277,23 +277,45 @@ void Utilities::setOpacity(QWidget *widget, qreal opacity)
     widget->setGraphicsEffect(effect);
 }
 
-QString Utilities::formatMemory(qulonglong bytes, int precision)
+QString Utilities::formatMemory(qulonglong bytes, int precision, bool useBinary)
 {
-    qulonglong x = 1024;
-    if (bytes == 0) return "0";
-    if (bytes < x) return QString::number(bytes) + " bytes";
-    if (bytes < x * 1024)
-        return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " KB";
-    x *= 1024;
-    if (bytes < (x * 1024))
-        return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " MB";
-    x *= 1024;
-    if (bytes < (x * 1024))
-        return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " GB";
-    x *= 1024;
-    if (bytes < (x * 1024))
-        return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " TB";
-    return "More than TB";
+    // qulonglong x = 1024;
+    // if (bytes == 0) return "0";
+    // if (bytes < x) return QString::number(bytes) + " bytes";
+    // if (bytes < x * 1024)
+    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " KB";
+    // x *= 1024;
+    // if (bytes < (x * 1024))
+    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " MB";
+    // x *= 1024;
+    // if (bytes < (x * 1024))
+    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " GB";
+    // x *= 1024;
+    // if (bytes < (x * 1024))
+    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " TB";
+    // return "More than TB";
+
+    // Define units and base depending on the format
+    G::log("Mac::formatMemory");
+    QStringList units = useBinary
+        ? QStringList{"bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
+        : QStringList{"bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+
+    int base = useBinary ? 1024 : 1000;
+
+    double size = static_cast<double>(bytes);
+    int unitIndex = 0;
+
+    while (size >= base && unitIndex < units.size() - 1) {
+        size /= base;
+        ++unitIndex;
+    }
+
+    if (unitIndex == 0) {
+        return QString("%1 %2").arg(bytes).arg(units[unitIndex]);
+    } else {
+        return QString("%1 %2").arg(size, 0, 'f', precision).arg(units[unitIndex]);
+    }
 }
 
 QString Utilities::enquote(QString &s)
