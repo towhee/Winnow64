@@ -12,7 +12,7 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
-- When remove folder from FSTree selection the Selection::setCurrentIndex can be invalid index and crashes
+- When set color / rating for icon refresh icons
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Full Screen toggle not returning to previous size window
 - Check missing thumbnails process is working
@@ -34,7 +34,6 @@ BUGS / TO DO
 - Check MW::refreshCurrentFolder still works
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
-- CR2/CR3 shutter count
 - DataModel could fileInfoList be local - req'd as class variable after model built?
 - When select folder using include subfolders make sure it is and remains selected in FSTree
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
@@ -148,6 +147,7 @@ ENHANCEMENTS
 DONE/FIXED
 - Fix icon chunking
 - Update "row of rows" in status bar when add multiple folders to existing datamodel
+- When remove folder from FSTree selection the Selection::setCurrentIndex can be invalid index and crashes
 - Zero size files resulting in slow crash
 - Orientation should be 8 for /Users/roryhill/Pictures/_test/2023-05-28_0002-Enhanced-NR.dng
 - Setting color or rating should not filter unless a color filter has been set

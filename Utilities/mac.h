@@ -25,6 +25,7 @@ class Mac
 public:
     static void initializeAppDelegate();
     static void availableMemory();
+    static qint64 getResidentMemoryUsageBytes();
     static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();

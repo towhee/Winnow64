@@ -481,12 +481,8 @@ void ImageCache::setTargetRange(int key)
 /*
     The target range is the list of images being targeted to cache, based on the current
     image, the direction of travel, the caching strategy and the maximum memory allotted
-    to the image cache.
-
-    The start and end of the target range are determined (targetFirst and targetLast) and
-    the boolean isTarget is assigned for each item in the cacheItemList.
-
-    Each item in the target range is added to the toCache list.
+    to the image cache.  The DataModel is iterated to populate the toCache list of images
+    to cache.
 
     • The direction of travel (dot) isForward boolean is calculated to indicate whether
       the caching should proceed forward or backward from the current position (key).
@@ -502,6 +498,11 @@ void ImageCache::setTargetRange(int key)
 
     • The function maintains flags (aheadDone and behindDone) to indicate when caching in
       either direction is complete.
+
+    • The start and end of the target range (targetFirst and targetLast) are assigned when
+      the cache allocated memory (maxMB) has been reached or all items in the DataModel
+      have been iterated.  targetFirst and targetLast are used in trimOutsideTargetRange
+      and showCacheStatus.
 */
     QString fun = "ImageCache::setTargetRange";
     fun = fun.leftJustified(col0Width, ' ');
@@ -539,7 +540,7 @@ void ImageCache::setTargetRange(int key)
             ;
     }
 
-    // Iterate while there is space in the cache
+    // Iterate while there is space in the cache or datamodel is exhausted
     int pos = 0;
     int i = 0;
     while (sumMB < maxMB && !(aheadDone && behindDone)) {

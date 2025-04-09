@@ -392,7 +392,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    tableView->updateVisible("");
+    qApp->processEvents();
+    qDebug() << icd->imCache.size();
+    return;
+    G::log("test");
+    quint64 x = Mac::getResidentMemoryUsageBytes();
+    qDebug() << "ResidentMemoryUsage =" << Utilities::formatMemory(x, 2);
     // qDebug() << G::allMetadataLoaded;
     // QStringList usbDevices = Mac::listMountedVolumes();
     // for (QString s : usbDevices) qDebug() << s;

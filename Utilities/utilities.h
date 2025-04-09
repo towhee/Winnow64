@@ -42,7 +42,7 @@ public:
     static void setOpacity(QWidget *widget, qreal opacity);
 
     // Format
-    static QString formatMemory(qulonglong bytes, int precision = 1);
+    static QString formatMemory(qulonglong bytes, int precision = 1, bool useBinary = true);
     static QString enquote(QString &s);
     static QString centeredRptHdr(QChar padChar, QString title, int width = 180);
 

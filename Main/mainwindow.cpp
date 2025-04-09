@@ -2471,6 +2471,9 @@ bool MW::reset(QString src)
     dm->clearDataModel();
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
+    // Image cache
+    icd->clear();
+
     // used by updateStatus
     pickMemSize = "";
     updateStatus(false, "", "MW::reset");
