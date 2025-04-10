@@ -38,7 +38,8 @@ QThread* guiThread;;            // use to check
 bool isInitializing;            // flag program starting / initializing
 bool stop = false;              // flag to stop everything involving DM loading new dataset
 bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
-                                // all new folder processes.
+bool removingRowsFromDM;        // flag when datamodel rows are being deleted
+
 // datamodel status
 bool allMetadataLoaded;         // all metadata attempted
 bool iconChunkLoaded;           // all icon chunk loaded

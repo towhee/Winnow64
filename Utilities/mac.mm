@@ -67,7 +67,7 @@ void Mac::availableMemory()
 
 qint64 Mac::getResidentMemoryUsageBytes()
 {
-  // if (G::isLogger)
+  if (G::isLogger)
     G::log("Mac::getResidentMemoryUsageBytes");
   struct task_basic_info info;
     mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;

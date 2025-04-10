@@ -109,7 +109,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
         //*/
 
     // scroll first to insure icons are painted first when select a new image
-    // thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
+    thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
 
     // select the new image, load in ImageCache
     emit updateChange(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");

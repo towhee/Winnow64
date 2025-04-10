@@ -279,24 +279,13 @@ void Utilities::setOpacity(QWidget *widget, qreal opacity)
 
 QString Utilities::formatMemory(qulonglong bytes, int precision, bool useBinary)
 {
-    // qulonglong x = 1024;
-    // if (bytes == 0) return "0";
-    // if (bytes < x) return QString::number(bytes) + " bytes";
-    // if (bytes < x * 1024)
-    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " KB";
-    // x *= 1024;
-    // if (bytes < (x * 1024))
-    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " MB";
-    // x *= 1024;
-    // if (bytes < (x * 1024))
-    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " GB";
-    // x *= 1024;
-    // if (bytes < (x * 1024))
-    //     return QString::number(static_cast<double>(bytes) / x, 'f', precision) + " TB";
-    // return "More than TB";
-
+/*
+    Binary is the default.
+    • Use binary (1024) if you’re showing memory (RAM, image size, cache size).
+    • Use SI (1000) if you’re showing disk space, drive capacities, or network speeds
+*/
     // Define units and base depending on the format
-    G::log("Mac::formatMemory");
+    // G::log("Mac::formatMemory");
     QStringList units = useBinary
         ? QStringList{"bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
         : QStringList{"bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};

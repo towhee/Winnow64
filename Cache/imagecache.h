@@ -78,6 +78,7 @@ public slots:
                         bool isShowCacheStatus, int cacheWtAhead);
     void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
+    void updateInstance();
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
