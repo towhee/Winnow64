@@ -454,13 +454,14 @@ void DataModel::remove(QString fPath)
     // if (isDebug)
         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
 
+    // do not use a mutex here  rgh 2025-04-10
+
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
             QModelIndex par = QModelIndex();
-            // do not use a mutex here
             beginRemoveRows(par, row, row);
             qDebug() << "DataModel::remove"
                      << "row =" << row
@@ -475,7 +476,7 @@ void DataModel::remove(QString fPath)
     rebuildRowFromPathHash();
 }
 
-/* MULTI-SELECT FOLDERS
+/* MULTI-SELECT FOLDERS SECTION
 
     When a folder is selected it is added to the folderQueue. If a folder is unselected,
     it is added to the folderQueue, but the add flag is set to false, and the folder

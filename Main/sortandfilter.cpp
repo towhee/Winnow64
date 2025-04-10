@@ -140,7 +140,8 @@ void MW::filterChange(QString source)
 
     // rebuild imageCacheList and update priorities in image cache
     QString fPath = newSfIdx.data(G::PathRole).toString();
-    emit imageCacheFilterChange(fPath, "MW::filterChange");
+    if (!G::removingRowsFromDM)
+        emit imageCacheFilterChange(fPath, "MW::filterChange");
 
     // select after filtration
     if (newSelectReqd) {

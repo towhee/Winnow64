@@ -640,9 +640,13 @@ void ImageCache::removeFromCache(QStringList &pathList)
     // remove images from imCache and toCache
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPathToRemove = pathList.at(i);
-        icd->imCache.remove(fPathToRemove);
+        if (icd->imCache.contains(fPathToRemove)) {
+            icd->imCache.remove(fPathToRemove);
+        }
         int sfRow = dm->proxyRowFromPath(fPathToRemove, "ImageCache::removeFromCache");
-        toCacheRemove(sfRow);
+        if (toCache.contains(sfRow)) {
+            toCacheRemove(sfRow);
+        }
     }
 }
 
@@ -1209,6 +1213,12 @@ void ImageCache::initialize(int cacheMaxMB,
     abort = false;
 }
 
+void ImageCache::updateInstance()
+{
+    if (G::isLogger) log("updateInstance");
+    instance = dm->instance;
+}
+
 void ImageCache::updateImageCacheParam(int cacheSizeMB,
                                        int cacheMinMB,
                                        bool isShowCacheStatus,
@@ -1247,6 +1257,7 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
             ;
     }
     if (dm->sf->rowCount() == 0) return;
+    if (G::removingRowsFromDM) return;
 
     // do not use mutex - spins forever
 
@@ -1327,12 +1338,14 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     Do not use QMutexLocker. Can cause deadlock in updateTargets()
 
 */
+    if (G::removingRowsFromDM) return;
+
     QString fun = "ImageCache::setCurrentPosition";
     currRow = dm->proxyRowFromPath(fPath, fun);
 
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    if (debugCaching)
+    // if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow

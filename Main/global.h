@@ -174,6 +174,7 @@ namespace G
     // flow
     extern bool stop;
     extern bool removingFolderFromDM;
+    extern bool removingRowsFromDM;
     extern bool isInitializing;
 
     // datamodel

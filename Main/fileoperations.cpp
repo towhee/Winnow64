@@ -396,6 +396,8 @@ void MW::deleteFiles(QStringList paths)
     QElapsedTimer t;
     t.restart();
 
+    G::removingRowsFromDM = true;
+
     // if still loading metadata then do not delete
     if (!G::allMetadataLoaded) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
@@ -460,18 +462,24 @@ void MW::deleteFiles(QStringList paths)
 
     dmRemove(sldm);
 
+    G::removingRowsFromDM = false;
+
+    // update ImageCache instance
+    imageCache->updateInstance();
+
     // update current index
     if (dm->sf->rowCount()) {
         int sfRow;
         if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
         sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
-
+        qDebug() << "MW::deleteFiles sel row =" << sfRow;
         QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-        sel->select(sfIdx, Qt::NoModifier,"MW::deleteFiles");
+        sel->select(sfIdx, Qt::NoModifier, "MW::deleteFiles");
     }
 
     fsTree->updateCount();
     bookmarks->updateCount();
+
 }
 
 void MW::currentFolderDeletedExternally(QString path)

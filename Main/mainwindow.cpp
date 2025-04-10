@@ -2190,9 +2190,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
     // other selection methods (keyboard, folderAndFileSelectionChange, handleStartupArgs...
     else {
-        thumbView->scrollToCurrent(source);
-        gridView->scrollToCurrent(source);
-        tableView->scrollToCurrent();
+        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
+        if (gridView->isVisible()) gridView->scrollToCurrent(source);
+        if (tableView->isVisible()) tableView->scrollToCurrent();
     }
 
     // new file name appended to window title
@@ -2246,6 +2246,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (!workspaceChanged)
         && (G::mode != "Compare")
         && (G::useImageCache)
+        && (!G::removingRowsFromDM)
        )
     {
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
@@ -2788,7 +2789,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /* debug
+    // /* debug
     {
         qDebug().noquote()
                  << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
