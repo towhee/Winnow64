@@ -549,15 +549,24 @@ void ImageCache::setTargetRange(int key)
         i++;
         bool isAhead = i % 3;
         if (isForward) {
-            if (isAhead && !aheadDone) pos = aheadPos++;
-            else if (!behindDone) pos = behindPos--;
-            if (aheadPos >= n) aheadDone = true;
-            if (behindPos < 0) behindDone = true;
-        } else {
-            if (isAhead && !aheadDone) pos = aheadPos--;
-            else if (!behindDone) pos = behindPos++;
-            if (aheadPos < 0) aheadDone = true;
-            if (behindPos >= n) behindDone = true;
+            if (isAhead) {
+                if (!aheadDone) pos = aheadPos++;
+                if (aheadPos >= n) aheadDone = true;
+            }
+            else {
+                if (!behindDone) pos = behindPos--;
+                if (behindPos < 0) behindDone = true;
+            }
+        }
+        else {
+            if (isAhead) {
+                if (!aheadDone) pos = aheadPos--;
+                if (aheadPos < 0) aheadDone = true;
+            }
+            else {
+                if (!behindDone) pos = behindPos++;
+                if (behindPos >= n) behindDone = true;
+            }
         }
 
         // update toCache targets
@@ -580,7 +589,7 @@ void ImageCache::setTargetRange(int key)
             //*/
 
             // fast but risky, can crash when stress testing bounce folders
-            sumMB +=  dm->sf->index(aheadPos, G::CacheSizeColumn).data().toFloat();
+            sumMB +=  dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
 
             QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
             if (sumMB < maxMB) {
@@ -734,6 +743,11 @@ void ImageCache::updateStatus(QString instruction, QString source)
     // rgh get G::showProgress == G::ShowProgress::ImageCache working
     // not all items req'd passed via showCacheStatus since icd->cache struct eliminated
     float currMB = getImCacheSize();
+    /*
+    qDebug() << "ImageCache::updateStatus"
+             << "targetFirst =" << targetFirst
+             << "targetLast =" << targetLast
+        ; //*/
     emit showCacheStatus(instruction, currMB, maxMB, targetFirst, targetLast, source);
 }
 
@@ -1018,7 +1032,8 @@ QString ImageCache::reportImCache()
         image = icd->imCache.value(keys.at(i));    // QHash<QString, QImage> imCache
         imRptItem.w = image.width();
         imRptItem.h = image.height();
-        imRptItem.mb = static_cast<float>(imRptItem.w * imRptItem.h * 1.0 / 262144);
+        imRptItem.mb = static_cast<float>(image.sizeInBytes() / (1 << 20));
+        // imRptItem.mb = static_cast<float>(imRptItem.w * imRptItem.h * 1.0 / 262144);
         rptList.append(imRptItem);
     }
     // sort
@@ -1676,7 +1691,7 @@ void ImageCache::cacheImage(int id, int sfRow)
 bool ImageCache::okToCache(int id, int sfRow)
 {
 /*
-    Called bY fillCache.  Returns true to add  image to image cache.
+    Called bY fillCache.  Returns true to add image to image cache.
 */
     QString src = "ImageCache::okToCache";
 
@@ -1693,6 +1708,7 @@ bool ImageCache::okToCache(int id, int sfRow)
     emit setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
                     static_cast<int>(decoders[id]->status), instance, src);
 
+    // no longer in target range to cache
     if (!toCache.contains(sfRow)) return false;
 
     // if Imagedecoder failed then remove from toCache
@@ -1717,6 +1733,24 @@ bool ImageCache::okToCache(int id, int sfRow)
         return false;
     }
 
+    // image cache is full
+    // float toCacheMB = decoders[id]->image.sizeInBytes() / (1 << 20);
+    // float currCacheMB = getImCacheSize();
+    // if ((currCacheMB + toCacheMB) > maxMB) {
+    //     if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+    //     // toCache.clear();
+    //     // toCacheStatus.clear();
+    //     qDebug() << "ImageCache::okToCache"
+    //              << "row =" << sfRow
+    //              << "maxMB HAS BEEN EXCEEDED";
+    //     return false;
+    // }
+
+    qDebug() << "ImageCache::okToCache"
+             << "row =" << sfRow
+             << "targetFirst =" << targetFirst
+             << "targetLast =" << targetLast
+             << "okToCache = true";
     return true;
 }
 
@@ -1816,7 +1850,7 @@ void ImageCache::fillCache(int id)
         if (!abort) cacheImage(id, cacheRow);
     }
 
-    // get next image toˇ· cache
+    // get next image to cache
     // rgh todo add retry here?  Used Status::Failed
     int toCacheKey = nextToCache(id);
     bool okDecodeNextImage = !abort && toCacheKey != -1 && isValidKey(toCacheKey);
@@ -1860,7 +1894,6 @@ void ImageCache::fillCache(int id)
     if (okDecodeNextImage) {
         if (!abort) decodeNextImage(id, toCacheKey);
     }
-
 
     // else caching available targets completed
     else {

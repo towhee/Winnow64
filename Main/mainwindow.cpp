@@ -2789,7 +2789,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /* debug
+    /* debug
     {
         qDebug().noquote()
                  << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -3126,7 +3126,7 @@ void MW::updateImageCacheStatus(QString instruction,
     //*/
 
     /*
-   qDebug() << "MW::updateImageCacheStatus  Instruction ="
+    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
              << "row =" << cache.key
              << "source =" << source
@@ -3165,7 +3165,8 @@ void MW::updateImageCacheStatus(QString instruction,
                                          cacheProgressBar->targetColorGradient);
         // cached
         for (int i = tFirst; i <= tLast; ++i) {
-            if (i >= rows) break;
+            // if (i >= rows) break;
+            // qDebug() << "MW::updateImageCacheStatus i =" << i << "rows =" << rows;
             if (dm->sf->index(i, G::IsCachedColumn).data().toBool()) {
                 cacheProgressBar->updateImageCacheProgress(i, i, rows,
                                   cacheProgressBar->imageCacheGradient);

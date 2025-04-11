@@ -198,13 +198,16 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
     if (pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
 
     /*
-       qDebug() << "Target range from =" << fromItem
-             << "to" << toItem
-             << "itemWidth" << itemWidth
-             << "pxStart" << pxStart
-             << "pxWidth" << pxWidth
-             << "source" << source;
-             //*/
+       qDebug()
+            << "Total rows =" << items
+            << "barWidth" << barWidth
+            << "itemWidth" << itemWidth
+            << "Target range from " << fromItem
+            << "to" << toItem
+            << "pxStart" << pxStart
+            << "pxWidth" << pxWidth
+            ;
+            //*/
 
     // Done range
     QRect doneRect(pxStart, htOffset, pxWidth, ht);
