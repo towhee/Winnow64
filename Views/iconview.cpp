@@ -322,7 +322,8 @@ void IconView::refreshThumb(QModelIndex idx, int role)
     dataChanged(idx, idx, roles);
 }
 
-void IconView::refreshThumbs() {
+void IconView::refreshThumbs()
+{
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
     int last = dm->sf->rowCount() - 1;
     QVector<int> roles;

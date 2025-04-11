@@ -655,6 +655,10 @@ void MW::setRating()
         }
     }
 
+    // update thumbnail appearance to show classification
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
     /* must execute in order:
        - suspend proxy updates
        - update filter category
@@ -843,6 +847,10 @@ void MW::setColorClass()
             G::popUp->setProgress(i+1);
         }
     }
+
+    // update thumbnail appearance to show classification
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
 
     /* must execute in order:
        - suspend proxy updates
