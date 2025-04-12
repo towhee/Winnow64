@@ -516,14 +516,22 @@ void ImageCache::setTargetRange(int key)
     }
 
     // initialize
-    bool aheadDone = false;
-    bool behindDone = false;
     float sumMB = 0;
     int n = dm->sf->rowCount();
-    if (key == n - 1) {isForward = false; targetLast = n - 1;}
-    if (key == 0)     {isForward = true; targetFirst = 0;}
+    bool aheadDone = false;
+    bool behindDone = false;
+    if (key == n - 1) {
+        isForward = false;
+        targetLast = n - 1;
+    }
+    if (key == 0) {
+        isForward = true;
+        targetFirst = 0;
+    }
     int aheadPos = key;
     int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    if (behindPos >= n) behindDone = true;
+    if (behindPos < 0) behindDone = true;
 
     // folders were added or removed from datamodel
     if (instance != dm->instance) {
@@ -549,25 +557,44 @@ void ImageCache::setTargetRange(int key)
         i++;
         bool isAhead = i % 3;
         if (isForward) {
-            if (isAhead) {
-                if (!aheadDone) pos = aheadPos++;
+            if (isAhead && !aheadDone) {
+                pos = aheadPos++;
                 if (aheadPos >= n) aheadDone = true;
             }
-            else {
-                if (!behindDone) pos = behindPos--;
+            else if (!behindDone) {
+                pos = behindPos--;
                 if (behindPos < 0) behindDone = true;
             }
+            else continue;
         }
         else {
-            if (isAhead) {
-                if (!aheadDone) pos = aheadPos--;
+            if (isAhead && !aheadDone) {
+                pos = aheadPos--;
                 if (aheadPos < 0) aheadDone = true;
             }
-            else {
-                if (!behindDone) pos = behindPos++;
+            else if (!behindDone) {
+                pos = behindPos++;
                 if (behindPos >= n) behindDone = true;
             }
+            else continue;
         }
+
+        /*
+        qDebug() << "setTargetRange"
+                 << "key =" << key
+                 << "i =" << i
+                 << "pos =" << pos
+                 << "n =" << n
+                 << "isForward =" << isForward
+                 << "isAhead =" << isAhead
+                 << "aheadDone =" << aheadDone
+                 << "behindDone =" << behindDone
+                 << "mb =" << dm->sf->index(pos, G::CacheSizeColumn).data().toFloat()
+                 << "sumMB =" << sumMB
+                 << "maxMB =" << maxMB
+                 << "targetFirst =" << targetFirst
+                 << "targetLast =" << targetLast
+                    ;//*/
 
         // update toCache targets
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
@@ -1360,7 +1387,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow
@@ -1733,24 +1760,27 @@ bool ImageCache::okToCache(int id, int sfRow)
         return false;
     }
 
+    // /*
     // image cache is full
-    // float toCacheMB = decoders[id]->image.sizeInBytes() / (1 << 20);
-    // float currCacheMB = getImCacheSize();
-    // if ((currCacheMB + toCacheMB) > maxMB) {
-    //     if (toCache.contains(sfRow)) toCacheRemove(sfRow);
-    //     // toCache.clear();
-    //     // toCacheStatus.clear();
-    //     qDebug() << "ImageCache::okToCache"
-    //              << "row =" << sfRow
-    //              << "maxMB HAS BEEN EXCEEDED";
-    //     return false;
-    // }
+    float toCacheMB = decoders[id]->image.sizeInBytes() / (1 << 20);
+    float currCacheMB = getImCacheSize();
+    if ((currCacheMB + toCacheMB) > maxMB) {
+        // if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+        toCache.clear();
+        toCacheStatus.clear();
+        qDebug() << "ImageCache::okToCache"
+                 << "row =" << sfRow
+                 << "maxMB HAS BEEN EXCEEDED";
+        return false;
+    } //*/
 
+    /*
     qDebug() << "ImageCache::okToCache"
              << "row =" << sfRow
              << "targetFirst =" << targetFirst
              << "targetLast =" << targetLast
              << "okToCache = true";
+                //*/
     return true;
 }
 

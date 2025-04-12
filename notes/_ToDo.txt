@@ -143,6 +143,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix setTargetRange sumMB error
 - When set color/rating icons not refreshing
 - Fix icon chunking
 - Update "row of rows" in status bar when add multiple folders to existing datamodel
