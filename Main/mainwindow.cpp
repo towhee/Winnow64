@@ -4741,45 +4741,37 @@ void MW::rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure)
 void MW::ejectUsb(QString path)
 {
 /*
-    If the current folder is on the drive to be ejected, attempts to read subsequent
-    files will cause a crash. This is avoided by stopping any further activity in the
-    metaReadThread and imageCacheThread, preventing any file reading attempts to a
+    If the datamodel includes images on the drive to be ejected, attempts to read
+    subsequent files will cause a crash. This is avoided by stopping any further activity
+    in the metaReadThread and imageCacheThread, preventing any file reading attempts to a
     non-existent drive.
 */
     if (G::isLogger) G::log("MW::ejectUsb");
 
-    // if current folder is on the USB drive to be ejected then stop caching
+    // does datamodel include any image on the ejection drive
     QStorageInfo ejectDrive(path);
-    QString dummy;  // place holder until fix
-    QStorageInfo currentDrive(dummy); // rgh this what we want?
-    // QStorageInfo currentDrive(dm->currentPrimaryFolderPath); // rgh this what we want?
-    bool ejectDriveIsCurrent = currentDrive.rootPath() == ejectDrive.rootPath();
-    // /*
-    qDebug() << "MW::ejectUsb"
-             << "path =" << path
-             << "currentDrive.name() =" << currentDrive.name()
-             << "currentDrive.rootPath() =" << currentDrive.rootPath()
-             << "ejectDrive.name() =" << ejectDrive.name()
-             << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
-                ;
-                //*/
+    bool ejectDriveIsCurrent = false;
+    for (QString path : dm->folderList) {
+        QStorageInfo currDrive(path);
+        if (currDrive.rootPath() == ejectDrive.rootPath()) {
+            ejectDriveIsCurrent = true;
+            break;
+        }
+    }
+
     if (ejectDriveIsCurrent) {
-        /*
-        qDebug() << "MW::ejectUsb"
-                 << "currentDrive.rootPath() =" << currentDrive.rootPath()
-                 << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
-                    ;
-                    //*/
-        stop("ejectUSB");
+        stop("MW::ejectUSB");
+        reset("MW::ejectUSB");
+        fsTree->selectionModel()->clearSelection();
     }
 
     // get the drive name
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
-#if defined(Q_OS_WIN)
+    #if defined(Q_OS_WIN)
     driveName = ejectDrive.rootPath();
-#elif defined(Q_OS_MAC)
+    #elif defined(Q_OS_MAC)
     driveName = ejectDrive.name();
-#endif
+    #endif
 
     // confirm this is an ejectable drive
     if (Usb::isUsb(path)) {
