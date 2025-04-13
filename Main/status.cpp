@@ -227,8 +227,7 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < cacheBarProgressWidth) cacheBarProgressWidth = availableSpace;
         progressLabel->setFixedWidth(cacheBarProgressWidth);
-        // rgh todo 2024-12-05
-        // updateImageCacheStatus("Update all rows", icd->cache, "MW::updateProgressBarWidth");
+        imageCache->updateStatus("Update all rows", "MW::updateProgressBarWidth");
     }
 }
 

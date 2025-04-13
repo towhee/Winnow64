@@ -1718,7 +1718,7 @@ void ImageCache::cacheImage(int id, int sfRow)
 bool ImageCache::okToCache(int id, int sfRow)
 {
 /*
-    Called bY fillCache.  Returns true to add image to image cache.
+    Called by fillCache.  Returns true to add image to image cache.
 */
     QString src = "ImageCache::okToCache";
 
