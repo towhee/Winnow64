@@ -212,7 +212,7 @@ QString MW::getPicked()
 QString MW::getSelectedFileSize()
 {
 /*
-Returns a string like "12 (165 MB)"
+    Returns a string like "12 (165 MB)"
 */
     if (G::isLogger) G::log("MW::getSelectedFileSize");
     QString selected = QString::number(dm->selectionModel->selectedRows().count());

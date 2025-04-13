@@ -392,15 +392,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qApp->processEvents();
-    qDebug() << icd->imCache.size();
-    return;
-    G::log("test");
-    quint64 x = Mac::getResidentMemoryUsageBytes();
-    qDebug() << "ResidentMemoryUsage =" << Utilities::formatMemory(x, 2);
-    // qDebug() << G::allMetadataLoaded;
-    // QStringList usbDevices = Mac::listMountedVolumes();
-    // for (QString s : usbDevices) qDebug() << s;
+    stop("MW::ejectUSB");
+    reset("MW::ejectUSB");
+    fsTree->selectionModel()->clearSelection();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
