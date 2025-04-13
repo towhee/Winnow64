@@ -12,6 +12,8 @@ WHAT'S NEW
 - Fixed latency issue in FSTree image count
 
 BUGS / TO DO
+- Refine pref cache progress size
+- Eject mem card while selected, then clear datamodel
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Full Screen toggle not returning to previous size window
 - Check missing thumbnails process is working
@@ -143,6 +145,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix setTargetRange logic error
 - Fix setTargetRange sumMB error
 - When set color/rating icons not refreshing
 - Fix icon chunking
