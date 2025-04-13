@@ -320,7 +320,7 @@ bool ImageDecoder::load()
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
             QString errMsg = "heic.decodePrimaryImage failed.";
-            G::issue("Error", errMsg, "ImageDecoder::load", n.key, fPath);
+            G::issue("Error", errMsg, "ImageDecoder::load", sfRow, fPath);
             imFile.close();
             status = Status::Invalid;
             return false;

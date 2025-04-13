@@ -44,9 +44,8 @@ NORMAL DEPLOYMENT
 	---------------------------------------------------------------------
         - Update version in mainwindow.h
         - global.cpp: isLogger and isFlowLogger = false
-        - Compile release mode
         - Update winnow.exe by compiling in release mode without shadow build
-        - Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive
+        - In WinSCP, Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive
           folder (change target remote path).  DO NOT DELETE repository in current folder.
         - Update and save the version and folder paths and test/current in
           D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
@@ -175,7 +174,8 @@ Win notes:
 
 	Manual deployment
 	Open cmd
-	CD "D:\My Projects\Winnow Project\Deploy Winnow"     (use as temp location as cannot write to folders in "c:\program files"
+        CD "D:\My Projects\Winnow Project\Deploy Winnow"
+            (use as temp location as cannot write to folders in "c:\program files"
 	C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
 	C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
 	then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
