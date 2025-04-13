@@ -1,7 +1,9 @@
 #include "Main/mainwindow.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
+#ifdef Q_OS_MAC
 #include "Utilities/mac.h"
+#endif
 
 static QString rory = "Rory";
 
