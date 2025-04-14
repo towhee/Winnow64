@@ -125,6 +125,9 @@ void MW::updateStatusBar()
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 
+    if (panFocusToggleAction->isChecked()) panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
+    else panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
+
     G::isFilter = filters->isAnyFilter();
     filterStatusLabel->setVisible(G::isFilter);
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
@@ -142,6 +145,7 @@ int MW::availableSpaceForProgressBar()
     if (statusBarSpacer1->isVisible()) w += s + statusBarSpacer1->width();
     if (modifyImagesBtn->isVisible()) w += s + modifyImagesBtn->width();
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
+    if (panToFocusToggleBtn->isVisible()) w += s + panToFocusToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
     if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
@@ -496,6 +500,40 @@ void MW::toggleColorManage(Tog n)
     // reload image cache
     emit imageCacheColorManageChange();
     // imageCache->colorManageChange();
+}
+
+void MW::togglePanToFocusClick()
+{
+    /*
+    This is called by connect signals from the menu action and the reverse sort button.  The
+    call is redirected to toggleSortDirection, which has a parameter which is not supported
+    by the action and button signals.
+*/
+    if (G::isLogger) G::log("MW::toggleSortDirectionClick");
+    togglePanToFocus(Tog::toggle);
+    sortChange("MW::toggleSortDirectionClick");
+    // Experiment to reverse sort on the file name while a new folder is loading.
+    // sortReverse();
+}
+
+void MW::togglePanToFocus(Tog n)
+{
+    if (G::isLogger) G::log("MW::toggleSortDirection");
+    if (n == Tog::toggle) imageView->panToFocus = !imageView->panToFocus;
+    if (n == Tog::off) imageView->panToFocus = false;
+    if (n == Tog::on) imageView->panToFocus = true;
+    if (imageView->panToFocus) {
+        panFocusToggleAction->setChecked(true);
+        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
+    }
+    else {
+        panFocusToggleAction->setChecked(false);
+        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
+    }
+    QString txt;
+    imageView->panToFocus ? txt = "Pan to camera focus point is ON"
+                          : txt = "Pan to camera focus point is OFF";
+    G::popUp->showPopup(txt);
 }
 
 void MW::toggleImageCacheStrategy()

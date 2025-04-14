@@ -195,6 +195,10 @@ QString s(QVariant x)
                QString::number(r.width()) + "x" +
                QString::number(r.height());
     }
+    if (x.typeId() == QMetaType::QPointF) {
+        QPointF p = x.toPointF();
+        return QString::number(p.x(),'f', 2) + ", " + QString::number(p.y(),'f', 2);
+    }
     return QVariant(x).toString();
 }
 

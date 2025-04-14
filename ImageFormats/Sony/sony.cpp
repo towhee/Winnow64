@@ -499,11 +499,14 @@ bool Sony::parse(MetadataParameters &p,
     // MakerNote: focus (width, height, x, y) each 16 bits
 
     if (ifd->ifdDataHash.contains(8231)) {
-        quint32 focusOffset = ifd->ifdDataHash.value(8231).tagValue + 4;
+        quint32 focusOffset = ifd->ifdDataHash.value(8231).tagValue;
         p.file.seek(focusOffset);
-        m.focusX = u.get16(p.file.read(2), isBigEnd);
-        m.focusY = u.get16(p.file.read(2), isBigEnd);
-        //qDebug() << "focusX =" << m.focusX;
+        int w = u.get16(p.file.read(2), isBigEnd);
+        int h = u.get16(p.file.read(2), isBigEnd);
+        int x = u.get16(p.file.read(2), isBigEnd);
+        int y = u.get16(p.file.read(2), isBigEnd);
+        m.focusX = x * 1.0 / w;
+        m.focusY = y * 1.0 / h;
     }
 
     /* Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data

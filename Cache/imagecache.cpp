@@ -1479,7 +1479,8 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
     }
 
     // make sure metadata has been loaded
-    if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+    // if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+    if (!dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
         if (!waitForMetaRead(sfRow, 50)) {
             msg = "Metadata not loaded";
             return false;
@@ -1691,19 +1692,6 @@ void ImageCache::cacheImage(int id, int sfRow)
         }
     }
 
-    // // image size in  MB
-    // const int w = decoders[id]->image.width();
-    // const int h = decoders[id]->image.height();
-    // float mb = static_cast<float>(w * h * 1.0 / 262144);
-
-    // quint64 x = getImCacheSize() + mb;
-    // qDebug() << "row =" << sfRow << "cacheImage size in MB =" << x << "maxMB =" << maxMB;
-
-    // // do not add to cache if image cache is full
-    // if (getImCacheSize() + mb > maxMB) {
-    //     return;
-    // }
-
     // cache the image
     if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
 
@@ -1760,19 +1748,18 @@ bool ImageCache::okToCache(int id, int sfRow)
         return false;
     }
 
-    // /*
-    // image cache is full
+    // image cache is full (prevent runaway caching)
     float toCacheMB = decoders[id]->image.sizeInBytes() / (1 << 20);
     float currCacheMB = getImCacheSize();
     if ((currCacheMB + toCacheMB) > maxMB) {
-        // if (toCache.contains(sfRow)) toCacheRemove(sfRow);
         toCache.clear();
         toCacheStatus.clear();
+        /*
         qDebug() << "ImageCache::okToCache"
                  << "row =" << sfRow
-                 << "maxMB HAS BEEN EXCEEDED";
+                 << "maxMB HAS BEEN EXCEEDED"; //*/
         return false;
-    } //*/
+    }
 
     /*
     qDebug() << "ImageCache::okToCache"

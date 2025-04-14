@@ -1261,6 +1261,13 @@ void MW::createViewActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
+    panFocusToggleAction = new QAction(tr("Toggle Pan to Focus"), this);
+    panFocusToggleAction->setObjectName("togglePanToFocus");
+    panFocusToggleAction->setCheckable(true);
+    panFocusToggleAction->setShortcutVisibleInContextMenu(true);
+    addAction(panFocusToggleAction);
+    connect(panFocusToggleAction, &QAction::triggered, this, &MW::togglePanToFocusClick);
+
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     thumbsEnlargeAction->setShortcutVisibleInContextMenu(true);
@@ -1899,6 +1906,7 @@ void MW::createViewMenu()
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
     viewMenu->addAction(zoomToggleAction);
+    viewMenu->addAction(panFocusToggleAction);
     viewMenu->addSeparator();
     viewMenu->addAction(thumbsEnlargeAction);
     viewMenu->addAction(thumbsShrinkAction);
@@ -2565,7 +2573,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
-        // subFoldersAction->setShortcut(QKeySequence("B"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
         refreshFoldersAction->setShortcut(QKeySequence("Ctrl+F5"));
         refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
@@ -2697,6 +2704,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         //        zoomToggleAction->setShortcut(QKeySequence("Space"));
         zoomToggleAction->setShortcut(Qt::Key_Space);
+        panFocusToggleAction->setShortcut(QKeySequence("B"));
+
 
         //        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
         thumbsEnlargeAction->setShortcut(QKeySequence("]"));

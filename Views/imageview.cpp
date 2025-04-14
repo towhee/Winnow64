@@ -399,6 +399,16 @@ void ImageView::scale()
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
 
+    if (isScrollable && panToFocus) {
+        int i = dm->currentSfRow;
+        float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
+        float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
+        qDebug() << "ImageView::scale"
+                 << "x =" << x
+                 << "y =" << y;
+        panTo(x, y);
+    }
+
     if (!G::isSlideShow) {
         if (isScrollable) setCursor(Qt::OpenHandCursor);
         else {
@@ -583,7 +593,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     setShootingInfo(infoText);
 }
 
-void ImageView::thumbClick(float xPct, float yPct)
+void ImageView::panTo(float xPct, float yPct)
 {
 /*
    When the image is zoomed and a thumbnail is mouse clicked the position within the thumb is
