@@ -75,8 +75,8 @@ public:
     QString duration = "";
     QString cameraSN = "";
     QString lensSN = "";
-    int focusX = 0;
-    int focusY = 0;
+    float focusX = 0.5;
+    float focusY = 0.5;
     int shutterCount = 0;
     QString gpsCoord;
     QString shootingInfo = "";

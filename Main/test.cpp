@@ -392,9 +392,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stop("MW::ejectUSB");
-    reset("MW::ejectUSB");
-    fsTree->selectionModel()->clearSelection();
+    int i = dm->currentSfRow;
+    float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
+    float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
+    imageView->panTo(x, y);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

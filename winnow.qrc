@@ -189,5 +189,7 @@
         <file>Docs/helpfilmstrip.html</file>
         <file>images/icon16/nosidecar.png</file>
         <file>images/icon16/sidecar.png</file>
+        <file>images/icon16/target_bw.png</file>
+        <file>images/icon16/target.png</file>
     </qresource>
 </RCC>

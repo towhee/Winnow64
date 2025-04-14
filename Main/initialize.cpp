@@ -52,9 +52,14 @@ void MW::initialize()
     connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
 
     colorManageToggleBtn = new BarBtn();
-    msg = "Toggle color manage on/off.";
+    msg = "Toggle \"Color Manage\" on/off.";
     colorManageToggleBtn->setToolTip(msg);
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
+
+    panToFocusToggleBtn = new BarBtn();
+    msg = "Toggle \"Pan To Focus\" on/off.  Mouse click or shortcut B";
+    panToFocusToggleBtn->setToolTip(msg);
+    connect(panToFocusToggleBtn, &BarBtn::clicked, this, &MW::togglePanToFocusClick);
 
     cacheMethodBtn = new BarBtn();
     msg = "Toggle cache size Thrifty > Moderate > Greedy > Thrifty... \n"
@@ -646,7 +651,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::togglePick, this, &MW::togglePick);
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
-    connect(thumbView, &IconView::thumbClick, imageView, &ImageView::thumbClick);
+    connect(thumbView, &IconView::thumbClick, imageView, &ImageView::panTo);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
@@ -1065,6 +1070,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
+    statusBar()->addWidget(panToFocusToggleBtn);
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);

@@ -79,6 +79,8 @@ public:
     bool isFirstImageNewInstance;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;
 
+    bool panToFocus = false;
+
     void showRubber(QRect r);
 
     QString diagnostics();
@@ -87,7 +89,7 @@ public slots:
     bool loadImage(QString fPath, bool replace = false, QString src = "");
     void monitorCursorState();
     void copyImage();
-    void thumbClick(float xPct, float yPct);
+    void panTo(float xPct, float yPct);
     void updateToggleZoom(qreal toggleZoomValue);
     void zoomIn();
     void zoomOut();

@@ -531,6 +531,8 @@ private slots:
     void toggleModifyImages();
     void toggleColorManageClick();
     void toggleColorManage(Tog n = toggle);
+    void togglePanToFocusClick();
+    void togglePanToFocus(Tog n = toggle);
     void toggleImageCacheStrategy();
     void allPreferences();
     void infoViewPreferences();
@@ -922,6 +924,7 @@ private:
     QAction *zoomOutAction;
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
+    QAction *panFocusToggleAction;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *sortReverseAction;
@@ -1039,6 +1042,7 @@ private:
     BarBtn *reverseSortBtn;
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
+    BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
     QLabel *filterStatusLabel;

@@ -1190,8 +1190,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.lens = index(row, G::LensColumn).data().toString();
     m.focalLengthNum = index(row, G::FocalLengthColumn).data().toInt();
     m.focalLength = QString::number(m.focalLengthNum, 'f', 0) + "mm";
-    m.focusX = index(row, G::FocusXColumn).data().toInt();
-    m.focusY = index(row, G::FocusYColumn).data().toInt();
+    m.focusX = index(row, G::FocusXColumn).data().toFloat();
+    m.focusY = index(row, G::FocusYColumn).data().toFloat();
     m.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
     m.keywords = index(row, G::KeywordsColumn).data().toStringList();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
@@ -1264,7 +1264,7 @@ void DataModel::addAllMetadata()
             return;
         }
         // is metadata already cached (or attempted?)
-        if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
+        if (index(row, G::MetadataAttemptedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
@@ -1326,7 +1326,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
               << index(row, G::MetadataLoadedColumn).data().toBool()
               << fPath;//*/
 
-    if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+    if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
 
         // only read metadata from files that we know how to

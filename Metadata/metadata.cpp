@@ -374,6 +374,8 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("orientation", n) << G::s(m.orientation) << "\n";
     p.rpt << G::sj("orientationOffset", n) << G::s(m.orientationOffset) << "\n";
     p.rpt << G::sj("rotationDegrees", n) << G::s(m.rotationDegrees) << "\n";
+    p.rpt << G::sj("focusX", n) << G::s(m.focusX) << "\n";
+    p.rpt << G::sj("focusY", n) << G::s(m.focusY) << "\n";
     p.rpt << "\n";
     p.rpt << G::sj("make", n) << G::s(m.make) << "\n";
     p.rpt << G::sj("model", n) << G::s(m.model) << "\n";
@@ -979,8 +981,8 @@ void Metadata::clearMetadata()
     m.shootingInfo = "";
     m.focalLength = "";
     m.focalLengthNum = 0;
-    m.focusX = 0;
-    m.focusY = 0;
+    m.focusX = 0.5;
+    m.focusY = 0.5;
     m.gpsCoord = "";
     m.keywords.clear();
     m.title = "";
