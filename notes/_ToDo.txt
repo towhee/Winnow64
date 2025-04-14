@@ -10,6 +10,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 - Folder multi-select
 - Fixed latency issue in FSTree image count
+- Pan to camera focus point when zoomed
 
 BUGS / TO DO
 - Eject mem card while selected, then clear datamodel
@@ -144,6 +145,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Implemented pan to camera focus point
 - Refine pref cache progress size
 - Fix setTargetRange logic error
 - Fix setTargetRange sumMB error
