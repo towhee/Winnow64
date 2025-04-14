@@ -313,7 +313,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                  << "zoomFit =" << zoomFit
                  << "zoom =" << zoom
                  << "Src:" << src;
-        scale();
+        scale(true);    // isNewImage == true
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
@@ -356,7 +356,7 @@ void ImageView::noJpgAvailable()
     infoOverlay->setText("");
 }
 
-void ImageView::scale()
+void ImageView::scale(bool isNewImage)
 {
 /*
     Scales the pixmap to zoom.  Panning is automatically to the cursor position
@@ -399,7 +399,7 @@ void ImageView::scale()
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
 
-    if (isScrollable && panToFocus) {
+    if (isScrollable && panToFocus && isNewImage) {
         int i = dm->currentSfRow;
         float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
         float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();

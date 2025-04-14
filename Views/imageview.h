@@ -144,7 +144,7 @@ protected:
 
 private:
     void noJpgAvailable();
-    void scale();
+    void scale(bool isNewImage = false);
     qreal getZoom();
 
     QPointF getScrollPct();
