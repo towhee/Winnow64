@@ -161,8 +161,11 @@ private:
     bool sceneBiggerThanView();
     bool resizeIsSmaller();
     void placeClassificationBadge();
+    void placeTarget(float x, float y);
 
     InfoString *infoString;
+
+    QLabel *bullseye;
 
     QTimer *mouseMovementTimer;                     // control cursor during slideshow
     QElapsedTimer *mouseMovementElapsedTimer;       // detect valid mouse drag

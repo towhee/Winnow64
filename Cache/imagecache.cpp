@@ -1676,7 +1676,8 @@ void ImageCache::cacheImage(int id, int sfRow)
     { // log
         if (G::isLogger || G::isFlowLogger) {
             QString comment = "decoder " + QString::number(id).leftJustified(3) +
-                              "row = " + QString::number(sfRow).leftJustified(5);
+                              "row = " + QString::number(sfRow).leftJustified(5) +
+                              "cache size = " + QString::number(getImCacheSize());
             log("cacheImage", comment);
         }
         if (debugCaching)
@@ -1685,17 +1686,24 @@ void ImageCache::cacheImage(int id, int sfRow)
                    << src.leftJustified(col0Width, ' ')
                    << "decoder" << QString::number(id).leftJustified(3)
                    << "row =" << QString::number(sfRow).leftJustified((4))
-                   // << "G::mode =" << G::mode
+                   << "G::mode =" << G::mode
                    // << "errMsg =" << decoders[id]->errMsg
-                   << "decoder[id]->fPath =" << decoders[id]->fPath
+                   // << "decoder[id]->fPath =" << decoders[id]->fPath
                     ;
         }
     }
 
     // cache the image
     if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
+    /*
+    qDebug().noquote()
+        << src.leftJustified(col0Width, ' ')
+        << "decoder" << QString::number(id).leftJustified(3)
+        << "row =" << QString::number(sfRow).leftJustified((4))
+        << "sumCacheMB =" << getImCacheSize()
+        ;//*/
 
-    // // remove from toCache
+     // remove from toCache
     if (!abort) if (toCache.contains(sfRow)) toCacheRemove(sfRow);
 
     if (!abort) emit setCached(sfRow, true, instance);

@@ -13,7 +13,6 @@ WHAT'S NEW
 - Pan to camera focus point when zoomed
 
 BUGS / TO DO
-- Eject mem card while selected, then clear datamodel
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Full Screen toggle not returning to previous size window
 - Check missing thumbnails process is working
@@ -23,7 +22,6 @@ BUGS / TO DO
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
 - Prev and next folders
-- Rethink copy, paste, delete incl MW::deleteFolder with possible multi folder selections
 - MW::deleteFiles filter/sort work? Does gridView refresh?
 - MW::insertFiles filter/sort work?
 - Review all rgh comments
@@ -146,6 +144,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
 - Implemented pan to camera focus point
+- Eject mem card while selected, then clear datamodel
 - Refine pref cache progress size
 - Fix setTargetRange logic error
 - Fix setTargetRange sumMB error

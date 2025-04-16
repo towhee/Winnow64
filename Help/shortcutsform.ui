@@ -3,7 +3,7 @@
  <class>shortcutsForm</class>
  <widget class="QScrollArea" name="shortcutsForm">
   <property name="windowModality">
-   <enum>Qt::WindowModality::NonModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -44,7 +44,7 @@
     <item>
      <widget class="QTreeWidget" name="treeWidget">
       <property name="focusPolicy">
-       <enum>Qt::FocusPolicy::NoFocus</enum>
+       <enum>Qt::NoFocus</enum>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
@@ -838,6 +838,17 @@
         </property>
         <property name="text">
          <string>Cmd/Ctrl + [</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pan to Camera Focus Point</string>
+        </property>
+        <property name="text">
+         <string>B</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
         </property>
        </item>
       </item>

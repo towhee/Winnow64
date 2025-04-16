@@ -981,8 +981,8 @@ void Metadata::clearMetadata()
     m.shootingInfo = "";
     m.focalLength = "";
     m.focalLengthNum = 0;
-    m.focusX = 0.5;
-    m.focusY = 0.5;
+    m.focusX = -1;
+    m.focusY = -1;
     m.gpsCoord = "";
     m.keywords.clear();
     m.title = "";

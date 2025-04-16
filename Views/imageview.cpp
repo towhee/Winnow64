@@ -109,6 +109,11 @@ ImageView::ImageView(QWidget *parent,
     classificationLabel->setAlignment(Qt::AlignCenter);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
+    bullseye = new QLabel(this);
+    bullseye->setAttribute(Qt::WA_TranslucentBackground, true);
+    // bullseye->setPixmap(QPixmap(":/images/target.png"));
+    // bullseye->setPixmap(QPixmap(":/images/icon16/target.png"));
+
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
     infoOverlay->setGraphicsEffect(infoEffect);
@@ -399,13 +404,17 @@ void ImageView::scale(bool isNewImage)
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
 
-    if (isScrollable && panToFocus && isNewImage) {
-        int i = dm->currentSfRow;
-        float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
-        float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
+    // pan to camera focus point
+    int i = dm->currentSfRow;
+    float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
+    float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
+    /*
         qDebug() << "ImageView::scale"
                  << "x =" << x
-                 << "y =" << y;
+                 << "y =" << y;//*/
+    bool isFocus = (x >= 0 && y >= 0);
+    // placeTarget(x, y);
+    if (isFocus && isScrollable && panToFocus && isNewImage) {
         panTo(x, y);
     }
 
@@ -538,6 +547,33 @@ void ImageView::placeClassificationBadge()
     int d = classificationBadgeDiam;    // diameter of the classification label
     classificationLabel->setDiameter(d);
     classificationLabel->move(x - d - o, y - d - o);
+}
+
+void ImageView::placeTarget(float x, float y)
+{
+    if (G::isLogger) G::log("ImageView::placeTarget");
+
+    if (x >= 0 && y >= 0) {
+        qDebug() << "bullseye" << bullseye->size();
+        // Get the scene rectangle
+        QRectF sceneRect = this->sceneRect();
+
+        // Calculate the scene coordinates
+        QPointF scenePos(sceneRect.left() + x * sceneRect.width(),
+                         sceneRect.top() + y * sceneRect.height());
+
+        // Map the scene coordinates to the view (widget) coordinates
+        QPoint viewPos = mapFromScene(scenePos);
+
+        // Move the QLabel so its center is at viewPos
+        QSize labelSize = bullseye->size();
+        QPoint topLeft(viewPos.x() - labelSize.width() / 2,
+                       viewPos.y() - labelSize.height() / 2);
+
+        bullseye->move(topLeft);
+        bullseye->setVisible(true);
+    }
+    else bullseye->setVisible(false);
 }
 
 void ImageView::showRubber(QRect r)
