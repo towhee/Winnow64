@@ -41,7 +41,7 @@ signals:
 private:
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder = nullptr;
+    FrameDecoder *frameDecoder;
     int dmRow;
     QString err;
     QSize thumbMax;

@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Cache/framedecoder.h"
 #include "Main/global.h"
 
 /*
@@ -2029,7 +2030,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
 }
 
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance,
-                                      qint64 duration)
+                                      qint64 duration, FrameDecoder *frameDecoder)
 {
 /*
     This slot is signalled from FrameDecoder, where the thumbnail and video duration are
@@ -2075,7 +2076,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         if (duration > 3600) format = "hh:mm:ss";
         setData(index(row, G::DurationColumn), durationTime.toString(format));
     }
-    //qDebug() << "DataModel::setIconFromVideoFrame  itemFromIndex" << dmIdx;
+    qDebug() << "DataModel::setIconFromVideoFrame  itemFromIndex" << dmIdx;
     QStandardItem *item = itemFromIndex(dmIdx);
     if (itemFromIndex(dmIdx)->icon().isNull()) {
         if (item != nullptr) {
@@ -2088,6 +2089,8 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
             //setIconMax(pm);
         }
     }
+
+    // frameDecoder->deleteLater();
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src)

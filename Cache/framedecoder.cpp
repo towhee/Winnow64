@@ -46,10 +46,29 @@ FrameDecoder::FrameDecoder()  : QObject(nullptr)
     isDebugging = false;
 }
 
+FrameDecoder::~FrameDecoder()
+{
+    if (mediaPlayer) {
+        mediaPlayer->stop();
+        mediaPlayer->setVideoOutput(nullptr);
+        disconnect(mediaPlayer, nullptr, this, nullptr);
+        delete mediaPlayer;
+        mediaPlayer = nullptr;
+    }
+    if (videoSink) {
+        disconnect(videoSink, nullptr, this, nullptr);
+        delete videoSink;
+        videoSink = nullptr;
+    }
+}
+
 void FrameDecoder::stop()
 {
     if (G::isLogger) G::log("FrameDecoder::stop");
     // qDebug() << "FrameDecoder::stop  isGuiThread =" << G::isGuiThread();
+    if (mediaPlayer) {
+        mediaPlayer->stop();
+    }
     abort = true;
 }
 
@@ -72,7 +91,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
     item.dmIdx = dmIdx;
     item.dmInstance = dmInstance;
     queue.append(item);
-    if (isDebugging)
+    // if (isDebugging)
     {
         qDebug() << "FrameDecoder::addToQueue                 "
                  //<< "ddmIdx =" << dmIdx
@@ -148,7 +167,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     }
 
     attempts++;
-    if (isDebugging)
+    // if (isDebugging)
     {
         qDebug() << "FrameDecoder::frameChanged               "
                  << "row =" << queue.at(0).dmIdx.row()
@@ -170,7 +189,19 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         if (queue.at(0).dmIdx.isValid()) {
             QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
             qint64 duration = mediaPlayer->duration();
-            emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance, duration, thisFrameDecoder);
+
+            qDebug() << "FrameDecoder::frameChanged               "
+                     << "row =" << queue.at(0).dmIdx.row()
+                     << "valid index =" << queue.at(0).dmIdx.isValid()
+                     << "attempts =" << attempts
+                     << "validFrame =" << validFrame
+                     << "queue size =" << queue.size()
+                     << "source =" << queue.at(0).source
+                     << "isGUI =" << G::isGuiThread()
+                ;
+
+            emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance,
+                              duration, thisFrameDecoder);
         }
     }
     else {
