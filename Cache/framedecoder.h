@@ -14,6 +14,8 @@ class FrameDecoder : public QObject
 
 public:
     FrameDecoder();
+    ~FrameDecoder() override;
+    QThread *frameDecoderThread;  // not being used
 
 signals:
     void setFrameIcon(QModelIndex dmIdx, QPixmap pm, int instance, qint64 duration,

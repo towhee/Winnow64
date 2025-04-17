@@ -2032,7 +2032,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         G::log("","");
         {
@@ -2669,15 +2669,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // /*
-    if (dm->rowCount() > 1000)
-    qDebug().noquote()
-            << fun
-            << "row 1000 icon loaded =" << dm->index(1000, G::IconLoadedColumn).data().toBool()
-            << "instance =" << instance
-            << "dm->folderList.count = =" << dm->folderList.count()
-            << "\n\tfolderAndFileChangePath =" << folderAndFileChangePath
-               ;//*/
+
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);

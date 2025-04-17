@@ -6,6 +6,7 @@
 #include <QWaitCondition>           // req'd for removeFolder process
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
+#include "Cache/framedecoder.h"
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
 
@@ -196,7 +197,8 @@ public slots:
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src = "");
-    void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance, qint64 duration);
+    void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance, qint64 duration,
+                               FrameDecoder *frameDecoder);
     void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft | Qt::AlignVCenter);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,

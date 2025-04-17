@@ -18,13 +18,17 @@ Thumb::Thumb(DataModel *dm)
     connect(this, &Thumb::setValueDm, dm, &DataModel::setValueDm, Qt::QueuedConnection);
     connect(this, &Thumb::setValueSf, dm, &DataModel::setValueSf, Qt::QueuedConnection);
 
+    frameDecoder = new FrameDecoder();
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+
     isDebug = false;
 }
 
 void Thumb::abortProcessing()
 {
     abort = true;
-    if (frameDecoder) frameDecoder->stop();
+    // if (frameDecoder) frameDecoder->stop();
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
@@ -124,17 +128,24 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     see top of FrameDecoder.cpp for documentation
 */
     QString fun = "Thumb::loadFromVideo";
-    if (isDebug)
+    // if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "row =" << dmRow
+            << "isGUI =" << G::isGuiThread()
             << fPath
             ;
     if (G::isLogger) G::log(fun, fPath);
 
-    frameDecoder = new FrameDecoder();
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+    // frameDecoder = new FrameDecoder();
+    // connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    // connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+
+    // moveToThread change
+    // QThread *thread = new QThread;
+    // frameDecoder->frameDecoderThread = thread;
+    // frameDecoder->moveToThread(thread);
+    // thread->start();
 
     QModelIndex dmIdx = dm->index(dmRow, 0);
     if (!abort)
@@ -417,7 +428,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     MW::refreshCurrentFolder.
 */
     QString fun = "Thumb::loadThumb";
-    if (isDebug)
+    // if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "Instance =" << instance << src << fPath;
