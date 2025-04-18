@@ -12,18 +12,20 @@ class TiffThumbDecoder : public QObject
 public:
     TiffThumbDecoder();
 
+signals:
+    void setIcon(QModelIndex dmIdx, QPixmap pm, int instance, QString src);
+
 public slots:
-    void addToQueue(QString fPath, QString source = "",
-                    QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
+    void addToQueue(QString fPath, QModelIndex dmIdx, int dmInstance, int offset);
 
 private:
-    void getNextThumbNail(QString src = "");
+    void processQueue();
     enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
         QModelIndex dmIdx;
         int dmInstance;
-        QString source;
+        int offset;
     };
     QList<Item> queue;
     bool abort = false;

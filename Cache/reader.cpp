@@ -139,7 +139,7 @@ void Reader::readIcon()
     }
 
     // get thumbnail or err.png or generic video
-    if (!abort) loadedIcon = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
+    if (!abort) loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
 
     #ifdef TIMER
     t4 = t.restart();
@@ -153,7 +153,7 @@ void Reader::readIcon()
 
     if (!abort && loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmIdx, pm, loadedIcon, instance, "MetaRead::readIcon");
+        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
         if (!pm.isNull()) return;
     }
 

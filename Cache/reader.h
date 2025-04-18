@@ -51,7 +51,7 @@ public:
 
 signals:
     void addToDatamodel(ImageMetadata m, QString src);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     // void addToImageCache(ImageMetadata m, int instance);
     void done(int threadId);

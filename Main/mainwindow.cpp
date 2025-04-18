@@ -5208,13 +5208,13 @@ void MW::refreshDataModel()
             QImage image;
             QPixmap pm;
             Thumb *thumb = new Thumb(dm);
-            bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, fun);
+            QModelIndex dmIdx = dm->indexFromPath(fPath);
+            bool thumbLoaded = thumb->loadThumb(fPath, dmIdx, image, dm->instance, fun);
             if (thumbLoaded)
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             else
                 pm = QPixmap(":/images/error_image256.png");
-            QModelIndex dmIdx = dm->index(dmRow, 0);
-            dm->setIcon(dmIdx, pm, thumbLoaded, dm->instance, src);
+            dm->setIcon(dmIdx, pm, dm->instance, src);
             delete thumb;
         }
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
