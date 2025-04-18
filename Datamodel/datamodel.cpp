@@ -2029,6 +2029,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     setData(dmIdx, value, role);
 }
 
+
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance,
                                       qint64 duration, FrameDecoder *frameDecoder)
 {
@@ -2093,7 +2094,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
     // frameDecoder->deleteLater();
 }
 
-void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src)
+void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
 {
 /*
     setIcon is a slot that can be signalled from another thread.  If the user is rapidly

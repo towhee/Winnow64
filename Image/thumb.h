@@ -7,16 +7,18 @@
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
+#include "Cache/tiffthumbdecoder.h"
 #include "ImageFormats/Tiff/tiff.h"
 
 class Thumb : public QObject
 {
     Q_OBJECT
-    QThread frameDecoderthread;
 public:
     explicit Thumb(DataModel *dm);
+    ~Thumb() override;
     void abortProcessing();
-    bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
+    bool loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image,
+                   int instance, QString src);
     void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
@@ -42,6 +44,9 @@ private:
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;
+    QThread *frameDecoderthread;
+    TiffThumbDecoder *tiffThumbDecoder;
+    QThread *tiffThumbDecoderThread;
     int dmRow;
     QString err;
     QSize thumbMax;
@@ -50,7 +55,7 @@ private:
 
     void setImageDimensions(QString &fPath, QImage &image, int row);
     Status loadFromJpgData(QString &fPath, QImage &image);
-    Status loadFromTiff(QString &fPath, QImage &image, int row);
+    Status loadFromTiff(QString &fPath, QImage &image, int row, ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);
     Status loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);

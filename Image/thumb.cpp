@@ -21,8 +21,23 @@ Thumb::Thumb(DataModel *dm)
     frameDecoder = new FrameDecoder();
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+    frameDecoderthread = new QThread;
+    frameDecoder->moveToThread(frameDecoderthread);
+    frameDecoderthread->start();
+
+    tiffThumbDecoder = new TiffThumbDecoder();
+    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
+    tiffThumbDecoderThread = new QThread;
+    tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);  // Move to MetaRead's thread
+    tiffThumbDecoderThread->start();
 
     isDebug = false;
+}
+
+Thumb::~Thumb()
+{
+    tiffThumbDecoderThread->quit();
+    tiffThumbDecoderThread->wait();
 }
 
 void Thumb::abortProcessing()
@@ -227,7 +242,8 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
     }
 }
 
-Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
+Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
+                                  ImageMetadata &m)
 {
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
@@ -250,7 +266,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row)
     // use QtTiff decoder
     // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
 
-    ImageMetadata m = dm->imMetadata(fPath);
+    // ImageMetadata m = dm->imMetadata(fPath);
     if (abort) return Status::Fail;
     Tiff tiff("Thumb::loadFromTiff");
     if (abort) return Status::Fail;
@@ -416,7 +432,7 @@ void Thumb::presetOffset(uint offset, uint length)
     isPresetOffset = true;
 }
 
-bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
+bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int instance, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw,
@@ -428,7 +444,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     MW::refreshCurrentFolder.
 */
     QString fun = "Thumb::loadThumb";
-    // if (isDebug)
+    if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "Instance =" << instance << src << fPath;
@@ -436,7 +452,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 
     abort = false;
 
-    dmRow = dm->rowFromPath(fPath);
+    dmRow = dmIdx.row();
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
@@ -512,8 +528,20 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
         }
 
         if (ext == "tif" && G::useMyTiff) {
-            if (!abort) status = loadFromTiff(fPath, image, dmRow);
-            if (status == Status::Success) break;
+            ImageMetadata m = dm->imMetadata(fPath);
+            // if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
+            // if (status == Status::Success) break;
+
+            if (m.isEmbeddedThumbMissing) {
+                // process on another thread
+                qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "no embedded thumb";
+                tiffThumbDecoder->addToQueue(fPath, dmIdx, instance, m.offsetFull);
+            }
+            else {
+                qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "embedded thumb";
+                if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
+                if (status == Status::Success) break;
+            }
         }
 
         // all other image files

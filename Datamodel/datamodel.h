@@ -196,7 +196,7 @@ public slots:
     bool addMetadataForItem(ImageMetadata m, QString src);
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
-    void setIcon(QModelIndex dmIdx, const QPixmap &pm, bool ok, int fromInstance, QString src = "");
+    void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);
     void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "",

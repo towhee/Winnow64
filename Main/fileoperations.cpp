@@ -222,7 +222,7 @@ void MW::dmInsert(QStringList pathList)
             // insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);
-            dm->setIcon(dmIdx, QPixmap(), false, dm->instance, "MW::insert");
+            dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
             if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
                 emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
