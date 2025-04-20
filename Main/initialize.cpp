@@ -338,6 +338,7 @@ void MW::createMetaRead()
             Qt::BlockingQueuedConnection);
     // loading image metadata into datamodel, okay to select
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
+    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex);
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
     // Signal to change selection, fileSelectionChange, update ImageCache

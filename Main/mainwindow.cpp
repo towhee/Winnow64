@@ -4997,7 +4997,7 @@ QString MW::embedThumbnails()
     return msg;
 }
 
-void MW::metadataChanged(QStandardItem* item)
+void MW::infoViewChanged(QStandardItem* item)
 {
 /*
     This slot is called when there is a data change in InfoView.

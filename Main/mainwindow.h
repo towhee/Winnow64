@@ -506,7 +506,7 @@ private slots:
     void setColorClass();
 
     void setRotation(int degrees);
-    void metadataChanged(QStandardItem* item);
+    void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
     void syncActionsWithFilters();

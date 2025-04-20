@@ -392,6 +392,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    // Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+    // sel->toggleSelect(dm->sf->index(0,0));
+    sel->setCurrentIndex(dm->sf->index(0,0), true);
+    return;
     int i = dm->currentSfRow;
     float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
     float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
