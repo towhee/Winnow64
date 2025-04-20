@@ -599,6 +599,7 @@ void ImageCache::setTargetRange(int key)
         // update toCache targets
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
             emit setCached(pos, true, instance);
+            pos < key ? targetFirst = pos : targetLast = pos;
         }
         else {
             /* see "Image size in cache" at top of imagecache.cpp

@@ -25,19 +25,19 @@ Thumb::Thumb(DataModel *dm)
     frameDecoder->moveToThread(frameDecoderthread);
     frameDecoderthread->start();
 
-    tiffThumbDecoder = new TiffThumbDecoder();
-    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
-    tiffThumbDecoderThread = new QThread;
-    tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);  // Move to MetaRead's thread
-    tiffThumbDecoderThread->start();
+    // tiffThumbDecoder = new TiffThumbDecoder();
+    // connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
+    // tiffThumbDecoderThread = new QThread;
+    // tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);  // Move to MetaRead's thread
+    // tiffThumbDecoderThread->start();
 
     isDebug = false;
 }
 
 Thumb::~Thumb()
 {
-    tiffThumbDecoderThread->quit();
-    tiffThumbDecoderThread->wait();
+    frameDecoderthread->quit();
+    frameDecoderthread->wait();
 }
 
 void Thumb::abortProcessing()
@@ -151,16 +151,6 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
             << fPath
             ;
     if (G::isLogger) G::log(fun, fPath);
-
-    // frameDecoder = new FrameDecoder();
-    // connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    // connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
-
-    // moveToThread change
-    // QThread *thread = new QThread;
-    // frameDecoder->frameDecoderThread = thread;
-    // frameDecoder->moveToThread(thread);
-    // thread->start();
 
     QModelIndex dmIdx = dm->index(dmRow, 0);
     if (!abort)
@@ -529,19 +519,19 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
 
         if (ext == "tif" && G::useMyTiff) {
             ImageMetadata m = dm->imMetadata(fPath);
-            // if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
-            // if (status == Status::Success) break;
+            if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
+            if (status == Status::Success) break;
 
-            if (m.isEmbeddedThumbMissing) {
-                // process on another thread
-                qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "no embedded thumb";
-                tiffThumbDecoder->addToQueue(fPath, dmIdx, instance, m.offsetFull);
-            }
-            else {
-                qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "embedded thumb";
-                if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
-                if (status == Status::Success) break;
-            }
+            // if (m.isEmbeddedThumbMissing) {
+            //     // process on another thread
+            //     qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "no embedded thumb";
+            //     tiffThumbDecoder->addToQueue(fPath, dmIdx, instance, m.offsetFull);
+            // }
+            // else {
+            //     qDebug().noquote() << fun.leftJustified(col0Width) << dmRow << "embedded thumb";
+            //     if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
+            //     if (status == Status::Success) break;
+            // }
         }
 
         // all other image files

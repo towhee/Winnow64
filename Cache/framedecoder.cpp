@@ -91,7 +91,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
     item.dmIdx = dmIdx;
     item.dmInstance = dmInstance;
     queue.append(item);
-    // if (isDebugging)
+    if (isDebugging)
     {
         qDebug() << "FrameDecoder::addToQueue                 "
                  //<< "ddmIdx =" << dmIdx
@@ -188,16 +188,6 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
             if (queue.at(0).dmIdx.isValid()) {
                 QPixmap pm = QPixmap::fromImage(im.scaled(ls, ls, Qt::KeepAspectRatio));
                 qint64 duration = mediaPlayer->duration();
-
-                qDebug() << "FrameDecoder::frameChanged               "
-                         << "row =" << queue.at(0).dmIdx.row()
-                         << "valid index =" << queue.at(0).dmIdx.isValid()
-                         << "attempts =" << attempts
-                         << "validFrame =" << validFrame
-                         << "queue size =" << queue.size()
-                         << "source =" << queue.at(0).source
-                         << "isGUI =" << G::isGuiThread()
-                    ;
 
                 emit setFrameIcon(queue.at(0).dmIdx, pm, queue.at(0).dmInstance,
                                   duration, thisFrameDecoder);

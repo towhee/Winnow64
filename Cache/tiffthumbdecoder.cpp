@@ -1,5 +1,27 @@
 #include "tiffthumbdecoder.h"
 
+/*
+    TiffThumbDecoder should be used to generate a thumbnail from a tiff that does not
+    have an embedded thumbnail. Generating a thumbnail from the full size tiff image is
+    very resource intensive and can result in GUI latency. This class should be moved to
+    a separate thread.  Example:
+
+        tiffThumbDecoder = new TiffThumbDecoder();
+        connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
+        tiffThumbDecoderThread = new QThread;
+        tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
+        tiffThumbDecoderThread->start();
+
+    Stop tiffThumbDecoderThread when finished ie when Winnow closes
+
+        tiffThumbDecoderThread->quit();
+        tiffThumbDecoderThread->wait();
+
+    When the thumbnail has been generated the icon is updated in the DataModel.
+
+    TiffThumbDecoder is used by Reader::readIcon().
+*/
+
 TiffThumbDecoder::TiffThumbDecoder() {}
 
 void TiffThumbDecoder::addToQueue(QString fPath, QModelIndex dmIdx, int dmInstance,

@@ -124,7 +124,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     There is an issue when attempting to invoke a workspace while in FullScreen state if
     the new sworkspace is on a different screen.  The function showNormal() always shows
-    the window in the same screen and this taks some time.  MW::eventFilter overrides the
+    the window in the same screen and this takes some time.  MW::eventFilter overrides the
     QEvent::WindowStateChange and calls invokeWorkspace after a delay to allow the showNormal
     function to complete drawing the normal window.
 */

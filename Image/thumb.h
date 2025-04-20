@@ -45,8 +45,8 @@ private:
     Metadata *metadata;
     FrameDecoder *frameDecoder;
     QThread *frameDecoderthread;
-    TiffThumbDecoder *tiffThumbDecoder;
-    QThread *tiffThumbDecoderThread;
+    // TiffThumbDecoder *tiffThumbDecoder;
+    // QThread *tiffThumbDecoderThread;
     int dmRow;
     QString err;
     QSize thumbMax;
