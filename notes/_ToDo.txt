@@ -143,6 +143,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Filter on picks, unpick: should select next picked
 - ImageCache progress bar not working for videos
 - Process video and tif with missing thumbnails in another thread
 - Implemented pan to camera focus point

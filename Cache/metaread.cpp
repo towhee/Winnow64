@@ -832,54 +832,15 @@ void MetaRead::dispatch(int id)
             )
         {
             imageCacheTriggered = true;
-            // QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // crash 2025-03-08
-            // QModelIndex sfIdx = dm->sf->mapFromSource(r->dmIdx); // crash
             // model and proxy rows the same in metaRead
             QModelIndex sfIdx = dm->sf->index(r->dmIdx.row(),0);
-            bool clearSelection = false;
+            bool clearSelection = true;
             QString src = "MetaRead::dispatch";
+            // select the current index row in thumbView, gridView and tableView
+            emit select(sfIdx, clearSelection);
+            // notify file selection changed
             emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
-            // qDebug() << src << "emit fileSelectionChange" << startRow;
         }
-        //*/
-
-        /* trigger fileSelectionChange which starts ImageCache after time delay
-        if (fileSelectionChanged && dmRow == startRow) {
-            QModelIndex sfIdx = dm->proxyIndexFromModelIndex(r->dmIdx);  // rghZ already a filter??
-
-            if (isDebug)  // returning reader, row has been processed by reader
-            {
-                qDebug().noquote()
-                    << "MetaRead::dispatch     startRow         "
-                    << "dmRow =" << dmRow
-                    << "startRow =" << startRow
-                    << "r->dmIdx =" << r->dmIdx
-                    << "sfIdx =" << sfIdx
-                    << r->fPath
-                    ;
-            }
-
-            if (debugLog && (G::isLogger || G::isFlowLogger))
-            {
-                G::log("MetaRead::dispatch", "fileSelectionChange row = " + QString::number(dmRow));
-            }
-            // if (isDebug) // fileSelectionChange
-            {
-                bool isMetaLoaded = dm->isMetadataLoaded(sfIdx.row());
-                qDebug().noquote()
-                    << "\nMetaRead::dispatch     fileSelectionChange "
-                    << "id =" << QString::number(id).leftJustified(2, ' ')
-                    << "row =" << QString::number(dmRow).leftJustified(4, ' ')
-                    << "metaLoaded =" << QVariant(isMetaLoaded).toString().leftJustified(5)
-                    << r->fPath;
-            }
-            if (!abort) {
-                // emit fileSelectionChange(r->dmIdx);
-                int msDelay = 500;
-                emitFileSelectionChangeWithDelay(r->dmIdx, msDelay);
-            }
-        }
-        //*/
 
         if (isDebug)  // returning reader, row has been processed by reader
         {

@@ -53,6 +53,7 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, bool /*success*/, QString/*calledBy*/);
     void centralMsg(QString message);
     void okToSelect(bool ok);
+    void select(QModelIndex sfIdx, bool clearSelection);
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 

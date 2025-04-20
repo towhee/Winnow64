@@ -159,7 +159,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
     else {
         // G::popUp->reset();
     }
-
+    qDebug() << "Selection::select(QModelIndex)" << sfIdx.row() << src;
     if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
@@ -188,7 +188,7 @@ void Selection::okToSelect(bool isOk) // not being used
     It is not ok to select while the datamodel is being built.
 */
 {
-    if (G::isLogger || isDebug) G::log("Selection::toggleSelect");
+    if (G::isLogger || isDebug) G::log("Selection::okToSelect");
     ok = isOk;
 }
 
