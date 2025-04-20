@@ -2077,7 +2077,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         if (duration > 3600) format = "hh:mm:ss";
         setData(index(row, G::DurationColumn), durationTime.toString(format));
     }
-    qDebug() << "DataModel::setIconFromVideoFrame  itemFromIndex" << dmIdx;
+
     QStandardItem *item = itemFromIndex(dmIdx);
     if (itemFromIndex(dmIdx)->icon().isNull()) {
         if (item != nullptr) {
@@ -2090,8 +2090,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
             //setIconMax(pm);
         }
     }
-
-    // frameDecoder->deleteLater();
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)

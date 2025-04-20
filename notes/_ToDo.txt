@@ -13,7 +13,6 @@ WHAT'S NEW
 - Pan to camera focus point when zoomed
 
 BUGS / TO DO
-- Process thumbnails in another thread and delete thread when finished.
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Full Screen toggle not returning to previous size window
 - Check missing thumbnails process is working
@@ -144,6 +143,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImageCache progress bar not working for videos
+- Process video and tif with missing thumbnails in another thread
 - Implemented pan to camera focus point
 - Eject mem card while selected, then clear datamodel
 - Refine pref cache progress size

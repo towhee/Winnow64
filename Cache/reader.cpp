@@ -9,13 +9,35 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     threadId = id;
     instance = 0;
 
-    thumb = new Thumb(dm);
-
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon);
 
+    thumb = new Thumb(dm);
+
+    frameDecoder = new FrameDecoder();
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+    frameDecoderthread = new QThread;
+    frameDecoder->moveToThread(frameDecoderthread);
+    frameDecoderthread->start();
+
+    tiffThumbDecoder = new TiffThumbDecoder();
+    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
+    connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
+    tiffThumbDecoderThread = new QThread;
+    tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
+    tiffThumbDecoderThread->start();
+
     isDebug = false;
     debugLog = false;
+}
+
+Reader::~Reader()
+{
+    frameDecoderthread->quit();
+    frameDecoderthread->wait();
+    tiffThumbDecoderThread->quit();
+    tiffThumbDecoderThread->wait();
 }
 
 void Reader::stop()
@@ -80,14 +102,15 @@ bool Reader::readMetadata()
     t2 = t.restart();
     #endif
 
-    metadata->m.row = dmRow;
-    metadata->m.instance = instance;
-    metadata->m.metadataAttempted = true;
-    metadata->m.metadataLoaded = isMetaLoaded;
+    m = &metadata->m;
+    m->row = dmRow;
+    m->instance = instance;
+    m->metadataAttempted = true;
+    m->metadataLoaded = isMetaLoaded;
 
     // req'd to readIcon, in case it runs before datamodel has been up[dated
-    offsetThumb = metadata->m.offsetThumb;
-    lengthThumb = metadata->m.lengthThumb;
+    offsetThumb = m->offsetThumb;
+    lengthThumb = m->lengthThumb;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
     if (abort) return false;
@@ -133,6 +156,21 @@ void Reader::readIcon()
     QString msg;
     QImage image;
 
+    // tiff missing embedded thumbnail
+    if (m->ext == "tif" && m->isEmbeddedThumbMissing) {
+        // tiffThumbDecoder->addToQueue(fPath, dmIdx, instance, m->offsetFull);
+        emit tiffMissingThumbDecode(fPath, dmIdx, instance, m->offsetFull);
+        return;
+    }
+
+    // video
+    if (isVideo) {
+        if (G::renderVideoThumb) {
+            emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, instance);
+        }
+        return;
+    }
+
     // pass embedded thumb offset and length in case datamodel not updated yet
     if (!abort) {
         if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
@@ -146,10 +184,6 @@ void Reader::readIcon()
     #endif
 
     if (abort) return;
-
-    // videos set the datamodel icon separately from FrameDecoder
-    // if !G::renderVideoThumb then generic Video image returned from Thumb
-    if (isVideo && G::renderVideoThumb) return;
 
     if (!abort && loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

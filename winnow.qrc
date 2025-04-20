@@ -192,5 +192,6 @@
         <file>images/icon16/target_bw.png</file>
         <file>images/icon16/target.png</file>
         <file>images/target.png</file>
+        <file>images/busy_spinner.gif</file>
     </qresource>
 </RCC>

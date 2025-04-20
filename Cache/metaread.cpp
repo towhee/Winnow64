@@ -87,7 +87,7 @@ MetaRead::MetaRead(QObject *parent,
         Reader *reader = new Reader(id, dm, imageCache);
         QThread *thread = new QThread;
         reader->readerThread = thread;
-        reader->moveToThread(thread);  // Move to MetaRead's thread
+        reader->moveToThread(thread);
         connect(reader, &Reader::done, this, &MetaRead::dispatch);
         thread->start();
         readers.append(reader);

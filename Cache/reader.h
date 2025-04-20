@@ -18,7 +18,7 @@ class Reader : public QObject
     Q_OBJECT
 public:
     Reader(int id, DataModel *dm, ImageCache *imageCache);
-    //~Reader() override;
+    ~Reader() override;
 
     QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
@@ -50,6 +50,9 @@ public:
     };
 
 signals:
+    void videoFrameDecode(QString fPath, int longSide, QString source,
+                          QModelIndex dmIdx, int dmInstance);
+    void tiffMissingThumbDecode(QString fPath, QModelIndex dmIdx, int instance, int offset);
     void addToDatamodel(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
@@ -70,8 +73,12 @@ private:
     void readIcon();
     inline bool instanceOk();
     DataModel *dm;
+    ImageMetadata *m;
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;
+    QThread *frameDecoderthread;
+    TiffThumbDecoder *tiffThumbDecoder;
+    QThread *tiffThumbDecoderThread;
     Thumb *thumb;
 
     uint offsetThumb;
