@@ -203,11 +203,15 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
     setThumbDockVisibity();
 
-    restoreGeometry(w.geometry);
-    restoreState(w.state);
-    // second restoreState req'd for going from docked to floating docks
-    restoreGeometry(w.geometry);
-    restoreState(w.state);
+    qDebug() << "ws.isMaximised =" << w.isMaximised;
+
+    if (!w.isMaximised) {
+        restoreGeometry(w.geometry);
+        restoreState(w.state);
+        // second restoreState req'd for going from docked to floating docks
+        restoreGeometry(w.geometry);
+        restoreState(w.state);
+    }
 
     // recover selection
     QItemSelection selection;
@@ -219,7 +223,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     thumbView->scrollToCurrent("MW::invokeWorkSpace");
 
-    if (w.isMaximised) showMaximized();
+    // if (w.isMaximised) showMaximized();
 }
 
 void MW::snapshotWorkspace(WorkspaceData &wsd)

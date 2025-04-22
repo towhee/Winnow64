@@ -7,7 +7,7 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = true;              // Writes log messages to file or console
+bool isLogger = false;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
