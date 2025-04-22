@@ -4048,10 +4048,15 @@ void MW::toggleFullScreen()
     is taken to be re-established when showNormal.
 */
     if (G::isLogger) G::log("MW::toggleFullScreen");
+
+    static bool wasMaximized = false;
+
+    // show full screen
     if (fullScreenAction->isChecked())
     {
-        reportWorkspace(ws);
+        // reportWorkspace(ws);
         snapshotWorkspace(ws);
+        wasMaximized = isMaximized();
         showFullScreen();
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
@@ -4070,10 +4075,16 @@ void MW::toggleFullScreen()
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
     }
+    // show normal screen
     else
     {
-        showNormal();
+        qDebug() << "wasMaximized =" << wasMaximized;
+        // showNormal();
+        // setVisible(false);
+        if (wasMaximized) showMaximized();
+        else showNormal();
         invokeWorkspace(ws);
+        // setVisible(true);
     }
 }
 

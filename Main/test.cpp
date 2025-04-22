@@ -394,7 +394,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Qt::KeyboardModifiers modifiers = Qt::NoModifier;
     // sel->toggleSelect(dm->sf->index(0,0));
-    sel->setCurrentIndex(dm->sf->index(0,0), true);
+    qDebug() << "ws.isMaximised =" << ws.isMaximised;
     return;
     int i = dm->currentSfRow;
     float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
