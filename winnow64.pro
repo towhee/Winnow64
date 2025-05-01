@@ -1,4 +1,3 @@
-#CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
 
 macx:CONFIG += app_bundle
@@ -62,8 +61,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    Cache/tiffthumbdecoder.h
+HEADERS += Cache/cachedata.h
+HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
 HEADERS += ImageFormats/Png/png.h
@@ -113,7 +112,6 @@ HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
-HEADERS +=
 HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
@@ -205,8 +203,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Cache/tiffthumbdecoder.cpp
+SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/tiffthumbdecoder.cpp
 SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
 SOURCES += ImageFormats/Png/png.cpp
@@ -430,7 +428,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath
+DISTFILES += Docs/ingestautopath \
+    notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt
 DISTFILES += _CMakeLists.txt
 DISTFILES += notes/_InstallLibrary.txt

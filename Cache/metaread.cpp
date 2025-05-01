@@ -129,12 +129,13 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
-            << "startRow =" << startRow
-            << "isDispatching =" << isDispatching
+            << "startRow =" << sfRow
+            << "startRow =" << sfRow
+            << "sfRowCount =" << sfRowCount
             << "imageCacheTriggered =" << imageCacheTriggered
             << "fileSelectionChanged =" << fileSelectionChanged
             << "G::allMetadataLoaded =" << G::allMetadataLoaded
@@ -147,8 +148,9 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     abort = false;
 
     // prevent redundant calls
-    if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
-    else startRow = 0;
+    startRow = sfRow;
+    // if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
+    // else startRow = 0;
     // if (instance == dm->instance && prevStartRow == startRow) return;
     prevStartRow = startRow;
 

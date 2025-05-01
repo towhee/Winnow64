@@ -394,6 +394,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Qt::KeyboardModifiers modifiers = Qt::NoModifier;
     // sel->toggleSelect(dm->sf->index(0,0));
+
+    folderAndFileSelectionChange("/Users/roryhill/Pictures/Zen2048/pbase2048/2022-12-30_0003_Zen2048.JPG");
+    return;
+
     qDebug() << "ws.isMaximised =" << ws.isMaximised;
     return;
     int i = dm->currentSfRow;
