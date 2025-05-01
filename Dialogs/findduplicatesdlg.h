@@ -81,6 +81,7 @@ private:
 
     struct B {
         QString fPath;
+        QString name;
         QString type;
         QString createdDate;
         QString aspect;
@@ -90,11 +91,12 @@ private:
 
     // replaced by QHash<int, QList<M>> matches
     struct R {
-        bool sameType;              //
-        bool sameCreationDate;      //
-        bool sameAspect;            //
-        bool sameDuration;          //
-        int deltaPixels;         //
+        bool sameName;
+        bool sameType;
+        bool sameCreationDate;
+        bool sameAspect;
+        bool sameDuration;
+        int deltaPixels;
         bool match;                 // for reporting only
     };
 
@@ -145,6 +147,7 @@ private:
     void reportMatches();
     void reportResults();
     void reportAspects();
+    bool sameFileName(int a, int b);
     bool sameFileType(int a, int b);
     bool sameCreationDate(int a, int b/*, ImageMetadata *m*/);
     bool sameAspect(int a, int b/*, ImageMetadata *m*/);
