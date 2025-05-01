@@ -797,6 +797,20 @@ void FindDuplicatesDlg::buildBList()
     }
 }
 
+bool FindDuplicatesDlg::sameFileName(int a, int b)
+{
+/*
+    Compare candidate / target image file type and return result
+*/
+    QString nameA = dm->sf->index(a, G::NameColumn).data().toString().toLower();
+    QString nameB = bItems.at(b).name;
+    bool isSame = (nameA == nameB);
+    if (isDebug)
+        qDebug() << "FileName     a =" << a << nameA << "b =" << b << nameB<< "isSame" << isSame;
+    results[a][b].sameName = isSame;
+    return isSame;
+}
+
 bool FindDuplicatesDlg::sameFileType(int a, int b)
 {
 /*
@@ -897,7 +911,11 @@ void FindDuplicatesDlg::findMatches()
             ui->progressLbl->setText(s);
             results[a][b].match = false;
 
-             // same file type
+            // same file name
+            if (ui->sameFileNameCB->isChecked()) {
+                if (!sameFileName(a, b)) continue;
+            }
+            // same file type
             if (ui->sameFileTypeCB->isChecked()) {
                 if (!sameFileType(a, b)) continue;
             }
@@ -967,11 +985,18 @@ void FindDuplicatesDlg::buildResults()
                      <<  dm->sf->index(a,G::NameColumn).data().toString()
                      <<  "B =" << bItems.at(b).fPath
                 ;
+            // same file name
+            if (ui->sameFileNameCB->isChecked()) {
+                results[a][b].sameName = sameFileName(a, b);
+                if (isDebug)
+                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameName" << results[a][b].sameName;
+            }
+
             // same file type
             if (ui->sameFileTypeCB->isChecked()) {
                 results[a][b].sameType = sameFileType(a, b);
                 if (isDebug)
-                qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameType" << results[a][b].sameType;
+                    qDebug() << "FindDuplicatesDlg::buildResults results[a][b].sameType" << results[a][b].sameType;
             }
 
             // same creation date
@@ -1063,6 +1088,11 @@ void::FindDuplicatesDlg::reportResults()
                 rpt << "    SAME PIXELS   Delta " << delta;
             }
             else {
+                if (ui->sameFileNameCB->isChecked()) {
+                    QString sameType = results[a][b].sameName ? "true" : "false";
+                    QString typeB = bItems.at(b).name;
+                    rpt << "    NAME " + sameType.leftJustified(25) + (typeA + s + typeB).leftJustified(25);
+                }
                 if (ui->sameFileTypeCB->isChecked()) {
                     QString sameType = results[a][b].sameType ? "true" : "false";
                     QString typeB = bItems.at(b).type;
@@ -1135,6 +1165,7 @@ void FindDuplicatesDlg::on_samePixelsCB_clicked()
 */
     // qDebug() << "FindDuplicatesDlg::on_samePixels_clicked";
     bool isPix = ui->samePixelsCB->isChecked();
+    ui->sameFileNameCB->setEnabled(!isPix);
     ui->sameFileTypeCB->setEnabled(!isPix);
     ui->sameCreationDateCB->setEnabled(!isPix);
     ui->sameAspectCB->setEnabled(!isPix);
@@ -1545,6 +1576,7 @@ void::FindDuplicatesDlg::reportFindMatch(int a, int b)
     // A items
     QString fileNameA = dm->sf->index(a,G::NameColumn).data().toString().leftJustified(20);
     QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString();
+    QString nameA = QFileInfo(pathA).fileName().toLower();
     QString typeA = QFileInfo(pathA).suffix().toLower();
     QString dateA = dm->sf->index(a, G::CreatedColumn).data().toString();
     QString aspectA = QString::number(dm->sf->index(a, G::AspectRatioColumn).data().toDouble(),'f', 2);
@@ -1552,6 +1584,12 @@ void::FindDuplicatesDlg::reportFindMatch(int a, int b)
     if (durationA.length() == 0) durationA = "00:00";
 
     QString same;
+    if (ui->sameFileNameCB->isChecked()) {
+        QString typeB = bItems.at(b).name;
+        bool same = typeA == typeB;
+        QString sameName = same ? "true" : "false";
+        rpt += "    NAME " + sameName.leftJustified(25) + (typeA + s + typeB).leftJustified(25);
+    }
     if (ui->sameFileTypeCB->isChecked()) {
         QString typeB = bItems.at(b).type;
         bool same = typeA == typeB;
