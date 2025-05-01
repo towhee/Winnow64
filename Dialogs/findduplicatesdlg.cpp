@@ -549,9 +549,10 @@ void FindDuplicatesDlg::clear()
     ui->tv->setEnabled(false);
 }
 
-void FindDuplicatesDlg::showImageComparisonStuff(int a, QString bPath)
+void FindDuplicatesDlg::showImageComparisonStuff(int a, int b, QString bPath)
 {
     if (!matches.contains(a)) return;
+    int tot = matches[a].count();
     if (ui->samePixelsCB->isChecked()) {
         ui->deltaLbl->setVisible(true);
         ui->deltaTxt->setVisible(true);
@@ -564,8 +565,8 @@ void FindDuplicatesDlg::showImageComparisonStuff(int a, QString bPath)
     ui->prevToolBtn->setVisible(true);
     ui->nextToolBtn->setVisible(true);
     ui->currentLbl->setVisible(true);
-    ui->currentLbl->setText(currentMatchString(a, 0));
-    ui->currentLbl->setToolTip(currentMatchString(a, 0));
+    ui->currentLbl->setText(currentMatchString(b, tot));
+    ui->currentLbl->setToolTip(currentMatchString(b, tot));
     ui->targetPathLbl->setVisible(true);
     ui->targetPathLbl->setText(bPath);
     ui->targetPathLbl->setToolTip(bPath);
@@ -604,6 +605,7 @@ void FindDuplicatesDlg::getMetadataBItems()
     of the candidate A list images in the datamodel. The list is built in buildBList().
 
     The list bItems contains all the information required for comparison:
+        - file name
         - type
         - createdDate
         - aspect
@@ -654,6 +656,9 @@ void FindDuplicatesDlg::getMetadataBItems()
             loadMeta = false;
         }
         ImageMetadata *m = &metadata->m;
+
+        // file name
+        bItems[b].name = QFileInfo(fPath).fileName().toLower();
 
         // type
         bItems[b].type = QFileInfo(fPath).suffix().toLower();
@@ -1117,6 +1122,7 @@ void::FindDuplicatesDlg::reportResults()
             rpt << "    A: " + fileNameA;
             // rpt << "    A: " + fileNameA.leftJustified(10);
             rpt << "   B: " + bItems.at(b).fPath;
+            rpt << "   B: " + bItems.at(b).name;
             rpt << "\n";
         }
     }
@@ -1143,7 +1149,7 @@ void::FindDuplicatesDlg::reportResults()
         longestLinePixelWidth = qMax(longestLinePixelWidth, lineWidth);
     }
     longestLinePixelWidth += 50;    // add dialog borders
-    int widthToUse = longestLinePixelWidth > G::displayVirtualHorizontalPixels
+    int widthToUse = longestLinePixelWidth < G::displayVirtualHorizontalPixels
                          ? G::displayVirtualHorizontalPixels : longestLinePixelWidth;
     qDebug() << "longestLinePixelWidth =" << longestLinePixelWidth
              << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels;
@@ -1255,7 +1261,7 @@ void FindDuplicatesDlg::on_prevToolBtn_clicked()
         QImage image;
         getPreview(bPath, image, "FindDupMatch");
         showPreview(bPath, image, "FindDupMatch");
-        showImageComparisonStuff(a, bPath);
+        showImageComparisonStuff(a, b, bPath);
         // if (ui->samePixelsCB->isChecked()) {
         //     ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
         // }
@@ -1284,7 +1290,7 @@ void FindDuplicatesDlg::on_nextToolBtn_clicked()
         currentMatch++;
         int b = currentMatch;
         QString bPath = matches[a].at(b).path;
-        if (isDebug)
+        // if (isDebug)
         {
         qDebug() << "FindDuplicatesDlg::on_nextToolBtn_clicked"
                  << "a =" << a
@@ -1294,7 +1300,7 @@ void FindDuplicatesDlg::on_nextToolBtn_clicked()
         QImage image;
         getPreview(bPath, image, "FindDupMatch");
         showPreview(bPath, image, "FindDupMatch");
-        showImageComparisonStuff(a, bPath);
+        showImageComparisonStuff(a, b, bPath);
         // if (ui->samePixelsCB->isChecked()) {
         //     ui->deltaLbl->setText(QString::number(matches[a].at(b).deltaPixels));
         // }
@@ -1344,7 +1350,7 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     bool isMatch = matches.contains(a);
     if (isMatch) {
         if (matches[a].count() > 0) bPath = matches[a].at(0).path;
-        showImageComparisonStuff(a, bPath);
+        showImageComparisonStuff(a, 0, bPath);
     }
     ui->candidateFilenameLbl->setVisible(true);
     ui->candidateFilenameLbl->setText(aName);
