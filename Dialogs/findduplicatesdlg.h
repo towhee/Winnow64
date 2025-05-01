@@ -136,7 +136,7 @@ private:
     void setupModel();
     QString currentMatchString(int a, int b);
     void clear();
-    void showImageComparisonStuff(int a, QString bPath);
+    void showImageComparisonStuff(int a, int b, QString bPath);
     void initializeResultsVector();
     void pixelCompare();
     void findMatches();
