@@ -11,14 +11,6 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
     connect(this, &Pixmap::setValueDm, dm, &DataModel::setValueDm);
 }
 
-bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
-{
-    QImage image;
-    bool success = load(fPath, image, src);
-    pm = QPixmap::fromImage(image);
-    return success;
-}
-
 bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
 {
      QFile imFile(fPath);
@@ -40,13 +32,21 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      #endif
 }
 
+bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
+{
+    QImage image;
+    bool success = load(fPath, image, src);
+    pm = QPixmap::fromImage(image);
+    return success;
+}
+
 bool Pixmap::load(QString &fPath, QImage &image, QString src)
 {
 /*  Reads the embedded jpg (known offset and length) and converts it into a
     QImage.
 
     This function is dependent on metadata being updated first.  Metadata is
-    updated by the metadataReadThread that runs every time a new folder is
+    updated by the metaRead thread that runs every time a new folder is
     selected. This function is signalled by the imageCache thread that stores
     pixmaps on the heap.
 

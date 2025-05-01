@@ -38,7 +38,8 @@ NORMAL DEPLOYMENT
         - Codesign must be run as the last step when modifying Winnow.app.  Recompilation
           does not require rerunning codesign.
         - Using macdeployqt -dmg removes codesign, so must use Disk Utilities.app
-        - FileZilla requires Server > Reconnect
+        - FileZilla requires Server > Reconnect. When reconnecting server the ssh key must be at
+          "/Users/roryhill/Documents/Winnow/ssh digital ocean private key.ppk"
 
 	For Win: 
 	---------------------------------------------------------------------

@@ -560,6 +560,7 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
                   " folderPath = " + folderPath;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
+    qDebug() << fun << msg;
 
     if (recurse) {
         enqueueOp(folderPath, op);
@@ -594,7 +595,6 @@ void DataModel::processNextFolder()
     // QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
         isProcessingFolders = false;
-        emit folderChange();
         return;
     }
 
@@ -605,34 +605,28 @@ void DataModel::processNextFolder()
     bool addFolderImages = folderOperation.second;
 
     QString fun = "DataModel::processNextFolder";
-    {
     QString msg = "folderOperation.first = " + folderOperation.first + " " +
-                  "folderOperation.second = " + QVariant(folderOperation.second).toString();
+                  "folderOperation.second = " + QVariant(folderOperation.second).toString() +
+                  " Remaining = " + QString::number(folderQueue.count())
+        ;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    }
 
     // add images from model
     if (addFolderImages) {
         addFolder(folderPath);
-        // signal MW::loadChanged
-        // if (!abort/* && folderQueue.empty()*/) {
-        //     emit addedFolderToDM(folderOperation.first, "Add");
-        // }
     }
 
     // remove images from model
     else {
         removeFolder(folderPath);
-       // signal MW::loadChanged if last removal in queue
-        // if (isQueueRemoveEmpty()) {
-        //     emit removedFolderFromDM(folderOperation.first, "Remove");
-        // }
     }
 
+    qDebug().noquote() << fun << msg;
+    emit folderChange();
+
     // Continue with the next folder operation
-    // QMetaObject::invokeMethod(this, "processNextFolder", Qt::QueuedConnection);
-    processNextFolder();
+    if (folderQueue.count()) processNextFolder();
 }
 
 void DataModel::addFolder(const QString &folderPath)

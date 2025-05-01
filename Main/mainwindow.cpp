@@ -2043,6 +2043,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
             G::log(fun, msg);
         }
     }
+    qDebug() << fun << op << folderPath;
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2112,7 +2113,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
     {
     qDebug() << fun
              << "src =" << src
@@ -2324,24 +2325,27 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
                 ;
                 //*/
 
-    // path to image, used in loadImageCacheForNewFolder to select image
+    // path to image, used in folderChanged() to select image
     folderAndFileChangePath = fPath;
-
-    // handle StartupArgs (embellish call from remote source ie Lightroom)
-    if (!fsTree->select(folder)) {
-        QString msg = "fsTree failed to select folder.";
-        G::issue("Warning", msg, "MW::folderAndFileSelectionChange", -1, folder);
-        return;
-    }
 
     if (centralLayout->currentIndex() == CompareTab) {
         centralLayout->setCurrentIndex(LoupeTab);
     }
     // dm->selectionModel->clear();
 
+    // handle StartupArgs (embellish call from remote source ie Lightroom)
+    if (!fsTree->select(folder)) {
+        QString msg = "fsTree failed to select folder.";
+        G::issue("Warning", msg, "MW::folderAndFileSelectionChange", -1, folder);
+        qWarning() << msg;
+        return;
+    }
+
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     // qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
-    // folderSelectionChange();
+    // bool resetDatamodel = true;
+    // bool recurse = false;
+    // folderSelectionChange(folder, "Add", resetDatamodel, recurse);
 
     return;
 }
@@ -2674,6 +2678,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
     G::isModifyingDatamodel = false;
+    int startRow = 0;
 
     // datamodel is empty
     if (dm->rowCount()) {
@@ -2688,13 +2693,19 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     // if there was a folder and file change
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
-        folderAndFileChangePath = "";
+        // startRow = dm->currentDmRow;
+        startRow = dm->rowFromPath(folderAndFileChangePath);
+        // folderAndFileChangePath = "";
     }
     // reset datamodel current index if it has been removed
     else if (!dm->currentDmIdx.isValid()) {
         dm->setCurrent(dm->index(0,0), dm->instance);
         imageView->isFirstImageNewInstance = true;
     }
+
+    qDebug()  << "MW::folderChanged"
+              << "startRow =" << startRow
+              << "folderAndFileChangePath =" << folderAndFileChangePath;
 
     // Only one folder selected
     if (dm->folderList.count() == 1) {
@@ -2746,9 +2757,10 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        dm->setIconRange(0);
+        qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
+        dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
-                                  Q_ARG(int, 0),
+                                  Q_ARG(int, startRow),
                                   Q_ARG(bool, true),
                                   Q_ARG(QString, fun)
                                   );
@@ -2781,7 +2793,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    /* debug
+    // /* debug
     {
         qDebug().noquote()
                  << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2931,6 +2943,8 @@ void MW::folderChangeCompleted()
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
+
+    // folderAndFileChangePath = "";
 }
 
 void MW::thumbHasScrolled()

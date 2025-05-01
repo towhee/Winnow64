@@ -1,0 +1,21 @@
+Make sure brew is installed.
+
+Install dependencies:
+brew install bazel
+brew install cmake
+brew install opencv
+
+Clone the MediaPipe repository:
+git clone https://github.com/google/mediapipe.git
+cd mediapipe
+
+Get Bazel 6.5 on macOS
+brew install bazelisk
+users/mediapipe/.bazelversion must contain "6.5.0"
+bazel --version   //installs bazel using bazelisk
+
+Build a sample app to test:
+bazel build -c opt mediapipe/examples/desktop/hello_world:hello_world
+
+Fix all build errors:
+Requires Python 3.12

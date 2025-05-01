@@ -13,6 +13,7 @@ WHAT'S NEW
 - Pan to camera focus point when zoomed
 
 BUGS / TO DO
+- Resolve Pixmap vs ImageDecoder classes
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Check missing thumbnails process is working
 - Fix MW::ejectUsb(QString path)
