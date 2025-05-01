@@ -14,6 +14,8 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Resolve Pixmap vs ImageDecoder classes
+- Find duplicates x of x duplicates not updating as progress
+- Find duplicates add same name to criteria
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Check missing thumbnails process is working
 - Fix MW::ejectUsb(QString path)
