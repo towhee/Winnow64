@@ -5553,7 +5553,7 @@ void MW::findDuplicates()
     FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
     findDuplicatesDlg->setStyleSheet(G::css);
     // minimize dialog size fitting contents
-    findDuplicatesDlg->resize(100, 100);
+    // findDuplicatesDlg->resize(100, 100);
     if (findDuplicatesDlg->exec()) {
         qDebug() << "MW::findDuplicates accepted";
         // add true to compare filter

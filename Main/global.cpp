@@ -93,6 +93,7 @@ QColor disabledColor;               // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
+QColor helpColor = QColor(68,95,118);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
 QColor selectionColor = QColor(68,95,118);
 QColor mouseOverColor = QColor(40,54,66);

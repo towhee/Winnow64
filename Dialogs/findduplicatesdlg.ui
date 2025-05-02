@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1291</width>
-    <height>944</height>
+    <width>1497</width>
+    <height>949</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -794,7 +794,7 @@
                    <string notr="true">border-width: 0</string>
                   </property>
                   <property name="title">
-                   <string>Match from targeted images</string>
+                   <string>Duplicates found from targeted images</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <property name="leftMargin">
@@ -1212,7 +1212,7 @@
               </font>
              </property>
              <property name="title">
-              <string>Candidate Images</string>
+              <string>Candidate Images: match results (select to review)</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_2">
               <property name="leftMargin">
@@ -1241,6 +1241,16 @@
                 <property name="bottomMargin">
                  <number>6</number>
                 </property>
+                <item>
+                 <widget class="QLabel" name="label_4">
+                  <property name="styleSheet">
+                   <string notr="true">color: rgb(128,128,128);</string>
+                  </property>
+                  <property name="text">
+                   <string>Only checked candidates are returned as duplicated when Done.</string>
+                  </property>
+                 </widget>
+                </item>
                 <item>
                  <widget class="QTableView" name="tv">
                   <property name="sizePolicy">
@@ -1344,6 +1354,9 @@
         </property>
         <property name="toolTip">
          <string>How this works</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(43, 85, 49);</string>
         </property>
         <property name="text">
          <string>How this works</string>
