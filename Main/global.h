@@ -253,6 +253,7 @@ namespace G
     extern QColor tabWidgetBorderColor;
     extern QColor pushButtonBackgroundColor;
     extern QColor scrollBarHandleBackgroundColor;
+    extern QColor helpColor;
     extern QColor selectionColor;
     extern QColor mouseOverColor;
     extern QColor appleBlue;

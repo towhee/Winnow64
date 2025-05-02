@@ -512,6 +512,11 @@ QString FindDuplicatesDlg::currentMatchString(int a, int b)
 {
 /*
     Reports ie "3 of 7 matches" under the target image preview.
+                b of tot
+
+    matches[a].at(b)
+        a = match index = candidate row selected
+        b = nth match for candidate a
 */
     if (!matches.contains(a)) {
         return "No matches";
@@ -552,7 +557,6 @@ void FindDuplicatesDlg::clear()
 void FindDuplicatesDlg::showImageComparisonStuff(int a, int b, QString bPath)
 {
     if (!matches.contains(a)) return;
-    int tot = matches[a].count();
     if (ui->samePixelsCB->isChecked()) {
         ui->deltaLbl->setVisible(true);
         ui->deltaTxt->setVisible(true);
@@ -565,8 +569,8 @@ void FindDuplicatesDlg::showImageComparisonStuff(int a, int b, QString bPath)
     ui->prevToolBtn->setVisible(true);
     ui->nextToolBtn->setVisible(true);
     ui->currentLbl->setVisible(true);
-    ui->currentLbl->setText(currentMatchString(b, tot));
-    ui->currentLbl->setToolTip(currentMatchString(b, tot));
+    ui->currentLbl->setText(currentMatchString(a, b));
+    ui->currentLbl->setToolTip(currentMatchString(a, b));
     ui->targetPathLbl->setVisible(true);
     ui->targetPathLbl->setText(bPath);
     ui->targetPathLbl->setToolTip(bPath);
@@ -802,16 +806,30 @@ void FindDuplicatesDlg::buildBList()
     }
 }
 
-bool FindDuplicatesDlg::sameFileName(int a, int b)
+bool FindDuplicatesDlg::sameFilePath(int a, int b)
 {
 /*
-    Compare candidate / target image file type and return result
+    Compare candidate / target image file path and return result.  This is used
+    to prevent including the candidate file as a duplicate result.
+*/
+    QString pathA = dm->sf->index(a, G::PathColumn).data(G::PathRole).toString().toLower();
+    QString pathB = bItems.at(b).fPath.toLower();
+    bool isSame = (pathA == pathB);
+    // if (isDebug)
+        qDebug() << "FilePath     a =" << a << pathA << "b =" << b << pathB << "isSame" << isSame;
+    return isSame;
+}
+
+bool FindDuplicatesDlg::sameFileName(int a, int b)
+{
+    /*
+    Compare candidate / target image file name and return result
 */
     QString nameA = dm->sf->index(a, G::NameColumn).data().toString().toLower();
     QString nameB = bItems.at(b).name;
     bool isSame = (nameA == nameB);
     if (isDebug)
-        qDebug() << "FileName     a =" << a << nameA << "b =" << b << nameB<< "isSame" << isSame;
+        qDebug() << "FileName     a =" << a << nameA << "b =" << b << nameB << "isSame" << isSame;
     results[a][b].sameName = isSame;
     return isSame;
 }
@@ -827,7 +845,7 @@ bool FindDuplicatesDlg::sameFileType(int a, int b)
     QString extB = QFileInfo(pathB).suffix().toLower();
     bool isSame = (extA == extB);
     if (isDebug)
-        qDebug() << "FileType     a =" << a << extA << "b =" << b << extB<< "isSame" << isSame;
+        qDebug() << "FileType     a =" << a << extA << "b =" << b << extB << "isSame" << isSame;
     results[a][b].sameType = isSame;
     return isSame;
 }
@@ -896,8 +914,8 @@ bool FindDuplicatesDlg::sameDuration(int a, int b)
 void FindDuplicatesDlg::findMatches()
 {
 /*
-    Iterates all candidate/target combinations, comparing the criteria that is checked.  If
-    they all match then the model item is checked then:
+    Iterates all candidate/target combinations, comparing the criteria that is checked.
+    If they all match then the model item is checked then:
         - the item path is appended to the matches hash
         - results match set to true
     Note that pixel comparison is not done here.  See pixelCompare().
@@ -915,6 +933,9 @@ void FindDuplicatesDlg::findMatches()
                         "b = " + QString::number(b+1) + " of " + QString::number(bCount);
             ui->progressLbl->setText(s);
             results[a][b].match = false;
+
+            // same file path = candidate image file = compare to itself
+            if (!sameFilePath(a, b)) continue;
 
             // same file name
             if (ui->sameFileNameCB->isChecked()) {
@@ -1341,8 +1362,7 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
     if (G::useProcessEvents) qApp->processEvents();
 
     currentMatch = 0;
-    // // larger A image (candidate)
-    // int a = index.row();
+    // larger A image (candidate)
     QString aName = dm->sf->index(a,G::NameColumn).data().toString();
     // candidate image path
     QString aPath = dm->sf->index(a,0).data(G::PathRole).toString();

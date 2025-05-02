@@ -147,6 +147,7 @@ private:
     void reportMatches();
     void reportResults();
     void reportAspects();
+    bool sameFilePath(int a, int b);
     bool sameFileName(int a, int b);
     bool sameFileType(int a, int b);
     bool sameCreationDate(int a, int b/*, ImageMetadata *m*/);
