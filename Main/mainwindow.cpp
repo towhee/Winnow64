@@ -3544,7 +3544,7 @@ void MW::about()
     if (G::isLogger) G::log("MW::about");
     QString qtVersion = QT_VERSION_STR;
     qtVersion.prepend("Qt: ");
-    aboutDlg = new AboutDlg(this, version, qtVersion);
+    aboutDlg = new AboutDlg(this, version, qtVersion, compileDate);
     aboutDlg->exec();
 }
 

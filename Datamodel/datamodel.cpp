@@ -522,7 +522,6 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("DataModel::enqueueOp", op + " " + folderPath);
-    qDebug() << "DataModel::enqueueOp op =" << op << folderPath;
 
     if (op == "Add") {
         if (!folderList.contains(folderPath)) {
@@ -538,9 +537,9 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
 {
 /*
     Receive a folderPath for processing (add or remove from datamodel)
-    - op is Add, Remove or Toggle
+    - op is Add or Remove
     - recurse is add all subfolders as well
-    - call enqueueOp to add to queue
+    - call enqueueOp to add operation to the queue
     - call processNextFolder to make the changes to the datamodel
 */
     QString fun = "DataModel::enqueueFolderSelection";
@@ -549,7 +548,6 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
                   " folderPath = " + folderPath;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    qDebug() << fun << msg;
 
     if (recurse) {
         enqueueOp(folderPath, op);
@@ -566,10 +564,6 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
         enqueueOp(folderPath, op);
     }
 
-    qDebug() << fun << "isProcessingFolders =" << isProcessingFolders
-             << "folderQueue.isEmpty() =" << folderQueue.isEmpty()
-        ;
-
     // If not already processing, start the processing
     if (!isProcessingFolders) {
         isProcessingFolders = true;
@@ -585,7 +579,6 @@ void DataModel::processNextFolder()
     - folderOperation.first is the folderPath
     - folderOperation.second true = Add, false = Remove
 */
-    // QMutexLocker locker(&mutex);
     if (folderQueue.isEmpty()) {
         isProcessingFolders = false;
         return;
@@ -601,24 +594,20 @@ void DataModel::processNextFolder()
     QString msg = "folderOperation.first = " + folderOperation.first + " " +
                   "folderOperation.second = " + QVariant(folderOperation.second).toString() +
                   " Remaining = " + QString::number(folderQueue.count())
-        ;
+                    ;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    qDebug() << fun << msg;
 
     // add images from model
     if (addFolderImages) {
-        qDebug() << fun << "addFolder" << folderPath;
         addFolder(folderPath);
     }
 
     // remove images from model
     else {
-        qDebug() << fun << "removeFolder" << folderPath;
         removeFolder(folderPath);
     }
 
-    // qDebug().noquote() << fun << "after addFolder" << msg;
     emit folderChange();
 
     // Continue with the next folder operation
@@ -633,14 +622,6 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
-    qDebug() << fun << folderPath;
-
-    // start message
-    // QString msg = "Finding all image files...";
-    // G::popUp->showPopup(msg, 0, true, 1);   // pipeline popup
-
-    G::allMetadataLoaded = false;
-    G::iconChunkLoaded = false;
 
     QMutexLocker locker(&mutex);
     abort = false;
@@ -654,14 +635,6 @@ void DataModel::addFolder(const QString &folderPath)
     dir.setNameFilters(*fileFilters);
     dir.setFilter(QDir::Files);
     QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-    /*
-    qDebug().noquote()
-            << fun << "folder =" << folderPath
-            << "folderQueue(count) =" << folderQueue.count()
-            << "folderFileInfoList(count) =" << folderFileInfoList.count()
-        ;
-    for (const QFileInfo &i : folderFileInfoList) qDebug() << i.fileName();
-    //*/
 
     if (combineRawJpg) {
         // make sure, if raw+jpg pair, that raw file is first to make combining easier
@@ -673,10 +646,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     QString step = "Loading eligible image file information.<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
-    // G::popUp->reset(); // pipeline popup
-    // G::popUp->setProgressVisible(true);
-    // G::popUp->setProgressMax(folderFileInfoList.count());
-    // G::popUp->showPopup(step + escapeClause, 0, true, 1);
+
     // test if raw file to match jpg when same file names and one is a jpg
     QString suffix;
     QString prevRawSuffix = "";
@@ -684,14 +654,10 @@ void DataModel::addFolder(const QString &folderPath)
     QString baseName = "";
     QModelIndex prevRawIdx;
 
-    // sf->suspend(true);
-
-    // // datamodel size
+    // datamodel size
     int row = rowCount();
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
-    // // setRowCount(newRowCount);
-    // if (!columnCount()) setColumnCount(G::TotalColumns);
 
     int counter = 0;
     int countInterval = 100;
@@ -715,10 +681,9 @@ void DataModel::addFolder(const QString &folderPath)
         addFileDataForRow(row, fileInfo);
 
         if (row % countInterval == 0 && row > 0) updateLoadStatus(newRowCount);
-        // G::popUp->setProgress(++counter);   // pipeline popup
-        // qApp->processEvents();
 
-        /* Save info for duplicated raw and jpg files, which generally are the result of
+        /*
+        Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
         with the same path precede jpg files with duplicate names. Two roles track duplicates:
         G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
@@ -759,12 +724,6 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
-    // G::popUp->setProgressVisible(false);   // pipeline popup
-    // G::popUp->reset();
-    // msg = "File info added to datamodel";
-    // G::popUp->showPopup(msg, 0, true, 1);
-    // qApp->processEvents();
-
     newRowCount = row;
 
     if (oldRowCount == 0 && newRowCount > 0) {
@@ -786,10 +745,8 @@ void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
-    qDebug() << fun << folderPath;
 
     folderList.removeAll(folderPath);
-
     QModelIndex par = QModelIndex();
 
     // Collect all rows that need to be removed
@@ -797,10 +754,6 @@ void DataModel::removeFolder(const QString &folderPath)
         QString filePath = index(row, 0).data(G::PathRole).toString();
         QFileInfo info(filePath);
         QString rowFolder = info.dir().absolutePath();
-
-        bool isMatch = rowFolder == folderPath;
-        qDebug() << fun << isMatch << folderPath << rowFolder;
-
         if (rowFolder == folderPath) {
             // do not use a mutex here
             beginRemoveRows(par, row, row);
