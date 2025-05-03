@@ -2673,7 +2673,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-
+    qDebug() << fun << msg;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);

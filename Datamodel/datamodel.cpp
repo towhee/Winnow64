@@ -522,6 +522,7 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("DataModel::enqueueOp", op + " " + folderPath);
+    qDebug() << "DataModel::enqueueOp op =" << op << folderPath;
 
     if (op == "Toggle") {
         if (folderList.contains(folderPath)) {
@@ -534,6 +535,7 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
 
     else if (op == "Add") {
         if (!folderList.contains(folderPath)) {
+            qDebug() << "DataModel::enqueueOp Add" << folderPath;
             folderQueue.enqueue(qMakePair(folderPath, true));
         }
     }
@@ -577,6 +579,10 @@ void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bo
         enqueueOp(folderPath, op);
     }
 
+    qDebug() << fun << "isProcessingFolders =" << isProcessingFolders
+             << "folderQueue.isEmpty() =" << folderQueue.isEmpty()
+        ;
+
     // If not already processing, start the processing
     if (!isProcessingFolders) {
         isProcessingFolders = true;
@@ -611,22 +617,28 @@ void DataModel::processNextFolder()
         ;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
+    // qDebug() << fun << msg;
 
     // add images from model
     if (addFolderImages) {
+        qDebug() << fun << "addFolder" << folderPath;
         addFolder(folderPath);
     }
 
     // remove images from model
     else {
+        qDebug() << fun << "addFolder" << folderPath;
         removeFolder(folderPath);
     }
 
-    qDebug().noquote() << fun << msg;
+    // qDebug().noquote() << fun << "after addFolder" << msg;
     emit folderChange();
 
     // Continue with the next folder operation
     if (folderQueue.count()) processNextFolder();
+
+    // finished
+    isProcessingFolders = false;
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -634,6 +646,7 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
+    qDebug() << fun << folderPath;
 
     // start message
     // QString msg = "Finding all image files...";

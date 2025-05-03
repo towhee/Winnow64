@@ -997,18 +997,23 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         bool folderWasSelected = selectedFolderPaths().contains(dPath);
         resetDataModel = false;
         recurse = false;
+        // qDebug() << "FSTree::mousePressEvent  isCtrl =" << isCtrl << "folderWasSelected =" << folderWasSelected;
         // ignore if click on only folder selected
         if (folderWasSelected) {
             // do not toggle if only one folder selected
             if (folders < 2) return;
-            if (G::isLogger) G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            emit folderSelectionChange(dPath, "Remove", /*resetDataModel*/false, /*recurse*/false);
+            // if (G::isLogger)
+                G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
+            emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
         }
         else {
-            if (G::isLogger) G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
-            emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
+            // if (G::isLogger)
+                G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
+            emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
         }
-        QTreeView::mousePressEvent(event);
+        QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+        selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
+        // QTreeView::mousePressEvent(event);
     }
 
     // Select visible unselected between previous selected folder to idx0
@@ -1022,8 +1027,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         foreach(QString path, foldersToAdd) {
             resetDataModel = false;
             emit folderSelectionChange(path, "Add", resetDataModel, recurse);
+            QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
     }
+    // QTreeView::mousePressEvent(event);
 }
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
