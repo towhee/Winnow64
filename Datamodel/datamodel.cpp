@@ -524,26 +524,13 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
         G::log("DataModel::enqueueOp", op + " " + folderPath);
     qDebug() << "DataModel::enqueueOp op =" << op << folderPath;
 
-    if (op == "Toggle") {
-        if (folderList.contains(folderPath)) {
-            folderQueue.enqueue(qMakePair(folderPath, false));
-        }
-        else {
-            folderQueue.enqueue(qMakePair(folderPath, true));
-        }
-    }
-
-    else if (op == "Add") {
+    if (op == "Add") {
         if (!folderList.contains(folderPath)) {
-            qDebug() << "DataModel::enqueueOp Add" << folderPath;
             folderQueue.enqueue(qMakePair(folderPath, true));
         }
     }
-
-    else if (op == "Remove") {
-        if (folderList.contains(folderPath)) {
-            folderQueue.enqueue(qMakePair(folderPath, false));
-        }
+    else if (folderList.contains(folderPath)) {
+        folderQueue.enqueue(qMakePair(folderPath, false));
     }
 }
 
@@ -617,7 +604,7 @@ void DataModel::processNextFolder()
         ;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // qDebug() << fun << msg;
+    qDebug() << fun << msg;
 
     // add images from model
     if (addFolderImages) {
@@ -627,7 +614,7 @@ void DataModel::processNextFolder()
 
     // remove images from model
     else {
-        qDebug() << fun << "addFolder" << folderPath;
+        qDebug() << fun << "removeFolder" << folderPath;
         removeFolder(folderPath);
     }
 
@@ -799,6 +786,7 @@ void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
+    qDebug() << fun << folderPath;
 
     folderList.removeAll(folderPath);
 
@@ -807,7 +795,13 @@ void DataModel::removeFolder(const QString &folderPath)
     // Collect all rows that need to be removed
     for (int row = rowCount() - 1; row >= 0; row--) {
         QString filePath = index(row, 0).data(G::PathRole).toString();
-        if (filePath.startsWith(folderPath)) {
+        QFileInfo info(filePath);
+        QString rowFolder = info.dir().absolutePath();
+
+        bool isMatch = rowFolder == folderPath;
+        qDebug() << fun << isMatch << folderPath << rowFolder;
+
+        if (rowFolder == folderPath) {
             // do not use a mutex here
             beginRemoveRows(par, row, row);
             removeRows(row, 1);

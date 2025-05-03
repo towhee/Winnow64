@@ -1004,12 +1004,12 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             if (folders < 2) return;
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
+            emit folderSelectionChange(dPath, "Remove", resetDataModel, recurse);
         }
         else {
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
-            emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
+            emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
         }
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);

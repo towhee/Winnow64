@@ -2027,7 +2027,6 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     op = operation to perform:
     - Add
     - Remove
-    - Toggle
 */
     G::t.start();
 
