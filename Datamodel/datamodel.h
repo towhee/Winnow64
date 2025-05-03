@@ -174,6 +174,11 @@ public:
     void setShowThumbNailSymbolHelp(bool showHelp);
     bool okManyImagesWarning();
 
+    struct Fld {
+        QString path;
+        QString op;
+    };
+
     QQueue<QPair<QString, bool>> folderQueue;
 
 signals:
