@@ -4,13 +4,15 @@
 
 AboutDlg::AboutDlg(QWidget *parent,
                    QString &version,
-                   QString &qtVersion) :
+                   QString &qtVersion,
+                   QString &compileDate) :
     QDialog(parent),
     ui(new Ui::About)
 {
     ui->setupUi(this);
     ui->qtVersion->setText(qtVersion);
     ui->version->setText(version);
+    ui->compileDate->setText(compileDate);
     // once a stylesheet has been inherited can only change stuff like font size via stylesheet
     QString fontPointSize = QString::number(static_cast<int>(G::strFontSize.toInt() * G::ptToPx));
     QString styleText = "QLabel {font-size: " + fontPointSize + "px;}";

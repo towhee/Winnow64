@@ -117,7 +117,7 @@ public:
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
     */
     QString versionNumber = "2.00" ;
-
+    QString compileDate = "Compiled: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
     QString website = "Website: "
