@@ -949,8 +949,6 @@ void MetaRead::dispatch(int id)
                     }
                     else {
                         qWarning() << "REDO MAXED OUT";
-                        // dispatchFinished("WeAreDone");
-
                         // fall through to we are done
                         allAttempted = true;
                     }

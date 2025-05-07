@@ -216,9 +216,9 @@ void MW::dmInsert(QStringList pathList)
     foreach(QString fPath, pathList) {
         // replace existing image with the same name
         if (dm->isPath(fPath)) {
-            qDebug() << src << "replace" << fPath;
             int dmRow = dm->rowFromPath(fPath);
             int sfRow = dm->proxyRowFromPath(fPath, src);
+            qDebug() << src << "replace row" << sfRow << fPath;
             // insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);

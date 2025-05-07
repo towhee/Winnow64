@@ -158,7 +158,6 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
     else {
         // G::popUp->reset();
     }
-    qDebug() << "Selection::select(QModelIndex)" << sfIdx.row() << src;
     if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
