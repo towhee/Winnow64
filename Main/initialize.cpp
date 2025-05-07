@@ -806,7 +806,8 @@ void MW::createInfoView()
     settings->endGroup();
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
-            this, SLOT(metadataChanged(QStandardItem*)));
+            this, SLOT(infoViewChanged(QStandardItem*)));
+    // connect(infoView, &InfoView::ok, this, &MW::infoViewChanged);
     // update filters
     connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::updateCategory);
     connect(infoView, &InfoView::filterChange, this, &MW::filterChange);

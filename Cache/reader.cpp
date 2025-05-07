@@ -123,7 +123,7 @@ bool Reader::readMetadata()
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
-        if (isDebug)
+        // if (isDebug)
         {
             qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -210,7 +210,9 @@ void Reader::readIcon()
 void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
                   bool needMeta, bool needIcon)
 {
-    t.restart();
+    QString fun = "Reader::read";
+    if (G::isLogger) G::log(fun, filePath);
+    if (filePath.isEmpty()) qWarning().noquote() << fun << "EMPTY FILEPATH";
     abort = false;
     this->dmIdx = dmIdx;
     fPath = filePath;
@@ -222,7 +224,6 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
     offsetThumb = 0;
     lengthThumb = 0;
 
-    QString fun = "Reader::read";
     if (isDebug)
     {
         qDebug().noquote()
