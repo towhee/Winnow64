@@ -929,7 +929,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     int indentationOffset = level * indentation();
     int decorationWidth = style()->pixelMetric(QStyle::PM_IndicatorWidth);
     QRect decorationRect = QRect(indentationOffset, rect.top(), decorationWidth, rect.height());
-    // /*
+    /*
     qDebug() << "FSTree::mousePressEvent"
              << "level =" << level
              << "rect =" << rect

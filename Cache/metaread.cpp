@@ -129,7 +129,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -949,7 +949,10 @@ void MetaRead::dispatch(int id)
                     }
                     else {
                         qWarning() << "REDO MAXED OUT";
-                        dispatchFinished("WeAreDone");
+                        // dispatchFinished("WeAreDone");
+
+                        // fall through to we are done
+                        allAttempted = true;
                     }
                 }
             }
@@ -1008,6 +1011,7 @@ void MetaRead::dispatch(int id)
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = sfIdx.data(G::PathRole).toString();
+
         if (isDebug)
         {
             QString fun1 = fun + " invoke reader";
@@ -1030,8 +1034,9 @@ void MetaRead::dispatch(int id)
                 ;
         }
 
-        /* read the image file metadata and icon.  When the reader is finished, it will
-           signal dispatch (this function) to loop through to read another file...  */
+        /* Read the image file metadata and icon.  When the reader is finished, it will
+           signal dispatch (this function) to loop through to read another file and so
+           on.  Must use invoke to prevent crash.  */
         if (!abort) {
             QMetaObject::invokeMethod(readers.at(id), "read", Qt::QueuedConnection,
                                       Q_ARG(QModelIndex, dmIdx),
@@ -1160,7 +1165,8 @@ void::MetaRead::quitAfterTimeout()
 void MetaRead::dispatchFinished(QString src)
 {
     QString fun = "MetaRead::dispatchFinished";
-    if (debugLog && (G::isLogger || G::isFlowLogger))  G::log(fun, src);
+    if (debugLog && (G::isLogger || G::isFlowLogger))
+        G::log(fun, src);
     if (isDebug)
     {
         qDebug().noquote()

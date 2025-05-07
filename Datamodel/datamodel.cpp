@@ -608,13 +608,13 @@ void DataModel::processNextFolder()
         removeFolder(folderPath);
     }
 
-    emit folderChange();
-
     // Continue with the next folder operation
     if (folderQueue.count()) processNextFolder();
 
     // finished
     isProcessingFolders = false;
+    qDebug() << fun << "rows =" << rowCount();
+    emit folderChange();
 }
 
 void DataModel::addFolder(const QString &folderPath)

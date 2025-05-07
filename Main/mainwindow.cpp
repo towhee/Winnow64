@@ -2042,7 +2042,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
             G::log(fun, msg);
         }
     }
-    qDebug() << fun << op << folderPath;
+    // qDebug() << fun << op << folderPath;
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2112,7 +2112,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     {
     qDebug() << fun
              << "src =" << src
@@ -2670,9 +2670,10 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
 */
     QString fun = "MW::folderChanged";
     QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
+    msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    qDebug() << fun << msg;
+    // qDebug() << fun << msg;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2702,9 +2703,11 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
         imageView->isFirstImageNewInstance = true;
     }
 
+    /*
     qDebug()  << "MW::folderChanged"
               << "startRow =" << startRow
               << "folderAndFileChangePath =" << folderAndFileChangePath;
+              */
 
     // Only one folder selected
     if (dm->folderList.count() == 1) {
@@ -2756,7 +2759,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
+        // qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
         dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
@@ -2792,7 +2795,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
 
-    // /* debug
+    /* debug
     {
         qDebug().noquote()
                  << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2832,16 +2835,17 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 void MW::folderChangeCompleted()
 {
 /*
-    Signalled by MetaRead::run when finished reading all metadata.
+    Signalled by MetaRead::dispatchFinished (done) when finished reading all metadata.
     Called by folderChanged when a folder has been removed.
+
     - check for missing thumbnails.
     - update filters
     - resize tableView columns
 */
     if (G::isLogger || G::isFlowLogger)
     {
-        QString msg = /*QString::number(testTime.elapsed()) + " ms " +*/
-                      QString::number(dm->rowCount()) + " images";
+        int rows = dm->rowCount();
+        QString msg = QString::number(rows) + " images";
         G::log("MW::folderChangeCompleted", msg);
     }
     QString src = "MW::folderChangeCompleted";
@@ -2852,8 +2856,7 @@ void MW::folderChangeCompleted()
     // G::isModifyingDatamodel = false;
 
     /*
-    qDebug() << "MW::loadConcurrentDone" << G::t.elapsed() << "ms"
-             << dm->currentFolderPath
+    qDebug() << src
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
