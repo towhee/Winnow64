@@ -1696,6 +1696,7 @@ void ImageCache::cacheImage(int id, int sfRow)
 
     // cache the image
     if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
+
     /*
     qDebug().noquote()
         << src.leftJustified(col0Width, ' ')
@@ -1707,8 +1708,10 @@ void ImageCache::cacheImage(int id, int sfRow)
      // remove from toCache
     if (!abort) if (toCache.contains(sfRow)) toCacheRemove(sfRow);
 
+    // update datamodel cache status
     if (!abort) emit setCached(sfRow, true, instance);
 
+    // update cache status in cache progress bar
     if (!abort) updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 

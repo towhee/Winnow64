@@ -613,7 +613,6 @@ void DataModel::processNextFolder()
 
     // finished
     isProcessingFolders = false;
-    qDebug() << fun << "rows =" << rowCount();
     emit folderChange();
 }
 
@@ -1563,9 +1562,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
     // image cache helpers
+    // do not set these.  Out of order when multi-folder selection
     // setData(index(row, G::IsTargetColumn), false);
-    setData(index(row, G::IsCachingColumn), false);
-    setData(index(row, G::IsCachedColumn), false);
+    // setData(index(row, G::IsCachingColumn), false);
+    // setData(index(row, G::IsCachedColumn), false);
     setData(index(row, G::AttemptsColumn), 0);
     setData(index(row, G::DecoderIdColumn), -1);
     setData(index(row, G::DecoderReturnStatusColumn), 0);
@@ -2257,7 +2257,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, src, sfIdx.row());
         qDebug() << src << sfRow << errMsg;
-        return ;
+        return;
     }
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
@@ -2265,7 +2265,6 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
         qDebug() << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
-    // qDebug() << src << sfRow << "isCached =" << isCached;
     sf->setData(sfIdx, isCached);
     QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
     emit refreshViewsOnCacheChange(fPath, isCached, src);
@@ -3085,6 +3084,15 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("rotationDegrees", 25) << G::s(index(row, G::RotationDegreesColumn).data());
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
     rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
+
+    rpt << "\n  " << G::sj("cacheSize", 25) << G::s(index(row, G::CacheSizeColumn).data());
+    rpt << "\n  " << G::sj("IsCaching", 25) << G::s(index(row, G::IsCachingColumn).data());
+    rpt << "\n  " << G::sj("IsCached", 25) << G::s(index(row, G::IsCachedColumn).data());
+    rpt << "\n  " << G::sj("Attempts", 25) << G::s(index(row, G::AttemptsColumn).data());
+    rpt << "\n  " << G::sj("DecoderId", 25) << G::s(index(row, G::DecoderIdColumn).data());
+    rpt << "\n  " << G::sj("DecoderReturnStatus", 25) << G::s(index(row, G::DecoderReturnStatusColumn).data());
+    rpt << "\n  " << G::sj("DecoderErrMsg", 25) << G::s(index(row, G::DecoderErrMsgColumn).data());
+
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
 
     rpt << "\n  ";
