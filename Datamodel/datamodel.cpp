@@ -898,7 +898,7 @@ void DataModel::updateLoadStatus(int row)
                 escapeClause;
 
     emit centralMsg(s);        // rghmsg
-    qApp->processEvents();
+    // qApp->processEvents();               // crashing
     /*
     qDebug() << "DataModel::updateLoadStatus"
              << "imageCount =" << rowCount()

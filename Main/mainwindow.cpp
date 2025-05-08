@@ -3037,11 +3037,11 @@ void MW::gridHasScrolled()
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(false, "MW::gridHasScrolled");
-        int midVisibleCell = gridView->midVisibleCell;
+        qDebug() << " MW::gridHasScrolled" << gridView->midVisibleCell;
         if (thumbView->isVisible()) {
-            thumbView->scrollToRow(midVisibleCell, "MW::gridHasScrolled");
+            thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
         }
-        updateChange(midVisibleCell, false, "MW::gridHasScrolled");
+        updateChange(gridView->midVisibleCell, false, "MW::gridHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }
