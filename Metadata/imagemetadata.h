@@ -30,6 +30,7 @@ public:
     bool pick = false;
     bool ingested = false;
     bool video = false;
+    bool metadataReading = false;         // all metadata except thumb
     bool metadataAttempted = false;         // all metadata except thumb
     bool metadataLoaded = false;            // all metadata except thumb
     bool isEmbeddedThumbMissing = true;

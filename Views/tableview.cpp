@@ -183,6 +183,7 @@ int TableView::defaultColumnWidth(int column)
     if (column == G::EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::UrlColumn) return fm.boundingRect("=Url=======================").width();
     if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
+    if (column == G::MetadataReadingColumn) return fm.boundingRect("=Metadata Reading=").width();
     if (column == G::MetadataAttemptedColumn) return fm.boundingRect("=Metadata Attempted=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
     if (column == G::IconLoadedColumn) return fm.boundingRect("=Icon Loaded=").width();

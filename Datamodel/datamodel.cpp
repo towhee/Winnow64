@@ -245,6 +245,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email")); horizontalHeaderItem(G::EmailColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
@@ -528,8 +529,18 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
             folderQueue.enqueue(qMakePair(folderPath, true));
         }
     }
-    else if (folderList.contains(folderPath)) {
-        folderQueue.enqueue(qMakePair(folderPath, false));
+
+    if (op == "Remove") {
+        if (folderList.contains(folderPath)) {
+            folderQueue.enqueue(qMakePair(folderPath, false));
+        }
+    }
+
+    if (op == "Toggle") {
+        if (folderList.contains(folderPath)) {
+            folderQueue.enqueue(qMakePair(folderPath, false));
+        }
+        else folderQueue.enqueue(qMakePair(folderPath, true));
     }
 }
 
@@ -581,6 +592,9 @@ void DataModel::processNextFolder()
 */
     if (folderQueue.isEmpty()) {
         isProcessingFolders = false;
+        isProcessingFolders = false;
+        // qDebug() << "DataModel::processNextFolder" << "unwound";
+        emit folderChange();
         return;
     }
 
@@ -609,11 +623,7 @@ void DataModel::processNextFolder()
     }
 
     // Continue with the next folder operation
-    if (folderQueue.count()) processNextFolder();
-
-    // finished
-    isProcessingFolders = false;
-    emit folderChange();
+    processNextFolder();
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -658,6 +668,7 @@ void DataModel::addFolder(const QString &folderPath)
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
 
+
     int counter = 0;
     int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
@@ -669,6 +680,10 @@ void DataModel::addFolder(const QString &folderPath)
                  << "file =" << fileInfo.fileName()
                  << "folder =" << folderPath
                     ; //*/
+
+        // skip if already in datamodel.  This happens when multiple folders selected.
+        QString fPath = fileInfo.filePath();
+        if (fPathRowContains(fPath)) continue;
 
         // do not include zero size files
         if (fileInfo.size() == 0) {
@@ -933,7 +948,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString ext = fileInfo.suffix().toLower();
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
-    // fPathRow[fPath] = row;
+    if (fPathRow.contains(fPath)) return;
     fPathRowSet(fPath, row);
 
     // string to hold aggregated text for searching
@@ -987,6 +1002,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
     setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::MetadataReadingColumn), false);
     setData(index(row, G::MetadataAttemptedColumn), false);
     setData(index(row, G::MetadataLoadedColumn), false);
     setData(index(row, G::IconLoadedColumn), false);
@@ -1106,6 +1122,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();
+    m.metadataReading = index(row, G::MetadataReadingColumn).data().toBool();
     m.metadataAttempted = index(row, G::MetadataAttemptedColumn).data().toBool();
     m.metadataLoaded = index(row, G::MetadataLoadedColumn).data().toBool();
     m.permissions = index(row, G::PermissionsColumn).data().toUInt();
@@ -1396,19 +1413,14 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         QString msg = "row = " + QString::number(m.row);
         G::log("DataModel::addMetadataForItem", msg);
     }
-    /*
-    qDebug() << "DataModel::addMetadataForItem"
-             << "Instance =" << instance
-             << "m.instance =" << m.instance
-             << currentFolderPath;
-    //*/
+
     rowCountChk = rowCount();
     if (G::stop) return false;
-    if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
+
+    if (isDebug)
+        qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
                           << pathFromProxyRow(m.row);
-
-    // qApp->processEvents();   // process mouse events in fsTree and bookmarks
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
@@ -1554,6 +1566,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
+    setData(index(row, G::MetadataReadingColumn), m.metadataReading);
     setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
@@ -1563,9 +1576,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     // image cache helpers
     // do not set these.  Out of order when multi-folder selection
-    // setData(index(row, G::IsTargetColumn), false);
     // setData(index(row, G::IsCachingColumn), false);
     // setData(index(row, G::IsCachedColumn), false);
+    // qDebug() << "add isCached for row =" << row;
+
     setData(index(row, G::AttemptsColumn), 0);
     setData(index(row, G::DecoderIdColumn), -1);
     setData(index(row, G::DecoderReturnStatusColumn), 0);
@@ -3013,6 +3027,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
     rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
     rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, G::IsCachedColumn).data());
+    rpt << "\n  " << G::sj("MetadataReadingColumn", 25) << G::s(index(row, G::MetadataReadingColumn).data());
     rpt << "\n  " << G::sj("isMetadataAttempted", 25) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("isIconLoaded", 25) << G::s(index(row, G::IconLoadedColumn).data());

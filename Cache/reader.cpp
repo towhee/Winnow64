@@ -69,12 +69,11 @@ void Reader::abortProcessing()
 
 inline bool Reader::instanceOk()
 {
-    if (instance != dm->instance)
-        /*
+    /*
     qDebug() << "Reader::instanceOk"
              << "reader instance =" << instance
              << "datamodel instance =" << dm->instance;//*/
-        return instance == dm->instance;
+    return instance == dm->instance;
 }
 
 bool Reader::readMetadata()
@@ -86,7 +85,7 @@ bool Reader::readMetadata()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-        << "isGUI" << G::isGuiThread()
+        // << "isGUI" << G::isGuiThread()
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
@@ -105,6 +104,7 @@ bool Reader::readMetadata()
     m = &metadata->m;
     m->row = dmRow;
     m->instance = instance;
+    m->metadataReading = false;
     m->metadataAttempted = true;
     m->metadataLoaded = isMetaLoaded;
 
@@ -123,7 +123,7 @@ bool Reader::readMetadata()
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
         G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
-        // if (isDebug)
+        if (isDebug)
         {
             qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -243,7 +243,6 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
     if (!abort && needMeta) readMetadata();
     if (!abort && needIcon) readIcon();
 
-    // if (abort) return;
     if (!abort) emit done(threadId);
     if (G::isLogger) G::log("Reader::read", "Finished");
     fun = "Reader::read done and returning";
