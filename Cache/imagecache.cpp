@@ -1413,7 +1413,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         {
             QString msg = "Instance clash from " + src;
             G::issue("Comment", msg, "ImageCache::setCurrentPosition", currRow, fPath);
-            qWarning() << "ImageCache::setCurrentPosition cancelled instance change row =" << currRow;
+            // qWarning() << "ImageCache::setCurrentPosition cancelled instance change row =" << currRow;
         }
         return;
     }

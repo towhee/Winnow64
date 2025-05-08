@@ -171,8 +171,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 
     if (isDebug)
     {
-    qDebug().noquote()
-             << "\n"
+        qDebug() << " ";
+        qDebug().noquote()
              << fun.leftJustified(col0Width)
              << "startRow =" << startRow
              << "firstIconRow =" << firstIconRow
@@ -504,6 +504,9 @@ inline bool MetaRead::needToRead(int row)
     Returns true if either the metadata or icon (thumbnail) has not been loaded.
 */
 {
+    // already reading this item?
+    if (dm->sf->index(row, G::MetadataReadingColumn).data().toBool()) return false;
+
     needMeta = needIcon = false;
     if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
         needMeta = true;
@@ -1010,6 +1013,9 @@ void MetaRead::dispatch(int id)
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = sfIdx.data(G::PathRole).toString();
 
+        // set reading flag
+        dm->setData(dmIdx, true);
+
         if (isDebug)
         {
             QString fun1 = fun + " invoke reader";
@@ -1019,7 +1025,7 @@ void MetaRead::dispatch(int id)
                 // << ms
                 << fun.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "row =" << QString::number(sfIdx.row()).leftJustified(4, ' ')
+                << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
                 << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
                 << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
                 << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')

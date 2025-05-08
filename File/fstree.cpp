@@ -914,6 +914,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    static QModelIndex prevIdx = QModelIndex();
 
     QModelIndex index = indexAt(event->pos());
     if (!index.isValid()) return;
@@ -967,6 +968,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         resetDataModel = true;
         recurse = false;
         emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
+        prevIdx = index;
         return;
     }
 
@@ -981,6 +983,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
             bool toggle = true;
             selectRecursively(dPath, toggle);
+            prevIdx = index;
             return;
         }
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
@@ -1014,14 +1017,16 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         }
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
-        // QTreeView::mousePressEvent(event);
+        prevIdx = index;
+        return;
     }
 
     // Select visible unselected between previous selected folder to idx0
     if (isShift || isAlt) {
         recurse = false;
         if (isAlt) recurse = true;
-        QStringList foldersToAdd = selectVisibleBetween(currentIndex(), idx0, recurse);
+        // QStringList foldersToAdd = selectVisibleBetween(currentIndex(), idx0, recurse);
+        QStringList foldersToAdd = selectVisibleBetween(prevIdx, idx0, recurse);
         if (G::isLogger || G::isFlowLogger)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
 
@@ -1031,6 +1036,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
+        prevIdx = index;
     }
     // QTreeView::mousePressEvent(event);
 }

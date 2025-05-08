@@ -138,8 +138,6 @@ A new image is selected which triggers a scroll event
 
     • Update the icon range (firstVisible/lastVisible)
 
-
-
 Flow Flags:
 
     G::isInitializing
@@ -375,6 +373,14 @@ Images inserted
 Images deleted
 
 Images modified
+
+INSTANCE
+
+The instance is a specific datamodel.  Every time the datamodel changes: either an folder is
+added or removed, then the instance is incremented.  When the instance changes:
+
+    MetaRead must be called
+    Filtering must be updated
 
 ***********************************************************************************************
 
@@ -2021,12 +2027,13 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
 
     If the source is FSTree then the op is defined by the mouse click modifier
     - NoModifier: Add folder and resetDataModel = true
-    - Ctrl/cmd:   Toggle folder Add or Remove
-    - Alt/opt:    recurse subfolders = true
+    - Ctrl/Cmd:   Toggle folder Add or Remove
+    - Alt/Opt:    Recurse subfolders = true
 
     op = operation to perform:
     - Add
     - Remove
+    - Toggle (applies if recurse = true)
 */
     G::t.start();
 
@@ -2849,6 +2856,7 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString src = "MW::folderChangeCompleted";
+    // qDebug() << src;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();

@@ -88,6 +88,7 @@ namespace G
         EmailColumn,
         UrlColumn,
         KeywordsColumn,
+        MetadataReadingColumn,
         MetadataAttemptedColumn,
         MetadataLoadedColumn,
         IconLoadedColumn,
