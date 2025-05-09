@@ -504,16 +504,11 @@ void MW::toggleColorManage(Tog n)
 
 void MW::togglePanToFocusClick()
 {
-    /*
-    This is called by connect signals from the menu action and the reverse sort button.  The
-    call is redirected to toggleSortDirection, which has a parameter which is not supported
-    by the action and button signals.
+/*
+    This is called by connect signals from the menu action and the PanToFocus button.
 */
     if (G::isLogger) G::log("MW::toggleSortDirectionClick");
     togglePanToFocus(Tog::toggle);
-    sortChange("MW::toggleSortDirectionClick");
-    // Experiment to reverse sort on the file name while a new folder is loading.
-    // sortReverse();
 }
 
 void MW::togglePanToFocus(Tog n)
@@ -522,6 +517,10 @@ void MW::togglePanToFocus(Tog n)
     if (n == Tog::toggle) imageView->panToFocus = !imageView->panToFocus;
     if (n == Tog::off) imageView->panToFocus = false;
     if (n == Tog::on) imageView->panToFocus = true;
+
+    // Hijack to create a training collection of thumbnails
+    G::isTraining = imageView->panToFocus;
+
     if (imageView->panToFocus) {
         panFocusToggleAction->setChecked(true);
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
@@ -534,6 +533,7 @@ void MW::togglePanToFocus(Tog n)
     imageView->panToFocus ? txt = "Pan to camera focus point is ON"
                           : txt = "Pan to camera focus point is OFF";
     G::popUp->showPopup(txt);
+
 }
 
 void MW::toggleImageCacheStrategy()

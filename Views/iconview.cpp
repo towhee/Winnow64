@@ -1253,13 +1253,15 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 
     /* debug
     qDebug() << "\nIconView::mouseReleaseEvent"
-             << "\n" << "idx =" << idx
-             << "\n" << "idx selected =" << selectionModel()->isSelected(idx)
-             << "\n" << "row =" << idx.row()
-             << "\n" << "row selected =" << selectionModel()->isRowSelected(idx.row())
+             << "\n" << "sfIdx =" << sfIdx
+             << "\n" << "sfIdx selected =" << selectionModel()->isSelected(sfIdx)
+             << "\n" << "row =" << sfIdx.row()
+             << "\n" << "row selected =" << selectionModel()->isRowSelected(sfIdx.row())
              << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
-             << "\n" << "dm selected =" << dm->isSelected(idx.row())
+             << "\n" << "dm selected =" << dm->isSelected(sfIdx.row())
+             << "\n" << "!event->modifiers() =" << !event->modifiers()
              << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
+             << "\n" << "G::isTraining =" << G::isTraining
                 ;
                 //*/
 
@@ -1284,6 +1286,39 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
             if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
                 // signal ImageView
                 emit thumbClick(xPct, yPct);
+            }
+        }
+    }
+
+    if (G::isTraining && G::mode == "Grid" && !event->modifiers() && event->button() == Qt::LeftButton) {
+        // Capture the normalized coordinates of the mouse click within the thumbnail
+        // to provide the focus point coordinates to train a focus detection ML model.
+        if (dm->currentSfIdx.isValid()) {
+            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
+            QPoint iconPt = event->pos() - iconRect.topLeft();
+            float x = iconPt.x() * 1.0 / iconRect.width();
+            float y = iconPt.y() * 1.0 / iconRect.height();
+            if (x >= 0 && x <= 1 && y >= 0 && y <=1) {
+                QVariant var = dm->currentSfIdx.data(Qt::DecorationRole);
+                QIcon icon = var.value<QIcon>();
+                QPixmap pm = icon.pixmap(icon.actualSize(QSize(256, 256)));
+                // QImage image = im.value<QImage>();
+                QImage image = pm.toImage();
+                // /* debug
+                qDebug() << "IconView::mouseReleaseEvent"
+                         << "\n currentIndex =" << currentIndex()
+                         << "\n iconRect     =" << iconRect
+                         << "\n mousePt      =" << event->pos()
+                         << "\n iconPt       =" << iconPt
+                         << "\n x            =" << x
+                         << "\n y            =" << y
+                         << "\n image.width  =" << image.width()
+                         << "\n image.height =" << image.height()
+                         << "\n dm->currentSfIdx =" << dm->currentSfIdx
+                    ;
+                //*/
+                // signal focusPointTrainer
+                emit focusClick(image, x, y);
             }
         }
     }
