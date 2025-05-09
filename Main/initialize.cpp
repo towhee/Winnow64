@@ -511,6 +511,10 @@ void MW::createGridView()
     // update metadata and icons if not loaded for new images when scroll
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::gridHasScrolled);
+
+    // connect grid mouse click to the FocusPointTrainer
+    connect(gridView, &IconView::focusClick,
+            focusPointTrainer, &FocusPointTrainer::focus);
 }
 
 void MW::createTableView()

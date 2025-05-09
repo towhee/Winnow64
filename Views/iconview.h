@@ -122,7 +122,8 @@ protected:
 signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
+    void thumbClick(float xPct, float yPct);          // used in ThumbView::mouseReleaseEvent
+    void focusClick(QImage image, float x, float y);  // used in ThumbView::mouseReleaseEvent
     // void displayLoupe(const QString src);
     void displayVideo();
     void updateThumbDockHeight();

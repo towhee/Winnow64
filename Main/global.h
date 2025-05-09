@@ -302,6 +302,9 @@ namespace G
     extern bool renderVideoThumb;
     extern bool isFilter;
 
+    // training
+    extern bool isTraining;
+
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;
     extern QDate ingestLastSeqDate;

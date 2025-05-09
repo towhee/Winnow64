@@ -83,6 +83,8 @@
 #include "ui_test12.h"
 
 #include "Metadata/ExifTool.h"
+
+#include "Utilities/focuspointtrainer.h"
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
@@ -1346,6 +1348,8 @@ private:
 
     qulonglong memoryReqdForPicks();
     qulonglong memoryReqdForSelection();
+
+    FocusPointTrainer *focusPointTrainer = new FocusPointTrainer;
 
     void diagnosticsAll();
     void diagnosticsCurrent();

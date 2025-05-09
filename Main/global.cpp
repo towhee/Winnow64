@@ -154,6 +154,9 @@ bool renderVideoThumb;
 bool isFilter;
 bool isRemote;
 
+// training
+bool isTraining = false;
+
 // ingest
 bool isRunningBackgroundIngest;
 int ingestCount = 0;
