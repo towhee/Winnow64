@@ -582,7 +582,10 @@ void IconView::thumbsEnlarge()
     }
 
     qDebug() << "IconView::thumbsEnlarge" << objectName()
-             << "iconHeight =" << iconHeight;
+             << "iconWidth =" << iconWidth
+             << "iconHeight =" << iconHeight
+             << "G::maxIconSize =" << G::maxIconSize
+        ;
     setThumbSize();
     return;
 }
@@ -807,6 +810,12 @@ void IconView::resizeEvent(QResizeEvent *)
              << "last  =" << iconViewDelegate->lastVisible
                 ;
                 //*/
+
+    // if (!isCellVisible(dm->currentSfRow))
+    // create flag resizeJustDone, and scollToCurrent when mouse release
+    resizeJustDone = true;
+    // scrollToCurrent("IconView::resize");
+
 }
 
 void IconView::thumbsFitTopOrBottom(QString src)
@@ -968,7 +977,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     if (isDebug) G::log("IconView::scrollToRow", objectName());
-    /*
+    // /*
     qDebug() << "IconView::scrollToRow" << objectName()
              << "row =" << row
              << "source =" << source;
@@ -1249,6 +1258,11 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     // update selection
     if (sfIdx.isValid()) {
         m2->sel->select(sfIdx, modifiers, "IconView::mouseReleaseEvent");
+    }
+
+    if (resizeJustDone && !isCellVisible(dm->currentSfRow)) {
+        scrollToCurrent("IconView::resize");
+        resizeJustDone = false;
     }
 
     /* debug
@@ -1610,12 +1624,16 @@ void IconView::startDrag(Qt::DropActions)
     }
 
     QList<QUrl> urls;
+    QList<QString>paths;
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
+        paths << fPath;
         QString xmpPath = Utilities::assocXmpPath(fPath);
         if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
     }
+
+    qDebug() << "urls =" << urls;
 
     QDrag *drag = new QDrag(this);
     QMimeData *mimeData = new QMimeData;
@@ -1661,10 +1679,51 @@ void IconView::startDrag(Qt::DropActions)
     }
 
     Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
+    Qt::DropAction result;
+
+    // copy
     if (key == Qt::AltModifier) {
-        drag->exec(Qt::CopyAction);
+        result = drag->exec(Qt::CopyAction);
+        qDebug() << "AltModifier Result =" << result;
+        if (result == Qt::CopyAction) {
+            // moved, so remove drag items from datamodel
+            qDebug() << "Copy operation completed";
+        }
     }
+
+    // move
     if (key == Qt::NoModifier) {
-        drag->exec(Qt::MoveAction);
+        result = drag->exec(Qt::MoveAction);
+
+        // was move onto self? ignoreDrop is set in MW::dropEvent.
+        if (ignoreDrop) {
+            qDebug() << "drop onto self";
+            ignoreDrop = false;
+            return;
+        }
+
+        // moved, so remove drag items from datamodel
+        for (QString fPath : paths) dm->remove(fPath);
+
+        // update selection
+        m2->sel->select(dm->currentSfIdx, Qt::NoModifier, "IconView::startDrag");
+        if (!isCellVisible(dm->currentSfRow)) {
+            scrollToCurrent("IconView::startDrag");
+        }
+
+        // qDebug() << "IconView::startDrag  NoModifier Result =" << result;
+        if (result == Qt::MoveAction) {
+            qDebug() << "Local move operation completed";
+        }
+    }
+}
+
+void IconView::dropEvent(QDropEvent *event)
+{
+    qDebug() << "IconView::dropEvent";
+    if (event->source() == this) {
+        event->ignore();  // Prevent self-drop
+    } else {
+        QListView::dropEvent(event);
     }
 }

@@ -49,6 +49,9 @@ public:
     QModelIndex prevIdx;                // for zoomCursor
     double bestAspectRatio;
 
+    bool ignoreDrop = false;            // set in MW::dropEvent in case drop on self
+    bool resizeJustDone = false;        // set in resize, use in mousereleaseEvent
+
     enum JustifyAction {
         Shrink = 1,
         Enlarge = -1
@@ -105,6 +108,7 @@ private slots:
 
 protected:
     void startDrag(Qt::DropActions) override;
+    void dropEvent(QDropEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     bool event(QEvent *event) override;
     void showEvent(QShowEvent *event) override;

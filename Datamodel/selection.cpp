@@ -109,10 +109,10 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
         //*/
 
     // scroll first to insure icons are painted first when select a new image
-    if (thumbView->isVisible())
-        thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
-    if (gridView->isVisible())
-        gridView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
+    // if (thumbView->isVisible())
+    //     thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
+    // if (gridView->isVisible())
+    //     gridView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
 
     // select the new image, load in ImageCache
     emit updateChange(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");
@@ -161,6 +161,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
     else {
         // G::popUp->reset();
     }
+
     if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
@@ -173,6 +174,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
 
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
+        if (!shiftAnchorIndex.isValid()) return;
         shiftExtendIndex = sfIdx;
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
