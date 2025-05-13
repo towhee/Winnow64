@@ -49,10 +49,17 @@ void MW::dragMoveEvent(QDragMoveEvent *event)
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log("MW::dropEvent");
+    qDebug() << "MW::dropEvent";
 
     // Ignore if source is Winnow.  Probably result of an aborted drag.
-    if (event->source() == thumbView) return;
-    if (event->source() == gridView) return;
+    if (event->source() == thumbView) {
+        thumbView->ignoreDrop = true;
+        return;
+    }
+    if (event->source() == gridView) {
+        gridView->ignoreDrop = true;
+        return;
+    }
 
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
