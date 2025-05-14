@@ -464,16 +464,12 @@ void DataModel::remove(QString fPath)
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
             QModelIndex par = QModelIndex();
-            beginRemoveRows(par, row, row);
-            /*
-            qDebug() << "DataModel::remove"
-                     << "row =" << row
-                     << fPath; */
             removeRow(row);
-            endRemoveRows();
             break;
         }
     }
+
+    sf->invalidate();
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
@@ -889,19 +885,19 @@ bool DataModel::okManyImagesWarning()
 
 void DataModel::updateLoadStatus(int row)
 {
-    QString step = "Searching for eligible images.\n\n";
-    QString escapeClause = "\n\nPress \"Esc\" to stop.";
-    QString root;
-    if (dir->isRoot()) root = "Drive ";
-    else root = "Folder ";
-    QString folder;
-    folderList.count() > 1 ? folder = " folders " : folder = " folder ";
-    QString imageCountStr = QString::number(row).leftJustified(6);
-    QString folderCountStr = QString::number(folderList.count()).leftJustified(5);
+    QString step = "Searching for eligible images.\n";
+    QString escapeClause = "\nPress \"Esc\" to stop.";
+    // QString root;
+    // if (dir->isRoot()) root = "Drive ";
+    // else root = "Folder ";
+    // QString folder;
+    // folderList.count() > 1 ? folder = " folders " : folder = " folder ";
+    // QString imageCountStr = QString::number(row).leftJustified(6);
+    // QString folderCountStr = QString::number(folderList.count()).leftJustified(5);
 
     QString s = step +
-                imageCountStr + " found so far in " +
-                folderCountStr + folder +
+                // imageCountStr + " found so far in " +
+                // folderCountStr + folder +
                 escapeClause;
 
     emit centralMsg(s);        // rghmsg

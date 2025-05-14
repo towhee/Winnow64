@@ -689,6 +689,12 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
+    if (G::mode == "Loupe" && !thumbDock->isVisible()) {
+        thumbDock->setVisible(true);
+        thumbDock->raise();
+        thumbDockVisibleAction->setChecked(true);
+    }
+
     /* set thumbnail size to fit the thumbdock initial size
        canceled as dock height reduced every time a new session */
     // thumbView->thumbsFitTopOrBottom();
@@ -818,8 +824,9 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
+    QString src = "MW::resizeEvent";
     if (G::isLogger) {
-        G::log("MW::resizeEvent");
+        G::log(src);
     }
     QMainWindow::resizeEvent(event);
 
@@ -836,6 +843,20 @@ void MW::resizeEvent(QResizeEvent *event)
     // update current workspace
     ws.isMaximised = isMaximized();
     // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
+
+    // scroll to current
+    // int row = dm->currentSfRow;
+    // if (gridView->isVisible()) {
+    //     int row = gridView->midVisibleCell;
+    //     qDebug()
+    //             << "dm->currentSfRow =" << dm->currentSfRow
+    //             << "gridView->midVisibleCell =" << gridView->midVisibleCell
+    //                ;
+    //     // if (!thumbView->isCellVisible(row)) {
+    //         gridView->scrollToRow(row, src);
+    //         // thumbView->scrollToCurrent(src);
+    //     // }
+    // }
 }
 
 void MW::changeEvent(QEvent *event) {
@@ -2182,12 +2203,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString source = fun;
     // Mouse clicks on a view item
     if (G::fileSelectionChangeSource.right(5) == "Click") {
-        // if source is thumbView then only tableView could be visible
         if (G::fileSelectionChangeSource == "ThumbMouseClick") {
+            gridView->scrollToCurrent(source);
             tableView->scrollToCurrent();
         }
-        // if source is tableView then only thumbView could be visible
+        else if (G::fileSelectionChangeSource == "GridMouseClick") {
+            thumbView->scrollToCurrent(source);
+            tableView->scrollToCurrent();
+        }
         else if (G::fileSelectionChangeSource == "TableMouseClick") {
+            gridView->scrollToCurrent(source);
             thumbView->scrollToCurrent(source);
         }
         // is source is doubleMouseClick then only thumbView will be visible
@@ -2197,10 +2222,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
     // other selection methods (keyboard, folderAndFileSelectionChange, handleStartupArgs...
     else {
-        if (thumbView->isVisible()) thumbView->scrollToCurrent(source);
-        if (gridView->isVisible()) gridView->scrollToCurrent(source);
-        if (tableView->isVisible()) tableView->scrollToCurrent();
+        thumbView->scrollToCurrent(source);
+        gridView->scrollToCurrent(source);
+        tableView->scrollToCurrent();
     }
+
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -2586,8 +2612,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
 
-    /*
-    qDebug() << "MW::updateIconRange  src =" << src
+    // /*
+    qDebug().noquote() << "MW::updateIconRange  src =" << src
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "dm->currentSfRow =" << dm->currentSfRow
             << "G::isInitializing =" << G::isInitializing

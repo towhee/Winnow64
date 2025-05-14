@@ -754,6 +754,12 @@ void MW::createGoActions()
     addAction(keyScrollEndAction);
     connect(keyScrollEndAction, &QAction::triggered, this, &MW::keyScrollEnd);
 
+    keyScrollCurrentAction = new QAction(tr("Scroll Current"), this);
+    keyScrollCurrentAction->setObjectName("scrollCurrent");
+    keyScrollCurrentAction->setShortcutVisibleInContextMenu(true);
+    addAction(keyScrollCurrentAction);
+    connect(keyScrollCurrentAction, &QAction::triggered, this, &MW::keyScrollCurrent);
+
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
@@ -1784,6 +1790,7 @@ void MW::createGoMenu()
     goGroupAct = new QAction("Go", this);
     goGroupAct->setMenu(goMenu);
     goMenu->addAction(jumpAction);
+    goMenu->addAction(keyScrollCurrentAction);
     goMenu->addSeparator();
     // moved to MW::eventFilter
     goMenu->addAction(keyRightAction);
@@ -2656,6 +2663,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyScrollPageDownAction->setShortcut(QKeySequence("Alt+PgDown"));
         keyScrollHomeAction->setShortcut(QKeySequence("Alt+Home"));
         keyScrollEndAction->setShortcut(QKeySequence("Alt+End"));
+        keyScrollCurrentAction->setShortcut(QKeySequence("."));
 
         nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));

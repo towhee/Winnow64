@@ -170,6 +170,14 @@ void MW::keyScrollEnd()
     if (thumbView->isVisible()) thumbView->scrollToRow(last, "MW::keyScrollEnd");
 }
 
+void MW::keyScrollCurrent()
+{
+    if (G::isLogger) G::log("MW::keyScrollCurrent");
+    thumbView->scrollToCurrent("MW::keyScrollCurrent");
+    gridView->scrollToCurrent("MW::keyScrollCurrent");
+    tableView->scrollToCurrent();
+}
+
 void MW::scrollToCurrentRowIfNotVisible()
 {
 /*

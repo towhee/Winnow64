@@ -27,6 +27,7 @@ void MW::initialize()
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
     hasGridBeenActivated = true;
+    wasThumbDockVisible = true;
 
     // drag text
     dragLabel->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
@@ -512,9 +513,9 @@ void MW::createGridView()
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::gridHasScrolled);
 
-    // connect grid mouse click to the FocusPointTrainer
-    connect(gridView, &IconView::focusClick,
-            focusPointTrainer, &FocusPointTrainer::focus);
+    // // connect grid mouse click to the FocusPointTrainer
+    // connect(gridView, &IconView::focusClick,
+    //         focusPointTrainer, &FocusPointTrainer::focus);
 }
 
 void MW::createTableView()
@@ -661,6 +662,7 @@ void MW::createImageView()
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
     connect(imageView, &ImageView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
+    connect(imageView, &ImageView::focusClick, focusPointTrainer, &FocusPointTrainer::focus);
     // connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 

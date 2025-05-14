@@ -395,6 +395,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // Qt::KeyboardModifiers modifiers = Qt::NoModifier;
     // sel->toggleSelect(dm->sf->index(0,0));
 
+    dm->remove("/Users/roryhill/Pictures/Test/Test_0004.jpg");
+
     folderChangeCompleted();
     return;
 

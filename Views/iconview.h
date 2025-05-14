@@ -27,6 +27,7 @@ public:
 
     int firstVisibleCell;
     int midVisibleCell;
+    int prevMidVisibleCell;
     int lastVisibleCell;
     double visibleCellCount;            // same as cellsPerVP
 
@@ -85,7 +86,7 @@ public slots:
     void thumbsShrink();
     int justifyMargin();
     void justify(JustifyAction action);
-    void rejustify();
+    void rejustify(/*int prevMidVisibleCell*/);
     void thumbsFitTopOrBottom(QString src = "");
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 

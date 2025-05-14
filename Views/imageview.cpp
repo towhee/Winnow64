@@ -1397,7 +1397,34 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         ;
     //*/
 
-    if (!isMouseDrag) {
+    bool isTraining = event->modifiers() & Qt::AltModifier;;
+    bool isZoomToggle = event->modifiers() == Qt::NoModifier;
+
+    if (isTraining) {
+
+        QPoint globalPos = mapToGlobal(event->pos());
+        QPoint viewPos = viewport()->mapFromGlobal(globalPos);
+        QPointF scenePos = mapToScene(viewPos);
+        float xNorm = scenePos.x() * 1.0 / sceneRect().width();
+        float yNorm = scenePos.y() * 1.0 / sceneRect().height();
+        QString type = "creature";
+        QImage image = pmItem->pixmap().toImage();
+
+        emit focusClick(currentImagePath, xNorm, yNorm, type, image);
+
+        /*
+        qDebug() << "ImageView::mouseReleaseEvent" << "Alt modifier"
+            << "event->pos" << event->pos()
+            << "sceneRect" << sceneRect()
+            << "globalPos" << globalPos
+            << "viewPos" << viewPos
+            << "scenePos" << scenePos
+            << "xNorm" << xNorm
+            << "yNorm" << yNorm
+            ; //*/
+    }
+
+    if (!isMouseDrag && isZoomToggle) {
         zoomToggle();
     }
 

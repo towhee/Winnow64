@@ -117,6 +117,7 @@ signals:
 //    void handleDrop(const QMimeData *mimeData);
     void embellish(QString fPath, QString src);
     void newTile();
+    void focusClick(QString path, float x, float y, QString type, QImage image);
 
 private slots:
     void wheelStopped();

@@ -411,7 +411,7 @@ void IconView::updateVisible(QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("IconView::updateVisible", objectName() + " src = " + src);
     if (isDebug)
-        qDebug() << "   IconView::updateVisible"
+        qDebug() << "IconView::updateVisible"
                  << objectName()
                  << "IconView::updateVisible src =" << src ;
 
@@ -438,10 +438,11 @@ void IconView::updateVisible(QString src)
     // midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);
     isFirstCellPartial = !viewport()->rect().contains(visualRect(tlIdx));
     isLastCellPartial = !viewport()->rect().contains(visualRect(brIdx));
-    if (isDebug)
+    // if (isDebug)
     {
     qDebug() << "IconView::updateVisible"
              << objectName()
+             << "src =" << src
              << "cellsPerRow" << cellsPerRow
              << "cellsPerPageRow" << cellsPerPageRow
              << "rowsPerVP" << rowsPerVP
@@ -538,19 +539,16 @@ void IconView::setThumbSize()
 /*
 
 */
-    // if (isDebug)
-        qDebug() << "IconView::setThumbSize" << objectName();
     QString src = "IconView::setThumbSize";
+    if (isDebug || G::isLogger) G::log(src, objectName());
+    if (isDebug)
+        qDebug() << src << objectName();
 
     setThumbParameters();
     m2->updateIconRange(true, "IconView::setThumbSize");
 
-    QModelIndex scrollToIndex;
-    int currentRow = currentIndex().row();
-    if (currentRow >= firstVisibleCell && currentRow <= lastVisibleCell)
-        scrollToIndex = currentIndex();
-    else
-        scrollToIndex = dm->sf->index(midVisibleCell, 0);
+    scrollToCurrent(src);
+
     /* debug
     qDebug() << "IconView::setThumbSize"
              << "currentRow =" << currentRow
@@ -560,7 +558,6 @@ void IconView::setThumbSize()
              << "scrollToIndex.row() =" << scrollToIndex.row()
                 ;
                 //*/
-    scrollTo(scrollToIndex, ScrollHint::PositionAtCenter);
 }
 
 void IconView::thumbsEnlarge()
@@ -569,7 +566,7 @@ void IconView::thumbsEnlarge()
    This function enlarges the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
-    if (isDebug) G::log("IconView::thumbsEnlarge", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsEnlarge", objectName());
 
     if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
     if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
@@ -596,7 +593,7 @@ void IconView::thumbsShrink()
    This function reduces the size of the thumbnails in the thumbView, with the objectName
    "Thumbnails", which either resides in a dock or a floating window.
 */
-    if (isDebug) G::log("IconView::thumbsShrink", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsShrink", objectName());
 
     if (iconWidth > ICON_MIN  && iconHeight > ICON_MIN) {
         iconWidth *= 0.9;
@@ -619,7 +616,7 @@ int IconView::justifyMargin()
     function returns the right margin amount. It is used in MW::gridDisplay to determine
     if a rejustify is req'd.
 */
-    if (isDebug) G::log("IconView::justifyMargin", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::justifyMargin", objectName());
     int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
 
@@ -627,7 +624,7 @@ int IconView::justifyMargin()
     return wRow % wCell;
 }
 
-void IconView::rejustify()
+void IconView::rejustify(/*int prevMidVisibleCell*/)
 {
 /*
     This function controls the resizing behavior of the thumbnails in gridview
@@ -640,7 +637,8 @@ void IconView::rejustify()
     increased or decreased in the justify() function, and used to maintain the
     cell size during the resize and preference adjustment operations.
 */
-    if (isDebug) G::log("IconView::rejustify", objectName());
+    QString src = "IconView::rejustify";
+    if (isDebug || G::isLogger) G::log(src, objectName());
     /*
     qDebug() << objectName() << "::rejustify   "
              << "isWrapping" << isWrapping();
@@ -661,20 +659,23 @@ void IconView::rejustify()
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
-    /*
-    qDebug() << "IconView::rejustify" << objectName()
+    // /*
+    qDebug().noquote() << src << objectName()
              << "assignedIconWidth =" << assignedIconWidth
              << "wRow =" << wRow
              << "wCell =" << wCell
              << "tpr =" << tpr
              << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight;
+             << "iconHeight =" << iconHeight
+             << "midVisibleCell =" << midVisibleCell
+        ;
     //*/
 
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    QString src = "IconView::rejustify";
+    scrollToRow(midVisibleCell, src);
+
     m2->updateIconRange(true, src);
 }
 
@@ -683,7 +684,7 @@ void IconView::justify(JustifyAction action)
 /*
    This function enlarges or shrinks the grid cells while keeping the right hand side margin
    minimized. To make this work it is critical to assign the correct value to the row width:
-   wRow. The superclass QListView, uses a width that assumes there will always be a scrollbar
+   wRow. The superclass QListView uses a width that assumes there will always be a scrollbar
    and also a "margin". The width of the QListView (width()) is reduced by the width of the
    scrollbar and and additional "margin", determined by experimentation, to be 8 pixels.
 
@@ -695,8 +696,9 @@ void IconView::justify(JustifyAction action)
         Enlarge = -1
 
 */
-    if (isDebug) G::log("IconView::justify", objectName());
-    //qDebug() << "IconView::justify" << objectName();
+    QString src = "IconView::justify";
+    if (isDebug || G::isLogger) G::log(src, objectName());
+    qDebug() << src << objectName();
 
     int wCell = iconViewDelegate->getCellSize().width();
     int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
@@ -724,7 +726,8 @@ void IconView::justify(JustifyAction action)
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    QString src = "IconView::justify";
+    scrollToRow(midVisibleCell, src);
+
     m2->updateIconRange(true, src);
 }
 
@@ -736,6 +739,7 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 */
     //qDebug() << "IconView::updateThumbRectRole" << index << iconRect;
     QString src = "IconView::updateThumbRectRole";
+    if (isDebug || G::isLogger) G::log(src, objectName());
     emit setValueSf(index, iconRect, dm->instance, src, G::IconRectRole);
 }
 
@@ -757,7 +761,8 @@ void IconView::resizeEvent(QResizeEvent *)
     This event is not forwarded to QListView::resize. This would cause multiple scroll
     events which isn't pretty at all.
 */
-    if (isDebug) G::log("IconView::resizeEvent", objectName());
+    if (isDebug || G::isLogger) G::log(" ");
+    if (isDebug || G::isLogger) G::log("IconView::resizeEvent", objectName());
     /*
     if (m2->thumbDock != nullptr) {
         qDebug() << "IconView::resizeEvent"
@@ -768,6 +773,8 @@ void IconView::resizeEvent(QResizeEvent *)
     //*/
 
     static int prevWidth = 0;
+    // int prevMidVisibleCell = midVisibleCell;
+
     /*
     qDebug() << "IconView::resizeEvent"
              << "Object =" << objectName()
@@ -790,7 +797,11 @@ void IconView::resizeEvent(QResizeEvent *)
 
     // Rejustify icons
     bool widthChange = width() != prevWidth;
-    if (isWrapping() && widthChange) {
+    bool needToRejustify = isWrapping() && widthChange;
+    if (needToRejustify) {
+        // QTimer::singleShot(500, this, [this, prevMidVisibleCell]() {
+        //     rejustify(prevMidVisibleCell);
+        // });
         QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
     }
     prevWidth = width();
@@ -802,20 +813,22 @@ void IconView::resizeEvent(QResizeEvent *)
     //if (m2->gridDisplayFirstOpen) return;
 
     QString src = "IconView::resizeEvent";
-    m2->updateIconRange(true, src);
-    /*
-    qDebug() << "IconView::resizeEvent"
+    if (!needToRejustify) m2->updateIconRange(true, src);
+    // /*
+    qDebug().noquote() << src
              << "Object =" << objectName()
              << "first =" << iconViewDelegate->firstVisible
              << "last  =" << iconViewDelegate->lastVisible
                 ;
                 //*/
 
-    // if (!isCellVisible(dm->currentSfRow))
     // create flag resizeJustDone, and scollToCurrent when mouse release
-    resizeJustDone = true;
-    // scrollToCurrent("IconView::resize");
-
+    if (isLeftMouseBtnPressed) {
+        if (!isCellVisible(dm->currentSfRow)) {
+            scrollToCurrent(src);
+        }
+        resizeJustDone = true;
+    }
 }
 
 void IconView::thumbsFitTopOrBottom(QString src)
@@ -832,7 +845,8 @@ void IconView::thumbsFitTopOrBottom(QString src)
 
     For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
 */
-    if (isDebug) G::log("IconView::thumbsFitTopOrBottom", objectName());
+    QString fun = "IconView::thumbsFitTopOrBottom";
+    if (isDebug || G::isLogger) G::log(fun, objectName());
     /*
     qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
                 ; //*/
@@ -976,11 +990,12 @@ void IconView::scrollToRow(int row, QString source)
 
     source is the calling function and is used for debugging.
 */
-    if (isDebug) G::log("IconView::scrollToRow", objectName());
+    QString src = "IconView::scrollToRow";
+    if (isDebug || G::isLogger) G::log(src, objectName());
     // /*
     qDebug() << "IconView::scrollToRow" << objectName()
              << "row =" << row
-             << "source =" << source;
+             << "src =" << source;
                 // */
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
@@ -996,7 +1011,8 @@ void IconView::scrollToCurrent(QString source)
     Called from MW::fileSelectionChange.
 */
 {
-    if (isDebug) G::log("IconView::scrollToCurrent", objectName());
+    QString src = "IconView::scrollToCurrent";
+    if (isDebug || G::isLogger) G::log(src, objectName());
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
@@ -1260,24 +1276,26 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         m2->sel->select(sfIdx, modifiers, "IconView::mouseReleaseEvent");
     }
 
-    if (resizeJustDone && !isCellVisible(dm->currentSfRow)) {
-        scrollToCurrent("IconView::resize");
-        resizeJustDone = false;
-    }
-
-    /* debug
+    // /* debug
     qDebug() << "\nIconView::mouseReleaseEvent"
              << "\n" << "sfIdx =" << sfIdx
              << "\n" << "sfIdx selected =" << selectionModel()->isSelected(sfIdx)
              << "\n" << "row =" << sfIdx.row()
              << "\n" << "row selected =" << selectionModel()->isRowSelected(sfIdx.row())
              << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
-             << "\n" << "dm selected =" << dm->isSelected(sfIdx.row())
+             << "\n" << "dm selected row =" << dm->currentSfRow
+             << "\n" << "resizeJustDone =" << resizeJustDone
+             << "\n" << "isCellVisible(dm->currentSfRow) =" << isCellVisible(dm->currentSfRow)
              << "\n" << "!event->modifiers() =" << !event->modifiers()
              << "\n" << "ctrl modifier =" << (event->modifiers() & Qt::ControlModifier)
              << "\n" << "G::isTraining =" << G::isTraining
                 ;
                 //*/
+
+    // if (resizeJustDone && !isCellVisible(dm->currentSfRow)) {
+    //     scrollToCurrent("IconView::resize");
+    //     resizeJustDone = false;
+    // }
 
     if (!event->modifiers() && event->button() == Qt::LeftButton && G::mode == "Loupe") {
         QString src = "IconView::mouseReleaseEvent";

@@ -12,7 +12,7 @@ public:
 signals:
 
 public slots:
-    void focus(QImage image, float x, float y);
+    void focus(QString path, float x, float y, QString type, QImage image);
 
 };
 
