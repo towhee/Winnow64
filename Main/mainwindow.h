@@ -568,6 +568,7 @@ private slots:
     void keyScrollPageUp();
     void keyScrollHome();
     void keyScrollEnd();
+    void keyScrollCurrent();
     void scrollToCurrentRowIfNotVisible();
     void jump();
     void zoomToggle();
@@ -836,6 +837,7 @@ private:
     QAction *keyScrollPageUpAction;
     QAction *keyScrollHomeAction;
     QAction *keyScrollEndAction;
+    QAction *keyScrollCurrentAction;
 
     QAction *nextPickAction;
     QAction *prevPickAction;

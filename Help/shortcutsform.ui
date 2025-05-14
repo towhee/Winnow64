@@ -623,6 +623,17 @@
           <string>Cmd/Ctrl + Opt/Alt + Down</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>Scroll to Current</string>
+         </property>
+         <property name="text">
+          <string>. (period)</string>
+         </property>
+         <property name="text">
+          <string>Scroll to current selection</string>
+         </property>
+        </item>
        </item>
        <item>
         <property name="text">

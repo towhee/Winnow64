@@ -4,8 +4,14 @@ FocusPointTrainer::FocusPointTrainer(QObject *parent)
     : QObject{parent}
 {}
 
-void FocusPointTrainer::focus(QImage image, float x, float y)
+void FocusPointTrainer::focus(QString path, float x, float y, QString type, QImage image)
 {
-    qDebug() << "FocusPointTrainer::focus" << image.width() << image.height()
-             << x << y;
+    qDebug() << "FocusPointTrainer::focus"
+             << type
+             << x
+             << y
+             << path
+                ;
+    QImage im = image.scaled(QSize(256,256),Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
 }
