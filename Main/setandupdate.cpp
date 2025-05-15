@@ -337,6 +337,7 @@ void MW::toggleThumbDockVisibity()
     case SetVisible:
         thumbDock->setVisible(true);
         thumbDock->raise();
+        thumbView->scrollToRow(dm->midIcon, "MW::toggleThumbDockVisibity");
         thumbDockVisibleAction->setChecked(true);
     }
 

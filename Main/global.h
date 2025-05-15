@@ -288,6 +288,7 @@ namespace G
 
     extern bool isModifyingDatamodel;
     extern bool ignoreScrollSignal;
+    extern bool resizingIcons;
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;
     extern bool isRunningStackOperation;

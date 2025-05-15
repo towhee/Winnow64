@@ -58,6 +58,7 @@ public:
         Enlarge = -1
     };
 
+    int updateMidVisibleCell(QString src);
     void updateVisible(QString src);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
