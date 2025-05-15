@@ -404,9 +404,9 @@ int IconView::updateMidVisibleCell(QString src)
     QPoint ctr = QPoint(viewport()->rect().x() + viewport()->rect().width() / 2,
                         viewport()->rect().y() + viewport()->rect().height() / 2);
 
-    dm->midIcon = indexAt(QPoint(ctr)).row();
+    dm->scrollToIcon = indexAt(QPoint(ctr)).row();
     QString msg = objectName() + " src = " + src
-                  + " midIcon = " + QVariant(dm->midIcon).toString();
+                  + " scrollToIcon = " + QVariant(dm->scrollToIcon).toString();
     G::log("IconView::updateMidVisibleCell", msg);
 }
 
@@ -702,7 +702,7 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
 
 
     setThumbParameters();
-    scrollToRow(dm->midIcon, src);
+    scrollToRow(dm->scrollToIcon, src);
 
     m2->updateIconRange(true, src);
 }
@@ -755,7 +755,7 @@ void IconView::justify(JustifyAction action)
     skipResize = true;      // prevent feedback loop
 
     setThumbParameters();
-    scrollToRow(dm->midIcon, src);
+    scrollToRow(dm->scrollToIcon, src);
 
     // m2->updateIconRange(true, src);
 }
@@ -1183,8 +1183,8 @@ bool IconView::event(QEvent *event) {
 void IconView::showEvent(QShowEvent *event)
 {
     if (G::isInitializing || G::stop) return;
-    QString src = "IconView::showEvent";
-    m2->updateIconRange(true, src);
+    // QString src = "IconView::showEvent";
+    // m2->updateIconRange(true, src);
     QListView::showEvent(event);
 }
 

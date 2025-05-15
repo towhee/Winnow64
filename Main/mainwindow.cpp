@@ -430,7 +430,13 @@ Scrollbar change flow:
 
 Resizing icons or the icon viewport
 
+    When the IconView viewport is resized or the icon size is changed this results in
+    a scroll event.  Since we want to keep the view centered on its original state,
+    the middle or center icon is tracked as dm->scrollToIcon.  The G::resizingIcons is set
+    for the resize and the subsequent scroll event does not reset dm->scrollToIcon.  In
+    MW::thumbHasScrolled or MW::gridHasScrolled resets G::resizingIcons to false.
 
+    This allows the three datamodel views to be synced using dm->scrollToIcon.
 
 
 QT VERSIONS
@@ -2232,6 +2238,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         tableView->scrollToCurrent();
     }
 
+    dm->scrollToIcon = dm->currentSfRow;
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
@@ -3018,25 +3025,27 @@ void MW::thumbHasScrolled()
     if (G::isInitializing) return;
 
     if (G::resizingIcons) G::resizingIcons = false;
-    else thumbView->updateMidVisibleCell(fun);
+    else {
+        thumbView->updateMidVisibleCell(fun);
 
-    if (G::ignoreScrollSignal == false) {
-        G::ignoreScrollSignal = true;
-        updateIconRange(false, "MW::thumbHasScrolled");
-        if (gridView->isVisible()) {
-            gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+        if (G::ignoreScrollSignal == false) {
+            G::ignoreScrollSignal = true;
+            updateIconRange(false, "MW::thumbHasScrolled");
+            if (gridView->isVisible()) {
+                gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            }
+            if (tableView->isVisible()) {
+                tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            }
+            updateChange(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
+            // update thumbnail zoom frame cursor
+            QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+            if (idx.isValid()) {
+                thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
+            }
         }
-        if (tableView->isVisible()) {
-            tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
-        }
-        updateChange(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
-        // update thumbnail zoom frame cursor
-        QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-        if (idx.isValid()) {
-            thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
-        }
+        G::ignoreScrollSignal = false;
     }
-    G::ignoreScrollSignal = false;
 }
 
 void MW::gridHasScrolled()
@@ -3069,16 +3078,18 @@ void MW::gridHasScrolled()
     if (G::isInitializing) return;
 
     if (G::resizingIcons) G::resizingIcons = false;
-    else gridView->updateMidVisibleCell(fun);
+    else {
+        gridView->updateMidVisibleCell(fun);
 
-    if (G::ignoreScrollSignal == false) {
-        G::ignoreScrollSignal = true;
-        updateIconRange(false, "MW::gridHasScrolled");
-        thumbView->scrollToRow(gridView->midVisibleCell, fun);
-        tableView->scrollToRow(gridView->midVisibleCell, fun);
-        updateChange(gridView->midVisibleCell, false, fun);
+        if (G::ignoreScrollSignal == false) {
+            G::ignoreScrollSignal = true;
+            updateIconRange(false, "MW::gridHasScrolled");
+            thumbView->scrollToRow(gridView->midVisibleCell, fun);
+            tableView->scrollToRow(gridView->midVisibleCell, fun);
+            updateChange(gridView->midVisibleCell, false, fun);
+        }
+        G::ignoreScrollSignal = false;
     }
-    G::ignoreScrollSignal = false;
 }
 
 void MW::tableHasScrolled()
