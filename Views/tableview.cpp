@@ -97,7 +97,7 @@ void TableView::updateVisible(QString src)
     lastVisibleRow = firstVisibleRow + visibleRowCount - 1;
     if (lastVisibleRow > lastRow) lastVisibleRow = lastRow;
     midVisibleRow = lastVisibleRow - visibleRowCount / 2;
-    dm->midIcon = midVisibleRow;
+    dm->scrollToIcon = midVisibleRow;
     /*
     qDebug() << "TableView::updateVisible"
              << "firstVisibleRow =" << firstVisibleRow

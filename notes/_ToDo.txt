@@ -15,7 +15,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
-- In gridview, when change icon size scrolls to different location (try adding scrollTarget?)
+- In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Always show thumbView when open program
 - Universal help color = rgb(43, 85, 49) used in "How this works"

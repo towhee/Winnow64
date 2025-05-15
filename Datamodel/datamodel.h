@@ -149,7 +149,7 @@ public:
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
     bool checkChunkSize;                // true if iconChunkSize < rowCount()
-    int midIcon;
+    int scrollToIcon = 0;
 
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel

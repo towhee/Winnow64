@@ -153,23 +153,26 @@ void MW::gridDisplay()
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
 
-    // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Table") {
-        if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = tableView->midVisibleRow;
-    }
-    if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
-        if (thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = thumbView->midVisibleCell;
-    }
+    // // sync scrolling between modes (loupe, grid and table)
+    // if (prevMode == "Table") {
+    //     if (tableView->isRowVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = tableView->midVisibleRow;
+    // }
+    // if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
+    //     if (thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = thumbView->midVisibleCell;
+    // }
 
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
     G::wait(100);
-    gridView->scrollToRow(scrollRow, "MW::gridDisplay");
+    // gridView->scrollToRow(scrollRow, "MW::gridDisplay");
 //    updateIconRange(-1, "MW::gridDisplay1");
 
-    if (gridView->justifyMargin() > 3) gridView->rejustify();
+    // if (gridView->justifyMargin() > 3) gridView->rejustify();
+
+    scrollRow = dm->scrollToIcon;
+    gridView->scrollToRow(scrollRow, "MW::gridDisplay");
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
@@ -254,7 +257,7 @@ void MW::tableDisplay()
     // // sync scrolling between modes (loupe, grid and table)
     // if (prevMode == "Grid") {
     //     if (gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-    //     else scrollRow = dm->midIcon;
+    //     else scrollRow = dm->scrollToIcon;
     //     // else scrollRow = gridView->midVisibleCell;
     // }
     // if (prevMode == "Loupe") {
@@ -263,7 +266,7 @@ void MW::tableDisplay()
     // }
     // G::ignoreScrollSignal = false;
     G::wait(100);
-    scrollRow = dm->midIcon;
+    scrollRow = dm->scrollToIcon;
 //    qDebug() << "MW::tableDisplay" << "scrollRow =" << scrollRow;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
