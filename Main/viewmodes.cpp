@@ -233,13 +233,12 @@ void MW::tableDisplay()
         if (wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-            sel->setCurrentRow(dm->currentSfRow);
+            // sel->setCurrentRow(dm->currentSfRow);
         }
         if (!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
         }
-
     }
 
     // req'd after compare mode to re-enable extended selection
@@ -252,17 +251,19 @@ void MW::tableDisplay()
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-    // sync scrolling between modes (loupe, grid and table)
-    if (prevMode == "Grid") {
-        if (gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = gridView->midVisibleCell;
-    }
-    if (prevMode == "Loupe") {
-        if(thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
-        else scrollRow = thumbView->midVisibleCell;
-    }
-    G::ignoreScrollSignal = false;
+    // // sync scrolling between modes (loupe, grid and table)
+    // if (prevMode == "Grid") {
+    //     if (gridView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = dm->midIcon;
+    //     // else scrollRow = gridView->midVisibleCell;
+    // }
+    // if (prevMode == "Loupe") {
+    //     if(thumbView->isCellVisible(dm->currentSfRow)) scrollRow = dm->currentSfRow;
+    //     else scrollRow = thumbView->midVisibleCell;
+    // }
+    // G::ignoreScrollSignal = false;
     G::wait(100);
+    scrollRow = dm->midIcon;
 //    qDebug() << "MW::tableDisplay" << "scrollRow =" << scrollRow;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");

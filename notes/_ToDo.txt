@@ -14,7 +14,8 @@ WHAT'S NEW
 - Pan to camera focus point when zoomed
 
 BUGS / TO DO
-- In gridview, when change icon size scrolls to different location
+- https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
+- In gridview, when change icon size scrolls to different location (try adding scrollTarget?)
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Always show thumbView when open program
 - Universal help color = rgb(43, 85, 49) used in "How this works"

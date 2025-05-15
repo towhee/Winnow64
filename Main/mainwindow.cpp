@@ -389,8 +389,8 @@ SCROLLING
 When the user scrolls a datamodel view (thumbView, gridView or tableView) the scrollbar
 change signal is received by thumbHasScrolled, gridHasScrolled or tableHasScrolled. The
 other views are scrolled to sync with the source view midVisibleRow. The first, mid and
-last visible items are determined in MW::updateIconRange and the metadataCacheThread or
-metaReadThread is called to update the metadata and icons in the range (chunk).
+last visible items are determined in MW::updateIconRange and the metaReadThread is called
+to update the metadata and icons in the range (chunk).
 
 However, when the program syncs the views this generates more scrollbar signals that
 would loop. This is prevented by the G::ignoreScrollSignal flag. This is also employed in
@@ -427,6 +427,10 @@ Scrollbar change flow:
 
          MW::update(midVisibleIcon) is called and it loads any missing icons and
          cleans up any orphaned icons (not in the iconChunkRange).
+
+Resizing icons or the icon viewport
+
+
 
 
 QT VERSIONS
@@ -824,9 +828,9 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
-    QString src = "MW::resizeEvent";
+    QString fun = "MW::resizeEvent";
     if (G::isLogger) {
-        G::log(src);
+        G::log(fun);
     }
     QMainWindow::resizeEvent(event);
 
@@ -853,8 +857,8 @@ void MW::resizeEvent(QResizeEvent *event)
     //             << "gridView->midVisibleCell =" << gridView->midVisibleCell
     //                ;
     //     // if (!thumbView->isCellVisible(row)) {
-    //         gridView->scrollToRow(row, src);
-    //         // thumbView->scrollToCurrent(src);
+    //         gridView->scrollToRow(row, fun);
+    //         // thumbView->scrollToCurrent(fun);
     //     // }
     // }
 }
@@ -2125,13 +2129,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         G::log(fun,
-               "row = " + QString::number(current.row()) + " Src = " + src
+               "row = " + QString::number(current.row()) + " fun = " + fun
                + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
         // can crash here
-        // G::log("MW::fileSelectionChange", "Source: " + src + " " + current.data(G::PathRole).toString());
+        // G::log("MW::fileSelectionChange", "Source: " + fun + " " + current.data(G::PathRole).toString());
     }
 
     if (G::stop) {
@@ -2143,7 +2147,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     /* debug
     {
     qDebug() << fun
-             << "src =" << src
+             << "fun =" << fun
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
              // << "current =" << current
@@ -2200,30 +2204,31 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
        clicks on an item scrolling to center is disorienting so we do not scroll.
     */
 
-    QString source = fun;
     // Mouse clicks on a view item
     if (G::fileSelectionChangeSource.right(5) == "Click") {
         if (G::fileSelectionChangeSource == "ThumbMouseClick") {
-            gridView->scrollToCurrent(source);
+            gridView->scrollToCurrent(fun);
             tableView->scrollToCurrent();
+            // thumbView->updateMidVisibleCell(fun);
         }
         else if (G::fileSelectionChangeSource == "GridMouseClick") {
-            thumbView->scrollToCurrent(source);
+            thumbView->scrollToCurrent(fun);
             tableView->scrollToCurrent();
+            // gridView->updateMidVisibleCell(fun);
         }
         else if (G::fileSelectionChangeSource == "TableMouseClick") {
-            gridView->scrollToCurrent(source);
-            thumbView->scrollToCurrent(source);
+            gridView->scrollToCurrent(fun);
+            thumbView->scrollToCurrent(fun);
         }
         // is source is doubleMouseClick then only thumbView will be visible
         else if (G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-            thumbView->scrollToCurrent(source);
+            thumbView->scrollToCurrent(fun);
         }
     }
     // other selection methods (keyboard, folderAndFileSelectionChange, handleStartupArgs...
     else {
-        thumbView->scrollToCurrent(source);
-        gridView->scrollToCurrent(source);
+        thumbView->scrollToCurrent(fun);
+        gridView->scrollToCurrent(fun);
         tableView->scrollToCurrent();
     }
 
@@ -2609,10 +2614,10 @@ bool MW::updateIconRange(bool sizeChange, QString src)
 */
     if (G::isInitializing) return false;
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
 
-    // /*
+    /*
     qDebug().noquote() << "MW::updateIconRange  src =" << src
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "dm->currentSfRow =" << dm->currentSfRow
@@ -2881,8 +2886,8 @@ void MW::folderChangeCompleted()
         QString msg = QString::number(rows) + " images";
         G::log("MW::folderChangeCompleted", msg);
     }
-    QString src = "MW::folderChangeCompleted";
-    // qDebug() << src;
+    QString fun = "MW::folderChangeCompleted";
+    // qDebug() << fun;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -2890,7 +2895,7 @@ void MW::folderChangeCompleted()
     // G::isModifyingDatamodel = false;
 
     /*
-    qDebug() << src
+    qDebug() << fun
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
              << "G::allMetadataLoaded =" << G::allMetadataLoaded
@@ -2944,14 +2949,14 @@ void MW::folderChangeCompleted()
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
     // if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-    //     // qDebug() << src << "buildFilters->build()";
+    //     // qDebug() << fun << "buildFilters->build()";
     //     buildFilters->build();
     // }
 
     // filterChange();
     // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
 
-    // qDebug() << src
+    // qDebug() << fun
     //          << "dm->folderList.count() =" << dm->folderList.count()
     //          << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
     //          << "!filterDock->visibleRegion().isNull() =" << !filterDock->visibleRegion().isNull()
@@ -2960,7 +2965,7 @@ void MW::folderChangeCompleted()
         dm->isQueueEmpty() &&
         !filterDock->visibleRegion().isNull())
     {
-        // qDebug() << src << "buildFilters";
+        // qDebug() << fun << "buildFilters";
         buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
@@ -2974,7 +2979,7 @@ void MW::folderChangeCompleted()
     // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
 
     // update image cache in case not already done during metaRead
-    emit setImageCachePosition(dm->currentFilePath, src);
+    emit setImageCachePosition(dm->currentFilePath, fun);
 
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
@@ -3002,14 +3007,18 @@ void MW::thumbHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger || G::isFlowLogger)
-        G::log("MW::thumbHasScrolled",
+    QString fun = "MW::thumbHasScrolled";
+    // if (G::isLogger || G::isFlowLogger)
+        G::log(fun,
                "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString()
                + " thumbView->midVisibleCell = "
                + QVariant(thumbView->midVisibleCell).toString()
                );
 
     if (G::isInitializing) return;
+
+    if (G::resizingIcons) G::resizingIcons = false;
+    else thumbView->updateMidVisibleCell(fun);
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -3053,20 +3062,21 @@ void MW::gridHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger || G::isFlowLogger) {
-        G::log("MW::gridHasScrolled", "isVisible = " + QVariant(gridView->isVisible()).toString());
-        // qDebug() << "MW::gridHasScrolled  Visible (0 = false) ="
-        //          << QVariant(gridView->isVisible()).toString();
-    }
+    QString fun = "MW::gridHasScrolled";
+    // if (G::isLogger || G::isFlowLogger)
+        G::log(fun, "isVisible = " +
+               QVariant(gridView->isVisible()).toString());
     if (G::isInitializing) return;
+
+    if (G::resizingIcons) G::resizingIcons = false;
+    else gridView->updateMidVisibleCell(fun);
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(false, "MW::gridHasScrolled");
-        if (thumbView->isVisible()) {
-            thumbView->scrollToRow(gridView->midVisibleCell, "MW::gridHasScrolled");
-        }
-        updateChange(gridView->midVisibleCell, false, "MW::gridHasScrolled");
+        thumbView->scrollToRow(gridView->midVisibleCell, fun);
+        tableView->scrollToRow(gridView->midVisibleCell, fun);
+        updateChange(gridView->midVisibleCell, false, fun);
     }
     G::ignoreScrollSignal = false;
 }
@@ -3094,7 +3104,7 @@ void MW::tableHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
         G::log("MW::tableHasScrolled");
     if (G::isInitializing) return;
 
@@ -3463,7 +3473,8 @@ void MW::showHiddenFiles()
 void MW::thumbsEnlarge()
 {
 
-    if (G::isLogger) G::log("MW::thumbsEnlarge");
+    // if (G::isLogger)
+        G::log("MW::thumbsEnlarge");
     if (gridView->isVisible()) gridView->justify(IconView::JustifyAction::Enlarge);
     if (thumbView->isVisible())  {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
@@ -3481,7 +3492,8 @@ void MW::thumbsEnlarge()
 
 void MW::thumbsShrink()
 {
-    if (G::isLogger) G::log("MW::thumbsShrink");
+    // if (G::isLogger)
+        G::log("MW::thumbsShrink");
     if (gridView->isVisible()) gridView->justify(IconView::JustifyAction::Shrink);
     if (thumbView->isVisible()) {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Shrink);
@@ -5200,7 +5212,7 @@ void MW::refreshDataModel()
 */
     QString fun = "MW::refreshDataModel";
     if (G::isLogger) G::log(fun);
-    QString src = "fun";
+    // QString src = "fun";
     isRefreshingDM = true;  // rgh not being used, under review
 
     // update counts in fsTree just in case
@@ -5274,7 +5286,7 @@ void MW::refreshDataModel()
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             else
                 pm = QPixmap(":/images/error_image256.png");
-            dm->setIcon(dmIdx, pm, dm->instance, src);
+            dm->setIcon(dmIdx, pm, dm->instance, fun);
             delete thumb;
         }
         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);

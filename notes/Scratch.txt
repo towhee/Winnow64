@@ -32,3 +32,8 @@ ImageView::ImageView(QWidget *parent,
     pmItem->setOpacity(1.0);
     scene->addItem(pmItem);
 }
+
+/*  SCROLLING
+
+
+*/
