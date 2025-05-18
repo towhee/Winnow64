@@ -1529,6 +1529,13 @@ void MW::createPreferences()
     pref = new Preferences(this);
 }
 
+void MW::createFocusPredictor()
+{
+    QString focusPointModelPath = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focus_point_model.onnx";
+    int imageSize = 256;
+
+}
+
 void MW::createStressTest()
 {
     if (G::isLogger) G::log("MW::createPreferences");

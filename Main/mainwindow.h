@@ -85,6 +85,8 @@
 #include "Metadata/ExifTool.h"
 
 #include "Utilities/focuspointtrainer.h"
+// #include "Utilities/focuspredictor.h"
+
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
@@ -1287,6 +1289,7 @@ private:
     void updateStatusBar();
     void createMessageView();
     void createPreferences();
+    void createFocusPredictor();
     void createStressTest();
     void createAppStyle();
     void setupCentralWidget();
