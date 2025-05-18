@@ -111,7 +111,7 @@ ImageView::ImageView(QWidget *parent,
 
     bullseye = new QLabel(this);
     bullseye->setAttribute(Qt::WA_TranslucentBackground, true);
-    // bullseye->setPixmap(QPixmap(":/images/target.png"));
+    bullseye->setPixmap(QPixmap(":/images/target.png"));
     // bullseye->setPixmap(QPixmap(":/images/icon16/target.png"));
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -120,6 +120,11 @@ ImageView::ImageView(QWidget *parent,
 
     rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
     isRubberBand = false;
+
+    // focus predictor
+    QString focusPointModelPath = "/Users/roryhill/Projects/FocusPointTrainer/focus_point_model.onnx";
+    int imageSize = 512;
+    focusPredictor = new FocusPredictor(focusPointModelPath, imageSize);
 
     // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
@@ -268,6 +273,11 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                      << "h =" << pmItem->pixmap().height()
                      << "isNull =" << pmItem->pixmap().isNull()
                      << fPath;
+        // focus prediction
+        focusPrediction = focusPredictor->predict(icd->imCache.value(fPath));
+        placeTarget(focusPrediction.x(), focusPrediction.y());
+        qDebug() << "Predicted (normalized):" << focusPrediction;
+
     }
     else {
         if (isDebug)
@@ -547,6 +557,11 @@ void ImageView::placeClassificationBadge()
     int d = classificationBadgeDiam;    // diameter of the classification label
     classificationLabel->setDiameter(d);
     classificationLabel->move(x - d - o, y - d - o);
+}
+
+void ImageView::setBullseyeVisible(bool isVisible)
+{
+    bullseye->setVisible(isVisible);
 }
 
 void ImageView::placeTarget(float x, float y)
@@ -1411,6 +1426,8 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         QImage image = pmItem->pixmap().toImage();
 
         emit focusClick(currentImagePath, xNorm, yNorm, type, image);
+        QString path = ":/Sounds/ingest.wav";
+        qApp->beep();
 
         /*
         qDebug() << "ImageView::mouseReleaseEvent" << "Alt modifier"

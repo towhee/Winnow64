@@ -524,10 +524,12 @@ void MW::togglePanToFocus(Tog n)
     if (imageView->panToFocus) {
         panFocusToggleAction->setChecked(true);
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
+        imageView->setBullseyeVisible(true);
     }
     else {
         panFocusToggleAction->setChecked(false);
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
+        imageView->setBullseyeVisible(false);
     }
     QString txt;
     imageView->panToFocus ? txt = "Pan to camera focus point is ON"

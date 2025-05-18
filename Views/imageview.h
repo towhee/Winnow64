@@ -12,6 +12,7 @@
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
 #include "Embellish/embel.h"
+#include "Utilities/focuspredictor.h"
 
 class ImageView : public QGraphicsView
 {
@@ -70,6 +71,8 @@ public:
     QPoint scene2CW(QPointF pctPt);
     void focus();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
+    void setBullseyeVisible(bool isVisible);
+    void placeTarget(float x, float y);
 
     void changeInfoOverlay();
     QString infoText;
@@ -158,14 +161,16 @@ private:
     Selection *sel;
     ImageCacheData *icd;
     IconView *thumbView;
+    FocusPredictor *focusPredictor;
 
     bool sceneBiggerThanView();
     bool resizeIsSmaller();
     void placeClassificationBadge();
-    void placeTarget(float x, float y);
+    // void placeTarget(float x, float y);
 
     InfoString *infoString;
 
+    QPointF focusPrediction;
     QLabel *bullseye;
 
     QTimer *mouseMovementTimer;                     // control cursor during slideshow

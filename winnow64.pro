@@ -61,8 +61,9 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    Utilities/focuspointtrainer.h
+HEADERS += Cache/cachedata.h
+HEADERS += Utilities/focuspointtrainer.h
+HEADERS += Utilities/focuspredictor.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -204,8 +205,9 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Utilities/focuspointtrainer.cpp
+SOURCES += Cache/cachedata.cpp
+SOURCES += Utilities/focuspointtrainer.cpp
+SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
 SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
@@ -474,8 +476,8 @@ macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
 # opencv
-#macx:INCLUDEPATH += "/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/include/opencv4"
-#macx:LIBS += -L"/Users/roryhill/Projects/Winnow64/Lib/opencv-4.7.0/build/install/lib" -l"opencv_world"
+macx:INCLUDEPATH += $$PWD/Lib/opencv/include/opencv4
+macx:LIBS += -L$$PWD/Lib/opencv/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_dnn
 
 # zLib
 macx:INCLUDEPATH += /usr/include

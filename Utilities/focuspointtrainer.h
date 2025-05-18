@@ -12,8 +12,10 @@ public:
 signals:
 
 public slots:
-    void focus(QString path, float x, float y, QString type, QImage image);
+    void focus(QString srcPath, float x, float y, QString type, QImage srcImage);
 
+private:
+    void appendToCSV(QString &type, float x, float y, QString &srcPath);
 };
 
 #endif // FOCUSPOINTTRAINER_H

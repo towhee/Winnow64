@@ -15,7 +15,6 @@ WHAT'S NEW
 
 BUGS / TO DO
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
-- In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Always show thumbView when open program
 - Universal help color = rgb(43, 85, 49) used in "How this works"
@@ -151,6 +150,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)
 - Add scroll to current shortcut
 - When change from grid to thumb view not scrolled to same position
 - Grid click on icon scrolls to end
