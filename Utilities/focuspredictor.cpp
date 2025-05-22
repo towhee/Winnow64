@@ -3,10 +3,9 @@
 FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
     : imageSize(inputSize)
 {
-    qDebug() << "FocusPredictor::FocusPredictor";
+    // qDebug() << "FocusPredictor::FocusPredictor";
     try {
         net = cv::dnn::readNetFromONNX(onnxPath.toStdString());
-        qDebug() << "FocusPredictor::FocusPredictor 1";
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);  // or DNN_TARGET_OPENCL
     } catch (const cv::Exception& e) {
@@ -24,7 +23,7 @@ QPointF FocusPredictor::predict(const QImage& image)
 
     // Convert QImage → cv::Mat in RGB
     QImage resized = image.scaled(imageSize, imageSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    qDebug() << "FocusPredictor::predict" << resized.size();
+    // qDebug() << "FocusPredictor::predict" << resized.size();
     QImage rgbImage = resized.convertToFormat(QImage::Format_RGB888);
     cv::Mat img(rgbImage.height(), rgbImage.width(), CV_8UC3, const_cast<uchar*>(rgbImage.bits()), rgbImage.bytesPerLine());
 

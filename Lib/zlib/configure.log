@@ -1,0 +1,9 @@
+--------------------
+./configure --host=arm-apple-darwin
+Fri  5 Jul 2024 04:44:26 PDT
+unknown option: --host=arm-apple-darwin
+./configure --help for help
+** ./configure aborting.
+--------------------
+
+

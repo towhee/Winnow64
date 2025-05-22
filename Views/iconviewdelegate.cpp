@@ -118,6 +118,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     labelTextColor = G::textColor;
     videoTextColor = G::textColor;
     numberTextColor = QColor(l60,l60,l60);
+    vp1Color = QColor(Qt::white);
+    vp2Color = QColor(Qt::black);
 
     // define pens
     currentPen.setColor(currentItemColor);
@@ -132,6 +134,10 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     rejectedPen.setWidth(pickWidth);
     ingestedPen.setColor(ingestedColor);
     ingestedPen.setWidth(pickWidth);
+    vp1Pen.setColor(vp1Color);
+    vp1Pen.setWidth(1);
+    vp2Pen.setColor(vp2Color);
+    vp2Pen.setWidth(1);
 
     // keep currentPen inside the cell
     int currentOffsetWidth = currentWidth / 2;
@@ -299,6 +305,17 @@ int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
     return thumbHeight;
 //    int maxHeight = G::maxIconSize - pad2 - textHeight - 2;
 //    return thumbHeight <= G::maxIconSize ? thumbHeight : maxHeight;
+}
+
+void IconViewDelegate::setVpRectVisibility(bool isVisible)
+{
+    vpRectIsVisible = isVisible;
+}
+
+void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
+{
+    vpRect = vp;
+    this->imA = imA;
 }
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
@@ -667,6 +684,39 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawRoundedRect(currRect, 8, 8);
     }
 
+    // imageView viewport rect when zoomed
+    if (isCurrentIndex && vpRectIsVisible) {
+        // imA is original image aspect (in case thumbnail has black borders)
+        qDebug() << "IconViewDelegate::paint  imA =" << imA;
+        qreal wIcon, hIcon;
+        int wBlack = 0;     // black border
+        int hBlack = 0;     // black border
+        if (imA > 1) {
+            wIcon = iconRect.width();
+            hIcon = static_cast<int>(wIcon / imA);
+            hBlack = (iconRect.height() - hIcon) / 2;
+        }
+        else {
+            hIcon = iconRect.height();
+            wIcon = static_cast<int>(hIcon * imA);
+            wBlack = (iconRect.width() - hIcon) / 2;
+        }
+        int xIconTL = iconRect.x() + wBlack;
+        int yIconTL = iconRect.y() + hBlack;
+        int x1Vp = static_cast<int>(vpRect.topLeft().x() * wIcon);
+        int y1Vp = static_cast<int>(vpRect.topLeft().y() * hIcon);
+        int x2Vp = static_cast<int>(vpRect.bottomRight().x() * wIcon);
+        int y2Vp = static_cast<int>(vpRect.bottomRight().y() * hIcon);
+        int x1 = x1Vp + xIconTL;
+        int y1 = y1Vp + yIconTL;
+        int x2 = x2Vp + xIconTL;
+        int y2 = y2Vp + yIconTL;
+        painter->setPen(vp1Pen);
+        painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
+        painter->setPen(vp2Pen);
+        painter->drawRect(QRect(QPoint(x1+1,y1+1), QPoint(x2-1,y2-1)));
+        // painter->drawRect(QRect(topLeft, bottomRight));
+    }
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */
