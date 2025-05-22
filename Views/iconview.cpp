@@ -791,7 +791,7 @@ void IconView::resizeEvent(QResizeEvent *)
     events which isn't pretty at all.
 */
     if (isDebug || G::isLogger) G::log(" ");
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
         G::log("IconView::resizeEvent", objectName());
     /*
     if (m2->thumbDock != nullptr) {
@@ -1048,7 +1048,7 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     QString src = "IconView::scrollToCurrent";
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
         G::log(src, objectName());
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     /*
@@ -1332,15 +1332,17 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
                 ;
                 //*/
 
+    /*
     // if (resizeJustDone && !isCellVisible(dm->currentSfRow)) {
     //     scrollToCurrent("IconView::resize");
     //     resizeJustDone = false;
     // }
+    */
 
     if (!event->modifiers() && event->button() == Qt::LeftButton && G::mode == "Loupe") {
         QString src = "IconView::mouseReleaseEvent";
         // Capture the percent coordinates of the mouse click within the thumbnail
-        // so that the full scale image can be zoomed to the same point.
+        // so that the full scale image can be panned to the same point.
         if (dm->currentSfIdx.isValid()) {
             QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
             QPoint iconPt = event->pos() - iconRect.topLeft();
@@ -1362,6 +1364,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         }
     }
 
+    // focus point inference training
     if (G::isTraining && G::mode == "Grid" && !event->modifiers() && event->button() == Qt::LeftButton) {
         // Capture the normalized coordinates of the mouse click within the thumbnail
         // to provide the focus point coordinates to train a focus detection ML model.
@@ -1445,6 +1448,166 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     }
 }
 
+void IconView::showLoupeRect(bool isVisible)
+{
+    qDebug() << "IconView::showLoupeRect" << isVisible;
+    iconViewDelegate->setVpRectVisibility(isVisible);
+    refreshThumb(dm->currentSfIdx);
+
+}
+
+void IconView::loupeRect(QRectF vp, qreal imA)
+{
+    if (isDebug) G::log("IconView::showLoupeRect", objectName());
+    qDebug() << "IconView::loupeRect"
+             << "vp =" << vp
+             << "imA =" << imA
+        ;
+    iconViewDelegate->setVpRectVisibility(true);
+    iconViewDelegate->setVpRect(vp, imA);
+    refreshThumb(dm->currentSfIdx);
+}
+
+QSize IconView::loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon)
+{
+    // int w, h;       // zoom frame width and height in pixels
+    // int vpW = vp.width();
+    // int vpH = vp.height();
+    // int imW = scene.width();
+    // int imH = scene.height();
+    // int iconW = icon.width();
+    // int iconH = icon.height();
+    // qreal normW = vp.width() / scene.width();
+    // qreal normH = vp.height();
+
+    // if (normW < 1 || normH <= 1 ) {
+    //     // imageView is zoomed in at least one axis
+
+    //     // scale is for the side that needs to be reduced the most to fit
+    //     qreal scale = (normW < normH) ? normW : normH;
+    //     // qreal zoomFit = (normW < normH) ? normW : normH;
+    //     // qreal scale = zoomFit / zoom;
+
+    //     // iv = the cropped image visible in centralRect - the ImageView viewport
+    //     int ivW = (imW > vpW) ? vpW : imW;
+    //     int ivH = (imH > vpH) ? vpH : imH;
+    //     // aspect of iv
+    //     qreal ivA = static_cast<qreal>(vpW) / ivH;
+    //     /*
+    //     qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
+    //                              << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
+    //                              << "hScale =" << hScale << "vScale =" << vScale;
+    //     //*/
+
+    //     /* some brands create thumbnails with black borders, which are not part of the
+    //     image, and should be excluded. The long side (ie width if landscape, height if
+    //     portrait, will not have a black border. Using that side and the aspect of the
+    //     original image can give the correct length for the other side of the thumbnail.
+    //     */
+    //     int iconW, iconH;
+    //     if (imA > 1) {
+    //         iconW = iconRect.width();
+    //         iconH = static_cast<int>(iconW / imA);
+    //     }
+    //     else {
+    //         iconH = iconRect.height();
+    //         iconW = static_cast<int>(iconH * imA);
+    //     }
+
+    //     // determine cursor frame dimensions: w, h
+    //     if (normW < normH) {
+    //         w = static_cast<int>(iconW * scale);
+    //         h = static_cast<int>(w / ivA);
+    //     }
+    //     else {
+    //         h = static_cast<int>(iconH * scale);
+    //         w = static_cast<int>(h * ivA);
+    //     }
+
+    //     if (w > iconRect.width()) w = iconRect.width();
+    //     if (h > iconRect.height()) h = iconRect.height();
+
+    //     QString whichScale = normW < normH ? "hScale" : "vScale";
+    //     /*
+    //     qDebug() << "IconView::zoomCursor"
+    //              << whichScale
+    //              << "ivW =" << ivW
+    //              << "ivH =" << ivH
+    //              << "w =" << w
+    //              << "h =" << h
+    //              << "ivA =" << ivA;
+    //     */
+    //     /*
+    //         qDebug() << "IconView::zoomCursor"
+    //                  << "zoom =" << zoom
+    //                  << "zoomFit =" << zoomFit
+    //                  << "iconRect =" << iconRect
+    //                  << "imW =" << imW
+    //                  << "imH =" << imH
+    //                  << "imA =" << imA
+    //                  << "ivW =" << ivW
+    //                  << "ivH =" << ivH
+    //                  << "cW =" << cW
+    //                  << "cH =" << cH
+    //                  << "hScale =" << hScale
+    //                  << "vScale =" << vScale
+    //                  << "scale =" << scale
+    //                  << "iconW =" << iconW
+    //                  << "iconH =" << iconH
+    //                  << "w =" << w
+    //                  << "h =" << h
+    //                  << "ivA =" << ivA;
+    //     //            */
+    // }
+    // else {
+    //     // imageView smaller than central widget so no cropping
+    //     w = iconRect.width();
+    //     h = iconRect.height();
+    // }
+
+    // return QSize(w, h);
+}
+
+QPixmap IconView::drawLoupeVPRect(int w, int h)
+{
+    // w = width of box in cell
+    // h = height of box in cell
+
+    // check if mac Accessibility has scaled pointer size
+    float scale = 1.0;
+#ifdef Q_OS_MAC
+    scale = Mac::getMouseCursorMagnification();
+    if (scale == 0) scale = 1;
+#endif
+    w /= scale;
+    h /= scale;
+
+    // make room for border
+    int pw = 1;                                     // pen width
+    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
+    h += (pw * 8);
+    cursorRect = QRect(0, 0, w, h);
+    /*
+    qDebug() << "IconView::zoomCursor" << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
+    //*/
+    auto frame = QImage(w, h, QImage::Format_ARGB32);
+    int opacity = 0;                                // Set this between 0 and 255
+    frame.fill(QColor(0,0,0,opacity));
+    QPen oPen, iPen;
+    oPen.setWidth(pw);
+    iPen.setWidth(pw);
+    oPen.setColor(Qt::white);
+    iPen.setColor(Qt::black);
+    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
+    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
+    QPainter p(&frame);
+    p.setPen(oPen);
+    p.drawRect(oBorder);
+    p.setPen(iPen);
+    p.drawRect(iBorder);
+    return QPixmap::fromImage(frame);
+}
+
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
 {
 /*
@@ -1458,7 +1621,15 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     pointer might be on a different thumbnail after the thumbnails scroll. Finally it is
     called when there is a window resize MW::resizeEvent that will change the
     centralWidget geometry.
+
+    scene           - the extent of full image in ImageView
+    vp              - ImageView viewport into scene
+    icon            - the icon here in IconView
 */
+    QSizeF scene = m2->imageView->scene->sceneRect().size();
+    QSizeF vp = m2->imageView->viewport()->size();
+    QSize cell = idx.data(G::IconRectRole).toRect().size();
+
     if (isDebug) G::log("IconView::zoomCursor", objectName());
     /*
     qDebug() << "IconView::zoomCursor"
@@ -1468,6 +1639,8 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << "isFit =" << m2->imageView->isFit
              << mousePos;
              //*/
+
+    // check for failures
     QString failReason = "";
     if (G::isEmbellish) failReason = "G::isEmbellish";
     if (G::isInitializing) failReason = "G::isInitializing";
@@ -1486,14 +1659,13 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         failReason = "Key modifier pressed";
     }
 
-//    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
     if (!showZoomFrame) failReason = "!showZoomFrame";
     if (!idx.isValid()) failReason = "!idx.isValid()";
     if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
 
     // preview dimensions
-    int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
-    int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
+    int imW = scene.width();
+    int imH = scene.height();
     if (imW == 0 || imH == 0) failReason = "Zero width or height";
 
     qreal zoom = m2->imageView->zoom;
@@ -1501,15 +1673,18 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     imH = static_cast<int>(imH + zoom);
     qreal imA = static_cast<qreal>(imW) / imH;
 
-    QRect centralRect = m2->centralWidget->rect();
-    int cW = centralRect.width();
-    int cH = centralRect.height();
+    int vpW = vp.width();
+    int vpH = vp.height();
     /*
     qDebug() << "IconView::zoomCursor" << idx
-             << "cW =" << cW << "cH =" << cH
-             << "imW =" << imW << "imH =" << imH;
+             << "cW =" << vpW << "cH =" << vpH
+             << "imW =" << imW << "imH =" << imH
+             << "scene" << scene
+             << "vp" << vp
+             << "cell" << cell
+    ;
 //        */
-    if (imW < cW && imH < cH) {
+    if (imW < vpW && imH < vpH) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
         failReason = "imW < cW && imH < cH";
@@ -1530,16 +1705,26 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     prevIdx = idx;
 
-    qreal hScale = static_cast<qreal>(cW) / imW;
-    qreal vScale = static_cast<qreal>(cH) / imH;
+    // QSizeF vp(static_cast<qreal>(cW) / imW, static_cast<qreal>(cH) / imH);
 
-    iconRect = idx.data(G::IconRectRole).toRect();
+    // QRect iconRect = idx.data(G::IconRectRole).toRect();
+
+    // QSize box = loupeVPinScene(vp, iconRect , centralRect);
+    // int w = box.width();
+    // int h = box.height();
     /*
     qDebug() << "IconView::zoomCursor"
              << "idx =" << idx
              << "idx.data(G::IconRectRole) =" << idx.data(G::IconRectRole)
              << "iconRect =" << iconRect;
     //*/
+
+    // /*
+    // normalized scale of ImageView viewport in scene
+    qreal hScale = static_cast<qreal>(vpW) / imW;
+    qreal vScale = static_cast<qreal>(vpH) / imH;
+
+    QRect iconRect = idx.data(G::IconRectRole).toRect();
     int w, h;       // zoom frame width and height in pixels
 
     if (hScale < 1 || vScale <= 1 ) {
@@ -1550,8 +1735,8 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         qreal scale = zoomFit / zoom;
 
         // iv = the cropped image visible in centralRect - the ImageView viewport
-        int ivW = (imW > cW) ? cW : imW;
-        int ivH = (imH > cH) ? cH : imH;
+        int ivW = (imW > vpW) ? vpW : imW;
+        int ivH = (imH > vpH) ? vpH : imH;
         // aspect of iv
         qreal ivA = static_cast<qreal>(ivW) / ivH;
         /*
@@ -1625,42 +1810,10 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         w = iconRect.width();
         h = iconRect.height();
     }
+    //*/
 
     // draw the new cursor as a frame
-
-    // check if mac Accessibility has scaled pointer size
-    float scale = 1.0;
-    #ifdef Q_OS_MAC
-        scale = Mac::getMouseCursorMagnification();
-        if (scale == 0) scale = 1;
-    #endif
-    w /= scale;
-    h /= scale;
-
-    // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
-    cursorRect = QRect(0, 0, w, h);
-    /*
-    qDebug() << "IconView::zoomCursor" << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
-    //*/
-    auto frame = QImage(w, h, QImage::Format_ARGB32);
-    int opacity = 0;                                // Set this between 0 and 255
-    frame.fill(QColor(0,0,0,opacity));
-    QPen oPen, iPen;
-    oPen.setWidth(pw);
-    iPen.setWidth(pw);
-    oPen.setColor(Qt::white);
-    iPen.setColor(Qt::black);
-    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
-    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-    QPainter p(&frame);
-    p.setPen(oPen);
-    p.drawRect(oBorder);
-    p.setPen(iPen);
-    p.drawRect(iBorder);
-    setCursor(QCursor(QPixmap::fromImage(frame)));
+    setCursor(QCursor(drawLoupeVPRect(w, h)));
 }
 
 void IconView::startDrag(Qt::DropActions)

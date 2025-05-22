@@ -60,6 +60,8 @@ public:
 
     int updateMidVisibleCell(QString src);
     void updateVisible(QString src);
+    QSize loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon);
+    QPixmap drawLoupeVPRect(int w, int h);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -104,6 +106,8 @@ public slots:
                             int _badgeSize, int _iconNumberSize);
 
     void sortThumbs(int sortColumn, bool isReverse);
+    void loupeRect(QRectF vp, qreal imA);
+    void showLoupeRect(bool isVisible);
 
 private slots:
     void wheelStopped();
@@ -152,7 +156,7 @@ private:
     QTimer wheelTimer;
 
     QRect cursorRect;
-    QRect iconRect;
+    // QRect iconRect;
     QLabel *zoomFrame;
 
     // used during gridView resize to keep close to beginning thumb size

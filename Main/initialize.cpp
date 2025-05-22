@@ -658,11 +658,18 @@ void MW::createImageView()
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::panTo);
+
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
-    connect(imageView, &ImageView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
-    connect(imageView, &ImageView::focusClick, focusPointTrainer, &FocusPointTrainer::focus);
+    connect(imageView, &ImageView::mouseSideKeyPress,
+            this, &MW::mouseSideKeyPress);
+    connect(imageView, &ImageView::focusClick,
+            focusPointTrainer, &FocusPointTrainer::focus);
+    connect(imageView, &ImageView::loupeRect,
+            thumbView, &IconView::loupeRect);
+    connect(imageView, &ImageView::showLoupeRect,
+            thumbView, &IconView::showLoupeRect);
     // connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
@@ -1531,9 +1538,8 @@ void MW::createPreferences()
 
 void MW::createFocusPredictor()
 {
-    QString focusPointModelPath = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focus_point_model.onnx";
-    int imageSize = 256;
-
+    // QString focusPointModelPath = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focus_point_model.onnx";
+    QString focusPointModelPath = "/DetectionModels/focus_point_model.onnx";
 }
 
 void MW::createStressTest()

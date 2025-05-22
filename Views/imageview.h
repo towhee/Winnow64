@@ -93,6 +93,8 @@ public slots:
     void monitorCursorState();
     void copyImage();
     void panTo(float xPct, float yPct);
+    void getFocusPrediction();
+    void showPredictedFocus();
     void updateToggleZoom(qreal toggleZoomValue);
     void zoomIn();
     void zoomOut();
@@ -115,6 +117,9 @@ signals:
     void keyPress(QKeyEvent *event);
     void mouseSideKeyPress(int direction);  // logitech mouse NativeGesture event
     void zoomChange(qreal zoomValue, QString src);
+    void loupeRect(QRectF vp, qreal imA);
+    void showLoupeRect(bool isVisible);
+
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
 //    void handleDrop(const QMimeData *mimeData);
@@ -154,6 +159,7 @@ private:
     QPointF getScrollPct();
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
+    void scrollChange(int value);
 
     QWidget *mainWindow;
     Metadata *metadata;

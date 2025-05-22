@@ -65,6 +65,8 @@ signals:
 public slots:
     void setCurrentIndex(QModelIndex current);
     void setCurrentRow(int row);
+    void setVpRect(QRectF vp, qreal imA);
+    void setVpRectVisibility(bool isVisible);
 
 private:
     QObject parent;
@@ -91,6 +93,8 @@ private:
     QColor labelTextColor;
     QColor videoTextColor;
     QColor numberTextColor;
+    QColor vp1Color;
+    QColor vp2Color;
 
     QPen pickedPen;
     QPen rejectedPen;
@@ -99,6 +103,8 @@ private:
     QPen backPen;
     QPen currentPen;
     QPen selectedPen;
+    QPen vp1Pen;
+    QPen vp2Pen;
 
     int fontHt;
     int textHeadroom;
@@ -130,6 +136,10 @@ private:
     QSize selectedSize;
     QSize cellSize;
     QSize cellSpace;
+
+    QRectF vpRect;
+    qreal imA;
+    bool vpRectIsVisible;
 };
 
 #endif // THUMBVIEWDELEGATE_H

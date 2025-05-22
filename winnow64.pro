@@ -432,8 +432,10 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-    notes/InstallMediaPipe.txt
+DISTFILES += $$files(Lib/*, true)
+DISTFILES += Docs/ingestautopath
+DISTFILES += DetectionModels/focus_point_model.onnx
+DISTFILES += notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt
 DISTFILES += _CMakeLists.txt
 DISTFILES += notes/_InstallLibrary.txt

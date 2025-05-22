@@ -109,9 +109,9 @@ ImageView::ImageView(QWidget *parent,
     classificationLabel->setAlignment(Qt::AlignCenter);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
-    bullseye = new QLabel(this);
-    bullseye->setAttribute(Qt::WA_TranslucentBackground, true);
-    bullseye->setPixmap(QPixmap(":/images/target.png"));
+    // bullseye = new QLabel(this);
+    // bullseye->setAttribute(Qt::WA_TranslucentBackground, true);
+    // bullseye->setPixmap(QPixmap(":/images/target.png"));
     // bullseye->setPixmap(QPixmap(":/images/icon16/target.png"));
 
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
@@ -134,6 +134,13 @@ ImageView::ImageView(QWidget *parent,
     // mouse wheel is spinning
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &ImageView::wheelStopped);
+
+    // scroll event - pan scene when zoomed
+    connect(horizontalScrollBar(), &QScrollBar::valueChanged,
+            this, &ImageView::scrollChange);
+    connect(verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &ImageView::scrollChange);
+
 
     // mouseZoomFit = true;
     isMouseDrag = false;
@@ -274,9 +281,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                      << "isNull =" << pmItem->pixmap().isNull()
                      << fPath;
         // focus prediction
-        focusPrediction = focusPredictor->predict(icd->imCache.value(fPath));
-        placeTarget(focusPrediction.x(), focusPrediction.y());
-        qDebug() << "Predicted (normalized):" << focusPrediction;
+        if (panToFocus) {
+            getFocusPrediction();
+        }
 
     }
     else {
@@ -413,8 +420,9 @@ void ImageView::scale(bool isNewImage)
 
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
+    if (panToFocus) emit showLoupeRect(isScrollable);
 
-    // pan to camera focus point
+    // pan to predicted focus point of interest
     int i = dm->currentSfRow;
     float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
     float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
@@ -561,7 +569,7 @@ void ImageView::placeClassificationBadge()
 
 void ImageView::setBullseyeVisible(bool isVisible)
 {
-    bullseye->setVisible(isVisible);
+    // bullseye->setVisible(isVisible);
 }
 
 void ImageView::placeTarget(float x, float y)
@@ -569,7 +577,7 @@ void ImageView::placeTarget(float x, float y)
     if (G::isLogger) G::log("ImageView::placeTarget");
 
     if (x >= 0 && y >= 0) {
-        qDebug() << "bullseye" << bullseye->size();
+        // qDebug() << "bullseye" << bullseye->size();
         // Get the scene rectangle
         QRectF sceneRect = this->sceneRect();
 
@@ -624,6 +632,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     ● if zoomed and resize to view entire image then engage zoomFit
     ● if view larger than image and resize to clip image then engage zoomFit.
     ● move and size pick icon and shooting info as necessary
+    ● show predictive focus change
 */
     if (G::isLogger) G::log("ImageView::resizeEvent");
     /*
@@ -642,6 +651,40 @@ void ImageView::resizeEvent(QResizeEvent *event)
     }
     placeClassificationBadge();
     setShootingInfo(infoText);
+    showPredictedFocus();
+}
+
+void ImageView::showPredictedFocus()
+{
+    if (!panToFocus || zoom <= zoomFit) return;
+
+    // generate normalized coordinates for viewport in scene
+    qreal w = pmItem->pixmap().width();
+    qreal h = pmItem->pixmap().height();
+    // qreal w = scene->width();
+    // qreal h = scene->height();
+    QPolygonF p = mapToScene(viewport()->rect());
+    qreal x1 = p.at(0).x() / w;
+    qreal y1 = p.at(0).y() / h;
+    qreal x2 = p.at(2).x() / w;
+    qreal y2 = p.at(2).y() / h;
+    QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
+    qreal imA = w * 1.0 / h;
+    qDebug() << "ImageView::scrollChange  imA =" << imA;
+    emit loupeRect(vp, imA);
+}
+
+void ImageView::getFocusPrediction()
+{
+    if (G::isLogger) G::log("ImageView::focusPrediction");
+
+    focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
+    panTo(focusPrediction.x(), focusPrediction.y());
+    qDebug() << "ImageView::getFocusPrediction"
+             << "Predicted (normalized):" << focusPrediction
+             << "x =" << focusPrediction.x()
+             << "y =" << focusPrediction.y()
+        ;
 }
 
 void ImageView::panTo(float xPct, float yPct)
@@ -1078,13 +1121,25 @@ void ImageView::hideCursor()
     setCursor(Qt::BlankCursor);
 }
 
-// EVENTS
-
 void ImageView::scrollContentsBy(int dx, int dy)
 {
     if (G::isLogger) G::log("ImageView::scrollContentsBy");
     scrollCount++;
     QGraphicsView::scrollContentsBy(dx, dy);
+}
+
+// EVENTS
+// SCROLLING
+void ImageView::scrollChange(int /*value*/)
+{
+    if (G::isLogger) G::log("ImageView::scrollChange");
+
+    showPredictedFocus();
+    /*
+    qDebug() << "ImageView::scrollChange"
+             << "mapToScene(viewport()->rect()) =" << mapToScene(viewport()->rect())
+             << x1 << y1 << x2 << y2
+        ;//*/
 }
 
 // MOUSE CONTROL
@@ -1102,6 +1157,7 @@ void ImageView::enterEvent(QEnterEvent *event)
 void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
+    emit showLoupeRect(false);
 }
 
 void ImageView::wheelEvent(QWheelEvent *event)
@@ -1447,14 +1503,6 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     QGraphicsView::mouseReleaseEvent(event);
 }
-
-// qt6.2
-//void ImageView::enterEvent(QEvent *event)
-//{
-//    if (G::isLogger) G::log("ImageView::enterEvent");
-//    QVariant x = event->type();     // suppress compiler warning
-////    this->setFocus();
-//}
 
 // DRAG AND DROP
 
