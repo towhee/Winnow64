@@ -524,7 +524,7 @@ void MW::togglePanToFocus(Tog n)
     if (imageView->panToFocus) {
         panFocusToggleAction->setChecked(true);
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
-        imageView->getFocusPrediction();
+        imageView->predictPanToFocus();
         imageView->showPredictedFocus();
         // imageView->setBullseyeVisible(true);     // for testing
     }
