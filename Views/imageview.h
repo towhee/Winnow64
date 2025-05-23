@@ -93,7 +93,7 @@ public slots:
     void monitorCursorState();
     void copyImage();
     void panTo(float xPct, float yPct);
-    void getFocusPrediction();
+    void predictPanToFocus();
     void showPredictedFocus();
     void updateToggleZoom(qreal toggleZoomValue);
     void zoomIn();

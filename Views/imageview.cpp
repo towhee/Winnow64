@@ -281,9 +281,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                      << "isNull =" << pmItem->pixmap().isNull()
                      << fPath;
         // focus prediction
-        if (panToFocus) {
-            getFocusPrediction();
-        }
+        // if (panToFocus) {
+        //     predictPanToFocus();
+        // }
 
     }
     else {
@@ -341,7 +341,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
 
-        //focus();
+        // focus prediction
+        if (panToFocus) {
+            predictPanToFocus();
+        }
     }
 
     isBusy = false;
@@ -674,7 +677,7 @@ void ImageView::showPredictedFocus()
     emit loupeRect(vp, imA);
 }
 
-void ImageView::getFocusPrediction()
+void ImageView::predictPanToFocus()
 {
     if (G::isLogger) G::log("ImageView::focusPrediction");
 
