@@ -1,5 +1,5 @@
 WHAT'S NEW
-- MetaRead2
+- MetaRead2 - new architecture
 - Fix filters (faster + bug fixes)
 - Find duplicates
 - CreateDate fixes
@@ -11,7 +11,7 @@ WHAT'S NEW
 - Help for film strip and status bar symbols
 - Folder multi-select
 - Fixed latency issue in FSTree image count
-- Pan to camera focus point when zoomed
+- Pan to camera focus point when zoomed with zoom box
 
 BUGS / TO DO
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html

@@ -715,7 +715,6 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
         painter->setPen(vp2Pen);
         painter->drawRect(QRect(QPoint(x1+1,y1+1), QPoint(x2-1,y2-1)));
-        // painter->drawRect(QRect(topLeft, bottomRight));
     }
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to

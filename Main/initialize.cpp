@@ -58,7 +58,7 @@ void MW::initialize()
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
 
     panToFocusToggleBtn = new BarBtn();
-    msg = "Toggle \"Pan To Focus\" on/off.  Mouse click or shortcut B";
+    msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut B";
     panToFocusToggleBtn->setToolTip(msg);
     connect(panToFocusToggleBtn, &BarBtn::clicked, this, &MW::togglePanToFocusClick);
 

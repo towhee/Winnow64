@@ -1267,7 +1267,7 @@ void MW::createViewActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
-    panFocusToggleAction = new QAction(tr("Toggle Pan to Focus"), this);
+    panFocusToggleAction = new QAction(tr("Toggle Pan to Predicted Focus"), this);
     panFocusToggleAction->setObjectName("togglePanToFocus");
     panFocusToggleAction->setCheckable(true);
     panFocusToggleAction->setShortcutVisibleInContextMenu(true);

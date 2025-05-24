@@ -1,5 +1,9 @@
 #include "focuspointtrainer.h"
 
+/*
+    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+*/
+
 FocusPointTrainer::FocusPointTrainer(QObject *parent)
     : QObject{parent}
 {}

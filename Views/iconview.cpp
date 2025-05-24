@@ -1459,6 +1459,9 @@ void IconView::showLoupeRect(bool isVisible)
 
 void IconView::loupeRect(QRectF vp, qreal imA)
 {
+/*
+    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+*/
     if (isDebug) G::log("IconView::showLoupeRect", objectName());
     qDebug() << "IconView::loupeRect"
              << "vp =" << vp

@@ -534,8 +534,8 @@ void MW::togglePanToFocus(Tog n)
         // imageView->setBullseyeVisible(false);    // for testing
     }
     QString txt;
-    imageView->panToFocus ? txt = "Pan to camera focus point is ON"
-                          : txt = "Pan to camera focus point is OFF";
+    imageView->panToFocus ? txt = "Pan to predicted focus point is ON"
+                          : txt = "Pan to predicted focus point is OFF";
     G::popUp->showPopup(txt);
 
 }
