@@ -193,5 +193,6 @@
         <file>images/icon16/target.png</file>
         <file>images/target.png</file>
         <file>images/busy_spinner.gif</file>
+        <file>DetectionModels/focus_point_model.onnx</file>
     </qresource>
 </RCC>

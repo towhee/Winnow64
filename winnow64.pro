@@ -434,7 +434,6 @@ RC_ICONS = images/winnow.ico
 
 DISTFILES += $$files(Lib/*, true)
 DISTFILES += Docs/ingestautopath
-DISTFILES += DetectionModels/focus_point_model.onnx
 DISTFILES += notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt
 DISTFILES += _CMakeLists.txt
@@ -480,6 +479,8 @@ macx:LIBS += -framework Foundation
 # opencv
 macx:INCLUDEPATH += $$PWD/Lib/opencv/include/opencv4
 macx:LIBS += -L$$PWD/Lib/opencv/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_dnn
+win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
+win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
 
 # zLib
 macx:INCLUDEPATH += /usr/include
