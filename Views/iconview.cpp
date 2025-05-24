@@ -408,6 +408,7 @@ int IconView::updateMidVisibleCell(QString src)
     QString msg = objectName() + " src = " + src
                   + " scrollToIcon = " + QVariant(dm->scrollToIcon).toString();
     G::log("IconView::updateMidVisibleCell", msg);
+    return 0;
 }
 
 void IconView::updateVisible(QString src)
@@ -1565,7 +1566,7 @@ QSize IconView::loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon)
     //     h = iconRect.height();
     // }
 
-    // return QSize(w, h);
+     return QSize(1, 1);
 }
 
 QPixmap IconView::drawLoupeVPRect(int w, int h)

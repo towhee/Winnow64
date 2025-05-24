@@ -1289,7 +1289,6 @@ private:
     void updateStatusBar();
     void createMessageView();
     void createPreferences();
-    void createFocusPredictor();
     void createStressTest();
     void createAppStyle();
     void setupCentralWidget();

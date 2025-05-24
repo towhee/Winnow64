@@ -3,7 +3,9 @@
 FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
     : imageSize(inputSize)
 {
-    // qDebug() << "FocusPredictor::FocusPredictor";
+     qDebug() << "FocusPredictor::FocusPredictor"
+              << "onnxPath =" << onnxPath
+        ;
     try {
         net = cv::dnn::readNetFromONNX(onnxPath.toStdString());
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
@@ -11,6 +13,9 @@ FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
     } catch (const cv::Exception& e) {
         qWarning("Failed to load ONNX model: %s", e.what());
     }
+    qDebug() << "FocusPredictor::FocusPredictor"
+             << "net.empty() =" << net.empty()
+        ;
 }
 
 bool FocusPredictor::isLoaded() const {
