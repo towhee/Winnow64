@@ -297,6 +297,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Predict Focus Location</string>
+        </property>
+        <property name="text">
+         <string>D</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Pick Image</string>
         </property>
         <property name="text">

@@ -286,11 +286,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                      << "h =" << pmItem->pixmap().height()
                      << "isNull =" << pmItem->pixmap().isNull()
                      << fPath;
-        // focus prediction
-        // if (panToFocus) {
-        //     predictPanToFocus();
-        // }
-
     }
     else {
         if (isDebug)
@@ -665,6 +660,9 @@ void ImageView::resizeEvent(QResizeEvent *event)
 
 void ImageView::showPredictedFocus()
 {
+/*
+    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+*/
     if (!panToFocus || zoom <= zoomFit) return;
 
     // generate normalized coordinates for viewport in scene
@@ -685,6 +683,9 @@ void ImageView::showPredictedFocus()
 
 void ImageView::predictPanToFocus()
 {
+/*
+    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+*/
     if (G::isLogger) G::log("ImageView::focusPrediction");
 
     focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
@@ -1156,6 +1157,12 @@ void ImageView::scrollChange(int /*value*/)
 void ImageView::enterEvent(QEnterEvent *event)
 {
     wheelSpinningOnEntry = G::wheelSpinning;
+
+    if (panToFocus && zoom > zoomFit) {
+        qDebug() << "ImageView::enterEvent emit showLoupeRect";
+        emit showLoupeRect(true);
+    }
+
     /*
     qDebug() << "ImageView::enterEvent" << objectName()
              << "G::wheelSpinning =" << G::wheelSpinning

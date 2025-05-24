@@ -430,16 +430,74 @@ Scrollbar change flow:
 
 Resizing icons or the icon viewport
 
-    When the IconView viewport is resized or the icon size is changed this results in
-    a scroll event.  Since we want to keep the view centered on its original state,
-    the middle or center icon is tracked as dm->scrollToIcon.  The G::resizingIcons is set
-    for the resize and the subsequent scroll event does not reset dm->scrollToIcon.  In
+    When the IconView viewport is resized or the icon size is changed this results in a
+    scroll event. Since we want to keep the view centered on its original state, the
+    middle or center icon is tracked as dm->scrollToIcon. The G::resizingIcons is set for
+    the resize and the subsequent scroll event does not reset dm->scrollToIcon. In
     MW::thumbHasScrolled or MW::gridHasScrolled resets G::resizingIcons to false.
 
     This allows the three datamodel views to be synced using dm->scrollToIcon.
 
 
-QT VERSIONS
+FOCUS PREDICTOR
+
+    Focus predictor uses a machine learnin`g model to predict where in the image
+    the user will want to review the image focus - for example, the eye of the
+    subject.  When enabled, and the loupe view is zoomed, as the used advances,
+    each image is panned to the predicted focus review location.
+
+Architecture
+
+    Data: this includes all the training images and a CSV file that records
+    the focus point, type and path.  This is all located at:
+    /Users/roryhill/Documents/Documents - Quark/FocusPointTrainer
+
+    Python: Code is used to execute the python scripts to create the model:
+    /Users/roryhill/Projects/FocusPointTrainer
+    - config.py
+    - model.py
+    - train_focus_model.py (Create the model)
+    - validate_focus_model.py
+
+    Model: focus_point_model at /Users/roryhill/Projects/FocusPointTrainer in
+    two versions: .pth and .onnx.
+
+    FocusPointTrainer: a c++ class to create the "labeling" data from the
+    training images in
+    /Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focuspoint.csv
+
+    FocusPredictor: a c++ class that uses the model to predict the focus point
+    for the current image.
+
+Process
+
+    1. The training data is created using FocusPointTrainer to append the
+       focus point, type and path for each training image to focuspoint.csv.
+
+    2. In Code, train_focus_model is run (run python in terminal).  This creates
+       focus_point_model.pth and focus_point_model.onnx. .pth is the native torch format
+       and it is converted to .onnx, the format that opencv uses. This enables c++ to use
+       the model with the opencv library.
+
+    3. Copy focus_point_model.onnx to
+       /Users/roryhill/Projects/Winnow64/DetectionModels
+
+    4. Use FocusPredictor::predict to return the normalized image coordinates for
+       the predicted focus location.
+
+Implementation
+
+    When focus prediction is enabled (Toggle Pan to Focus) and the loupe view is
+    zoomed, the ImageView pans to the predicted focus point.  See
+    - end of ImageView::loadImage
+    - ImageView::predictPanToFocus (get focus coord and pan)
+
+    When this occurs, the location of the ImageView viewport within the scene is
+    signalled to IconView, which tells IconViewDelegate to show a rectangle in
+    the thumbView tumbnail matching the viewport in the scene.  See
+    - ImageView::showPredictedFocus sends the rectangle and image aspect
+      - IconView::loupeRect receives rect/aspect, updates delegate
+        - IconViewDelegate::setVpRect
 
 */
 

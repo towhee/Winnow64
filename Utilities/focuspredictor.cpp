@@ -1,5 +1,9 @@
 #include "focuspredictor.h"
 
+/*
+    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+*/
+
 FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
     : imageSize(inputSize)
 {
