@@ -383,9 +383,9 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Help/helppixeldelta.ui
 FORMS += Dialogs/loupeinfodlg.ui
-FORMS += Help/foldershelp.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
@@ -417,9 +417,9 @@ FORMS += Embellish/embelCoord.ui
 FORMS += Help/filtershelp.ui
 FORMS += Help/foldershelp.ui
 FORMS += Help/helpfindduplicates.ui
-FORMS +=
 FORMS += Help/helpform.ui
 FORMS += Help/helpingest.ui
+FORMS += Help/helppixeldelta.ui
 FORMS += Help/ingestautopath.ui
 FORMS += Help/introduction.ui
 FORMS += Help/message.ui
@@ -472,13 +472,13 @@ DISTFILES += notes/xmp.txt
 
 macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
-#macx:LIBS += -framework ColorSync
 macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
 # opencv
-macx:INCLUDEPATH += $$PWD/Lib/opencv/include/opencv4
-macx:LIBS += -L$$PWD/Lib/opencv/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_dnn
+macx:OPENCV_PREFIX = /opt/homebrew/opt/opencv
+macx:INCLUDEPATH += $$OPENCV_PREFIX/include/opencv4
+macx:LIBS += -L$$OPENCV_PREFIX/lib -lopencv_core -lopencv_imgproc -lopencv_dnn
 win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
 win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
 
@@ -508,19 +508,12 @@ win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
 win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
-# macx arm64 only using homebrew installation
-# macx:LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
-# macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
-macx:LIBS += -L$$PWD/Lib/libtiff/build-universal -ltiff
-macx:INCLUDEPATH += $$PWD/Lib/libtiff/build-universal/include
-macx:QMAKE_RPATHDIR += $$PWD/Lib/libtiff/build-universal
+macx:LIBTIFF_PREFIX = /opt/homebrew/opt/libtiff
+macx:INCLUDEPATH += $$LIBTIFF_PREFIX/include
+# macx:LIBS += -L$$LIBTIFF_PREFIX/lib -llibtiff  # not working, use absolute ref
+macx::LIBS += /opt/homebrew/opt/libtiff/lib/libtiff.dylib
 
 # libjpeg-turbo
-# macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build-arm64 -lturbojpeg
-# macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo
-# macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-arm64
-# Ensure rpath is set correctly
-# macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-arm64
-macx:LIBS += -L$$PWD/Lib/libjpeg-turbo/build-universal -lturbojpeg
-macx:INCLUDEPATH += $$PWD/Lib/libjpeg-turbo/build-universal/include
-macx:QMAKE_RPATHDIR += $$PWD/Lib/libjpeg-turbo/build-universal
+macx:JPEGTURBO_PREFIX = /opt/homebrew/opt/jpeg-turbo
+macx:INCLUDEPATH += $$JPEGTURBO_PREFIX/include
+macx:LIBS += -L$$JPEGTURBO_PREFIX/lib -lturbojpeg

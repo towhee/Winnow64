@@ -536,7 +536,7 @@ void MW::togglePanToFocus(Tog n)
     QString txt;
     imageView->panToFocus ? txt = "Pan to predicted focus point is ON"
                           : txt = "Pan to predicted focus point is OFF";
-    G::popUp->showPopup(txt);
+    // G::popUp->showPopup(txt);
 
 }
 

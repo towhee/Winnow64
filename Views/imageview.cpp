@@ -122,13 +122,8 @@ ImageView::ImageView(QWidget *parent,
     isRubberBand = false;
 
     // focus predictor
-#ifdef Q_OS_WIN
-    QString focusPointModelPath = "C:/Users/hillr/Projects/Winnow64/DetectionModels/focus_point_model.onnx";
-#endif
-
-#ifdef Q_OS_MAC
-    QString focusPointModelPath = "/Users/roryhill/Projects/Winnow64/DetectionModels/focus_point_model.onnx";
-#endif
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString focusPointModelPath = QDir(appDir).filePath("focus_point_model.onnx");
     int imageSize = 512;
     focusPredictor = new FocusPredictor(focusPointModelPath, imageSize);
 

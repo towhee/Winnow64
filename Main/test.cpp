@@ -392,25 +392,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageView->placeTarget(0.5, 0.5);
-    return;
-
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (selection.isEmpty()) return;
-
-    bool isSidecar = false;
-    int n = selection.count();
-    QString s;
-    for (int i = 0; i < n; ++i) {
-        if (s.length()) s += ", ";
-        int row = selection.at(i).row();
-        QString fName = dm->sf->index(row, G::NameColumn).data().toString();
-        int endBase = fName.lastIndexOf(".");
-        QString fBase = fName.left(endBase);
-        // qDebug() << "row =" << row << fName << fBase;
-        s += fBase;
-    }
-    qDebug().noquote() << s;
+    qDebug() << QCoreApplication::applicationDirPath();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
