@@ -17,6 +17,7 @@ NORMAL DEPLOYMENT
         - Update ExifTool if necessary.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
           Winnow.app/Contents/MacOS.
         - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
+	- Make sure focus_point_model.onnx is in Winnow.app/Contents/MacOS.
         - Execute build>clean to make sure fully universal build
         - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
         - Run WinnowDeployRelease.command to add frameworks, sign app and copy to Install Winnow folder.

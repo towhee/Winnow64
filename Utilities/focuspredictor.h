@@ -2,6 +2,7 @@
 #define FOCUSPREDICTOR_H
 
 #include <QtWidgets>
+#include "Main/global.h"
 #include "opencv2/core.hpp"
 #include "opencv2/dnn.hpp"
 

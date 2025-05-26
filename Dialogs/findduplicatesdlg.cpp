@@ -1472,7 +1472,11 @@ void FindDuplicatesDlg::on_helpBtn_clicked()
 void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
 {
 /*
-The delta or difference in pixels between two images is determined by taking the difference of the red, green and blue component values (RGB), and then averaging the sum of all the differences.  The values range of a red, green or blue component is 0 - 255, therefore the maximum pixel delta = 255 and two identical images would have a pixel delta = 0.
+    The delta or difference in pixels between two images is determined by taking the
+    difference of the red, green and blue component values (RGB), and then averaging the
+    sum of all the differences. The values range of a red, green or blue component is 0 -
+    255, therefore the maximum pixel delta = 255 and two identical images would have a
+    pixel delta = 0.
 */
     QDialog *dlg = new QDialog;
     Ui::HelpPixelDelta *ui = new Ui::HelpPixelDelta;

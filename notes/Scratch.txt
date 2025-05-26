@@ -1,67 +1,7 @@
-# ---------- Training Setup ----------
-def train():
-    csv_path = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focuspoint.csv"
-    batch_size = 16
-    num_epochs = 10
-    learning_rate = 1e-4
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    dataset = FocusPointDataset(csv_path)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-    model = FocusPointRegressor().to(device)
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    print("Starting {num_epochs} epochs")
-    for epoch in range(num_epochs):
-        start = time.perf_counter()          # ⏱️ start timer
-        model.train()
-        running = 0.0
-
-        for imgs, targets in dataloader:
-            imgs, targets = imgs.to(device), targets.to(device)
-
-            with torch.cuda.amp.autocast(enabled=amp_enabled):
-                outs  = model(imgs)
-                loss  = criterion(outs, targets)
-
-            opt.zero_grad()
-            scaler.scale(loss).backward()
-            scaler.step(opt)
-            scaler.update()
-
-            running += loss.item()
-
-        epoch_sec = time.perf_counter() - start   # ⏱️ stop timer
-        print(
-            f"Epoch {epoch+1:02d}/{num_epochs} | "
-            f"Loss: {running/len(dataloader):.5f} | "
-            f"Time: {epoch_sec:.1f}s"
-        )
-
-torch.cuda.amp.autocast(args...) is deprecated. Please use torch.amp.autocast("cuda", args...)
-2025-04-16_0008_Focus_Stack-2, 2025-04-07_0001_Focus_Stack
-"2025-04-16_0008_Focus_Stack-2", "2025-04-07_0001_Focus_Stack"
-
-Winnow/
-    Lib/
-        opencv/
-            include/
-                opencv4/
-                    opencv2/
-                        core/
-                        improc/
-                        highgui/
-                        dnn/
-    Lib/
-        opencv/
-            lib/
-                libopencv_core.4.11.0.dylib
-                libopencv_dnn.4.11.0.dylib
-                libopencv_highgui.4.11.0.dylib
-                libopencv_imgproc.4.11.0.dylib
-
-/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focus_point_model.onnx
-/Users/roryhill/Projects/FocusPointTrainer/focus_point_model.onnx
-
+dylibbundler -od -b \
+  -x /Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow \
+  -d /Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/libs \
+  -s /Users/roryhill/Projects/Winnow64/Lib/opencv/lib \
+  -s /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64/lib \
+  -s /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64 \
+  -p @executable_path/../libs
