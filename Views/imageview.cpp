@@ -861,6 +861,11 @@ void ImageView::zoomToggle()
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
     scale();
+
+    if (panToFocus) {
+        predictPanToFocus();
+    }
+
 }
 
 void ImageView::rotateImage(int degrees)
