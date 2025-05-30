@@ -10,17 +10,9 @@ FocusPointTrainer::FocusPointTrainer(QObject *parent)
 
 void FocusPointTrainer::focus(QString srcPath, float x, float y, QString type, QImage srcImage)
 {
-    /*
-    qDebug() << "FocusPointTrainer::focus"
-             << type
-             << x
-             << y
-             << path
-                ;//*/
-
     int px = 512;
     QImage trainImage = srcImage.scaled(QSize(px,px),Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    // QString trainFolderPath = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/train256";
+    // Set to folder with training images (Train_Creature, Train_Subject, Train_Human...)
     QString trainFolderPath = "/Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/Train_Creature";
     QDir dir(trainFolderPath);
     // dir.count() includes two hidden folders (. and ..)
