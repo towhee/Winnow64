@@ -602,7 +602,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         embelProperties->doNotEmbellish();
     }
 
-    // qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
     qRegisterMetaType<QSharedPointer<Issue>>("QSharedPointer<Issue>");
@@ -614,6 +613,17 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // create issue log used to report errors and issues.  If fails, show popup after
     // show main window
     G::newIssueLog();
+
+    /* Simulate startup arguments for debugging
+    QString simArgs =
+        "0_arg\n"
+        "Embellish\n"
+        "Zen2048\n"
+        "/Users/roryhill/Pictures/Zen2048/2008-05-09_0063.jpg";
+    // "/Users/roryhill/Pictures/2025/202503/2025-03-27/2025-03-25_0002.jpg";
+    handleStartupArgs(simArgs);
+    return;
+    //*/
 
     if (isStartupArgs) {
         if (G::useProcessEvents) qApp->processEvents();
@@ -685,7 +695,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // crash log
     settings->setValue("hasCrashed", true);
 
-    // if (G::isLogger) qDebug() << "MW::MW  Winnow running (end of MW::MW)";
+    if (G::isLogger) G::log("MW::MW",  "(end of MW::MW)");
 }
 
 void MW::whenActivated(Qt::ApplicationState state)
@@ -1935,9 +1945,9 @@ void MW::handleStartupArgs(const QString &args)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
-    //qDebug() << "MW::handleStartupArgs" << argList;
+    // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        // if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
@@ -1947,7 +1957,9 @@ void MW::handleStartupArgs(const QString &args)
         /* This means a remote embellish has been invoked.
                 arg 1 = "Embellish"
                 arg 2 = Embellish template name ie "Zen2048"
-                arg 3 = Folder holding temp image files sent to embellish
+                arg 3 = Path to first image being exported to be embellished in folder ie Zen2084
+                arg 4 = Path to 2nd image
+                arg...
 
         The information is gathered and sent to EmbelExport::exportRemoteFiles, where the
         images are embellished and saved in the manner defined by the embellish template
@@ -1958,6 +1970,8 @@ void MW::handleStartupArgs(const QString &args)
         this would be confusing for the user.  */
         show();
         raise();
+
+        G::mode = "Loupe";
 
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
@@ -1983,6 +1997,11 @@ void MW::handleStartupArgs(const QString &args)
         dir.setSorting(QDir::Time );
         dir.setPath(folderPath);
 
+        if (!dir.entryInfoList().count()) {
+            qWarning() << "There are no files in folder" << folderPath;
+            return;
+        }
+
         /* Get earliest lastModified time (t) for incoming files, then choose all files in the
         folder that are Winnow supported formats and have been modified after (t). This allows
         unlimited files to be received, getting around the command argument buffer limited
@@ -1992,7 +2011,7 @@ void MW::handleStartupArgs(const QString &args)
         files have been saved to the folder folderPath by the exporting program (ie lightroom).
         However, this folder might already have existing files.  If the command argument
         buffer has been exceeded then the argument list may not contain the earliest modified
-        file.  To determine which files are part of the incoming the modified date of the first
+        file.  To determine which files are part of the incoming, the modified date of the first
         file in the command argument buffer is used as a seed value, and any file with a
         modified date up to 10 seconds earlier becomes the new seed value.  After reviewing all
         the eligible files in folderPath the seed value will be the earliest modified incoming
@@ -2012,14 +2031,6 @@ void MW::handleStartupArgs(const QString &args)
             tMinus10 = t.addSecs(-10);
             if (tThis < t && tThis > tMinus10) t = tThis;
             /* log
-            qDebug() << "MW::handleStartupArgs"
-                     << i
-                     << "tOld =" << tOld.toString("yyyy-MM-dd hh:mm:ss")
-                     << "tMinus10 =" << tMinus10.toString("yyyy-MM-dd hh:mm:ss")
-                     << "tThis =" << tThis.toString("yyyy-MM-dd hh:mm:ss")
-                     << "t =" << t.toString("yyyy-MM-dd hh:mm:ss")
-                     << fPath
-                        ;
             QString msg = QString::number(i).rightJustified(3) +
                           " tOld = " + tOld.toString("yyyy-MM-dd hh:mm:ss") +
                           " tMinus10 = " + tMinus10.toString("yyyy-MM-dd hh:mm:ss") +
@@ -2036,11 +2047,14 @@ void MW::handleStartupArgs(const QString &args)
                        folderPath + "  Cutoff = " + t.toString("yyyy-MM-dd hh:mm:ss"));
         //*/
 
+        // for debugging ...
+        bool doThemAll = false;
+
         // add the recently modified incoming files to pathList
         for (int i = 0; i < dir.entryInfoList().size(); ++i) {
             info = dir.entryInfoList().at(i);
             // only add files just modified
-            if (info.lastModified() >= t) {
+            if (info.lastModified() >= t || doThemAll) {
                 pathList << info.filePath();
                 /* log
                 QString msg = QString::number(i) +
@@ -2050,8 +2064,6 @@ void MW::handleStartupArgs(const QString &args)
                 //*/
             }
         }
-
-        //setCentralWidget(blankView);  // crash
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
@@ -2067,32 +2079,19 @@ void MW::handleStartupArgs(const QString &args)
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
 
-        /* debug
-        qDebug() << "MW::handleStartUpArgs"
-                 << "fDir" << fDir
-                 << "dm->currentPrimaryFolderPath" << dm->currentPrimaryFolderPath
-                 << "first path =" << embellishedPaths.at(0)
-            ; //*/
+        // if folder with embellished images is not already selected
+        if (!dm->folderList.contains(fDir)) {
+            fsTree->select(fDir, "", "handleStartupArgs");
+        }
 
-        bool useDynamicInsertion = true;
-        // folder already open
-        bool folderAlreadyOpen = dm->folderList.contains(fDir);
-        if (useDynamicInsertion && folderAlreadyOpen) {
-            imageView->currentImageHasChanged = true;
-            insertFiles(embellishedPaths);
-            // update filter counts
-            buildFilters->recount();
-            filterChange("MW::handleStartupArgs_remoteEmbellish");
-            // select first new embellished image
-            QString fPath = embellishedPaths.at(0);
-            sel->select(fPath);
-        }
-        // open the folder
-        else {
-            // go there ...
-            QString fPath = embellishedPaths.at(0);
-            folderAndFileSelectionChange(fPath, "handleStartupArgs");
-        }
+        imageView->currentImageHasChanged = true;
+        insertFiles(embellishedPaths);
+        // update filter counts
+        buildFilters->recount();
+        filterChange("MW::handleStartupArgs_remoteEmbellish");
+        // select first new embellished image
+        QString fPath = embellishedPaths.at(0);
+        sel->select(fPath);
     }
 
     // startup not triggered by embellish winnet
@@ -2230,6 +2229,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     if (!rememberLastDir) {
         if (G::isInitializing || isFilterChange) {
+            qDebug() << fun << "G::isInitializing || isFilterChange so exit";
             return;
         }
     }
@@ -2679,7 +2679,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
 */
     if (G::isInitializing) return false;
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
 
     /*
@@ -3073,7 +3073,7 @@ void MW::thumbHasScrolled()
     icons within the cache range.
 */
     QString fun = "MW::thumbHasScrolled";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log(fun,
                "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString()
                + " thumbView->midVisibleCell = "
@@ -3130,7 +3130,7 @@ void MW::gridHasScrolled()
     icons within the cache range.
 */
     QString fun = "MW::gridHasScrolled";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log(fun, "isVisible = " +
                QVariant(gridView->isVisible()).toString());
     if (G::isInitializing) return;
@@ -3173,7 +3173,7 @@ void MW::tableHasScrolled()
     Finally, metaReadThread->setCurrentRow is called to load any necessary metadata and
     icons within the cache range.
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::tableHasScrolled");
     if (G::isInitializing) return;
 

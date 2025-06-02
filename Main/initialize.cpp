@@ -11,6 +11,7 @@ void MW::initialize()
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
     G::isModifyingDatamodel = false;
+    G::isEmbellish = false;
     G::actDevicePixelRatio = 1;
     G::dpi = 72;
     G::ptToPx = G::dpi / 72;
@@ -137,8 +138,11 @@ void MW::setupPlatform()
 }
 
 void MW::checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
-                               int frameHeight)
+                                int frameHeight)
 {
+/*
+    Not being used.
+*/
     // compare with restored geometry's height increased by frameHeight
     const int height = restoredGeometry->height() + frameHeight;
 
@@ -202,6 +206,7 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(welcome);          // 5 first time open program tips
     centralLayout->addWidget(messageView);      // 6
     centralLayout->addWidget(blankView);        // 7
+
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -209,16 +214,16 @@ void MW::setupCentralWidget()
 void MW::createFilterView()
 {
     if (G::isLogger) G::log("MW::createFilterView");
+    /*
     // G::fontSize req'd for row heights in filter view
-//    if (setting->contains("fontSize"))
-//        G::fontSize = setting->value("fontSize").toString();
-//    else
-//        G::fontSize = "12";
-//    qDebug() << "MW::createFilterView  G::fontSize =" << G::fontSize;
+    if (G::settings->contains("fontSize"))
+       G::fontSize = G::settings->value("fontSize").toString();
+    else
+       G::fontSize = 12;
+    */
     filters = new Filters(this);
     filters->setObjectName("Filters");
     filters->setMaximumWidth(folderMaxWidth);
-//    qApp->installEventFilter(filters);
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
@@ -229,11 +234,8 @@ void MW::createDataModel()
 {
     if (G::isLogger) G::log("MW::createDataModel");
     icd = new ImageCacheData(this);
-    // iconCacheData = new IconCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
-    // bool onTopOfCache = G::showProgress == G::ShowProgress::ImageCache;
-    // cacheProgressBar->setMetaProgressStyle(onTopOfCache);
     cacheProgressBar->setMetaProgressStyle(true);
 
     // loadSettings not run yet
@@ -242,7 +244,7 @@ void MW::createDataModel()
     else combineRawJpg = false;
 
     dm = new DataModel(nullptr, metadata, filters, combineRawJpg);
-    // dm = new DataModel(this, metadata, filters, combineRawJpg);
+
     // enable global access to datamodel
     G::setDM(dm);
 
@@ -252,8 +254,6 @@ void MW::createDataModel()
 
     connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
     connect(dm, &DataModel::folderChange, this, &MW::folderChanged);
-    // connect(dm, &DataModel::addedFolderToDM, this, &MW::folderChanged);
-    // connect(dm, &DataModel::removedFolderFromDM, this, &MW::folderChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
@@ -264,7 +264,6 @@ void MW::createDataModel()
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
-    // connect(this, &MW::setIcon, dm, &DataModel::setIcon, Qt::BlockingQueuedConnection);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters);
 
@@ -289,13 +288,9 @@ void MW::createSelectionModel()
     TableView, insuring that each view is in sync, except when a view is hidden.
 */
     if (G::isLogger) G::log("MW::createSelectionModel");
-    // set a common selection model for all views
-//    selectionModel = new QItemSelectionModel(dm->sf);
     thumbView->setSelectionModel(dm->selectionModel);
     tableView->setSelectionModel(dm->selectionModel);
     gridView->setSelectionModel(dm->selectionModel);
-
-    // when selection changes update views
 }
 
 void MW::createMetaRead()
@@ -318,41 +313,42 @@ void MW::createMetaRead()
        settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
     }
 
-    // dm->defaultIconChunkSize = 200;
-    // dm->defaultIconChunkSize = G::maxIconChunk;
-
-    // dm->setChunkSize(dm->defaultIconChunkSize);
-
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);
-    // metaReadThread->iconChunkSize = dm->iconChunkSize;
-    // metadataCacheThread->metadataChunkSize = dm->iconChunkSize;
-
-    // signal to stop MetaRead
-    // connect(this, &MW::abortMetaRead, metaRead, &MetaRead::stopReaders);
 
     // update thumbView in case scrolling has occurred
     connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
+
     // update gridView in case scrolling has occurred
     connect(metaRead, &MetaRead::updateScroll, gridView, &IconView::repaintView,
             Qt::BlockingQueuedConnection);
+
     // loading image metadata into datamodel, okay to select
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
+
+    // selectCurrentIndex from MetaRead
     connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex);
+
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
+
     // Signal to change selection, fileSelectionChange, update ImageCache
     connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
+
     // update statusbar metadata active light
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+
     // update loading metadata in central window
     connect(metaRead, &MetaRead::centralMsg, this, &MW::setCentralMessage);
+
     // update filters MetaRead progress
     connect(metaRead, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
+
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
+
     // save time to read image metadata and icon to the datamodel
     connect(metaRead, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
 
@@ -413,9 +409,6 @@ void MW::createImageCache()
     connect(imageCache, &ImageCache::waitingForRow,
             dm, &DataModel::imageCacheWaiting);
 
-    // // signal stopped when abort completed
-    // connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
-
     // Update the cache status progress bar when changed in ImageCache
     connect(imageCache, &ImageCache::showCacheStatus,
             this, &MW::updateImageCacheStatus);
@@ -440,7 +433,7 @@ void MW::createThumbView()
     if (G::isLogger) G::log("MW::createThumbView");
     thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
-//    thumbView->setSpacing(0);                // thumbView not visible without this
+    // thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
     thumbView->firstVisibleCell = 0;
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
@@ -464,13 +457,6 @@ void MW::createThumbView()
         thumbView->badgeSize = 13;
         thumbView->iconNumberSize = 24;
     }
-
-    // double mouse click fires displayLoupe
-    // connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
-    // connect(thumbView, &IconView::displayLoupe, this, &MW::loupeDisplay);
-
-    // back and forward mouse buttons toggle pick
-//    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
 
     // scrolling
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
@@ -507,15 +493,9 @@ void MW::createGridView()
         gridView->iconNumberSize = iconNumberSize;
     }
 
-    // double mouse click fires displayLoupe (signal not req'd)
-    // connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
     // update metadata and icons if not loaded for new images when scroll
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::gridHasScrolled);
-
-    // // connect grid mouse click to the FocusPointTrainer
-    // connect(gridView, &IconView::focusClick,
-    //         focusPointTrainer, &FocusPointTrainer::focus);
 }
 
 void MW::createTableView()
@@ -551,8 +531,10 @@ void MW::createTableView()
     // update menu "sort by" to match tableView sort change
     connect(tableView->horizontalHeader(), &QHeaderView::sortIndicatorChanged,
             this, &MW::sortIndicatorChanged);
+
     // change to loupe view if double click or enter in tableview
     connect(tableView, &TableView::displayLoupe, this, &MW::loupeDisplay);
+
     // sync scrolling between tableview and thumbview
     connect(tableView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::tableHasScrolled);
@@ -579,11 +561,16 @@ void MW::createVideoView()
 
     // back and forward mouse buttons toggle pick
     connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
+
+    // mouse side key press
     connect(videoView, &VideoView::mouseSideKeyPress, this, &MW::mouseSideKeyPress);
+
     // drop event
     connect(videoView, &VideoView::handleDrop, this, &MW::handleDrop);
+
     // show mouse cursor
     connect(videoView, &VideoView::showMouseCursor, this, &MW::showMouseCursor);
+
     // hide mouse cursor
     connect(videoView, &VideoView::hideMouseCursor, this, &MW::hideMouseCursor);
 }
@@ -598,6 +585,7 @@ void MW::createImageView()
     if (G::isLogger) G::log("MW::createImageView");
     /* This is the info displayed on top of the image in loupe view. It is
        dependent on template data stored in QSettings */
+
     // start with defaults
     infoString->loupeInfoTemplate = "Default info";
     if (isSettings) {
@@ -658,7 +646,6 @@ void MW::createImageView()
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::panTo);
-
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
     connect(imageView, &ImageView::keyPress, this, &MW::keyPressEvent);
@@ -670,7 +657,6 @@ void MW::createImageView()
             thumbView, &IconView::loupeRect);
     connect(imageView, &ImageView::showLoupeRect,
             thumbView, &IconView::showLoupeRect);
-    // connect(imageCache, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
 void MW::createCompareView()
@@ -690,7 +676,6 @@ void MW::createCompareView()
     }
 
     connect(compareImages, &CompareImages::updateStatus, this, &MW::updateStatus);
-
     connect(compareImages, &CompareImages::togglePick, this, &MW::togglePick);
 }
 
@@ -702,7 +687,6 @@ void MW::createInfoString()
 */
     if (G::isLogger) G::log("MW::createInfoString");
     infoString = new InfoString(this, dm, settings);
-
 }
 
 void MW::createInfoView()
@@ -712,6 +696,7 @@ void MW::createInfoView()
 */
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::createInfoView");
+
     infoView = new InfoView(this, dm, metadata, thumbView, filters, buildFilters);
     infoView->setMaximumWidth(folderMaxWidth);
     infoView->enable(false);
@@ -736,13 +721,10 @@ void MW::createInfoView()
                 QModelIndex idParent = k->index(row, 0);
                 QString fieldName = qvariant_cast<QString>(idParent.data());
                 // find the match
-    //            qDebug() << G::t.restart() << "\t" << "Comparing parent" << fieldName << "to"<< setField;
                 if (fieldName == setField) {
                     QModelIndex idParentChk = k->index(row, 2);
                     // set the flag whether to display or not
                     k->setData(idParentChk, okToShow, Qt::EditRole);
-    //                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
-    //                         << idParent.data().toString() << "\n";
                     isFound = true;
                     break;
                 }
@@ -750,13 +732,10 @@ void MW::createInfoView()
                     QModelIndex idChild = k->index(childRow, 0, idParent);
                     QString fieldName = qvariant_cast<QString>(idChild.data());
                     // find the match
-    //                qDebug() << G::t.restart() << "\t" << "Comparing child" << fieldName << "to"<< setField;
                     if (fieldName == setField) {
                         QModelIndex idChildChk = k->index(childRow, 2, idParent);
                         // set the flag whether to display or not
                         k->setData(idChildChk, okToShow, Qt::EditRole);
-    //                    qDebug() << G::t.restart() << "\t" << "Child match so set to" << okToShow
-    //                             << idChild.data().toString() << "\n";
                         isFound = true;
                         break;
                     }
@@ -769,7 +748,6 @@ void MW::createInfoView()
     }
 
     /* read InfoView okToShow fields */
-//    qDebug() << G::t.restart() << "\t" << "\nread InfoView okToShow fields\n";
     settings->beginGroup("InfoFields");
     QStringList setFields = settings->childKeys();
     QList<QStandardItem *> itemList;
@@ -788,26 +766,20 @@ void MW::createInfoView()
             QModelIndex idParent = k->index(row, 0);
             QString fieldName = qvariant_cast<QString>(idParent.data());
             // find the match
-//            qDebug() << G::t.restart() << "\t" << "Comparing parent" << fieldName << "to"<< setField;
             if (fieldName == setField) {
                 QModelIndex idParentChk = k->index(row, 2);
                 // set the flag whether to display or not
                 k->setData(idParentChk, okToShow, Qt::EditRole);
-//                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
-//                         << idParent.data().toString() << "\n";
                 break;
             }
             for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
                 QModelIndex idChild = k->index(childRow, 0, idParent);
                 QString fieldName = qvariant_cast<QString>(idChild.data());
                 // find the match
-//                qDebug() << G::t.restart() << "\t" << "Comparing child" << fieldName << "to"<< setField;
                 if (fieldName == setField) {
                     QModelIndex idChildChk = k->index(childRow, 2, idParent);
                     // set the flag whether to display or not
                     k->setData(idChildChk, okToShow, Qt::EditRole);
-//                    qDebug() << G::t.restart() << "\t" << "Child match so set to" << okToShow
-//                             << idChild.data().toString() << "\n";
                     isFound = true;
                     break;
                 }
@@ -820,9 +792,10 @@ void MW::createInfoView()
 
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(infoViewChanged(QStandardItem*)));
-    // connect(infoView, &InfoView::ok, this, &MW::infoViewChanged);
+
     // update filters
     connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::updateCategory);
+
     connect(infoView, &InfoView::filterChange, this, &MW::filterChange);
 }
 
@@ -858,11 +831,6 @@ void MW::createFSTree()
 
     // this works for touchpad tap (replaced with folderSelection)
     // connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChangeNoParam);
-
-    // add/remove folder to the DataModel processing queue
-    // connect(fsTree, &FSTree::addToDataModel, this, &MW::loadConcurrentAddFolder);
-    // connect(fsTree, &FSTree::removeFromDataModel, this, &MW::loadConcurrentRemoveFolder);
-    // connect(fsTree, &FSTree::datamodelQueue, dm, &DataModel::enqueueFolderSelection);
 
     // reselect folder after external program drop onto FSTree or a selectionChange
     // connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
@@ -1002,7 +970,7 @@ void MW::createStatusBar()
                                  "color: #ffffff;"       // nada windows
                                  "}");
 
-    // progressBar created in MW::createDataModel, where it is first req'd
+    // progressBar is created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
     if (isSettings && settings->contains("cacheStatusWidth"))
@@ -1110,7 +1078,7 @@ void MW::createFolderDock()
     // folderDockTabText = "  📁  ";
     QPixmap pm(":/images/icon16/anchor.png");
     folderDockTabRichText = "test";
-//    folderDockTabRichText = Utilities::pixmapToString(pm);
+    // folderDockTabRichText = Utilities::pixmapToString(pm);
     dockTextNames << folderDockTabText;
     folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
     // folderDock->setObjectName("FoldersDock");
@@ -1308,9 +1276,7 @@ void MW::createMetadataDock()
 {
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::createMetadataDock");
-    // this does not work
-//    QPixmap pixmap(":/images/icon16/anchor.png");
-//    metadataDockTabText = Utilities::pixmapToString(pixmap);
+
     metadataDockTabText = "Metadata";
     // metadataDockTabText = "  📷  ";
     dockTextNames << metadataDockTabText;

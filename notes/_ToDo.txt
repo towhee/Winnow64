@@ -150,6 +150,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Remote embellish from Lightroom when no Winnow instance was not working
 - In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)
 - Add scroll to current shortcut
 - When change from grid to thumb view not scrolled to same position

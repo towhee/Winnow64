@@ -75,7 +75,7 @@ public slots:
     // void newInstance();
     void abortProcessing();
     void initialize(int cacheSizeMB, int cacheMinMB,
-                        bool isShowCacheStatus, int cacheWtAhead);
+                    bool isShowCacheStatus, int cacheWtAhead);
     void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
     void updateInstance();

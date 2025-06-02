@@ -1,7 +1,16 @@
-dylibbundler -od -b \
-  -x /Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow \
-  -d /Users/roryhill/Projects/build-winnow64-Qt_6_5_3_for_macOS-Release/Winnow.app/Contents/libs \
-  -s /Users/roryhill/Projects/Winnow64/Lib/opencv/lib \
-  -s /Users/roryhill/Projects/Winnow64/Lib/libtiff/build-arm64/lib \
-  -s /Users/roryhill/Projects/Winnow64/Lib/libjpeg-turbo/build-arm64 \
-  -p @executable_path/../libs
+ImageCache::fillCache                              allDecodersDone
+5 MW::eventFilter Key_Right
+1 Selection::select(row)                             row = 1
+88 Selection::select(QModelIndex)                     row = 1 src =
+
+1 Selection::setCurrentIndex                         row = 1 clearSelection = true
+62 Selection::updateCurrentIndex                      row = 1
+6 MW::updateChange                                   row = 1 isFileSelectionChange = true G::allMetadataLoaded = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
+365 MW::fileSelectionChange                            row = 1 fun = MW::fileSelectionChange G::fileSelectionChangeSource = Key_Right
+2 MW::gridHasScrolled                                isVisible = false
+587 IconView::updateMidVisibleCell                     Grid src = MW::gridHasScrolled
+15 VideoView::stop
+369 ImageView::loadImage                               row = 1 Src:MW::fileSelectionChange isFirstImageNewInstance = false /Users/roryhill/Pictures/Zen2048/pbase2048/2008-05-09_0063_Zen2048.JPG
+160 MW::loupeDisplay                                   src = MW::fileSelectionChange
+2 ImageCache::setCurrentPosition                     row = 1
+11 ImageCache::dispatch
