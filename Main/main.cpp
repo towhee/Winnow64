@@ -55,6 +55,9 @@ int main(int argc, char *argv[])
         // G::popUp->showPopup(msg);
         return 0;
     }
+    else {
+        if (G::isFileLogger) Utilities::log("WinnowMain", "New Instance");
+    }
 
 #ifdef Q_OS_MAC
     Mac::initializeAppDelegate();

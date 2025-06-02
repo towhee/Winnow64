@@ -7,7 +7,7 @@
 FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
     : imageSize(inputSize)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("FocusPredictor::FocusPredictor", onnxPath);
     try {
         net = cv::dnn::readNetFromONNX(onnxPath.toStdString());

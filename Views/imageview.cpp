@@ -109,11 +109,6 @@ ImageView::ImageView(QWidget *parent,
     classificationLabel->setAlignment(Qt::AlignCenter);
     classificationLabel->setVisible(isRatingBadgeVisible);
 
-    // bullseye = new QLabel(this);
-    // bullseye->setAttribute(Qt::WA_TranslucentBackground, true);
-    // bullseye->setPixmap(QPixmap(":/images/target.png"));
-    // bullseye->setPixmap(QPixmap(":/images/icon16/target.png"));
-
     QGraphicsOpacityEffect *infoEffect = new QGraphicsOpacityEffect;
     infoEffect->setOpacity(0.8);
     infoOverlay->setGraphicsEffect(infoEffect);
@@ -127,8 +122,9 @@ ImageView::ImageView(QWidget *parent,
     int imageSize = 512;
     focusPredictor = new FocusPredictor(focusPointModelPath, imageSize);
 
-    // rgh is this needed or holdover from prev program
+    // not being used (hide / reveal cursor)
     mouseMovementTimer = new QTimer(this);
+    // used to set isMouseDrag
     mouseMovementElapsedTimer = new QElapsedTimer;
     // connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
@@ -180,6 +176,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "replace =" << replace
+         << "G::isEmbellish =" << G::isEmbellish
          << " Src:" << src
          << fPath
             ; //*/
@@ -204,18 +201,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (isCurrent && replace == false) {
         return true;
     }
-
-    /*
-    qDebug().noquote()
-        << "ImageView::loadImage"
-        // << "imageHasChanged =" << currentImageHasChanged
-        << "fPath =" << fPath
-        << "currentImagePath =" << currentImagePath
-        ;
-    //*/
-
-    // could be a popup from a prior uncached image being loaded
-    //G::popUp->end();
 
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) {
@@ -298,7 +283,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
              << "isLoaded =" << isLoaded
              << "rect().height() > 50 =" << QVariant(rect().height() > 50).toString();
     //*/
-    // if (isLoaded && rect().height() > 50) {
     if (isLoaded) {
         /* important to keep currentImagePath. It is used to check if there isn't an image (when
         currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
@@ -322,7 +306,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (isFit) {
             setFitZoom();
         }
-        if (isDebug)
+        if (isDebug) {
         qDebug() << "ImageView::loadImage:"
                  << "isFirstImageNewInstance =" << isFirstImageNewInstance
                  << "row =" << sfRow
@@ -331,7 +315,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                  << "zoomFit =" << zoomFit
                  << "zoom =" << zoom
                  << "Src:" << src;
+        }
+
         scale(true);    // isNewImage == true
+
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
@@ -1084,6 +1071,7 @@ void ImageView::setShootingInfo(QString infoText)
 
 void ImageView::monitorCursorState()
 {
+    // not being used
     if (G::isLogger) G::log("ImageView::monitorCursorState");
     static QPoint lastPos;
 
@@ -1440,7 +1428,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         buffer.open(QIODevice::WriteOnly);
         tile.save(&buffer, "PNG");
         qDebug() << "ImageView::mouseReleaseEvent" << "new tile";
-//        emit newTile();
+        // emit newTile();
         return;
     }
 //    */

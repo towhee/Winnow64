@@ -407,7 +407,7 @@ int IconView::updateMidVisibleCell(QString src)
     dm->scrollToIcon = indexAt(QPoint(ctr)).row();
     QString msg = objectName() + " src = " + src
                   + " scrollToIcon = " + QVariant(dm->scrollToIcon).toString();
-    G::log("IconView::updateMidVisibleCell", msg);
+    // G::log("IconView::updateMidVisibleCell", msg);
     return 0;
 }
 
@@ -477,7 +477,7 @@ void IconView::updateVisible(QString src)
                   + " visibleCellCount = " + QVariant(visibleCellCount).toString()
                   + " midVisibleCell = " + QVariant(midVisibleCell).toString()
         ;
-    G::log("IconView::updateVisible", msg);
+    // G::log("IconView::updateVisible", msg);
     return;
 }
 
@@ -665,7 +665,7 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     cell size during the resize and preference adjustment operations.
 */
     QString src = "IconView::rejustify";
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
         G::log(src, objectName());
     /*
     qDebug() << objectName() << "::rejustify   "
@@ -1451,7 +1451,8 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void IconView::showLoupeRect(bool isVisible)
 {
-    qDebug() << "IconView::showLoupeRect" << isVisible;
+    if (isDebug || G::isLogger) G::log("IconView::showLoupeRect", objectName());
+    // qDebug() << "IconView::showLoupeRect" << isVisible;
     iconViewDelegate->setVpRectVisibility(isVisible);
     refreshThumb(dm->currentSfIdx);
 
@@ -1462,11 +1463,12 @@ void IconView::loupeRect(QRectF vp, qreal imA)
 /*
     Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
 */
-    if (isDebug) G::log("IconView::showLoupeRect", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::loupeRect", objectName());
+    /*
     qDebug() << "IconView::loupeRect"
              << "vp =" << vp
              << "imA =" << imA
-        ;
+        ;//*/
     iconViewDelegate->setVpRectVisibility(true);
     iconViewDelegate->setVpRect(vp, imA);
     refreshThumb(dm->currentSfIdx);

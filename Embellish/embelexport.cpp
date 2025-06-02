@@ -62,17 +62,11 @@ bool EmbelExport::loadImage(QString fPath)
     QImage image;
     int dmRow = dm->rowFromPath(fPath);
 
+    QString msg = "embellish->isRemote = " + QVariant(embellish->isRemote).toString();
+    if (G::isFileLogger) Utilities::log("EmbelExport::loadImage", msg);
+
     if (!embellish->isRemote) {
-        // CTSL::HashMap<QString, QImage> imCache
-        // if (icd->imCache.find(fPath, image)) {
-        // if (icd->has(fPath)) {  // QHash<QString, QImage> imCache
-        //     pmItem->setPixmap(QPixmap::fromImage(image));
-        //     return true;
-        // }
-        // QHash<QString, QImage> imCache
         if (icd->contains(fPath)) {
-            // image = icd->imCache.value(fPath);
-            // pmItem->setPixmap(QPixmap::fromImage(image));
             pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
             return true;
         }
