@@ -1355,6 +1355,7 @@ private:
 
     FocusPointTrainer *focusPointTrainer = new FocusPointTrainer;
 
+    void fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser);
     void diagnosticsAll();
     void diagnosticsCurrent();
     QString diagnostics();

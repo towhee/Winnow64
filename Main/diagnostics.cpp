@@ -1,5 +1,42 @@
 #include "Main/mainwindow.h"
 
+void MW::fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser)
+{
+    if (G::isLogger) G::log("MW::fitDiagnostics");
+
+    QFont courier("Courier", 12);
+    textBrowser->setFont(courier);
+    QFontMetrics metrics(textBrowser->font());
+    textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+    QStringList lines = textBrowser->toPlainText().split('\n');
+    int padding = 70;
+    int maxWidth = 0;
+    int maxHeight = 1200;
+
+    // get widest line + add padding at end
+    for (const QString &line : lines) {
+        int width = metrics.horizontalAdvance(line);
+        if (width > maxWidth) {
+            maxWidth = width;
+        }
+    }
+    maxWidth += padding;
+
+    // Calculate total text height
+    int lineHeight = metrics.height();
+    int totalHeight = lineHeight * lines.size() + padding;
+
+    int w, h;
+
+    w = maxWidth;
+    totalHeight < maxHeight ? h = totalHeight : h = 1200;
+    qDebug() << w << h << G::displayPhysicalHorizontalPixels << G::displayPhysicalVerticalPixels;
+    if (w > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
+    if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
+
+    dlg->resize(w, h);
+}
+
 void MW::reportState(QString title)
 {
     if (G::isLogger) G::log("MW::reportState");
@@ -303,6 +340,8 @@ void MW::diagnosticsReport(QString reportString, QString title)
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
 
+    int padding = 70;
+
     // determine width based on longest line in reportString
     QStringList lines = reportString.split('\n');
     int maxWidth = 0;
@@ -312,12 +351,23 @@ void MW::diagnosticsReport(QString reportString, QString title)
             maxWidth = width;
         }
     }
-    int padding = 70;
     maxWidth += padding;
-    int w = maxWidth;
-    int h = 1200;
-    // if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
-    // if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
+
+    // Calculate total text height
+    int lineHeight = metrics.height();
+    int totalTextHeight = lineHeight * lines.size() + padding;
+    int maxTextHeight = 1200;
+
+    int w, h;
+
+    w = maxWidth;
+    totalTextHeight < maxTextHeight ? h = totalTextHeight : h = 1200;
+    qDebug() << w << h;
+
+    // if (maxWidth > G::displayPhysicalHorizontalPixels)
+    //     w = G::displayPhysicalHorizontalPixels - 100;
+    // if (h > G::displayPhysicalVerticalPixels)
+    //     h = G::displayPhysicalVerticalPixels - 100;
 
     dlg->resize(w, h);
 
@@ -365,6 +415,8 @@ void MW::SessionIssuesReport()
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
     #endif
+
+    fitDiagnostics(dlg, md.textBrowser);
     dlg->show();
 }
 
