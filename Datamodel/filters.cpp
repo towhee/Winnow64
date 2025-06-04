@@ -604,6 +604,7 @@ void Filters::disableAllHeaders(bool disable)
 
 void Filters::disableColorAllHeaders(bool disable)
 {
+    // not used
     if (G::isLogger) G::log("Filters::disableColorAllHeaders");
     if (debugFilters)
         qDebug() << "Filters::disableColorAllHeaders"

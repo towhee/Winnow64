@@ -56,6 +56,9 @@
         reset() is called from MW::folderSelectionChange, setting isRest = true and
         isReset is set to false in BuildFilters::done.
 
+        Do not attempt to build filters when the filter panel is not visible, as this
+        can cause a crash if there are any videos in the mix.
+
     Dynamic category items
 
         Picks, Ratings, Color classes, Titles and Creator can be edited at runtime,
@@ -90,6 +93,10 @@ BuildFilters::BuildFilters(QObject *parent,
                            Filters *filters) :
                            QThread(parent)
 {
+/*
+    Do not attempt to build filters when the filter panel is not visible, as this
+    can cause a crash if there are any videos in the mix.
+*/
     if (G::isLogger) G::log("BuildFilters::BuildFilters");
     this->dm = dm;
     this->metadata = metadata;

@@ -392,7 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    folderAndFileSelectionChange("/Users/roryhill/Pictures/Family/IMG_3497.HEIC");
+    // filterChange("MW::test");
+    qDebug() << "MW::test" << "filters->filtersBuilt =" << filters->filtersBuilt;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

@@ -254,7 +254,14 @@ void MW::toggleFavDockVisibility() {
     }
 }
 
-void MW::toggleFilterDockVisibility() {
+void MW::toggleFilterDockVisibility()
+/*
+    Called from folterDockVisibleAction.
+
+    NOTE: When the filter tab is mouse clicked, MW::eventFilter calls
+    MW::filterDockTabMousePress which triggers buildFilters->build().
+*/
+{
     if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
     if (G::isInitializing) return;
 
