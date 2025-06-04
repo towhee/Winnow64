@@ -563,7 +563,7 @@ items, which is controlled by the "Metadata panel items" in preferences.
 Note: Even though treeIndex will find any index only root branches work. If the text for a
 secondary or tertiary branch is sent then all branches expand.
 */
-    qDebug() << "PropertyEditor::expandBranch" << text;
+    // qDebug() << "PropertyEditor::expandBranch" << text;
     collapseAll();
     getIndex(text);
     expandRecursively(foundIdx);

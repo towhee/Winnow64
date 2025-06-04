@@ -218,7 +218,7 @@ void MW::dmInsert(QStringList pathList)
         if (dm->isPath(fPath)) {
             int dmRow = dm->rowFromPath(fPath);
             int sfRow = dm->proxyRowFromPath(fPath, src);
-            qDebug() << src << "replace row" << sfRow << fPath;
+            // qDebug() << src << "replace row" << sfRow << fPath;
             // insertedRows << dmRow;
             QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
             dm->setData(dmIdx, false);

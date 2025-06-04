@@ -203,7 +203,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
     setThumbDockVisibity();
 
-    qDebug() << "ws.isMaximised =" << w.isMaximised;
+    // qDebug() << "ws.isMaximised =" << w.isMaximised;
 
     if (!w.isMaximised) {
         restoreGeometry(w.geometry);

@@ -1453,16 +1453,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     {
         static int prevTabIndex = -1;
         QString tabBarClassName = "QTabBar";
-        #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
         tabBarClassName = "QMainWindowTabBar";
         #endif
         if (QString(obj->metaObject()->className()) == tabBarClassName) {
+            // qDebug() << "MW::eventFilter obj->metaObject()->className() =" << obj->metaObject()->className();
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
+                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
                 if (tabBar->tabText(i) == filterDockTabText) {
+                    // qDebug() << "MW::eventFilter filterDock mouse press";
                     filterDockTabMousePress();
                 }
             }
@@ -1578,7 +1581,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             qDebug() << "MW::eventFilter" << "MouseButtonPress"
                      << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
                      << "isMouseDrag" << isMouseDrag
-                     << obj->objectName();
+                     << obj->objectName()
+                        ;
                         //*/
         }
 
@@ -2846,7 +2850,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
-    filters->loadingDataModel(false);   // isLoaded = false
+    // filters->loadingDataModel(false);   // isLoaded = false
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
@@ -3001,6 +3005,15 @@ void MW::folderChangeCompleted()
     //     progressLabel->setVisible(false);
     // // }
 
+    if (dm->folderList.count() >= 1
+            && dm->isQueueEmpty()
+            && !filterDock->visibleRegion().isNull()
+       )
+    {
+        qDebug() << fun << "buildFilters";
+        buildFilters->build();
+    }
+
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP
@@ -3008,37 +3021,11 @@ void MW::folderChangeCompleted()
 
     // filters->loadingDataModel(true);
     reverseSortBtn->setEnabled(true);
-    filters->setEnabled(true);
+    filters->setEnabled(true); //x
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
-    // if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
-    //     // qDebug() << fun << "buildFilters->build()";
-    //     buildFilters->build();
-    // }
-
-    // filterChange();
-    // if (sortColumn > G::NameColumn) thumbView->sortThumbs(sortColumn, isReverseSort);
-
-    // qDebug() << fun
-    //          << "dm->folderList.count() =" << dm->folderList.count()
-    //          << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
-    //          << "!filterDock->visibleRegion().isNull() =" << !filterDock->visibleRegion().isNull()
-    //             ;
-    if (dm->folderList.count() >= 1 &&
-        dm->isQueueEmpty() &&
-        !filterDock->visibleRegion().isNull())
-    {
-        // qDebug() << fun << "buildFilters";
-        buildFilters->reset(false);
-        buildFilters->build();
-        buildFilters->recount();
-        // filters->restore();
-        // filterChange("MW::loadConcurrentDone");
-        filters->setEnabled(true);
-        // thumbView->sortThumbs(sortColumn, isReverseSort);
-    }
 
     updateStatus(true, "", "MW::folderChangeCompleted");
     // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
@@ -3049,8 +3036,6 @@ void MW::folderChangeCompleted()
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-
-    // folderAndFileChangePath = "";
 }
 
 void MW::thumbHasScrolled()
