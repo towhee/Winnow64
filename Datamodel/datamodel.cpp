@@ -1243,7 +1243,7 @@ void DataModel::addAllMetadata()
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.suffix().toLower();
-        if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::addAllMetadata")) {
+        if (metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "DataModel::addAllMetadata")) {
             metadata->m.row = row;
             metadata->m.instance = instance;
             addMetadataForItem(metadata->m, "DataModel::addAllMetadata");
@@ -1307,8 +1307,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
         QString ext = fileInfo.suffix().toLower();
         if (metadata->hasMetadataFormats.contains(ext)) {
             //qDebug() << "DataModel::readMetadataForItem" << fPath;
-            if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
-                metadata->m.row = row;
+            if (metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             }
             else {
@@ -1365,8 +1364,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     QString ext = fileInfo.suffix().toLower();
     if (metadata->hasMetadataFormats.contains(ext)) {
         //qDebug() << "DataModel::readMetadataForItem" << fPath;
-        if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
-            metadata->m.row = sfRow;
+        if (metadata->loadImageMetadata(fileInfo, sfRow, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
         }
         else {

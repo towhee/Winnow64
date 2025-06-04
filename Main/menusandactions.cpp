@@ -468,7 +468,7 @@ void MW::createEditActions()
     addAction(searchTextEditAction);
     connect(searchTextEditAction, &QAction::triggered, this, &MW::searchTextEdit);
 
-    rate0Action = new QAction(tr("Clear rating"), this);
+    rate0Action = new QAction(tr("Clear rating              "), this);
     rate0Action->setObjectName("Rate0");
     rate0Action->setShortcutVisibleInContextMenu(true);
     addAction(rate0Action);
@@ -1778,7 +1778,7 @@ void MW::createEditMenu()
     utilitiesMenu->addAction(mediaReadSpeedAction);
     utilitiesMenu->addAction(visCmpImagesAction);
     if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
-    utilitiesMenu->addAction(reportHueCountAction);
+    // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX

@@ -482,11 +482,11 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-        metadata->loadImageMetadata(imageInfo, dm->instance, true, true, false, true, "InfoView::");
-        int row = dm->rowFromPath(fPath);
+        metadata->loadImageMetadata(imageInfo, row, dm->instance, true, true, false, true, "InfoView::");
+        // int row = dm->rowFromPath(fPath);
         if (row == -1) return;
-        metadata->m.row = row;
-        metadata->m.instance = dm->instance;
+        // metadata->m.row = row;
+        // metadata->m.instance = dm->instance;
 
         if (!dm->addMetadataForItem(metadata->m, "InfoView::updateInfo")) return;
 

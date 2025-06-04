@@ -16,6 +16,7 @@ WHAT'S NEW
 BUGS / TO DO
 - Preferences dialog always on top
 - Dissable double click in filters panel
+- Read media speed is unintuitive
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Always show thumbView when open program

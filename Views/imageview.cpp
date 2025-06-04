@@ -223,9 +223,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (dmRow == -1) return false;
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "ImageView::loadImage")) {
-                metadata->m.row = dmRow;
-                metadata->m.instance = dm->instance;
+            if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "ImageView::loadImage")) {
+                // metadata->m.row = dmRow;
+                // metadata->m.instance = dm->instance;
                 dm->addMetadataForItem(metadata->m, "ImageView::loadImage"); // rgh investigate warning (QVariant issue probably)
             }
         }
