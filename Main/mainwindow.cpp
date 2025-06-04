@@ -2773,7 +2773,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
 void MW::folderChanged(/*const QString folderPath, const QString op*/)
 {
 /*
-    Signaled from DataModel::processNextFolder
+    Signaled from DataModel::processNextFolder after all folders in the DataModel
+    folderQueue have been added or deleted.
 */
     QString fun = "MW::folderChanged";
     QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
@@ -2943,7 +2944,7 @@ void MW::folderChangeCompleted()
 {
 /*
     Signalled by MetaRead::dispatchFinished (done) when finished reading all metadata.
-    Called by folderChanged when a folder has been removed.
+    Also called by folderChanged when a folder has been removed.
 
     - check for missing thumbnails.
     - update filters
@@ -2972,21 +2973,22 @@ void MW::folderChangeCompleted()
                 //*/
 
     // missing thumbnails
-    /*
+    // /*
     qDebug() << "MW::LoadDone"
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                 ; //*/
+
     // missing thumbnails menu enabled
     enableSelectionDependentMenus();
-    /*
+    // /*
     if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
         embedThumbnailsAction->setEnabled(true);
     }
     else {
         embedThumbnailsAction->setEnabled(false);
-    }
-    */
+    }//*/
+
     // if missing thumbnails show missing thumb dialog
     if (G::modifySourceFiles
         && !ignoreAddThumbnailsDlg
@@ -2997,20 +2999,17 @@ void MW::folderChangeCompleted()
         chkMissingEmbeddedThumbnails("FromLoading");
     }
 
-    // hide metadata read progress
+    // hide metadata read progress after small delay
     QTimer::singleShot(1000, this, [this]() {
         cacheProgressBar->resetMetadataProgress(G::backgroundColor);
-    });    // if (G::showProgress == G::ShowProgress::MetaCache) {
-    //     isShowCacheProgressBar = false;
-    //     progressLabel->setVisible(false);
-    // // }
+    });
 
+    // build filters if filter dock is visible
     if (dm->folderList.count() >= 1
             && dm->isQueueEmpty()
             && !filterDock->visibleRegion().isNull()
        )
     {
-        qDebug() << fun << "buildFilters";
         buildFilters->build();
     }
 
@@ -3019,7 +3018,7 @@ void MW::folderChangeCompleted()
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP
     It is also okay to filter.  */
 
-    // filters->loadingDataModel(true);
+    // re-enable cause we're all loaded
     reverseSortBtn->setEnabled(true);
     filters->setEnabled(true); //x
     filterMenu->setEnabled(true);
@@ -3033,7 +3032,7 @@ void MW::folderChangeCompleted()
     // update image cache in case not already done during metaRead
     emit setImageCachePosition(dm->currentFilePath, fun);
 
-    // resize table columns with all data loaded
+    // resize table columns now that all data is loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 }
@@ -4939,9 +4938,8 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 */
 {
     if (G::isLogger) G::log("MW::chkMissingEmbeddedThumbnails");
-    /*
+    // /*
     qDebug() << "MW::chkMissingEmbeddedThumbnails" << "src =" << src
-             << "dm->isMissingEmbeddedThumb =" << dm->isMissingEmbeddedThumb
                 ;
     //*/
 
@@ -5315,9 +5313,9 @@ void MW::refreshDataModel()
             // update metadata
             QString ext = Utilities::getSuffix(fPath);
             if (metadata->hasMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(info, dm->instance, true, true, false, true, "MW::refreshCurrentFolder")) {
-                    metadata->m.row = dmRow;
-                    metadata->m.instance = dm->instance;
+                if (metadata->loadImageMetadata(info, dmRow, dm->instance, true, true, false, true, "MW::refreshCurrentFolder")) {
+                    // metadata->m.row = dmRow;
+                    // metadata->m.instance = dm->instance;
                     dm->addMetadataForItem(metadata->m, fun);
                 }
             }

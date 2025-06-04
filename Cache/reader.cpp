@@ -94,7 +94,7 @@ bool Reader::readMetadata()
     int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded;
-    if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "Reader::readMetadata");
+    if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, dmRow, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
 
     #ifdef TIMER

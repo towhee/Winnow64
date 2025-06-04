@@ -225,7 +225,8 @@ bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString
 
     QString ext = fileInfo.suffix().toLower();
 
-    metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "AutonomousImage::image");
+    int row = dm->proxyRowFromPath(fPath);
+    metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "AutonomousImage::image");
     m = &metadata->m;
 
     //int dmRow = dm->rowFromPath(fPath);

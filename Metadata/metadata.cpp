@@ -1157,12 +1157,14 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     //*/
 }
 
-bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
+bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instance,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source,
                                  bool isRemote)
 {
     QString fPath = fileInfo.filePath();
+    m.row = row;
+    m.instance = instance;
 
     if (G::isLogger)
         G::log("Metadata::loadImageMetadata", fPath + "  Source: " + source);

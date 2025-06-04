@@ -210,7 +210,8 @@ void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
 */
     QFileInfo fileInfo(fPath);
     ImageMetadata *m;
-    metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
+    int row = dm->proxyRowFromPath(fPath);
+    metadata->loadImageMetadata(fileInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
     m = &metadata->m;
 
     if (m->video) {
@@ -655,8 +656,9 @@ void FindDuplicatesDlg::getMetadataBItems()
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
         bool loadMeta = true;
+        int row = dm->proxyRowFromPath(fPath);
 
-        if (!metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
+        if (!metadata->loadImageMetadata(fInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             loadMeta = false;
         }
         ImageMetadata *m = &metadata->m;
@@ -1579,8 +1581,9 @@ void FindDuplicatesDlg::reportAspects()
     qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
     for (int a = 0, b = 0; static_cast<void>(a < dm->sf->rowCount()), b < bItems.count(); a++, b++) {
         QFileInfo fInfo(bItems.at(b).fPath);
+        int row = dm->proxyRowFromPath(bItems.at(b).fPath);
         QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
-        metadata->loadImageMetadata(fInfo, dm->instance, true, true, false, true);
+        metadata->loadImageMetadata(fInfo, row, dm->instance, true, true, false, true);
         ImageMetadata *m = &metadata->m;
         // QString::number().rightJustified(3)
         qDebug().noquote()
