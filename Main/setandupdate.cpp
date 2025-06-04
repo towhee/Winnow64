@@ -260,6 +260,9 @@ void MW::toggleFilterDockVisibility()
 
     NOTE: When the filter tab is mouse clicked, MW::eventFilter calls
     MW::filterDockTabMousePress which triggers buildFilters->build().
+
+    Do not attempt to build filters when the filter panel is not visible, as this
+    can cause a crash if there are any videos in the mix.
 */
 {
     if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
