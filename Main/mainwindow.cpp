@@ -789,6 +789,9 @@ void MW::showEvent(QShowEvent *event)
     // req'd for color management
     getDisplayProfile();
 
+    // set screen attributes in global
+    setDisplayResolution();
+
     QMainWindow::showEvent(event);
 
     // qApp->processEvents();
