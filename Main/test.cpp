@@ -393,7 +393,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // filterChange("MW::test");
-    qDebug() << "MW::test" << "filters->filtersBuilt =" << filters->filtersBuilt;
+    qDebug() << css;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
