@@ -3109,7 +3109,11 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("DecoderReturnStatus", 25) << G::s(index(row, G::DecoderReturnStatusColumn).data());
     rpt << "\n  " << G::sj("DecoderErrMsg", 25) << G::s(index(row, G::DecoderErrMsgColumn).data());
 
-    rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
+    QString searchText = index(row, G::SearchTextColumn).data().toString();
+    int n = 140;
+    for (int i = 0; i < searchText.length(); i += n) {
+        rpt << "\n  " << G::sj("searchText", 25) << searchText.mid(i, n);
+    }
 
     rpt << "\n  ";
     rpt << Utilities::centeredRptHdr('=', "Issues");
