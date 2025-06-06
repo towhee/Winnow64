@@ -342,8 +342,6 @@ void DataModel::clearDataModel()
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
     isProcessingFolders = false;
-    // reset sum used to estimate endImageCacheTargetRange
-    sumImageCacheMB = 0;
     // reset memory used by model
     bytesUsed = 0;
 }
@@ -408,15 +406,11 @@ int DataModel::insert(QString fPath)
     }
 
     QFileInfo insertFileInfo(fPath);
-    QString insertFileName = insertFileInfo.fileName().toLower();
-
-    // find row greater than insert file absolute path
+    QString insertFilePath = fPath.toLower();
     int dmRow;
     for (dmRow = 0; dmRow < rowCount(); ++dmRow) {
-        QString rowPath = index(dmRow, 0).data(G::PathRole).toString();
-        QFileInfo currentFile(rowPath);
-        QString currentFileName = currentFile.fileName().toLower();
-        if (insertFileName < currentFileName) {
+        QString rowPath = index(dmRow, 0).data(G::PathRole).toString().toLower();
+        if (insertFilePath < rowPath) {
             break;
         }
     }
@@ -469,7 +463,7 @@ void DataModel::remove(QString fPath)
         }
     }
 
-    sf->invalidate();
+    // sf->invalidate();
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
@@ -1409,13 +1403,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
-    mCopy = m;
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
         G::log("DataModel::addMetadataForItem", msg);
     }
 
-    rowCountChk = rowCount();
     if (G::stop) return false;
 
     if (isDebug)
@@ -2939,29 +2931,44 @@ QString DataModel::diagnostics()
     if (isDebug) qDebug() << "DataModel::diagnostics" << "instance =" << instance;
     QString reportString;
     QTextStream rpt;
+    int dots = 30;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
-    rpt << "\n" << G::sj("currentPrimaryFolderPath", 27) << G::s(primaryFolderPath());
-    rpt << "\n" << G::sj("firstFolderPathWithImages", 27) << G::s(firstFolderPathWithImages);
-    rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
-    rpt << "\n" << G::sj("currentDMRow", 27) << G::s(currentDmRow);
-    rpt << "\n" << G::sj("currentSFRow", 27) << G::s(currentSfRow);
-    rpt << "\n" << G::sj("firstVisibleIcon", 27) << G::s(firstVisibleIcon);
-    rpt << "\n" << G::sj("lastVisibleIcon", 27) << G::s(lastVisibleIcon);
-    rpt << "\n" << G::sj("startIconRange", 27) << G::s(startIconRange);
-    rpt << "\n" << G::sj("endIconRange", 27) << G::s(endIconRange);
-    rpt << "\n" << G::sj("iconChunkSize", 27) << G::s(iconChunkSize);
-    rpt << "\n" << G::sj("defaultIconChunkSize", 27) << G::s(defaultIconChunkSize);
-    rpt << "\n" << G::sj("hugeIconThreshold", 27) << G::s(hugeIconThreshold);
-    rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
-    rpt << "\n" << G::sj("loadingModel", 27) << G::s(loadingModel);
-    rpt << "\n" << G::sj("basicFileInfoLoaded", 27) << G::s(basicFileInfoLoaded);
-    rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
-    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abort);
-    rpt << "\n" << G::sj("dmRowCount", 27) << G::s(rowCount());
-    rpt << "\n" << G::sj("sfRowCount", 27) << G::s(sf->rowCount());
-    rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
+    rpt << "\n" << G::sj("instance", dots) << G::s(instance);
+    rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
+    rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
+    rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
+    rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
+    rpt << "\n";
+    rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
+    rpt << "\n";
+    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+    rpt << "\n" << G::sj("countInterval", dots) << G::s(countInterval);
+    rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
+    rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
+    rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
+    rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
+    rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange);
+    rpt << "\n" << G::sj("iconChunkSize", dots) << G::s(iconChunkSize);
+    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << G::s(defaultIconChunkSize);
+    rpt << "\n" << G::sj("hugeIconThreshold", dots) << G::s(hugeIconThreshold);
+    rpt << "\n" << G::sj("checkChunkSize", dots) << G::s(checkChunkSize);
+    rpt << "\n" << G::sj("scrollToIcon", dots) << G::s(scrollToIcon);
+    rpt << "\n";
+    rpt << "\n" << G::sj("hasDupRawJpg", dots) << G::s(hasDupRawJpg);
+    rpt << "\n" << G::sj("loadingModel", dots) << G::s(loadingModel);
+    rpt << "\n" << G::sj("basicFileInfoLoaded", dots) << G::s(basicFileInfoLoaded);
+    rpt << "\n" << G::sj("imageCacheWaitingForRow", dots) << G::s(imageCacheWaitingForRow);
+    rpt << "\n" << G::sj("folderHasMissingEmbeddedThumb", dots) << G::s(folderHasMissingEmbeddedThumb);
+    rpt << "\n" << G::sj("filtersBuilt", dots) << G::s(filters->filtersBuilt);
+    rpt << "\n" << G::sj("timeToQuit", dots) << G::s(abort);
+    rpt << "\n" << G::sj("bytesUsed", dots) << G::s(bytesUsed);
+    rpt << "\n" << G::sj("showThumbNailSymbolHelp", dots) << G::s(showThumbNailSymbolHelp);
+    rpt << "\n";
+    rpt << "\n" << G::sj("raw", dots) << G::s(raw);
+    rpt << "\n" << G::sj("jpg", dots) << G::s(jpg);
     for(int row = 0; row < rowCount(); row++) {
         rpt << "\n";
         getDiagnosticsForRow(row, rpt);
@@ -3023,96 +3030,98 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     }
 
     QString s = "";
-    rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
-    rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
-    rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
-    rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
-    rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, G::IsCachedColumn).data());
-    rpt << "\n  " << G::sj("MetadataReadingColumn", 25) << G::s(index(row, G::MetadataReadingColumn).data());
-    rpt << "\n  " << G::sj("isMetadataAttempted", 25) << G::s(index(row, G::MetadataAttemptedColumn).data());
-    rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
-    rpt << "\n  " << G::sj("isIconLoaded", 25) << G::s(index(row, G::IconLoadedColumn).data());
-    rpt << "\n  " << G::sj("isMissingThumb", 25) << G::s(index(row, G::MissingThumbColumn).data());
-    rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
-    rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
-    rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));
-    rpt << "\n  " << G::sj("dupRawType", 25) << G::s(index(row, 0).data(G::DupRawTypeRole));
-    rpt << "\n  " << G::sj("Column", 25) << G::s(index(row, 0).data(G::ColumnRole));
-    rpt << "\n  " << G::sj("isGeek", 25) << G::s(index(row, 0).data(G::GeekRole));
-    rpt << "\n  " << G::sj("type", 25) << G::s(index(row, G::TypeColumn).data());
-    rpt << "\n  " << G::sj("video", 25) << G::s(index(row, G::VideoColumn).data());
-    rpt << "\n  " << G::sj("duration", 25) << G::s(index(row, G::DurationColumn).data());
-    rpt << "\n  " << G::sj("bytes", 25) << G::s(index(row, G::SizeColumn).data());
-    rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());
-    rpt << "\n  " << G::sj("ingested", 25) << G::s(index(row, G::IngestedColumn).data());
-    rpt << "\n  " << G::sj("label", 25) << G::s(index(row, G::LabelColumn).data());
-    rpt << "\n  " << G::sj("_label", 25) << G::s(index(row, G::_LabelColumn).data());
-    rpt << "\n  " << G::sj("rating", 25) << G::s(index(row, G::RatingColumn).data());
-    rpt << "\n  " << G::sj("_rating", 25) << G::s(index(row, G::_RatingColumn).data());
-    rpt << "\n  " << G::sj("search", 25) << G::s(index(row, G::SearchColumn).data());
-    rpt << "\n  " << G::sj("modifiedDate", 25) << G::s(index(row, G::ModifiedColumn).data());
-    rpt << "\n  " << G::sj("createdDate", 25) << G::s(index(row, G::CreatedColumn).data());
-    rpt << "\n  " << G::sj("year", 25) << G::s(index(row, G::YearColumn).data());
-    rpt << "\n  " << G::sj("day", 25) << G::s(index(row, G::DayColumn).data());
-    rpt << "\n  " << G::sj("megapixels", 25) << G::s(index(row, G::MegaPixelsColumn).data());
-    rpt << "\n  " << G::sj("width", 25) << G::s(index(row, G::WidthColumn).data());
-    rpt << "\n  " << G::sj("height", 25) << G::s(index(row, G::HeightColumn).data());
-    rpt << "\n  " << G::sj("dimensions", 25) << G::s(index(row, G::DimensionsColumn).data());
-    rpt << "\n  " << G::sj("aspectRatio", 25) << G::s(index(row, G::DimensionsColumn).data());
-    rpt << "\n  " << G::sj("rotation", 25) << G::s(index(row, G::RotationColumn).data());
-//    rpt << "\n  " << G::sj("_rotation", 25) << G::s(index(row, G::_RotationColumn).data());
-    rpt << "\n  " << G::sj("apertureNum", 25) << G::s(index(row, G::ApertureColumn).data());
-    rpt << "\n  " << G::sj("exposureTimeNum", 25) << G::s(index(row, G::ShutterspeedColumn).data());
-    rpt << "\n  " << G::sj("iso", 25) << G::s(index(row, G::ISOColumn).data());
-    rpt << "\n  " << G::sj("exposureCompensationNum", 25) << G::s(index(row, G::ExposureCompensationColumn).data());
-    rpt << "\n  " << G::sj("make", 25) << G::s(index(row, G::CameraMakeColumn).data());
-    rpt << "\n  " << G::sj("model", 25) << G::s(index(row, G::CameraModelColumn).data());
-    rpt << "\n  " << G::sj("lens", 25) << G::s(index(row, G::LensColumn).data());
-    rpt << "\n  " << G::sj("focalLengthNum", 25) << G::s(index(row, G::FocalLengthColumn).data());
-    rpt << "\n  " << G::sj("foxusX", 25) << G::s(index(row, G::FocusXColumn).data());
-    rpt << "\n  " << G::sj("foxusY", 25) << G::s(index(row, G::FocusYColumn).data());
-    rpt << "\n  " << G::sj("gpsCoord", 25) << G::s(index(row, G::GPSCoordColumn).data());
-    rpt << "\n  " << G::sj("keywords", 25) << G::s(index(row, G::KeywordsColumn).data());
-    rpt << "\n  " << G::sj("title", 25) << G::s(index(row, G::TitleColumn).data());
-    rpt << "\n  " << G::sj("_title", 25) << G::s(index(row, G::_TitleColumn).data());
-    rpt << "\n  " << G::sj("creator", 25) << G::s(index(row, G::CreatorColumn).data());
-    rpt << "\n  " << G::sj("_creator", 25) << G::s(index(row, G::_CreatorColumn).data());
-    rpt << "\n  " << G::sj("copyright", 25) << G::s(index(row, G::CopyrightColumn).data());
-    rpt << "\n  " << G::sj("_copyright", 25) << G::s(index(row, G::_CopyrightColumn).data());
-    rpt << "\n  " << G::sj("email", 25) << G::s(index(row, G::EmailColumn).data());
-    rpt << "\n  " << G::sj("_email", 25) << G::s(index(row, G::_EmailColumn).data());
-    rpt << "\n  " << G::sj("url", 25) << G::s(index(row, G::UrlColumn).data());
-    rpt << "\n  " << G::sj("_url", 25) << G::s(index(row, G::_UrlColumn).data());
-    rpt << "\n  " << G::sj("offsetFull", 25) << G::s(index(row, G::OffsetFullColumn).data());
-    rpt << "\n  " << G::sj("lengthFull", 25) << G::s(index(row, G::LengthFullColumn).data());
-    rpt << "\n  " << G::sj("widthPreview", 25) << G::s(index(row, G::WidthPreviewColumn).data());
-    rpt << "\n  " << G::sj("heightPreview", 25) << G::s(index(row, G::HeightPreviewColumn).data());
-    rpt << "\n  " << G::sj("offsetThumb", 25) << G::s(index(row, G::OffsetThumbColumn).data());
-    rpt << "\n  " << G::sj("lengthThumb", 25) << G::s(index(row, G::LengthThumbColumn).data());
-    rpt << "\n  " << G::sj("isBigEndian", 25) << G::s(index(row, G::isBigEndianColumn).data());
-    rpt << "\n  " << G::sj("ifd0Offset", 25) << G::s(index(row, G::ifd0OffsetColumn).data());
-    rpt << "\n  " << G::sj("xmpSegmentOffset", 25) << G::s(index(row, G::XmpSegmentOffsetColumn).data());
-    rpt << "\n  " << G::sj("xmpNextSegmentOffset", 25) << G::s(index(row, G::XmpSegmentLengthColumn).data());
+    int dots = 30;
+    rpt << "\n"   << G::sj("DataModel row", dots) << G::s(row);
+    dots = 28;
+    rpt << "\n  " << G::sj("FileName", dots) << G::s(index(row, G::NameColumn).data());
+    rpt << "\n  " << G::sj("FilePath", dots) << G::s(index(row, 0).data(G::PathRole));
+    rpt << "\n  " << G::sj("isIcon", dots) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
+    rpt << "\n  " << G::sj("isCached", dots) << G::s(index(row, G::IsCachedColumn).data());
+    rpt << "\n  " << G::sj("MetadataReadingColumn", dots) << G::s(index(row, G::MetadataReadingColumn).data());
+    rpt << "\n  " << G::sj("isMetadataAttempted", dots) << G::s(index(row, G::MetadataAttemptedColumn).data());
+    rpt << "\n  " << G::sj("isMetadataLoaded", dots) << G::s(index(row, G::MetadataLoadedColumn).data());
+    rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
+    rpt << "\n  " << G::sj("isMissingThumb", dots) << G::s(index(row, G::MissingThumbColumn).data());
+    rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
+    rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
+    rpt << "\n  " << G::sj("dupIsJpg", dots) << G::s(index(row, 0).data(G::DupIsJpgRole));
+    rpt << "\n  " << G::sj("dupRawType", dots) << G::s(index(row, 0).data(G::DupRawTypeRole));
+    rpt << "\n  " << G::sj("Column", dots) << G::s(index(row, 0).data(G::ColumnRole));
+    rpt << "\n  " << G::sj("isGeek", dots) << G::s(index(row, 0).data(G::GeekRole));
+    rpt << "\n  " << G::sj("type", dots) << G::s(index(row, G::TypeColumn).data());
+    rpt << "\n  " << G::sj("video", dots) << G::s(index(row, G::VideoColumn).data());
+    rpt << "\n  " << G::sj("duration", dots) << G::s(index(row, G::DurationColumn).data());
+    rpt << "\n  " << G::sj("bytes", dots) << G::s(index(row, G::SizeColumn).data());
+    rpt << "\n  " << G::sj("pick", dots) << G::s(index(row, G::PickColumn).data());
+    rpt << "\n  " << G::sj("ingested", dots) << G::s(index(row, G::IngestedColumn).data());
+    rpt << "\n  " << G::sj("label", dots) << G::s(index(row, G::LabelColumn).data());
+    rpt << "\n  " << G::sj("_label", dots) << G::s(index(row, G::_LabelColumn).data());
+    rpt << "\n  " << G::sj("rating", dots) << G::s(index(row, G::RatingColumn).data());
+    rpt << "\n  " << G::sj("_rating", dots) << G::s(index(row, G::_RatingColumn).data());
+    rpt << "\n  " << G::sj("search", dots) << G::s(index(row, G::SearchColumn).data());
+    rpt << "\n  " << G::sj("modifiedDate", dots) << G::s(index(row, G::ModifiedColumn).data());
+    rpt << "\n  " << G::sj("createdDate", dots) << G::s(index(row, G::CreatedColumn).data());
+    rpt << "\n  " << G::sj("year", dots) << G::s(index(row, G::YearColumn).data());
+    rpt << "\n  " << G::sj("day", dots) << G::s(index(row, G::DayColumn).data());
+    rpt << "\n  " << G::sj("megapixels", dots) << G::s(index(row, G::MegaPixelsColumn).data());
+    rpt << "\n  " << G::sj("width", dots) << G::s(index(row, G::WidthColumn).data());
+    rpt << "\n  " << G::sj("height", dots) << G::s(index(row, G::HeightColumn).data());
+    rpt << "\n  " << G::sj("dimensions", dots) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("aspectRatio", dots) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("rotation", dots) << G::s(index(row, G::RotationColumn).data());
+//    rpt << "\n  " << G::sj("_rotation", dots) << G::s(index(row, G::_RotationColumn).data());
+    rpt << "\n  " << G::sj("apertureNum", dots) << G::s(index(row, G::ApertureColumn).data());
+    rpt << "\n  " << G::sj("exposureTimeNum", dots) << G::s(index(row, G::ShutterspeedColumn).data());
+    rpt << "\n  " << G::sj("iso", dots) << G::s(index(row, G::ISOColumn).data());
+    rpt << "\n  " << G::sj("exposureCompensationNum", dots) << G::s(index(row, G::ExposureCompensationColumn).data());
+    rpt << "\n  " << G::sj("make", dots) << G::s(index(row, G::CameraMakeColumn).data());
+    rpt << "\n  " << G::sj("model", dots) << G::s(index(row, G::CameraModelColumn).data());
+    rpt << "\n  " << G::sj("lens", dots) << G::s(index(row, G::LensColumn).data());
+    rpt << "\n  " << G::sj("focalLengthNum", dots) << G::s(index(row, G::FocalLengthColumn).data());
+    rpt << "\n  " << G::sj("foxusX", dots) << G::s(index(row, G::FocusXColumn).data());
+    rpt << "\n  " << G::sj("foxusY", dots) << G::s(index(row, G::FocusYColumn).data());
+    rpt << "\n  " << G::sj("gpsCoord", dots) << G::s(index(row, G::GPSCoordColumn).data());
+    rpt << "\n  " << G::sj("keywords", dots) << G::s(index(row, G::KeywordsColumn).data());
+    rpt << "\n  " << G::sj("title", dots) << G::s(index(row, G::TitleColumn).data());
+    rpt << "\n  " << G::sj("_title", dots) << G::s(index(row, G::_TitleColumn).data());
+    rpt << "\n  " << G::sj("creator", dots) << G::s(index(row, G::CreatorColumn).data());
+    rpt << "\n  " << G::sj("_creator", dots) << G::s(index(row, G::_CreatorColumn).data());
+    rpt << "\n  " << G::sj("copyright", dots) << G::s(index(row, G::CopyrightColumn).data());
+    rpt << "\n  " << G::sj("_copyright", dots) << G::s(index(row, G::_CopyrightColumn).data());
+    rpt << "\n  " << G::sj("email", dots) << G::s(index(row, G::EmailColumn).data());
+    rpt << "\n  " << G::sj("_email", dots) << G::s(index(row, G::_EmailColumn).data());
+    rpt << "\n  " << G::sj("url", dots) << G::s(index(row, G::UrlColumn).data());
+    rpt << "\n  " << G::sj("_url", dots) << G::s(index(row, G::_UrlColumn).data());
+    rpt << "\n  " << G::sj("offsetFull", dots) << G::s(index(row, G::OffsetFullColumn).data());
+    rpt << "\n  " << G::sj("lengthFull", dots) << G::s(index(row, G::LengthFullColumn).data());
+    rpt << "\n  " << G::sj("widthPreview", dots) << G::s(index(row, G::WidthPreviewColumn).data());
+    rpt << "\n  " << G::sj("heightPreview", dots) << G::s(index(row, G::HeightPreviewColumn).data());
+    rpt << "\n  " << G::sj("offsetThumb", dots) << G::s(index(row, G::OffsetThumbColumn).data());
+    rpt << "\n  " << G::sj("lengthThumb", dots) << G::s(index(row, G::LengthThumbColumn).data());
+    rpt << "\n  " << G::sj("isBigEndian", dots) << G::s(index(row, G::isBigEndianColumn).data());
+    rpt << "\n  " << G::sj("ifd0Offset", dots) << G::s(index(row, G::ifd0OffsetColumn).data());
+    rpt << "\n  " << G::sj("xmpSegmentOffset", dots) << G::s(index(row, G::XmpSegmentOffsetColumn).data());
+    rpt << "\n  " << G::sj("xmpNextSegmentOffset", dots) << G::s(index(row, G::XmpSegmentLengthColumn).data());
 
-    rpt << "\n  " << G::sj("isXmp", 25) << G::s(index(row, G::IsXMPColumn).data());
-    rpt << "\n  " << G::sj("orientationOffset", 25) << G::s(index(row, G::OrientationOffsetColumn).data());
-    rpt << "\n  " << G::sj("orientation", 25) << G::s(index(row, G::OrientationColumn).data());
-    rpt << "\n  " << G::sj("rotationDegrees", 25) << G::s(index(row, G::RotationDegreesColumn).data());
-    rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
-    rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
+    rpt << "\n  " << G::sj("isXmp", dots) << G::s(index(row, G::IsXMPColumn).data());
+    rpt << "\n  " << G::sj("orientationOffset", dots) << G::s(index(row, G::OrientationOffsetColumn).data());
+    rpt << "\n  " << G::sj("orientation", dots) << G::s(index(row, G::OrientationColumn).data());
+    rpt << "\n  " << G::sj("rotationDegrees", dots) << G::s(index(row, G::RotationDegreesColumn).data());
+    rpt << "\n  " << G::sj("shootingInfo", dots) << G::s(index(row, G::ShootingInfoColumn).data());
+    rpt << "\n  " << G::sj("loadMsecPerMp", dots) << G::s(index(row, G::LoadMsecPerMpColumn).data());
 
-    rpt << "\n  " << G::sj("cacheSize", 25) << G::s(index(row, G::CacheSizeColumn).data());
-    rpt << "\n  " << G::sj("IsCaching", 25) << G::s(index(row, G::IsCachingColumn).data());
-    rpt << "\n  " << G::sj("IsCached", 25) << G::s(index(row, G::IsCachedColumn).data());
-    rpt << "\n  " << G::sj("Attempts", 25) << G::s(index(row, G::AttemptsColumn).data());
-    rpt << "\n  " << G::sj("DecoderId", 25) << G::s(index(row, G::DecoderIdColumn).data());
-    rpt << "\n  " << G::sj("DecoderReturnStatus", 25) << G::s(index(row, G::DecoderReturnStatusColumn).data());
-    rpt << "\n  " << G::sj("DecoderErrMsg", 25) << G::s(index(row, G::DecoderErrMsgColumn).data());
+    rpt << "\n  " << G::sj("cacheSize", dots) << G::s(index(row, G::CacheSizeColumn).data());
+    rpt << "\n  " << G::sj("IsCaching", dots) << G::s(index(row, G::IsCachingColumn).data());
+    rpt << "\n  " << G::sj("IsCached", dots) << G::s(index(row, G::IsCachedColumn).data());
+    rpt << "\n  " << G::sj("Attempts", dots) << G::s(index(row, G::AttemptsColumn).data());
+    rpt << "\n  " << G::sj("DecoderId", dots) << G::s(index(row, G::DecoderIdColumn).data());
+    rpt << "\n  " << G::sj("DecoderReturnStatus", dots) << G::s(index(row, G::DecoderReturnStatusColumn).data());
+    rpt << "\n  " << G::sj("DecoderErrMsg", dots) << G::s(index(row, G::DecoderErrMsgColumn).data());
 
     QString searchText = index(row, G::SearchTextColumn).data().toString();
     int n = 140;
     for (int i = 0; i < searchText.length(); i += n) {
-        rpt << "\n  " << G::sj("searchText", 25) << searchText.mid(i, n);
+        rpt << "\n  " << G::sj("searchText", dots) << searchText.mid(i, n);
     }
 
     rpt << "\n  ";

@@ -154,6 +154,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix glitches in embellish from lightroom and deletion sort change
+- Diagnostics line widths
 - Row not always correct in ImageMetadata struct
 - Remote embellish from Lightroom when no Winnow instance was not working
 - In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)

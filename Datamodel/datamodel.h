@@ -135,10 +135,6 @@ public:
 
     const QStringList raw = {"arw", "cr2", "cr3", "dng","nef", "orf", "raf", "sr2", "rw2"};
     const QStringList jpg = {"jpg", "jpeg"};
-    int startImageCacheTargetRange = 0;
-    int endImageCacheTargetRange;
-    int imageCacheMaxMB;
-    double sumImageCacheMB = 0;
 
     int hugeIconThreshold = G::maxIconChunk;
     int firstVisibleIcon;
@@ -155,17 +151,6 @@ public:
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
     bool folderHasMissingEmbeddedThumb;        // jpg/tiff only
-
-    // rgh check if reqd still
-    bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true
-    int buildFiltersMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
-    QElapsedTimer buildFiltersTimer;
-
-    // QList<QFileInfo> modifiedFiles;     // used by MW::refreshCurrentFolder
-
-    /* errors are tracked by image (datamodel row) or general errors if not related to a
-       specific image */
-    QStringList generalErrors;
 
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
@@ -264,7 +249,6 @@ private:
     QStringList *fileFilters;
     QFileInfo fileInfo;
     QImage emptyImg;
-    bool includeSubfolders = false;
 
     QItemSelection savedSelection;
 
@@ -279,13 +263,9 @@ private:
     void updateLoadStatus(int row);
     // bool tooManyImagesWarning();
 
-    int folderCount;
     int countInterval = 0;
 
     bool isDebug = false;
-    ImageMetadata mCopy;
-    int line;
-    int rowCountChk;
 
     int imageCacheWaitingForRow = -1;
 
