@@ -868,10 +868,17 @@ void MW::closeEvent(QCloseEvent *event)
         QApplication::clipboard()->clear();
     }
 
+    // close all open dialogs
     if (preferencesDlg != nullptr) {
         delete pref;
         delete preferencesDlg;
     }
+    for (QWidget *w : openWindows) {
+        if (w && w->isVisible()) {
+            w->close();
+        }
+    }
+
     if (!simulateJustInstalled) {
         writeSettings();
     }
@@ -881,6 +888,7 @@ void MW::closeEvent(QCloseEvent *event)
     delete embel;
     delete G::issueLog;
     delete G::popUp;
+
     event->accept();
 }
 
@@ -3641,10 +3649,7 @@ void MW::about()
 
 void MW::helpThumbViewStatusBarSymbols()
 {
-    // if (G::isLogger) G::log("MW::helpThumbViewStatusBarSymbols");
-    // HtmlWindow *w = new HtmlWindow("Winnow - Film Strip and Status Bar Symbols",
-    //                                ":/Docs/helpfilmstrip.html",
-    //                                QSize(1601,710));
+    if (G::isLogger) G::log("MW::helpThumbViewStatusBarSymbols");
 
     const QSize windowSize(1601, 710);
 
@@ -3654,6 +3659,7 @@ void MW::helpThumbViewStatusBarSymbols()
     HtmlWindow *w = new HtmlWindow("Winnow - Film Strip and Status Bar Symbols",
                                    ":/Docs/helpfilmstrip.html",
                                    windowSize, mwRect, this);
+    openWindows.append(w);
 }
 
 void MW::allPreferences()
@@ -5657,6 +5663,7 @@ void MW::help()
     QWidget *helpDoc = new QWidget;
     Ui::helpForm ui;
     ui.setupUi(helpDoc);
+    openWindows.append(helpDoc);
     helpDoc->show();
 }
 
@@ -5674,6 +5681,7 @@ void MW::helpShortcuts()
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(helpShortcuts->winId(), G::backgroundColor);
     #endif
+    openWindows.append(helpShortcuts);
     helpShortcuts->show();
 }
 

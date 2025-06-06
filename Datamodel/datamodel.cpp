@@ -407,6 +407,8 @@ int DataModel::insert(QString fPath)
 
     QFileInfo insertFileInfo(fPath);
     QString insertFilePath = fPath.toLower();
+
+    // find insertion row
     int dmRow;
     for (dmRow = 0; dmRow < rowCount(); ++dmRow) {
         QString rowPath = index(dmRow, 0).data(G::PathRole).toString().toLower();
@@ -418,18 +420,11 @@ int DataModel::insert(QString fPath)
     // insert new row
     insertRow(dmRow);
 
-    /*
-    qDebug() << "DataModel::insert"
-             << "dmRow =" << dmRow
-             << "fPath =" << fPath;
-    //*/
-
     // update fPathRow hash
     rebuildRowFromPathHash();
 
     // update current row
     setCurrent(currentFilePath, instance);
-    // qDebug() << "DataModel::insert" << currentSfIdx;
 
     // add the file data to datamodel
     addFileDataForRow(dmRow, insertFileInfo);
@@ -462,8 +457,6 @@ void DataModel::remove(QString fPath)
             break;
         }
     }
-
-    // sf->invalidate();
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();

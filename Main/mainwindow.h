@@ -1156,6 +1156,8 @@ private:
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
+    QList<QWidget*> openWindows;
+
     bool ignoreDockResize;
     bool wasThumbDockVisible;
     bool workspaceChange;
@@ -1408,11 +1410,6 @@ private:
     QByteArray sta;
     void toggleRory();
     void rory();
-
-    //    void setCopyCutActions(bool setEnabled);
-    //    void setDeleteAction(bool setEnabled);
-    //    void setInterfaceEnabled(bool enable);
-    //    void setViewerKeyEventsEnabled(bool enabled);
 
 };
 #endif // MAINWINDOW_H

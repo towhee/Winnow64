@@ -424,40 +424,9 @@ void MW::diagnosticsReport(QString reportString, QString title)
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
-
-    // int padding = 70;
-
-    // // determine width based on longest line in reportString
-    // QStringList lines = reportString.split('\n');
-    // int maxWidth = 0;
-    // for (const QString &line : lines) {
-    //     int width = metrics.horizontalAdvance(line);
-    //     if (width > maxWidth) {
-    //         maxWidth = width;
-    //     }
-    // }
-    // maxWidth += padding;
-
-    // // Calculate total text height
-    // int lineHeight = metrics.height();
-    // int totalTextHeight = lineHeight * lines.size() + padding;
-    // int maxTextHeight = 1200;
-
-    // int w, h;
-
-    // w = maxWidth;
-    // totalTextHeight < maxTextHeight ? h = totalTextHeight : h = 1200;
-    // qDebug() << w << h;
-
-    // // if (maxWidth > G::displayPhysicalHorizontalPixels)
-    // //     w = G::displayPhysicalHorizontalPixels - 100;
-    // // if (h > G::displayPhysicalVerticalPixels)
-    // //     h = G::displayPhysicalVerticalPixels - 100;
-
-    // dlg->resize(w, h);
-
     fitDiagnostics(dlg, md.textBrowser);
     dlg->setWindowTitle(title);
+    openWindows.append(dlg);
     dlg->show();
 }
 
@@ -480,6 +449,7 @@ void MW::allIssuesReport()
     Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
     #endif
     fitDiagnostics(dlg, md.textBrowser);
+    openWindows.append(dlg);
     dlg->show();
 }
 
@@ -504,6 +474,7 @@ void MW::SessionIssuesReport()
     #endif
 
     fitDiagnostics(dlg, md.textBrowser);
+    openWindows.append(dlg);
     dlg->show();
 }
 

@@ -1578,33 +1578,12 @@ void IngestDlg::on_helpBtn_clicked()
     ui->textBrowser->setOpenExternalLinks(true);
     dlg->setWindowTitle("Ingest Automatic Path Help");
     dlg->setStyleSheet(G::css);
-    //dlg->setWindowModality(Qt::WindowModal);
     dlg->exec();
-//    dlg->setWindowModality(Qt::ApplicationModal);
-//    dlg->show();
-//    dlg->raise(); // Bring the dialog to the front
-//    dlg->activateWindow(); // Activate the dialog
-
-//    QFile f(":/Docs/ingestautopath.html");
-//    f.open(QIODevice::ReadOnly);
-//    QDialog *dlg = new QDialog;
-//    QTextBrowser *text = new QTextBrowser;
-//    text->setMinimumWidth(600);
-//    text->setMinimumHeight(600);
-//    text->setContentsMargins(9,9,9,9);
-//    text->setHtml(f.readAll());
-//    text->setStyleSheet(css);
-//    dlg->setLayout(new QHBoxLayout);
-//    dlg->layout()->setContentsMargins(0,0,0,0);
-//    dlg->layout()->addWidget(text);
-//    dlg->exec();
 }
 
 void IngestDlg::on_cancelBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_cancelBtn_clicked");
-    //test();
-    //return;
     reject();
 }
 
