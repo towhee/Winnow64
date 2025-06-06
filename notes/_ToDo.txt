@@ -14,7 +14,6 @@ WHAT'S NEW
 - Pan to camera focus point when zoomed with zoom box
 
 BUGS / TO DO
-- Delete all reports when exit Winnow
 - Preferences dialog always on top
 - Dissable double click in filters panel
 - Read media speed is unintuitive
@@ -154,6 +153,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Delete all reports when exit Winnow
 - Fix glitches in embellish from lightroom and deletion sort change
 - Diagnostics line widths
 - Row not always correct in ImageMetadata struct
