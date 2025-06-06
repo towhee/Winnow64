@@ -3696,7 +3696,7 @@ void MW::preferences(QString text)
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
     #endif
-    // non-modal
+    preferencesDlg->setWindowFlag(Qt::WindowStaysOnTopHint);
     preferencesDlg->setWindowModality(Qt::NonModal);
     preferencesDlg->show();
 
