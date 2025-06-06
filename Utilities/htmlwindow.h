@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 
-class HtmlWindow : QScrollArea
+class HtmlWindow : public QScrollArea
 {
     Q_OBJECT
 public:

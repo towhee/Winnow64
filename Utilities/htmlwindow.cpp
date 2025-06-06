@@ -8,9 +8,9 @@ HtmlWindow::HtmlWindow(const QString &title,
                        QObject */*parent*/) : QScrollArea()
 {
 /*
-    This opens a modeless window containing the html document.  The window will have a minimum
-    size of size.  The html and any other resources such as images need to be in Winnow
-    resources.  Example usage:
+    This opens a modeless window containing the html document. The window will have a
+    minimum size of size. The html and any other resources such as images need to be in
+    Winnow resources. Example usage:
 
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
