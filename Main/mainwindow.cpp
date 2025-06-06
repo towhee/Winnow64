@@ -2090,12 +2090,13 @@ void MW::handleStartupArgs(const QString &args)
         if (!dm->folderList.contains(fDir)) {
             fsTree->select(fDir, "", "handleStartupArgs");
         }
-
-        imageView->currentImageHasChanged = true;
-        insertFiles(embellishedPaths);
-        // update filter counts
-        buildFilters->recount();
-        filterChange("MW::handleStartupArgs_remoteEmbellish");
+        else {
+            imageView->currentImageHasChanged = true;
+            insertFiles(embellishedPaths);
+            // update filter counts
+            buildFilters->recount();
+            filterChange("MW::handleStartupArgs_remoteEmbellish");
+        }
         // select first new embellished image
         QString fPath = embellishedPaths.at(0);
         sel->select(fPath);
@@ -2967,14 +2968,6 @@ void MW::folderChangeCompleted()
 
     // G::isModifyingDatamodel = false;
 
-    /*
-    qDebug() << fun
-             << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
-             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
-             << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                ;
-                //*/
-
     // missing thumbnails
     // /*
     qDebug() << "MW::LoadDone"
@@ -3511,12 +3504,6 @@ void MW::setImageCacheParameters()
     bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
     emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
 
-    // also store in datamodel
-    dm->imageCacheMaxMB = cacheNetMB;
-
-    // // set position in image cache
-    // if (dm->currentFilePath.length() && G::useImageCache)
-    //     imageCache->setCurrentPosition(dm->currentFilePath, "MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()
@@ -3880,12 +3867,12 @@ void MW::setDisplayResolution()
 {
 /*
     This is triggered by the mainwindow show event at startup, when the operating system
-    display scale is changed and when the app window is dragged to another monitor. The loupe
-    view always shows native pixel resolution (one image pixel = one physical monitor pixel),
-    therefore the zoom has to be factored by the device pixel ratio.
+    display scale is changed and when the app window is dragged to another monitor. The
+    loupe view always shows native pixel resolution (one image pixel = one physical
+    monitor pixel), therefore the zoom has to be factored by the device pixel ratio.
 
-    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter which display
-    scaling is selected, so there are two ratios defined here:
+    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter which
+    display scaling is selected, so there are two ratios defined here:
 
     G::actDevicePixelRatio - the actual ratio from actual to vertual pixels
     G::sysDevicePixelRatio - the system reported device pixel ratio

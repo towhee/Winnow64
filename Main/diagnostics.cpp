@@ -30,7 +30,8 @@ void MW::fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser)
 
     w = maxWidth;
     totalHeight < maxHeight ? h = totalHeight : h = 1200;
-    qDebug() << w << h << G::displayPhysicalHorizontalPixels << G::displayPhysicalVerticalPixels;
+    // qDebug() << "MW::fitDiagnostics"
+        // << w << h << G::displayPhysicalHorizontalPixels << G::displayPhysicalVerticalPixels;
     if (w > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
     if (h > G::displayPhysicalVerticalPixels) h = G::displayPhysicalVerticalPixels - 100;
 
@@ -49,7 +50,6 @@ void MW::reportState(QString title)
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
-        << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
         << "\nimageView->isFirstImageNewInstance     " << imageView->isFirstImageNewInstance
 
 //        << "\nisDragDrop                             " << isDragDrop
@@ -202,7 +202,88 @@ QString MW::diagnostics()
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abort);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n";
 
+    rpt << "\n" << "G::isRory = " << G::s(G::isRory);
+    rpt << "\n" << "G::showProgress = " << G::s(G::showProgress);
+    rpt << "\n" << "G::useApplicationStateChanged = " << G::s(G::useApplicationStateChanged);
+    rpt << "\n" << "G::useZoomWindow = " << G::s(G::useZoomWindow);
+    rpt << "\n" << "G::useFSTreeCount = " << G::s(G::useFSTreeCount);
+    rpt << "\n" << "G::useReadMeta = " << G::s(G::useReadMeta);
+    rpt << "\n" << "G::useReadIcons = " << G::s(G::useReadIcons);
+    rpt << "\n" << "G::useImageCache = " << G::s(G::useImageCache);
+    rpt << "\n" << "G::useImageView = " << G::s(G::useImageView);
+    rpt << "\n" << "G::useInfoView = " << G::s(G::useInfoView);
+    rpt << "\n" << "G::useMultimedia = " << G::s(G::useMultimedia);
+    rpt << "\n" << "G::useUpdateStatus = " << G::s(G::useUpdateStatus);
+    rpt << "\n" << "G::useFilterView = " << G::s(G::useFilterView);
+    rpt << "\n" << "G::useProcessEvents = " << G::s(G::useProcessEvents);
+    rpt << "\n";
+    rpt << "\n" << "G::strFontSize = " << G::s(G::strFontSize);
+    rpt << "\n" << "G::fontSize = " << G::s(G::fontSize);
+    rpt << "\n" << "G::dpi = " << G::s(G::dpi);
+    rpt << "\n" << "G::ptToPx = " << G::s(G::ptToPx);
+    rpt << "\n";
+    rpt << "\n" << "G::labelNoneColor = " << G::s(G::labelNoneColor);
+    rpt << "\n" << "G::labelRedColor = " << G::s(G::labelRedColor);
+    rpt << "\n" << "G::labelYellowColor = " << G::s(G::labelYellowColor);
+    rpt << "\n" << "G::labelGreenColor = " << G::s(G::labelGreenColor);
+    rpt << "\n" << "G::labelBlueColor = " << G::s(G::labelBlueColor);
+    rpt << "\n" << "G::labelPurpleColor = " << G::s(G::labelPurpleColor);
+    rpt << "\n" << "G::labelColors = " << G::s(G::labelColors);
+    rpt << "\n" << "G::ratings = " << G::s(G::ratings);
+    rpt << "\n";
+    rpt << "\n" << "G::scrollBarThickness = " << G::s(G::scrollBarThickness);
+    rpt << "\n" << "G::propertyWidgetMarginLeft = " << G::s(G::propertyWidgetMarginLeft);
+    rpt << "\n" << "G::propertyWidgetMarginRight = " << G::s(G::propertyWidgetMarginRight);
+    rpt << "\n";
+    rpt << "\n" << "G::iconOpacity = " << G::s(G::iconOpacity);
+    rpt << "\n" << "G::wheelSensitivity = " << G::s(G::wheelSensitivity);
+    rpt << "\n" << "G::wheelSpinning = " << G::s(G::wheelSpinning);
+    rpt << "\n";
+    rpt << "\n" << "G::loadOnlyVisibleIcons = " << G::s(G::loadOnlyVisibleIcons);
+    rpt << "\n" << "G::availableMemoryMB = " << G::s(G::availableMemoryMB);
+    rpt << "\n" << "G::winnowMemoryBeforeCacheMB = " << G::s(G::winnowMemoryBeforeCacheMB);
+    rpt << "\n" << "G::metaCacheMB = " << G::s(G::metaCacheMB);
+    rpt << "\n";
+    rpt << "\n" << "G::mode = " << G::s(G::mode);
+    rpt << "\n" << "G::fileSelectionChangeSource = " << G::s(G::fileSelectionChangeSource);
+    rpt << "\n" << "G::autoAdvance = " << G::s(G::autoAdvance);
+    rpt << "\n";
+    rpt << "\n" << "G::maxIconSize = " << G::s(G::maxIconSize);
+    rpt << "\n" << "G::minIconSize = " << G::s(G::minIconSize);
+    rpt << "\n" << "G::maxIconChunk = " << G::s(G::maxIconChunk);
+    rpt << "\n";
+    rpt << "\n" << "G::isModifyingDatamodel = " << G::s(G::isModifyingDatamodel);
+    rpt << "\n" << "G::ignoreScrollSignal = " << G::s(G::ignoreScrollSignal);
+    rpt << "\n" << "G::resizingIcons = " << G::s(G::resizingIcons);
+    rpt << "\n" << "G::isSlideShow = " << G::s(G::isSlideShow);
+    rpt << "\n" << "G::isRunningColorAnalysis = " << G::s(G::isRunningColorAnalysis);
+    rpt << "\n" << "G::isRunningStackOperation = " << G::s(G::isRunningStackOperation);
+    rpt << "\n" << "G::isProcessingExportedImages = " << G::s(G::isProcessingExportedImages);
+    rpt << "\n" << "G::isEmbellish = " << G::s(G::isEmbellish);
+    rpt << "\n" << "G::includeSidecars = " << G::s(G::includeSidecars);
+    rpt << "\n" << "G::colorManage = " << G::s(G::colorManage);
+    rpt << "\n" << "G::modifySourceFiles = " << G::s(G::modifySourceFiles);
+    rpt << "\n" << "G::backupBeforeModifying = " << G::s(G::backupBeforeModifying);
+    rpt << "\n" << "G::autoAddMissingThumbnails = " << G::s(G::autoAddMissingThumbnails);
+    rpt << "\n" << "G::useSidecar = " << G::s(G::useSidecar);
+    rpt << "\n" << "G::renderVideoThumb = " << G::s(G::renderVideoThumb);
+    rpt << "\n" << "G::isFilter = " << G::s(G::isFilter);
+    rpt << "\n" << "G::isRemote = " << G::s(G::isRemote);
+    rpt << "\n";
+    rpt << "\n" << "G::isRunningBackgroundIngest = " << G::s(G::isRunningBackgroundIngest);
+    rpt << "\n" << "G::ingestCount = " << G::s(G::ingestCount);
+    rpt << "\n" << "G::ingestLastSeqDate = " << G::s(G::ingestLastSeqDate);
+    rpt << "\n";
+    rpt << "\n" << "G::isCopyingFiles = " << G::s(G::isCopyingFiles);
+    rpt << "\n" << "G::stopCopyingFiles = " << G::s(G::stopCopyingFiles);
+    rpt << "\n";
+    rpt << "\n" << "G::isThreadTrackingOn = " << G::s(G::isThreadTrackingOn);
+    rpt << "\n" << "G::showAllTableColumns = " << G::s(G::showAllTableColumns);
+    rpt << "\n";
+    rpt << "\n" << "G::copyCutFileList = " << G::s(G::copyCutFileList);
     rpt << "\n";
     rpt << "\n" << "isShift = " << G::s(isShiftOnOpen);
     rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
@@ -297,7 +378,7 @@ QString MW::diagnostics()
     for (int i = 0; i < css.length(); i += n) {
         rpt << "\n" << css.mid(i, n);
     }
-    // rpt << "\n" << css;
+    rpt << "\n";
     return reportString;
 }
 

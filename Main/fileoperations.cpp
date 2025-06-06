@@ -285,6 +285,9 @@ void MW::insertFiles(QStringList pathList)
     // must sort fPaths before insertion in case multiple items are appended to end of datamodel
     // fPaths.sort(Qt::CaseInsensitive);
     dmInsert(pathList);
+
+    fsTree->updateCount();
+    bookmarks->updateCount();
 }
 
 void MW::deleteSelectedFiles()
@@ -308,12 +311,12 @@ void MW::deleteSelectedFiles()
         QMessageBox msgBox(this);
         int msgBoxWidth = 300;
         msgBox.setWindowTitle("Delete Images");
-#ifdef Q_OS_WIN
+        #ifdef Q_OS_WIN
         msgBox.setText("This operation will move all selected images to the recycle bin.");
-#endif
-#ifdef Q_OS_MAC
+        #endif
+        #ifdef Q_OS_MAC
         msgBox.setText("This operation will move all selected images to the trash.");
-#endif
+        #endif
         msgBox.setInformativeText("Do you want continue?");
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Yes);
