@@ -457,7 +457,11 @@ void MW::setIngested()
 
 void MW::setCombineRawJpg()
 {
-    if (G::isLogger) G::log("MW::setCombineRawJpg");
+    if (G::isLogger)
+        G::log("MW::setCombineRawJpg");
+
+    if (!dm->rowCount()) return;
+
     if (dm->rowCount() && !G::allMetadataLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popUp->showPopup(msg, 2000);
@@ -493,31 +497,31 @@ void MW::setCombineRawJpg()
             QString jpgVersion = Utilities::replaceSuffix(fPath, "jpg");
             if (dm->contains(jpgVersion)) {
                 fPath = jpgVersion;
+                qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
+                folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
             }
         }
-        qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
-        folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
     }
 
-//    // update the datamodel type column
-//    QString src = "setCombinedRawJpg";
-//    for (int row = 0; row < dm->rowCount(); ++row) {
-//        QModelIndex idx = dm->index(row, 0);
-//        if (idx.data(G::DupIsJpgRole).toBool()) {
-//            QString rawType = idx.data(G::DupRawTypeRole).toString();
-//            QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-//            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//            else emit setValue(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//        }
-//    }
+   // update the datamodel type column
+   QString src = "setCombinedRawJpg";
+   for (int row = 0; row < dm->rowCount(); ++row) {
+       QModelIndex idx = dm->index(row, 0);
+       if (idx.data(G::DupIsJpgRole).toBool()) {
+           QString rawType = idx.data(G::DupRawTypeRole).toString();
+           QModelIndex typeIdx = dm->index(row, G::TypeColumn);
+           if (combineRawJpg) emit setValueDm(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+           else emit setValueDm(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+       }
+   }
 
-    // refresh the proxy sort/filter
-//    dm->sf->filterChange();
-//    dm->rebuildTypeFilter();
-//    filterChange("MW::setCombineRawJpg");
-//    updateStatusBar();
+   // refresh the proxy sort/filter
+   dm->sf->filterChange();
+   dm->rebuildTypeFilter();
+   filterChange("MW::setCombineRawJpg");
+   updateStatusBar();
 
-    G::popUp->close();
+   G::popUp->close();
 }
 
 void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
