@@ -607,12 +607,16 @@ void BookMarks::dropEvent(QDropEvent *event)
         }
     }
 
-    if (dm->folderList.contains(dropDir)) {
-        emit refreshDataModel();
-    }
-    else {
-        select(dropDir);
-    }
+    QString dropDirCopy = dropDir;
+    QTimer::singleShot(0, this, [=]() {
+        if (dm->folderList.contains(dropDirCopy)) {
+            emit refreshDataModel();
+        }
+        else {
+            select(dropDirCopy);
+        }
+    });
+
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION

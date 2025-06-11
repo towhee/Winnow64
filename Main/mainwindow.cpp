@@ -2978,7 +2978,7 @@ void MW::folderChangeCompleted()
 
     // missing thumbnails
     // /*
-    qDebug() << "MW::LoadDone"
+    qDebug() << "MW::folderChangeCompleted"
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
                 ; //*/
