@@ -1825,7 +1825,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 void IconView::startDrag(Qt::DropActions)
 {
 /*
-    Drag and drop thumbs to another program.
+    Drag and drop thumbs to another program or folder in FSTree.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
     /*
@@ -1840,6 +1840,22 @@ void IconView::startDrag(Qt::DropActions)
         return;
     }
 
+    for (int i = 0; i < selection.count(); ++i) {
+        QModelIndex idx = selection.at(i);
+        idx = dm->modelIndexFromProxyIndex(idx);
+        if (!idx.isValid()) {
+            qDebug() << "Invalid index at" << i;
+            continue;
+        }
+        QStandardItem *item = dm->itemFromIndex(idx);
+        if (!item) {
+            qDebug() << "Null item at" << i;
+            continue;
+        }
+        QStandardItem *parent = item->parent();  // <<<<< likely null or invalid
+        qDebug() << "Item" << i << "text:" << item->text() << "parent:" << parent;
+    }
+
     QList<QUrl> urls;
     QList<QString>paths;
     for (int i = 0; i < selection.count(); ++i) {
@@ -1847,6 +1863,7 @@ void IconView::startDrag(Qt::DropActions)
         urls << QUrl::fromLocalFile(fPath);
         paths << fPath;
         QString xmpPath = Utilities::assocXmpPath(fPath);
+        if (!QFile(xmpPath).exists()) continue;
         if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
     }
 

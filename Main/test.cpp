@@ -392,9 +392,21 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // filterChange("MW::test");
-    qDebug() << openWindows;
-    openWindows.at(0)->close();
+    // QModelIndexList selection = selectionModel()->selectedRows();
+    // for (int i = 0; i < selection.count(); ++i) {
+    //     QModelIndex idx = selection.at(i);
+    //     if (!idx.isValid()) {
+    //         qDebug() << "Invalid index at" << i;
+    //         continue;
+    //     }
+    //     QStandardItem *item = dm->sf->itemFromIndex(idx);
+    //     if (!item) {
+    //         qDebug() << "Null item at" << i;
+    //         continue;
+    //     }
+    //     QStandardItem *parent = item->parent();  // <<<<< likely null or invalid
+    //     qDebug() << "Item" << i << "text:" << item->text() << "parent:" << parent;
+    // }
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

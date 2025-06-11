@@ -365,7 +365,7 @@ void MW::dmRemove(QStringList pathList)
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
     the rows, updates dm->fPathRow.
 */
-    qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
+    // qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
 
     filters->save();
     clearAllFilters();
@@ -506,7 +506,7 @@ void MW::currentFolderDeletedExternally(QString path)
 
 void MW::deleteFolder()
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("MW::deleteFolder");
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
@@ -529,12 +529,12 @@ void MW::deleteFolder()
         int msgBoxWidth = 300;
         msgBox.setWindowTitle("Delete Folder");
         msgBox.setTextFormat(Qt::RichText);
-#ifdef Q_OS_WIN
+        #ifdef Q_OS_WIN
         QString trash = "recycle bin";
-#endif
-#ifdef Q_OS_MAC
+        #endif
+        #ifdef Q_OS_MAC
         QString trash = "trash";
-#endif
+        #endif
         msgBox.setText("This operation will move the folder<br>"
                        + dirToDelete +
                        "<br>to the " + trash);
@@ -554,10 +554,10 @@ void MW::deleteFolder()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndex currIdx = fsTree->currentIndex();
-
     if (dm->folderList.contains(dirToDelete)) {
         stop("deleteFolder");
+        reset();
+        setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
     }
 
     // okay to delete
@@ -573,20 +573,6 @@ void MW::deleteFolder()
 
     // do not highlight next folder
     fsTree->setCurrentIndex(QModelIndex());
-
-    // show msg if this wsa the active folder and there are no images now
-    if (dm->folderList.contains(dirToDelete)) {
-        if (dm->folderList.count() == 1) {
-            // stop();
-            // reset();
-            dm->clear();
-            dm->clearAllIcons();
-            setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
-        }
-        // if (dm->folderList.count() > 1) {
-        //     folderSelectionChange(dirToDelete, "Remove", false, false);
-        // }
-    }
 }
 
 void MW::deleteAllImageMemCard(QString rootPath, QString name)
@@ -607,16 +593,16 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     // warning
     QMessageBox msgBox;
     msgBox.setWindowTitle("Delete All Images on " + name);
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     QString trash = "recycle bin";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     QString trash = "trash";
-#endif
+    #endif
     msgBox.setText("This operation will DELETE ALL\n"
                    "the images on drive\n\n"
                    + name + "\n\n"
-                            "The images will NOT be copied to the " + trash);
+                   "The images will NOT be copied to the " + trash);
     msgBox.setInformativeText("Do you want continue?");
     msgBox.setStandardButtons(QMessageBox::Cancel | QMessageBox::Yes);
     msgBox.setDefaultButton(QMessageBox::Cancel);

@@ -1,16 +1,318 @@
-ImageCache::fillCache                              allDecodersDone
-5 MW::eventFilter Key_Right
-1 Selection::select(row)                             row = 1
-88 Selection::select(QModelIndex)                     row = 1 src =
+DataModel is a QStandardItemModel.  When dragging onto another folder with the option key pressed (copying)
+a crash occurs.
 
-1 Selection::setCurrentIndex                         row = 1 clearSelection = true
-62 Selection::updateCurrentIndex                      row = 1
-6 MW::updateChange                                   row = 1 isFileSelectionChange = true G::allMetadataLoaded = true G::iconChunkLoaded = true src = Selection::setCurrentIndex
-365 MW::fileSelectionChange                            row = 1 fun = MW::fileSelectionChange G::fileSelectionChangeSource = Key_Right
-2 MW::gridHasScrolled                                isVisible = false
-587 IconView::updateMidVisibleCell                     Grid src = MW::gridHasScrolled
-15 VideoView::stop
-369 ImageView::loadImage                               row = 1 Src:MW::fileSelectionChange isFirstImageNewInstance = false /Users/roryhill/Pictures/Zen2048/pbase2048/2008-05-09_0063_Zen2048.JPG
-160 MW::loupeDisplay                                   src = MW::fileSelectionChange
-2 ImageCache::setCurrentPosition                     row = 1
-11 ImageCache::dispatch
+IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
+    : QListView(parent)
+{
+    this->dm = dm;
+    setModel(this->dm->sf);
+}
+
+void IconView::startDrag(Qt::DropActions)
+{
+    isMouseDrag = false;
+
+    QModelIndexList selection = selectionModel()->selectedRows();
+    if (selection.isEmpty()) {
+        QString msg = "Empty selection.";
+        G::issue("Warning", msg, "IconView::startDrag");
+        return;
+    }
+
+    QList<QUrl> urls;
+    QList<QString>paths;
+    for (int i = 0; i < selection.count(); ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        urls << QUrl::fromLocalFile(fPath);
+        paths << fPath;
+        QString xmpPath = Utilities::assocXmpPath(fPath);
+        if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
+    }
+
+    QDrag *drag = new QDrag(this);
+    QMimeData *mimeData = new QMimeData;
+
+    mimeData->setUrls(urls);
+    drag->setMimeData(mimeData);
+
+    Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
+    Qt::DropAction result;
+
+    // copy
+    if (key == Qt::AltModifier) {
+        result = drag->exec(Qt::CopyAction);  // CRASH TRIGGERED (ROW 1903)
+    }
+
+    // move
+    if (key == Qt::NoModifier) {
+        result = drag->exec(Qt::MoveAction);
+
+        // was move onto self? ignoreDrop is set in MW::dropEvent.
+        if (ignoreDrop) {
+            qDebug() << "drop onto self";
+            ignoreDrop = false;
+            return;
+        }
+
+        // moved, so remove drag items from datamodel
+        for (QString fPath : paths) dm->remove(fPath);
+
+        // update selection
+        m2->sel->select(dm->currentSfIdx, Qt::NoModifier, "IconView::startDrag");
+        if (!isCellVisible(dm->currentSfRow)) {
+            scrollToCurrent("IconView::startDrag");
+        }
+
+    }
+}
+
+Crash report:
+
+-------------------------------------
+Translated Report (Full Report Below)
+-------------------------------------
+
+Process:               Winnow [75102]
+Path:                  /Users/USER/*/Winnow.app/Contents/MacOS/Winnow
+Identifier:            roryhill.zenfolio.com.Winnow
+Version:               ???
+Code Type:             ARM-64 (Native)
+Parent Process:        qtcreator_processlauncher [61419]
+User ID:               501
+
+Date/Time:             2025-06-10 06:08:08.0085 -0700
+OS Version:            macOS 15.5 (24F74)
+Report Version:        12
+Anonymous UUID:        366EE24F-7AF0-8BBA-0235-293926E55D82
+
+Sleep/Wake UUID:       E72E1CD0-3B66-4F1D-9368-A61D4963FFBE
+
+Time Awake Since Boot: 300000 seconds
+Time Since Wake:       2999 seconds
+
+System Integrity Protection: enabled
+
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_INVALID_ADDRESS at 0x00000000000002ac
+Exception Codes:       0x0000000000000001, 0x00000000000002ac
+
+Termination Reason:    Namespace SIGNAL, Code 11 Segmentation fault: 11
+Terminating Process:   exc handler [75102]
+
+VM Region Info: 0x2ac is not in any region.  Bytes before following region: 4344331604
+      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
+      UNUSED SPACE AT START
+--->
+      __TEXT                      102f14000-104188000    [ 18.5M] r-x/r-x SM=COW  /Users/USER/*/Winnow.app/Contents/MacOS/Winnow
+
+Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
+0   QtGui                         	       0x1064cb75c QStandardItemModel::indexFromItem(QStandardItem const*) const + 8 (qstandarditemmodel.cpp:2330) [inlined]
+1   QtGui                         	       0x1064cb75c QStandardItemModel::parent(QModelIndex const&) const + 64 (qstandarditemmodel.cpp:2979)
+2   QtGui                         	       0x1064c5488 QModelIndex::parent() const + 28 (qabstractitemmodel.h:481) [inlined]
+3   QtGui                         	       0x1064c5488 QStandardItemModelPrivate::_q_emitItemChanged(QModelIndex const&, QModelIndex const&) + 92 (qstandarditemmodel.cpp:416)
+4   QtCore                        	       0x105700ef4 QObject::event(QEvent*) + 612 (qobject.cpp:1437)
+5   QtWidgets                     	       0x106d7a748 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3296)
+6   QtWidgets                     	       0x106d7b59c QApplication::notify(QObject*, QEvent*) + 504 (qapplication.cpp:3247)
+7   QtCore                        	       0x1056be450 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 292 (qcoreapplication.cpp:1121)
+8   QtCore                        	       0x1056bf6d8 QCoreApplication::sendEvent(QObject*, QEvent*) + 16 (qcoreapplication.cpp:1539) [inlined]
+9   QtCore                        	       0x1056bf6d8 QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*) + 1448 (qcoreapplication.cpp:1901)
+10  libqcocoa.dylib               	       0x108075320 QCocoaEventDispatcherPrivate::processPostedEvents() + 288 (qcocoaeventdispatcher.mm:899)
+11  libqcocoa.dylib               	       0x1080763e4 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 536 (qcocoaeventdispatcher.mm:921)
+12  CoreFoundation                	       0x19f331cd4 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
+13  CoreFoundation                	       0x19f331c68 __CFRunLoopDoSource0 + 172
+14  CoreFoundation                	       0x19f3319d4 __CFRunLoopDoSources0 + 232
+15  CoreFoundation                	       0x19f330628 __CFRunLoopRun + 840
+16  CoreFoundation                	       0x19f32fc58 CFRunLoopRunSpecific + 572
+17  Foundation                    	       0x1a08fec78 -[NSRunLoop(NSRunLoop) runMode:beforeDate:] + 212
+18  Foundation                    	       0x1a09723a4 -[NSRunLoop(NSRunLoop) runUntilDate:] + 100
+19  AppKit                        	       0x1a34de000 NSCoreDragReceiveMessageProc + 1780
+20  HIServices                    	       0x1a60aa61c CallReceiveMessageCollectionWithMessage + 116
+21  HIServices                    	       0x1a60a4478 DoMultipartDropMessage + 96
+22  HIServices                    	       0x1a60a4238 DoDropMessage + 56
+23  HIServices                    	       0x1a60a2a90 DragInApplication + 952
+24  HIServices                    	       0x1a60ab4ac CoreDragStartDraggingAsync + 588
+25  AppKit                        	       0x1a397cabc -[NSCoreDragManager _dragUntilMouseUp:initialEvent:async:] + 1108
+26  AppKit                        	       0x1a397c5f0 -[NSCoreDragManager _tryCatchDragUntilMouseUp:initialEvent:async:] + 32
+27  CoreFoundation                	       0x19f331098 __CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ + 36
+28  CoreFoundation                	       0x19f330f80 __CFRunLoopDoObservers + 536
+29  CoreFoundation                	       0x19f32fbfc CFRunLoopRunSpecific + 480
+30  HIToolbox                     	       0x1aadc427c RunCurrentEventLoopInMode + 324
+31  HIToolbox                     	       0x1aadc731c ReceiveNextEventCommon + 216
+32  HIToolbox                     	       0x1aaf52484 _BlockUntilNextEventMatchingListInModeWithFilter + 76
+33  AppKit                        	       0x1a3257ab4 _DPSNextEvent + 684
+34  AppKit                        	       0x1a3bf65b0 -[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 688
+35  AppKit                        	       0x1a324ac64 -[NSApplication run] + 480
+36  libqcocoa.dylib               	       0x108073f6c QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 2128 (qcocoaeventdispatcher.mm:405)
+37  QtCore                        	       0x1056c814c QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:100) [inlined]
+38  QtCore                        	       0x1056c814c QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 540 (qeventloop.cpp:182)
+39  libqcocoa.dylib               	       0x108071d00 QCocoaDrag::maybeDragMultipleItems() + 1204 (qcocoadrag.mm:218)
+40  libqcocoa.dylib               	       0x1080716a4 QCocoaDrag::drag(QDrag*) + 300 (qcocoadrag.mm:105)
+41  QtGui                         	       0x106539b08 QDragManager::drag(QDrag*) + 368 (qdnd.cpp:81)
+42  QtGui                         	       0x10653a000 QDrag::exec(QFlags<Qt::DropAction>, Qt::DropAction) + 104 (qdrag.cpp:246)
+43  Winnow                        	       0x1033c94ac IconView::startDrag(QFlags<Qt::DropAction>) + 3172 (iconview.cpp:1903)
+44  Winnow                        	       0x1033c671c IconView::mouseMoveEvent(QMouseEvent*) + 488 (iconview.cpp:1295)
+45  QtWidgets                     	       0x106dc3980 QWidget::event(QEvent*) + 132
+46  QtWidgets                     	       0x106e47834 QFrame::event(QEvent*) + 56 (qframe.cpp:515)
+47  QtWidgets                     	       0x106ff0978 QAbstractItemView::viewportEvent(QEvent*) + 972 (qabstractitemview.cpp:1778)
+48  Winnow                        	       0x1033c6070 IconView::viewportEvent(QEvent*) + 32 (iconview.cpp:1196)
+49  QtCore                        	       0x1056be724 QCoreApplicationPrivate::sendThroughObjectEventFilters(QObject*, QEvent*) + 244 (qcoreapplication.cpp:1253)
+50  QtWidgets                     	       0x106d7a728 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 240 (qapplication.cpp:3290)
+51  QtWidgets                     	       0x106d7c774 QApplication::notify(QObject*, QEvent*) + 5072 (qapplication.cpp:2782)
+52  QtCore                        	       0x1056be450 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 292 (qcoreapplication.cpp:1121)
+53  QtWidgets                     	       0x106d7ace8 QApplicationPrivate::sendMouseEvent(QWidget*, QMouseEvent*, QWidget*, QWidget*, QWidget**, QPointer<QWidget>&, bool, bool) + 808 (qapplication.cpp:2366)
+54  QtWidgets                     	       0x106dd896c QWidgetWindow::handleMouseEvent(QMouseEvent*) + 1416 (qwidgetwindow.cpp:653)
+55  QtWidgets                     	       0x106dd7b78 QWidgetWindow::event(QEvent*) + 100 (qwidgetwindow.cpp:267)
+56  QtWidgets                     	       0x106d7a748 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3296)
+57  QtWidgets                     	       0x106d7b59c QApplication::notify(QObject*, QEvent*) + 504 (qapplication.cpp:3247)
+58  QtCore                        	       0x1056be450 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 292 (qcoreapplication.cpp:1121)
+59  QtGui                         	       0x106220394 QGuiApplicationPrivate::processMouseEvent(QWindowSystemInterfacePrivate::MouseEvent*) + 1760 (qguiapplication.cpp:2325)
+60  QtGui                         	       0x10627c068 QWindowSystemInterface::sendWindowSystemEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 408 (qwindowsysteminterface.cpp:1109)
+61  libqcocoa.dylib               	       0x1080763e4 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 536 (qcocoaeventdispatcher.mm:921)
+62  CoreFoundation                	       0x19f331cd4 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
+63  CoreFoundation                	       0x19f331c68 __CFRunLoopDoSource0 + 172
+64  CoreFoundation                	       0x19f3319d4 __CFRunLoopDoSources0 + 232
+65  CoreFoundation                	       0x19f330628 __CFRunLoopRun + 840
+66  CoreFoundation                	       0x19f32fc58 CFRunLoopRunSpecific + 572
+67  HIToolbox                     	       0x1aadc427c RunCurrentEventLoopInMode + 324
+68  HIToolbox                     	       0x1aadc731c ReceiveNextEventCommon + 216
+69  HIToolbox                     	       0x1aaf52484 _BlockUntilNextEventMatchingListInModeWithFilter + 76
+70  AppKit                        	       0x1a3257ab4 _DPSNextEvent + 684
+71  AppKit                        	       0x1a3bf65b0 -[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 688
+72  AppKit                        	       0x1a324ac64 -[NSApplication run] + 480
+73  libqcocoa.dylib               	       0x108073f6c QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 2128 (qcocoaeventdispatcher.mm:405)
+74  QtCore                        	       0x1056c814c QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:100) [inlined]
+75  QtCore                        	       0x1056c814c QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 540 (qeventloop.cpp:182)
+76  QtCore                        	       0x1056beadc QCoreApplication::exec() + 112 (qcoreapplication.cpp:1442)
+77  Winnow                        	       0x103241c94 main + 1144 (main.cpp:91)
+78  dyld                          	       0x19eea6b98 start + 6076
+
+
+When I drag to Finder everything works correctly.  I get the crash when I drag to a QTreeView FSTree
+based on a QFileSystemModel.
+void FSTree::dropEvent(QDropEvent *event)
+{
+    const QMimeData *mimeData = event->mimeData();
+    if (!mimeData->hasUrls()) {
+        return;
+    }
+
+    QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
+
+    G::stopCopyingFiles = false;
+    G::isCopyingFiles = true;
+    bool isInternal;
+    event->source() ? isInternal = true : isInternal = false;
+    QString srcPath;
+    QStringList srcPaths;
+    int sidecarCount = 0;
+    QString fileCategory;
+    QMap<QString, int> fileCategoryCounts {
+        {"image", 0},
+        {"sidecar", 0},
+        {"other", 0}
+    };
+
+    // Copy or Move operation
+    QString operation = "Copy";
+    if (event->dropAction() == Qt::MoveAction) operation = "Move";
+
+    // Number of files (internal = images, external = all files selected)
+    int count = event->mimeData()->urls().count();
+
+    // iterate files
+    for (int i = 0; i < count; i++) {
+        if (G::stopCopyingFiles) {
+            break;
+        }
+        srcPath = event->mimeData()->urls().at(i).toLocalFile();
+        QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
+        bool copied = QFile::copy(srcPath, destPath);
+
+        if (copied) {
+            // make list of src files to delete if Qt::MoveAction
+            srcPaths << srcPath;
+            // infer and copy/move any sidecars if internal drag operation
+            if (isInternal) {
+                QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
+                sidecarCount += srcSidecarPaths.count();
+                foreach (QString srcSidecarPath, srcSidecarPaths) {
+                    if (QFile(srcSidecarPath).exists()) {
+                        QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
+                        QFile::copy(srcSidecarPath, destSidecarPath);
+                    }
+                }
+            }
+        }
+    }
+
+    // count file categories
+    foreach (srcPath, srcPaths) {
+        QString cat = metadata->fileCategory(srcPath, srcPaths);
+        fileCategoryCounts[cat]++;
+    }
+
+    if (G::stopCopyingFiles) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->reset();
+        G::popUp->showPopup("Terminated " + operation + "operation", 4000);
+    }
+    else {
+        //report on copy/move operation
+        QString op;
+        operation == "Copy" ? op = "Copied " : op = "Moved ";
+        int totFiles = srcPaths.count();
+
+        QString msg = op;
+        int imageCount = 0;
+        int otherCount = 0;
+        if (event->source()) imageCount = srcPaths.count();
+        else {
+            imageCount = fileCategoryCounts["image"];
+            sidecarCount = fileCategoryCounts["sidecar"];
+            otherCount = fileCategoryCounts["other"];
+        }
+
+        if (imageCount)
+            msg += QString::number(imageCount) + " images";
+        if (sidecarCount) {
+            if (imageCount) msg += ", ";
+            msg += QString::number(sidecarCount) + " sidecars";
+        }
+        if (otherCount) {
+            if (imageCount || sidecarCount) msg += ", ";
+            msg += QString::number(otherCount) + " other";
+            if (otherCount == 1) msg += " file";
+            else msg += " files";
+        }
+        if (totFiles == 0)
+            msg += "0 files.";
+        else
+            msg += ".";
+
+        emit status(false, msg, src);
+    }
+    G::isCopyingFiles = false;
+    G::stopCopyingFiles = false;
+
+    // if internal (Winnow) and move then delete source files
+    if (isInternal && event->dropAction() == Qt::MoveAction) {
+        setCurrentIndex(dndOrigSelection);
+        if (srcPaths.count()) {
+            // deleteFiles also deletes sidecars
+            emit deleteFiles(srcPaths);
+        }
+    }
+
+    if (dm->folderList.contains(dropDir)) {
+        emit refreshDataModel();
+    }
+    else {
+        select(dropDir);
+    }
+    event->acceptProposedAction();
+
+    // refresh the fsTree QFileSystemModel
+    refreshModel();
+}

@@ -140,7 +140,7 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     QString fun = "Reader::readIcon";
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(col0Width)
