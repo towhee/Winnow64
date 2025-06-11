@@ -1,4 +1,6 @@
 WHAT'S NEW
+- Fix Copy Drag to FSTree from IconView crashes
+
 - MetaRead2 - new architecture
 - Fix filters (faster + bug fixes)
 - Find duplicates
@@ -15,6 +17,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Combine raw/jpg crashing after toggling on
+- Save preview to same folder not refreshing folder in FSTree
 - Check missing thumbnails process is not working
 - Dissable double click in filters panel
 - Read media speed is unintuitive
@@ -152,6 +155,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Do not pan to predictive focus when mouse click on ImageView
 - Copy Drag to FSTree from IconView crashes
 - Preferences dialog always on top
 - Delete all reports when exit Winnow

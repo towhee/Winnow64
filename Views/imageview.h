@@ -238,6 +238,7 @@ private:
     bool isTrackpadScroll;
     bool isLeftMouseBtnPressed;
     bool isMouseDoubleClick;
+    bool isLocalMouseClick = false;
 
     int scrollCount;
 
