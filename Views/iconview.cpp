@@ -1840,22 +1840,6 @@ void IconView::startDrag(Qt::DropActions)
         return;
     }
 
-    for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex idx = selection.at(i);
-        idx = dm->modelIndexFromProxyIndex(idx);
-        if (!idx.isValid()) {
-            qDebug() << "Invalid index at" << i;
-            continue;
-        }
-        QStandardItem *item = dm->itemFromIndex(idx);
-        if (!item) {
-            qDebug() << "Null item at" << i;
-            continue;
-        }
-        QStandardItem *parent = item->parent();  // <<<<< likely null or invalid
-        qDebug() << "Item" << i << "text:" << item->text() << "parent:" << parent;
-    }
-
     QList<QUrl> urls;
     QList<QString>paths;
     for (int i = 0; i < selection.count(); ++i) {
@@ -1866,8 +1850,6 @@ void IconView::startDrag(Qt::DropActions)
         if (!QFile(xmpPath).exists()) continue;
         if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
     }
-
-    qDebug() << "urls =" << urls;
 
     QDrag *drag = new QDrag(this);
     QMimeData *mimeData = new QMimeData;
@@ -1918,11 +1900,6 @@ void IconView::startDrag(Qt::DropActions)
     // copy
     if (key == Qt::AltModifier) {
         result = drag->exec(Qt::CopyAction);
-        qDebug() << "AltModifier Result =" << result;
-        if (result == Qt::CopyAction) {
-            // moved, so remove drag items from datamodel
-            qDebug() << "Copy operation completed";
-        }
     }
 
     // move
@@ -1943,11 +1920,6 @@ void IconView::startDrag(Qt::DropActions)
         m2->sel->select(dm->currentSfIdx, Qt::NoModifier, "IconView::startDrag");
         if (!isCellVisible(dm->currentSfRow)) {
             scrollToCurrent("IconView::startDrag");
-        }
-
-        // qDebug() << "IconView::startDrag  NoModifier Result =" << result;
-        if (result == Qt::MoveAction) {
-            qDebug() << "Local move operation completed";
         }
     }
 }

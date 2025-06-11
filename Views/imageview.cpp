@@ -842,6 +842,7 @@ void ImageView::zoomToggle()
     if (isFit && zoomFit >= toggleZoom) {
         QString toggleZoomPct = QString::number(toggleZoom * 100) + "%";
         G::popUp->showPopup("Already at " + toggleZoomPct, 1000);
+        isLocalMouseClick = false;
         return;
     }
 
@@ -849,10 +850,10 @@ void ImageView::zoomToggle()
     isFit ? zoom = zoomFit : zoom = toggleZoom;
     scale();
 
-    if (panToFocus) {
+    if (panToFocus && !isLocalMouseClick) {
         predictPanToFocus();
     }
-
+    isLocalMouseClick = false;
 }
 
 void ImageView::rotateImage(int degrees)
@@ -1472,36 +1473,11 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         ;
     //*/
 
-    bool isTraining = event->modifiers() & Qt::AltModifier;;
     bool isZoomToggle = event->modifiers() == Qt::NoModifier;
 
-    if (isTraining) {
-
-        QPoint globalPos = mapToGlobal(event->pos());
-        QPoint viewPos = viewport()->mapFromGlobal(globalPos);
-        QPointF scenePos = mapToScene(viewPos);
-        float xNorm = scenePos.x() * 1.0 / sceneRect().width();
-        float yNorm = scenePos.y() * 1.0 / sceneRect().height();
-        QString type = "creature";
-        QImage image = pmItem->pixmap().toImage();
-
-        emit focusClick(currentImagePath, xNorm, yNorm, type, image);
-        QString path = ":/Sounds/ingest.wav";
-        qApp->beep();
-
-        /*
-        qDebug() << "ImageView::mouseReleaseEvent" << "Alt modifier"
-            << "event->pos" << event->pos()
-            << "sceneRect" << sceneRect()
-            << "globalPos" << globalPos
-            << "viewPos" << viewPos
-            << "scenePos" << scenePos
-            << "xNorm" << xNorm
-            << "yNorm" << yNorm
-            ; //*/
-    }
-
     if (!isMouseDrag && isZoomToggle) {
+        // prevent pan to predictive focus when click on ImageView
+        isLocalMouseClick = true;
         zoomToggle();
     }
 
