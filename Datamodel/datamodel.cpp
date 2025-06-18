@@ -287,6 +287,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::DecoderErrMsgColumn, new QStandardItem("Decoder Err Msg")); horizontalHeaderItem(G::DecoderErrMsgColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::IconSymbolColumn, new QStandardItem("IconSymbolColumn")); //horizontalHeaderItem(G::IconSymbolColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
@@ -948,9 +949,11 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::RowNumberColumn), row + 1);
     setData(index(row, G::RowNumberColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
-    QString tip = fPath;  //fileInfo.absoluteFilePath();
-    if (showThumbNailSymbolHelp) tip += thumbnailHelp;
-    setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
+    // Show tooltips for each item in datamodel views - this has been moved to
+    // IconView::mouseMoveEvent so can show tooltips for icon symbols as well
+    // QString tip = fPath;  //fileInfo.absoluteFilePath();
+    // if (showThumbNailSymbolHelp) tip += thumbnailHelp;
+    // setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     // setData(index(row, G::MSToReadColumn), 0);
     // setData(index(row, G::MSToReadColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -2914,7 +2917,7 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
         QString fPath = dmIdx.data(G::PathRole).toString();
         QString tip = fPath;  //fileInfo.absoluteFilePath();
         if (showThumbNailSymbolHelp) tip += thumbnailHelp;
-        setData(dmIdx, tip, Qt::ToolTipRole);
+        // setData(dmIdx, tip, Qt::ToolTipRole);
     }
 }
 
@@ -3035,6 +3038,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isMetadataLoaded", dots) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
     rpt << "\n  " << G::sj("isMissingThumb", dots) << G::s(index(row, G::MissingThumbColumn).data());
+    rpt << "\n  " << G::sj("isReadWrite", dots) << G::s(index(row, G::ReadWriteColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
     rpt << "\n  " << G::sj("dupIsJpg", dots) << G::s(index(row, 0).data(G::DupIsJpgRole));
@@ -3108,6 +3112,16 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("IsCached", dots) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("Attempts", dots) << G::s(index(row, G::AttemptsColumn).data());
     rpt << "\n  " << G::sj("DecoderId", dots) << G::s(index(row, G::DecoderIdColumn).data());
+
+    using SymbolRectMap = QHash<QString, QRect>;
+    QVariant v = index(row, G::IconSymbolColumn).data();
+    QHash<QString, QRect> rects = v.value<SymbolRectMap>();
+    rpt << "\n  " << G::sj("MissingThumb rect", dots) << G::s(rects["MissingThumb"]);
+    rpt << "\n  " << G::sj("Lock rect", dots) << G::s(rects["Lock"]);
+    rpt << "\n  " << G::sj("Rating rect", dots) << G::s(rects["Rating"]);
+    rpt << "\n  " << G::sj("CombineRawJpg rect", dots) << G::s(rects["CombineRawJpg"]);
+    rpt << "\n  " << G::sj("Cache rect", dots) << G::s(rects["Cache"]);
+
     rpt << "\n  " << G::sj("DecoderReturnStatus", dots) << G::s(index(row, G::DecoderReturnStatusColumn).data());
     rpt << "\n  " << G::sj("DecoderErrMsg", dots) << G::s(index(row, G::DecoderErrMsgColumn).data());
 

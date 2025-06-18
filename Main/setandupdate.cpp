@@ -477,31 +477,21 @@ void MW::setCombineRawJpg()
     G::popUp->showPopup(msg);
     qApp->processEvents();
 
+    // prevent crash when there are videos (did not work)
+    stop();
+    reset();
+
     settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();
 
+    G::combineRawJpg = combineRawJpg;
     dm->sf->combineRawJpg = combineRawJpg;
     fsTree->combineRawJpg = combineRawJpg;
     bookmarks->combineRawJpg = combineRawJpg;
+    // update image counts
     fsTree->refreshModel();
     refreshBookmarks();
-
-
-    /* Reopen the folder and go to the current file.  If the current file was a raw file
-       and Raw+Jpg is checked then the raw file will no longer be in the DataModel. In
-       this case the current file needs to be set to the jpg alternative. */
-    if (dm->rowCount()) {
-        QString fPath = dm->currentFilePath;
-        QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
-        if (combineRawJpg && ext != "jpg") {
-            QString jpgVersion = Utilities::replaceSuffix(fPath, "jpg");
-            if (dm->contains(jpgVersion)) {
-                fPath = jpgVersion;
-                qDebug() << "MW::setCombineRawJpg  fPath =" << fPath;
-                folderAndFileSelectionChange(fPath, "MW::setCombineRawJpg");
-            }
-        }
-    }
+    qDebug() << "MW::setCombineRawJpg combineRawJpg =" << combineRawJpg;
 
    // update the datamodel type column
    QString src = "setCombinedRawJpg";
@@ -517,8 +507,13 @@ void MW::setCombineRawJpg()
 
    // refresh the proxy sort/filter
    dm->sf->filterChange();
+
+   // update elements available to sort and filter
    dm->rebuildTypeFilter();
+
+   // redo the filter to either combine or separate the raw and jpg files
    filterChange("MW::setCombineRawJpg");
+
    updateStatusBar();
 
    G::popUp->close();

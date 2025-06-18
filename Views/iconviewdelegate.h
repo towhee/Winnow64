@@ -46,7 +46,9 @@ public:
     mutable int firstVisible;
     mutable int lastVisible;
     mutable int midVisible;
-    mutable QRect missingIconRect;  // cell coordinates
+    mutable QRect missingIconRect;          // cell coordinates
+    mutable QRect lockRect;                 // cell coordinates
+    mutable QRect combineRawJpgRect;        // cell coordinates
 
     const QRect r;
 
@@ -106,6 +108,7 @@ private:
     QPen vp1Pen;
     QPen vp2Pen;
 
+    int labelFontSize;
     int fontHt;
     int textHeadroom;
     int textHeight;
@@ -140,6 +143,8 @@ private:
     QRectF vpRect;
     qreal imA;
     bool vpRectIsVisible;
+
+    QImage combineRawJpgSymbol;
 };
 
 #endif // THUMBVIEWDELEGATE_H

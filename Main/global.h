@@ -16,7 +16,7 @@
 #include "Log/issue.h"
 #include "Log/log.h"
 
-#define ICON_MIN	40
+#define ICON_MIN	60
 #define ICON_MAX	480  // 256 is default
 #define EXISTS if (p.file.exists())
 
@@ -137,6 +137,7 @@ namespace G
 
         OrientationOffsetColumn,
         RotationDegreesColumn,
+        IconSymbolColumn,
         ShootingInfoColumn,
         SearchTextColumn,
         ErrColumn,
@@ -301,6 +302,7 @@ namespace G
     extern bool autoAddMissingThumbnails;
     extern bool useSidecar;
     extern bool renderVideoThumb;
+    extern bool combineRawJpg;
     extern bool isFilter;
 
     // training

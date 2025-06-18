@@ -28,10 +28,10 @@ IconViewDelegate Anatomy:
 |     |     |     .                        .     |  i  |     |
 |     |     |     .                        .     |  g  |     |
 |     |     |     .                        .     |  h  |     |
-|     |     |....................................|  t  |     |
+|     |     4....................................|  t  |     |
 |     |     |     .                        .     |  :  |     |
 |     |     |     .                        .     |  :  |     |
-|     |     |     .                        .     |  :  |     |
+|     |     |     .        *****           .     |  :  |     |   info row at bottom of thumbRect
 |     3----textRect -----------------------------+--˅--|     |
 |     |                                                |     |
 |     |     <---------- thumbWidth -------------->     |     |
@@ -46,6 +46,7 @@ IconViewDelegate Anatomy:
 1 = fPadOffset
 2 = fPadOffset + tPadOffset
 3 = frameRect.bottomLeft() - textHtOffset
+4 = info row (rating etc) = 1/6 thumbRect height
 
 IconView thumbDock Anatomy
 
@@ -114,7 +115,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     cacheColor = QColor(200,0,0);
     cacheBorderColor = QColor(l20,l20,l20);
     missingThumbColor = QColor(Qt::yellow);
-    ratingBackgoundColor = QColor(b,b,b,50);
+    ratingBackgoundColor = QColor(Qt::yellow);
+    // ratingBackgoundColor = QColor(b,b,b,50);
     labelTextColor = G::textColor;
     videoTextColor = G::textColor;
     numberTextColor = QColor(l60,l60,l60);
@@ -144,6 +146,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     currentOffsetWidth += currentWidth % 2;
     currOffset.setX(currentOffsetWidth);
     currOffset.setY(currentOffsetWidth);
+
+    combineRawJpgSymbol.load(":/images/icon16/link.png");
 }
 
 void IconViewDelegate::setThumbDimensions(int thumbWidth,
@@ -176,6 +180,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     //fPad = thumbPadding;
     font = QApplication::font();
     if (labelFontSize < 6) labelFontSize = 6;
+    this->labelFontSize = labelFontSize;
     font.setPixelSize(labelFontSize);
     QFontMetrics fm(font);
     fontHt = fm.height();
@@ -422,6 +427,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
+    bool isCombineRawJpg = index.model()->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
 
     // Cell structure (see IconViewDelegate Anatomy at top of file).
     QRect cellRect(option.rect);
@@ -450,20 +456,31 @@ void IconViewDelegate::paint(QPainter *painter,
     int alignHorPad = (thumbRect.width() - pm.width()) / 2;
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
                    pm.width(), pm.height());
+
+    // INFO ROW containment rects overlap bottom of thumbRect and
+    // It is 1/6 or 0.17 of the thumbRect height
+
+    int infoHt = thumbRect.height() / 6;
+
+    // save info row symbol rects in datamodel so can show tooltips later
+    QHash<QString, QRect>iconSymbolRects;
+
     /* debug
     if (row == 0)
-    qDebug() << "IconViewDelegate::paint "
-             << "row =" << row
-             << "currentRow =" << currentRow
-             << "selected =" << isSelected
-             << "cellRect =" << cellRect
-             << "frameRect =" << frameRect
-             << "thumbRect =" << thumbRect
-             << "iconRect =" << iconRect
-             << "thumbSize =" << thumbSize
-             << "iconsize =" << iconSize
-                ;
-//             */
+        qDebug() << "IconViewDelegate::paint "
+                 << "row =" << row
+                 << "currentRow =" << currentRow
+                 << "selected =" << isSelected
+                 << "cellRect =" << cellRect
+                 << "frameRect =" << frameRect
+                 << "thumbRect =" << thumbRect
+                 << "iconRect =" << iconRect
+                 << "thumbSize =" << thumbSize
+                 << "infoHt =" << infoHt
+                 << "fontHt =" << fontHt
+                 << "textHeight =" << textHeight
+            ;
+    //             */
 
     // cached rect located bottom right as containment for circle
     int dotDiam = 6;
@@ -472,6 +489,18 @@ void IconViewDelegate::paint(QPainter *painter,
                         thumbRect.bottom() - dotDiam - dotOffset);
     QPoint cacheBottomRight(thumbRect.right() - dotOffset, thumbRect.bottom() - dotOffset);
     QRect cacheRect(cacheTopLeft, cacheBottomRight);
+    iconSymbolRects["Cache"] = cacheRect;
+
+    // combine raw/jpg rect to left of cached rect
+    {
+        int pxSize = 14;
+        int h = pxSize;
+        int w = h * 1.2;
+        int x = cacheRect.left() - w - 2;
+        int y = thumbRect.bottom() - h + 3;
+        combineRawJpgRect.setRect(x, y, w, h);
+        iconSymbolRects["CombineRawJpg"] = combineRawJpgRect;
+    }
 
     // missing thumb rect located bottom left as containment for circle
     const QPoint missingThumbTopLeft(thumbRect.left() + dotDiam - dotOffset,
@@ -479,10 +508,21 @@ void IconViewDelegate::paint(QPainter *painter,
     const QPoint missingThumbBottomRight(thumbRect.left() + dotDiam + dotOffset,
                                          thumbRect.bottom() - dotOffset);
     QRect missingThumbRect(missingThumbTopLeft, missingThumbBottomRight);
-    // public class var so can show tooltip
+    iconSymbolRects["MissingThumb"] = missingThumbRect;
     int missingThumbX = fPad + tPad + dotDiam - dotOffset;
     int missingThumbY = fPad + tPad + thumbRect.height() - dotDiam - dotOffset;
     missingIconRect.setRect(missingThumbX, missingThumbY, dotDiam, dotDiam);
+
+    // locked file rect
+    {
+        int pxSize = 10;
+        int x = missingThumbRect.right() + 2;
+        int y = thumbRect.bottom() - pxSize;
+        int w = pxSize + 2;
+        int h = w;
+        lockRect.setRect(x, y, w, h);
+        iconSymbolRects["Lock"] = lockRect;
+    }
 
     QPainterPath iconPath;
     iconPath.addRoundedRect(iconRect, 6, 6);
@@ -501,7 +541,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
     else labelColorToUse = G::backgroundColor;
 
-    // start painting (painters algorithm - last over first)
+    // START PAINTING (painters algorithm - last over first)
 
     // paint the background label color and border
     painter->setBrush(labelColorToUse);
@@ -551,68 +591,65 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // rating badge (color filled circle with rating number in center)
+    isRatingBadgeVisible = true;
     if (isRatingBadgeVisible || showAllSymbols) {
         // label/rating rect located top-right as containment for circle
-        QColor textColor(Qt::white);
         if (G::ratings.contains(rating)) {
-            // font
-            QFont font = painter->font();
-            int pxSize = 1.0 * G::fontSize * thumbRect.width() * 0.02;
-            if (pxSize < 6) pxSize = 6;
-            font.setPixelSize(pxSize-1);
-            painter->setFont(font);
-            // stars
-            QString stars;
-            stars.fill('*', ratingNumber);
-
-            // define star rect
-            QFontMetrics fm(font);
-            QRect bRect = fm.boundingRect("******");
-            int w = bRect.width();
-            int b = (thumbRect.width() - w) / 2;
-            int h = bRect.height() * 0.5;
-            int t = h / 5;      // translate to center * in ratingRect
-            QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - h + 6 - videoDurationHt);
-            QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() + 6 - videoDurationHt);
-            QRect ratingRect(ratingTopLeft, ratingBottomRight);
-
-            // draw stars
+            QColor textColor(Qt::white);
             QPen ratingTextPen(textColor);
-            painter->setPen(Qt::transparent);
             painter->setBrush(ratingBackgoundColor);
-            painter->drawRoundedRect(ratingRect,8,8);
-            ratingTextPen.setWidth(1);
-            painter->setPen(ratingTextPen);
-            painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignCenter, stars);
+            QFont starFont = painter->font();
+            QString stars;
+            int pxSize;
+            if (infoHt > 14) {
+                stars.fill('*', ratingNumber);
+                pxSize = 20;
+                starFont.setPixelSize(pxSize);
+                painter->setFont(starFont);
+                QFontMetrics fm(starFont);
+                QRect bRect = fm.boundingRect("*******");
+                int w = bRect.width();
+                int b = (thumbRect.width() - w) / 2;
+                int h = pxSize * 0.8;
+                int t = h / 5;      // translate to center * in ratingRect
+                QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h);
+                QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() - videoDurationHt);
+                QRect ratingRect(ratingTopLeft, ratingBottomRight);
+                iconSymbolRects["Rating"] = ratingRect;
+                ratingTextPen.setWidth(1);
+                painter->setPen(ratingTextPen);
+                painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignHCenter | Qt::AlignTop, stars);
+            }
+            else {
+                stars = QString::number(ratingNumber);
+                pxSize = infoHt;
+                starFont.setPixelSize(pxSize);
+                painter->setFont(starFont);
+                painter->setPen(ratingTextPen);
+                int w = pxSize;
+                int h = w;
+                int x = thumbRect.center().x() - w / 2;
+                int y = thumbRect.bottom() - videoDurationHt - h + 3;
+                QRect ratingRect(x, y, w, h);
+                painter->drawText(ratingRect, Qt::AlignBottom, stars);
+            }
         }
+    }
+
+    // show if combine raw/jpg for this image
+    if (isCombineRawJpg) {
+        painter->drawImage(combineRawJpgRect, combineRawJpgSymbol);
     }
 
     // show lock if file does not have read/write permissions
     if (!isReadWrite || showAllSymbols) {
-        int lockSize = thumbRect.height() / 6;
-        if (lockSize < 11) lockSize = 11;
-        if (lockSize > 20) lockSize = 20;
         QFont lockFont = painter->font();
-        lockFont.setPixelSize(lockSize);
+        int pxSize = 10;
+        lockFont.setPixelSize(pxSize);
         painter->setFont(lockFont);
-        QRectF bRect;
-        QRect lockRect(missingThumbRect.right() + 2, thumbRect.bottom() - lockSize,
-                       lockSize, lockSize);
-        painter->drawText(lockRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
-        painter->drawText(bRect, "🔒");
-        /*
-        qDebug() << "IconViewDelegate::paint "
-                 << "font =" << painter->font().pixelSize()
-                 << "lockSize =" << lockSize
-                 << "cellRect =" << cellRect
-                 << "thumbRect =" << thumbRect
-                 << "thumbSize =" << thumbSize
-                 << "iconsize =" << iconSize
-                 << "iconRect =" << iconRect
-                    ;
-                    //*/
+        painter->setPen(G::textColor);  // any pen
+        painter->drawText(lockRect, Qt::AlignBottom, "🔒");
     }
-
 
     // draw the cache circle
     if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
@@ -720,6 +757,14 @@ void IconViewDelegate::paint(QPainter *painter,
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */
     emit update(index, iconRect);
+
+    // save the locations of the symbols so can show tooltips
+    dm->setData(dm->index(row, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
+
+    qDebug() << "IconViewDelegate::paint"
+             << "row =" << index.row()
+             << "CombineRawJpg =" << iconSymbolRects["CombineRawJpg"]
+        ;
 
     painter->restore();
 }
