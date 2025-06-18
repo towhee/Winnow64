@@ -263,7 +263,8 @@ bool MW::loadSettings()
 
     if (!isSettings || simulateJustInstalled) {
         // general
-        combineRawJpg = true;
+        combineRawJpg = false;
+        G::combineRawJpg = false;
         prevMode = "Loupe";
         G::mode = "Loupe";
         G::isLogger = false;

@@ -230,6 +230,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSpacing(0);
     setLineWidth(0);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setMouseTracking(true);
 
     bestAspectRatio = 1;
 
@@ -1295,6 +1296,57 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
             if (event->modifiers() & Qt::AltModifier) startDrag(Qt::CopyAction);
             if (!event->modifiers()) startDrag(Qt::MoveAction);
         }
+    }
+
+    QPoint viewPos = event->pos();
+    QModelIndex index = indexAt(viewPos);
+    if (!index.isValid()) {
+        QToolTip::hideText();
+        return;
+    }
+
+    // locations for the symbols on the icon, saved in the datamodel
+    using SymbolRectMap = QHash<QString, QRect>;
+    QHash<QString, QRect> rects;
+    int row = index.row();
+    QVariant v = dm->index(row, G::IconSymbolColumn).data();
+    if (v.canConvert<SymbolRectMap>()) {
+        rects = v.value<SymbolRectMap>();
+    }
+
+    QString tooltip;
+
+    bool isMissing = dm->sf->index(row, G::MissingThumbColumn).data().toBool();
+    bool isLock = !dm->sf->index(row, G::ReadWriteColumn).data().toBool();
+    bool isRating = dm->sf->index(row, G::RatingColumn).data().toBool();
+    bool isCombineRawJpg = dm->sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
+    bool isCached = dm->sf->index(row, G::IsCachedColumn).data().toBool();
+
+    qDebug() << "IconView::mouseMoveEvent"
+             << "Mouse pos =" << event->pos()
+             << "Lock =" << rects.value("Lock")
+             << "isLock =" << isLock
+        ;
+
+    // Is there a tooltip for this position
+    if (isMissing && rects.value("MissingThumb").contains(viewPos))
+        tooltip = "This image does not have an embedded thumbnail";
+    else if (isLock && rects.value("Lock").contains(viewPos))
+        tooltip = "This image file is locked";
+    else if (isRating && rects.value("Rating").contains(viewPos))
+        tooltip = "Rating";
+    else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
+        tooltip = "This image is a RAW+JPG pair";
+    else if (!isCached && rects.value("Cache").contains(viewPos))
+        tooltip = "This image is not cached";
+    else
+        tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
+
+
+    if (!tooltip.isEmpty()) {
+        QToolTip::showText(event->globalPos() - QPoint(10, 10), tooltip, this/*, {}, 10000*/);
+    } else {
+        QToolTip::hideText();
     }
 }
 

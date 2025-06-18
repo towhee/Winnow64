@@ -167,6 +167,9 @@ public:
 
     QQueue<QPair<QString, bool>> folderQueue;
 
+    // locations of symbols on a thumbnail so can show tooltip
+    QHash<QString, QRect>iconSymbolRects;
+
 signals:
     void stop(QString src);
     void folderChange();

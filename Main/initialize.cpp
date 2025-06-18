@@ -242,6 +242,7 @@ void MW::createDataModel()
     if (isSettings && settings->contains("combineRawJpg"))
         combineRawJpg = settings->value("combineRawJpg").toBool();
     else combineRawJpg = false;
+    G::combineRawJpg = combineRawJpg;
 
     dm = new DataModel(nullptr, metadata, filters, combineRawJpg);
 
