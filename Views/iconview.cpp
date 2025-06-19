@@ -1321,6 +1321,7 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     bool isRating = dm->sf->index(row, G::RatingColumn).data().toBool();
     bool isCombineRawJpg = dm->sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
     bool isCached = dm->sf->index(row, G::IsCachedColumn).data().toBool();
+    bool isVideo = dm->sf->index(row, G::VideoColumn).data().toBool();
 
     qDebug() << "IconView::mouseMoveEvent"
              << "Mouse pos =" << event->pos()
@@ -1330,15 +1331,17 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 
     // Is there a tooltip for this position
     if (isMissing && rects.value("MissingThumb").contains(viewPos))
-        tooltip = "This image does not have an embedded thumbnail";
+        tooltip = "Image does not have an embedded thumbnail";
     else if (isLock && rects.value("Lock").contains(viewPos))
-        tooltip = "This image file is locked";
+        tooltip = "Image file is locked";
     else if (isRating && rects.value("Rating").contains(viewPos))
         tooltip = "Rating";
     else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
-        tooltip = "This image is a RAW+JPG pair";
+        tooltip = "Image is JPG version of a RAW+JPG pair";
     else if (!isCached && rects.value("Cache").contains(viewPos))
         tooltip = "This image is not cached";
+    else if (isVideo && rects.value("Duration").contains(viewPos))
+        tooltip = "Duration";
     else
         tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
 
