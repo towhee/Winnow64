@@ -2502,11 +2502,11 @@ bool MW::stop(QString src)
     dm->abort = true;
 
     // frameDecoder->stop();
-    // videoView->stop();
+    videoView->stop();
     metaRead->abortReaders();
     imageCache->abortProcessing();
 
-    // qApp->processEvents();  // can cause spinning ball from hell
+    // qApp->processEvents();  // can cause spinning ball
     /*
     qDebug() << "MW::stop"
              << "src =" << src

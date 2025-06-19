@@ -43,7 +43,7 @@ Thumb::~Thumb()
 void Thumb::abortProcessing()
 {
     abort = true;
-    // if (frameDecoder) frameDecoder->stop();
+    if (frameDecoder) frameDecoder->stop();
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
