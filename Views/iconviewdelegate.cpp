@@ -579,7 +579,7 @@ void IconViewDelegate::paint(QPainter *painter,
         QFont videoFont = painter->font();
         videoFont.setPixelSize(G::fontSize);
         painter->setFont(videoFont);
-        QRectF bRect;
+        QRect bRect;
         painter->setPen(G::backgroundColor);
         painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
         painter->setBrush(G::backgroundColor);
@@ -588,6 +588,7 @@ void IconViewDelegate::paint(QPainter *painter,
         if (G::renderVideoThumb)
             painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
         videoDurationHt = bRect.height();
+        iconSymbolRects["Duration"] = bRect;
     }
 
     // rating badge (color filled circle with rating number in center)

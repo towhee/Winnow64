@@ -31,9 +31,47 @@
             - frameDecoder->frameChanged calls frameDecoder->getNextThumbNail
        - loop until queue is empty
 
-    ChatGPT was used to make code more robust.  Original code below.
+    ChatGPT was used to make code more robust.  Original code at bottom.
 */
+/*
+    Generates a thumbnail from the first video frame of a video file.
 
+    For each video file, a new QMediaPlayer and QVideoSink instance is created to decode
+    the video frame. QMediaPlayer is connected to a QVideoSink, which emits the
+    videoFrameChanged signal when new video frames are available. The FrameDecoder
+    captures this signal and processes the first valid frame into a QImage and then
+    QPixmap (if needed), which is emitted to the datamodel via the setFrameIcon or
+    frameImage signal.
+
+    This one-player-per-video approach ensures decoding threads (used internally by FFmpeg)
+    are safely isolated. It avoids reuse of QMediaPlayer instances, which can cause
+    crashes if stopped or destroyed while FFmpeg threads are still active. This design is
+    robust to rapid datamodel changes and frequent thumbnail requests.
+
+    FrameDecoder maintains an internal queue of video files to process sequentially.
+    As each thumbnail is generated (or skipped due to an error), the player and sink are
+    cleaned up, and the next item in the queue is processed.
+
+    Summary of workflow:
+        - thumb->loadFromVideo calls frameDecoder->addToQueue
+        - frameDecoder->addToQueue stores the request and starts processing if idle
+        - frameDecoder->getNextThumbNail creates a new mediaPlayer + videoSink per file
+        - mediaPlayer->setSource(path) and ->play() start decoding
+        - QVideoSink emits videoFrameChanged
+        - frameDecoder->handleFrameChanged converts the frame to QImage/QPixmap
+        - appropriate signal is emitted to the UI/datamodel
+        - mediaPlayer is stopped and deleted
+        - queue advances to next file via getNextThumbNail
+
+    Additional improvements:
+        - Invalid or null frames are retried a few times before skipping
+        - Each QMediaPlayer and QVideoSink is deleted with deleteLater()
+        - Uses QPointer to safely handle deletion and avoid dangling pointers
+        - Rapid filter changes and aborts via stop() are safe and thread-stable
+
+    ChatGPT was used to improve robustness, eliminate crashes, and modernize threading
+    and media handling in the original code (at bottom of file).
+*/
 FrameDecoder::FrameDecoder() : QObject(nullptr)
 {
     status = Idle;

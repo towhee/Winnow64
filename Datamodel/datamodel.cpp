@@ -3121,6 +3121,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("Rating rect", dots) << G::s(rects["Rating"]);
     rpt << "\n  " << G::sj("CombineRawJpg rect", dots) << G::s(rects["CombineRawJpg"]);
     rpt << "\n  " << G::sj("Cache rect", dots) << G::s(rects["Cache"]);
+    rpt << "\n  " << G::sj("Duration rect", dots) << G::s(rects["Duration"]);
 
     rpt << "\n  " << G::sj("DecoderReturnStatus", dots) << G::s(index(row, G::DecoderReturnStatusColumn).data());
     rpt << "\n  " << G::sj("DecoderErrMsg", dots) << G::s(index(row, G::DecoderErrMsgColumn).data());

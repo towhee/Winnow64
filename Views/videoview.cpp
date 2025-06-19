@@ -126,7 +126,8 @@ void VideoView::durationChanged(qint64 duration_ms)
 {
     if (G::isLogger || isDebug) G::log("VideoView::durationChanged");
     duration = duration_ms / 1000;
-    scrub->setMaximum(duration_ms);
+    // round duration ms to duration seconds to match position changed
+    scrub->setMaximum(duration * 1000);
     updatePositionLabel();
 }
 
