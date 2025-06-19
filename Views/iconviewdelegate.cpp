@@ -761,10 +761,11 @@ void IconViewDelegate::paint(QPainter *painter,
     // save the locations of the symbols so can show tooltips
     dm->setData(dm->index(row, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
 
+    /*
     qDebug() << "IconViewDelegate::paint"
              << "row =" << index.row()
              << "CombineRawJpg =" << iconSymbolRects["CombineRawJpg"]
-        ;
+        ; */
 
     painter->restore();
 }

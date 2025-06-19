@@ -505,8 +505,8 @@ void MW::setCombineRawJpg()
        }
    }
 
-   // refresh the proxy sort/filter
-   dm->sf->filterChange();
+   // // refresh the proxy sort/filter
+   // dm->sf->filterChange();
 
    // update elements available to sort and filter
    dm->rebuildTypeFilter();
