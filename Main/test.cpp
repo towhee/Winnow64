@@ -392,6 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qApp->setStyleSheet(G::css);
+
     // QModelIndexList selection = selectionModel()->selectedRows();
     // for (int i = 0; i < selection.count(); ++i) {
     //     QModelIndex idx = selection.at(i);

@@ -795,6 +795,7 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 
     // qApp->processEvents();
+    qApp->setStyleSheet(G::css);
 
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 
@@ -2501,24 +2502,11 @@ bool MW::stop(QString src)
     G::stop = true;
     dm->abort = true;
 
-    // frameDecoder->stop();
-    videoView->stop();
     metaRead->abortReaders();
     imageCache->abortProcessing();
 
-    // qApp->processEvents();  // can cause spinning ball
-    /*
-    qDebug() << "MW::stop"
-             << "src =" << src
-             << "G::stop =" << G::stop
-             << "dm->abortLoadingModel =" << dm->abortLoadingModel
-             << "thread =" << QThread::currentThreadId()
-             << "G::currRootFolder =" << dm->currentPrimaryFolderPath;  // rgh ??
-    //*/
-
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
-
 
     buildFilters->abortIfRunning();
 

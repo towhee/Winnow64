@@ -61,8 +61,14 @@ public:
     int fPad2;
     int tPad2;
 
+    QString tooltip;
+
 signals:
     void update(const QModelIndex index, QRect iconRect) const;
+
+protected:
+    bool helpEvent(QHelpEvent *event, QAbstractItemView *view,
+                   const QStyleOptionViewItem &option, const QModelIndex &index);
 
 public slots:
     void setCurrentIndex(QModelIndex current);

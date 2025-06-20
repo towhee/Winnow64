@@ -1298,6 +1298,11 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
         }
     }
 
+    // ToolTip: QListView arbitrarily imposes a 1 second duration for the tooltip.
+    // To overcome, override helpEvent in the delegate and show tooltip there.
+    QToolTip::hideText();
+    iconViewDelegate->tooltip = "";
+
     QPoint viewPos = event->pos();
     QModelIndex index = indexAt(viewPos);
     if (!index.isValid()) {
@@ -1314,7 +1319,7 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
         rects = v.value<SymbolRectMap>();
     }
 
-    QString tooltip;
+    // QString tooltip;
 
     bool isMissing = dm->sf->index(row, G::MissingThumbColumn).data().toBool();
     bool isLock = !dm->sf->index(row, G::ReadWriteColumn).data().toBool();
@@ -1323,34 +1328,45 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     bool isCached = dm->sf->index(row, G::IsCachedColumn).data().toBool();
     bool isVideo = dm->sf->index(row, G::VideoColumn).data().toBool();
 
+    /*
     qDebug() << "IconView::mouseMoveEvent"
              << "Mouse pos =" << event->pos()
              << "Lock =" << rects.value("Lock")
              << "isLock =" << isLock
-        ;
+        ; //*/
 
     // Is there a tooltip for this position
-    if (isMissing && rects.value("MissingThumb").contains(viewPos))
-        tooltip = "Image does not have an embedded thumbnail";
+    if (!rects.value("Thumb").contains(viewPos))
+        iconViewDelegate->tooltip = "Borders:\n"
+                  "  Yellow:\t Current image\n"
+                  "  White:\t Selected image\n"
+                  "  Green:\t Picked\n"
+                  "  Blue:\t Ingested\n"
+                  "  Red:   \t Rejected"
+            ;
+    else if (isMissing && rects.value("MissingThumb").contains(viewPos))
+        iconViewDelegate->tooltip = "Image does not have an embedded thumbnail";
     else if (isLock && rects.value("Lock").contains(viewPos))
-        tooltip = "Image file is locked";
+        iconViewDelegate->tooltip = "Image file is locked";
     else if (isRating && rects.value("Rating").contains(viewPos))
-        tooltip = "Rating";
+        iconViewDelegate->tooltip = "Rating";
     else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
-        tooltip = "Image is JPG version of a RAW+JPG pair";
+        iconViewDelegate->tooltip = "Image is JPG version of a RAW+JPG pair";
     else if (!isCached && rects.value("Cache").contains(viewPos))
-        tooltip = "This image is not cached";
+        iconViewDelegate->tooltip = "This image is not cached";
     else if (isVideo && rects.value("Duration").contains(viewPos))
-        tooltip = "Duration";
+        iconViewDelegate->tooltip = "Duration";
     else
-        tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
+        iconViewDelegate->tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
 
 
-    if (!tooltip.isEmpty()) {
-        QToolTip::showText(event->globalPos() - QPoint(10, 10), tooltip, this/*, {}, 10000*/);
-    } else {
-        QToolTip::hideText();
-    }
+    // if (!iconViewDelegate->tooltip.isEmpty()) {
+    //     iconViewDelegate->tooltip = tooltip;
+    //     // QRect dummyRect(event->globalPos() - QPoint(10, 10), QSize(20, 20));
+    //     // QToolTip::showText(event->globalPos() - QPoint(10, 10), tooltip);
+    // } else {
+    //     // QToolTip::hideText();
+    // }
 }
 
 void IconView::mouseReleaseEvent(QMouseEvent *event)
