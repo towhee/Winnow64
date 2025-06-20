@@ -2184,10 +2184,6 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(rotateRightAction);
     thumbViewActions->append(rotateLeftAction);
-    thumbViewActions->append(separatorAction2);
-    //    thumbViewActions->append(thumbsWrapAction);
-    thumbViewActions->append(thumbsEnlargeAction);
-    thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(separatorAction3);
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);

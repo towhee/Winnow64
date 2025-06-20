@@ -3116,6 +3116,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     using SymbolRectMap = QHash<QString, QRect>;
     QVariant v = index(row, G::IconSymbolColumn).data();
     QHash<QString, QRect> rects = v.value<SymbolRectMap>();
+    rpt << "\n  " << G::sj("Thumb rect", dots) << G::s(rects["Thumb"]);
     rpt << "\n  " << G::sj("MissingThumb rect", dots) << G::s(rects["MissingThumb"]);
     rpt << "\n  " << G::sj("Lock rect", dots) << G::s(rects["Lock"]);
     rpt << "\n  " << G::sj("Rating rect", dots) << G::s(rects["Rating"]);

@@ -267,7 +267,6 @@ QString WidgetCSS::toolTip()
         "border-style: solid;"
         "border-color: " + QColor(l10,l10,l10).name() + ";"
         "margin: 2px;"
-        //"font-size:" + QString::number(30) + "px;"
         "font-size:" + QString::number(fontSize) + "px;"
     "}"
     ;

@@ -342,6 +342,24 @@ void IconViewDelegate::resetFirstLastVisible()
     midVisible = 0;
 }
 
+bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
+                                 const QStyleOptionViewItem &option,
+                                 const QModelIndex &index)
+{
+    if (event->type() == QEvent::ToolTip)
+    {
+        // QString toolTipData = view->model()->data(index, Qt::ToolTipRole).toString();
+        if (!tooltip.isEmpty())
+        {
+            QPoint pos = event->globalPos() - QPoint(20, 20);
+            QToolTip::showText(pos, tooltip, view, QRect(), 5000);
+            return true;
+        }
+    }
+
+    return QStyledItemDelegate::helpEvent(event, view, option, index);
+}
+
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
                                  const QModelIndex& index) const
 {
@@ -417,7 +435,6 @@ void IconViewDelegate::paint(QPainter *painter,
     if (duration.isNull()) duration = "XXX";
     bool isSelected = dm->isSelected(row);
     bool isCurrentIndex = row == dm->currentSfRow;
-//    bool isCurrentIndex = row == dm->currentSfIdx.row();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     bool isPicked = pickStatus == "Picked";
     bool isRejected = pickStatus == "Rejected";
@@ -433,6 +450,12 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
+
+    // save info row symbol rects in datamodel so can show tooltips later
+    QHash<QString, QRect>iconSymbolRects;
+
+    iconSymbolRects["Thumb"] = QRect(thumbRect.topLeft() + fPadOffset,
+                                     thumbRect.bottomRight() - fPadOffset);
 
     // get icon (thumbnail) from the datamodel and scale
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -461,9 +484,6 @@ void IconViewDelegate::paint(QPainter *painter,
     // It is 1/6 or 0.17 of the thumbRect height
 
     int infoHt = thumbRect.height() / 6;
-
-    // save info row symbol rects in datamodel so can show tooltips later
-    QHash<QString, QRect>iconSymbolRects;
 
     /* debug
     if (row == 0)
