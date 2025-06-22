@@ -429,6 +429,7 @@ public slots:
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void currentFolderDeletedExternally(QString path);
+    void refresh();
     bool stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();

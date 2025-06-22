@@ -21,13 +21,12 @@ public:
                        Metadata *metadata,
                        DataModel *dm,
                        QWidget *parent = nullptr);
-    ~SaveAsDlg();
+    ~SaveAsDlg() override;
+    QString getFolderPath();
 
 private slots:
     void on_selectBtn_clicked();
-
     void on_cancelBtn_clicked();
-
     void on_saveBtn_clicked();
 
 private:
@@ -35,6 +34,7 @@ private:
     QModelIndexList &selection;
     Metadata *metadata;
     DataModel *dm;
+    QString savedFolderPath;
 };
 
 #endif // SAVEASDLG_H

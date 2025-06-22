@@ -776,6 +776,53 @@ void DataModel::removeFolder(const QString &folderPath)
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
+void DataModel::refresh()
+{
+    if (G::isLogger) G::log("DataModel::refresh");
+
+    for (QString folderPath : folderList) {
+        QDir dir(folderPath);
+        dir.setNameFilters(*fileFilters);
+        dir.setFilter(QDir::Files);
+        QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+        /*
+        if (combineRawJpg) {
+            // make sure, if raw+jpg pair, that raw file is first to make combining easier
+            std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThanCombineRawJpg);
+        }
+        else {
+            std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+        }
+        */
+
+        // convert folderFileInfoList to folderFileList
+        QStringList folderFileList;
+        for (const QFileInfo &fileInfo : folderFileInfoList) {
+            folderFileList << fileInfo.filePath();
+        }
+
+        // check for insertions
+        for (const QString &fPath : folderFileList) {
+            if (fPathRowContains(fPath)) continue;
+            insert(fPath);
+        }
+        // for (const QFileInfo &fileInfo : folderFileInfoList) {
+        //     QString fPath = fileInfo.filePath();
+        //     if (fPathRowContains(fPath)) continue;
+        //     insert(fPath);
+        // }
+
+        // check for deletions
+        QHashIterator<QString, int> i(fPathRow);
+        while (i.hasNext()) {
+            i.next();
+            if (!folderFileList.contains(i.key())) {
+                remove(i.key());
+            }
+        }
+    }
+}
+
 QString DataModel::primaryFolderPath()
 {
     if (G::isLogger) G::log("DataModel::primaryFolderPath");

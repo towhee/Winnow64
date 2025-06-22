@@ -205,7 +205,20 @@ void MW::saveAsFile()
     }
     saveAsDlg = new SaveAsDlg(selection, metadata, dm);
     saveAsDlg->setStyleSheet(css);
-    saveAsDlg->exec();
+    if (saveAsDlg->exec() == QDialog::Accepted) {
+        QString savedFolderPath = saveAsDlg->getFolderPath();
+        qDebug() << "MW::saveAsFile"
+                 << "savedFolderPath =" << savedFolderPath
+                 << "dm->folderList =" << dm->folderList
+            ;
+        if (dm->folderList.contains(savedFolderPath)) {
+            qDebug() << "User saved to:" << savedFolderPath << "Do something";
+            refresh();
+        }
+    }
+
+    fsTree->updateCount();
+    bookmarks->updateCount();
 }
 
 void MW::dmInsert(QStringList pathList)
@@ -279,7 +292,6 @@ void MW::insertFiles(QStringList pathList)
 
     QString fPath;
     QList<int> insertedRows;
-    int dmRow;
     QString src = "MW::insertFiles";
 
     // must sort fPaths before insertion in case multiple items are appended to end of datamodel
