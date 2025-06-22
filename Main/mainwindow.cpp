@@ -2469,6 +2469,30 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     return;
 }
 
+void MW::refresh()
+{
+/*
+    If images have been added or removed from any of the folders currently selected
+    then refresh the datamodel and views to match without reloading all the folders.
+*/
+    if (G::isLogger) G::log("MW::refresh");
+
+    dm->refresh();
+    buildFilters->rebuild();
+    // filterChange("MW::refresh");
+    // rev up metaRead
+    if (G::useReadMeta) {
+        updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+        // qDebug() << "MW::refresh invoking metaRead  startRow =" << startRow;
+        dm->setIconRange(dm->currentSfRow);
+        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                  Q_ARG(int, dm->currentSfRow),
+                                  Q_ARG(bool, true),
+                                  Q_ARG(QString, "MW::refresh")
+                                  );
+    }
+}
+
 bool MW::stop(QString src)
 {
 /*
@@ -2965,7 +2989,7 @@ void MW::folderChangeCompleted()
     // G::isModifyingDatamodel = false;
 
     // missing thumbnails
-    // /*
+    /*
     qDebug() << "MW::folderChangeCompleted"
              << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
              << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails

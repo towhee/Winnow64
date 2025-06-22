@@ -44,6 +44,12 @@ SaveAsDlg::~SaveAsDlg()
     delete ui;
 }
 
+QString SaveAsDlg::getFolderPath()
+{
+    if (savedFolderPath.endsWith('/')) savedFolderPath.chop(1);
+    return savedFolderPath;
+}
+
 void SaveAsDlg::on_selectBtn_clicked()
 {
     QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
@@ -90,5 +96,6 @@ void SaveAsDlg::on_saveBtn_clicked()
         image.save(newFilePath, imageType, compression);
         delete getImage;
     }
+    savedFolderPath = ui->folderPath->text();
     QDialog::accept();
 }

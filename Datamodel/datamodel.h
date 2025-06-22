@@ -62,6 +62,7 @@ public:
     void clearPicks();
     void remove(QString fPath);
     int insert(QString fPath);
+    void refresh();
     QModelIndex indexFromPath(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     QModelIndex proxyIndexFromModelIndex(QModelIndex dmIdx);
