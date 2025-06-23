@@ -1098,7 +1098,7 @@ void MW::createFolderDock()
     folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     folderRefreshBtn->setToolTip("Refresh folders and image counts");
     //folderRefreshBtn->setStyleSheet("QToolTip { color: red;}");
-    connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
+    connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
     folderTitleLayout->addWidget(folderRefreshBtn);
 
     // Spacer
@@ -1160,7 +1160,7 @@ void MW::createFavDock()
     BarBtn *favRefreshBtn = new BarBtn();
     favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     favRefreshBtn->setToolTip("Refresh bookmarks and image counts");
-    connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
+    connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
     favTitleLayout->addWidget(favRefreshBtn);
 
     // Spacer

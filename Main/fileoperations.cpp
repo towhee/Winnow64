@@ -254,24 +254,10 @@ void MW::dmInsert(QStringList pathList)
             qDebug() << src << "insert" << fPath;
             dm->insert(fPath);
             ImageMetadata m = dm->imMetadata(fPath, false);
-            // filters->save();
-            // clearAllFilters();
-            // dm->sf->suspend(false, "MW::filterChange");
-            // dm->sf->filterChange("MW::filterChange");  // crash (removed wait in SortFilter::filterChange)
             buildFilters->rebuild();
-            // filters->restore();
             sel->select(dm->currentFilePath);
         }
     }
-    // imageView->currentImageHasChanged = true;
-    // rebuild the filters to include new or changed images
-    // buildFilters->build();
-    // filterChange(src);
-    // updateAllFilters();
-    // update current to account for insertions
-    // dm->setCurrent(dm->currentFilePath, dm->instance);
-    // selection triggers thumbnail and imagecache updates
-    // sel->select(dm->currentFilePath);
 }
 
 void MW::insertFiles(QStringList pathList)

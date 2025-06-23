@@ -1295,7 +1295,7 @@ void FSTree::dropEvent(QDropEvent *event)
     // END MIRRORED CODE SECTION
 
     // refresh the fsTree QFileSystemModel
-    refreshModel();
+    // refreshModel();
 }
 
 void FSTree::debugSelectedFolders(QString msg)

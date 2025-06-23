@@ -30,11 +30,11 @@ void MW::createFileActions()
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
-    refreshCurrentAction = new QAction(tr("Refresh Current Folder(s)"), this);
-    refreshCurrentAction->setObjectName("refreshFolder");
+    refreshCurrentAction = new QAction(tr("Refresh"), this);
+    refreshCurrentAction->setObjectName("refresh");
     refreshCurrentAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshCurrentAction);
-    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refreshDataModel);
+    connect(refreshCurrentAction, &QAction::triggered, this, &MW::refresh);
 
     openUsbAction = new QAction(tr("Open Memory Card..."), this);
     openUsbAction->setObjectName("openUsbFolder");
@@ -190,19 +190,11 @@ void MW::createFileActions()
     addAction(renameAction);
     connect(renameAction, &QAction::triggered, this, &MW::renameSelectedFiles);
 
-    // subFoldersAction = new QAction(tr("Include Subfolders (or shift+ctrl click)  "), this);
-    // subFoldersAction->setObjectName("subFolders");
-    // subFoldersAction->setShortcutVisibleInContextMenu(true);
-    // subFoldersAction->setCheckable(true);
-    // subFoldersAction->setChecked(false);
-    // addAction(subFoldersAction);
-    // connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
-
-    refreshFoldersAction = new QAction(tr("Refresh folders"), this);
-    refreshFoldersAction->setObjectName("refreshFolders");
+    refreshFoldersAction = new QAction(tr("Refresh"), this);
+    refreshFoldersAction->setObjectName("refresh");
     refreshFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshFoldersAction);
-    connect(refreshFoldersAction, &QAction::triggered, this, &MW::refreshFolders);
+    connect(refreshFoldersAction, &QAction::triggered, this, &MW::refresh);
 
     collapseFoldersAction = new QAction(tr("Collapse all folders"), this);
     collapseFoldersAction->setObjectName("collapseFolders");
@@ -1699,7 +1691,7 @@ void MW::createFileMenu()
     fileMenu->addAction(revealFileAction);
 
     fileMenu->addSeparator();
-    fileMenu->addAction(refreshCurrentAction);
+    // fileMenu->addAction(refreshCurrentAction);
     fileMenu->addAction(refreshFoldersAction);
 
     fileMenu->addSeparator();
@@ -2040,7 +2032,7 @@ void MW::createFSTreeContextMenu()
     fsTreeActions = new QList<QAction *>;
     //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
-    fsTreeActions->append(refreshCurrentAction);
+    // fsTreeActions->append(refreshCurrentAction);
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(ejectActionFromContextMenu);
