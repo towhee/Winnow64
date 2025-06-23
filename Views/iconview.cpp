@@ -1992,6 +1992,10 @@ void IconView::startDrag(Qt::DropActions)
         if (!isCellVisible(dm->currentSfRow)) {
             scrollToCurrent("IconView::startDrag");
         }
+
+        qDebug() << "IconView::startDrag moved" << paths;
+        // update image counts
+        // m2->refresh();
     }
 }
 

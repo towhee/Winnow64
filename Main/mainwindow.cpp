@@ -2436,7 +2436,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    // /*
+    /*
     qDebug() << "MW::folderAndFileSelectionChange"
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
@@ -2450,7 +2450,6 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (centralLayout->currentIndex() == CompareTab) {
         centralLayout->setCurrentIndex(LoupeTab);
     }
-    // dm->selectionModel->clear();
 
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
@@ -2461,29 +2460,28 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     }
 
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
-    // qDebug() << "MW::folderAndFileSelectionChange" << folderAndFileChangePath;
-    // bool resetDatamodel = true;
-    // bool recurse = false;
-    // folderSelectionChange(folder, "Add", resetDatamodel, recurse);
-
     return;
 }
 
 void MW::refresh()
 {
 /*
-    If images have been added or removed from any of the folders currently selected
-    then refresh the datamodel and views to match without reloading all the folders.
+    Get a list of source image files (in the selected folders) that have been added,
+    removed or modified. Refresh the datamodel and views to match without reloading all
+    the folders.  Update the image counts in FSTree and bookmarks.
+
+    Called by MW::saveAsFile if saved to a currently selected folder.
 */
     if (G::isLogger) G::log("MW::refresh");
 
     dm->refresh();
     buildFilters->rebuild();
-    // filterChange("MW::refresh");
+    // fsTree->refreshModel();
+    // fsTree->updateCount();
+    // bookmarks->updateCount();
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        // qDebug() << "MW::refresh invoking metaRead  startRow =" << startRow;
         dm->setIconRange(dm->currentSfRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, dm->currentSfRow),
@@ -4521,6 +4519,15 @@ void MW::updateState()
 
 void MW::refreshFolders()
 {
+/*
+    Update image counts in FSTree and Bookmarks.
+
+    Called by FSTree and Bookmarks buttons, Menu File > Refresh folders
+    and MW::openUsbFolder
+*/
+    refresh();
+    return;
+
     if (G::isLogger) G::log("MW::refreshFolders");
     bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
@@ -5270,6 +5277,9 @@ void MW::refreshDataModel()
     Called by FSTree::dropEvent or BookMarks::dropEvent.
 
 */
+    refresh();
+    return;
+
     QString fun = "MW::refreshDataModel";
     if (G::isLogger) G::log(fun);
     // QString src = "fun";
@@ -5420,7 +5430,7 @@ void MW::openUsbFolder()
         G::popUp->showPopup("No USB Drives available");
     }
 
-    refreshFolders();
+    refresh();
     bookmarks->selectionModel()->clear();
     QString fPath = usbMap[drive].rootPath;
     if (isFolderValid(fPath, true, false)) {

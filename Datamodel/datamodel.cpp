@@ -779,23 +779,23 @@ void DataModel::removeFolder(const QString &folderPath)
 void DataModel::refresh()
 {
     if (G::isLogger) G::log("DataModel::refresh");
-
+    /*
     for (QString folderPath : folderList) {
         QDir dir(folderPath);
         dir.setNameFilters(*fileFilters);
         dir.setFilter(QDir::Files);
         QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-        /*
-        if (combineRawJpg) {
-            // make sure, if raw+jpg pair, that raw file is first to make combining easier
-            std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThanCombineRawJpg);
-        }
-        else {
-            std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
-        }
-        */
 
-        // convert folderFileInfoList to folderFileList
+        // if (combineRawJpg) {
+        //     // make sure, if raw+jpg pair, that raw file is first to make combining easier
+        //     std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThanCombineRawJpg);
+        // }
+        // else {
+        //     std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
+        // }
+
+
+        // build folderFileList from folderFileInfoList
         QStringList folderFileList;
         for (const QFileInfo &fileInfo : folderFileInfoList) {
             folderFileList << fileInfo.filePath();
@@ -806,11 +806,6 @@ void DataModel::refresh()
             if (fPathRowContains(fPath)) continue;
             insert(fPath);
         }
-        // for (const QFileInfo &fileInfo : folderFileInfoList) {
-        //     QString fPath = fileInfo.filePath();
-        //     if (fPathRowContains(fPath)) continue;
-        //     insert(fPath);
-        // }
 
         // check for deletions
         QHashIterator<QString, int> i(fPathRow);
@@ -821,6 +816,32 @@ void DataModel::refresh()
             }
         }
     }
+    */
+
+    QStringList added;
+    QStringList removed;
+    QStringList modified;
+
+    if (!sourceModified(added, removed, modified)) return;
+
+    // additions
+    for (const QString &fPath : added) {
+        qDebug() << "DataModel::refresh add" << fPath;
+        insert(fPath);
+    }
+
+    // removals
+    for (const QString &fPath : removed) {
+        remove(fPath);
+    }
+
+    // modifications
+    for (const QString &fPath : modified) {
+        int row = rowFromPath(fPath);
+        setData(index(row, G::MetadataAttemptedColumn), false);
+        setData(index(row, G::IconLoadedColumn), false);
+    }
+
 }
 
 QString DataModel::primaryFolderPath()
@@ -2488,9 +2509,11 @@ void DataModel::rebuildRowFromPathHash()
 bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
 {
 /*
-    Called from MW::refreshDataModel. Determine if the eligible file count has changed
+    Determine if the eligible file count has changed
     and/or any images have been modified. If a file has been modified since the datamodel
     was loaded then it is added to the modifiedFiles list.
+
+    Called from MW::refreshDataModel.
 */
     if (G::isLogger) G::log("DataModel::sourceModified");
     if (isDebug)
@@ -2512,7 +2535,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
             QString fPath = info.filePath();
             srcImageFiles << fPath;
             // in datamodel?
-            // if (!fPathRow.contains(fPath)) {
             if (!fPathRowContains(fPath)) {
                 added << fPath;
             }
