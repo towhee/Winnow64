@@ -392,7 +392,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    refresh();
+    fsTree->viewport()->update();
+
+    // fsTree->updateCount();
+    // refresh();
 
     // QModelIndexList selection = selectionModel()->selectedRows();
     // for (int i = 0; i < selection.count(); ++i) {

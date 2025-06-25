@@ -144,6 +144,7 @@ private:
 
     void launchDecoders(QString src);
     bool okToCache(int id, int sfRow);
+    bool nullInImCache();
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList

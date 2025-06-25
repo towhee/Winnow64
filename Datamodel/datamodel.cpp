@@ -3411,7 +3411,9 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     Sets the local suspendFiltering flag.  When true, filterAcceptsRow ignores calls.
     When false the filtering is refreshed.
 */
-    if (G::isLogger) G::log("SortFilter::suspend");
+    QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
+              " src = " + src;
+    if (G::isLogger) G::log("SortFilter::suspend", msg);
     // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;
 }

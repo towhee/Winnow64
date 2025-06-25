@@ -5,20 +5,25 @@
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
+    qDebug() << "MW::dragEnterEvent";
+
     if (event->mimeData()->hasUrls()) {
         event->acceptProposedAction();
     }
+    else event->ignore();
 }
 
 void MW::dragLeaveEvent(QDragLeaveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
+    qDebug() << "MW::dragLeaveEvent";
     dragLabel->hide();
 }
 
 void MW::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragMoveEvent");
+    qDebug() << "MW::dragMoveEvent";
 
     // Cannot show in source folder as this is already the source
     QObject *source = event->source();
@@ -38,7 +43,7 @@ void MW::dragMoveEvent(QDragMoveEvent *event)
         dragLabel->move(globalPos + QPoint(xOffset, 10)); // Offset slightly from cursor
         dragLabel->show();
 
-        event->accept(); // Accept the event
+        event->accept();
     }
     else {
         event->ignore();
@@ -54,10 +59,12 @@ void MW::dropEvent(QDropEvent *event)
     // Ignore if source is Winnow.  Probably result of an aborted drag.
     if (event->source() == thumbView) {
         thumbView->ignoreDrop = true;
+        event->ignore();
         return;
     }
     if (event->source() == gridView) {
         gridView->ignoreDrop = true;
+        event->ignore();
         return;
     }
 
@@ -65,12 +72,14 @@ void MW::dropEvent(QDropEvent *event)
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         handleDrop(fPath);
         dragLabel->hide();
+        event->ignore();
     }
 }
 
 void MW::handleDrop(QString fPath)
 {
     if (G::isLogger) G::log("MW::handleDrop");
+    qDebug() << "MW::handleDrop" << fPath;
     QFileInfo info(fPath);
     QString incoming = info.dir().absolutePath();
     if (dm->folderList.contains(incoming)) {

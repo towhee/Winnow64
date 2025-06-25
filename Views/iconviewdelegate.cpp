@@ -454,8 +454,8 @@ void IconViewDelegate::paint(QPainter *painter,
     // save info row symbol rects in datamodel so can show tooltips later
     QHash<QString, QRect>iconSymbolRects;
 
-    iconSymbolRects["Thumb"] = QRect(thumbRect.topLeft() + fPadOffset,
-                                     thumbRect.bottomRight() - fPadOffset);
+    iconSymbolRects["Thumb"] = QRect(thumbRect.topLeft() + QPoint(1,1),
+                                     thumbRect.bottomRight() - QPoint(1,1));
 
     // get icon (thumbnail) from the datamodel and scale
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));

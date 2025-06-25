@@ -2473,12 +2473,13 @@ void MW::refresh()
     Called by MW::saveAsFile if saved to a currently selected folder.
 */
     if (G::isLogger) G::log("MW::refresh");
-
+    qDebug() << "MW::refresh";
     dm->refresh();
     buildFilters->rebuild();
-    // fsTree->refreshModel();
-    // fsTree->updateCount();
-    // bookmarks->updateCount();
+    fsTree->updateCount();
+    // fsTree->update();
+    // if (fsTree->isVisible()) fsTree->raise();
+    bookmarks->updateCount();
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true, true, "MW::updateChange");
@@ -5368,7 +5369,8 @@ void MW::refreshCurrentAfterReload()
 {
 /*
     This slot is triggered after the metaRead thread has run and isRefreshingDM = true to
-    complete the refresh current folder process by selecting the previously selected thumb.
+    complete the refresh current folder process by selecting the previously selected
+    thumb.
 */
     if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;

@@ -1,22 +1,612 @@
-Qt, c++.
+FSTree shows the OS folders and the count of images in each folder.  I need a reliable way
+to force a recount to update, but the count row remains hidden until I mouse over the tree.
 
-I have a QListView IconView, set to QListView::IconMode.  In each item I show a thumbnail
-of an image.  I set a delegate:
-    setItemDelegate(iconViewDelegate);
+fstree.h
+#include <QtWidgets>
+#include <QHash>
+#include "Datamodel/datamodel.h"
+#include "Metadata/metadata.h"
+#include "Utilities/utilities.h"
+#include "ui_foldershelp.h"
+#include "HoverDelegate.h"
 
-I also show various symbols in iconViewDelegate in public QRect such as:
-QRect missingThumb.
-QRect lock.
-QRect rating
-QRect combineRawJpg.
-QRect cache.
+#ifndef FSTREE_H
+#define FSTREE_H
 
-IconViewDelegate::paint row = 0 CombineRawJpg = QRect(119,119 7x7)
-IconViewDelegate::paint row = 1 CombineRawJpg = QRect(256,119 7x7)
-IconViewDelegate::paint row = 2 CombineRawJpg = QRect(393,119 7x7)
-IconViewDelegate::paint row = 3 CombineRawJpg = QRect(530,119 7x7)
-IconViewDelegate::paint row = 4 CombineRawJpg = QRect(667,119 7x7)
-IconViewDelegate::paint row = 5 CombineRawJpg = QRect(804,119 7x7)
-IconViewDelegate::paint row = 6 CombineRawJpg = QRect(941,119 7x7)
+class ImageCounter : public QThread {
+    Q_OBJECT
 
-When I mouse over each of the symbol QRects I want to show an explanatory tooltip.
+public:
+    ImageCounter(const QString &path, Metadata &metadata,
+                 bool &combineRawJpg, QStringList *fileFilters,
+                 QObject *parent = nullptr);
+
+signals:
+    void countReady(const QString &path, int count);
+
+protected:
+    void run() override;
+
+private:
+    QString dPath;
+    Metadata &metadata;
+    bool combineRawJpg;
+    QStringList *fileFilters;
+
+    int computeImageCount(const QString &path);
+};
+
+class FSFilter : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    FSFilter(QObject *parent);
+    void refresh();
+
+protected:
+    bool filterAcceptsRow(int source_row,
+                          const QModelIndex &source_parent) const; // override;
+};
+
+class FSModel : public QFileSystemModel
+{
+    Q_OBJECT
+
+public:
+    FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg);
+        bool hasChildren(const QModelIndex &parent) const;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+    QVariant data(const QModelIndex &index, int role) const;
+    void clearCount();
+    void updateCount(const QString &dPath);
+    bool showImageCount;
+    bool &combineRawJpg;
+    bool forceRefresh = true;
+    Metadata &metadata;
+    int imageCountColumn = 4;
+    QStringList *fileFilters;
+
+signals:
+    void update() const;        // const req'd but shows warning
+
+private:
+    QDir *dir;
+    mutable QHash <QString, QString> count;
+};
+
+class FSTree : public QTreeView
+{
+        Q_OBJECT
+
+public:
+    FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
+    void createModel();
+    void setShowImageCount(bool showImageCount);
+    void updateCount();
+    void updateCount(const QString &dPath);
+    int imageCount(QString path);
+    bool isShowImageCount();
+    qlonglong selectionCount();
+
+    FSModel *fsModel;
+    FSFilter *fsFilter;
+
+        QModelIndex getCurrentIndex();
+    void scrollToCurrent();
+    QString selectSrc = "";
+    QString currentFolderPath();
+    QStringList selectedFolderPaths() const;
+
+    bool combineRawJpg;
+    QString hoverFolderName;
+
+    QFileSystemWatcher volumesWatcher;
+
+    void test();
+    void debugSelectedFolders(QString msg = "");
+
+public slots:
+    bool select(QString folderPath, QString modifier = "None", QString src = "");
+    void resizeColumns();
+    void refreshModel();
+    void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
+    void howThisWorks();
+
+private slots:
+    void wheelStopped();
+    void hasExpanded(const QPersistentModelIndex &index);
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;       // debugging
+    void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
+
+signals:
+        void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
+    void indexExpanded();
+    void selectionChange();
+    void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
+    void datamodelQueue(QString dPath, bool isAdding);
+    void addToDataModel(QString dPath);
+    void removeFromDataModel(QString dPath);
+    void abortLoadDataModel();
+    void refreshDataModel();
+    void deleteFiles(QStringList srcPaths);
+    void renameEjectAction(QString path);
+    void renameEraseMemCardContextAction(QString path);
+    void renamePasteContextAction(QString folderName);
+    void renameDeleteFolderAction(QString folderName);
+    void renameCopyFolderPathAction(QString folderName);
+    void renameRevealFileAction(QString folderName);
+    void addBookmarkAction(QString folderName);
+    void status(bool keepBase, QString msg, QString src);
+
+private:
+    void selectRecursively(QString folderPath, bool toggle = false);
+    struct ViewState {
+        QPointF scrollPosition;
+        QList<QModelIndex> selectedIndexes;
+    };
+    void saveState(ViewState& state) const;
+    bool restoreState(const ViewState& state) const;
+    QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
+    QSet<QPersistentModelIndex> nodesToExpand;
+    QElapsedTimer expansionTimer;
+    QElapsedTimer rapidClick;
+    bool eventLoopRunning;
+    QPersistentModelIndex justExpandedIndex;
+    QModelIndex dndOrigSelection;
+    QModelIndex prevCurrentIndex;
+    QFileSystemModel fileSystemModel;
+    QItemSelectionModel* treeSelectionModel;
+    Metadata *metadata;
+    DataModel *dm;
+    HoverDelegate *delegate;
+    QDir *dir;
+    QStringList *fileFilters;
+    QList<QPersistentModelIndex> recursedForSelection;
+    // QModelIndexList recursedForSelection;
+    QModelIndex rightClickIndex;
+    int imageCountColumnWidth;
+    QElapsedTimer t;
+    QTimer wheelTimer;
+    bool wheelSpinningOnEntry;
+    bool isRecursiveSelection = false;
+    bool isDebug = false;
+};
+
+#endif // FSTREE_H
+
+fstree.cpp
+#include "File/fstree.h"
+#include "Main/global.h"
+
+extern QStringList mountedDrives;
+QStringList mountedDrives;
+
+/*------------------------------------------------------------------------------
+CLASS ImageCounter worker thread
+------------------------------------------------------------------------------*/
+
+ImageCounter::ImageCounter(const QString &path, Metadata &metadata,
+                           bool &combineRawJpg, QStringList *fileFilters,
+                           QObject *parent)
+    : QThread(parent),
+    dPath(path),
+    metadata(metadata),
+    combineRawJpg(combineRawJpg),
+    fileFilters(fileFilters)
+{}
+
+void ImageCounter::run()
+{
+    int count = computeImageCount(dPath);
+    emit countReady(dPath, count);
+}
+
+int ImageCounter::computeImageCount(const QString &path)
+{
+    QDirIterator it(path, *fileFilters, QDir::Files);
+    int count = 0;
+    QSet<QString> rawBaseNames;     // Stores base names of RAW files
+    QStringList jpgBaseNames;       // Stores all valid file names
+
+    if (combineRawJpg) {
+        while (it.hasNext()) {
+            it.next();
+            QString fileName = it.fileName().toLower();
+            int dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex == -1) {
+                continue;  // No extension, skip
+            }
+
+            QString baseName = fileName.left(dotIndex);
+            QString ext = fileName.mid(dotIndex + 1);
+
+            bool isRaw = metadata.hasJpg.contains(ext);
+            bool isJpg = ext == "jpeg" || ext == "jpg";
+
+            // count raw files
+            if (isRaw) {
+                rawBaseNames.insert(baseName);
+                count++;
+            }
+            // do not count jpg files yet
+            else if (isJpg) jpgBaseNames.append(baseName);
+            // count all other image files
+            else count++;
+        }
+
+        // check for jpg/raw matching pairs
+        for (const QString &baseName : jpgBaseNames) {
+            // count jpg files if no matching raw file
+            if (!rawBaseNames.contains(baseName)) {
+                count++;
+            }
+        }
+    }
+    else {
+        while (it.hasNext()) {
+            it.next();
+            count++;
+        }
+    }
+
+    return count;
+}
+
+/*------------------------------------------------------------------------------
+CLASS FSFilter subclassing QSortFilterProxyModel
+------------------------------------------------------------------------------*/
+
+FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
+{
+
+}
+
+void FSFilter::refresh()
+{
+    this->invalidateFilter();
+}
+
+bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+#ifdef Q_OS_WIN
+    if (!sourceParent.isValid()) {      // if is a drive
+        QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
+        bool mounted = mountedDrives.contains(path);
+        if (!mounted) return false;     // do not accept unmounted drives
+    }
+    return true;
+#endif
+
+#ifdef Q_OS_MAC
+    if (sourceParent.row() == -1) return true;
+    if (!sourceParent.isValid()) return true;
+
+    QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
+    QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
+    QFileInfo info(fPath);
+    if (fParentPath == "/" && (fPath == "/Users" || fPath == "/Volumes")) return true;
+    if (fParentPath == "/") return false;
+    if (info.isHidden()) return false;
+
+    return true;
+#endif
+
+#ifdef Q_OS_LINIX
+    return true;
+#endif
+}
+
+/*------------------------------------------------------------------------------
+CLASS FSModel subclassing QFileSystemModel
+------------------------------------------------------------------------------*/
+
+/*
+   We are subclassing QFileSystemModel in order to add a column for imageCount
+   to the model and display the image count beside each folder in the TreeView.
+*/
+
+FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
+                 : QFileSystemModel(parent),
+                   combineRawJpg(combineRawJpg),
+                   metadata(metadata)
+{
+    fileFilters = new QStringList;
+    dir = new QDir();
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata.supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    count.clear();
+
+    this->iconProvider()->setOptions(QFileIconProvider::DontUseCustomDirectoryIcons);
+}
+
+bool FSModel::hasChildren(const QModelIndex &parent) const
+{
+    if (parent.column() > 0)
+                return false;
+
+        if (!parent.isValid()) // drives
+                return true;
+
+        // return false if item can't have children
+        if (parent.flags() &  Qt::ItemNeverHasChildren) {
+                return false;
+        }
+
+        // return if at least one child exists
+        return QDirIterator(filePath(parent), filter() | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags).hasNext();
+}
+
+int FSModel::columnCount(const QModelIndex &parent) const
+{
+    // add a column for the image count
+    return QFileSystemModel::columnCount(parent) + 1;
+}
+
+QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    // add header text for the additional image count column
+    if (orientation == Qt::Horizontal && section == imageCountColumn)
+    {
+        if (role == Qt::DisplayRole) return QVariant("#");
+        if (role == Qt::EditRole) return QVariant("#");
+        return QVariant();
+     }
+     else
+        return QFileSystemModel::headerData(section, orientation, role);
+}
+
+void FSModel::clearCount()
+{
+    count.clear();
+}
+
+void FSModel::updateCount(const QString &dPath)
+{
+    // remove count for folder dPath
+    count.remove(dPath);
+
+    // update data
+    const QModelIndex idx = index(dPath, imageCountColumn);
+    QList<int> roles;
+    roles << Qt::DisplayRole;
+    emit dataChanged(idx, idx, roles);
+}
+
+QVariant FSModel::data(const QModelIndex &index, int role) const
+{
+/*
+    Return image count for each folder by looking it up in the QHash count which is built
+    in FSTree::getImageCount and referenced here. This is much faster than performing the
+    image count "on-the-fly" here, which causes scroll latency.
+*/
+    if (index.column() == imageCountColumn /*&& showImageCount*/) {
+        if (role == Qt::DisplayRole) {
+            QString dPath = filePath(index);
+
+            if (count.contains(dPath)) {
+                return count.value(dPath);  // Return cached value
+            }
+
+            // Cache folder eligible image count
+            ImageCounter *worker = new ImageCounter(dPath, metadata, combineRawJpg, fileFilters);
+
+            connect(worker, &ImageCounter::countReady,
+                    this, [this](const QString &path, int countValue)
+            {
+                // Convert 'this' from 'const FSModel*' to 'FSModel*'
+                auto *nc = const_cast<FSModel*>(this);
+                nc->count.insert(path, QString::number(countValue));
+            });
+
+            worker->start(QThread::LowPriority);
+        }
+
+        if (role == Qt::TextAlignmentRole) {
+            return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
+        }
+
+        return QVariant();  // Show nothing until count is ready
+    }
+
+    // return tooltip for folder path
+    if (index.column() == 0) {
+        if (role == Qt::ToolTipRole) {
+            return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
+        }
+        else {
+            return QFileSystemModel::data(index, role);
+        }
+    }
+
+    return QVariant();
+}
+
+/*------------------------------------------------------------------------------
+CLASS FSTree subclassing QTreeView
+------------------------------------------------------------------------------*/
+
+FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
+        : QTreeView(parent), delegate(new HoverDelegate(this))
+{
+    if (G::isLogger) G::log("FSTree::FSTree");
+    this->dm = dm;
+    this->metadata = metadata;
+    fileFilters = new QStringList;
+    dir = new QDir();
+    viewport()->setObjectName("fsTreeViewPort");
+    setObjectName("fsTree");
+
+    // create model and filter
+    createModel();
+    treeSelectionModel = selectionModel();
+
+    // setup treeview
+    for (int i = 1; i <= 3; ++i) {
+        hideColumn(i);
+    }
+
+    setItemDelegate(delegate);
+
+    setRootIsDecorated(true);
+    setSortingEnabled(false);
+    setHeaderHidden(true);
+    sortByColumn(0, Qt::AscendingOrder);
+    setIndentation(16);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    setMouseTracking(true);
+
+    rapidClick.start();
+
+    setAcceptDrops(true);
+    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::InternalMove);
+
+    QStringList *fileFilters = new QStringList;
+    dir = new QDir();
+
+    fileFilters->clear();
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters->append("*." + str);
+    dir->setNameFilters(*fileFilters);
+    dir->setFilter(QDir::Files);
+
+    // mouse wheel is spinning
+    wheelTimer.setSingleShot(true);
+    connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
+
+    // prevent select next folder when a folder is moved to trash/recycle
+    connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
+            this, &FSTree::onRowsAboutToBeRemoved);
+
+    // Repaint when hover changes: Lambda function to call update
+    connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
+            this->viewport()->update();});
+
+}
+
+void FSTree::createModel()
+{
+/*
+    Create the model and filter in a separate function as it is also used to refresh
+    the folders by deleting the model and re-creating it.
+*/
+    if (G::isLogger) G::log("FSTree::createModel");
+    fsModel = new FSModel(this, *metadata, combineRawJpg);
+    fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    fsModel->setRootPath("");  //
+    //fsModel->setRootPath(fsModel->myComputer().toString());
+
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+          /*
+          qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
+                 << "storage.isValid()" << storage.isValid()
+                 << "storage.isReady()" << storage.isReady()
+                 << "storage.isReadOnly()" << storage.isReadOnly();
+                 //                 */
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+
+    fsFilter = new FSFilter(fsModel);
+    fsFilter->setSourceModel(fsModel);
+    fsFilter->setSortRole(QFileSystemModel::FilePathRole);
+
+    // apply model to treeview
+    setModel(fsFilter);
+
+    QAbstractFileIconProvider *iconProvider = fsModel->iconProvider();
+    QIcon icon = fsModel->iconProvider()->icon(QFileIconProvider::Folder);
+}
+
+void FSTree::refreshModel()
+{
+/*
+    Most common use is to refresh the folder panel after inserting a USB connected
+    media card.
+*/
+    if (G::isLogger) G::log("FSTree::refreshModel");
+    //qDebug() << "FSTree::refreshModel";
+    mountedDrives.clear();
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    fsModel->clearCount();
+    fsFilter->refresh();
+    setFocus();
+    select(currentFolderPath());
+}
+
+bool FSTree::isShowImageCount()
+{
+    if (G::isLogger) G::log("FSTree::isShowImageCount");
+    return fsModel->showImageCount;
+}
+
+int FSTree::imageCount(QString path)
+{
+    QModelIndex idx0 = fsFilter->mapFromSource(fsModel->index(path));
+    int row = idx0.row();
+    int col = fsModel->imageCountColumn;
+    QModelIndex par = idx0.parent();
+    QModelIndex idx4 = fsFilter->index(row, col, par);
+    int count = idx4.data().toInt();
+    // qDebug() << row << col << idx0.data() << idx4.data().toString() << idx0 << idx4;
+    return count;
+}
+
+void FSTree::updateCount()
+{
+/*
+    Updates all visible image counts
+    This is not working properly.  The counts are updated but are not visible until
+    a mouse over occurs.
+*/
+    fsModel->clearCount();
+    fsFilter->refresh();
+    viewport()->update();
+    // setFocus();
+    // QModelIndex firstVisible = indexAt(QPoint(0, 0));
+    // QModelIndex lastVisible = indexAt(QPoint(0, viewport()->height() - 1));
+    // emit fsModel->dataChanged(firstVisible, lastVisible);
+}
+
+void FSTree::updateCount(const QString &dPath)
+{
+/*
+    Updates image count for the dPath folder
+*/
+    fsModel->updateCount(dPath);
+}
