@@ -1789,9 +1789,6 @@ bool ImageCache::nullInImCache()
 
     bool isEmptyImage = false;
     for (const QString &path : icd->imCache.keys()) {
-        // int w = icd->imCache.value(path).width();
-        // int sfRow = dm->proxyRowFromPath(path, "ImageCache::nullInImCache");
-        // qDebug() << src << "row =" << sfRow << "w =" << w;
         // empty image in cache
         if (icd->imCache.value(path).width() == 0) {
             int sfRow = dm->proxyRowFromPath(path, "ImageCache::nullInImCache");
