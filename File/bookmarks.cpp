@@ -475,7 +475,8 @@ void BookMarks::dropEvent(QDropEvent *event)
     }
 
     // START MIRRORED CODE SECTION
-    // This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any changes.
+    // This code section is mirrored in BookMarks::dropEvent.::dropEvent.
+    // Make sure to sync any changes.
 
     /* Drag and Drop files:
 
@@ -504,8 +505,9 @@ void BookMarks::dropEvent(QDropEvent *event)
     };
 
     // Copy or Move operation
-    QString operation = "Copy";
+    QString operation;
     if (event->dropAction() == Qt::MoveAction) operation = "Move";
+    else operation = "Copy";
 
     // Number of files (internal = images, external = all files selected)
     int count = event->mimeData()->urls().count();
@@ -518,6 +520,7 @@ void BookMarks::dropEvent(QDropEvent *event)
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(msg, 0, true, 1);
 
+    QString issue;
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
@@ -543,6 +546,10 @@ void BookMarks::dropEvent(QDropEvent *event)
                     }
                 }
             }
+        }
+        else if (QFile(destPath).exists()) {
+            issue += "<br>" + Utilities::getFileName(srcPath) +
+                     " already in destination folder";
         }
     }
 
@@ -589,11 +596,14 @@ void BookMarks::dropEvent(QDropEvent *event)
             msg += "0 files.";
         else
             msg += ".";
+        if (!issue.isEmpty()) msg += "<br>";
+        msg += issue;
+        msg += "<p>Press \"ESC\" to close this message";
 
         emit status(false, msg, src);
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup(msg, 4000);
+        G::popUp->showPopup(msg, 10000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
@@ -603,24 +613,17 @@ void BookMarks::dropEvent(QDropEvent *event)
         setCurrentIndex(dndOrigSelection);
         if (srcPaths.count()) {
             // deleteFiles also deletes sidecars
+            // deleteFiles is a blocking connection so finished before refresh
+            // otherwise can crash
             emit deleteFiles(srcPaths);
         }
     }
 
-    QString dropDirCopy = dropDir;
-    QTimer::singleShot(0, this, [=]() {
-        if (dm->folderList.contains(dropDirCopy)) {
-            emit refreshDataModel();
-        }
-        else {
-            select(dropDirCopy);
-        }
-    });
+    emit refreshDataModel();
+    // if (dm->folderList.contains(dropDir)) {
+    // }
 
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION
-
-    // update bookmarks folder count
-    updateCount();
 }

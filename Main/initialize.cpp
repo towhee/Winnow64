@@ -843,7 +843,8 @@ void MW::createFSTree()
     connect(fsTree, &FSTree::refreshDataModel, this, &MW::refreshDataModel);
 
     // if move drag and drop then delete files from source folder(s)
-    connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
+    connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles,
+            Qt::BlockingQueuedConnection);
 
     // rename menu item "Eject USB drive <x>" and enable/disable
     connect(fsTree, &FSTree::renameEjectAction, this, &MW::renameEjectUsbMenu);
@@ -915,7 +916,8 @@ void MW::createBookmarks()
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
 
     // if move drag and drop then delete files from source folder(s)
-    connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles);
+    connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles,
+            Qt::BlockingQueuedConnection);
 
     // refresh FSTree count after drag and drop to BookMarks
     connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);

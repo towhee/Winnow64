@@ -480,7 +480,7 @@ void MW::deleteFiles(QStringList paths)
 
     fsTree->updateCount();
     bookmarks->updateCount();
-
+    // fsTree->viewport()->update();
 }
 
 void MW::currentFolderDeletedExternally(QString path)

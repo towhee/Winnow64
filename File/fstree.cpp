@@ -245,6 +245,12 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                 // Convert 'this' from 'const FSModel*' to 'FSModel*'
                 auto *nc = const_cast<FSModel*>(this);
                 nc->count.insert(path, QString::number(countValue));
+
+                QModelIndex srcIndex = nc->index(path, imageCountColumn);
+                if (srcIndex.isValid()) {
+                    emit nc->dataChanged(srcIndex, srcIndex, { Qt::DisplayRole });
+                }
+
             });
 
             worker->start(QThread::LowPriority);
@@ -419,13 +425,48 @@ int FSTree::imageCount(QString path)
 void FSTree::updateCount()
 {
 /*
+    Updates all visible image counts.
+    Forces repaint of the image count column by emitting dataChanged
+    on visible rows. This ensures the count is shown without requiring
+    hover or scroll.
+*/
+    if (G::isLogger) G::log("FSTree::updateCount");
+
+    fsModel->clearCount();
+    fsFilter->refresh();
+
+    // Force update on visible rows
+    const int countCol = fsModel->imageCountColumn;
+
+    int y = 0;
+    while (y < viewport()->height()) {
+        QModelIndex visualIndex = indexAt(QPoint(0, y));
+        if (!visualIndex.isValid()) break;
+
+        QModelIndex countIndex = fsFilter->index(
+            visualIndex.row(), countCol, visualIndex.parent());
+
+        if (countIndex.isValid()) {
+            QModelIndex srcIndex = fsFilter->mapToSource(countIndex);
+            emit fsModel->dataChanged(srcIndex, srcIndex, { Qt::DisplayRole });
+        }
+
+        y += rowHeight(visualIndex);
+    }
+
+    viewport()->update();
+    updateGeometries();
+/*
     Updates all visible image counts
 */
-    // qDebug() << "FSTree::updateCount";
-    fsModel->clearCount();
-    // fsModel->refresh();
-    fsFilter->refresh();
-    setFocus();
+    // // qDebug() << "FSTree::updateCount";
+    // fsModel->clearCount();
+    // fsFilter->refresh();
+    // viewport()->update();
+    // // setFocus();
+    // // QModelIndex firstVisible = indexAt(QPoint(0, 0));
+    // // QModelIndex lastVisible = indexAt(QPoint(0, viewport()->height() - 1));
+    // // emit fsModel->dataChanged(firstVisible, lastVisible);
 }
 
 void FSTree::updateCount(const QString &dPath)
@@ -1090,7 +1131,7 @@ void FSTree::contextMenuEvent(QContextMenuEvent *event)
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("FSTree::dragEnterEvent");
-    //    qDebug() << "FSTree::dragEnterEvent" << event-> dropAction() << event->modifiers();
+    qDebug() << "FSTree::dragEnterEvent" << event-> dropAction() << event->modifiers();
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
     if (selectedDirs.size() > 0) {
@@ -1133,6 +1174,11 @@ void FSTree::dropEvent(QDropEvent *event)
 */
     QString src = "FSTree::dropEvent";
     if (G::isLogger) G::log(src);
+    qDebug() << "FSTree::dropEvent";
+
+    // QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();
+
+    // HandleDropOnFolder handle(event, dropDir);
 
     if (QMessageBox::question(nullptr, "Confirm", "Accept drop operation?",
                               QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
@@ -1141,10 +1187,12 @@ void FSTree::dropEvent(QDropEvent *event)
 
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) {
+        event->ignore();
         return;
     }
 
-    QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
+    // QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
+    QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();
 
     // START MIRRORED CODE SECTION
     // This code section is mirrored in BookMarks::dropEvent.::dropEvent.
@@ -1177,8 +1225,9 @@ void FSTree::dropEvent(QDropEvent *event)
     };
 
     // Copy or Move operation
-    QString operation = "Copy";
+    QString operation;
     if (event->dropAction() == Qt::MoveAction) operation = "Move";
+    else operation = "Copy";
 
     // Number of files (internal = images, external = all files selected)
     int count = event->mimeData()->urls().count();
@@ -1191,6 +1240,7 @@ void FSTree::dropEvent(QDropEvent *event)
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(msg, 0, true, 1);
 
+    QString issue;
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
@@ -1216,6 +1266,10 @@ void FSTree::dropEvent(QDropEvent *event)
                     }
                 }
             }
+        }
+        else if (QFile(destPath).exists()) {
+            issue += "<br>" + Utilities::getFileName(srcPath) +
+                     " already in destination folder";
         }
     }
 
@@ -1262,11 +1316,14 @@ void FSTree::dropEvent(QDropEvent *event)
             msg += "0 files.";
         else
             msg += ".";
+        if (!issue.isEmpty()) msg += "<br>";
+        msg += issue;
+        msg += "<p>Press \"ESC\" to close this message";
 
         emit status(false, msg, src);
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup(msg, 4000);
+        G::popUp->showPopup(msg, 10000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
@@ -1276,25 +1333,21 @@ void FSTree::dropEvent(QDropEvent *event)
         setCurrentIndex(dndOrigSelection);
         if (srcPaths.count()) {
             // deleteFiles also deletes sidecars
+            // deleteFiles is a blocking connection so finished before refresh
+            // otherwise can crash
             emit deleteFiles(srcPaths);
         }
     }
 
-    QString dropDirCopy = dropDir;
-    QTimer::singleShot(0, this, [=]() {
-        if (dm->folderList.contains(dropDirCopy)) {
-            emit refreshDataModel();
-        }
-        else {
-            select(dropDirCopy);
-        }
-    });
+    // update folder image counts
+    emit refreshDataModel();
+    // if (dm->folderList.contains(dropDir)) {
+    // }
 
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION
 
-    // refresh the fsTree QFileSystemModel
     // refreshModel();
 }
 

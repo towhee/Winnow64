@@ -604,16 +604,16 @@ void ImageCache::setTargetRange(int key)
         else {
             /* see "Image size in cache" at top of imagecache.cpp
             // this lowers performance
-            // QVariant mb;
-            // QMetaObject::invokeMethod(
-            //     dm,
-            //     "valueSf",
-            //     Qt::BlockingQueuedConnection,
-            //     Q_RETURN_ARG(QVariant, mb),
-            //     Q_ARG(int, pos),
-            //     Q_ARG(int, G::CacheSizeColumn)
-            // );
-            // sumMB += mb.toFloat();
+            QVariant mb;
+            QMetaObject::invokeMethod(
+                dm,
+                "valueSf",
+                Qt::BlockingQueuedConnection,
+                Q_RETURN_ARG(QVariant, mb),
+                Q_ARG(int, pos),
+                Q_ARG(int, G::CacheSizeColumn)
+            );
+            sumMB += mb.toFloat();
             //*/
 
             // fast but risky, can crash when stress testing bounce folders
@@ -1783,6 +1783,29 @@ bool ImageCache::okToCache(int id, int sfRow)
     return true;
 }
 
+bool ImageCache::nullInImCache()
+{
+    QString src = "ImageCache::nullInImCache";
+
+    bool isEmptyImage = false;
+    for (const QString &path : icd->imCache.keys()) {
+        // int w = icd->imCache.value(path).width();
+        // int sfRow = dm->proxyRowFromPath(path, "ImageCache::nullInImCache");
+        // qDebug() << src << "row =" << sfRow << "w =" << w;
+        // empty image in cache
+        if (icd->imCache.value(path).width() == 0) {
+            int sfRow = dm->proxyRowFromPath(path, "ImageCache::nullInImCache");
+            // add back to toCache list
+            toCacheAppend(sfRow);
+            // set isCaching to true
+            emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
+            isEmptyImage = true;
+            qDebug() << "XXXXXXXXXX" << src << "row =" << sfRow;
+        }
+    }
+    return isEmptyImage;
+}
+
 void ImageCache::fillCache(int id)
 {
 /*
@@ -1942,7 +1965,13 @@ void ImageCache::fillCache(int id)
         // is this the last active decoder?
         if (!anyDecoderCycling()) {
 
-            // update cache progress in status bar
+            // if empty image in ImCache then relaunch decoders
+            if (nullInImCache()) {
+                launchDecoders(src);
+                return;
+            }
+
+            // else update cache progress in status bar
             if (isShowCacheStatus) {
                 updateStatus("Update all rows", "ImageCache::fillCache after check cacheUpToDate");
             }
