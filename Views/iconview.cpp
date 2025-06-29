@@ -1280,7 +1280,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
              << "modifiers =" << event->modifiers()
         ; //*/
 
-    // if (isLeftMouseBtnPressed) {
     if (event->buttons() & Qt::LeftButton) {
         // allow small 'jiggle' tolerance before start drag
         int deltaX = qAbs(mousePressPos.x() - event->pos().x());
@@ -1304,6 +1303,10 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     QToolTip::hideText();
     iconViewDelegate->tooltip = "";
 
+    if (cursor() != QCursor(Qt::CursorShape(Qt::ArrowCursor))) {
+        return;
+    }
+
     QPoint viewPos = event->pos();
     QModelIndex index = indexAt(viewPos);
     if (!index.isValid()) {
@@ -1319,8 +1322,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
     if (v.canConvert<SymbolRectMap>()) {
         rects = v.value<SymbolRectMap>();
     }
-
-    // QString tooltip;
 
     bool isMissing = dm->sf->index(row, G::MissingThumbColumn).data().toBool();
     bool isLock = !dm->sf->index(row, G::ReadWriteColumn).data().toBool();
@@ -1359,15 +1360,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
         iconViewDelegate->tooltip = "Duration";
     else
         iconViewDelegate->tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
-
-
-    // if (!iconViewDelegate->tooltip.isEmpty()) {
-    //     iconViewDelegate->tooltip = tooltip;
-    //     // QRect dummyRect(event->globalPos() - QPoint(10, 10), QSize(20, 20));
-    //     // QToolTip::showText(event->globalPos() - QPoint(10, 10), tooltip);
-    // } else {
-    //     // QToolTip::hideText();
-    // }
 }
 
 void IconView::mouseReleaseEvent(QMouseEvent *event)
