@@ -316,6 +316,7 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
 
     setAcceptDrops(true);
     setDragEnabled(true);
+    setDropIndicatorShown(true);
     setDragDropMode(QAbstractItemView::InternalMove);
 
     QStringList *fileFilters = new QStringList;
@@ -469,7 +470,7 @@ void FSTree::updateCount()
     // // emit fsModel->dataChanged(firstVisible, lastVisible);
 }
 
-void FSTree::updateCount(const QString &dPath)
+void FSTree::updateAFolderCount(const QString &dPath)
 {
 /*
     Updates image count for the dPath folder
@@ -1143,7 +1144,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
 void FSTree::dragLeaveEvent(QDragLeaveEvent *event)
 {
     delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
-
+    QApplication::restoreOverrideCursor(); // Restore the original cursor when drag leaves
     event->accept();
     viewport()->update();
 }
@@ -1161,7 +1162,7 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
         delegate->setHoveredIndex(QModelIndex());  // No row hovered
     }
 
-    event->accept();
+    event->acceptProposedAction();
     viewport()->update();  // Refresh view
 }
 
@@ -1182,6 +1183,7 @@ void FSTree::dropEvent(QDropEvent *event)
 
     if (QMessageBox::question(nullptr, "Confirm", "Accept drop operation?",
                               QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        event->ignore();
         return;
     }
 
@@ -1191,7 +1193,6 @@ void FSTree::dropEvent(QDropEvent *event)
         return;
     }
 
-    // QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();
 
     // START MIRRORED CODE SECTION
@@ -1250,6 +1251,8 @@ void FSTree::dropEvent(QDropEvent *event)
         }
         srcPath = event->mimeData()->urls().at(i).toLocalFile();
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
+
+        // copy thew files
         bool copied = QFile::copy(srcPath, destPath);
 
         if (copied) {
@@ -1313,7 +1316,7 @@ void FSTree::dropEvent(QDropEvent *event)
             else msg += " files";
         }
         if (totFiles == 0)
-            msg += "0 files.";
+            msg += " 0 files.";
         else
             msg += ".";
         if (!issue.isEmpty()) msg += "<br>";
@@ -1323,38 +1326,23 @@ void FSTree::dropEvent(QDropEvent *event)
         emit status(false, msg, src);
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup(msg, 10000);
+        G::popUp->showPopup(msg, 4000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
 
-    // if internal (Winnow) and move then delete source files
-    if (isInternal && event->dropAction() == Qt::MoveAction) {
-        setCurrentIndex(dndOrigSelection);
-        if (srcPaths.count()) {
-            // deleteFiles also deletes sidecars
-            // deleteFiles is a blocking connection so finished before refresh
-            // otherwise can crash
-            emit deleteFiles(srcPaths);
-        }
-    }
-
-    // update folder image counts
-    emit refreshDataModel();
-    // if (dm->folderList.contains(dropDir)) {
-    // }
+    // update folder image counts if only copy
+    if (event->dropAction() == Qt::CopyAction) emit updateCounts();
 
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION
-
-    // refreshModel();
 }
 
 void FSTree::debugSelectedFolders(QString msg)
 {
     qDebug() << "SELECTION" << msg;
-    for(int i = 0; i < selectionModel()->selectedRows().count(); i++) {
+    for (int i = 0; i < selectionModel()->selectedRows().count(); i++) {
         QModelIndex index = selectionModel()->selectedRows().at(i);
         QString path = index.data(QFileSystemModel::FilePathRole).toString();
         qDebug() << "SELECTION" << path;

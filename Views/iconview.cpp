@@ -1280,7 +1280,8 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
              << "modifiers =" << event->modifiers()
         ; //*/
 
-    if (isLeftMouseBtnPressed) {
+    // if (isLeftMouseBtnPressed) {
+    if (event->buttons() & Qt::LeftButton) {
         // allow small 'jiggle' tolerance before start drag
         int deltaX = qAbs(mousePressPos.x() - event->pos().x());
         int deltaY = qAbs(mousePressPos.y() - event->pos().y());
@@ -1899,9 +1900,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program or folder in FSTree.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
-    /*
-    qDebug() << "IconView::startDrag";
-    //*/
+
     isMouseDrag = false;
 
     QModelIndexList selection = selectionModel()->selectedRows();
@@ -1977,34 +1976,31 @@ void IconView::startDrag(Qt::DropActions)
     if (key == Qt::NoModifier) {
         result = drag->exec(Qt::MoveAction);
 
-        // was move onto self? ignoreDrop is set in MW::dropEvent.
-        if (ignoreDrop) {
-            qDebug() << "drop onto self";
-            ignoreDrop = false;
-            return;
-        }
-
-        // moved, so remove drag items from datamodel
-        for (QString fPath : paths) dm->remove(fPath);
-
-        // update selection
-        m2->sel->select(dm->currentSfIdx, Qt::NoModifier, "IconView::startDrag");
-        if (!isCellVisible(dm->currentSfRow)) {
-            scrollToCurrent("IconView::startDrag");
-        }
-
-        qDebug() << "IconView::startDrag moved" << paths;
-        // update image counts
-        // m2->refresh();
+        // moved, so remove drag items from datamodel unless drag onto self
+        if (result != Qt::IgnoreAction) m2->deleteFiles(paths);
     }
+}
+
+void IconView::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->source() == this) {
+        event->setDropAction(Qt::IgnoreAction);
+        event->accept();  // Cleanly terminate, don't let it float
+        return;
+    }
+    event->acceptProposedAction();  // Or accept if you're being selective
 }
 
 void IconView::dropEvent(QDropEvent *event)
 {
     qDebug() << "IconView::dropEvent";
+
     if (event->source() == this) {
-        event->ignore();  // Prevent self-drop
-    } else {
+        event->setDropAction(Qt::IgnoreAction);
+        event->accept();  // Cleanly terminate, don't let it float
+        return;
+    }
+    else {
         QListView::dropEvent(event);
     }
 }

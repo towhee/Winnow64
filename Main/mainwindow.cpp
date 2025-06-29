@@ -2164,6 +2164,8 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     fsTree->setEnabled(false);
 
     // only done here and if sort/filter operation
+    qDebug() << "MW::folderSelectionchange call dm->newInstance";
+
     dm->newInstance();
 
     // save the current datamodel selection before removing a folder from datamodel
@@ -2463,33 +2465,41 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     return;
 }
 
+void MW::updateImageCount()
+{
+    if (G::isLogger) G::log("MW::refresh");
+    fsTree->updateCount();
+    bookmarks->updateCount();
+}
+
 void MW::refresh()
 {
 /*
     Get a list of source image files (in the selected folders) that have been added,
-    removed or modified. Refresh the datamodel and views to match without reloading all
-    the folders.  Update the image counts in FSTree and bookmarks.
+    removed or modified. Refresh the datamodel, filters and views to match without
+    reloading all the folders. Update the image counts in FSTree and Bookmarks. Update
+    ImageCache.
 
     Called by MW::saveAsFile if saved to a currently selected folder.
+              MW::deleteFiles
+              FSTree::dropEvent
+              BookMarks::dropEvent
+              Folders dock refresh button
+              Bookmarks dock refresh button
+              Menu File > Refresh
+
 */
     if (G::isLogger) G::log("MW::refresh");
     qDebug() << "MW::refresh";
     dm->refresh();
+    // imageCache->updateInstance();
     buildFilters->rebuild();
     fsTree->updateCount();
-    // fsTree->update();
-    // if (fsTree->isVisible()) fsTree->raise();
     bookmarks->updateCount();
-    // rev up metaRead
-    if (G::useReadMeta) {
-        updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        dm->setIconRange(dm->currentSfRow);
-        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
-                                  Q_ARG(int, dm->currentSfRow),
-                                  Q_ARG(bool, true),
-                                  Q_ARG(QString, "MW::refresh")
-                                  );
-    }
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    // current is updated in DataModel if there has been a deletion
+    sel->select(dm->currentSfIdx);  // runs metaread if new images
 }
 
 bool MW::stop(QString src)
@@ -5265,118 +5275,6 @@ void MW::openFolder()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
     fsTree->select(dirPath);
-}
-
-void MW::refreshDataModel()
-{
-/*
-    If there has been any additions or removals of images in the selected folders then
-    reload the folders and reselect the current image.  If the image count has not
-    changed, check if there have been any images modified.  If so, reload the modified
-    images, and if necessary, redisplay the current image.
-
-    Called by FSTree::dropEvent or BookMarks::dropEvent.
-
-*/
-    refresh();
-    return;
-
-    QString fun = "MW::refreshDataModel";
-    if (G::isLogger) G::log(fun);
-    // QString src = "fun";
-    isRefreshingDM = true;  // rgh not being used, under review
-
-    // update counts in fsTree just in case
-    for (QString folderPath : dm->folderList) fsTree->updateCount(folderPath);
-
-    QStringList added;
-    QStringList removed;
-    QStringList modified;
-
-    // find changes between datamodel and files in folders
-    if (!dm->sourceModified(added, removed, modified)) {
-        G::popUp->showPopup("There have been no changes to any images in the folder.", 2000);
-        return;
-    }
-
-    if (added.count()) {
-        dmInsert(added);
-    }
-
-    if (removed.count()) {
-        dmRemove(removed);
-    }
-
-    // rgh review this working
-    if (modified.count()) {
-        foreach (QString fPath, modified) {
-            QFileInfo info = QFileInfo(fPath);
-            int dmRow = dm->rowFromPath(fPath);
-            if (dmRow == -1) continue;
-
-            QDateTime t1 = dm->index(dmRow, G::ModifiedColumn).data().toDateTime();
-            QDateTime t2 = info.lastModified();
-            /*
-            qint64 diff = t1.msecsTo(t2);
-            qDebug().noquote() << fun << "modified"
-                               << "t1 =" << t1
-                               << "t2 =" << t2
-                               << "t2 - t1 =" << diff
-                                  ;
-            continue;
-            //*/
-
-            // update file size and modified date
-            dm->updateFileData(info);
-
-            // update metadata
-            QString ext = Utilities::getSuffix(fPath);
-            if (metadata->hasMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(info, dmRow, dm->instance, true, true, false, true, "MW::refreshCurrentFolder")) {
-                    // metadata->m.row = dmRow;
-                    // metadata->m.instance = dm->instance;
-                    dm->addMetadataForItem(metadata->m, fun);
-                }
-            }
-
-            // update image cache in case image has changed
-            if (icd->contains(fPath)) icd->imCache.remove(fPath);
-            if (dm->currentFilePath == fPath) {
-                if (imageView->loadImage(fPath, true, fun)) {
-                    updateClassification();
-                }
-            }
-
-            // update thumbnail in case image has changed
-            QImage image;
-            QPixmap pm;
-            Thumb *thumb = new Thumb(dm);
-            QModelIndex dmIdx = dm->indexFromPath(fPath);
-            bool thumbLoaded = thumb->loadThumb(fPath, dmIdx, image, dm->instance, fun);
-            if (thumbLoaded)
-                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            else
-                pm = QPixmap(":/images/error_image256.png");
-            dm->setIcon(dmIdx, pm, dm->instance, fun);
-            delete thumb;
-        }
-        if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
-        refreshCurrentAfterReload();
-    }
-}
-
-void MW::refreshCurrentAfterReload()
-{
-/*
-    This slot is triggered after the metaRead thread has run and isRefreshingDM = true to
-    complete the refresh current folder process by selecting the previously selected
-    thumb.
-*/
-    if (G::isLogger) G::log("MW::refreshCurrentAfterReload");
-    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-    sel->setCurrentRow(dm->currentSfRow);
-    isRefreshingDM = false;
 }
 
 void MW::openUsbFolder()

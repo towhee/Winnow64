@@ -80,8 +80,7 @@ public:
     FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
     void createModel();
     void setShowImageCount(bool showImageCount);
-    void updateCount();
-    void updateCount(const QString &dPath);
+    void updateAFolderCount(const QString &dPath);
     int imageCount(QString path);
     bool isShowImageCount();
     qlonglong selectionCount();
@@ -107,6 +106,7 @@ public slots:
     bool select(QString folderPath, QString modifier = "None", QString src = "");
     void resizeColumns();
     void refreshModel();
+    void updateCount();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
     void howThisWorks();
 
@@ -139,7 +139,7 @@ signals:
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
     void abortLoadDataModel();
-    void refreshDataModel();
+    void updateCounts();
     void deleteFiles(QStringList srcPaths);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);

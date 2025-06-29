@@ -96,7 +96,7 @@ void MW::pasteFiles(QString folderPath)
     buildFilters->recount();
 
     // update folder counts
-    fsTree->updateCount(folderPath);
+    fsTree->updateAFolderCount(folderPath);
     bookmarks->updateCount();
 
     // refresh folder to show pasted images rgh check this
@@ -394,10 +394,6 @@ void MW::deleteFiles(QStringList paths)
     image cache status bar.
 */
     if (G::isLogger) G::log("MW::deleteFiles");
-    QElapsedTimer t;
-    t.restart();
-
-    G::removingRowsFromDM = true;
 
     // if still loading metadata then do not delete
     if (!G::allMetadataLoaded) {
@@ -408,21 +404,6 @@ void MW::deleteFiles(QStringList paths)
                       "Press <font color=\"red\"><b>Spacebar</b></font> to continue.";
         G::popUp->showPopup(msg, 0);
         return;
-    }
-
-    /* save the index to the first row in selection (order depends on how selection was
-       made) to insure the correct index is selected after deletion.  */
-    int lowRow = 999999;
-    if (dm->sf->rowCount() == 1) {
-        lowRow = dm->rowFromPath(paths.at(0));
-    }
-    else {
-        for (int i = 0; i < paths.count(); ++i) {
-            int row = dm->proxyRowFromPath(paths.at(i));
-            if (row < lowRow) {
-                lowRow = row;
-            }
-        }
     }
 
     G::ignoreScrollSignal = true;
@@ -461,26 +442,8 @@ void MW::deleteFiles(QStringList paths)
     }
     if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
 
-    dmRemove(sldm);
-
-    G::removingRowsFromDM = false;
-
-    // update ImageCache instance
-    imageCache->updateInstance();
-
-    // update current index
-    if (dm->sf->rowCount()) {
-        int sfRow;
-        if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
-        sfRow = dm->nearestProxyRowFromDmRow(dm->modelRowFromProxyRow(lowRow));
-        qDebug() << "MW::deleteFiles sel row =" << sfRow;
-        QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-        sel->select(sfIdx, Qt::NoModifier, "MW::deleteFiles");
-    }
-
-    fsTree->updateCount();
-    bookmarks->updateCount();
-    // fsTree->viewport()->update();
+    // updata datamodel, imagecache, image counts, selection
+    refresh();
 }
 
 void MW::currentFolderDeletedExternally(QString path)

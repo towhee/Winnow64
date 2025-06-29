@@ -355,7 +355,6 @@ QString MW::diagnostics()
     rpt << "\n" << "workspaceChange = " << G::s(workspaceChange);
     rpt << "\n" << "isUpdatingState = " << G::s(isUpdatingState);
     rpt << "\n" << "isFilterChange = " << G::s(isFilterChange);
-    rpt << "\n" << "isRefreshingDM = " << G::s(isRefreshingDM);
     rpt << "\n" << "simulateJustInstalled = " << G::s(simulateJustInstalled);
     rpt << "\n" << "isSettings = " << G::s(isSettings);
     rpt << "\n" << "isStressTest = " << G::s(G::isStressTest);
