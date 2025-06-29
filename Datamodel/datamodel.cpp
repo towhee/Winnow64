@@ -351,7 +351,7 @@ void DataModel::newInstance()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
     instance++;
-    // qDebug() << "DataModel::newInstance =" << instance;
+    qDebug() << "DataModel::newInstance =" << instance;
     G::dmInstance = instance;
 }
 
@@ -779,50 +779,16 @@ void DataModel::removeFolder(const QString &folderPath)
 void DataModel::refresh()
 {
     if (G::isLogger) G::log("DataModel::refresh");
-    /*
-    for (QString folderPath : folderList) {
-        QDir dir(folderPath);
-        dir.setNameFilters(*fileFilters);
-        dir.setFilter(QDir::Files);
-        QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
-
-        // if (combineRawJpg) {
-        //     // make sure, if raw+jpg pair, that raw file is first to make combining easier
-        //     std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThanCombineRawJpg);
-        // }
-        // else {
-        //     std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
-        // }
-
-
-        // build folderFileList from folderFileInfoList
-        QStringList folderFileList;
-        for (const QFileInfo &fileInfo : folderFileInfoList) {
-            folderFileList << fileInfo.filePath();
-        }
-
-        // check for insertions
-        for (const QString &fPath : folderFileList) {
-            if (fPathRowContains(fPath)) continue;
-            insert(fPath);
-        }
-
-        // check for deletions
-        QHashIterator<QString, int> i(fPathRow);
-        while (i.hasNext()) {
-            i.next();
-            if (!folderFileList.contains(i.key())) {
-                remove(i.key());
-            }
-        }
-    }
-    */
 
     QStringList added;
     QStringList removed;
     QStringList modified;
+    qDebug() << "DataModel::refresh instance =" << instance;
 
-    if (!sourceModified(added, removed, modified)) return;
+    if (!sourceModified(added, removed, modified)) {
+        qDebug() << "DataModel::refresh source was not modified";
+        return;
+    }
 
     // additions
     for (const QString &fPath : added) {
@@ -831,9 +797,11 @@ void DataModel::refresh()
     }
 
     // removals
+    G::removingRowsFromDM = true;
     for (const QString &fPath : removed) {
         remove(fPath);
     }
+    G::removingRowsFromDM = false;
 
     // modifications
     for (const QString &fPath : modified) {
@@ -842,6 +810,8 @@ void DataModel::refresh()
         setData(index(row, G::IconLoadedColumn), false);
     }
 
+    // qDebug() << "DataModel::refresh call newInstance";
+    // newInstance();
 }
 
 QString DataModel::primaryFolderPath()
@@ -2327,7 +2297,10 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, src, sfIdx.row());
-        qDebug() << src << sfRow << errMsg;
+        qDebug() << src << sfRow << errMsg
+                 << "ImageCache instance =" << instance
+                 << "DataModel instance =" << this->instance
+            ;
         return;
     }
     if (!sfIdx.isValid()) {

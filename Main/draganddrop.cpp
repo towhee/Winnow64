@@ -5,25 +5,22 @@
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
-    qDebug() << "MW::dragEnterEvent";
+    // qDebug() << "MW::dragEnterEvent";
 
     if (event->mimeData()->hasUrls()) {
         event->acceptProposedAction();
     }
-    else event->ignore();
 }
 
 void MW::dragLeaveEvent(QDragLeaveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
-    qDebug() << "MW::dragLeaveEvent";
     dragLabel->hide();
 }
 
 void MW::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragMoveEvent");
-    qDebug() << "MW::dragMoveEvent";
 
     // Cannot show in source folder as this is already the source
     QObject *source = event->source();
@@ -48,22 +45,33 @@ void MW::dragMoveEvent(QDragMoveEvent *event)
     else {
         event->ignore();
     }
-    // event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log("MW::dropEvent");
-    qDebug() << "MW::dropEvent";
+
+    QWidget *child = childAt(event->position().toPoint());
+    if (child && (
+            qobject_cast<FSTree *>(child) ||
+            qobject_cast<BookMarks *>(child) ||
+            qobject_cast<IconView *>(child)
+            )) {
+        event->setDropAction(Qt::IgnoreAction);
+        event->ignore();  // Let the child handle it
+        qDebug() << "MW::dropEvent Ignore because child available";
+        return;
+    }
 
     // Ignore if source is Winnow.  Probably result of an aborted drag.
     if (event->source() == thumbView) {
-        thumbView->ignoreDrop = true;
+        event->setDropAction(Qt::IgnoreAction);
         event->ignore();
+        qDebug() << "MW::dropEvent event->source()- == thumbView";
         return;
     }
     if (event->source() == gridView) {
-        gridView->ignoreDrop = true;
+        event->setDropAction(Qt::IgnoreAction);
         event->ignore();
         return;
     }
@@ -72,14 +80,13 @@ void MW::dropEvent(QDropEvent *event)
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         handleDrop(fPath);
         dragLabel->hide();
-        event->ignore();
+        event->acceptProposedAction();
     }
 }
 
 void MW::handleDrop(QString fPath)
 {
     if (G::isLogger) G::log("MW::handleDrop");
-    qDebug() << "MW::handleDrop" << fPath;
     QFileInfo info(fPath);
     QString incoming = info.dir().absolutePath();
     if (dm->folderList.contains(incoming)) {
@@ -100,7 +107,6 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 
 */
     if (G::isLogger) G::log("MW::dropOp");
-    qDebug() << "MW::dropOp";
     QApplication::restoreOverrideCursor();
     copyOp = (keyMods == Qt::ControlModifier);
     QMessageBox msgBox;

@@ -129,7 +129,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)

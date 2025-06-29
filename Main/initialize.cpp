@@ -840,11 +840,10 @@ void MW::createFSTree()
     connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
 
     // refresh datamodel after dragdrop operation
-    connect(fsTree, &FSTree::refreshDataModel, this, &MW::refreshDataModel);
+    connect(fsTree, &FSTree::updateCounts, this, &MW::updateImageCount);
 
     // if move drag and drop then delete files from source folder(s)
-    connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles,
-            Qt::BlockingQueuedConnection);
+    connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
 
     // rename menu item "Eject USB drive <x>" and enable/disable
     connect(fsTree, &FSTree::renameEjectAction, this, &MW::renameEjectUsbMenu);
@@ -903,7 +902,7 @@ void MW::createBookmarks()
     bookmarks->setMaximumWidth(folderMaxWidth);
 
     // refresh datamodel after dragdrop operation
-    connect(bookmarks, &BookMarks::refreshDataModel, this, &MW::refreshDataModel);
+    connect(bookmarks, &BookMarks::refreshDataModel, this, &MW::refresh);
 
     // this works for touchpad tap
     // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange
@@ -912,15 +911,15 @@ void MW::createBookmarks()
     // update folder image counts
     connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::updateBookmarks);
 
-    connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
-            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
+    // connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
+    //         this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
 
     // if move drag and drop then delete files from source folder(s)
     connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles,
             Qt::BlockingQueuedConnection);
 
     // refresh FSTree count after drag and drop to BookMarks
-    connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
+    connect(bookmarks, &BookMarks::updateCounts, this, &MW::updateImageCount);
 
     // reselect folder after external program drop onto BookMarks
     connect(bookmarks, &BookMarks::folderSelection, fsTree, &FSTree::select);

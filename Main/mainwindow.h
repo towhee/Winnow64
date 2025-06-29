@@ -430,6 +430,7 @@ public slots:
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void currentFolderDeletedExternally(QString path);
     void refresh();
+    void updateImageCount();
     bool stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
@@ -594,7 +595,6 @@ private slots:
     void folderChangeCompleted();
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
-    void refreshCurrentAfterReload();
     void updateDefaultIconChunkSize(int size);
     bool updateIconRange(bool sizeChange, QString src = "");
     void thumbHasScrolled();
@@ -687,7 +687,6 @@ private slots:
     void reportState(QString title);
 
     void openFolder();
-    void refreshDataModel();
     void openUsbFolder();
     void saveAsFile();
     void revealWinnets();
@@ -1166,7 +1165,6 @@ private:
     bool embelDockTabActivated;
 
     bool isFilterChange = false;        // prevent fileSelectionChange
-    bool isRefreshingDM = false;
 
     bool simulateJustInstalled;
     bool isSettings = false;

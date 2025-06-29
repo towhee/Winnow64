@@ -414,7 +414,8 @@ void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
     if (G::isLogger) G::log("BookMarks::dragLeaveEvent");
     delegate->setHoveredIndex(QModelIndex());  // Clear highlight when mouse leaves
     QApplication::restoreOverrideCursor(); // Restore the original cursor when drag leaves
-    QWidget::dragLeaveEvent(event);
+    // QWidget::dragLeaveEvent(event);
+    event->accept();
     emit status(true);
 }
 
@@ -432,7 +433,7 @@ void BookMarks::dragMoveEvent(QDragMoveEvent *event)
         delegate->setHoveredIndex(QModelIndex());  // No row hovered
     }
 
-    event->accept();
+    event->acceptProposedAction();
     viewport()->update();  // Refresh view
 }
 
@@ -530,6 +531,8 @@ void BookMarks::dropEvent(QDropEvent *event)
         }
         srcPath = event->mimeData()->urls().at(i).toLocalFile();
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
+
+        // copy the files
         bool copied = QFile::copy(srcPath, destPath);
 
         if (copied) {
@@ -593,7 +596,7 @@ void BookMarks::dropEvent(QDropEvent *event)
             else msg += " files";
         }
         if (totFiles == 0)
-            msg += "0 files.";
+            msg += " 0 files.";
         else
             msg += ".";
         if (!issue.isEmpty()) msg += "<br>";
@@ -603,27 +606,16 @@ void BookMarks::dropEvent(QDropEvent *event)
         emit status(false, msg, src);
         G::popUp->setProgressVisible(false);
         G::popUp->reset();
-        G::popUp->showPopup(msg, 10000);
+        G::popUp->showPopup(msg, 4000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
 
-    // if internal (Winnow) and move then delete source files
-    if (isInternal && event->dropAction() == Qt::MoveAction) {
-        setCurrentIndex(dndOrigSelection);
-        if (srcPaths.count()) {
-            // deleteFiles also deletes sidecars
-            // deleteFiles is a blocking connection so finished before refresh
-            // otherwise can crash
-            emit deleteFiles(srcPaths);
-        }
-    }
-
-    emit refreshDataModel();
-    // if (dm->folderList.contains(dropDir)) {
-    // }
+    // update folder image counts if only copy
+    if (event->dropAction() == Qt::CopyAction) emit updateCounts();
 
     event->acceptProposedAction();
 
     // END MIRRORED CODE SECTION
+
 }
