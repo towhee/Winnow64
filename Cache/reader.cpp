@@ -166,6 +166,10 @@ void Reader::readIcon()
     // video
     if (isVideo) {
         if (G::renderVideoThumb) {
+            qDebug() << "Reader::readIcon"
+                     << fPath
+                     << " instance =" << instance
+                ;
             emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, instance);
         }
         return;

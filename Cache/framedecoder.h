@@ -33,6 +33,7 @@ private:
     void getNextThumbNail(QString src = "");
     void handleFrameChanged(const QVideoFrame &frame);
     void cleanupPlayer();
+    bool queueContains(const QString &fPath);
 
     enum Status { Idle, Busy } status;
 

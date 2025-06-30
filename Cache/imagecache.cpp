@@ -327,7 +327,7 @@ void ImageCache::updateToCache()
     if (debugLog || G::isLogger || G::isFlowLogger) log("updateToCache");
 
     QString fun = "ImageCache::updateToCache";
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
                            << "current position =" << currRow
@@ -1389,7 +1389,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
         << "currRow =" << currRow
