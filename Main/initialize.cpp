@@ -901,9 +901,6 @@ void MW::createBookmarks()
 
     bookmarks->setMaximumWidth(folderMaxWidth);
 
-    // refresh datamodel after dragdrop operation
-    connect(bookmarks, &BookMarks::refreshDataModel, this, &MW::refresh);
-
     // this works for touchpad tap
     // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange
     connect(bookmarks, &BookMarks::itemPressed, this, &MW::bookmarkClicked);

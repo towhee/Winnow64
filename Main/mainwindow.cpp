@@ -2482,8 +2482,6 @@ void MW::refresh()
 
     Called by MW::saveAsFile if saved to a currently selected folder.
               MW::deleteFiles
-              FSTree::dropEvent
-              BookMarks::dropEvent
               Folders dock refresh button
               Bookmarks dock refresh button
               Menu File > Refresh
