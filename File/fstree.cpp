@@ -35,6 +35,7 @@ int ImageCounter::computeImageCount(const QString &path)
     if (combineRawJpg) {
         while (it.hasNext()) {
             it.next();
+            if (!it.fileInfo().size()) continue;
             QString fileName = it.fileName().toLower();
             int dotIndex = fileName.lastIndexOf('.');
             if (dotIndex == -1) {
@@ -69,6 +70,7 @@ int ImageCounter::computeImageCount(const QString &path)
     else {
         while (it.hasNext()) {
             it.next();
+            if (!it.fileInfo().size()) continue;
             count++;
         }
     }

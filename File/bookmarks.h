@@ -65,7 +65,6 @@ signals:
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void deleteFiles(QStringList srcPaths);
     void updateCounts();
-    void refreshDataModel();
     void folderSelection(QString dPath, QString modifier, QString src);
     void renameEjectAction(QString path);
     void renameEraseMemCardContextAction(QString path);

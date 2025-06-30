@@ -152,6 +152,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- In FSTree and BookMarks do not count fiels if size() == zero
 - Add MW::refresh and DataModel::refresh to update when source folders file list changes
 - Save preview to same folder not refreshing folder in FSTree or DataModel
 - Combine raw/jpg crashing after toggling on/off

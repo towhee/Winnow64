@@ -89,6 +89,7 @@ BookMarks::BookMarks(QWidget *parent, DataModel *dm,
 void BookMarks::reloadBookmarks()
 {
     if (G::isLogger) G::log("BookMarks::reloadBookmarks");
+    qDebug() << "BookMarks::reloadBookmarks";
 	clear();
     QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
@@ -144,15 +145,18 @@ void BookMarks::updateCount()
      Update the image count for all folders in BookMarks
 */
     if (G::isLogger) G::log("BookMarks::count");
+    qDebug() << "BookMarks::updateCount";
      QTreeWidgetItemIterator it(this);
      while (*it) {
          QString path = (*it)->toolTip(0);
          int count = 0;
          dir->setPath(path);
+         QListIterator<QFileInfo> i(dir->entryInfoList());
          if (combineRawJpg) {
-             QListIterator<QFileInfo> i(dir->entryInfoList());
              while (i.hasNext()) {
                  QFileInfo info = i.next();
+                 qDebug() << "BookMarks::updateCount" << info.size() << info.fileName();
+                 if (!info.size()) continue;
                  QString fPath = info.path();
                  QString baseName = info.baseName();
                  QString suffix = info.suffix().toLower();
@@ -163,7 +167,12 @@ void BookMarks::updateCount()
                  count++;
              }
          }
-         else count = dir->entryInfoList().size();
+         else {
+             while (i.hasNext()) {
+                 QFileInfo info = i.next();
+                 if (info.size()) count++;
+             }
+         }
          (*it)->setText(1, QString::number(count));
          ++it;
      }
