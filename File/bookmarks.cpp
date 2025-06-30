@@ -89,7 +89,6 @@ BookMarks::BookMarks(QWidget *parent, DataModel *dm,
 void BookMarks::reloadBookmarks()
 {
     if (G::isLogger) G::log("BookMarks::reloadBookmarks");
-    qDebug() << "BookMarks::reloadBookmarks";
 	clear();
     QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
@@ -145,7 +144,6 @@ void BookMarks::updateCount()
      Update the image count for all folders in BookMarks
 */
     if (G::isLogger) G::log("BookMarks::count");
-    qDebug() << "BookMarks::updateCount";
      QTreeWidgetItemIterator it(this);
      while (*it) {
          QString path = (*it)->toolTip(0);
@@ -155,7 +153,6 @@ void BookMarks::updateCount()
          if (combineRawJpg) {
              while (i.hasNext()) {
                  QFileInfo info = i.next();
-                 qDebug() << "BookMarks::updateCount" << info.size() << info.fileName();
                  if (!info.size()) continue;
                  QString fPath = info.path();
                  QString baseName = info.baseName();
@@ -181,7 +178,8 @@ void BookMarks::updateCount()
 void BookMarks::updateCount(QString dPath)
 {
 /*
-     Only update the image count for the folder dPath
+    Only update the image count for the folder dPath
+    Is this being used? 2025-06-30
 */
      if (G::isLogger) G::log("BookMarks::count(fPath)");
      QTreeWidgetItemIterator it(this);
@@ -190,8 +188,8 @@ void BookMarks::updateCount(QString dPath)
          if (path == dPath) {
              int count = 0;
              dir->setPath(path);
+             QListIterator<QFileInfo> i(dir->entryInfoList());
              if (combineRawJpg) {
-                 QListIterator<QFileInfo> i(dir->entryInfoList());
                  while (i.hasNext()) {
                      QFileInfo info = i.next();
                      QString fPath = info.path();
@@ -204,7 +202,12 @@ void BookMarks::updateCount(QString dPath)
                      count++;
                  }
              }
-             else count = dir->entryInfoList().size();
+             else {
+                 while (i.hasNext()) {
+                     QFileInfo info = i.next();
+                     if (info.size()) count++;
+                 }
+             }
              (*it)->setText(1, QString::number(count));
              return;
          }

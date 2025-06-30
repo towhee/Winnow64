@@ -2164,7 +2164,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     fsTree->setEnabled(false);
 
     // only done here and if sort/filter operation
-    qDebug() << "MW::folderSelectionchange call dm->newInstance";
+    // qDebug() << "MW::folderSelectionchange call dm->newInstance";
 
     dm->newInstance();
 

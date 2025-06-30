@@ -351,7 +351,6 @@ void DataModel::newInstance()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
     instance++;
-    qDebug() << "DataModel::newInstance =" << instance;
     G::dmInstance = instance;
 }
 

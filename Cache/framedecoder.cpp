@@ -43,13 +43,13 @@
     QPixmap (if needed), which is emitted to the datamodel via the setFrameIcon or
     frameImage signal.
 
-    This one-player-per-video approach ensures decoding threads (used internally by FFmpeg)
-    are safely isolated. It avoids reuse of QMediaPlayer instances, which can cause
-    crashes if stopped or destroyed while FFmpeg threads are still active. This design is
-    robust to rapid datamodel changes and frequent thumbnail requests.
+    This one-player-per-video approach ensures decoding threads (used internally by
+    FFmpeg) are safely isolated. It avoids reuse of QMediaPlayer instances, which can
+    cause crashes if stopped or destroyed while FFmpeg threads are still active. This
+    design is robust to rapid datamodel changes and frequent thumbnail requests.
 
-    FrameDecoder maintains an internal queue of video files to process sequentially.
-    As each thumbnail is generated (or skipped due to an error), the player and sink are
+    FrameDecoder maintains an internal queue of video files to process sequentially. As
+    each thumbnail is generated (or skipped due to an error), the player and sink are
     cleaned up, and the next item in the queue is processed.
 
     Summary of workflow:
@@ -96,10 +96,19 @@ void FrameDecoder::clear()
     frameAlreadyDone = false;
 }
 
+bool FrameDecoder::queueContains(const QString &fPath)
+{
+    for (int i = 0; i < queue.size(); ++i) {
+        if (queue[i].fPath == fPath) return true;
+    }
+    return false;
+}
+
 void FrameDecoder::addToQueue(QString path, int longSide, QString source,
                               QModelIndex dmIdx, int dmInstance)
 {
     if (abort) return;
+    // if (queueContains(path)) return;
 
     Item item;
     item.fPath = path;
@@ -201,11 +210,19 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         return;
     }
 
-    QImage scaledIm = (item.longSide > 0) ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio) : im;
+    QImage scaledIm = (item.longSide > 0)
+                      ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
+                      : im;
 
     if (item.source == "dmThumb" && item.dmIdx.isValid()) {
         QPixmap pm = QPixmap::fromImage(scaledIm);
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
+        qDebug() << "FrameDecoder::handleFrameChanged"
+                 << "path =" << path
+                 << "pm.width() =" << pm.width()
+                 << "pm.height() =" << pm.height()
+                 << "duration =" << duration
+            ;
         emit setFrameIcon(item.dmIdx, pm, item.dmInstance, duration, this);
     } else {
         emit frameImage(path, scaledIm, item.source);

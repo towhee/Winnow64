@@ -505,7 +505,10 @@ inline bool MetaRead::needToRead(int row)
 */
 {
     // already reading this item?
-    if (dm->sf->index(row, G::MetadataReadingColumn).data().toBool()) return false;
+    if (dm->sf->index(row, G::MetadataReadingColumn).data().toBool()) {
+        qDebug() << "MetaRead::needToRead reading = true" << "row =" << row;
+        return false;
+    }
 
     needMeta = needIcon = false;
     if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
@@ -1010,11 +1013,21 @@ void MetaRead::dispatch(int id)
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
+        QModelIndex sfReadingIdx = dm->sf->index(nextRow, G::MetadataReadingColumn);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = sfIdx.data(G::PathRole).toString();
 
         // set reading flag
-        dm->setData(dmIdx, true);
+        dm->sf->setData(sfReadingIdx, true);
+
+        qDebug().noquote()
+            // << ms
+            << fun.leftJustified(col0Width)
+            << fPath
+            << "sfReadingIdx.data() ="
+            << dm->sf->index(nextRow, G::MetadataReadingColumn).data().toBool()
+            ;
+
 
         if (isDebug)
         {
@@ -1023,7 +1036,7 @@ void MetaRead::dispatch(int id)
             // if (ms.trimmed().toInt() > 100)
             qDebug().noquote()
                 // << ms
-                << fun.leftJustified(col0Width)
+                << fun1.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
                 << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')

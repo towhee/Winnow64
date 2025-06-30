@@ -1025,7 +1025,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     QString src = "IconView::scrollToRow";
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
     {
         QString msg = " row = " + QVariant(row).toString()
                       + " src = " + source;
