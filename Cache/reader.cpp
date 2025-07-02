@@ -169,6 +169,7 @@ void Reader::readIcon()
             qDebug() << "Reader::readIcon"
                      << fPath
                      << " instance =" << instance
+                     << "isReading =" << dm->index(dmRow, G::MetadataReadingColumn).data().toBool()
                 ;
             emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, instance);
         }
