@@ -104,7 +104,7 @@ bool Reader::readMetadata()
     m = &metadata->m;
     m->row = dmRow;
     m->instance = instance;
-    m->metadataReading = false;
+    m->metadataReading = true;
     m->metadataAttempted = true;
     m->metadataLoaded = isMetaLoaded;
 
@@ -166,11 +166,12 @@ void Reader::readIcon()
     // video
     if (isVideo) {
         if (G::renderVideoThumb) {
+            /*
             qDebug() << "Reader::readIcon"
                      << fPath
                      << " instance =" << instance
                      << "isReading =" << dm->index(dmRow, G::MetadataReadingColumn).data().toBool()
-                ;
+                ; //*/
             emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, instance);
         }
         return;

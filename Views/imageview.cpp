@@ -659,7 +659,7 @@ void ImageView::showPredictedFocus()
     qreal y2 = p.at(2).y() / h;
     QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
     qreal imA = w * 1.0 / h;
-    qDebug() << "ImageView::scrollChange  imA =" << imA;
+    // qDebug() << "ImageView::scrollChange  imA =" << imA;
     emit loupeRect(vp, imA);
 }
 
@@ -672,11 +672,12 @@ void ImageView::predictPanToFocus()
 
     focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
     panTo(focusPrediction.x(), focusPrediction.y());
+    /*
     qDebug() << "ImageView::getFocusPrediction"
              << "Predicted (normalized):" << focusPrediction
              << "x =" << focusPrediction.x()
              << "y =" << focusPrediction.y()
-        ;
+        ; //*/
 }
 
 void ImageView::panTo(float xPct, float yPct)
@@ -1148,7 +1149,7 @@ void ImageView::enterEvent(QEnterEvent *event)
     wheelSpinningOnEntry = G::wheelSpinning;
 
     if (panToFocus && zoom > zoomFit) {
-        qDebug() << "ImageView::enterEvent emit showLoupeRect";
+        // qDebug() << "ImageView::enterEvent emit showLoupeRect";
         emit showLoupeRect(true);
     }
 

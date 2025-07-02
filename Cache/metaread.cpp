@@ -129,7 +129,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -506,12 +506,12 @@ inline bool MetaRead::needToRead(int row)
 */
 {
     // already reading this item?
-    QString fPath = dm->sf->index(row,0).data(G::PathRole).toString();
+    // QString fPath = dm->sf->index(row,0).data(G::PathRole).toString();
     if (dm->sf->index(row, G::MetadataReadingColumn).data().toBool()) {
-        qDebug() << "MetaRead::needToRead already reading = true " << "row =" << row << fPath;
+        // qDebug() << "MetaRead::needToRead already reading = true " << "row =" << row << fPath;
         return false;
     }
-    else qDebug() << "MetaRead::needToRead already reading = false" << "row =" << row << fPath;
+    // else qDebug() << "MetaRead::needToRead already reading = false" << "row =" << row << fPath;
 
     needIcon = false;
     needMeta = false;
@@ -641,7 +641,7 @@ void MetaRead::redo()
     {
         G::log(fun, "count = " + QString::number(redoCount));
     }
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -1001,7 +1001,7 @@ void MetaRead::dispatch(int id)
         b = startRow - 1;
         if (fileSelectionChanged) headStartCount = 0;
         isNewStartRowWhileDispatching = false;
-        // if (isDebug)
+        if (isDebug)
         {
             QString fun1 = fun + " isNewStartRowWhileStillReading";
             qDebug().noquote()

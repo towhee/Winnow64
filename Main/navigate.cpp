@@ -108,7 +108,7 @@ void MW::keyHome()
 /*
 
 */
-    qDebug() << "\nKEY HOME\n";
+    // qDebug() << "\nKEY HOME\n";
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("Home");
@@ -120,7 +120,7 @@ void MW::keyEnd()
 /*
 
 */
-    qDebug() << "\nKEY END\n";
+    // qDebug() << "\nKEY END\n";
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
     if (G::mode == "Compare") compareImages->go("End");

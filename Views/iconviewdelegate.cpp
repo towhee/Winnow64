@@ -745,7 +745,7 @@ void IconViewDelegate::paint(QPainter *painter,
     // imageView viewport rect when zoomed
     if (isCurrentIndex && vpRectIsVisible) {
         // imA is original image aspect (in case thumbnail has black borders)
-        qDebug() << "IconViewDelegate::paint  imA =" << imA;
+        // qDebug() << "IconViewDelegate::paint  imA =" << imA;
         qreal wIcon, hIcon;
         int wBlack = 0;     // black border
         int hBlack = 0;     // black border

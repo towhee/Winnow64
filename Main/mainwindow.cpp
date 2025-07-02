@@ -4207,13 +4207,9 @@ void MW::toggleFullScreen()
     // show normal screen
     else
     {
-        qDebug() << "wasMaximized =" << wasMaximized;
-        // showNormal();
-        // setVisible(false);
         if (wasMaximized) showMaximized();
         else showNormal();
         invokeWorkspace(ws);
-        // setVisible(true);
     }
 }
 
