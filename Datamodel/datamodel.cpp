@@ -2076,6 +2076,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
     if (itemFromIndex(dmIdx)->icon().isNull()) {
         if (item != nullptr) {
             item->setIcon(pm);
+            setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             // set aspect ratio for video
             if (pm.height() > 0) {
                 QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
