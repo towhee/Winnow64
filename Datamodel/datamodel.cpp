@@ -2044,7 +2044,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
                  << "row =" << dmIdx.row()
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
-                 << "\n"
         ;
 
     if (G::stop) return;
@@ -2077,12 +2076,12 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         if (item != nullptr) {
             item->setIcon(pm);
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             // set aspect ratio for video
             if (pm.height() > 0) {
                 QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
                 setData(index(row, G::AspectRatioColumn), aspectRatio);
             }
-            //setIconMax(pm);
         }
     }
 }
@@ -2144,6 +2143,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+    setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)

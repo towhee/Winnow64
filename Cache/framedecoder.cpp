@@ -217,12 +217,13 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
     if (item.source == "dmThumb" && item.dmIdx.isValid()) {
         QPixmap pm = QPixmap::fromImage(scaledIm);
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
+        /*
         qDebug() << "FrameDecoder::handleFrameChanged"
                  << "path =" << path
                  << "pm.width() =" << pm.width()
                  << "pm.height() =" << pm.height()
                  << "duration =" << duration
-            ;
+            ; //*/
         emit setFrameIcon(item.dmIdx, pm, item.dmInstance, duration, this);
     } else {
         emit frameImage(path, scaledIm, item.source);
