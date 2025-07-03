@@ -491,7 +491,7 @@ void MW::setCombineRawJpg()
     // update image counts
     fsTree->refreshModel();
     refreshBookmarks();
-    qDebug() << "MW::setCombineRawJpg combineRawJpg =" << combineRawJpg;
+    // qDebug() << "MW::setCombineRawJpg combineRawJpg =" << combineRawJpg;
 
    // update the datamodel type column
    QString src = "setCombinedRawJpg";

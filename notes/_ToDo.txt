@@ -38,15 +38,12 @@ BUGS / TO DO
 - Read svg files ie downloads/glyphs.svg
 - Missing thumbs phantom in filters (reproducible?)
 - When select thumb check if null and retry to read
-- Check MW::refreshCurrentFolder still works
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
 - DataModel could fileInfoList be local - req'd as class variable after model built?
-- When select folder using include subfolders make sure it is and remains selected in FSTree
 - FSTree/Bookmarks folder not always highlighted ie select plus subfolders
 - FS and Bookmarks show unselected row highlighted sometimes
 - Label colors not getting into LR during ingest
-- Add header row to reports
 - Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
@@ -54,7 +51,6 @@ BUGS / TO DO
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
-- "Busy, try new bookmark in a sec" when click bookmark (maybe MetaRead2 not stopped).
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads
 - ARW file preview size is wrong ?
