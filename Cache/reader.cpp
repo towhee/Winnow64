@@ -93,7 +93,7 @@ bool Reader::readMetadata()
     // read metadata from file into metadata->m
     int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
-    bool isMetaLoaded;
+    bool isMetaLoaded = false;
     if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, dmRow, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
 
@@ -104,11 +104,11 @@ bool Reader::readMetadata()
     m = &metadata->m;
     m->row = dmRow;
     m->instance = instance;
-    m->metadataReading = true;
     m->metadataAttempted = true;
     m->metadataLoaded = isMetaLoaded;
+    // Do not set m->metadataReading = true (causes some video repeats 2025-07-04
 
-    // req'd to readIcon, in case it runs before datamodel has been up[dated
+    // req'd to readIcon, in case it runs before datamodel has been updated
     offsetThumb = m->offsetThumb;
     lengthThumb = m->lengthThumb;
 

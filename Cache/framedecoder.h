@@ -49,6 +49,7 @@ private:
 
     QPointer<QMediaPlayer> mediaPlayer;
     QPointer<QVideoSink> videoSink;
+    int playerGeneration = 0;
 
     bool abort = false;
     QString prevPath;

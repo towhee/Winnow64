@@ -499,27 +499,33 @@ void MetaRead::cleanupIcons()
     }
 }
 
-inline bool MetaRead::needToRead(int row)
+inline bool MetaRead::needToRead(int sfRow)
 /*
     Returns true if either the metadata or icon (thumbnail) has not been loaded and
     not already reading.
 */
 {
-    // already reading this item?
-    // QString fPath = dm->sf->index(row,0).data(G::PathRole).toString();
-    if (dm->sf->index(row, G::MetadataReadingColumn).data().toBool()) {
-        // qDebug() << "MetaRead::needToRead already reading = true " << "row =" << row << fPath;
-        return false;
-    }
-    // else qDebug() << "MetaRead::needToRead already reading = false" << "row =" << row << fPath;
-
     needIcon = false;
     needMeta = false;
-    if (!dm->sf->index(row, G::MetadataAttemptedColumn).data().toBool()) {
+
+    bool isReading = dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool();
+    bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
+    bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+
+    // already reading this item?
+    if (isReading || isIcon) {
+        return false;
+    }
+    else {
+        QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
+        dm->sf->setData(sfReadingIdx, true);
+    }
+
+    if (!isMeta) {
         needMeta = true;
     }
-    if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) {
-        if (row >= firstIconRow && row <= lastIconRow) {
+    if (!isIcon) {
+        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
             needIcon = true;
         }
     }
@@ -1017,24 +1023,11 @@ void MetaRead::dispatch(int id)
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
-        QModelIndex sfReadingIdx = dm->sf->index(nextRow, G::MetadataReadingColumn);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = sfIdx.data(G::PathRole).toString();
 
-        /*
-        qDebug().noquote()
-            << fun.leftJustified(col0Width)
-            << "row =" << nextRow
-            << fPath
-            // << "sfReadingIdx.data() ="
-            // << dm->sf->index(nextRow, G::MetadataReadingColumn).data().toBool()
-            ; //*/
-
-        // set reading flag
-        dm->sf->setData(sfReadingIdx, true);
-
-
         if (isDebug)
+        // if (dm->sf->index(nextRow, G::VideoColumn).data().toBool())
         {
             QString fun1 = fun + " invoke reader";
             // QString ms = msElapsed();
@@ -1043,7 +1036,8 @@ void MetaRead::dispatch(int id)
                 // << ms
                 << fun1.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+                << "redo =" << QString::number(redoCount).leftJustified(2, ' ')
+                << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
                 << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
                 << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
                 << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
