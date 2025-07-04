@@ -1592,7 +1592,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
-    setData(index(row, G::MetadataReadingColumn), m.metadataReading);
+    // cancel as causing repeats for some videos
+    // setData(index(row, G::MetadataReadingColumn), m.metadataReading);
     setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
@@ -2041,9 +2042,10 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
     if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame         "
-                 << "row =" << dmIdx.row()
+                 << "dmRow =" << dmIdx.row()
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
+                 << "fPath =" << dmIdx.data(G::PathRole).toString()
         ;
 
     if (G::stop) return;
@@ -2076,6 +2078,8 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
         if (item != nullptr) {
             item->setIcon(pm);
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataAttemptedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             // set aspect ratio for video
             if (pm.height() > 0) {
