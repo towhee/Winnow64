@@ -13,6 +13,7 @@ class InfoString : public QWidget
     Q_OBJECT
 public:
     explicit InfoString(QWidget *parent, DataModel *dm, QSettings *setting);
+    void tokenEditor();
     void change(std::function<void()> updateInfoCallback = nullptr);
     QString getCurrentInfoTemplate();
     QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);

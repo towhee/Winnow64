@@ -1,8 +1,376 @@
-26	IMG_5796.MOV
-67	IMG_5951.MOV
-68	IMG_5952.MOV
-98	IMG_5988.MOV
-100	IMG_5990.MOV
-101	IMG_5991.MOV
-109	IMG_5999.MOV
-110	IMG_6001.MOV
+void MW::createMenus()
+{
+    if (G::isLogger) G::log("MW::createMenus");
+
+    createFileMenu();
+    createEditMenu();
+    createGoMenu();
+    createFilterMenu();
+    createSortMenu();
+    createEmbellishMenu();
+    createViewMenu();
+    createHelpMenu();
+
+    createMainMenu();
+    createMainContextMenu();
+    createFSTreeContextMenu();
+    createBookmarksContextMenu();
+    createFiltersContextMenu();
+    createInfoViewContextMenu();
+    createThumbViewContextMenu();
+
+    QLabel *label = new QLabel;
+    label->setText(" TEST ");
+    label->setStyleSheet("QLabel{color:yellow;}");
+    QToolBar *toolBar = new QToolBar;
+    toolBar->addWidget(label);
+
+    enableSelectionDependentMenus();
+}
+
+void MW::createFileMenu()
+{
+    fileMenu = new QMenu(this);
+    fileMenu->setToolTipsVisible(true);
+    fileGroupAct = new QAction("File", this);
+    fileGroupAct->setMenu(fileMenu);
+    fileMenu->addAction(openAction);
+    fileMenu->addAction(openUsbAction);
+    openWithMenu = fileMenu->addMenu(tr("Open with..."));
+    openWithMenu->addAction(manageAppAction);
+    openWithMenu->addSeparator();
+    // add 10 dummy menu items for external apps
+    for (int i = 0; i < 10; i++) {
+        openWithMenu->addAction(appActions.at(i));
+    }
+    recentFoldersMenu = fileMenu->addMenu(tr("Recent folders"));
+    // add maxRecentFolders dummy menu items for custom workspaces
+    for (int i = 0; i < maxRecentFolders; i++) {
+        recentFoldersMenu->addAction(recentFolderActions.at(i));
+    }
+    connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeRecentFolder(QAction*)));
+
+    fileMenu->addAction(revealFileAction);
+
+    fileMenu->addSeparator();
+    fileMenu->addAction(refreshFoldersAction);
+
+    fileMenu->addSeparator();
+    fileMenu->addAction(colorManageAction);
+    fileMenu->addAction(combineRawJpgAction);
+    fileMenu->addAction(includeSidecarsAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(deleteImagesAction);
+    fileMenu->addAction(deleteActiveFolderAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(renameAction);
+    fileMenu->addAction(saveAsFileAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(reportMetadataAction);
+    //    fileMenu->addAction(mediaReadSpeedAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
+}
+
+void MW::createIngestMenu()
+{
+    ingestMenu = new QMenu(this);
+    ingestGroupAct = new QAction("Ingest", this);
+    ingestGroupAct->setMenu(ingestMenu);
+    ingestMenu->addAction(pickAction);
+    ingestMenu->addAction(rejectAction);
+    ingestMenu->addAction(pickUnlessRejectedAction);
+    //    editMenu->addAction(filterPickAction);
+    ingestMenu->addAction(popPickHistoryAction);
+    ingestMenu->addSeparator();
+    ingestMenu->addAction(ingestAction);
+    ingestHistoryFoldersMenu = ingestMenu->addMenu(tr("Ingest History"));
+    // add maxIngestHistoryFolders dummy menu items for custom workspaces
+    for (int i = 0; i < maxIngestHistoryFolders; i++) {
+        ingestHistoryFoldersMenu->addAction(ingestHistoryFolderActions.at(i));
+    }
+    connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeIngestHistoryFolder(QAction*)));
+    ingestMenu->addAction(ejectAction);
+    ingestMenu->addAction(eraseUsbAction);
+}
+
+void MW::createEditMenu()
+{
+    editMenu = new QMenu(this);
+    editGroupAct = new QAction("Edit", this);
+    editGroupAct->setMenu(editMenu);
+    editMenu->addAction(selectAllAction);
+    editMenu->addAction(invertSelectionAction);
+    editMenu->addSeparator();
+#ifdef Q_OS_MAC
+    editMenu->addAction(shareFilesAction);
+#endif
+    editMenu->addAction(copyFilesAction);
+    editMenu->addAction(copyImageAction);
+    editMenu->addAction(copyImagePathFromContextAction);
+    editMenu->addAction(pasteFilesAction);
+    editMenu->addSeparator();
+    editMenu->addAction(searchTextEditAction);
+    editMenu->addSeparator();
+    ratingsMenu = editMenu->addMenu("Ratings");
+    ratingsMenu->addAction(rate0Action);
+    ratingsMenu->addAction(rate1Action);
+    ratingsMenu->addAction(rate2Action);
+    ratingsMenu->addAction(rate3Action);
+    ratingsMenu->addAction(rate4Action);
+    ratingsMenu->addAction(rate5Action);
+    //    editMenu->addSeparator();
+    labelsMenu = editMenu->addMenu("Color labels");
+    labelsMenu->addAction(label0Action);
+    labelsMenu->addAction(label1Action);
+    labelsMenu->addAction(label2Action);
+    labelsMenu->addAction(label3Action);
+    labelsMenu->addAction(label4Action);
+    labelsMenu->addAction(label5Action);
+    editMenu->addSeparator();
+    editMenu->addAction(rotateRightAction);
+    editMenu->addAction(rotateLeftAction);
+    editMenu->addSeparator();
+    utilitiesMenu = editMenu->addMenu("Utilities");
+    utilitiesMenu->addAction(mediaReadSpeedAction);
+    utilitiesMenu->addAction(visCmpImagesAction);
+    if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
+    // utilitiesMenu->addAction(reportHueCountAction);
+    utilitiesMenu->addAction(meanStackAction);
+    editMenu->addSeparator();
+    editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
+}
+
+void MW::createGoMenu()
+{
+    goMenu = new QMenu(this);
+    goGroupAct = new QAction("Go", this);
+    goGroupAct->setMenu(goMenu);
+    goMenu->addAction(jumpAction);
+    goMenu->addAction(keyScrollCurrentAction);
+    goMenu->addSeparator();
+    // moved to MW::eventFilter
+    goMenu->addAction(keyRightAction);
+    goMenu->addAction(keyLeftAction);
+    goMenu->addAction(keyUpAction);
+    goMenu->addAction(keyDownAction);
+    goMenu->addAction(keyPageDownAction);
+    goMenu->addAction(keyPageUpAction);
+    goMenu->addAction(keyHomeAction);
+    goMenu->addAction(keyEndAction);
+    goMenu->addSeparator();
+    goMenu->addAction(keyRightAddToSelectionAction);
+    goMenu->addAction(keyLeftAddToSelectionAction);
+    goMenu->addAction(keyUpAddToSelectionAction);
+    goMenu->addAction(keyDownAddToSelectionAction);
+    goMenu->addAction(keyPageUpAddToSelectionAction);
+    goMenu->addAction(keyPageDownAddToSelectionAction);
+    goMenu->addAction(keyHomeAddToSelectionAction);
+    goMenu->addAction(keyEndAddToSelectionAction);
+    goMenu->addSeparator();
+    goMenu->addAction(keyScrollLeftAction);
+    goMenu->addAction(keyScrollRightAction);
+    goMenu->addAction(keyScrollUpAction);
+    goMenu->addAction(keyScrollDownAction);
+    goMenu->addAction(keyScrollPageUpAction);
+    goMenu->addAction(keyScrollPageDownAction);
+    goMenu->addAction(keyScrollHomeAction);
+    goMenu->addAction(keyScrollEndAction);
+    goMenu->addSeparator();
+    goMenu->addAction(nextPickAction);
+    goMenu->addAction(prevPickAction);
+    goMenu->addSeparator();
+    goMenu->addAction(randomImageAction);
+}
+
+void MW::createFilterMenu()
+{
+    filterMenu = new QMenu(this);
+    filterGroupAct = new QAction("Filter", this);
+    filterGroupAct->setMenu(filterMenu);
+    // filterMenu->addAction(filterUpdateAction);
+    filterMenu->addAction(filterInvertAction);
+    filterMenu->addAction(clearAllFiltersAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterPickAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterSearchAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterRating1Action);
+    filterMenu->addAction(filterRating2Action);
+    filterMenu->addAction(filterRating3Action);
+    filterMenu->addAction(filterRating4Action);
+    filterMenu->addAction(filterRating5Action);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterRedAction);
+    filterMenu->addAction(filterYellowAction);
+    filterMenu->addAction(filterGreenAction);
+    filterMenu->addAction(filterBlueAction);
+    filterMenu->addAction(filterPurpleAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterLastDayAction);
+    filterMenu->addSeparator();
+    filterMenu->addAction(filterLastDayAction);
+}
+
+void MW::createSortMenu()
+{
+    sortMenu = new QMenu(this);
+    sortGroupAct = new QAction("Sort", this);
+    sortGroupAct->setMenu(sortMenu);
+    sortMenu->addActions(sortGroupAction->actions());
+    sortMenu->addSeparator();
+    sortMenu->addAction(sortReverseAction);
+}
+
+void MW::createEmbellishMenu()
+{
+    embelMenu = new QMenu(this);
+    //    /*
+    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
+    //*/
+    embelGroupAct = new QAction("Embellish", this);
+    embelGroupAct->setMenu(embelMenu);
+    embelExportMenu = embelMenu->addMenu(tr("Export embellished images..."));
+    embelExportMenu->addActions(embelExportGroupAction->actions());
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelNewTemplateAction);
+    embelMenu->addAction(embelReadTemplateAction);
+    embelMenu->addAction(embelSaveTemplateAction);
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelManageTilesAction);
+    embelMenu->addAction(embelManageGraphicsAction);
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelRevealWinnetsAction);
+    connect(embelExportMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
+}
+
+void MW::createViewMenu()
+{
+    viewMenu = new QMenu(this);
+    windowGroupAct = new QAction("Window", this);
+    windowGroupAct->setMenu(viewMenu);
+    workspaceMenu = viewMenu->addMenu(tr("&Workspace"));
+    workspaceMenu->addAction(defaultWorkspaceAction);
+    workspaceMenu->addAction(newWorkspaceAction);
+    workspaceMenu->addAction(manageWorkspaceAction);
+    workspaceMenu->addSeparator();
+    // add 10 dummy menu items for custom workspaces
+    for (int i=0; i<10; i++) {
+        workspaceMenu->addAction(workspaceActions.at(i));
+    }
+    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeWorkspaceFromAction(QAction*)));
+
+    viewMenu->addSeparator();
+    viewMenu->addAction(folderDockVisibleAction);
+    viewMenu->addAction(favDockVisibleAction);
+    viewMenu->addAction(filterDockVisibleAction);
+    viewMenu->addAction(metadataDockVisibleAction);
+    viewMenu->addAction(thumbDockVisibleAction);
+    if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
+    // viewMenu->addSeparator();
+    //    windowMenu->addAction(windowTitleBarVisibleAction);
+    #ifdef Q_OS_WIN
+    //windowMenu->addAction(menuBarVisibleAction);
+    #endif
+    viewMenu->addAction(statusBarVisibleAction);  // crash
+    viewMenu->addSeparator();
+    viewGroupAct = new QAction("View", this);
+    viewGroupAct->setMenu(viewMenu);
+    viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addSeparator();
+    viewMenu->addAction(slideShowAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(fullScreenAction);
+    viewMenu->addAction(escapeFullScreenAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(ratingBadgeVisibleAction);
+    viewMenu->addAction(iconNumberVisibleAction);
+    viewMenu->addAction(infoVisibleAction);
+    viewMenu->addAction(infoSelectAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(zoomToAction);
+    viewMenu->addAction(zoomInAction);
+    viewMenu->addAction(zoomOutAction);
+    viewMenu->addAction(zoomToggleAction);
+    viewMenu->addAction(panFocusToggleAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(thumbsEnlargeAction);
+    viewMenu->addAction(thumbsShrinkAction);
+
+}
+
+void MW::createHelpMenu()
+{
+    helpMenu = new QMenu(this);
+    helpGroupAct = new QAction("Help", this);
+    helpGroupAct->setMenu(helpMenu);
+    #ifdef Q_OS_WIN
+    helpMenu->addAction(checkForUpdateAction);
+    helpMenu->addSeparator();
+    #endif
+    helpMenu->addAction(aboutAction);
+    //    helpMenu->addAction(helpAction);
+    helpMenu->addAction(helpShortcutsAction);
+    helpMenu->addAction(helpWelcomeAction);
+    helpMenu->addAction(helpFilmStripAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(diagnosticsLogIssuesAction);
+    helpMenu->addAction(diagnosticsSessionIssuesAction);
+    helpMenu->addSeparator();
+    helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
+    testMenu = helpDiagnosticsMenu->addMenu(tr("&Tests"));
+    testMenu->addAction(traverseFolderStressTestAction);
+    testMenu->addAction(bounceFoldersStressTestAction);
+    helpDiagnosticsMenu->addAction(diagnosticsAllAction);
+    helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMainAction);
+    helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);
+    helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
+    helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
+}
+
+void MW::createMainMenu()
+{
+    // MAIN MENU
+    menuBar()->addAction(fileGroupAct);
+    menuBar()->addAction(ingestGroupAct);
+    menuBar()->addAction(editGroupAct);
+    menuBar()->addMenu(goMenu);
+    menuBar()->addAction(goGroupAct);
+    menuBar()->addAction(filterGroupAct);
+    menuBar()->addAction(sortGroupAct);
+    menuBar()->addAction(embelGroupAct);
+    menuBar()->addAction(viewGroupAct);
+    // menuBar()->addAction(windowGroupAct);
+    menuBar()->addAction(helpGroupAct);
+    menuBar()->setVisible(true);
+}
+
+void MW::createMainContextMenu()
+{
+    // MAIN CONTEXT MENU
+    mainContextActions = new QList<QAction *>;
+    mainContextActions->append(fileGroupAct);
+    mainContextActions->append(ingestGroupAct);  // crashing here line 2084
+    mainContextActions->append(editGroupAct);
+    mainContextActions->append(goGroupAct);
+    mainContextActions->append(filterGroupAct);
+    mainContextActions->append(sortGroupAct);
+    mainContextActions->append(embelGroupAct);
+    mainContextActions->append(viewGroupAct);
+    mainContextActions->append(windowGroupAct);
+    mainContextActions->append(helpGroupAct);
+    // Central Widget mode context menu
+    centralWidget->addActions(*mainContextActions);
+    centralWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
+}

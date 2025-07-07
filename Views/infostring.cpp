@@ -111,12 +111,22 @@ void InfoString::add(QMap<QString, QVariant> items)
     }
 }
 
+void InfoString::tokenEditor()
+{
+    QString title = "TokenEditor";
+    int index = 0;
+    QString key = "";
+    TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, usingTokenMap,
+                      index, key, title);
+    tokenDlg.exec();
+}
+
 void InfoString::change(std::function<void ()> updateInfoCallback)
 {
     usingToken();
     int index = getCurrentInfoTemplateIndex();
     bool showInLoupeView = true;
-    QString title = "Loupe View Info Token Editor";
+    QString title = "Loupe View Info Token Editor XXX";
     LoupeInfoDlg loupeInfoDlg(tokens, exampleMap, infoTemplates, usingTokenMap,
                               index, loupeInfoTemplate, updateInfoCallback, this);
     loupeInfoDlg.exec();

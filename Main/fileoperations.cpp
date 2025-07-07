@@ -159,7 +159,7 @@ void MW::renameSelectedFiles()
                           "images from multiple folders and there should be a<br>"
                           + includesubfoldersIcon +
                           " in the status bar.<p>"
-                          "Press <font color=\"red\"><b>Spacebar</b></font> to continue."
+                          "Press <font color=\"red\"><b>Esc</b></font> to continue."
                 ;
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             return;
@@ -300,7 +300,7 @@ void MW::deleteSelectedFiles()
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
-                      "Press <font color=\"red\"><b>Spacebar</b></font> to continue.";
+                      "Press <font color=\"red\"><b>Esc</b></font> to continue.";
         G::popUp->showPopup(msg, 0);
         return;
     }
@@ -401,7 +401,7 @@ void MW::deleteFiles(QStringList paths)
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
-                      "Press <font color=\"red\"><b>Spacebar</b></font> to continue.";
+                      "Press <font color=\"red\"><b>Esc</b></font> to continue.";
         G::popUp->showPopup(msg, 0);
         return;
     }

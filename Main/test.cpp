@@ -392,26 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->viewport()->update();
-
-    // fsTree->updateCount();
-    // refresh();
-
-    // QModelIndexList selection = selectionModel()->selectedRows();
-    // for (int i = 0; i < selection.count(); ++i) {
-    //     QModelIndex idx = selection.at(i);
-    //     if (!idx.isValid()) {
-    //         qDebug() << "Invalid index at" << i;
-    //         continue;
-    //     }
-    //     QStandardItem *item = dm->sf->itemFromIndex(idx);
-    //     if (!item) {
-    //         qDebug() << "Null item at" << i;
-    //         continue;
-    //     }
-    //     QStandardItem *parent = item->parent();  // <<<<< likely null or invalid
-    //     qDebug() << "Item" << i << "text:" << item->text() << "parent:" << parent;
-    // }
+    qDebug() << "Test::test()";
+    infoString->tokenEditor();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
