@@ -233,7 +233,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     if (embelProperties->templateName == "Do not Embellish") {
         G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"
-                            "Press <font color=\"red\"><b>Spacebar</b></font> to continue.",
+                            "Press <font color=\"red\"><b>Esc</b></font> to continue.",
                             0);
         return;
     }
@@ -328,7 +328,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                   "Elapsed time " + _sec + second + "<p>" +
                   _msperim + " milliseconds per image.<p>" +
                   "<hr>" +
-                  "Press <font color=\"red\"><b>Spacebar</b></font> to continue";
+                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
     G::popUp->showPopup(msg, 2000);
     //*/
 }

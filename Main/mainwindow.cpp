@@ -4455,7 +4455,7 @@ void MW::setRotation(int degrees)
             QString msg = "Please note that while the images have been rotated in Winnow,<br>"
                           "the EXIF in the image file has not been updated because file<br>"
                           "modification is disabled in preferences (General section).<p>"
-                          "<p>Press <font color=\"red\"><b>Spacebar</b></font> to continue."
+                          "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
                 ;
             G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             rotationAlertShown = true;

@@ -718,6 +718,7 @@ private:
     QMenu *fileMenu;
     QMenu *openWithMenu;
     QMenu *recentFoldersMenu;
+    QMenu *ingestMenu;
     QMenu *ingestHistoryFoldersMenu;
     QMenu *editMenu;
     QMenu *ratingsMenu;
@@ -843,7 +844,7 @@ private:
 
     QAction *nextPickAction;
     QAction *prevPickAction;
-    QAction *searchTextEditAction;
+    QAction *tokenTemplateEditorAction;
     QAction *rate0Action;
     QAction *rate1Action;
     QAction *rate2Action;
@@ -1002,6 +1003,7 @@ private:
 
     // Group actions
     QAction *fileGroupAct;
+    QAction *ingestGroupAct;
     QAction *editGroupAct;
     QAction *goGroupAct;
     QAction *filterGroupAct;
@@ -1238,6 +1240,7 @@ private:
     void addMenuSeparator(QWidget *widget);
     void createActions();
     void createFileActions();
+    void createIngestActions();
     void createEditActions();
     void createGoActions();
     void createFilterActions();
@@ -1263,6 +1266,7 @@ private:
     // menus
     void createMenus();
     void createFileMenu();
+    void createIngestMenu();
     void createEditMenu();
     void createGoMenu();
     void createFilterMenu();
