@@ -1233,7 +1233,7 @@ private:
     void embelDockVisibilityChange();
     void updateState();
     // bool stop(QString src = "");
-//    void stopAndClearAllAfterMetaReadStopped();
+    // void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
     // actions
