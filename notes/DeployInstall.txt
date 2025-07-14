@@ -19,8 +19,10 @@ NORMAL DEPLOYMENT
         - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
 	- Make sure focus_point_model.onnx is in Winnow.app/Contents/MacOS.
         - Execute build>clean to make sure fully universal build
+	- Delete Winnow executable inside Winnow.app, to be replaced when compile in release mode.
         - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
         - Run WinnowDeployRelease.command to add frameworks, sign app and copy to Install Winnow folder.
+	- Run WinnowDeployFixLibPaths to clean up library references and missing dylibs.
         - In Install folder rename with version ie Winnow1.37.app.
         - Confirm is universal:
           lipo -archs /Users/roryhill/Projects/build-winnow64-Qt_6_6_0_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow

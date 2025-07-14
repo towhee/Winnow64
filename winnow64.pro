@@ -475,6 +475,10 @@ macx:LIBS += -framework AppKit
 macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
+# onnxruntime
+# macx:INCLUDEPATH += /Users/roryhill/onnxruntime-osx-arm64-1.17.0/include
+# LIBS += -L/Users/roryhill/onnxruntime-osx-arm64-1.17.0/lib -lonnxruntime
+
 # opencv
 macx:OPENCV_PREFIX = /opt/homebrew/opt/opencv
 macx:INCLUDEPATH += $$OPENCV_PREFIX/include/opencv4

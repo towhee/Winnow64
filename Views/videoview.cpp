@@ -19,7 +19,7 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWi
     setStyleSheet("QSlider{min-height: 24;}");
 
     t = new QTimer(this);
-    t->setInterval(50);
+    t->setInterval(10);
     t->setSingleShot(false);
 
     connect(video->mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoView::durationChanged);
@@ -33,7 +33,7 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWi
     connect(playPauseBtn, &QToolButton::pressed, this, &VideoView::playOrPause);
 
     scrub = new QSlider(Qt::Horizontal, this);
-    scrub->setRange(0, 100);
+    scrub->setRange(0, 1000);
     connect(scrub, &QSlider::sliderMoved, this, &VideoView::scrubMoved);
     connect(scrub, &QSlider::sliderPressed, this, &VideoView::scrubPressed);
 
