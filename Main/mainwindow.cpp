@@ -4187,6 +4187,7 @@ void MW::toggleFullScreen()
         snapshotWorkspace(ws);
         wasMaximized = isMaximized();
         showFullScreen();
+        menuBar()->setVisible(false);
         folderDockVisibleAction->setChecked(fullScreenDocks.isFolders);
         folderDock->setVisible(fullScreenDocks.isFolders);
         favDockVisibleAction->setChecked(fullScreenDocks.isFavs);
@@ -4210,6 +4211,7 @@ void MW::toggleFullScreen()
         if (wasMaximized) showMaximized();
         else showNormal();
         invokeWorkspace(ws);
+        menuBar()->setVisible(true);
     }
 }
 

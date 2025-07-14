@@ -17,6 +17,8 @@ WHAT'S NEW
 - Add tooltips for IconView symbols
 
 BUGS / TO DO
+- Windows tooltips (esp for thumbnails)
+- Windows do not show menu when full screen
 - Read media speed is unintuitive
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
