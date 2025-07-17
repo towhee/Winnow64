@@ -950,6 +950,14 @@ void MW::createAppStyle()
     css = widgetCSS.css();
     G::css = css;
     this->setStyleSheet(css);
+
+    // fix tooltips for windows (still works in MacOS)
+    QToolTip::setFont(QFont("Segoe UI", 10));
+    QPalette pal;
+    int b = G::backgroundShade;
+    pal.setColor(QPalette::ToolTipBase, QColor(b,b,b));
+    pal.setColor(QPalette::ToolTipText, QColor(255, 255, 255));
+    QToolTip::setPalette(pal);
     return;
 }
 
