@@ -3028,7 +3028,12 @@ void MW::folderChangeCompleted()
     });
 
     // build filters if filter dock is visible
-    if (dm->folderList.count() >= 1
+    qDebug() << "MW::folderChangecompleted"
+             << "dm->folderList.count() =" << dm->folderList.count()
+             << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
+             << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
+                ;
+    if (dm->folderList.count() > 0
             && dm->isQueueEmpty()
             && !filterDock->visibleRegion().isNull()
        )

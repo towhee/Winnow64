@@ -1206,7 +1206,7 @@ void MW::createFilterDock()
     BarBtn *updateFiltersBtn = new BarBtn();
     updateFiltersBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     updateFiltersBtn->setToolTip("Update filters");
-//    connect(updateFiltersBtn, &BarBtn::clicked, buildFilters, &BuildFilters::build);
+    connect(updateFiltersBtn, &BarBtn::clicked, this, &MW::updateAllFilters);
     filterTitleLayout->addWidget(updateFiltersBtn);
 
     // Spacer

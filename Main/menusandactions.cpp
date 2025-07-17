@@ -921,7 +921,7 @@ void MW::createFilterActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
-    filterUpdateAction = new QAction(tr("Update all filters"), this);
+    filterUpdateAction = new QAction(tr("Force update"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
     connect(filterUpdateAction,  &QAction::triggered, this, &MW::updateAllFilters);
@@ -1901,7 +1901,7 @@ void MW::createFilterMenu()
     filterMenu = new QMenu(this);
     filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
-    // filterMenu->addAction(filterUpdateAction);
+    filterMenu->addAction(filterUpdateAction);
     filterMenu->addAction(filterInvertAction);
     filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();

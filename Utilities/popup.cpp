@@ -34,7 +34,8 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     label.setStyleSheet(
         "QLabel "
         "{"
-            "color : white; "
+            "color: white;"
+            "background-color: transparent;"
             "font-size: 16px;"
             "margin-top: 10px;"
             "margin-bottom: 10px;"
