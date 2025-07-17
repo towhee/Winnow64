@@ -82,8 +82,10 @@ QString WidgetCSS::css()
             tabWidget() +
             textEdit() +
             toolButton() +
-            toolTip() +
             treeView() +
+            #ifdef Q_OS_MAC
+            toolTip() +
+            #endif
 
            // dockTitleBar() +      // not working
            // treeWidget() +        // not working
