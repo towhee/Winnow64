@@ -56,7 +56,7 @@ void MW::filterChange(QString source)
     - the datamodel proxy filter is refreshed
     - the filter panel counts are updated
     - the current index is updated
-    //- any prior selection that is still available is set
+    - any prior selection that is still available is set
     - the image cache is rebuilt to match the current filter
     - the thumb and grid first/last/thumbsPerPage parameters are recalculated
       and icons are loaded if necessary.
@@ -69,7 +69,7 @@ void MW::filterChange(QString source)
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
-        G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
+        G::popup->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
 
@@ -233,12 +233,12 @@ void MW::invertFilters()
     if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
-        G::popUp->showPopup("No images available to invert filtration", 2000);
+        G::popup->showPopup("No images available to invert filtration", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
     if (dm->rowCount() == dm->sf->rowCount()) {
-        G::popUp->showPopup("No filters assigned - null inversion would result", 2000);
+        G::popup->showPopup("No filters assigned - null inversion would result", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -291,7 +291,7 @@ void MW::filterLastDay()
 */
     if (G::isLogger) G::log("MW::filterLastDay");
     if (dm->sf->rowCount() == 0 && filterLastDayAction->isChecked()) {
-        G::popUp->showPopup("No images available to filter", 2000);
+        G::popup->showPopup("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -315,7 +315,7 @@ void MW::filterLastDay()
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
     if (last == 0) {
-        G::popUp->showPopup("No days are available to filter", 2000);
+        G::popup->showPopup("No days are available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
@@ -432,7 +432,7 @@ void MW::sortChange(QString source)
 //             */
 
     if (G::allMetadataLoaded) {
-        G::popUp->showPopup("Sorting...", 0);
+        G::popup->showPopup("Sorting...", 0);
     }
     else {
         setCentralMessage("Sorting images");
@@ -470,7 +470,7 @@ void MW::sortChange(QString source)
 //    sel->select(idx);
 
     scrollToCurrentRowIfNotVisible();
-    G::popUp->reset();
+    G::popup->reset();
 
 }
 
@@ -652,7 +652,7 @@ void MW::setRating()
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)
             QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
             emit setValueDm(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
-            G::popUp->setProgress(i+1);
+            G::popup->setProgress(i+1);
         }
     }
 
@@ -845,7 +845,7 @@ void MW::setColorClass()
             // update _Label (used to check what metadata has changed in metadata->writeXMP)
             QModelIndex _labelIdx = dm->index(dmRow, G::_LabelColumn);
             emit setValueDm(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
-            G::popUp->setProgress(i+1);
+            G::popup->setProgress(i+1);
         }
     }
 

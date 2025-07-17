@@ -121,7 +121,7 @@ void MW::reportMetadata()
 {
     if (G::isLogger) G::log("MW::reportMetadata");
     if (dm->rowCount()) diagnosticsMetadata();
-    else G::popUp->showPopup("No image selected");
+    else G::popup->showPopup("No image selected");
 }
 
 // Diagnostic Reports

@@ -5,7 +5,7 @@ void MW::slideShow()
     if (G::isLogger) G::log("MW::slideShow");
     if (G::isSlideShow) {
         // stop slideshow
-        G::popUp->showPopup("Slideshow has been terminated.", 2000);
+        G::popup->showPopup("Slideshow has been terminated.", 2000);
         G::isSlideShow = false;
         slideCount = 0;
         // not finisheduseImageCache = true;
@@ -42,7 +42,7 @@ void MW::slideShow()
         else msg += "<br>Stop at end of slides";
         msg += "<p>Press <font color=\"red\"><b>SpaceBar</b></font> to start slideshow.";
 
-        G::popUp->showPopup(msg, 3000, true, 0.75, Qt::AlignLeft);
+        G::popup->showPopup(msg, 3000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
         if (isSlideShowRandom) G::useImageCache = false;
@@ -91,7 +91,7 @@ void MW::prevRandomSlide()
 {
     if (G::isLogger) G::log("MW::prevRandomSlide");
     if (slideshowRandomHistoryStack->isEmpty()) {
-        G::popUp->showPopup("End of random slide history");
+        G::popup->showPopup("End of random slide history");
         return;
     }
 //    isSlideshowPaused = true;
@@ -103,7 +103,7 @@ void MW::prevRandomSlide()
                  "press <font color=\"white\"><b>Esc</b></font> to quit slideshow."
                  , "MW::prevRandomSlide");
     // hide popup if showing
-    G::popUp->reset();
+    G::popup->reset();
 }
 
 void MW::slideShowResetDelay()
@@ -128,7 +128,7 @@ void MW::slideShowResetSequence()
         msg = msg + "sequential";
         progressLabel->setVisible(true);
     }
-    G::popUp->showPopup(msg);
+    G::popup->showPopup(msg);
 }
 
 void MW::slideshowHelpMsg()
@@ -170,6 +170,6 @@ void MW::slideshowHelpMsg()
         "<li>Wrap      = " + wrap + "</li>"
         "</ul><p><p>"
         "Press <font color=\"red\"><b>Space Bar</b></font> continue slideshow and close this message";
-    G::popUp->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
+    G::popup->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
 }
 

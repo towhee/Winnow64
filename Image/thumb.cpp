@@ -565,11 +565,11 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
     qDebug() << "Thumb::insertThumbnailsInJpg";
     int count = selection.count();
 
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(count);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(count);
     QString txt = "Embedding thumbnail(s) for " + QString::number(count) +
                   " JPG images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(txt, 0, true, 1);
+    G::popup->showPopup(txt, 0, true, 1);
     insertingThumbnails = true;
 
 
@@ -577,7 +577,7 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
     et.setOverWrite(true);
     QStringList thumbList;
     for (int i = 0; i < count; ++i) {
-        G::popUp->setProgress(i+1);
+        G::popup->setProgress(i+1);
         if (abort) break;
 
         // check if already a thumbnail
@@ -615,8 +615,8 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
     for (int i = 0; i < thumbList.length(); ++i) {
         QFile::remove(thumbList.at(i));
     }
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
 }
 
 

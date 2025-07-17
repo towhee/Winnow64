@@ -369,7 +369,7 @@ namespace G
 
     extern int popUpProgressCount;
     extern int popUpLoadFolderStep;
-    extern PopUp *popUp;
+    extern Popup *popup;
     extern void newPopUp(QWidget *widget, QWidget *centralWidget);
 }
 #endif // GLOBAL_H

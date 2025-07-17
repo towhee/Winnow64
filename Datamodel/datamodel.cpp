@@ -2814,7 +2814,7 @@ bool DataModel::getSelection(QStringList &list)
 
     // nothing picked or selected
     if (isPick() && selectionModel->selectedRows().size() == 0) {
-        G::popUp->showPopup("Oops.  There are no picks or selected images.", 2000);
+        G::popup->showPopup("Oops.  There are no picks or selected images.", 2000);
         return false;
     }
 
@@ -3036,12 +3036,12 @@ QString DataModel::diagnosticsForCurrentRow()
     if (isDebug) qDebug() << "DataModel::diagnosticsForCurrentRow" << "instance =" << instance << folderPathFromProxyRow(currentSfRow);
 
     if (rowCount() == 0) {
-        G::popUp->showPopup("Empty folder or no folder selected");
+        G::popup->showPopup("Empty folder or no folder selected");
         return "";
     }
 
     if (currentSfRow < 0 || currentSfRow >= rowCount()) {
-        G::popUp->showPopup("Invalid row " + QString::number(currentSfRow));
+        G::popup->showPopup("Invalid row " + QString::number(currentSfRow));
         return "";
     }
 
@@ -3062,12 +3062,12 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     if (isDebug) qDebug() << "DataModel::getDiagnosticsForRow" << "instance =" << instance << folderPathFromProxyRow(row);
 
     if (rowCount() == 0) {
-        G::popUp->showPopup("Empty folder or no folder selected");
+        G::popup->showPopup("Empty folder or no folder selected");
         return;
     }
 
     if (row < 0 || row >= rowCount()) {
-        G::popUp->showPopup("Invalid row " + QString::number(row));
+        G::popup->showPopup("Invalid row " + QString::number(row));
         return;
     }
 

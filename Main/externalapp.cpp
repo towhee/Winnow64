@@ -104,7 +104,7 @@ void MW::runExternalApp()
     int nFiles = files.size();
 
     if (nFiles < 1) {
-        G::popUp->showPopup("No images have been selected", 2000);
+        G::popup->showPopup("No images have been selected", 2000);
         return;
     }
 

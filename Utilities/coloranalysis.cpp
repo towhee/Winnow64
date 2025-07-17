@@ -13,11 +13,11 @@ void ColorAnalysis::process(QStringList &fPathList)
 
     int count = fPathList.length();
     G::isRunningColorAnalysis = true;
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(count);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(count);
     QString txt = "Generating hue count for " + QString::number(count) + " images. " +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(txt, 0, true, 1);
+    G::popup->showPopup(txt, 0, true, 1);
 
     QVector<int> hues(360, 0);
     Effects effects;
@@ -34,7 +34,7 @@ void ColorAnalysis::process(QStringList &fPathList)
             continue;
         }
         effects.hueCount(img, hues);
-        G::popUp->setProgress(f+1);
+        G::popup->setProgress(f+1);
         if (G::useProcessEvents) qApp->processEvents();
         if (abort) return;
         for (int i = 0; i < hues.size(); i++) {
@@ -48,8 +48,8 @@ void ColorAnalysis::process(QStringList &fPathList)
         }
     }
 
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
     if (abort) return;
 
     QTextBrowser *tb = new QTextBrowser;
@@ -69,9 +69,9 @@ void ColorAnalysis::abortHueReport()
 {
     abort = true;
     G::isRunningColorAnalysis = false;
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
-    G::popUp->showPopup("Hue report has been aborted.");
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
+    G::popup->showPopup("Hue report has been aborted.");
     qDebug() << "ColorAnalysis::abortHueReport" << abort;
     // if (G::useProcessEvents) qApp->processEvents();
 }

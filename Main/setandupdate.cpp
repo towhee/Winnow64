@@ -326,7 +326,7 @@ void MW::toggleThumbDockVisibity()
     if (G::isLogger) G::log("MW::toggleThumbDockVisibity");
 
     if (G::isInitializing) {
-        G::popUp->showPopup("Please wait until initialization is completed.", 2000);
+        G::popup->showPopup("Please wait until initialization is completed.", 2000);
         return;
     }
 
@@ -464,7 +464,7 @@ void MW::setCombineRawJpg()
 
     if (dm->rowCount() && !G::allMetadataLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         return;
     }
 
@@ -474,7 +474,7 @@ void MW::setCombineRawJpg()
     QString msg;
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
-    G::popUp->showPopup(msg);
+    G::popup->showPopup(msg);
     qApp->processEvents();
 
     // prevent crash when there are videos (did not work)
@@ -516,7 +516,7 @@ void MW::setCombineRawJpg()
 
    updateStatusBar();
 
-   G::popUp->close();
+   G::popup->close();
 }
 
 void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)

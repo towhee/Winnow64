@@ -731,7 +731,7 @@ void MW::whenActivated(Qt::ApplicationState state)
     if (G::issueLog->failedToOpen) {
         QString popupMsg = "The issue log file is open, preventing Winnow from writing issues<br>"
                            "to file.<p>";
-        G::popUp->showPopup(popupMsg, 3000, true, 0.75, Qt::AlignLeft);
+        G::popup->showPopup(popupMsg, 3000, true, 0.75, Qt::AlignLeft);
         qDebug() << "MW::whenActivated" << popupMsg;
     }
 
@@ -832,7 +832,7 @@ void MW::closeEvent(QCloseEvent *event)
                 "There is a background ingest in progress.  When it<br>"
                 "has completed Winnow will close."
                 ;
-        G::popUp->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
         while (G::isRunningBackgroundIngest) G::wait(100);
     }
 
@@ -862,7 +862,7 @@ void MW::closeEvent(QCloseEvent *event)
     // crash log
     settings->setValue("hasCrashed", false);
 
-    if (G::popUp != nullptr) G::popUp->close();
+    if (G::popup != nullptr) G::popup->close();
     if (zoomDlg != nullptr) zoomDlg->close();
     hide();
     if (!QApplication::clipboard()->image().isNull()) {
@@ -888,7 +888,7 @@ void MW::closeEvent(QCloseEvent *event)
     delete ingestHistoryFolders;
     delete embel;
     delete G::issueLog;
-    delete G::popUp;
+    delete G::popup;
 
     event->accept();
 }
@@ -986,7 +986,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            tested.
         */
 
-        G::popUp->reset();
+        G::popup->reset();
         dragLabel->hide();
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
@@ -1035,7 +1035,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
                 QString msg;
                 if (isSlideShowWrap) msg = "Slide wrapping is on.";
                 else msg = "Slide wrapping is off.";
-                G::popUp->showPopup(msg);
+                G::popup->showPopup(msg);
             }
             else if (event->key() == Qt::Key_H) {
                 slideShowTimer->stop();
@@ -1043,7 +1043,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             }
             else if (event->key() == Qt::Key_Space) {
                 slideShowTimer->stop();
-                G::popUp->showPopup("Slideshow is paused", 0);
+                G::popup->showPopup("Slideshow is paused", 0);
             }
             else if (event->key() == Qt::Key_R) {
                 isSlideShowRandom = !isSlideShowRandom;
@@ -1051,23 +1051,23 @@ void MW::keyReleaseEvent(QKeyEvent *event)
                 QString msg;
                 if (isSlideShowRandom) msg = "Random selection enabled.";
                 else msg = "Sequential selection enabled.";
-                G::popUp->showPopup(msg);
+                G::popup->showPopup(msg);
             }
             // quick change slideshow delay 1 - 9 seconds
             else if (n > 0 && n <= 9) {
                 slideShowDelay = delay[n];
                 slideShowResetDelay();
                 QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
-                G::popUp->showPopup(msg);
+                G::popup->showPopup(msg);
             }
         }
         else {  // slideshow is inactive
             if (isSlideShowHelpVisible) {
-                G::popUp->reset();
+                G::popup->reset();
                 isSlideShowHelpVisible = false;
             }
             if (event->key() == Qt::Key_Space) {
-                G::popUp->showPopup("Slideshow is active");
+                G::popup->showPopup("Slideshow is active");
                 nextSlide();
                 slideShowTimer->start(slideShowDelay * 1000);
             }
@@ -3321,7 +3321,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     if (G::isLogger) qDebug() << "MW::bookmarkClicked";
 
     if (G::stop) {
-        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        G::popup->showPopup("Busy, try new folder in a sec.", 1000);
         return;
     }
 
@@ -3746,7 +3746,7 @@ void MW::setShowImageCount()
 {
     if (G::isLogger) G::log("MW::setShowImageCount");
     if (!fsTree->isVisible()) {
-        G::popUp->showPopup("Show image count is only available when the Folders Panel is visible",
+        G::popup->showPopup("Show image count is only available when the Folders Panel is visible",
               1500);
     }
     bool isShow = showImageCountAction->isChecked();
@@ -4275,7 +4275,7 @@ void MW::toggleZoomDlg()
 
     // only makes sense to zoom when in loupe or compare view
     if (G::mode == "Table" || G::mode == "Grid") {
-        G::popUp->showPopup("The zoom dialog is only available in loupe view", 2000);
+        G::popup->showPopup("The zoom dialog is only available in loupe view", 2000);
         return;
     }
 
@@ -4468,7 +4468,7 @@ void MW::setRotation(int degrees)
                           "modification is disabled in preferences (General section).<p>"
                           "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
                 ;
-            G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+            G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             rotationAlertShown = true;
         }
     }
@@ -4710,7 +4710,7 @@ void MW::ingest()
                 "the status bar will disappear and you can make another<br>"
                 "ingest."
                 ;
-        G::popUp->showPopup(msg, 5000);
+        G::popup->showPopup(msg, 5000);
         return;
     }
 
@@ -4927,7 +4927,7 @@ void MW::ejectUsb(QString path)
         int result = Usb::eject(driveName);
         // drive was ejected
         if (result < 2) {
-            G::popUp->showPopup("Ejecting drive " + driveName, 2000);
+            G::popup->showPopup("Ejecting drive " + driveName, 2000);
             bookmarks->updateCount();
             #ifdef Q_OS_WIN
             fsTree->refreshModel();
@@ -4935,11 +4935,11 @@ void MW::ejectUsb(QString path)
         }
         // drive ejection failed
         else
-            G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
+            G::popup->showPopup("Failed to eject drive " + driveName, 2000);
     }
     // drive not ejectable
     else {
-        G::popUp->showPopup("Drive " + driveName
+        G::popup->showPopup("Drive " + driveName
               + " is not removable and cannot be ejected", 2000);
     }
 }
@@ -4996,7 +4996,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
     QString result = embedThumbnails();
     if (src == "FromLoading") sel->select(dm->currentSfIdx, Qt::NoModifier,"MW::chkMissingEmbeddedThumbnails");
     thumbView->refreshThumbs();
-    G::popUp->showPopup(result, 3000);
+    G::popup->showPopup(result, 3000);
 }
 
 QString MW::embedThumbnails()
@@ -5061,9 +5061,9 @@ QString MW::embedThumbnails()
 
     QString txt = "Embedding thumbnail(s) for " + QString::number(selection.size()) +
                   " images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->setProgressVisible(true);
-    G::popUp->showPopup(txt, 0, true, 1);
-    G::popUp->setProgressMax(n);
+    G::popup->setProgressVisible(true);
+    G::popup->showPopup(txt, 0, true, 1);
+    G::popup->setProgressMax(n);
     if (G::useProcessEvents) qApp->processEvents();
     qDebug() << "MW::embedThumbnails" << txt;
 
@@ -5086,7 +5086,7 @@ QString MW::embedThumbnails()
 
     // process selection
     for (int i = 0; i < n; i++) {
-        G::popUp->setProgress(i+1);
+        G::popup->setProgress(i+1);
         if (G::useProcessEvents) qApp->processEvents();
         int sfRow = selection.at(i).row();
         // int sfRow = rows.at(i);
@@ -5138,8 +5138,8 @@ QString MW::embedThumbnails()
     // update filter list and counts
     buildFilters->updateCategory(BuildFilters::MissingThumbEdit, BuildFilters::NoAfterAction);
 
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
 
     QString msg;
     QString br;
@@ -5332,7 +5332,7 @@ void MW::openUsbFolder()
         drive = usbDrives.at(0);
     }
     else if (usbDrives.length() == 0) {
-        G::popUp->showPopup("No USB Drives available");
+        G::popup->showPopup("No USB Drives available");
     }
 
     refresh();

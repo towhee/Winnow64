@@ -127,7 +127,7 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
     if (isDebug || G::isLogger) G::log("ZoomDlg::on_toggleZoomAmountBtn_clicked");
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
-    G::popUp->showPopup(msg, 1500);
+    G::popup->showPopup(msg, 1500);
     qreal zoomVal = (qreal)ui->zoomSB->value() / 100/* / G::actDevicePixelRatio*/;
     emit updateToggleZoom(zoomVal);
 }

@@ -162,7 +162,7 @@ void Appdlg::on_removeBtn_clicked()
 {
     int rowToRemove = ui->appsTable->currentRow();
     if (rowToRemove < 0 || ui->appsTable->currentRow() > 9) {
-        G::popUp->showPopup("No row selected");
+        G::popup->showPopup("No row selected");
         return;
     }
 

@@ -573,8 +573,8 @@ void TokenDlg::on_templatesCB_currentIndexChanged(int row)
 void TokenDlg::reject()
 {
     qDebug() << "TokenDlg::reject";
-    if (G::popUp->isVisible()) {
-        G::popUp->setVisible(false);
+    if (G::popup->isVisible()) {
+        G::popup->setVisible(false);
         return;
     }
     QDialog::reject();

@@ -497,7 +497,7 @@ void Ingest::run()
         emit rptIngestErrors(failedToCopy, integrityFailure);
     }
 
-    if (abort) G::popUp->showPopup("Background ingest terminated", 2000);
+    if (abort) G::popup->showPopup("Background ingest terminated", 2000);
 
     emit updateProgress(-1);
     emit ingestFinished();

@@ -190,8 +190,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
             if (G::useSidecar) {
                 usedPopUp = true;
-                G::popUp->setProgressVisible(true);
-                G::popUp->setProgressMax(n + 1);
+                G::popup->setProgressVisible(true);
+                G::popup->setProgressMax(n + 1);
                 QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
                               "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
                 //G::popUp->showPopup(txt, 0, true, 1);
@@ -231,7 +231,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                     // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
                     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
                     metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
-                    G::popUp->setProgress(i+1);
+                    G::popup->setProgress(i+1);
                 }
             }
 
@@ -267,8 +267,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     count++;
     if (count > 1) count = 0;
     if (usedPopUp) {
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
+        G::popup->setProgressVisible(false);
+        G::popup->reset();
     }
 }
 
@@ -613,7 +613,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                 QString msg = "<font color=\"red\"><b>Note: </b></font>"
                               "Any edits to " + name + " will be applied to all " +
                               selectedCount + " selected images.";
-                G::popUp->showPopup(msg, 3000);
+                G::popup->showPopup(msg, 3000);
             }
 
             // alternating colors

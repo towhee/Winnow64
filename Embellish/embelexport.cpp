@@ -226,12 +226,12 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     abort = false;
     int count = srcList.size();
     if (count == 0) {
-        G::popUp->showPopup("No images picked or selected");
+        G::popup->showPopup("No images picked or selected");
         return;
     }
 
     if (embelProperties->templateName == "Do not Embellish") {
-        G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
+        G::popup->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"
                             "Press <font color=\"red\"><b>Esc</b></font> to continue.",
                             0);
@@ -258,19 +258,19 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     QString folderPath = filedir.dir().path();
     QStringList thumbList;
 
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(count);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(count);
     QString txt = "Exporting " + QString::number(count) +
                   " embellished images to " + folderPath +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(txt, 0, true, 1);
+    G::popup->showPopup(txt, 0, true, 1);
     exportingEmbellishedImages = true;
 
     // iterate list of files, embellish and transfer metadata, ICC and insert thumbnail
     ExifTool et;
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
-        G::popUp->setProgress(i+1);
+        G::popup->setProgress(i+1);
         if (G::useProcessEvents) qApp->processEvents();
         if (abort) break;
         QString src = srcList.at(i);
@@ -302,8 +302,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
         QFile::remove(thumbList.at(i));
     }
 
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
     G::isProcessingExportedImages = false;
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", "Delete embellish");
     delete embellish;
@@ -311,7 +311,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     if (abort) {
         abort = false;
         G::isProcessingExportedImages = false;
-        G::popUp->showPopup("Export has been aborted", 1500);
+        G::popup->showPopup("Export has been aborted", 1500);
         return;
     }
     /*
@@ -413,7 +413,7 @@ void EmbelExport::abortEmbelExport()
 {
     // if (G::useProcessEvents) qApp->processEvents();
     G::isProcessingExportedImages = false;
-    G::popUp->showPopup("Export has been aborted", 1500);
+    G::popup->showPopup("Export has been aborted", 1500);
     qDebug() << "EmbelExport::" << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     abort = true;
 }
