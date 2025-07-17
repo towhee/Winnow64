@@ -1872,7 +1872,7 @@ I hope this helps! Let me know if you have any questions.
     if (process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        if (!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
+        if (!isStartingWhileUpdating) G::popup->showPopup(msg, 1500);
         isStartingWhileUpdating = false;
         return;
     }
@@ -1898,7 +1898,7 @@ I hope this helps! Let me know if you have any questions.
     if (noUpdataAvailable.toBool())
     {
         QString msg = "No updates available";
-        if(!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
+        if(!isStartingWhileUpdating) G::popup->showPopup(msg, 1500);
         if (G::useProcessEvents) qApp->processEvents();
         return;
     }
@@ -1919,12 +1919,12 @@ I hope this helps! Let me know if you have any questions.
     // Close Winnow
     if (startMaintenanceTool) {
         QString msg = "Updating Winnow.  Winnow will reopen when update is completed.";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         G::wait(2000);
         qApp->closeAllWindows();
     }
     else if(!isStartingWhileUpdating)
-        G::popUp->showPopup("The maintenance tool failed to open", 2000);
+        G::popup->showPopup("The maintenance tool failed to open", 2000);
 
 #endif
 }
