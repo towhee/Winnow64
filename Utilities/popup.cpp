@@ -70,17 +70,6 @@ void Popup::paintEvent(QPaintEvent *event)
     painter.drawRoundedRect(roundedRect, 10, 10);
 }
 
-// void Popup::keyReleaseEvent(QKeyEvent *event)
-// {
-//     qDebug() << "PopUp::keyReleaseEvent";
-//     QWidget::keyReleaseEvent(event);
-// }
-
-// void Popup::focusOutEvent(QFocusEvent *event)
-// {
-//     qDebug() << "PopUp::focusOutEvent" << event;
-// }
-
 void Popup::showPopup(const QString &text,
                  int msDuration,
                  bool isAutoSize,

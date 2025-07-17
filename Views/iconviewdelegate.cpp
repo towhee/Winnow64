@@ -346,18 +346,69 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
                                  const QStyleOptionViewItem &option,
                                  const QModelIndex &index)
 {
-    if (event->type() == QEvent::ToolTip)
-    {
-        // QString toolTipData = view->model()->data(index, Qt::ToolTipRole).toString();
-        if (!tooltip.isEmpty())
-        {
-            QPoint pos = event->globalPos() - QPoint(20, 20);
-            QToolTip::showText(pos, tooltip, view, QRect(), 5000);
-            return true;
-        }
+    // if (event->type() == QEvent::ToolTip)
+    // {
+    //     // QString toolTipData = view->model()->data(index, Qt::ToolTipRole).toString();
+    //     if (!tooltip.isEmpty())
+    //     {
+    //         QPoint pos = event->globalPos() - QPoint(20, 20);
+    //         QToolTip::showText(pos, tooltip, view, QRect(), 5000);
+    //         return true;
+    //     }
+    // }
+
+    // return QStyledItemDelegate::helpEvent(event, view, option, index);
+
+    if (event->type() != QEvent::ToolTip || !index.isValid())
+        return QStyledItemDelegate::helpEvent(event, view, option, index);
+
+    // Extract useful data from model
+    QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel*>(view->model());
+    QModelIndex sourceIndex = proxy ? proxy->mapToSource(index) : index;
+    QVariant v = sourceIndex.model()->data(sourceIndex.siblingAtColumn(G::IconSymbolColumn));
+
+    using SymbolRectMap = QHash<QString, QRect>;
+    QHash<QString, QRect> rects;
+    if (v.canConvert<SymbolRectMap>())
+        rects = v.value<SymbolRectMap>();
+
+    QPoint viewPos = view->viewport()->mapFromGlobal(event->globalPos());
+    int row = sourceIndex.row();
+
+    auto sf = proxy ? proxy->sourceModel() : view->model();
+
+    bool isMissing = sf->index(row, G::MissingThumbColumn).data().toBool();
+    bool isLock = !sf->index(row, G::ReadWriteColumn).data().toBool();
+    bool isRating = sf->index(row, G::RatingColumn).data().toBool();
+    bool isCombineRawJpg = sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
+    bool isCached = sf->index(row, G::IsCachedColumn).data().toBool();
+    bool isVideo = sf->index(row, G::VideoColumn).data().toBool();
+
+    QString tooltip;
+
+    if (!rects.value("Thumb").contains(viewPos))
+        tooltip = "Borders:\n  Yellow:\t Current image\n  White:\t Selected image\n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
+    else if (isMissing && rects.value("MissingThumb").contains(viewPos))
+        tooltip = "Image does not have an embedded thumbnail";
+    else if (isLock && rects.value("Lock").contains(viewPos))
+        tooltip = "Image file is locked";
+    else if (isRating && rects.value("Rating").contains(viewPos))
+        tooltip = "Rating";
+    else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
+        tooltip = "Image is JPG version of a RAW+JPG pair";
+    else if (!isCached && rects.value("Cache").contains(viewPos))
+        tooltip = "This image is not cached";
+    else if (isVideo && rects.value("Duration").contains(viewPos))
+        tooltip = "Duration";
+    else
+        tooltip = sf->index(row, 0).data(G::PathRole).toString();
+
+    if (!tooltip.isEmpty()) {
+        QToolTip::showText(event->globalPos(), tooltip, view, option.rect, 4000);
+        return true;
     }
 
-    return QStyledItemDelegate::helpEvent(event, view, option, index);
+    return false;
 }
 
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
