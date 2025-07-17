@@ -44,7 +44,7 @@ void MW::updateAllFilters()
     // filters->save();
     buildFilters->build();
     // filters->restore();
-    filterChange("updateAllFilters");
+    // filterChange("updateAllFilters");
 }
 
 void MW::filterChange(QString source)
