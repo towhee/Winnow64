@@ -263,7 +263,7 @@ QString WidgetCSS::toolTip()
     return
     "QToolTip {"
         "opacity: 200;"         // nada windows
-        "color: #ffffff;"       // nada windows
+        "color: " + QColor(fg,fg,fg).name() + ";"   // nada windows
         "background-color: " + QColor(d5,d5,d5).name() + ";"
         "border-width: 1px;"
         "border-style: solid;"
