@@ -2,7 +2,6 @@
 #include "Utilities/popup.h"
 #include <QPainter>
 #include <QApplication>
-//#include <QDesktopWidget>
 #include <QDebug>
 
 /*
@@ -19,11 +18,10 @@ In Winnow an instance of this class is created in global so that it is available
 of the program. It is created once in MW::initialize.
 */
 
-PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget(parent)
+Popup::Popup(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget(parent)
 {
     this->source = source;
     this->centralWidget = centralWidget;
-//    locRect = QWidget *centralWidget;
     setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
                    Qt::Tool |                       // Discard display in a separate window
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
@@ -49,11 +47,11 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     layout.addWidget(&progressBar, 1, 0);
     setLayout(&layout);
 
-    hideTimer = new QTimer();
-    connect(hideTimer, &QTimer::timeout, this, &PopUp::reset);
+    hideTimer = new QTimer(this);
+    connect(hideTimer, &QTimer::timeout, this, &Popup::reset);
 }
 
-void PopUp::paintEvent(QPaintEvent *event)
+void Popup::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
 
@@ -72,18 +70,18 @@ void PopUp::paintEvent(QPaintEvent *event)
     painter.drawRoundedRect(roundedRect, 10, 10);
 }
 
-void PopUp::keyReleaseEvent(QKeyEvent *event)
-{
-    qDebug() << "PopUp::keyReleaseEvent";
-    QWidget::keyReleaseEvent(event);
-}
+// void Popup::keyReleaseEvent(QKeyEvent *event)
+// {
+//     qDebug() << "PopUp::keyReleaseEvent";
+//     QWidget::keyReleaseEvent(event);
+// }
 
-void PopUp::focusOutEvent(QFocusEvent *event)
-{
-    qDebug() << "PopUp::focusOutEvent" << event;
-}
+// void Popup::focusOutEvent(QFocusEvent *event)
+// {
+//     qDebug() << "PopUp::focusOutEvent" << event;
+// }
 
-void PopUp::showPopup(const QString &text,
+void Popup::showPopup(const QString &text,
                  int msDuration,
                  bool isAutoSize,
                  float opacity,
@@ -112,8 +110,11 @@ void PopUp::showPopup(const QString &text,
     QRect cwRect = centralWidget->geometry();
     int w = width();
     int h = height();
-    int x = source->geometry().x() + cwRect.x() + cwRect.width() / 2 - w / 2;
-    int y = source->geometry().y() + cwRect.y() + cwRect.height() / 2 - h / 2;
+    // int x = source->geometry().x() + cwRect.x() + cwRect.width() / 2 - w / 2;
+    // int y = source->geometry().y() + cwRect.y() + cwRect.height() / 2 - h / 2;
+    QPoint center = centralWidget->mapToGlobal(centralWidget->rect().center());
+    int x = center.x() - w / 2;
+    int y = center.y() - h / 2;
     setGeometry(x, y, w, h);
 
     show();
@@ -123,7 +124,7 @@ void PopUp::showPopup(const QString &text,
     if (popupDuration > 0) hideTimer->start(popupDuration);
 }
 
-void PopUp::reset()
+void Popup::reset()
 {
     // qDebug() << "PopUp::reset";
     okayToHide = true;
@@ -132,14 +133,14 @@ void PopUp::reset()
     hide();
 }
 
-void PopUp::hide()
+void Popup::hide()
 {
     if (okayToHide) {
         QWidget::hide();
     }
 }
 
-void PopUp::setProgressVisible(bool isVisible)
+void Popup::setProgressVisible(bool isVisible)
 {
     if (isVisible) {
         progressBar.setStyleSheet(
@@ -169,45 +170,45 @@ void PopUp::setProgressVisible(bool isVisible)
     }
 }
 
-void PopUp::setProgressMax(int maxProgress)
+void Popup::setProgressMax(int maxProgress)
 {
     progressBar.setMaximum(maxProgress);
     progressBar.setMinimum(0);
 }
 
-void PopUp::setProgress(int progress)
+void Popup::setProgress(int progress)
 {
     progressBar.setValue(progress);
 }
 
-void PopUp::setPopupAlignment(Qt::Alignment alignment)
+void Popup::setPopupAlignment(Qt::Alignment alignment)
 {
     label.setAlignment(alignment/* | Qt::AlignVCenter*/);
 }
 
-void PopUp::setPopupText(const QString &text)
+void Popup::setPopupText(const QString &text)
 {
     label.setText(text);
     repaint(0, 0, width(), height());
 }
 
-void PopUp::setPopupOpacity(float opacity)
+void Popup::setPopupOpacity(float opacity)
 {
     popupOpacity = opacity;
     setWindowOpacity(static_cast<double>(opacity));
 }
 
-float PopUp::getPopupOpacity() const
+float Popup::getPopupOpacity() const
 {
     return popupOpacity;
 }
 
-void PopUp::setPopupDuration(int msDuration)
+void Popup::setPopupDuration(int msDuration)
 {
     popupDuration = msDuration;
 }
 
-void PopUp::setPopUpSize(int w, int h)
+void Popup::setPopUpSize(int w, int h)
 {
-    setGeometry(0, 0, w, h);
+    resize(w, h);
 }

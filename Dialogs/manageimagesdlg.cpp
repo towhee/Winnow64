@@ -183,7 +183,7 @@ void ManageImagesDlg::save(QPixmap *pm)
 
     // let user know
     QString msg = "Image has been saved as " + name + ".";
-    G::popUp->showPopup(msg, 2000);
+    G::popup->showPopup(msg, 2000);
 }
 
 void ManageImagesDlg::itemDoubleClicked(QTableWidgetItem *item)
@@ -234,7 +234,7 @@ void ManageImagesDlg::on_newBtn_clicked()
     if (file.isOpen()) {
         QString msg = "Whoops.  The file is already open in another process.<br>"
                       "Close the file and try again.  Press ESC to continue.";
-        G::popUp->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
         return;
     }
     QPixmap src(fPath);

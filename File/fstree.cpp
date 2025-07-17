@@ -508,7 +508,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     selectSrc = src;
     QDir test(folderPath);
     if (!test.exists()) {
-        G::popUp->showPopup("The folder path " + folderPath + " was not found.", 2000);
+        G::popup->showPopup("The folder path " + folderPath + " was not found.", 2000);
         return false;
     }
 
@@ -954,7 +954,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
                 "the status bar will disappear and you can select another<br>"
                 "folder."
                 ;
-        G::popUp->showPopup(msg, 5000);
+        G::popup->showPopup(msg, 5000);
         return;
     }
 
@@ -1236,17 +1236,17 @@ void FSTree::dropEvent(QDropEvent *event)
     int count = event->mimeData()->urls().count();
 
     // popup for internal drag&drop progress reporting
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(count);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(count);
     QString msg = operation + QString::number(count) +
                   " to " + dropDir +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(msg, 0, true, 1);
+    G::popup->showPopup(msg, 0, true, 1);
 
     QString issue;
     // iterate files
     for (int i = 0; i < count; i++) {
-        G::popUp->setProgress(i+1);
+        G::popup->setProgress(i+1);
         if (G::useProcessEvents) qApp->processEvents();        // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
@@ -1285,9 +1285,9 @@ void FSTree::dropEvent(QDropEvent *event)
     }
 
     if (G::stopCopyingFiles) {
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
-        G::popUp->showPopup("Terminated " + operation + "operation", 4000);
+        G::popup->setProgressVisible(false);
+        G::popup->reset();
+        G::popup->showPopup("Terminated " + operation + "operation", 4000);
     }
     else {
         //report on copy/move operation
@@ -1326,9 +1326,9 @@ void FSTree::dropEvent(QDropEvent *event)
         msg += "<p>Press \"ESC\" to close this message";
 
         emit status(false, msg, src);
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
-        G::popUp->showPopup(msg, 4000);
+        G::popup->setProgressVisible(false);
+        G::popup->reset();
+        G::popup->showPopup(msg, 4000);
     }
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;

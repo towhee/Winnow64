@@ -598,7 +598,7 @@ void ImageView::activateRubberBand()
     setCursor(Qt::CrossCursor);
     QString msg = "Rubberband activated.  Make a selection in the ImageView.\n"
                   "Press Esc to quit rubberbanding.";
-    G::popUp->showPopup(msg, 2000);
+    G::popup->showPopup(msg, 2000);
 }
 
 void ImageView::quitRubberBand()
@@ -842,7 +842,7 @@ void ImageView::zoomToggle()
 
     if (isFit && zoomFit >= toggleZoom) {
         QString toggleZoomPct = QString::number(toggleZoom * 100) + "%";
-        G::popUp->showPopup("Already at " + toggleZoomPct, 1000);
+        G::popup->showPopup("Already at " + toggleZoomPct, 1000);
         isLocalMouseClick = false;
         return;
     }
@@ -1558,12 +1558,12 @@ void ImageView::copyImage()
         }
         else {
             QString msg = "Could not copy the current image to the clipboard";
-            G::popUp->showPopup(msg, 1500);
+            G::popup->showPopup(msg, 1500);
         }
     }
     QApplication::clipboard()->setPixmap(pm, QClipboard::Clipboard);
     QString msg = "Copied current image to the clipboard";
-    G::popUp->showPopup(msg, 1500);
+    G::popup->showPopup(msg, 1500);
 }
 
 // not being used, but maybe in the future

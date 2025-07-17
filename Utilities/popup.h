@@ -8,15 +8,14 @@
 #include <QPropertyAnimation>
 #include <QTimer>
 
-class PopUp : public QWidget
+class Popup : public QWidget
 {
     Q_OBJECT
 
     Q_PROPERTY(float popupOpacity READ getPopupOpacity WRITE setPopupOpacity)
 
-
 public:
-    explicit PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent = nullptr);
+    explicit Popup(QWidget *source, QWidget *centralWidget, QWidget *parent = nullptr);
     void setPopupOpacity(float opacity);
     float getPopupOpacity() const;
     void setPopupDuration(int msDuration);
@@ -32,8 +31,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;    // The background will be drawn through the redraw method
-    void focusOutEvent(QFocusEvent *event) override;
-    void keyReleaseEvent(QKeyEvent *event) override;
+    // void focusOutEvent(QFocusEvent *event) override;
+    // void keyReleaseEvent(QKeyEvent *event) override;
 
 
 public slots:

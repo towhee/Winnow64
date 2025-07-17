@@ -289,7 +289,7 @@ void MW::compareDisplay()
                       "and then you can switch to compare view<p>"
                       "Press ESC to continue"
             ;
-        G::popUp->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
         return;
     }
 
@@ -297,7 +297,7 @@ void MW::compareDisplay()
     for (int i = 0; i < n; ++i) {
         QModelIndex idx = dm->selectionModel->selectedRows().at(i);
         if (dm->sf->index(idx.row(), G::VideoColumn).data().toBool()) {
-            G::popUp->showPopup(
+            G::popup->showPopup(
                 "Compare mode is not available if a video is part of "
                 "the selection.", 2000);
             return;
@@ -308,13 +308,13 @@ void MW::compareDisplay()
     asCompareAction->setChecked(true);
     updateStatus(true, "", "MW::compareDisplay");
     if (n < 2) {
-        G::popUp->showPopup("Select more than one image to compare.");
+        G::popup->showPopup("Select more than one image to compare.");
         return;
     }
     if (n > 16) {
         QString msg = QString::number(n);
         msg += " images have been selected.  Only the first 16 will be compared.";
-        G::popUp->showPopup(msg, 4000);
+        G::popup->showPopup(msg, 4000);
     }
 
     /* If thumbdock was visible and enter grid mode, make selection, and then

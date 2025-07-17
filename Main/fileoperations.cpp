@@ -37,7 +37,7 @@ void MW::copyFiles()
     else nPaths = QString::number(n) + " image files";
     QString msg = "Copied " + nPaths + " to the clipboard";
     if (isSidecar) msg += " including associated sidecar files";
-    G::popUp->showPopup(msg, 2000);
+    G::popup->showPopup(msg, 2000);
 }
 
 void MW::pasteFiles(QString folderPath)
@@ -47,7 +47,7 @@ void MW::pasteFiles(QString folderPath)
     // are there any files to paste?
     if (!Utilities::clipboardHasUrls()) {
         QString msg = "There are no files in the clipboard.";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         return;
     }
 
@@ -56,12 +56,12 @@ void MW::pasteFiles(QString folderPath)
         QString nStr = QString::number(n);
         if (n == 0) {
             QString msg = "No folder selected, paste cancelled.";
-            G::popUp->showPopup(msg, 2000);
+            G::popup->showPopup(msg, 2000);
             return;
         }
         if (n > 1) {
             QString msg = "More than 1 folder selected, paste cancelled.";
-            G::popUp->showPopup(msg, 2000);
+            G::popup->showPopup(msg, 2000);
             return;
         }
 
@@ -112,7 +112,7 @@ void MW::pasteFiles(QString folderPath)
     if (sidecarCount == 1) mSidecars = " and 1 sidecar file";
     if (sidecarCount > 1) mSidecars = " and " + QString::number(sidecarCount) + " sidecar files";
     QString msg = "Pasted " + mImages + mSidecars;
-    G::popUp->showPopup(msg, 2000);
+    G::popup->showPopup(msg, 2000);
 }
 
 void MW::copyFolderPathFromContext()
@@ -120,7 +120,7 @@ void MW::copyFolderPathFromContext()
     if (G::isLogger) G::log("MW::copyFolderPathFromContext");
     QApplication::clipboard()->setText(mouseOverFolderPath);
     QString msg = "Copied " + mouseOverFolderPath + " to the clipboard";
-    G::popUp->showPopup(msg, 1500);
+    G::popup->showPopup(msg, 1500);
 }
 
 void MW::copyImagePathFromContext()
@@ -139,7 +139,7 @@ void MW::copyImagePathFromContext()
     if (n == 1) nPaths = "1 path";
     else nPaths = QString::number(n) + " paths";
     QString msg = "Copied " + nPaths + " to the clipboard";
-    G::popUp->showPopup(msg, 1500);
+    G::popup->showPopup(msg, 1500);
 }
 
 void MW::renameSelectedFiles()
@@ -161,7 +161,7 @@ void MW::renameSelectedFiles()
                           " in the status bar.<p>"
                           "Press <font color=\"red\"><b>Esc</b></font> to continue."
                 ;
-            G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+            G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             return;
         }
     }
@@ -200,7 +200,7 @@ void MW::saveAsFile()
     if (G::isLogger) G::log("MW::saveAsFile");
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.length() == 0) {
-        G::popUp->showPopup("No images selected for save as operation", 1500);
+        G::popup->showPopup("No images selected for save as operation", 1500);
         return;
     }
     saveAsDlg = new SaveAsDlg(selection, metadata, dm);
@@ -301,7 +301,7 @@ void MW::deleteSelectedFiles()
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
                       "Press <font color=\"red\"><b>Esc</b></font> to continue.";
-        G::popUp->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
         return;
     }
 
@@ -402,7 +402,7 @@ void MW::deleteFiles(QStringList paths)
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
                       "Press <font color=\"red\"><b>Esc</b></font> to continue.";
-        G::popUp->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
         return;
     }
 
@@ -440,7 +440,7 @@ void MW::deleteFiles(QStringList paths)
             G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
         }
     }
-    if (fileWasLocked) G::popUp->showPopup("Locked file(s) were not deleted", 3000);
+    if (fileWasLocked) G::popup->showPopup("Locked file(s) were not deleted", 3000);
 
     // updata datamodel, imagecache, image counts, selection
     refresh();
@@ -481,7 +481,7 @@ void MW::deleteFolder()
 
     if (!QFile(dirToDelete).exists()) {
         QString msg = dirToDelete + " does not exist";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         return;
     }
 
@@ -576,7 +576,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     dcimDir.removeRecursively();
 
     QString msg = "All images removed from " + name;
-    G::popUp->showPopup(msg);
+    G::popup->showPopup(msg);
 
     // rgh check what to do
 

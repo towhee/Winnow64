@@ -137,7 +137,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     // secPerFolder    ms test (0 == forever) ESC to stop
     // uturn           randomly change direction
 
-    G::popUp->reset();
+    G::popup->reset();
 
     // if no images in folder then return
     if (dm->sf->rowCount() == 0) return;
@@ -177,7 +177,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     qDebug() << "MW::traverseFolderStressTest randomChangeDirection =" << randomChangeDirection;
 
     QString stopMsg = "Press <font color=\"red\"><b>ESC</b></font> to stop stress test";
-    if (!secPerFolder) G::popUp->showPopup(stopMsg, 0);
+    if (!secPerFolder) G::popup->showPopup(stopMsg, 0);
     G::isStressTest = true;
     bool isForward = true;
     //slideCount = 0;
@@ -241,7 +241,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
                   // QString::number(elapsedMsPerImage) + " ms per image."
                   + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
                   ;
-    G::popUp->showPopup(msg, 0);
+    G::popup->showPopup(msg, 0);
     /*
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
@@ -263,7 +263,7 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
 {
     if (G::isLogger) G::log("MW::bounceFoldersStressTest");
     qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
-    G::popUp->reset();
+    G::popup->reset();
 
     if (!msPerImage) {
         msPerImage = QInputDialog::getInt(this,
@@ -394,7 +394,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     qDebug() << "Test::test()";
     filterChange("Test");
-    G::popUp->showPopup("FilterChange");
+    G::popup->showPopup("FilterChange", 5000);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

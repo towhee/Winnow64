@@ -256,10 +256,10 @@ void track(QString functionName, QString comment, bool hideTime)
 
 int popUpProgressCount = 0;
 int popUpLoadFolderStep = 100;
-PopUp *popUp = nullptr;
+Popup *popup = nullptr;
 void newPopUp(QWidget *widget, QWidget *centralWidget)
 {
-    popUp = new PopUp(widget, centralWidget);
+    popup = new Popup(widget, centralWidget);
 }
 
 //*** LOGGER ******************************************************************************

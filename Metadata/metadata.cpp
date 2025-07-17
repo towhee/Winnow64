@@ -478,7 +478,7 @@ void Metadata::missingThumbnailWarning()
             "sure you have backups until you are sure this does not corrupt<br>"
             "your images.<p>"
             "Press ESC to continue.";
-    G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+    G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
 }
 
 int Metadata::getNewOrientation(int orientation, int rotation)

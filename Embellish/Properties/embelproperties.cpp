@@ -1029,7 +1029,7 @@ bool EmbelProperties::saveTemplateToFile()
     // cannot save "Do not Embellish"
     if (templateName == "Do not Embellish") {
         QString msg = "Cannot save template 'Do not Embellish'";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         return false;
     }
 
@@ -2886,7 +2886,7 @@ void EmbelProperties::addTemplateHeader()
     if (templateList.size() == 1) {
         QString msg = "You must create a template as a first step before adding<br>"
                       "borders, text, rectangles or graphics.";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
     }
 }
 

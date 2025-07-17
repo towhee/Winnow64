@@ -1072,7 +1072,7 @@ void::FindDuplicatesDlg::reportResults()
             QString msg = "The report length (candidates * targets) = " +
                           locale.toString(tot) +
                           ". This exceeds the maximum allowed (100,000).";
-            G::popUp->showPopup(msg, 4000);
+            G::popup->showPopup(msg, 4000);
             return;
         }
     }
@@ -1220,7 +1220,7 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     // check target folder(s) assigned
     if (ui->includeSubfolders->count() == 0) {
         QString msg = "Comparison requires target folder(s)";
-        G::popUp->showPopup(msg, 3000);
+        G::popup->showPopup(msg, 3000);
         return;
     }
 
@@ -1294,7 +1294,7 @@ void FindDuplicatesDlg::on_prevToolBtn_clicked()
         // ui->targetPathLbl->setToolTip(bPath);
     }
     else {
-        G::popUp->showPopup("Start of match images");
+        G::popup->showPopup("Start of match images");
     }
 }
 
@@ -1333,7 +1333,7 @@ void FindDuplicatesDlg::on_nextToolBtn_clicked()
         // ui->targetPathLbl->setToolTip(bPath);
     }
     else {
-        G::popUp->showPopup("End of match images");
+        G::popup->showPopup("End of match images");
     }
 }
 

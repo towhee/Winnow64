@@ -70,7 +70,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
 {
     if (dm->loadingModel) {
         QString msg = "Collecting image files in folder(s), please wait a sec.";
-        G::popUp->showPopup(msg);
+        G::popup->showPopup(msg);
         qApp->processEvents();
         return;
 
@@ -154,7 +154,7 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
 
     if (!sfIdx.isValid()) {
         qWarning() << "Selection::select(QModelIndex) sfIdx =" << sfIdx << "invalid.";
-        G::popUp->showPopup("Selection is invalid");
+        G::popup->showPopup("Selection is invalid");
         qApp->beep();
         return;
     }

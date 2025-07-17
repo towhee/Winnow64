@@ -198,7 +198,7 @@ void BuildFilters::build(AfterAction newAction)
     if (filters->buildingFilters) return;
 
     if (!G::allMetadataLoaded) {
-        G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
+        G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
 

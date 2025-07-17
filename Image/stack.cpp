@@ -19,9 +19,9 @@ void Stack::stop()
     if (G::isLogger) G::log("Stack::stop");
     abort = true;
     G::isRunningStackOperation = false;
-    G::popUp->setProgressVisible(false);
-    G::popUp->reset();
-    G::popUp->showPopup("Stack operation has been aborted.");
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
+    G::popup->showPopup("Stack operation has been aborted.");
     qDebug() << "Stack::stop" << abort;
 //    qApp->processEvents();
 }
@@ -48,7 +48,7 @@ QString Stack::mean()
         if (thisW == w && thisH == h) n++;
     }
     if (n < 2) {
-        G::popUp->showPopup("Select more than 1 image to execute a mean stack.", 2000);
+        G::popup->showPopup("Select more than 1 image to execute a mean stack.", 2000);
         return "";
     }
 
@@ -71,11 +71,11 @@ QString Stack::mean()
         }
     }
 
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(n + 1);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(n + 1);
     QString txt = "Generating the average from " + QString::number(n) + " images." +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popUp->showPopup(txt, 0, true, 1);
+    G::popup->showPopup(txt, 0, true, 1);
 
     // incrementally update mean vector for each selected image
     for (int i = 0; i < n; ++i) {
@@ -99,9 +99,9 @@ QString Stack::mean()
                               "has diffent dimensions."
                               "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
                               ;
-                G::popUp->setProgressVisible(false);
-                G::popUp->reset();
-                 G::popUp->showPopup(txt, 0, true, 1);
+                G::popup->setProgressVisible(false);
+                G::popup->reset();
+                 G::popup->showPopup(txt, 0, true, 1);
                 return "";
             }
             //if ((image.height() != h)) continue;
@@ -130,7 +130,7 @@ QString Stack::mean()
                 //*/
             }
         }
-        G::popUp->setProgress(i+1);
+        G::popup->setProgress(i+1);
         qApp->processEvents();
     }
 
@@ -146,7 +146,7 @@ QString Stack::mean()
             }
         }
 
-        G::popUp->setProgress(n + 1);
+        G::popup->setProgress(n + 1);
 
         // convert source vector to image
         for (int y = 0; y < image.height(); ++y) {
@@ -185,8 +185,8 @@ QString Stack::mean()
         QVariant ret = et.close();
         qDebug() << "Stack::mean" << "et exit code =" << ret;
 
-        G::popUp->setProgressVisible(false);
-        G::popUp->reset();
+        G::popup->setProgressVisible(false);
+        G::popup->reset();
     }
 
     delete pix;

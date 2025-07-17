@@ -270,7 +270,7 @@ void PatternDlg::save()
     // confirm a pixmap has been selected
     if (tile.isNull()) {
         QString msg = "A selection from the source image must be made prior to saving.";
-        G::popUp->showPopup(msg, 2000);
+        G::popup->showPopup(msg, 2000);
         return;
     }
 
