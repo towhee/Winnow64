@@ -952,11 +952,13 @@ void MW::createAppStyle()
     this->setStyleSheet(css);
 
     // fix tooltips for windows (still works in MacOS)
+    #ifdef Q_OS_WIN
     QPalette pal;
     int b = G::backgroundShade;
     pal.setColor(QPalette::ToolTipBase, QColor(b,b,b));
     pal.setColor(QPalette::ToolTipText, QColor(255, 255, 255));
     QToolTip::setPalette(pal);
+    #endif
 }
 
 void MW::createStatusBar()

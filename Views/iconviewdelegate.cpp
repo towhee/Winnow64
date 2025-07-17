@@ -404,7 +404,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         tooltip = sf->index(row, 0).data(G::PathRole).toString();
 
     if (!tooltip.isEmpty()) {
-        QToolTip::showText(event->globalPos(), tooltip, view, option.rect, 4000);
+        QToolTip::showText(event->globalPos(), tooltip, view, option.rect, 10000);
         return true;
     }
 
