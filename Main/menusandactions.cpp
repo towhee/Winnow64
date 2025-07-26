@@ -1792,8 +1792,8 @@ void MW::createIngestMenu()
     }
     connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeIngestHistoryFolder(QAction*)));
-    ingestMenu->addAction(ejectAction);
-    ingestMenu->addAction(eraseUsbAction);
+    // ingestMenu->addAction(ejectAction);
+    // ingestMenu->addAction(eraseUsbAction);
 }
 
 void MW::createEditMenu()
@@ -2143,7 +2143,7 @@ void MW::createFSTreeContextMenu()
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(separatorAction);
     fsTreeActions->append(ejectActionFromContextMenu);
-    fsTreeActions->append(eraseUsbActionFromContextMenu);
+    // fsTreeActions->append(eraseUsbActionFromContextMenu);
     fsTreeActions->append(separatorAction1);
     //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
@@ -2174,7 +2174,7 @@ void MW::createBookmarksContextMenu()
     favActions->append(copyFolderPathFromContextAction);
     favActions->append(separatorAction);
     favActions->append(ejectActionFromContextMenu);
-    favActions->append(eraseUsbActionFromContextMenu);
+    // favActions->append(eraseUsbActionFromContextMenu);
     favActions->append(separatorAction1);
     favActions->append(pasteFilesAction);
     favActions->append(separatorAction2);
@@ -2334,7 +2334,7 @@ void MW::renameEjectUsbMenu(QString path)
     QString drive = "";
     QString text;
     bool enabled;
-    if (Usb::isEjectable(path)) {
+    if (UsbUtil::isEjectable(path)) {
         //qDebug() << "MW::renameEjectUsbMenu  enable";
         enabled = true;
         drive = Utilities::getDriveName(path);
@@ -2409,18 +2409,17 @@ void MW::renameDeleteFolderAction(QString folderName)
 void MW::renameEraseMemCardFromContextMenu(QString path)
 {
     QString drive = "";
-    QString text;
+    QString text = "Erase all images on Memory Card ";
     bool enabled;
-    if (Usb::isMemCardWithDCIM(path)) {
+    if (UsbUtil::isMemCardWithDCIM(path)) {
         //qDebug() << "MW::renameEjectUsbMenu  enable";
         enabled = true;
         drive = Utilities::getDriveName(path);
         drive = Utilities::enquote(drive);
-        text = "Erase all images on Memory Card " + drive;
+        text += drive;
     }
     else {
         enabled = false;
-        text = "Erase Memory Card Images";
     }
     //qDebug() << "MW::renameEjectUsbMenu" << path << drive;
     eraseUsbActionFromContextMenu->setEnabled(enabled);

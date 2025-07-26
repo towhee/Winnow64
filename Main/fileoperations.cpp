@@ -606,7 +606,7 @@ void MW::eraseMemCardImages()
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
         if (storage.isValid() && storage.isReady()) {
             if (!storage.isReadOnly()) {
-                if (Usb::isUsb(storage.rootPath())) {
+                if (UsbUtil::isMemCardWithDCIM(storage.rootPath())) {
                     QString dcimPath = storage.rootPath() + "/DCIM";
                     if (QDir(dcimPath).exists(dcimPath)) {
                         usbInfo.rootPath = storage.rootPath();

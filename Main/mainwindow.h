@@ -65,7 +65,7 @@
 #include "erasememcardimagesdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/renamefile.h"
-#include "Utilities/usb.h"
+#include "Utilities/usbutil.h"
 #include "Utilities/inputdlg.h"
 #include "Utilities/htmlwindow.h"
 #include "progressbar.h"

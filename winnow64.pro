@@ -192,7 +192,8 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/renamefile.h
 HEADERS += Utilities/showhelp.h
 HEADERS += Utilities/stresstest.h
-HEADERS += Utilities/usb.h
+HEADERS += \
+    Utilities/usbutil.h
 HEADERS += Utilities/utilities.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
@@ -369,7 +370,8 @@ SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/renamefile.cpp
 SOURCES += Utilities/showhelp.cpp
 SOURCES += Utilities/stresstest.cpp
-SOURCES += Utilities/usb.cpp
+SOURCES += \
+    Utilities/usbutil.cpp
 SOURCES += Utilities/utilities.cpp
 win32:SOURCES += Utilities/win.cpp
 SOURCES += Views/compareImages.cpp
