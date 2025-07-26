@@ -4913,21 +4913,20 @@ void MW::ejectUsb(QString path)
         fsTree->selectionModel()->clearSelection();
     }
 
-    // get the drive name
-    QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
-    #if defined(Q_OS_WIN)
-    driveName = ejectDrive.rootPath();
-    #elif defined(Q_OS_MAC)
-    driveName = ejectDrive.name();
-    #endif
+    // get the drive name ie WIN "D:\" or MAC "Untitled
+    QString driveName = Utilities::getDriveName(path);
+    // #if defined(Q_OS_WIN)
+    // driveName = ejectDrive.rootPath();
+    // #elif defined(Q_OS_MAC)
+    // driveName = ejectDrive.name();
+    // #endif
 
     // confirm this is an ejectable drive
-    if (Usb::isUsb(path)) {
+    if (UsbUtil::isEjectable(path)) {
         // eject USD drive
-        int result = Usb::eject(driveName);
-        // drive was ejected
-        if (result < 2) {
-            G::popup->showPopup("Ejecting drive " + driveName, 2000);
+        if (UsbUtil::eject(path)) {
+            // drive was ejected
+            G::popup->showPopup("Ejected drive " + driveName, 2000);
             bookmarks->updateCount();
             #ifdef Q_OS_WIN
             fsTree->refreshModel();
@@ -5299,31 +5298,27 @@ void MW::openUsbFolder()
     QMap<QString, UsbInfo> usbMap;
     QStringList usbDrives;
     int n = 0;
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-        if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                if (Usb::isUsb(storage.rootPath())) {
-                    QString dcimPath = storage.rootPath() + "/DCIM";
-                    if (QDir(dcimPath).exists(dcimPath)) {
-                        usbInfo.rootPath = storage.rootPath();
-                        usbInfo.name = storage.name();
-                        QString count = QString::number(n) + ". ";
-                        if (usbInfo.name.length() > 0)
-                            usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
-                        else
-                            usbInfo.description = count + usbInfo.rootPath;
-                        usbMap.insert(usbInfo.description, usbInfo);
 
-                        usbDrives << usbInfo.description;
-                        n++;
-                    }
-                }
-            }
+    for (const QStorageInfo &storage : QStorageInfo::mountedVolumes()) {
+        if (UsbUtil::isMemCardWithDCIM(storage.rootPath())) {
+            QString dcimPath = storage.rootPath() + "/DCIM";
+            usbInfo.rootPath = storage.rootPath();
+            usbInfo.name = storage.name();
+            QString count = QString::number(n) + ". ";
+            if (usbInfo.name.length() > 0)
+                usbInfo.description = count + usbInfo.name + " (" + usbInfo.rootPath + ")";
+            else
+                usbInfo.description = count + usbInfo.rootPath;
+            usbMap.insert(usbInfo.description, usbInfo);
+
+            usbDrives << usbInfo.description;
+            n++;
         }
     }
 
     QString drive;
 
+    // show usb drives in a dialog
     if (usbDrives.length() > 1) {
         loadUsbDlg = new LoadUsbDlg(this, usbDrives, drive);
         loadUsbDlg->exec();

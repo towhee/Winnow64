@@ -392,9 +392,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << "Test::test()";
-    filterChange("Test");
-    G::popup->showPopup("FilterChange", 5000);
+    qDebug() << UsbUtil::dcimCards();
+    UsbUtil::eject("/Volumes/Untitled");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
