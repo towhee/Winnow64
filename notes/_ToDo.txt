@@ -17,10 +17,8 @@ WHAT'S NEW
 - Add tooltips for IconView symbols
 
 BUGS / TO DO
-- MacOS Winnow appears in all desktops
 - Update menu filters when delete all filtered
 - Undo delete
-- ChatGPT review USB code
 - Read media speed is unintuitive
 - https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
@@ -152,6 +150,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- VERSION 2.01
+- MacOS Winnow appears in all desktops
+- ChatGPT review USB code
 - Windows tooltips (esp for thumbnails)
 - Windows do not show menu when full screen
 - In FSTree and BookMarks do not count fiels if size() == zero
