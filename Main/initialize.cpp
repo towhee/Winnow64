@@ -132,7 +132,8 @@ void MW::setupPlatform()
     #ifdef Q_OS_MAC
         setWindowIcon(QIcon(":/images/winnow.icns"));
         Mac::availableMemory();
-        Mac::joinAllSpaces(window()->winId());
+        // rgh desk
+        // Mac::joinAllSpaces(window()->winId());
         G::trash = "Trash";
     #endif
 }
