@@ -441,7 +441,7 @@ Resizing icons or the icon viewport
 
 FOCUS PREDICTOR
 
-    Focus predictor uses a machine learnin`g model to predict where in the image
+    Focus predictor uses a machine learning model to predict where in the image
     the user will want to review the image focus - for example, the eye of the
     subject.  When enabled, and the loupe view is zoomed, as the used advances,
     each image is panned to the predicted focus review location.
@@ -533,11 +533,15 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     initialize();
 
     // persistant settings between sessions
-    // regular settings to use
-    settings = new QSettings("Winnow", "winnow_100");
-    // use to test new user
-    // settings = new QSettings("Winnow", "winnow_101");
+    migrateOldSettings();
+    QString iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+            + "/settings.ini";
+    qDebug() << "iniPath =" << iniPath;
+    // iniPath = "/Users/roryhill/Library/Application Support/Winnow/settings.ini"
+    settings = new QSettings(iniPath, QSettings::IniFormat);
+    // settings = new QSettings("Winnow", "winnow_100");
     G::settings = settings;
+    // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();     // except settings with dependencies ie for actions not created yet

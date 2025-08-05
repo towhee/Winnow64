@@ -321,6 +321,11 @@ void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
 {
     vpRect = vp;
     this->imA = imA;
+    // /*
+    qDebug() << "IconViewDelegate::setVpRect"
+             << "vpRect =" << vpRect
+             << "imA =" << imA
+                ; //*/
 }
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
@@ -387,7 +392,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     QString tooltip;
 
     if (!rects.value("Thumb").contains(viewPos))
-        tooltip = "Borders:\n  Yellow:\t Current image\n  White:\t Selected image\n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
+        tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
     else if (isMissing && rects.value("MissingThumb").contains(viewPos))
         tooltip = "Image does not have an embedded thumbnail";
     else if (isLock && rects.value("Lock").contains(viewPos))
@@ -808,7 +813,7 @@ void IconViewDelegate::paint(QPainter *painter,
         else {
             hIcon = iconRect.height();
             wIcon = static_cast<int>(hIcon * imA);
-            wBlack = (iconRect.width() - hIcon) / 2;
+            wBlack = (iconRect.width() - wIcon) / 2;
         }
         int xIconTL = iconRect.x() + wBlack;
         int yIconTL = iconRect.y() + hBlack;
@@ -820,6 +825,13 @@ void IconViewDelegate::paint(QPainter *painter,
         int y1 = y1Vp + yIconTL;
         int x2 = x2Vp + xIconTL;
         int y2 = y2Vp + yIconTL;
+        qDebug() << "IconViewDelegate::paint"
+                 << "cellRect =" << cellRect
+                 << "thumbRect =" << thumbRect
+                 << "iconRect =" << iconRect
+                 << "vpRect =" << vpRect
+                 << QRect(QPoint(x1,y1), QPoint(x2,y2))
+                    ;
         painter->setPen(vp1Pen);
         painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
         painter->setPen(vp2Pen);

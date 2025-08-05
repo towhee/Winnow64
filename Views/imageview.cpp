@@ -659,7 +659,10 @@ void ImageView::showPredictedFocus()
     qreal y2 = p.at(2).y() / h;
     QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
     qreal imA = w * 1.0 / h;
-    // qDebug() << "ImageView::scrollChange  imA =" << imA;
+    qDebug() << "ImageView::showPredictedFocus"
+             << "vp =" << vp
+             << "imA =" << imA
+                ;
     emit loupeRect(vp, imA);
 }
 

@@ -12,6 +12,8 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #    win32:QT += core5compat   # huge performance hit without this
 }
 
+# QMAKE_BUNDLE_IDENTIFIER = com.winnow.Winnow
+
 # Compile without warnings
 # GCC / Clang
 # QMAKE_CXXFLAGS += -Wno-unused-variable
@@ -472,35 +474,49 @@ DISTFILES += notes/users.txt
 DISTFILES += notes/VideoScripts
 DISTFILES += notes/xmp.txt
 
+# *** MAC Libraries ***
+
 macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
 macx:LIBS += -framework CoreFoundation
 macx:LIBS += -framework Foundation
 
-# onnxruntime
-# macx:INCLUDEPATH += /Users/roryhill/onnxruntime-osx-arm64-1.17.0/include
-# LIBS += -L/Users/roryhill/onnxruntime-osx-arm64-1.17.0/lib -lonnxruntime
-
 # opencv
-macx:OPENCV_PREFIX = /opt/homebrew/opt/opencv
-macx:INCLUDEPATH += $$OPENCV_PREFIX/include/opencv4
-macx:LIBS += -L$$OPENCV_PREFIX/lib -lopencv_core -lopencv_imgproc -lopencv_dnn
-win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
-win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
+macx:LIBS += \
+  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
+  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
+  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
+macx:INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
+
+# libtiff
+macx:LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libtiff.6.dylib
+macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+
+# libjpeg-turbo
+macx:LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libturbojpeg.0.dylib
+macx:INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
 
 # zLib
 macx:INCLUDEPATH += /usr/include
 macx:LIBS += -lz
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib/build
-win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
+
+# *** WIN Libraries ***
+
+# opencv
+win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
+win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
 win32:INCLUDEPATH += $$PWD/Lib/libde265/include
 win32:DEPENDPATH  += $$PWD/Lib/libde265/release
+
+# zLib
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
+win32:INCLUDEPATH += $$PWD/Lib/zlib
+win32:INCLUDEPATH += $$PWD/Lib/zlib/build
+win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
 
 # libheif
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
@@ -510,16 +526,6 @@ win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
 # libtiff
 win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
-#win32: CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
 win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
 win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
-macx:LIBTIFF_PREFIX = /opt/homebrew/opt/libtiff
-macx:INCLUDEPATH += $$LIBTIFF_PREFIX/include
-# macx:LIBS += -L$$LIBTIFF_PREFIX/lib -llibtiff  # not working, use absolute ref
-macx::LIBS += /opt/homebrew/opt/libtiff/lib/libtiff.dylib
-
-# libjpeg-turbo
-macx:JPEGTURBO_PREFIX = /opt/homebrew/opt/jpeg-turbo
-macx:INCLUDEPATH += $$JPEGTURBO_PREFIX/include
-macx:LIBS += -L$$JPEGTURBO_PREFIX/lib -lturbojpeg

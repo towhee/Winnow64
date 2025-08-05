@@ -1297,69 +1297,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
             if (!event->modifiers()) startDrag(Qt::MoveAction);
         }
     }
-
-    // // ToolTip: QListView arbitrarily imposes a 1 second duration for the tooltip.
-    // // To overcome, override helpEvent in the delegate and show tooltip there.
-    // QToolTip::hideText();
-    // iconViewDelegate->tooltip = "";
-
-    // if (cursor() != QCursor(Qt::CursorShape(Qt::ArrowCursor))) {
-    //     return;
-    // }
-
-    // QPoint viewPos = event->pos();
-    // QModelIndex index = indexAt(viewPos);
-    // if (!index.isValid()) {
-    //     QToolTip::hideText();
-    //     return;
-    // }
-
-    // // locations for the symbols on the icon, saved in the datamodel
-    // using SymbolRectMap = QHash<QString, QRect>;
-    // QHash<QString, QRect> rects;
-    // int row = index.row();
-    // QVariant v = dm->index(row, G::IconSymbolColumn).data();
-    // if (v.canConvert<SymbolRectMap>()) {
-    //     rects = v.value<SymbolRectMap>();
-    // }
-
-    // bool isMissing = dm->sf->index(row, G::MissingThumbColumn).data().toBool();
-    // bool isLock = !dm->sf->index(row, G::ReadWriteColumn).data().toBool();
-    // bool isRating = dm->sf->index(row, G::RatingColumn).data().toBool();
-    // bool isCombineRawJpg = dm->sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
-    // bool isCached = dm->sf->index(row, G::IsCachedColumn).data().toBool();
-    // bool isVideo = dm->sf->index(row, G::VideoColumn).data().toBool();
-
-    // /*
-    // qDebug() << "IconView::mouseMoveEvent"
-    //          << "Mouse pos =" << event->pos()
-    //          << "Lock =" << rects.value("Lock")
-    //          << "isLock =" << isLock
-    //     ; //*/
-
-    // // Is there a tooltip for this position
-    // if (!rects.value("Thumb").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Borders:\n"
-    //               "  Yellow:\t Current image\n"
-    //               "  White:\t Selected image\n"
-    //               "  Green:\t Picked\n"
-    //               "  Blue:\t Ingested\n"
-    //               "  Red:   \t Rejected"
-    //         ;
-    // else if (isMissing && rects.value("MissingThumb").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Image does not have an embedded thumbnail";
-    // else if (isLock && rects.value("Lock").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Image file is locked";
-    // else if (isRating && rects.value("Rating").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Rating";
-    // else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Image is JPG version of a RAW+JPG pair";
-    // else if (!isCached && rects.value("Cache").contains(viewPos))
-    //     iconViewDelegate->tooltip = "This image is not cached";
-    // else if (isVideo && rects.value("Duration").contains(viewPos))
-    //     iconViewDelegate->tooltip = "Duration";
-    // else
-    //     iconViewDelegate->tooltip = dm->sf->index(row, 0).data(G::PathRole).toString();
 }
 
 void IconView::mouseReleaseEvent(QMouseEvent *event)
@@ -1844,7 +1781,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         if (h > iconRect.height()) h = iconRect.height();
 
         QString whichScale = hScale < vScale ? "hScale" : "vScale";
-        /*
+        // /*
         qDebug() << "IconView::zoomCursor"
                  << whichScale
                  << "ivW =" << ivW
@@ -1852,7 +1789,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
                  << "w =" << w
                  << "h =" << h
                  << "ivA =" << ivA;
-            */
+                    //*/
         /*
             qDebug() << "IconView::zoomCursor"
                      << "zoom =" << zoom
