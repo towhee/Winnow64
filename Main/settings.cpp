@@ -558,6 +558,45 @@ bool MW::loadSettings()
     return true;
 }
 
+void MW::migrateOldSettings()
+{
+/*
+    Sandboxed applications (req'd for Mac App Store) cannot access library/preferences
+    so the settings need to be moved from com.Winnow.winnow_100.plist to a sandbox-safe
+    .ini file
+*/
+    // Define new INI path inside standard writable location
+    QString iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(iniPath);  // Ensure the folder exists
+    QString iniFile = iniPath + "/settings.ini";
+
+    // Check if the INI file already exists (migration done)
+    if (QFile::exists(iniFile)) {
+        qDebug() << "✅ Settings already migrated to" << iniFile;
+        return;
+    }
+
+    qDebug() << "🔄 Migrating old settings to" << iniFile;
+
+    // Load old settings (macOS plist format, typically in ~/Library/Preferences)
+    QSettings oldSettings("Winnow", "winnow_100");
+
+    // Load new INI-format settings
+    QSettings newSettings(iniFile, QSettings::IniFormat);
+
+    // Migrate all keys from old to new
+    QStringList keys = oldSettings.allKeys();
+    for (const QString &key : keys) {
+        QVariant value = oldSettings.value(key);
+        newSettings.setValue(key, value);
+        qDebug() << "Migrated:" << key << "=>" << value;
+    }
+
+    newSettings.sync();
+    qDebug() << "✅ Migration complete. INI file created at:" << iniFile;
+
+}
+
 void MW::removeDeprecatedSettings()
 {
     if (G::isLogger) G::log("MW::removeDeprecatedSettings");

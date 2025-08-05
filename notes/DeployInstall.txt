@@ -172,6 +172,37 @@ Mac Notes:
 	#put /Users/roryhill/Projects/Winnow64/Docs/versions.html 
 	exit
 
+Mac Developer Notes:
+
+        email: hillrg@gmail.com
+	Password: Kirkpa7$$
+	Comapny/Team: Robert hillrg
+	Company/Team ID: 2663CS489R
+	Winnow App ID: 2663CS489R.com.winnow.winnow
+	Developer certificate: 2663CS489R
+	App-Specific Password for Winnow Notarization: pclq-wccx-jyjg-ggpy
+
+        /Users/roryhill/Projects/build-winnow64-Qt_6_8_2_for_macOS-Release/Winnow.app/Contents/entitlements.plist
+
+        Save your App-Specific Password to the macOS keychain in terminal:
+	xcrun notarytool store-credentials "AC_PASSWORD" \
+	  --apple-id "hillrg@gmail.com" \
+	  --team-id "2663CS489R" \
+	  --password "pclq-wccx-jyjg-ggpy"
+
+        Credentials saved to Keychain.
+	To use them, specify `--keychain-profile "AC_PASSWORD"`
+
+        In Terminal, test that Xcode and tools are aware of your identity:
+	xcrun notarytool store-credentials "notary-profile" \
+	  --apple-id "hillrg@gmail.com" \
+	  --team-id "2663CS489R" \
+	  --password "pclq-wccx-jyjg-ggpy"
+
+        Success. Credentials validated.
+	Credentials saved to Keychain.
+	To use them, specify `--keychain-profile "notary-profile"`
+
 
 Win notes: 
 	Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!

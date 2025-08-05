@@ -17,7 +17,7 @@ LEXFLAGS  =
 YACC      = yacc
 YACCFLAGS = -d
 DEFINES       = -DQT_DISABLE_DEPRECATED_BEFORE=0x051500 -DQT_NO_DEBUG -DQT_MULTIMEDIAWIDGETS_LIB -DQT_WIDGETS_LIB -DQT_MULTIMEDIA_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_CONCURRENT_LIB -DQT_CORE_LIB
-INCPATH       = -I. -I. -IDialogs -IUtilities -I. -I/usr/include -I../../Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I../../Qt/6.7.2/macos/lib/QtGui.framework/Headers -I../../Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I../../Qt/6.7.2/macos/lib/QtCore.framework/Headers -I. -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AGL.framework/Headers -I. -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AGL.framework/Headers -I../../Qt/6.7.2/macos/mkspecs/macx-clang -F/Users/roryhill/Qt/6.7.2/macos/lib
+INCPATH       = -I. -I. -IDialogs -IUtilities -I. -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I../../Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I../../Qt/6.7.2/macos/lib/QtGui.framework/Headers -I../../Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I../../Qt/6.7.2/macos/lib/QtCore.framework/Headers -I. -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AGL.framework/Headers/ -I. -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/OpenGL.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/System/Library/Frameworks/AGL.framework/Headers/ -I../../Qt/6.7.2/macos/mkspecs/macx-clang -F/Users/roryhill/Qt/6.7.2/macos/lib
 DEL_FILE  = rm -f
 MOVE      = mv -f
 
@@ -32,49 +32,54 @@ check: first
 
 benchmark: first
 
-compilers: qrc_winnow.cpp moc_cachedata.cpp moc_framedecoder.cpp moc_imagecache.cpp\
-	 moc_imagedecoder.cpp moc_metaread.cpp moc_metaread2.cpp\
-	 moc_reader.cpp moc_buildfilters.cpp moc_datamodel.cpp\
-	 moc_filters.cpp moc_selection.cpp moc_aboutdlg.cpp\
-	 moc_addthumbnailsdlg.cpp moc_appdlg.cpp moc_copystyledlg.cpp\
-	 moc_editlistdlg.cpp moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp\
-	 moc_imagedlg.cpp moc_ingestdlg.cpp moc_ingesterrors.cpp\
-	 moc_loadusbdlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp\
+compilers: qrc_winnow.cpp moc_cachedata.cpp moc_focuspointtrainer.cpp moc_focuspredictor.cpp\
+	 moc_tiffthumbdecoder.cpp moc_mov.cpp moc_mp4.cpp\
+	 moc_png.cpp moc_framedecoder.cpp moc_imagecache.cpp\
+	 moc_imagedecoder.cpp moc_metaread.cpp moc_reader.cpp\
+	 moc_buildfilters.cpp moc_datamodel.cpp moc_filters.cpp\
+	 moc_selection.cpp moc_aboutdlg.cpp moc_addthumbnailsdlg.cpp\
+	 moc_appdlg.cpp moc_copystyledlg.cpp moc_editlistdlg.cpp\
+	 moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp moc_imagedlg.cpp\
+	 moc_ingestdlg.cpp moc_ingesterrors.cpp moc_loadusbdlg.cpp\
+	 moc_loupeinfodlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp\
 	 moc_managetilesdlg.cpp moc_patterndlg.cpp moc_preferencesdlg.cpp\
 	 moc_renamedlg.cpp moc_saveasdlg.cpp moc_selectionorpicksdlg.cpp\
 	 moc_testaligndlg.cpp moc_tokendlg.cpp moc_updateapp.cpp\
 	 moc_workspacedlg.cpp moc_zoomdlg.cpp moc_graphicseffect.cpp\
 	 moc_embel.cpp moc_embelexport.cpp moc_embelproperties.cpp\
-	 moc_bookmarks.cpp moc_fstree.cpp moc_ingest.cpp\
-	 moc_helppixeldelta.cpp moc_autonomousimage.cpp moc_imagealign.cpp\
+	 moc_bookmarks.cpp moc_fstree.cpp moc_hoverdelegate.cpp\
+	 moc_ingest.cpp moc_autonomousimage.cpp moc_imagealign.cpp\
 	 moc_pixmap.cpp moc_stack.cpp moc_thumb.cpp\
 	 moc_canon.cpp moc_heic.cpp moc_jpeg.cpp\
+	 moc_jpeg2.cpp moc_jpgdecoder.cpp moc_jpegturbo.cpp\
 	 moc_nikon.cpp moc_olympus.cpp moc_panasonic.cpp\
-	 moc_sony.cpp moc_tiff.cpp moc_issue.cpp\
-	 moc_log.cpp moc_dockwidget.cpp moc_mainwindow.cpp\
+	 moc_sony.cpp moc_tiff.cpp moc_libtiff.cpp\
+	 moc_rorytiff.cpp moc_issue.cpp moc_log.cpp\
+	 moc_dockwidget.cpp moc_global.cpp moc_mainwindow.cpp\
 	 moc_qtlocalpeer.cpp moc_qtsingleapplication.cpp moc_exiftool.cpp\
 	 moc_metadata.cpp moc_xmp.cpp moc_preferences.cpp\
 	 moc_propertyeditor.cpp moc_propertydelegate.cpp moc_propertywidgets.cpp\
-	 moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dropshadowlabel.cpp\
-	 moc_foldercompressor.cpp moc_htmlwindow.cpp moc_inputdlg.cpp\
-	 moc_popup.cpp moc_progressbar.cpp moc_renamefile.cpp\
-	 moc_compareImages.cpp moc_compareview.cpp moc_iconview.cpp\
-	 moc_iconviewdelegate.cpp moc_imageview.cpp moc_infostring.cpp\
-	 moc_infoview.cpp moc_tableview.cpp moc_videoview.cpp\
-	 moc_videowidget.cpp ui_aboutdlg.h ui_addthumbnailsdlg.h ui_aligndlg.h\
-	 ui_appdlg.h ui_copystyledlg.h ui_editlistdlg.h\
-	 ui_erasememcardimagesdlg.h ui_findduplicatesdlg.h ui_imagedlg.h\
-	 ui_ingestdlg.h ui_ingesterrors.h ui_loadusbdlg.h\
-	 ui_managegraphicsdlg.h ui_manageimagesdlg.h ui_managetilesdlg.h\
-	 ui_patterndlg.h ui_renamedlg.h ui_renamefiledlg.h\
-	 ui_saveasdlg.h ui_selectionorpicksdlg.h ui_testaligndlg.h\
-	 ui_testdlg.h ui_test1.h ui_test12.h\
-	 ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h\
-	 ui_zoomdlg.h ui_embelCoord.h ui_filtershelp.h\
-	 ui_filtershelp_copy.h ui_helpfindduplicates.h ui_helppixeldelta.h\
-	 ui_helpform.h ui_helpingest.h ui_ingestautopath.h\
-	 ui_introduction.h ui_message.h ui_shortcutsform.h\
-	 ui_welcome.h ui_metadatareport.h ui_inputdlg.h
+	 moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dirwatcher.cpp\
+	 moc_dropshadowlabel.cpp moc_foldercompressor.cpp moc_htmlwindow.cpp\
+	 moc_inputdlg.cpp moc_popup.cpp moc_progressbar.cpp\
+	 moc_renamefile.cpp moc_stresstest.cpp moc_compareImages.cpp\
+	 moc_compareview.cpp moc_iconview.cpp moc_iconviewdelegate.cpp\
+	 moc_imageview.cpp moc_infostring.cpp moc_infoview.cpp\
+	 moc_tableview.cpp moc_videoview.cpp moc_videowidget.cpp ui_aboutdlg.h ui_helppixeldelta.h ui_loupeinfodlg.h\
+	 ui_addthumbnailsdlg.h ui_aligndlg.h ui_appdlg.h\
+	 ui_copystyledlg.h ui_editlistdlg.h ui_erasememcardimagesdlg.h\
+	 ui_findduplicatesdlg.h ui_imagedlg.h ui_ingestdlg.h\
+	 ui_ingesterrors.h ui_loadusbdlg.h ui_managegraphicsdlg.h\
+	 ui_manageimagesdlg.h ui_managetilesdlg.h ui_patterndlg.h\
+	 ui_renamedlg.h ui_renamefiledlg.h ui_saveasdlg.h\
+	 ui_selectionorpicksdlg.h ui_testaligndlg.h ui_testdlg.h\
+	 ui_test1.h ui_test12.h ui_tokendlg.h\
+	 ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h\
+	 ui_embelCoord.h ui_filtershelp.h ui_foldershelp.h\
+	 ui_helpfindduplicates.h ui_helpform.h ui_helpingest.h\
+	 ui_helppixeldelta.h ui_ingestautopath.h ui_introduction.h\
+	 ui_message.h ui_shortcutsform.h ui_welcome.h\
+	 ui_metadatareport.h ui_inputdlg.h
 compiler_rcc_make_all: qrc_winnow.cpp
 compiler_rcc_clean:
 	-$(DEL_FILE) qrc_winnow.cpp
@@ -99,6 +104,7 @@ qrc_winnow.cpp: winnow.qrc \
 		images/down-arrow2.png \
 		images/badImage1.png \
 		images/checkmark64.png \
+		images/busy_spinner.gif \
 		images/winnow.icns \
 		images/clear.png \
 		images/down_arrow.png \
@@ -117,6 +123,7 @@ qrc_winnow.cpp: winnow.qrc \
 		images/checkmark48.png \
 		images/spindown_hover.png \
 		images/checkbox_checked_pressed.png \
+		images/target.png \
 		images/Winnow\ coordinate\ spaces.psd \
 		images/down_arrow_disabled.png \
 		images/up.icns \
@@ -205,6 +212,7 @@ qrc_winnow.cpp: winnow.qrc \
 		images/colors.png \
 		images/icon16/emboss_trough.png \
 		images/icon16/refresh.png \
+		images/icon16/sidecar.png \
 		images/icon16/rawjpeg.png \
 		images/icon16/new.png \
 		images/icon16/delta_bw_16.png \
@@ -229,8 +237,11 @@ qrc_winnow.cpp: winnow.qrc \
 		images/icon16/text.png \
 		images/icon16/Z-A.png \
 		images/icon16/tile.png \
+		images/icon16/target.png \
 		images/icon16/delta.png \
+		images/icon16/target_bw.png \
 		images/icon16/slideshow.png \
+		images/icon16/nosidecar.png \
 		images/icon16/lightning1.png \
 		images/icon16/thrifty.png \
 		images/icon16/A-Z.png \
@@ -250,6 +261,7 @@ qrc_winnow.cpp: winnow.qrc \
 		images/icon16/emboss_ridge.png \
 		images/icon16/morevertthin.png \
 		Sounds/ingest.wav \
+		DetectionModels/focus_point_model.onnx \
 		Docs/filtershelp.html \
 		Docs/embelcoordsystem.html \
 		Docs/Winnow\ help.html \
@@ -257,6 +269,7 @@ qrc_winnow.cpp: winnow.qrc \
 		Docs/winnow.html \
 		Docs/ingestautopath.html \
 		Docs/versions.html \
+		Docs/helpfilmstrip.html \
 		Docs/_template.html \
 		Docs/filtershelp.fld/filelist.xml \
 		Docs/filtershelp.fld/themedata.thmx \
@@ -264,30 +277,112 @@ qrc_winnow.cpp: winnow.qrc \
 		Docs/images/filters2.png \
 		Docs/images/filters1.png \
 		Docs/images/EmbelCoordSystem.png \
+		Docs/images/HelpFilmStrip.png \
 		qss/winnow.css
 	/Users/roryhill/Qt/6.7.2/macos/libexec/rcc -name winnow --no-zstd winnow.qrc -o qrc_winnow.cpp
 
-compiler_moc_header_make_all: moc_cachedata.cpp moc_framedecoder.cpp moc_imagecache.cpp moc_imagedecoder.cpp moc_metaread.cpp moc_metaread2.cpp moc_reader.cpp moc_buildfilters.cpp moc_datamodel.cpp moc_filters.cpp moc_selection.cpp moc_aboutdlg.cpp moc_addthumbnailsdlg.cpp moc_appdlg.cpp moc_copystyledlg.cpp moc_editlistdlg.cpp moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp moc_imagedlg.cpp moc_ingestdlg.cpp moc_ingesterrors.cpp moc_loadusbdlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp moc_managetilesdlg.cpp moc_patterndlg.cpp moc_preferencesdlg.cpp moc_renamedlg.cpp moc_saveasdlg.cpp moc_selectionorpicksdlg.cpp moc_testaligndlg.cpp moc_tokendlg.cpp moc_updateapp.cpp moc_workspacedlg.cpp moc_zoomdlg.cpp moc_graphicseffect.cpp moc_embel.cpp moc_embelexport.cpp moc_embelproperties.cpp moc_bookmarks.cpp moc_fstree.cpp moc_ingest.cpp moc_helppixeldelta.cpp moc_autonomousimage.cpp moc_imagealign.cpp moc_pixmap.cpp moc_stack.cpp moc_thumb.cpp moc_canon.cpp moc_heic.cpp moc_jpeg.cpp moc_nikon.cpp moc_olympus.cpp moc_panasonic.cpp moc_sony.cpp moc_tiff.cpp moc_issue.cpp moc_log.cpp moc_dockwidget.cpp moc_mainwindow.cpp moc_qtlocalpeer.cpp moc_qtsingleapplication.cpp moc_exiftool.cpp moc_metadata.cpp moc_xmp.cpp moc_preferences.cpp moc_propertyeditor.cpp moc_propertydelegate.cpp moc_propertywidgets.cpp moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dropshadowlabel.cpp moc_foldercompressor.cpp moc_htmlwindow.cpp moc_inputdlg.cpp moc_popup.cpp moc_progressbar.cpp moc_renamefile.cpp moc_compareImages.cpp moc_compareview.cpp moc_iconview.cpp moc_iconviewdelegate.cpp moc_imageview.cpp moc_infostring.cpp moc_infoview.cpp moc_tableview.cpp moc_videoview.cpp moc_videowidget.cpp
+compiler_moc_header_make_all: moc_cachedata.cpp moc_focuspointtrainer.cpp moc_focuspredictor.cpp moc_tiffthumbdecoder.cpp moc_mov.cpp moc_mp4.cpp moc_png.cpp moc_framedecoder.cpp moc_imagecache.cpp moc_imagedecoder.cpp moc_metaread.cpp moc_reader.cpp moc_buildfilters.cpp moc_datamodel.cpp moc_filters.cpp moc_selection.cpp moc_aboutdlg.cpp moc_addthumbnailsdlg.cpp moc_appdlg.cpp moc_copystyledlg.cpp moc_editlistdlg.cpp moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp moc_imagedlg.cpp moc_ingestdlg.cpp moc_ingesterrors.cpp moc_loadusbdlg.cpp moc_loupeinfodlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp moc_managetilesdlg.cpp moc_patterndlg.cpp moc_preferencesdlg.cpp moc_renamedlg.cpp moc_saveasdlg.cpp moc_selectionorpicksdlg.cpp moc_testaligndlg.cpp moc_tokendlg.cpp moc_updateapp.cpp moc_workspacedlg.cpp moc_zoomdlg.cpp moc_graphicseffect.cpp moc_embel.cpp moc_embelexport.cpp moc_embelproperties.cpp moc_bookmarks.cpp moc_fstree.cpp moc_hoverdelegate.cpp moc_ingest.cpp moc_autonomousimage.cpp moc_imagealign.cpp moc_pixmap.cpp moc_stack.cpp moc_thumb.cpp moc_canon.cpp moc_heic.cpp moc_jpeg.cpp moc_jpeg2.cpp moc_jpgdecoder.cpp moc_jpegturbo.cpp moc_nikon.cpp moc_olympus.cpp moc_panasonic.cpp moc_sony.cpp moc_tiff.cpp moc_libtiff.cpp moc_rorytiff.cpp moc_issue.cpp moc_log.cpp moc_dockwidget.cpp moc_global.cpp moc_mainwindow.cpp moc_qtlocalpeer.cpp moc_qtsingleapplication.cpp moc_exiftool.cpp moc_metadata.cpp moc_xmp.cpp moc_preferences.cpp moc_propertyeditor.cpp moc_propertydelegate.cpp moc_propertywidgets.cpp moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dirwatcher.cpp moc_dropshadowlabel.cpp moc_foldercompressor.cpp moc_htmlwindow.cpp moc_inputdlg.cpp moc_popup.cpp moc_progressbar.cpp moc_renamefile.cpp moc_stresstest.cpp moc_compareImages.cpp moc_compareview.cpp moc_iconview.cpp moc_iconviewdelegate.cpp moc_imageview.cpp moc_infostring.cpp moc_infoview.cpp moc_tableview.cpp moc_videoview.cpp moc_videowidget.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_cachedata.cpp moc_framedecoder.cpp moc_imagecache.cpp moc_imagedecoder.cpp moc_metaread.cpp moc_metaread2.cpp moc_reader.cpp moc_buildfilters.cpp moc_datamodel.cpp moc_filters.cpp moc_selection.cpp moc_aboutdlg.cpp moc_addthumbnailsdlg.cpp moc_appdlg.cpp moc_copystyledlg.cpp moc_editlistdlg.cpp moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp moc_imagedlg.cpp moc_ingestdlg.cpp moc_ingesterrors.cpp moc_loadusbdlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp moc_managetilesdlg.cpp moc_patterndlg.cpp moc_preferencesdlg.cpp moc_renamedlg.cpp moc_saveasdlg.cpp moc_selectionorpicksdlg.cpp moc_testaligndlg.cpp moc_tokendlg.cpp moc_updateapp.cpp moc_workspacedlg.cpp moc_zoomdlg.cpp moc_graphicseffect.cpp moc_embel.cpp moc_embelexport.cpp moc_embelproperties.cpp moc_bookmarks.cpp moc_fstree.cpp moc_ingest.cpp moc_helppixeldelta.cpp moc_autonomousimage.cpp moc_imagealign.cpp moc_pixmap.cpp moc_stack.cpp moc_thumb.cpp moc_canon.cpp moc_heic.cpp moc_jpeg.cpp moc_nikon.cpp moc_olympus.cpp moc_panasonic.cpp moc_sony.cpp moc_tiff.cpp moc_issue.cpp moc_log.cpp moc_dockwidget.cpp moc_mainwindow.cpp moc_qtlocalpeer.cpp moc_qtsingleapplication.cpp moc_exiftool.cpp moc_metadata.cpp moc_xmp.cpp moc_preferences.cpp moc_propertyeditor.cpp moc_propertydelegate.cpp moc_propertywidgets.cpp moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dropshadowlabel.cpp moc_foldercompressor.cpp moc_htmlwindow.cpp moc_inputdlg.cpp moc_popup.cpp moc_progressbar.cpp moc_renamefile.cpp moc_compareImages.cpp moc_compareview.cpp moc_iconview.cpp moc_iconviewdelegate.cpp moc_imageview.cpp moc_infostring.cpp moc_infoview.cpp moc_tableview.cpp moc_videoview.cpp moc_videowidget.cpp
+	-$(DEL_FILE) moc_cachedata.cpp moc_focuspointtrainer.cpp moc_focuspredictor.cpp moc_tiffthumbdecoder.cpp moc_mov.cpp moc_mp4.cpp moc_png.cpp moc_framedecoder.cpp moc_imagecache.cpp moc_imagedecoder.cpp moc_metaread.cpp moc_reader.cpp moc_buildfilters.cpp moc_datamodel.cpp moc_filters.cpp moc_selection.cpp moc_aboutdlg.cpp moc_addthumbnailsdlg.cpp moc_appdlg.cpp moc_copystyledlg.cpp moc_editlistdlg.cpp moc_erasememcardimagesdlg.cpp moc_findduplicatesdlg.cpp moc_imagedlg.cpp moc_ingestdlg.cpp moc_ingesterrors.cpp moc_loadusbdlg.cpp moc_loupeinfodlg.cpp moc_managegraphicsdlg.cpp moc_manageimagesdlg.cpp moc_managetilesdlg.cpp moc_patterndlg.cpp moc_preferencesdlg.cpp moc_renamedlg.cpp moc_saveasdlg.cpp moc_selectionorpicksdlg.cpp moc_testaligndlg.cpp moc_tokendlg.cpp moc_updateapp.cpp moc_workspacedlg.cpp moc_zoomdlg.cpp moc_graphicseffect.cpp moc_embel.cpp moc_embelexport.cpp moc_embelproperties.cpp moc_bookmarks.cpp moc_fstree.cpp moc_hoverdelegate.cpp moc_ingest.cpp moc_autonomousimage.cpp moc_imagealign.cpp moc_pixmap.cpp moc_stack.cpp moc_thumb.cpp moc_canon.cpp moc_heic.cpp moc_jpeg.cpp moc_jpeg2.cpp moc_jpgdecoder.cpp moc_jpegturbo.cpp moc_nikon.cpp moc_olympus.cpp moc_panasonic.cpp moc_sony.cpp moc_tiff.cpp moc_libtiff.cpp moc_rorytiff.cpp moc_issue.cpp moc_log.cpp moc_dockwidget.cpp moc_global.cpp moc_mainwindow.cpp moc_qtlocalpeer.cpp moc_qtsingleapplication.cpp moc_exiftool.cpp moc_metadata.cpp moc_xmp.cpp moc_preferences.cpp moc_propertyeditor.cpp moc_propertydelegate.cpp moc_propertywidgets.cpp moc_classificationlabel.cpp moc_coloranalysis.cpp moc_dirwatcher.cpp moc_dropshadowlabel.cpp moc_foldercompressor.cpp moc_htmlwindow.cpp moc_inputdlg.cpp moc_popup.cpp moc_progressbar.cpp moc_renamefile.cpp moc_stresstest.cpp moc_compareImages.cpp moc_compareview.cpp moc_iconview.cpp moc_iconviewdelegate.cpp moc_imageview.cpp moc_infostring.cpp moc_infoview.cpp moc_tableview.cpp moc_videoview.cpp moc_videowidget.cpp
 moc_cachedata.cpp: Cache/cachedata.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/cachedata.h -o moc_cachedata.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/cachedata.h -o moc_cachedata.cpp
 
-moc_framedecoder.cpp: Cache/framedecoder.h \
+moc_focuspointtrainer.cpp: Utilities/focuspointtrainer.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/focuspointtrainer.h -o moc_focuspointtrainer.cpp
+
+moc_focuspredictor.cpp: Utilities/focuspredictor.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/core.hpp \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/dnn.hpp \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/focuspredictor.h -o moc_focuspredictor.cpp
+
+moc_tiffthumbdecoder.cpp: Cache/tiffthumbdecoder.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		ImageFormats/Tiff/tiff.h \
+		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Metadata/irb.h \
+		Metadata/xmp.h \
+		Metadata/rapidxml.h \
+		Metadata/rapidxml_print_rgh.h \
+		Metadata/gps.h \
+		ImageFormats/Jpeg/jpeg.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		Metadata/iptc.h \
+		Metadata/ExifTool.h \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/tiffthumbdecoder.h -o moc_tiffthumbdecoder.cpp
+
+moc_mov.cpp: ImageFormats/Video/mov.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
 		Utilities/popup.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
@@ -305,50 +400,95 @@ moc_framedecoder.cpp: Cache/framedecoder.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Video/mov.h -o moc_mov.cpp
+
+moc_mp4.cpp: ImageFormats/Video/mp4.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Log/issue.h \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Video/mp4.h -o moc_mp4.cpp
+
+moc_png.cpp: ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Png/png.h -o moc_png.cpp
+
+moc_framedecoder.cpp: Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/framedecoder.h -o moc_framedecoder.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/framedecoder.h -o moc_framedecoder.cpp
 
 moc_imagecache.cpp: Cache/imagecache.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
 		Metadata/imagemetadata.h \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -362,6 +502,10 @@ moc_imagecache.cpp: Cache/imagecache.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -372,30 +516,54 @@ moc_imagecache.cpp: Cache/imagecache.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/imagecache.h -o moc_imagecache.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/imagecache.h -o moc_imagecache.cpp
 
 moc_imagedecoder.cpp: Cache/imagedecoder.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Cache/cachedata.h \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -408,27 +576,12 @@ moc_imagedecoder.cpp: Cache/imagedecoder.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -442,6 +595,10 @@ moc_imagedecoder.cpp: Cache/imagedecoder.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -452,18 +609,33 @@ moc_imagedecoder.cpp: Cache/imagedecoder.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/imagedecoder.h -o moc_imagedecoder.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/imagedecoder.h -o moc_imagedecoder.cpp
 
 moc_metaread.cpp: Cache/metaread.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
@@ -472,8 +644,17 @@ moc_metaread.cpp: Cache/metaread.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -486,19 +667,11 @@ moc_metaread.cpp: Cache/metaread.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -512,6 +685,10 @@ moc_metaread.cpp: Cache/metaread.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -522,97 +699,32 @@ moc_metaread.cpp: Cache/metaread.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
-		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
-		Image/thumb.h \
 		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
-		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/metaread.h -o moc_metaread.cpp
-
-moc_metaread2.cpp: Cache/metaread2.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
-		Datamodel/datamodel.h \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
-		Metadata/irb.h \
-		Metadata/iptc.h \
-		Metadata/gps.h \
-		Metadata/ExifTool.h \
-		Metadata/xmp.h \
-		Metadata/rapidxml.h \
-		Metadata/rapidxml_print_rgh.h \
-		ui_metadatareport.h \
-		ImageFormats/Heic/heic.h \
-		Lib/libde265/include/de265.h \
-		Lib/libheif/include/heif.h \
-		ImageFormats/Jpeg/jpeg.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
-		ImageFormats/Canon/canon.h \
-		ImageFormats/Canon/canoncr3.h \
-		ImageFormats/Dng/dng.h \
-		ImageFormats/Fuji/fuji.h \
-		ImageFormats/Nikon/nikon.h \
-		ImageFormats/Olympus/olympus.h \
-		ImageFormats/Panasonic/panasonic.h \
-		ImageFormats/Sony/sony.h \
-		ImageFormats/Tiff/tiff.h \
-		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
-		Datamodel/filters.h \
-		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Image/thumb.h \
-		Cache/framedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		Cache/tiffthumbdecoder.h \
 		Cache/reader.h \
 		Cache/imagecache.h \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
@@ -622,13 +734,23 @@ moc_metaread2.cpp: Cache/metaread2.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/metaread2.h -o moc_metaread2.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/metaread.h -o moc_metaread.cpp
 
 moc_reader.cpp: Cache/reader.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -641,22 +763,12 @@ moc_reader.cpp: Cache/reader.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -670,6 +782,10 @@ moc_reader.cpp: Cache/reader.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -680,25 +796,33 @@ moc_reader.cpp: Cache/reader.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
-		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
-		Image/thumb.h \
 		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
+		Image/thumb.h \
+		Cache/tiffthumbdecoder.h \
 		Cache/imagecache.h \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
@@ -708,7 +832,7 @@ moc_reader.cpp: Cache/reader.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/reader.h -o moc_reader.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Cache/reader.h -o moc_reader.cpp
 
 moc_buildfilters.cpp: Datamodel/buildfilters.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
@@ -716,8 +840,17 @@ moc_buildfilters.cpp: Datamodel/buildfilters.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -730,20 +863,12 @@ moc_buildfilters.cpp: Datamodel/buildfilters.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -757,6 +882,10 @@ moc_buildfilters.cpp: Datamodel/buildfilters.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -767,20 +896,44 @@ moc_buildfilters.cpp: Datamodel/buildfilters.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/buildfilters.h -o moc_buildfilters.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/buildfilters.h -o moc_buildfilters.cpp
 
 moc_datamodel.cpp: Datamodel/datamodel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -794,10 +947,6 @@ moc_datamodel.cpp: Datamodel/datamodel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -805,10 +954,6 @@ moc_datamodel.cpp: Datamodel/datamodel.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -822,6 +967,10 @@ moc_datamodel.cpp: Datamodel/datamodel.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -832,51 +981,55 @@ moc_datamodel.cpp: Datamodel/datamodel.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/datamodel.h -o moc_datamodel.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/datamodel.h -o moc_datamodel.cpp
 
 moc_filters.cpp: Datamodel/filters.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		ui_filtershelp.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/filters.h -o moc_filters.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/filters.h -o moc_filters.cpp
 
 moc_selection.cpp: Datamodel/selection.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -890,10 +1043,6 @@ moc_selection.cpp: Datamodel/selection.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -901,10 +1050,6 @@ moc_selection.cpp: Datamodel/selection.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -918,6 +1063,10 @@ moc_selection.cpp: Datamodel/selection.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -928,62 +1077,50 @@ moc_selection.cpp: Datamodel/selection.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/selection.h -o moc_selection.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Datamodel/selection.h -o moc_selection.cpp
 
 moc_aboutdlg.cpp: Dialogs/aboutdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QDesktopServices \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/aboutdlg.h -o moc_aboutdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/aboutdlg.h -o moc_aboutdlg.cpp
 
 moc_addthumbnailsdlg.cpp: Dialogs/addthumbnailsdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/addthumbnailsdlg.h -o moc_addthumbnailsdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/addthumbnailsdlg.h -o moc_addthumbnailsdlg.cpp
 
 moc_appdlg.cpp: Dialogs/appdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
@@ -1012,128 +1149,61 @@ moc_appdlg.cpp: Dialogs/appdlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/appdlg.h -o moc_appdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/appdlg.h -o moc_appdlg.cpp
 
 moc_copystyledlg.cpp: Dialogs/copystyledlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/copystyledlg.h -o moc_copystyledlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/copystyledlg.h -o moc_copystyledlg.cpp
 
 moc_editlistdlg.cpp: Dialogs/editlistdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/editlistdlg.h -o moc_editlistdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/editlistdlg.h -o moc_editlistdlg.cpp
 
 moc_erasememcardimagesdlg.cpp: Dialogs/erasememcardimagesdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/erasememcardimagesdlg.h -o moc_erasememcardimagesdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/erasememcardimagesdlg.h -o moc_erasememcardimagesdlg.cpp
 
 moc_findduplicatesdlg.cpp: Dialogs/findduplicatesdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		Utilities/win.h \
 		Metadata/imagemetadata.h \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1147,6 +1217,10 @@ moc_findduplicatesdlg.cpp: Dialogs/findduplicatesdlg.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1157,45 +1231,61 @@ moc_findduplicatesdlg.cpp: Dialogs/findduplicatesdlg.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
-		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
-		Image/thumb.h \
 		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
+		Image/thumb.h \
+		Cache/tiffthumbdecoder.h \
 		Image/autonomousimage.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		ui_helpfindduplicates.h \
 		ui_helppixeldelta.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/findduplicatesdlg.h -o moc_findduplicatesdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/findduplicatesdlg.h -o moc_findduplicatesdlg.cpp
 
 moc_imagedlg.cpp: Dialogs/imagedlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/imagedlg.h -o moc_imagedlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/imagedlg.h -o moc_imagedlg.cpp
 
 moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Views/iconview.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1209,10 +1299,6 @@ moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -1220,10 +1306,6 @@ moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1237,6 +1319,10 @@ moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1247,22 +1333,32 @@ moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Dialogs/tokendlg.h \
 		Dialogs/renamedlg.h \
 		ui_ingestautopath.h \
@@ -1271,44 +1367,29 @@ moc_ingestdlg.cpp: Dialogs/ingestdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QTextEdit \
 		Dialogs/editlistdlg.h \
 		File/ingest.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/ingestdlg.h -o moc_ingestdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/ingestdlg.h -o moc_ingestdlg.cpp
 
 moc_ingesterrors.cpp: Dialogs/ingesterrors.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QTextDocument \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QTextEdit \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/ingesterrors.h -o moc_ingesterrors.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/ingesterrors.h -o moc_ingesterrors.cpp
 
 moc_loadusbdlg.cpp: Dialogs/loadusbdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/win.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/loadusbdlg.h -o moc_loadusbdlg.cpp
+
+moc_loupeinfodlg.cpp: Dialogs/loupeinfodlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Dialogs/tokendlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Dialogs/renamedlg.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1333,78 +1414,38 @@ moc_loadusbdlg.cpp: Dialogs/loadusbdlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/loadusbdlg.h -o moc_loadusbdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/loupeinfodlg.h -o moc_loupeinfodlg.cpp
 
 moc_managegraphicsdlg.cpp: Dialogs/managegraphicsdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/managegraphicsdlg.h -o moc_managegraphicsdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/managegraphicsdlg.h -o moc_managegraphicsdlg.cpp
 
 moc_manageimagesdlg.cpp: Dialogs/manageimagesdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Dialogs/patterndlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/manageimagesdlg.h -o moc_manageimagesdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/manageimagesdlg.h -o moc_manageimagesdlg.cpp
 
 moc_managetilesdlg.cpp: Dialogs/managetilesdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/managetilesdlg.h -o moc_managetilesdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/managetilesdlg.h -o moc_managetilesdlg.cpp
 
 moc_patterndlg.cpp: Dialogs/patterndlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/patterndlg.h -o moc_patterndlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/patterndlg.h -o moc_patterndlg.cpp
 
 moc_preferencesdlg.cpp: Dialogs/preferencesdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
@@ -1441,7 +1482,7 @@ moc_preferencesdlg.cpp: Dialogs/preferencesdlg.h \
 		PropertyEditor/propertywidgets.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/preferencesdlg.h -o moc_preferencesdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/preferencesdlg.h -o moc_preferencesdlg.cpp
 
 moc_renamedlg.cpp: Dialogs/renamedlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
@@ -1470,7 +1511,7 @@ moc_renamedlg.cpp: Dialogs/renamedlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/renamedlg.h -o moc_renamedlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/renamedlg.h -o moc_renamedlg.cpp
 
 moc_saveasdlg.cpp: Dialogs/saveasdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
@@ -1480,6 +1521,13 @@ moc_saveasdlg.cpp: Dialogs/saveasdlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1493,19 +1541,12 @@ moc_saveasdlg.cpp: Dialogs/saveasdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		Utilities/win.h \
 		Log/issue.h \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1519,6 +1560,10 @@ moc_saveasdlg.cpp: Dialogs/saveasdlg.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1529,56 +1574,50 @@ moc_saveasdlg.cpp: Dialogs/saveasdlg.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/saveasdlg.h -o moc_saveasdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/saveasdlg.h -o moc_saveasdlg.cpp
 
 moc_selectionorpicksdlg.cpp: Dialogs/selectionorpicksdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/selectionorpicksdlg.h -o moc_selectionorpicksdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/selectionorpicksdlg.h -o moc_selectionorpicksdlg.cpp
 
 moc_testaligndlg.cpp: Dialogs/testaligndlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/testaligndlg.h -o moc_testaligndlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/testaligndlg.h -o moc_testaligndlg.cpp
 
 moc_tokendlg.cpp: Dialogs/tokendlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Dialogs/renamedlg.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1603,52 +1642,28 @@ moc_tokendlg.cpp: Dialogs/tokendlg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Dialogs/renamedlg.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/tokendlg.h -o moc_tokendlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/tokendlg.h -o moc_tokendlg.cpp
 
 moc_updateapp.cpp: Dialogs/updateapp.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/updateapp.h -o moc_updateapp.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/updateapp.h -o moc_updateapp.cpp
 
 moc_workspacedlg.cpp: Dialogs/workspacedlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMenu \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/workspacedlg.h -o moc_workspacedlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/workspacedlg.h -o moc_workspacedlg.cpp
 
 moc_zoomdlg.cpp: Dialogs/zoomdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/zoomdlg.h -o moc_zoomdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Dialogs/zoomdlg.h -o moc_zoomdlg.cpp
 
 moc_graphicseffect.cpp: Effects/graphicseffect.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
@@ -1657,64 +1672,46 @@ moc_graphicseffect.cpp: Effects/graphicseffect.h \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Utilities/win.h \
 		Dialogs/imagedlg.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Effects/graphicseffect.h -o moc_graphicseffect.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Effects/graphicseffect.h -o moc_graphicseffect.cpp
 
 moc_embel.cpp: Embellish/embel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
 		Metadata/imagemetadata.h \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1728,6 +1725,10 @@ moc_embel.cpp: Embellish/embel.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1738,25 +1739,34 @@ moc_embel.cpp: Embellish/embel.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Cache/imagecache.h \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
@@ -1784,10 +1794,20 @@ moc_embel.cpp: Embellish/embel.h \
 		ui_embelCoord.h \
 		Effects/graphicsitemeventfilter.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/embel.h -o moc_embel.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/embel.h -o moc_embel.cpp
 
 moc_embelexport.cpp: Embellish/embelexport.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1801,10 +1821,6 @@ moc_embelexport.cpp: Embellish/embelexport.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -1812,12 +1828,6 @@ moc_embelexport.cpp: Embellish/embelexport.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1831,6 +1841,10 @@ moc_embelexport.cpp: Embellish/embelexport.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1841,19 +1855,31 @@ moc_embelexport.cpp: Embellish/embelexport.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Embellish/Properties/embelproperties.h \
 		PropertyEditor/propertyeditor.h \
 		Main/dockwidget.h \
@@ -1883,16 +1909,28 @@ moc_embelexport.cpp: Embellish/embelexport.h \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		Effects/graphicsitemeventfilter.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/embelexport.h -o moc_embelexport.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/embelexport.h -o moc_embelexport.cpp
 
 moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1906,10 +1944,6 @@ moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -1917,13 +1951,6 @@ moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Datamodel/datamodel.h \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -1937,6 +1964,10 @@ moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -1947,13 +1978,27 @@ moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		PropertyEditor/propertyeditor.h \
 		Main/dockwidget.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
@@ -1976,10 +2021,23 @@ moc_embelproperties.cpp: Embellish/Properties/embelproperties.h \
 		Dialogs/manageimagesdlg.h \
 		ui_embelCoord.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/Properties/embelproperties.h -o moc_embelproperties.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Embellish/Properties/embelproperties.h -o moc_embelproperties.cpp
 
 moc_bookmarks.cpp: File/bookmarks.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -1993,10 +2051,6 @@ moc_bookmarks.cpp: File/bookmarks.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2004,12 +2058,6 @@ moc_bookmarks.cpp: File/bookmarks.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2023,6 +2071,10 @@ moc_bookmarks.cpp: File/bookmarks.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2033,14 +2085,50 @@ moc_bookmarks.cpp: File/bookmarks.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
+		Datamodel/filters.h \
+		ui_filtershelp.h \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
 		File/fstree.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
+		ui_foldershelp.h \
+		File/HoverDelegate.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/bookmarks.h -o moc_bookmarks.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/bookmarks.h -o moc_bookmarks.cpp
 
 moc_fstree.cpp: File/fstree.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
+		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2054,10 +2142,6 @@ moc_fstree.cpp: File/fstree.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2065,12 +2149,6 @@ moc_fstree.cpp: File/fstree.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2084,6 +2162,10 @@ moc_fstree.cpp: File/fstree.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2094,8 +2176,39 @@ moc_fstree.cpp: File/fstree.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
+		Datamodel/filters.h \
+		ui_filtershelp.h \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
+		ui_foldershelp.h \
+		File/HoverDelegate.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/fstree.h -o moc_fstree.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/fstree.h -o moc_fstree.cpp
+
+moc_hoverdelegate.cpp: File/hoverdelegate.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		main/global.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/hoverdelegate.h -o moc_hoverdelegate.cpp
 
 moc_ingest.cpp: File/ingest.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
@@ -2103,8 +2216,17 @@ moc_ingest.cpp: File/ingest.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/datamodel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2117,20 +2239,12 @@ moc_ingest.cpp: File/ingest.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2144,6 +2258,10 @@ moc_ingest.cpp: File/ingest.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2154,23 +2272,32 @@ moc_ingest.cpp: File/ingest.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Dialogs/ingesterrors.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QTextDocument \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QTextEdit \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/ingest.h -o moc_ingest.cpp
-
-moc_helppixeldelta.cpp: Help/helppixeldelta.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Help/helppixeldelta.h -o moc_helppixeldelta.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib File/ingest.h -o moc_ingest.cpp
 
 moc_autonomousimage.cpp: Image/autonomousimage.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
@@ -2217,6 +2344,10 @@ moc_autonomousimage.cpp: Image/autonomousimage.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2227,20 +2358,32 @@ moc_autonomousimage.cpp: Image/autonomousimage.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
-		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/autonomousimage.h -o moc_autonomousimage.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/autonomousimage.h -o moc_autonomousimage.cpp
 
 moc_imagealign.cpp: Image/imagealign.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
@@ -2250,7 +2393,7 @@ moc_imagealign.cpp: Image/imagealign.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/imagealign.h -o moc_imagealign.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/imagealign.h -o moc_imagealign.cpp
 
 moc_pixmap.cpp: Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
@@ -2258,6 +2401,14 @@ moc_pixmap.cpp: Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2271,20 +2422,12 @@ moc_pixmap.cpp: Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2298,6 +2441,10 @@ moc_pixmap.cpp: Image/pixmap.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2308,18 +2455,34 @@ moc_pixmap.cpp: Image/pixmap.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/pixmap.h -o moc_pixmap.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/pixmap.h -o moc_pixmap.cpp
 
 moc_stack.cpp: Image/stack.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
@@ -2348,6 +2511,8 @@ moc_stack.cpp: Image/stack.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
@@ -2367,6 +2532,10 @@ moc_stack.cpp: Image/stack.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2377,29 +2546,49 @@ moc_stack.cpp: Image/stack.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Effects/effects.h \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/stack.h -o moc_stack.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/stack.h -o moc_stack.cpp
 
 moc_thumb.cpp: Image/thumb.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2413,22 +2602,12 @@ moc_thumb.cpp: Image/thumb.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2442,6 +2621,10 @@ moc_thumb.cpp: Image/thumb.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2452,23 +2635,42 @@ moc_thumb.cpp: Image/thumb.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
-		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
+		Cache/tiffthumbdecoder.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/thumb.h -o moc_thumb.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Image/thumb.h -o moc_thumb.cpp
 
 moc_canon.cpp: ImageFormats/Canon/canon.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2482,10 +2684,6 @@ moc_canon.cpp: ImageFormats/Canon/canon.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2493,8 +2691,6 @@ moc_canon.cpp: ImageFormats/Canon/canon.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2507,11 +2703,16 @@ moc_canon.cpp: ImageFormats/Canon/canon.h \
 		Metadata/iptc.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Canon/canon.h -o moc_canon.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Canon/canon.h -o moc_canon.cpp
 
 moc_heic.cpp: ImageFormats/Heic/heic.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2525,10 +2726,6 @@ moc_heic.cpp: ImageFormats/Heic/heic.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2536,7 +2733,6 @@ moc_heic.cpp: ImageFormats/Heic/heic.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2544,12 +2740,18 @@ moc_heic.cpp: ImageFormats/Heic/heic.h \
 		Lib/libde265/include/de265.h \
 		Lib/libheif/include/heif.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Heic/heic.h -o moc_heic.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Heic/heic.h -o moc_heic.cpp
 
 moc_jpeg.cpp: ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
@@ -2562,10 +2764,6 @@ moc_jpeg.cpp: ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2573,8 +2771,6 @@ moc_jpeg.cpp: ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2585,10 +2781,70 @@ moc_jpeg.cpp: ImageFormats/Jpeg/jpeg.h \
 		Metadata/rapidxml_print_rgh.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Jpeg/jpeg.h -o moc_jpeg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Jpeg/jpeg.h -o moc_jpeg.cpp
+
+moc_jpeg2.cpp: ImageFormats/Jpeg/jpeg2.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Metadata/iptc.h \
+		Metadata/gps.h \
+		Metadata/xmp.h \
+		Metadata/rapidxml.h \
+		Metadata/rapidxml_print_rgh.h \
+		Metadata/ExifTool.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Jpeg/jpeg2.h -o moc_jpeg2.cpp
+
+moc_jpgdecoder.cpp: ImageFormats/Jpeg/jpgdecoder.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Jpeg/jpgdecoder.h -o moc_jpgdecoder.cpp
+
+moc_jpegturbo.cpp: ImageFormats/jpeg/jpegturbo.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/jpeg/jpegturbo.h -o moc_jpegturbo.cpp
 
 moc_nikon.cpp: ImageFormats/Nikon/nikon.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2602,10 +2858,6 @@ moc_nikon.cpp: ImageFormats/Nikon/nikon.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2613,8 +2865,6 @@ moc_nikon.cpp: ImageFormats/Nikon/nikon.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2627,10 +2877,16 @@ moc_nikon.cpp: ImageFormats/Nikon/nikon.h \
 		Metadata/iptc.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Nikon/nikon.h -o moc_nikon.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Nikon/nikon.h -o moc_nikon.cpp
 
 moc_olympus.cpp: ImageFormats/Olympus/olympus.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2644,10 +2900,6 @@ moc_olympus.cpp: ImageFormats/Olympus/olympus.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2655,8 +2907,6 @@ moc_olympus.cpp: ImageFormats/Olympus/olympus.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2669,10 +2919,16 @@ moc_olympus.cpp: ImageFormats/Olympus/olympus.h \
 		Metadata/iptc.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Olympus/olympus.h -o moc_olympus.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Olympus/olympus.h -o moc_olympus.cpp
 
 moc_panasonic.cpp: ImageFormats/Panasonic/panasonic.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2686,10 +2942,6 @@ moc_panasonic.cpp: ImageFormats/Panasonic/panasonic.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2697,8 +2949,6 @@ moc_panasonic.cpp: ImageFormats/Panasonic/panasonic.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2711,10 +2961,16 @@ moc_panasonic.cpp: ImageFormats/Panasonic/panasonic.h \
 		Metadata/gps.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Panasonic/panasonic.h -o moc_panasonic.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Panasonic/panasonic.h -o moc_panasonic.cpp
 
 moc_sony.cpp: ImageFormats/Sony/sony.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2728,10 +2984,6 @@ moc_sony.cpp: ImageFormats/Sony/sony.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2739,8 +2991,6 @@ moc_sony.cpp: ImageFormats/Sony/sony.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2753,11 +3003,17 @@ moc_sony.cpp: ImageFormats/Sony/sony.h \
 		Metadata/iptc.h \
 		Metadata/ExifTool.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Sony/sony.h -o moc_sony.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Sony/sony.h -o moc_sony.cpp
 
 moc_tiff.cpp: ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -2771,10 +3027,6 @@ moc_tiff.cpp: ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -2782,8 +3034,6 @@ moc_tiff.cpp: ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/imagemetadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
@@ -2796,14 +3046,55 @@ moc_tiff.cpp: ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
 		Metadata/iptc.h \
 		Metadata/ExifTool.h \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Tiff/tiff.h -o moc_tiff.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Tiff/tiff.h -o moc_tiff.cpp
+
+moc_libtiff.cpp: ImageFormats/Tiff/libtiff.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Metadata/imagemetadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Log/issue.h \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Tiff/libtiff.h -o moc_libtiff.cpp
+
+moc_rorytiff.cpp: ImageFormats/Tiff/rorytiff.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib ImageFormats/Tiff/rorytiff.h -o moc_rorytiff.cpp
 
 moc_issue.cpp: Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Log/issue.h -o moc_issue.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Log/issue.h -o moc_issue.cpp
 
 moc_log.cpp: Log/log.h \
 		Utilities/popup.h \
@@ -2821,7 +3112,7 @@ moc_log.cpp: Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Log/log.h -o moc_log.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Log/log.h -o moc_log.cpp
 
 moc_dockwidget.cpp: Main/dockwidget.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
@@ -2852,12 +3143,10 @@ moc_dockwidget.cpp: Main/dockwidget.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Main/widgetcss.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/dockwidget.h -o moc_dockwidget.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/dockwidget.h -o moc_dockwidget.cpp
 
-moc_mainwindow.cpp: Main/mainwindow.h \
+moc_global.cpp: Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
-		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
@@ -2881,16 +3170,46 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Main/widgetcss.h \
-		Dialogs/appdlg.h \
-		Dialogs/addthumbnailsdlg.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/global.h -o moc_global.cpp
+
+moc_mainwindow.cpp: Main/mainwindow.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		Utilities/stresstest.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
 		Metadata/ifd.h \
 		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
 		Metadata/imagemetadata.h \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -2904,6 +3223,10 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -2913,13 +3236,35 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		ImageFormats/Panasonic/panasonic.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		File/bookmarks.h \
+		File/fstree.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
+		ui_foldershelp.h \
+		File/HoverDelegate.h \
+		Main/widgetcss.h \
+		Dialogs/appdlg.h \
+		Dialogs/addthumbnailsdlg.h \
 		Datamodel/selection.h \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
@@ -2927,17 +3272,9 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		Datamodel/buildfilters.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
-		File/bookmarks.h \
-		File/fstree.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		PropertyEditor/propertyeditor.h \
 		Main/dockwidget.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
@@ -2956,10 +3293,10 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		Utilities/mac.h \
 		Utilities/classificationlabel.h \
 		Image/imagealign.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
 		Dialogs/testaligndlg.h \
 		Views/imageview.h \
 		Views/infostring.h \
+		Dialogs/loupeinfodlg.h \
 		Dialogs/tokendlg.h \
 		Dialogs/renamedlg.h \
 		Embellish/Properties/embelproperties.h \
@@ -2980,23 +3317,22 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		Utilities/dropshadowlabel.h \
 		Embellish/embel.h \
 		Effects/graphicsitemeventfilter.h \
+		Utilities/focuspredictor.h \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/core.hpp \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/dnn.hpp \
 		Views/videoview.h \
 		Views/videowidget.h \
 		../../Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers/QVideoWidget \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaDevices \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QAudioDevice \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QAudioOutput \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
-		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaFormat \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaMetaData \
 		Views/infoview.h \
 		Embellish/embelexport.h \
 		Cache/metaread.h \
 		Image/thumb.h \
-		Cache/framedecoder.h \
-		Cache/metaread2.h \
+		Cache/tiffthumbdecoder.h \
 		Cache/reader.h \
 		File/ingest.h \
 		Dialogs/ingesterrors.h \
@@ -3020,8 +3356,12 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		Dialogs/loadusbdlg.h \
 		Dialogs/erasememcardimagesdlg.h \
 		Utilities/renamefile.h \
-		Utilities/usb.h \
+		Utilities/usbutil.h \
+		Utilities/progressbar.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
 		Utilities/coloranalysis.h \
+		Utilities/dirwatcher.h \
 		Image/stack.h \
 		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QSoundEffect \
 		Utilities/performance.h \
@@ -3030,82 +3370,47 @@ moc_mainwindow.cpp: Main/mainwindow.h \
 		ui_welcome.h \
 		ui_message.h \
 		ui_test12.h \
+		Utilities/focuspointtrainer.h \
 		Main/winnativeeventfilter.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/mainwindow.h -o moc_mainwindow.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/mainwindow.h -o moc_mainwindow.cpp
 
 moc_qtlocalpeer.cpp: Main/qtlocalpeer.h \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/lib/QtNetwork.framework/Headers/QLocalServer \
 		../../Qt/6.7.2/macos/lib/QtNetwork.framework/Headers/QLocalSocket \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDir \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QRegularExpression \
 		Main/qtlockedfile.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/qtlocalpeer.h -o moc_qtlocalpeer.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/qtlocalpeer.h -o moc_qtlocalpeer.cpp
 
 moc_qtsingleapplication.cpp: Main/qtsingleapplication.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QApplication \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/qtsingleapplication.h -o moc_qtsingleapplication.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Main/qtsingleapplication.h -o moc_qtsingleapplication.cpp
 
 moc_exiftool.cpp: Metadata/exiftool.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/exiftool.h -o moc_exiftool.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/exiftool.h -o moc_exiftool.cpp
 
 moc_metadata.cpp: Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3119,10 +3424,6 @@ moc_metadata.cpp: Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -3130,10 +3431,6 @@ moc_metadata.cpp: Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3147,6 +3444,10 @@ moc_metadata.cpp: Metadata/metadata.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3157,8 +3458,17 @@ moc_metadata.cpp: Metadata/metadata.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/metadata.h -o moc_metadata.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/metadata.h -o moc_metadata.cpp
 
 moc_xmp.cpp: Metadata/xmp.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
@@ -3166,70 +3476,53 @@ moc_xmp.cpp: Metadata/xmp.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Metadata/rapidxml.h \
 		Metadata/rapidxml_print_rgh.h \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		Utilities/utilities.h \
 		Utilities/inputdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
 		Utilities/win.h \
-		Log/issue.h \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/xmp.h -o moc_xmp.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Metadata/xmp.h -o moc_xmp.cpp
 
 moc_preferences.cpp: PropertyEditor/preferences.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		PropertyEditor/propertyeditor.h \
 		Main/dockwidget.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Main/widgetcss.h \
 		PropertyEditor/propertydelegate.h \
 		PropertyEditor/propertywidgets.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/preferences.h -o moc_preferences.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/preferences.h -o moc_preferences.cpp
 
 moc_propertyeditor.cpp: PropertyEditor/propertyeditor.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Main/dockwidget.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3254,17 +3547,18 @@ moc_propertyeditor.cpp: PropertyEditor/propertyeditor.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Main/dockwidget.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
 		Main/widgetcss.h \
 		PropertyEditor/propertydelegate.h \
 		PropertyEditor/propertywidgets.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertyeditor.h -o moc_propertyeditor.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertyeditor.h -o moc_propertyeditor.cpp
 
 moc_propertydelegate.cpp: PropertyEditor/propertydelegate.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		PropertyEditor/propertywidgets.h \
+		Main/dockwidget.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3289,13 +3583,10 @@ moc_propertydelegate.cpp: PropertyEditor/propertydelegate.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		PropertyEditor/propertywidgets.h \
-		Main/dockwidget.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDockWidget \
 		Main/widgetcss.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertydelegate.h -o moc_propertydelegate.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertydelegate.h -o moc_propertydelegate.cpp
 
 moc_propertywidgets.cpp: PropertyEditor/propertywidgets.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
@@ -3327,94 +3618,31 @@ moc_propertywidgets.cpp: PropertyEditor/propertywidgets.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Main/widgetcss.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertywidgets.h -o moc_propertywidgets.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib PropertyEditor/propertywidgets.h -o moc_propertywidgets.cpp
 
 moc_classificationlabel.cpp: Utilities/classificationlabel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/classificationlabel.h -o moc_classificationlabel.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/classificationlabel.h -o moc_classificationlabel.cpp
 
 moc_coloranalysis.cpp: Utilities/coloranalysis.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/coloranalysis.h -o moc_coloranalysis.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/coloranalysis.h -o moc_coloranalysis.cpp
+
+moc_dirwatcher.cpp: Utilities/dirwatcher.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/dirwatcher.h -o moc_dirwatcher.cpp
 
 moc_dropshadowlabel.cpp: Utilities/dropshadowlabel.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/dropshadowlabel.h -o moc_dropshadowlabel.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/dropshadowlabel.h -o moc_dropshadowlabel.cpp
 
 moc_foldercompressor.cpp: Utilities/foldercompressor.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
@@ -3422,65 +3650,18 @@ moc_foldercompressor.cpp: Utilities/foldercompressor.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDir \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDataStream \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/foldercompressor.h -o moc_foldercompressor.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/foldercompressor.h -o moc_foldercompressor.cpp
 
 moc_htmlwindow.cpp: Utilities/htmlwindow.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/htmlwindow.h -o moc_htmlwindow.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/htmlwindow.h -o moc_htmlwindow.cpp
 
 moc_inputdlg.cpp: Utilities/inputdlg.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Main/global.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
-		Utilities/popup.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
 		Utilities/win.h \
-		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
-		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/inputdlg.h -o moc_inputdlg.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/inputdlg.h -o moc_inputdlg.cpp
 
 moc_popup.cpp: Utilities/popup.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
@@ -3490,19 +3671,52 @@ moc_popup.cpp: Utilities/popup.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/popup.h -o moc_popup.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/popup.h -o moc_popup.cpp
 
 moc_progressbar.cpp: Utilities/progressbar.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/progressbar.h -o moc_progressbar.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/progressbar.h -o moc_progressbar.cpp
 
 moc_renamefile.cpp: Utilities/renamefile.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3516,22 +3730,12 @@ moc_renamefile.cpp: Utilities/renamefile.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		Log/log.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3545,6 +3749,10 @@ moc_renamefile.cpp: Utilities/renamefile.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3555,38 +3763,62 @@ moc_renamefile.cpp: Utilities/renamefile.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/imagecache.h \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Image/pixmap.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		Dialogs/tokendlg.h \
 		Dialogs/renamedlg.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/renamefile.h -o moc_renamefile.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/renamefile.h -o moc_renamefile.cpp
 
-moc_compareImages.cpp: Views/compareImages.h \
+moc_stresstest.cpp: Utilities/stresstest.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3600,21 +3832,11 @@ moc_compareImages.cpp: Views/compareImages.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3628,6 +3850,10 @@ moc_compareImages.cpp: Views/compareImages.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3638,24 +3864,124 @@ moc_compareImages.cpp: Views/compareImages.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
-		Views/iconview.h \
-		Datamodel/datamodel.h \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
+		File/bookmarks.h \
+		File/fstree.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
+		ui_foldershelp.h \
+		File/HoverDelegate.h \
+		../../Qt/6.7.2/macos/libexec/moc
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Utilities/stresstest.h -o moc_stresstest.cpp
+
+moc_compareImages.cpp: Views/compareImages.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
+		Main/global.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QStringList \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QElapsedTimer \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QMutex \
+		Utilities/popup.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QWidget \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QLabel \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QProgressBar \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
+		Log/issue.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
+		Log/log.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QThread \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
+		Metadata/irb.h \
+		Metadata/iptc.h \
+		Metadata/gps.h \
+		Metadata/ExifTool.h \
+		Metadata/xmp.h \
+		Metadata/rapidxml.h \
+		Metadata/rapidxml_print_rgh.h \
+		ui_metadatareport.h \
+		ImageFormats/Heic/heic.h \
+		Lib/libde265/include/de265.h \
+		Lib/libheif/include/heif.h \
+		ImageFormats/Jpeg/jpeg.h \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
+		ImageFormats/Canon/canon.h \
+		ImageFormats/Canon/canoncr3.h \
+		ImageFormats/Dng/dng.h \
+		ImageFormats/Fuji/fuji.h \
+		ImageFormats/Nikon/nikon.h \
+		ImageFormats/Olympus/olympus.h \
+		ImageFormats/Panasonic/panasonic.h \
+		ImageFormats/Sony/sony.h \
+		ImageFormats/Tiff/tiff.h \
+		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
+		Views/iconview.h \
+		Datamodel/datamodel.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
+		Datamodel/filters.h \
+		ui_filtershelp.h \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
+		Dialogs/selectionorpicksdlg.h \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Views/compareview.h \
 		Datamodel/selection.h \
 		Views/tableview.h \
@@ -3666,21 +3992,27 @@ moc_compareImages.cpp: Views/compareImages.h \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		Utilities/classificationlabel.h \
 		Image/imagealign.h \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
 		Dialogs/testaligndlg.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/compareImages.h -o moc_compareImages.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/compareImages.h -o moc_compareImages.cpp
 
 moc_compareview.cpp: Views/compareview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3694,10 +4026,6 @@ moc_compareview.cpp: Views/compareview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -3705,10 +4033,6 @@ moc_compareview.cpp: Views/compareview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3722,6 +4046,10 @@ moc_compareview.cpp: Views/compareview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3732,14 +4060,30 @@ moc_compareview.cpp: Views/compareview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Datamodel/selection.h \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
@@ -3747,10 +4091,6 @@ moc_compareview.cpp: Views/compareview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		Cache/imagecache.h \
@@ -3759,19 +4099,28 @@ moc_compareview.cpp: Views/compareview.h \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		Utilities/classificationlabel.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/compareview.h -o moc_compareview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/compareview.h -o moc_compareview.cpp
 
 moc_iconview.cpp: Views/iconview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3785,10 +4134,6 @@ moc_iconview.cpp: Views/iconview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -3796,10 +4141,6 @@ moc_iconview.cpp: Views/iconview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3813,6 +4154,10 @@ moc_iconview.cpp: Views/iconview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3823,24 +4168,34 @@ moc_iconview.cpp: Views/iconview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/iconview.h -o moc_iconview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/iconview.h -o moc_iconview.cpp
 
 moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
@@ -3848,8 +4203,18 @@ moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3863,10 +4228,6 @@ moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -3874,10 +4235,6 @@ moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3891,6 +4248,10 @@ moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3901,27 +4262,47 @@ moc_iconviewdelegate.cpp: Views/iconviewdelegate.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/iconviewdelegate.h -o moc_iconviewdelegate.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/iconviewdelegate.h -o moc_iconviewdelegate.cpp
 
 moc_imageview.cpp: Views/imageview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QHash \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -3935,10 +4316,6 @@ moc_imageview.cpp: Views/imageview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -3946,10 +4323,6 @@ moc_imageview.cpp: Views/imageview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -3963,6 +4336,10 @@ moc_imageview.cpp: Views/imageview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -3973,13 +4350,27 @@ moc_imageview.cpp: Views/imageview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Datamodel/selection.h \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
@@ -3987,10 +4378,6 @@ moc_imageview.cpp: Views/imageview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		Cache/imagecache.h \
@@ -3998,11 +4385,11 @@ moc_imageview.cpp: Views/imageview.h \
 		Utilities/icc.h \
 		Lcms2/lcms2.h \
 		Cache/imagedecoder.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QSize \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QGradient \
 		Utilities/mac.h \
 		Views/infostring.h \
+		Dialogs/loupeinfodlg.h \
 		Dialogs/tokendlg.h \
 		Dialogs/renamedlg.h \
 		Embellish/Properties/embelproperties.h \
@@ -4030,11 +4417,24 @@ moc_imageview.cpp: Views/imageview.h \
 		Utilities/classificationlabel.h \
 		Embellish/embel.h \
 		Effects/graphicsitemeventfilter.h \
+		Utilities/focuspredictor.h \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/core.hpp \
+		/opt/homebrew/opt/opencv/include/opencv4/opencv2/dnn.hpp \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/imageview.h -o moc_imageview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/imageview.h -o moc_imageview.cpp
 
 moc_infostring.cpp: Views/infostring.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
+		Metadata/metadata.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -4048,10 +4448,6 @@ moc_infostring.cpp: Views/infostring.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -4059,12 +4455,6 @@ moc_infostring.cpp: Views/infostring.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/metadata.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -4078,6 +4468,10 @@ moc_infostring.cpp: Views/infostring.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -4088,14 +4482,31 @@ moc_infostring.cpp: Views/infostring.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		Dialogs/loupeinfodlg.h \
 		Dialogs/tokendlg.h \
 		Dialogs/renamedlg.h \
 		Embellish/Properties/embelproperties.h \
@@ -4121,12 +4532,20 @@ moc_infostring.cpp: Views/infostring.h \
 		Dialogs/manageimagesdlg.h \
 		ui_embelCoord.h \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/infostring.h -o moc_infostring.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/infostring.h -o moc_infostring.cpp
 
 moc_infoview.cpp: Views/infoview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -4140,10 +4559,6 @@ moc_infoview.cpp: Views/infoview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -4151,10 +4566,6 @@ moc_infoview.cpp: Views/infoview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -4168,6 +4579,10 @@ moc_infoview.cpp: Views/infoview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -4178,34 +4593,55 @@ moc_infoview.cpp: Views/infoview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Datamodel/buildfilters.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/infoview.h -o moc_infoview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/infoview.h -o moc_infoview.cpp
 
 moc_tableview.cpp: Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QtWidgets \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
+		Metadata/exif.h \
+		Metadata/ifd.h \
+		Metadata/metareport.h \
+		Utilities/utilities.h \
+		Utilities/inputdlg.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
+		Utilities/win.h \
+		Metadata/imagemetadata.h \
 		Main/global.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QColor \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndexList \
@@ -4219,10 +4655,6 @@ moc_tableview.cpp: Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QGridLayout \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPropertyAnimation \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTimer \
-		Utilities/utilities.h \
-		Utilities/inputdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QDialog \
-		Utilities/win.h \
 		Log/issue.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QObject \
 		Log/log.h \
@@ -4230,10 +4662,6 @@ moc_tableview.cpp: Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QFile \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
-		Metadata/exif.h \
-		Metadata/ifd.h \
-		Metadata/metareport.h \
-		Metadata/imagemetadata.h \
 		Metadata/irb.h \
 		Metadata/iptc.h \
 		Metadata/gps.h \
@@ -4247,6 +4675,10 @@ moc_tableview.cpp: Views/tableview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -4257,26 +4689,36 @@ moc_tableview.cpp: Views/tableview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QMediaPlayer \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoSink \
+		../../Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers/QVideoFrame \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Views/iconview.h \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/tableview.h -o moc_tableview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/tableview.h -o moc_tableview.cpp
 
 moc_videoview.cpp: Views/videoview.h \
 		Views/videowidget.h \
@@ -4316,6 +4758,8 @@ moc_videoview.cpp: Views/videoview.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		Views/iconview.h \
 		Datamodel/datamodel.h \
+		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QWaitCondition \
 		Metadata/metadata.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QtCore \
 		Metadata/exif.h \
@@ -4335,6 +4779,10 @@ moc_videoview.cpp: Views/videoview.h \
 		Lib/libheif/include/heif.h \
 		ImageFormats/Jpeg/jpeg.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QRgb \
+		ImageFormats/Jpeg/jpeg2.h \
+		/opt/homebrew/opt/jpeg-turbo/include/turbojpeg.h \
+		ImageFormats/Jpeg/jpgdecoder.h \
+		ImageFormats/Jpeg/jpegturbo.h \
 		ImageFormats/Canon/canon.h \
 		ImageFormats/Canon/canoncr3.h \
 		ImageFormats/Dng/dng.h \
@@ -4345,27 +4793,34 @@ moc_videoview.cpp: Views/videoview.h \
 		ImageFormats/Sony/sony.h \
 		ImageFormats/Tiff/tiff.h \
 		../../Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers/QtConcurrent \
+		ImageFormats/Tiff/libtiff.h \
+		/opt/homebrew/opt/libtiff/include/tiffio.h \
+		Lib/libtiff/libtiff/tiff.h \
+		Lib/libtiff/libtiff/tiffio.h \
+		ImageFormats/Video/mov.h \
+		ImageFormats/Png/png.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDateTime \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
+		ImageFormats/Video/mp4.h \
 		Datamodel/filters.h \
 		ui_filtershelp.h \
-		Utilities/progressbar.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMainWindow \
-		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPainter \
+		Cache/framedecoder.h \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QPointer \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QPixmap \
+		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QImage \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QModelIndex \
+		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QList \
 		Dialogs/selectionorpicksdlg.h \
-		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QMessageBox \
 		Views/iconviewdelegate.h \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QtGui \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyleOptionViewItem \
 		../../Qt/6.7.2/macos/lib/QtGui.framework/Headers/QFont \
 		Cache/cachedata.h \
-		Datamodel/HashMap.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QVector \
-		Datamodel/HashNode.h \
-		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QDebug \
 		Datamodel/selection.h \
 		Views/tableview.h \
 		../../Qt/6.7.2/macos/lib/QtWidgets.framework/Headers/QStyledItemDelegate \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/videoview.h -o moc_videoview.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/videoview.h -o moc_videoview.cpp
 
 moc_videowidget.cpp: Views/videowidget.h \
 		../../Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers/QVideoWidget \
@@ -4403,18 +4858,26 @@ moc_videowidget.cpp: Views/videowidget.h \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QTextStream \
 		../../Qt/6.7.2/macos/lib/QtCore.framework/Headers/QString \
 		../../Qt/6.7.2/macos/libexec/moc
-	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/usr/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/videowidget.h -o moc_videowidget.cpp
+	/Users/roryhill/Qt/6.7.2/macos/libexec/moc $(DEFINES) -D__APPLE__ -D__GNUC__=4 -D__APPLE_CC__ -D__cplusplus=199711L -D__APPLE_CC__=6000 -D__clang__ -D__clang_major__=15 -D__clang_minor__=0 -D__clang_patchlevel__=0 -D__GNUC__=4 -D__GNUC_MINOR__=2 -D__GNUC_PATCHLEVEL__=1 -I/Users/roryhill/Qt/6.7.2/macos/mkspecs/macx-clang -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64 -I/Users/roryhill/Projects/Winnow64/Dialogs -I/Users/roryhill/Projects/Winnow64/Utilities -I/Users/roryhill/Projects/Winnow64 -I/opt/homebrew/opt/opencv/include/opencv4 -I/usr/include -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/jpeg-turbo/include -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimediaWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtWidgets.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtMultimedia.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtGui.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtNetwork.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtConcurrent.framework/Headers -I/Users/roryhill/Qt/6.7.2/macos/lib/QtCore.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/15.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk/usr/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -F/Users/roryhill/Qt/6.7.2/macos/lib Views/videowidget.h -o moc_videowidget.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
-compiler_uic_make_all: ui_aboutdlg.h ui_addthumbnailsdlg.h ui_aligndlg.h ui_appdlg.h ui_copystyledlg.h ui_editlistdlg.h ui_erasememcardimagesdlg.h ui_findduplicatesdlg.h ui_imagedlg.h ui_ingestdlg.h ui_ingesterrors.h ui_loadusbdlg.h ui_managegraphicsdlg.h ui_manageimagesdlg.h ui_managetilesdlg.h ui_patterndlg.h ui_renamedlg.h ui_renamefiledlg.h ui_saveasdlg.h ui_selectionorpicksdlg.h ui_testaligndlg.h ui_testdlg.h ui_test1.h ui_test12.h ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h ui_embelCoord.h ui_filtershelp.h ui_filtershelp_copy.h ui_helpfindduplicates.h ui_helppixeldelta.h ui_helpform.h ui_helpingest.h ui_ingestautopath.h ui_introduction.h ui_message.h ui_shortcutsform.h ui_welcome.h ui_metadatareport.h ui_inputdlg.h
+compiler_uic_make_all: ui_aboutdlg.h ui_helppixeldelta.h ui_loupeinfodlg.h ui_addthumbnailsdlg.h ui_aligndlg.h ui_appdlg.h ui_copystyledlg.h ui_editlistdlg.h ui_erasememcardimagesdlg.h ui_findduplicatesdlg.h ui_imagedlg.h ui_ingestdlg.h ui_ingesterrors.h ui_loadusbdlg.h ui_managegraphicsdlg.h ui_manageimagesdlg.h ui_managetilesdlg.h ui_patterndlg.h ui_renamedlg.h ui_renamefiledlg.h ui_saveasdlg.h ui_selectionorpicksdlg.h ui_testaligndlg.h ui_testdlg.h ui_test1.h ui_test12.h ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h ui_embelCoord.h ui_filtershelp.h ui_foldershelp.h ui_helpfindduplicates.h ui_helpform.h ui_helpingest.h ui_helppixeldelta.h ui_ingestautopath.h ui_introduction.h ui_message.h ui_shortcutsform.h ui_welcome.h ui_metadatareport.h ui_inputdlg.h
 compiler_uic_clean:
-	-$(DEL_FILE) ui_aboutdlg.h ui_addthumbnailsdlg.h ui_aligndlg.h ui_appdlg.h ui_copystyledlg.h ui_editlistdlg.h ui_erasememcardimagesdlg.h ui_findduplicatesdlg.h ui_imagedlg.h ui_ingestdlg.h ui_ingesterrors.h ui_loadusbdlg.h ui_managegraphicsdlg.h ui_manageimagesdlg.h ui_managetilesdlg.h ui_patterndlg.h ui_renamedlg.h ui_renamefiledlg.h ui_saveasdlg.h ui_selectionorpicksdlg.h ui_testaligndlg.h ui_testdlg.h ui_test1.h ui_test12.h ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h ui_embelCoord.h ui_filtershelp.h ui_filtershelp_copy.h ui_helpfindduplicates.h ui_helppixeldelta.h ui_helpform.h ui_helpingest.h ui_ingestautopath.h ui_introduction.h ui_message.h ui_shortcutsform.h ui_welcome.h ui_metadatareport.h ui_inputdlg.h
+	-$(DEL_FILE) ui_aboutdlg.h ui_helppixeldelta.h ui_loupeinfodlg.h ui_addthumbnailsdlg.h ui_aligndlg.h ui_appdlg.h ui_copystyledlg.h ui_editlistdlg.h ui_erasememcardimagesdlg.h ui_findduplicatesdlg.h ui_imagedlg.h ui_ingestdlg.h ui_ingesterrors.h ui_loadusbdlg.h ui_managegraphicsdlg.h ui_manageimagesdlg.h ui_managetilesdlg.h ui_patterndlg.h ui_renamedlg.h ui_renamefiledlg.h ui_saveasdlg.h ui_selectionorpicksdlg.h ui_testaligndlg.h ui_testdlg.h ui_test1.h ui_test12.h ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h ui_embelCoord.h ui_filtershelp.h ui_foldershelp.h ui_helpfindduplicates.h ui_helpform.h ui_helpingest.h ui_helppixeldelta.h ui_ingestautopath.h ui_introduction.h ui_message.h ui_shortcutsform.h ui_welcome.h ui_metadatareport.h ui_inputdlg.h
 ui_aboutdlg.h: Dialogs/aboutdlg.ui \
 		../../Qt/6.7.2/macos/libexec/uic
 	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Dialogs/aboutdlg.ui -o ui_aboutdlg.h
+
+ui_helppixeldelta.h: Help/helppixeldelta.ui \
+		../../Qt/6.7.2/macos/libexec/uic
+	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/helppixeldelta.ui -o ui_helppixeldelta.h
+
+ui_loupeinfodlg.h: Dialogs/loupeinfodlg.ui \
+		../../Qt/6.7.2/macos/libexec/uic
+	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Dialogs/loupeinfodlg.ui -o ui_loupeinfodlg.h
 
 ui_addthumbnailsdlg.h: Dialogs/addthumbnailsdlg.ui \
 		../../Qt/6.7.2/macos/libexec/uic
@@ -4536,17 +4999,13 @@ ui_filtershelp.h: Help/filtershelp.ui \
 		../../Qt/6.7.2/macos/libexec/uic
 	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/filtershelp.ui -o ui_filtershelp.h
 
-ui_filtershelp_copy.h: Help/filtershelp_copy.ui \
+ui_foldershelp.h: Help/foldershelp.ui \
 		../../Qt/6.7.2/macos/libexec/uic
-	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/filtershelp_copy.ui -o ui_filtershelp_copy.h
+	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/foldershelp.ui -o ui_foldershelp.h
 
 ui_helpfindduplicates.h: Help/helpfindduplicates.ui \
 		../../Qt/6.7.2/macos/libexec/uic
 	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/helpfindduplicates.ui -o ui_helpfindduplicates.h
-
-ui_helppixeldelta.h: Help/helppixeldelta.ui \
-		../../Qt/6.7.2/macos/libexec/uic
-	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/helppixeldelta.ui -o ui_helppixeldelta.h
 
 ui_helpform.h: Help/helpform.ui \
 		../../Qt/6.7.2/macos/libexec/uic
@@ -4555,6 +5014,10 @@ ui_helpform.h: Help/helpform.ui \
 ui_helpingest.h: Help/helpingest.ui \
 		../../Qt/6.7.2/macos/libexec/uic
 	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/helpingest.ui -o ui_helpingest.h
+
+ui_helppixeldelta.h: Help/helppixeldelta.ui \
+		../../Qt/6.7.2/macos/libexec/uic
+	/Users/roryhill/Qt/6.7.2/macos/libexec/uic Help/helppixeldelta.ui -o ui_helppixeldelta.h
 
 ui_ingestautopath.h: Help/ingestautopath.ui \
 		../../Qt/6.7.2/macos/libexec/uic

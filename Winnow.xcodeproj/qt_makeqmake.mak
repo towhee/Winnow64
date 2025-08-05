@@ -28,6 +28,8 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_concurrent.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_concurrent_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core.pri \
+		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core5compat.pri \
+		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core5compat_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_dbus.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_dbus_private.pri \
@@ -150,6 +152,8 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quickwidgets.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quickwidgets_private.pri \
+		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_shadertools.pri \
+		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_shadertools_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_spatialaudio.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_spatialaudio_private.pri \
 		../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_sql.pri \
@@ -179,6 +183,7 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 		../../Qt/6.7.2/macos/mkspecs/macx-clang/qmake.conf \
 		../../Qt/6.7.2/macos/mkspecs/macx-xcode/qmake.conf \
 		../../Qt/6.7.2/macos/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		../../Qt/6.7.2/macos/mkspecs/features/exclusive_builds.prf \
 		../../Qt/6.7.2/macos/mkspecs/features/mac/sdk.prf \
 		../../Qt/6.7.2/macos/mkspecs/features/toolchain.prf \
@@ -235,6 +240,8 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_concurrent.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_concurrent_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core.pri:
+../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core5compat.pri:
+../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core5compat_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_core_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_dbus.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_dbus_private.pri:
@@ -357,6 +364,8 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quickwidgets.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_quickwidgets_private.pri:
+../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_shadertools.pri:
+../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_shadertools_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_spatialaudio.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_spatialaudio_private.pri:
 ../../Qt/6.7.2/macos/mkspecs/modules/qt_lib_sql.pri:
@@ -386,6 +395,7 @@ Winnow.xcodeproj/project.pbxproj: winnow64.pro ../../Qt/6.7.2/macos/mkspecs/macx
 ../../Qt/6.7.2/macos/mkspecs/macx-clang/qmake.conf:
 ../../Qt/6.7.2/macos/mkspecs/macx-xcode/qmake.conf:
 ../../Qt/6.7.2/macos/mkspecs/features/spec_post.prf:
+.qmake.stash:
 ../../Qt/6.7.2/macos/mkspecs/features/exclusive_builds.prf:
 ../../Qt/6.7.2/macos/mkspecs/features/mac/sdk.prf:
 ../../Qt/6.7.2/macos/mkspecs/features/toolchain.prf:

@@ -1298,6 +1298,7 @@ private:
     void createAppStyle();
     void setupCentralWidget();
     void initialize();
+    void migrateOldSettings();
     void setupPlatform();
     void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r);
     void checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
