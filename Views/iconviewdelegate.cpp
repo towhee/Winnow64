@@ -825,13 +825,14 @@ void IconViewDelegate::paint(QPainter *painter,
         int y1 = y1Vp + yIconTL;
         int x2 = x2Vp + xIconTL;
         int y2 = y2Vp + yIconTL;
+        /*
         qDebug() << "IconViewDelegate::paint"
                  << "cellRect =" << cellRect
                  << "thumbRect =" << thumbRect
                  << "iconRect =" << iconRect
                  << "vpRect =" << vpRect
                  << QRect(QPoint(x1,y1), QPoint(x2,y2))
-                    ;
+                    ; // */
         painter->setPen(vp1Pen);
         painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
         painter->setPen(vp2Pen);

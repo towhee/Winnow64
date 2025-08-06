@@ -21,25 +21,27 @@ NORMAL DEPLOYMENT
         - Execute build>clean to make sure fully universal build
 	- Delete Winnow executable inside Winnow.app, to be replaced when compile in release mode.
         - Compile Winnow release mode in /Users/roryhill/Projects/Winnow64 as a universal binary.
-        - Run WinnowDeployRelease.command to add frameworks, sign app and copy to Install Winnow folder.
+	// - Run WinnowDeployRelease.command to add frameworks, sign app and copy to Install Winnow folder.
 	- Run WinnowDeployFixLibPaths to clean up library references and missing dylibs.
-        - In Install folder rename with version ie Winnow1.37.app.
-        - Confirm is universal:
-          lipo -archs /Users/roryhill/Projects/build-winnow64-Qt_6_6_0_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow
-          or
-          lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.40.app/Contents/MacOS/Winnow
-          result: x86_64 arm64
-        - In Disk Utility.app: File > New Image > Image from Folder...
-            - select /Users/roryhill/Projects/WinnowInstall/Winnow.
-            - save as Winnow1.37.dmg (in  /Users/roryhill/Projects/WinnowInstall).
+	- Run WinnowDeployFixLibPaths to Sign, copy, notarize, staple and create DMG.
+	// - In Install folder rename with version ie Winnow1.37.app.
+	// - Confirm is universal:
+	//   lipo -archs /Users/roryhill/Projects/build-winnow64-Qt_6_6_0_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow
+	//   or
+	//  lipo -archs /Users/roryhill/Projects/WinnowInstall/Winnow/Winnow1.40.app/Contents/MacOS/Winnow
+	//  result: x86_64 arm64
+	// - In Disk Utility.app: File > New Image > Image from Folder...
+	//     - select /Users/roryhill/Projects/WinnowInstall/Winnow.
+	//     - save as Winnow1.37.dmg (in  /Users/roryhill/Projects/WinnowInstall).
         - Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/test
           or use FileZilla.
         - Try http://www.winnow.ca/winnow_mac/test/Winnow1.37.dmg to make sure it works.
         - Finally Run WinnowDmgToServer.command to copy Winnow.dmg to server winnow_mac/current
+	  or use FileZilla.
 
         Notes
-        - Codesign must be run as the last step when modifying Winnow.app.  Recompilation
-          does not require rerunning codesign.
+	- Codesign (in WinnowDeployFixLibPaths) must be run as the last step when modifying Winnow.app.
+	  Recompilation does not require rerunning codesign.
         - Using macdeployqt -dmg removes codesign, so must use Disk Utilities.app
         - FileZilla requires Server > Reconnect. When reconnecting server the ssh key must be at
           "/Users/roryhill/Documents/Winnow/ssh digital ocean private key.ppk"

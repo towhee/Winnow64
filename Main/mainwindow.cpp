@@ -494,7 +494,7 @@ Implementation
 
     When this occurs, the location of the ImageView viewport within the scene is
     signalled to IconView, which tells IconViewDelegate to show a rectangle in
-    the thumbView tumbnail matching the viewport in the scene.  See
+    the thumbView thumbnail matching the viewport in the scene.  See
     - ImageView::showPredictedFocus sends the rectangle and image aspect
       - IconView::loupeRect receives rect/aspect, updates delegate
         - IconViewDelegate::setVpRect
