@@ -260,20 +260,20 @@ QModelIndex TableView::pageUpIndex(int fromRow)
     //return moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier);
 }
 
-bool TableView::eventFilter(QObject *obj, QEvent *event)
-{
-    if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer))
-    {
-        //qDebug() << "TableView::eventFilter  obj =" << obj->objectName().leftJustified(30) << "event =" << event;
-    }
-//    if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
-//        && scrollWhenReady
-//        && obj->objectName() == "QScrollBar")
-//    {
-//        scrollToCurrent();
-//    }
-    return QWidget::eventFilter(obj, event);
-}
+// bool TableView::eventFilter(QObject *obj, QEvent *event)
+// {
+//     if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer))
+//     {
+//         //qDebug() << "TableView::eventFilter  obj =" << obj->objectName().leftJustified(30) << "event =" << event;
+//     }
+// //    if ((event->type() == QEvent::Paint || event->type() == QEvent::Timer)
+// //        && scrollWhenReady
+// //        && obj->objectName() == "QScrollBar")
+// //    {
+// //        scrollToCurrent();
+// //    }
+//     return QWidget::eventFilter(obj, event);
+// }
 
 void TableView::onHorizontalScrollBarChanged(int value)
 {

@@ -18,6 +18,7 @@ public:
     bool scrollWhenReady;
     QStandardItemModel *ok;
     QModelIndex shiftAnchorIndex;
+    QTableView *frozenView = nullptr;
 
     int firstVisibleRow;
     int midVisibleRow;
@@ -39,7 +40,7 @@ public slots:
     void onHorizontalScrollBarChanged(int value);
 
 protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
+    // bool eventFilter(QObject *obj, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
