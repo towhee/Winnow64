@@ -212,7 +212,7 @@ void MW::tableDisplay()
     // change to the table view
     centralLayout->setCurrentIndex(TableTab);
     prevCentralView = TableTab;
-    if (isFirstTimeTableViewVisible) tableView->resizeColumns();
+    // if (isFirstTimeTableViewVisible) tableView->resizeColumns();
     isFirstTimeTableViewVisible = false;
 
     /* thumbView, gridView and tableView share the same datamodel and selection

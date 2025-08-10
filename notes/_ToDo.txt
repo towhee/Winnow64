@@ -17,7 +17,7 @@ WHAT'S NEW
 - Add tooltips for IconView symbols
 
 BUGS / TO DO
-- Copy path(s) not always  working
+- Copy path(s) not always working
 - Update menu filters when delete all filtered
 - Undo delete
 - Read media speed is unintuitive

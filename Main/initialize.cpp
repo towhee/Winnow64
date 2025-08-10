@@ -292,6 +292,7 @@ void MW::createSelectionModel()
     if (G::isLogger) G::log("MW::createSelectionModel");
     thumbView->setSelectionModel(dm->selectionModel);
     tableView->setSelectionModel(dm->selectionModel);
+    tableView->frozenView->setSelectionModel(dm->selectionModel);
     gridView->setSelectionModel(dm->selectionModel);
 }
 
@@ -529,6 +530,9 @@ void MW::createTableView()
         }
         settings->endGroup();
     }
+
+    // reset frozen columns
+    // tableView->resizeColumns();
 
     // update menu "sort by" to match tableView sort change
     connect(tableView->horizontalHeader(), &QHeaderView::sortIndicatorChanged,

@@ -120,7 +120,7 @@ public:
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
     */
-    QString versionNumber = "2.02" ;
+    QString versionNumber = "2.03" ;
     QString compileDate = "Compiled: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -132,14 +132,13 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShiftOnOpen;               // used when opening if shift key pressed
-    QString args;                     // opening args  // rgh req'd?
+    QString args;                     // opening args
 
     // debugging flags
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
     bool hideEmbellish = false;
 
-    int copyCutCount;   // rgh req'd?
     QTextStream rpt;
 
     // QSettings

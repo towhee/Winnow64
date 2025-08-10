@@ -4,7 +4,6 @@
 #include <QtWidgets>
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
-//#include "Utilities/utilities.h"
 
 class TableView : public QTableView
 {
@@ -12,13 +11,13 @@ class TableView : public QTableView
 
 public:
     TableView(QWidget *parent, DataModel *dm);
+    QTableView *frozenView = nullptr;
     void scrollToCurrent();
     void scrollToRow(int row, QString source);
     bool isRowVisible(int row);
     bool scrollWhenReady;
     QStandardItemModel *ok;
     QModelIndex shiftAnchorIndex;
-    QTableView *frozenView = nullptr;
 
     int firstVisibleRow;
     int midVisibleRow;
@@ -28,8 +27,8 @@ public:
 
     bool isColumnVisibleInViewport(int columnIndex);
     QList<int> visibleColumns();
-    void freezeFirstColumn();
-    bool okToFreeze = true;
+
+    void test();
 
 public slots:
     void showOrHide();
@@ -40,7 +39,6 @@ public slots:
     void onHorizontalScrollBarChanged(int value);
 
 protected:
-    // bool eventFilter(QObject *obj, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
@@ -50,8 +48,13 @@ protected:
 private:
     IconView *thumbView;
     DataModel *dm;
+    QMap<int,int>defaultColumnWidth;
+    int frozenColumns;
+    bool isDebug;
     void createOkToShow();
-    int defaultColumnWidth(int column);
+    void setDefaultColumnWidths();
+    void setFrozenModel(QAbstractItemModel *model);
+    void updateFrozenViewGeometry();
 
 signals:
     void displayLoupe(QString src);
