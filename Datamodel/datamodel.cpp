@@ -1545,6 +1545,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::GPSCoordColumn), m.gpsCoord, Qt::ToolTipRole);
     setData(index(row, G::KeywordsColumn), QVariant(m.keywords));
     setData(index(row, G::KeywordsColumn), Utilities::stringListToString(m.keywords), Qt::ToolTipRole);
+    search += Utilities::stringListToString(m.keywords);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;

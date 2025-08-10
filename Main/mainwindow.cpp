@@ -2423,6 +2423,11 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         G::log("MW::folderAndFileSelectionChange", msg);
     }
 
+    // // reset frozen columns
+    // if (tableView->isVisible()) {
+    //     tableView->resizeColumns();
+    // }
+
     setCentralMessage("Loading " + fPath + " ...");
 
     // used by scrolling in MW::fileSelectionChange
@@ -3065,8 +3070,7 @@ void MW::folderChangeCompleted()
     emit setImageCachePosition(dm->currentFilePath, fun);
 
     // resize table columns now that all data is loaded
-    tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(G::PathColumn, 24+8);
+    tableView->resizeColumns();
 }
 
 void MW::thumbHasScrolled()
