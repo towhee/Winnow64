@@ -3210,13 +3210,6 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     as categories, and each category has one or more filter items.  Categories
     map to columns in the data model ie Picked, Rating, Label ...
 */
-    // if (sourceRow == 0) {
-    // static int counter = 0;
-    // counter++;
-    // qDebug().noquote() << "SortFilter::filterAcceptsRow " << sourceRow
-    //              << "suspendFiltering =" << suspendFiltering
-    //              << "counter =" << counter;
-    // }
 
     // Suspend?
     if (suspendFiltering) {
@@ -3261,6 +3254,9 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             matches then set isMatch = true. If it does not match then isMatch is still
             false but the row could still be accepted if another item in the same
             category does match.
+
+            For search string matching see DataModel::searchStringChange, which sets the
+            datamodel G::SearchColumn true/false.
             */
             if ((*filter)->checkState(0) != Qt::Unchecked) {  // crash
                 if ((*filter) == filters->searchTrue &&

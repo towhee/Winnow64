@@ -5,6 +5,7 @@
 #include "Metadata/metadata.h"
 #include "Views/iconview.h"
 #include "Views/compareview.h"
+#include "Views/imageview.h"
 #include "Image/imagealign.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
@@ -14,8 +15,9 @@ class CompareImages : public QWidget
     Q_OBJECT
 
 public:
-    CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata, DataModel *dm,
-                  Selection *sel, IconView *thumbView, ImageCacheData *icd);
+    CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
+                  DataModel *dm, Selection *sel, IconView *thumbView,
+                  ImageCacheData *icd, ImageView *imageView);
 
     qreal toggleZoom;
     qreal zoomValue;
@@ -60,6 +62,7 @@ private:
     Selection *sel;
     IconView *thumbView;
     ImageCacheData *icd;
+    ImageView *imageView;
     QWidget *centralWidget;
 //    bool &isRatingBadgeVisible;
 

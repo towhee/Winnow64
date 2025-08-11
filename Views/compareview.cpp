@@ -142,7 +142,7 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
     else {
         // load the image from the image file, may need to wait a bit if another thread
         // reading file  rgh req'd to iterate
-        for (int i=0; i<100000; i++) {
+        for (int i = 0; i < 100000; i++) {
             isLoaded = pixmap->load(fPath, displayPixmap, "CompareView::loadImage");
             if (isLoaded) break;
         }
@@ -393,10 +393,11 @@ void CompareView::scale(bool okayToPropagate)
     local zoomTo.
 */
     if (G::isLogger) G::log("CompareView::scale");
+    /*
     qDebug() << "CompareView::scale before"
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
-             << "isZoom =" << isZoom;
+             << "isZoom =" << isZoom; //*/
 
     // rescale to new zoom factor
     matrix.reset();
@@ -418,10 +419,11 @@ void CompareView::scale(bool okayToPropagate)
     if (isZoom) setCursor(Qt::OpenHandCursor);
     else setCursor(Qt::ArrowCursor);
 
+    /*
     qDebug() << "CompareView::scale after "
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
-             << "isZoom =" << isZoom;
+             << "isZoom =" << isZoom; //*/
 
     // reposition classification icons ("thumbs up", ratings and color class)
     placeClassificationBadge();
@@ -627,10 +629,11 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
         else setCursor(Qt::ArrowCursor);
         return;
     }
+    /*
     qDebug() << "CompareView::mouseReleaseEvent"
              << "zoom =" << zoom
              << "zoomFit =" << zoomFit
-             << "isZoom =" << isZoom;
+             << "isZoom =" << isZoom; //*/
 
     if (!isZoom && zoom < zoomFit * 0.98)
         zoom = zoomFit;
@@ -668,6 +671,9 @@ void CompareView::select()
     // req'd for IconViewDelegate to show current item
     dm->currentSfIdx = imageIndex;
     dm->currentSfRow = imageIndex.row();
+    QString fPath = imageIndex.data(G::PathRole).toString();
+    // sync imageView used for loupe mode
+    emit sync(fPath, false, "CompareView::select");
 
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
     thumbView->setCurrentIndex(imageIndex);

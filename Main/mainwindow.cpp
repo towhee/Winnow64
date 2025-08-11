@@ -536,8 +536,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     migrateOldSettings();
     QString iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
-    qDebug() << "iniPath =" << iniPath;
-    // iniPath = "/Users/roryhill/Library/Application Support/Winnow/settings.ini"
     settings = new QSettings(iniPath, QSettings::IniFormat);
     // settings = new QSettings("Winnow", "winnow_100");
     G::settings = settings;
@@ -1217,8 +1215,23 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
-             QKeyEvent *e = static_cast<QKeyEvent *>(event);
-             Qt::KeyboardModifiers k = e->modifiers();
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            Qt::KeyboardModifiers k = e->modifiers();
+            // /*
+            qDebug() << "MW::eventFilter"
+                  << "obj->objectName:" << obj->objectName().leftJustified(25)
+                  << "key =" << e->key()
+                  << k
+                     ; //*/
+            // Return Key show loupe mode
+            if (e->key() == Qt::Key_Return) {
+                if (obj->objectName() == "Thumbnails" ||
+                    obj->objectName() == "Grid"
+                   )
+                {
+                    loupeDisplay("MW::eventFilter Key_Return");
+                }
+            }
 
             if (obj->objectName() == "MWWindow") {
                 /*
@@ -1228,7 +1241,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                          << k
                             ; //*/
 
-                if (e->key() == Qt::Key_Return) loupeDisplay("MW::eventFilter Key_Return");  // search filter not mix with sel->save/recover
+                // if (e->key() == Qt::Key_Return) loupeDisplay("MW::eventFilter Key_Return");  // search filter not mix with sel->save/recover
 
                 // faster than using menu shortcuts
                 if (e->key() == Qt::Key_Right) {
@@ -3037,11 +3050,12 @@ void MW::folderChangeCompleted()
     });
 
     // build filters if filter dock is visible
+    /*
     qDebug() << "MW::folderChangecompleted"
              << "dm->folderList.count() =" << dm->folderList.count()
              << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
              << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
-                ;
+                ; //*/
     if (dm->folderList.count() > 0
             && dm->isQueueEmpty()
             && !filterDock->visibleRegion().isNull()

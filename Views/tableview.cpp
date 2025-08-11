@@ -7,7 +7,6 @@ MW *m5;
 TableView::TableView(QWidget *parent, DataModel *dm)
 {
     if (isDebug || G::isLogger) G::log("TableView::TableView");
-    qDebug() << "TableView::TableView";
     this->dm = dm;
 
     // this works because ThumbView is a friend class of MW.  It is used in the
@@ -110,7 +109,7 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     // Keep geometry aligned
     updateFrozenViewGeometry();
 
-    isDebug = true;
+    isDebug = false;
 }
 
 void TableView::updateVisible(QString src)

@@ -1517,6 +1517,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
         if (topLeft.column() != 0) return;
         QTreeWidgetItem *item = itemFromIndex(topLeft);
         if (item == searchTrue) {
+            // qDebug() << "Search string change";
             // no search string
             if (searchTrue->text(0) == "") {
                 searchString = "";
