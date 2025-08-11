@@ -572,11 +572,11 @@ void MW::migrateOldSettings()
 
     // Check if the INI file already exists (migration done)
     if (QFile::exists(iniFile)) {
-        qDebug() << "✅ Settings already migrated to" << iniFile;
+        // qDebug() << "✅ Settings already migrated to" << iniFile;
         return;
     }
 
-    qDebug() << "🔄 Migrating old settings to" << iniFile;
+    // qDebug() << "🔄 Migrating old settings to" << iniFile;
 
     // Load old settings (macOS plist format, typically in ~/Library/Preferences)
     QSettings oldSettings("Winnow", "winnow_100");

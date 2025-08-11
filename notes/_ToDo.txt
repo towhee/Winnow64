@@ -61,7 +61,6 @@ BUGS / TO DO
   until move to another monitor and back
 - Rethink image file parse failure reporting
 - Use Exiftool to save image rotation change?
-- Select multiple folders
 - Check for updates for macos
 - Add tooltips to menus
 - GoogleDrive folder not showing all videos
@@ -152,9 +151,14 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Sync ImageView with CompareView selection
+- Return key behavior
+- TableView freeze columns
+- VERSION 2.02
 - When zoomed in focus point mode, icon focus box wrong if portrait
 - VERSION 2.01
 - Signed, notarized and stapled for Apple
+- VERSION 2.00
 - MacOS Winnow appears in all desktops
 - Tweak USB code
 - Windows tooltips (esp for thumbnails)

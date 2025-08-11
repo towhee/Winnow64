@@ -1,88 +1,46 @@
-CONFIG += sdk_no_version_check
+for (int i = 0; i < count; ++i) {
+    imList->append(new CompareView(this, gridCell, dm, sel, metadata, icd, thumbView));
+    imList->at(i)->loadImage(selection.at(i), fPath);
+    // set toggleZoom value (from QSettings)
+    imList->at(i)->toggleZoom = toggleZoom;
 
-macx:CONFIG += app_bundle
+    // classification badge
+    int row = idxPath.row();
+    bool isPick = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+    QString rating = dm->sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
+    QString colorClass = dm->sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    updateClassification(isPick, rating, colorClass, isRatingBadgeVisible, idxPath);
 
-greaterThan(QT_MAJOR_VERSION, 5) {
-    DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x051500
-#    win32:QT += core5compat   # huge performance hit without this
+    // relay back and forward mouse btns toggle picks from a compareView
+    connect(imList->at(i), SIGNAL(togglePick()), this, SLOT(togglePickSignalRelay()));
+
+    // pass mouse click zoom to other images as a pct of width and height
+    connect(imList->at(i), SIGNAL(zoomFromPct(QPointF, QModelIndex, bool)),
+            this, SLOT(zoom(QPointF, QModelIndex, bool)));
+
+    // sync panning
+    connect(imList->at(i), SIGNAL(panFromPct(QPointF, QModelIndex)),
+            this, SLOT(pan(QPointF, QModelIndex)));
+
+    // start of pan position
+    connect(imList->at(i), SIGNAL(panStartPct(QModelIndex)),
+            this, SLOT(startPan(QModelIndex)));
+
+    // cleanup at end of pan
+    connect(imList->at(i), SIGNAL(cleanupAfterPan(QPointF,QModelIndex)),
+            this, SLOT(cleanupAfterPan(QPointF,QModelIndex)));
+
+    // get zoom factor to report status and send zoomChange to ZoomDlg
+    connect(imList->at(i), SIGNAL(zoomChange(qreal,bool)),
+            this, SLOT(zoomChangeFromView(qreal,bool)));
+
+    // when select a compareView make sure all others hav been deselected
+    connect(imList->at(i), SIGNAL(deselectAll()), this, SLOT(deselectAll()));
+
+    // when select a compareView also load it in imageView
+    connect(imList->at(i), &CompareView::load, imageView, &ImageView::loadImage);
+
+    //        // align
+    //        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
+    //                this, SLOT(align(QPointF, QModelIndex)));
 }
-
-CONFIG += c++17
-win32:QMAKE_CXXFLAGS += /std:c++17
-win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
-win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
-
-TEMPLATE = app
-TARGET = Winnow
-INCLUDEPATH += .
-INCLUDEPATH += Dialogs
-INCLUDEPATH += Utilities
-
-INCLUDEPATH += $$PWD
-DEPENDPATH += $$PWD
-
-Release:DESTDIR = release
-Release:OBJECTS_DIR = release/.obj
-Release:MOC_DIR = release/.moc
-Release:RCC_DIR = release/.rcc
-Release:UI_DIR = release/.ui
-
-Debug:DESTDIR = debug
-Debug:OBJECTS_DIR = debug/.obj
-Debug:MOC_DIR = debug/.moc
-Debug:RCC_DIR = debug/.rcc
-Debug:UI_DIR = debug/.ui
-
-QT += widgets
-QT += multimedia
-QT += multimediawidgets
-QT += concurrent
-
-# Headers, Sources, forms and resources omitted for brevity
-
-macx:LIBS += -framework ApplicationServices
-macx:LIBS += -framework AppKit
-macx:LIBS += -framework CoreFoundation
-macx:LIBS += -framework Foundation
-
-# Use @rpath
-macx:QMAKE_LFLAGS += -Wl,-rpath,@executable_path/../Frameworks
-
-# opencv
-macx:LIBS += -L$$OUT_PWD/../Frameworks -lopencv_core -lopencv_imgproc -lopencv_dnn
-macx:INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
-win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
-win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
-
-# zLib
-macx:INCLUDEPATH += /usr/include
-macx:LIBS += -lz
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib/build
-win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
-
-# libde265 (frame parallel)
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
-win32:INCLUDEPATH += $$PWD/Lib/libde265/include
-win32:DEPENDPATH  += $$PWD/Lib/libde265/release
-
-# libheif
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
-win32:INCLUDEPATH += $$PWD/Lib/libheif/include
-win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
-
-# libtiff
-win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
-win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
-win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
-win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
-macx:LIBS += -L$$OUT_PWD/../Frameworks -ltiff
-macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
-macx:LIBTIFF_PREFIX = /opt/homebrew/opt/libtiff
-
-# libjpeg-turbo
-macx:LIBS += -L$$OUT_PWD/../Frameworks -lturbojpeg
-macx:INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
