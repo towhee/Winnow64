@@ -179,7 +179,7 @@ void BuildFilters::build(AfterAction newAction)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::build"
@@ -974,8 +974,8 @@ void BuildFilters::run()
 
     switch (action) {
     case Action::Reset:
-        if (!abort /*&& filters->filtersBuilt*/) appendUniqueItems();
-        break;
+        if (!abort) appendUniqueItems();
+        [[fallthrough]]; // deliberate fall-through
     case Action::Update:
         if (!abort) {
             updateFilteredCounts();
@@ -987,6 +987,7 @@ void BuildFilters::run()
         // no change to SortFilter
         //afterAction = AfterAction::NoFilterChange;
         if (!abort) updateCategoryItems();
+        break;
     }
 
     if (!abort) filters->setEachCatTextColor();

@@ -17,6 +17,8 @@ WHAT'S NEW
 - Add tooltips for IconView symbols
 
 BUGS / TO DO
+- TableView showing all columns at start when some columns are being hidden in pref
+- Do not show ICCBuf column in tableView
 - Copy path(s) not always working
 - Update menu filters when delete all filtered
 - Undo delete
@@ -151,6 +153,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- MetaRead and ImageView status lights are truncated (make container wider)
 - Sync ImageView with CompareView selection
 - Return key behavior
 - TableView freeze columns

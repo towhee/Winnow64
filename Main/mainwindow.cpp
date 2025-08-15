@@ -1198,7 +1198,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (obj->objectName() == "centralWidget") {
                 static int prevLayoutIndex = -1;
                 if (prevLayoutIndex == MessageTab) {
-                    // /*
+                    /*
                     qDebug() << "MW::eventFilter QEvent::NativeGesture"
                              << "obj->objectName:" << obj->objectName()
                              << "row =" << dm->currentSfRow
@@ -1217,7 +1217,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
             QKeyEvent *e = static_cast<QKeyEvent *>(event);
             Qt::KeyboardModifiers k = e->modifiers();
-            // /*
+            /*
             qDebug() << "MW::eventFilter"
                   << "obj->objectName:" << obj->objectName().leftJustified(25)
                   << "key =" << e->key()
@@ -2171,7 +2171,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
             G::log(fun, msg);
         }
     }
-    // qDebug() << fun << op << folderPath;
+    qDebug() << fun << op << "resetDataModel =" << resetDataModel << folderPath;
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2179,11 +2179,6 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     // block repeated clicks to folders or bookmarks while processing this one.
     bookmarks->setEnabled(false);
     fsTree->setEnabled(false);
-
-    // only done here and if sort/filter operation
-    // qDebug() << "MW::folderSelectionchange call dm->newInstance";
-
-    dm->newInstance();
 
     // save the current datamodel selection before removing a folder from datamodel
     if (op == "Remove") sel->save(fun);
@@ -2194,8 +2189,13 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
         stop(fun + " reset DataModel");
         // should only reset here
         reset(fun);
+        // new instance: only done here and if sort/filter operation
+        dm->newInstance();
         // sync bookmarks if exists
         bookmarks->select(folderPath);
+
+        // // initialize metaRead only when new instance and first folder loaded
+        // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
     }
     else {
         // stop building but do not clear filters
@@ -2550,6 +2550,7 @@ bool MW::stop(QString src)
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
 
+    qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
@@ -2641,6 +2642,9 @@ bool MW::reset(QString src)
     // used by updateStatus
     pickMemSize = "";
     updateStatus(false, "", "MW::reset");
+
+    // // initialize metaRead only when new instance and first folder loaded
+    // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
 
     // update metadata read status light
     updateMetadataThreadRunStatus(true, true, true, "MW::reset");
@@ -2834,7 +2838,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // qDebug() << fun << msg;
+    qDebug() << fun << msg;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2908,8 +2912,10 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
-    // initialize metaRead only when new instance and first folder loaded
-    QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
+    // // initialize metaRead only when new instance and first folder loaded
+    // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(metaRead, "initialize", Qt::BlockingQueuedConnection);
+    metaRead->initialize(fun);
 
     // initialize imageCache
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
@@ -3010,7 +3016,7 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
-    // qDebug() << fun;
+    qDebug() << fun;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -3061,6 +3067,7 @@ void MW::folderChangeCompleted()
             && !filterDock->visibleRegion().isNull()
        )
     {
+        filters->filtersBuilt = false;
         buildFilters->build();
     }
 
@@ -3077,7 +3084,7 @@ void MW::folderChangeCompleted()
     updateSortColumn(G::NameColumn);
     enableStatusBarBtns();
 
-    updateStatus(true, "", "MW::folderChangeCompleted");
+    updateStatus(true, "", fun);
     // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
 
     // update image cache in case not already done during metaRead
@@ -3085,6 +3092,41 @@ void MW::folderChangeCompleted()
 
     // resize table columns now that all data is loaded
     tableView->resizeColumns();
+
+    // test if any null thumbnails
+    bool isNullIcon = false;
+    for (int i = 0; i < dm->rowCount(); ++i) {
+        QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
+        if (icon.isNull()) {
+            qWarning() << "Warning: row" << i << "icon is null"
+                      << "G::iconChunkLoaded =" << G::iconChunkLoaded;
+            QString fPath = dm->index(i,0).data(G::PathRole).toString();
+            G::issue("Warning", "Icon is null", fun, i, fPath);
+            // G::iconChunkLoaded = false;
+            // isNullIcon = true;
+
+            // QImage image;
+            // QPixmap pm;
+            // Thumb *thumb;
+            // QModelIndex dmIdx = dm->index(i,0);
+            // thumb->loadThumb(fPath, dmIdx, image, instance, fun);
+            // pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            // dm->setIcon(dmIdx, pm, instance, fun);
+        }
+    }
+    if (isNullIcon) {
+
+        // updateChange(0, true, "MW::folderChangeCompleted");
+
+        // updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+        // // qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
+        // dm->setIconRange(0);
+        // QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+        //                           Q_ARG(int, 0),
+        //                           Q_ARG(bool, true),
+        //                           Q_ARG(QString, fun)
+        //                           );
+    }
 }
 
 void MW::thumbHasScrolled()
@@ -3807,6 +3849,7 @@ void MW::setFontSize(int fontPixelSize)
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
     embelTitleBar->setStyle();
+    setCacheRunningLightsWidth();
     embelProperties->fontSizeChanged(fontPixelSize);
     pref->fontSizeChanged(fontPixelSize);
 }

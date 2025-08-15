@@ -235,6 +235,13 @@ void MW::updateProgressBarWidth()
     }
 }
 
+void MW::setCacheRunningLightsWidth() {
+    QFontMetrics fm(metadataThreadRunningLabel->font());
+    int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
+    metadataThreadRunningLabel->setFixedWidth(charWidth);
+    imageThreadRunningLabel->setFixedWidth(charWidth);
+}
+
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
                                        bool success, QString src)
 {

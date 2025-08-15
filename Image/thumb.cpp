@@ -166,7 +166,9 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
             << "row =" << row << fPath;
     if (G::isLogger)
         G::log(fun, fPath);
-    if (instance != dm->instance) return Status::Fail;
+    if (instance != dm->instance) {
+        return Status::Fail;
+    }
 
     QFile imFile(fPath);
     if (imFile.isOpen()) {
@@ -447,6 +449,12 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
         G::issue("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
+        if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "Instance Clash" << "row =" << dmRow
+            << "G::instance =" << G::dmInstance << "instance =" << instance
+            << fPath;
         return false;
     }
     this->instance = instance;
@@ -478,7 +486,8 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
     /*
-    qDebug() << "Thumb::loadThumb"
+    qDebug().noquote()
+             << fun.leftJustified(col0Width)
              << "dmRow =" << dmRow
              << "offsetThumb =" << offsetThumb
              << "lengthThumb =" << lengthThumb
