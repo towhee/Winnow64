@@ -1014,10 +1014,10 @@ void MW::createStatusBar()
     statusBar()->addPermanentWidget(statusBarSpacer);
 
     // label to show metadataThreadRunning status
-    int runLabelWidth = 13;
-    //metadataThreadRunningLabel = new QLabel;
-    metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
-    // updateMetadataThreadRunStatus(false, true, "MW::createStatusBar");
+    // QFontMetrics fm(metadataThreadRunningLabel->font());
+    // int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
+    // qDebug() << "charWidth =" << charWidth;
+    // metadataThreadRunningLabel->setFixedWidth(charWidth);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
     QString tip = "Metadata and Icon caching:\n";
     tip += "\n";
@@ -1039,7 +1039,9 @@ void MW::createStatusBar()
     tip += "Click to go to cache preferences.";
     imageThreadRunningLabel->setObjectName("ImageCacheStatus");
     imageThreadRunningLabel->setToolTip(tip);
-    imageThreadRunningLabel->setFixedWidth(runLabelWidth);
+    // imageThreadRunningLabel->setFixedWidth(charWidth);
+
+    setCacheRunningLightsWidth();
 
     // label to show cache amount
     //    setImageCacheSize(cacheSizeStrategy);

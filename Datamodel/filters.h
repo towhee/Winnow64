@@ -46,7 +46,7 @@ public:
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
-    QString catMissingThumbs = "Missing thumbs";
+    QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
 
     QMap<QString,int> filterCategoryToDmColumn;

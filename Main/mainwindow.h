@@ -583,6 +583,7 @@ private slots:
     // caching status functions
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
+    void setCacheRunningLightsWidth();
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
                                        bool success, QString src = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);

@@ -644,7 +644,7 @@ void PropertyEditor::resizeColumns()
 
 void PropertyEditor::fontSizeChanged(int fontSize)
 {
-    qDebug() << "PropertyEditor::fontSizeChanged =" << fontSize;
+    // qDebug() << "PropertyEditor::fontSizeChanged =" << fontSize;
     if (!ignoreFontSizeChangeSignals) {
         emit propertyDelegate->fontSizeChange(fontSize);
     }

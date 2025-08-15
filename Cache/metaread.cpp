@@ -134,7 +134,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "startRow =" << sfRow
-            << "startRow =" << sfRow
             << "sfRowCount =" << sfRowCount
             << "imageCacheTriggered =" << imageCacheTriggered
             << "fileSelectionChanged =" << fileSelectionChanged
@@ -169,7 +168,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
     lastIconRow = dm->endIconRange;
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug() << " ";
         qDebug().noquote()
@@ -261,6 +260,9 @@ void MetaRead::abortReaders()
 /*
     Set the abort flag to cancel the current read operation, before changing folders
 */
+    QString fun = "MetaRead::abortReaders";
+    // qDebug().noquote() << fun.leftJustified(col0Width);
+
     abort = true;
     // abort all readers
     for (int id = 0; id < readerCount; ++id) {
@@ -276,7 +278,7 @@ bool MetaRead::allReadersCycling()
     return true;
 }
 
-void MetaRead::initialize()
+void MetaRead::initialize(QString src)
 /*
     Called when change folders.
     Must use QMetaObject::invokeMethod when calling this function
@@ -292,11 +294,13 @@ void MetaRead::initialize()
         qDebug().noquote()
             << "\n"
             << fun.leftJustified(col0Width)
+            << "src =" << src
             ;
     }
 
     abort = true;
-    for (Reader *r : readers) r->abortProcessing();
+    // for (Reader *r : readers) r->abortProcessing();
+    // abortReaders();
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
     metaReadItems = dmRowCount;

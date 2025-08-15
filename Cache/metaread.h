@@ -70,7 +70,7 @@ signals:
     void dispatchIsFinished(QString src);
 
 public slots:
-    void initialize();
+    void initialize(QString src = "");
     void dispatchReaders();
     void dispatch(int id);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");

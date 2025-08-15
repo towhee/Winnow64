@@ -43,7 +43,9 @@ Reader::~Reader()
 void Reader::stop()
 {
     QString fun = "Reader::stop";
-    if (isDebug) qDebug() << fun.leftJustified(col0Width) << threadId;
+    if (isDebug)
+        qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
+
     {
         QMutexLocker locker(&mutex);
         abort = true;
@@ -61,6 +63,9 @@ void Reader::stop()
 
 void Reader::abortProcessing()
 {
+    QString fun = "Reader::abortProcessing";
+    // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
+
     mutex.lock();
     abort = true;
     thumb->abortProcessing();
@@ -150,7 +155,14 @@ void Reader::readIcon()
             ;
     }
 
-    if (fPath.isEmpty()) return;
+    if (fPath.isEmpty()) {
+        qDebug().noquote()
+        << fun.leftJustified(col0Width)
+        << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "EMPTY PATH";
+        return;
+    }
 
     int dmRow = dmIdx.row();
     QString msg;
@@ -184,6 +196,14 @@ void Reader::readIcon()
 
     // get thumbnail or err.png or generic video
     if (!abort) loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
+    if (isDebug)
+    qDebug().noquote()
+        << fun.leftJustified(col0Width)
+        << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "loadedIcon" << loadedIcon
+        << "abort =" << abort
+        ;
 
     #ifdef TIMER
     t4 = t.restart();
@@ -191,14 +211,21 @@ void Reader::readIcon()
 
     if (abort) return;
 
-    if (!abort && loadedIcon) {
+    if (loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        if (isDebug)
+        qDebug().noquote()
+            << fun.leftJustified(col0Width)
+            << "id =" << QString::number(threadId).leftJustified(2, ' ')
+            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
         emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
         if (!pm.isNull()) return;
     }
 
     // failed to load icon, load error icon
     pm = QPixmap(":/images/error_image256.png");
+    emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
@@ -208,6 +235,7 @@ void Reader::readIcon()
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
+        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
         << msg
             ;
     }

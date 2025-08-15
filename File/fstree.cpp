@@ -1001,11 +1001,24 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     bool isCtrl = event->modifiers() & Qt::ControlModifier;
     bool isShift = event->modifiers() & Qt::ShiftModifier;
     bool isMeta = event->modifiers() & Qt::MetaModifier;
+    bool isNoModifier = event->modifiers() == Qt::NoModifier;
+
+    if (isDebug) {
+        qDebug() << " ";
+        qDebug().noquote()
+            << "FSTree::mousePressEvent"
+            << "isAlt =" << isAlt
+            << "isCtrl =" << isCtrl
+            << "isShift =" << isShift
+            << "isMeta =" << isMeta
+            << "isNone =" << isNoModifier
+            ;
+    }
 
     if (isMeta) return;
 
     // New selection (primary folder)
-    if (event->modifiers() == Qt::NoModifier) {
+    if (isNoModifier) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "No modifiers, new instance");
         QTreeView::mousePressEvent(event);
@@ -1066,10 +1079,9 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     }
 
     // Select visible unselected between previous selected folder to idx0
-    if (isShift || isAlt) {
+    if (isShift) {
         recurse = false;
         if (isAlt) recurse = true;
-        // QStringList foldersToAdd = selectVisibleBetween(currentIndex(), idx0, recurse);
         QStringList foldersToAdd = selectVisibleBetween(prevIdx, idx0, recurse);
         if (G::isLogger || G::isFlowLogger)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
