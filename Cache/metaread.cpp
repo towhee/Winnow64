@@ -952,7 +952,7 @@ void MetaRead::dispatch(int id)
                 // if all readers finished but not all loaded, then redo
                 else {
                     if (redoCount < redoMax) {
-                        if (isDebug)
+                        // if (isDebug)
                         {
                             QString fun1 = fun + " redo";
                             qDebug().noquote()
@@ -963,9 +963,9 @@ void MetaRead::dispatch(int id)
                         }
                         // try to read again
                         metaReadThread.msleep(50);
-                        if (!abort) {
+                        // if (!abort) {
                             redo();
-                        }
+                        // }
                     }
                     else {
                         qWarning() << "REDO MAXED OUT";
@@ -1030,6 +1030,9 @@ void MetaRead::dispatch(int id)
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
         QString fPath = sfIdx.data(G::PathRole).toString();
 
+        if (fPath.isEmpty()) qWarning() << fun << "Warning:" << "row"
+                       << nextRow << "fPath is empty";
+
         if (isDebug)
         // if (dm->sf->index(nextRow, G::VideoColumn).data().toBool())
         {
@@ -1070,24 +1073,24 @@ void MetaRead::dispatch(int id)
 
     /*
     // nothing to read, we're finished
-    // else {
-    //     cycling[id] = false;
-    //     if (isDebug)
-    //     {
-    //         qDebug().noquote()
-    //             << "MetaRead::dispatch     NO launch reader    "
-    //             << "id =" << QString::number(id).leftJustified(2, ' ')
-    //             << "row =" << QString::number(nextRow).leftJustified(4, ' ')
-    //             << "nextRowToRead = FALSE"
-    //             << "isCycling =" << QVariant(cycling.at(id)).toString().leftJustified(5, ' ')
-    //             << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
-    //             << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
-    //             << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-    //             << "a =" << QString::number(a).leftJustified(4, ' ')
-    //             << "b =" << QString::number(b).leftJustified(4, ' ')
-    //             ;
-    //     }
-    // }
+    else {
+        cycling[id] = false;
+        if (isDebug)
+        {
+            qDebug().noquote()
+                << "MetaRead::dispatch     NO launch reader    "
+                << "id =" << QString::number(id).leftJustified(2, ' ')
+                << "row =" << QString::number(nextRow).leftJustified(4, ' ')
+                << "nextRowToRead = FALSE"
+                << "isCycling =" << QVariant(cycling.at(id)).toString().leftJustified(5, ' ')
+                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                << "a =" << QString::number(a).leftJustified(4, ' ')
+                << "b =" << QString::number(b).leftJustified(4, ' ')
+                ;
+        }
+    }
     */
 
     // if done in both directions fire delay to quit in case isDone fails
