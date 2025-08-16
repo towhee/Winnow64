@@ -190,12 +190,14 @@ void Reader::readIcon()
     }
 
     // pass embedded thumb offset and length in case datamodel not updated yet
-    if (!abort) {
+    if (!abort)
         if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
-    }
+
 
     // get thumbnail or err.png or generic video
-    if (!abort) loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
+    if (!abort)
+        loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
+
     if (isDebug)
     qDebug().noquote()
         << fun.leftJustified(col0Width)
