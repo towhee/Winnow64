@@ -533,7 +533,7 @@ void DataModel::enqueueOp(const QString folderPath, const QString op)
         else folderQueue.enqueue(qMakePair(folderPath, true));
     }
 
-    qDebug() << "DataModel::enqueueOp" << op << folderPath;
+    // qDebug() << "DataModel::enqueueOp" << op << folderPath;
 }
 
 void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bool recurse)
@@ -585,7 +585,7 @@ void DataModel::processNextFolder()
     if (folderQueue.isEmpty()) {
         isProcessingFolders = false;
         isProcessingFolders = false;
-        qDebug() << "DataModel::processNextFolder" << "unwound";
+        // qDebug() << "DataModel::processNextFolder" << "unwound";
         emit folderChange();
         return;
     }
@@ -603,7 +603,7 @@ void DataModel::processNextFolder()
                     ;
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // /*
+    /*
     qDebug() << "DataModel::processNextFolder"
              << "folderQueue.count =" << folderQueue.count()
              << folderPath; //*/
