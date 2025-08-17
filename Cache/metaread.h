@@ -72,17 +72,17 @@ signals:
 public slots:
     void initialize(QString src = "");
     void dispatchReaders();
-    void dispatch(int id);
+    void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
-    void quitAfterTimeout();
+    void dispatchFinished(QString src);
 
 // protected:
 //     void run() Q_DECL_OVERRIDE;
 
 private:
     void read(int startRow = 0, QString src = "");// decoder
-
-    void dispatchFinished(QString src);
+    void processReturningReader(int id, Reader *r);
+    void quitAfterTimeout();
     bool allMetaIconLoaded();
     void redo();
     int pending();
@@ -156,6 +156,7 @@ private:
 
     QElapsedTimer t;
     QElapsedTimer tAbort;
+    QTimer *quitTimer;
     quint32 ms;
 };
 

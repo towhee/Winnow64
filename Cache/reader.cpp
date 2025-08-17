@@ -69,6 +69,8 @@ void Reader::abortProcessing()
     mutex.lock();
     abort = true;
     thumb->abortProcessing();
+    status = Status::Aborted;
+    pending = false;
     mutex.unlock();
 }
 
@@ -118,7 +120,7 @@ bool Reader::readMetadata()
     lengthThumb = m->lengthThumb;
 
     if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
-    if (abort) return false;
+    if (abort) {status = Status::Aborted; return false;}
 
     #ifdef TIMER
     t3 = t.restart();
@@ -161,6 +163,7 @@ void Reader::readIcon()
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
         << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
         << "EMPTY PATH";
+        status = Status::IconFailed;
         return;
     }
 
@@ -189,14 +192,15 @@ void Reader::readIcon()
         return;
     }
 
-    // pass embedded thumb offset and length in case datamodel not updated yet
-    if (!abort)
-        if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
+    if (abort) {status = Status::Aborted; return;}
 
+    // pass embedded thumb offset and length in case datamodel not updated yet
+    if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
+
+    if (abort) {status = Status::Aborted; return;}
 
     // get thumbnail or err.png or generic video
-    if (!abort)
-        loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
+    loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
 
     if (isDebug)
     qDebug().noquote()
@@ -211,7 +215,7 @@ void Reader::readIcon()
     t4 = t.restart();
     #endif
 
-    if (abort) return;
+    if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -248,7 +252,9 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
 {
     QString fun = "Reader::read";
     if (G::isLogger) G::log(fun, filePath);
-    if (filePath.isEmpty()) qWarning().noquote() << fun << "EMPTY FILEPATH";
+    if (filePath.isEmpty()) {
+        qWarning().noquote() << fun << "EMPTY FILEPATH";
+    }
     abort = false;
     this->dmIdx = dmIdx;
     fPath = filePath;
@@ -279,7 +285,12 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
     if (!abort && needMeta) readMetadata();
     if (!abort && needIcon) readIcon();
 
-    if (!abort) emit done(threadId);
+    // cycle backk to MetaRead::dispatchReaders
+    bool isReturning = true;
+    if (!abort) emit done(threadId, isReturning);
+
+    pending = false;
+
     if (G::isLogger) G::log("Reader::read", "Finished");
     fun = "Reader::read done and returning";
     if (isDebug)

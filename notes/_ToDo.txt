@@ -148,7 +148,7 @@ ENHANCEMENTS
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke
 - Add glow (inner/outer)
-- Add guassian blur (inner/outer)
+- Add gaussian blur (inner/outer)
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 

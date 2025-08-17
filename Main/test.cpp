@@ -401,18 +401,18 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
         if (icon.isNull()) {
             qWarning() << "Warning: row" << i << "icon is null"
                        << "G::iconChunkLoaded =" << G::iconChunkLoaded;
-            QString fPath = dm->index(i,0).data(G::PathRole).toString();
-            G::issue("Warning", "Icon is null", fun, i, fPath);
-            G::iconChunkLoaded = false;
-            isNullIcon = true;
+            // QString fPath = dm->index(i,0).data(G::PathRole).toString();
+            // G::issue("Warning", "Icon is null", fun, i, fPath);
+            // G::iconChunkLoaded = false;
+            // isNullIcon = true;
 
-            QImage image;
-            QPixmap pm;
-            Thumb *thumb;
-            QModelIndex dmIdx = dm->index(i,0);
-            thumb->loadThumb(fPath, dmIdx, image, instance, fun);
-            pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            dm->setIcon(dmIdx, pm, instance, fun);
+            // QImage image;
+            // QPixmap pm;
+            // Thumb *thumb;
+            // QModelIndex dmIdx = dm->index(i,0);
+            // thumb->loadThumb(fPath, dmIdx, image, instance, fun);
+            // pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            // dm->setIcon(dmIdx, pm, instance, fun);
         }
     }
 }
