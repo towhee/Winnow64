@@ -2171,7 +2171,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
             G::log(fun, msg);
         }
     }
-    qDebug() << fun << op << "resetDataModel =" << resetDataModel << folderPath;
+    // qDebug() << fun << op << "resetDataModel =" << resetDataModel << folderPath;
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2550,7 +2550,7 @@ bool MW::stop(QString src)
     // ignore if already stopping
     if (G::stop && !G::removingFolderFromDM) return false;
 
-    qDebug().noquote() << "MW::stop src =" << src;
+    // qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
@@ -2838,7 +2838,7 @@ void MW::folderChanged(/*const QString folderPath, const QString op*/)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    qDebug() << fun << msg;
+    // qDebug() << fun << msg;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -3016,7 +3016,7 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
-    qDebug() << fun;
+    // qDebug() << fun;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();

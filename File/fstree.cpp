@@ -1080,6 +1080,15 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // Select visible unselected between previous selected folder to idx0
     if (isShift) {
+        // if first mousePress includes shift (nothing has been selected yet)
+        if (!prevIdx.isValid()) {
+                QModelIndexList selectedIndexes = selectionModel()->selectedIndexes();
+            if (!selectedIndexes.isEmpty()) {
+                prevIdx = selectedIndexes.first();
+            } else {
+                prevIdx = indexAt(QPoint(0, 0));
+            }
+        }
         recurse = false;
         if (isAlt) recurse = true;
         QStringList foldersToAdd = selectVisibleBetween(prevIdx, idx0, recurse);
