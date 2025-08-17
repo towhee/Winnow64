@@ -57,7 +57,7 @@ signals:
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     // void addToImageCache(ImageMetadata m, int instance);
-    void done(int threadId);
+    void done(int threadId, bool isReturning);
 
 public slots:
     void read(QModelIndex dmIdx, QString filePath, int instance,

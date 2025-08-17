@@ -2112,8 +2112,9 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     This function is subject to potential race conditions, so it is critical that it only
     be called via a connection with Qt::BlockingQueuedConnection.
+
+    Do not use QMutexLocker.
 */
-    // QMutexLocker locker(&mutex);
     if (G::isLogger) G::log("DataModel::setIcon");
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
@@ -2210,7 +2211,8 @@ bool DataModel::isAllIconsLoaded()
 
 bool DataModel::isAllIconChunkLoaded(int first, int last)
 {
-    if (isDebug) qDebug() << "DataModel::allIconChunkLoaded" << "instance =" << instance;
+    if (isDebug)
+        qDebug() << "DataModel::isAllIconChunkLoaded" << "instance =" << instance;
 
     if (first < 0 || last > sf->rowCount()) return false;
 
@@ -2236,10 +2238,6 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
                         ; //*/
             return false;
         }
-        // if (itemFromIndex(sf->index(row, 0))->icon().isNull()) {
-        //     //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
-        //     return false;
-        // }
     }
     // qDebug() << "DataModel::allIconChunkLoaded = true";
     return true;
@@ -2328,7 +2326,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
-    // if (isDebug)
+    if (isDebug)
     qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance;
     G::allMetadataLoaded = isLoaded;
 }
