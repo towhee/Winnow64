@@ -519,7 +519,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     if (modifier == "" || modifier == "None") {
         resetDataModel = true;
         recurse = false;
-        emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
+        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        // emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
         setCurrentIndex(index);
         scrollToCurrent();
         selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
@@ -529,7 +530,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     if (modifier == "Recurse") {
         resetDataModel = true;
         recurse = true;
-        emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
+        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        // emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
         setCurrentIndex(index);
         scrollToCurrent();
         selectionModel()->clearSelection();
@@ -540,7 +542,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     if (modifier == "USBDrive") {
         resetDataModel = true;
         recurse = true;
-        emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
+        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        // emit folderSelectionChange(folderPath, "Add", resetDataModel, recurse);
         setCurrentIndex(index);
         scrollToCurrent();
         selectionModel()->clearSelection();
@@ -1024,7 +1027,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         QTreeView::mousePressEvent(event);
         resetDataModel = true;
         recurse = false;
-        emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
+        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
+        // emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
         prevIdx = index;
         return;
     }
@@ -1037,7 +1041,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             resetDataModel = false;
             // resetDataModel = true;
             recurse = true;
-            emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
+            emit folderSelectionChange(dPath, G::FolderOp::Toggle, resetDataModel, recurse);
+            // emit folderSelectionChange(dPath, "Toggle", resetDataModel, recurse);
             bool toggle = true;
             selectRecursively(dPath, toggle);
             prevIdx = index;
@@ -1046,7 +1051,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
         resetDataModel = true;
         recurse = true;
-        emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
+        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
+        // emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
         selectionModel()->clearSelection();
         selectRecursively(dPath);
         return;
@@ -1065,12 +1071,12 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             if (folders < 2) return;
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            emit folderSelectionChange(dPath, "Remove", resetDataModel, recurse);
+            emit folderSelectionChange(dPath, G::FolderOp::Remove, resetDataModel, recurse);
         }
         else {
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
-            emit folderSelectionChange(dPath, "Add", resetDataModel, recurse);
+            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
         }
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
@@ -1097,7 +1103,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
         foreach(QString path, foldersToAdd) {
             resetDataModel = false;
-            emit folderSelectionChange(path, "Add", resetDataModel, recurse);
+            emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, recurse);
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
             // QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);

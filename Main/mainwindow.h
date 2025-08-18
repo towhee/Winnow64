@@ -423,8 +423,11 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    void folderSelectionChange(QString folderPath = "", QString op = "Add",
+    void folderSelectionChange(QString folderPath = "",
+                               G::FolderOp op = G::FolderOp::Add,
                                bool resetDataModel = true, bool recurse = false);
+    // void folderSelectionChange(QString folderPath = "", QString op = "Add",
+    //                            bool resetDataModel = true, bool recurse = false);
     void fileSelectionChange(QModelIndex current, QModelIndex, bool clearSelection = true, QString src = "");
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void currentFolderDeletedExternally(QString path);
