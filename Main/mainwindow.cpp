@@ -1,5 +1,6 @@
 ﻿#include "Main/mainwindow.h"
 #include "Main/global.h"
+#include <QMetaEnum>
 
 /* Program notes
 ***********************************************************************************************
@@ -608,6 +609,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<QVector<int>>();
     qRegisterMetaType<QSharedPointer<Issue>>("QSharedPointer<Issue>");
     qRegisterMetaType<QList<QSharedPointer<Issue>>>("QList<QSharedPointer<Issue>>");
+    qRegisterMetaType<G::FolderOp>("FolderOp");
 
     // create popup window used for messaging
     G::newPopUp(this, centralWidget);
@@ -646,7 +648,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                     if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "Loading lastDir " + lastDir);
                     centralLayout->setCurrentIndex(LoupeTab);
                     if (fsTree->select(lastDir)) {
-                        folderSelectionChange(lastDir, "Add");
+                        folderSelectionChange(lastDir, G::FolderOp::Add);
+                        // folderSelectionChange(lastDir, "Add");
                         updateIconRange(false, "MW::MW rememberLastDir");
                     }
                 }
@@ -2142,7 +2145,7 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
-void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataModel, bool recurse)
+void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
 {
 /*
     This is invoked when there is a folder selection change in the folder or bookmark views.
@@ -2164,7 +2167,12 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     {
         G::log("","");
         {
-            QString msg = "op = " + op +
+            const QMetaObject &mo = G::staticMetaObject;
+            int enumIndex = mo.indexOfEnumerator("FolderOp");
+            QMetaEnum metaEnum = mo.enumerator(enumIndex);
+            QString opStr = QString::fromLatin1(metaEnum.valueToKey(static_cast<int>(op)));
+            // QString msg = "op = " + op +
+            QString msg = "op = " + opStr +
                 " recurse = " + QVariant(recurse).toString() +
                 " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
                 " folderPath = " + folderPath;
@@ -2181,7 +2189,7 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     fsTree->setEnabled(false);
 
     // save the current datamodel selection before removing a folder from datamodel
-    if (op == "Remove") sel->save(fun);
+    if (op == G::FolderOp::Remove) sel->save(fun);
 
     // folder selection cleared and new folder selected
     if (resetDataModel) {
@@ -2203,7 +2211,8 @@ void MW::folderSelectionChange(QString folderPath, QString op, bool resetDataMod
     }
 
     // put folder in datamodel queue to add or remove
-    dm->enqueueFolderSelection(folderPath, op, recurse);
+    dm->enqueueFolderSelection(folderPath, "Add", recurse);
+    // dm->enqueueFolderSelection(folderPath, op, recurse);
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -2548,7 +2557,7 @@ void MW::stop(QString src)
                " src = " + src);
 
     // ignore if already stopping
-    if (G::stop && !G::removingFolderFromDM) return false;
+    if (G::stop && !G::removingFolderFromDM) return;
 
     // qDebug().noquote() << "MW::stop src =" << src;
 

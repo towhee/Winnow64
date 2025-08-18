@@ -7,6 +7,8 @@
 #include <QModelIndexList>
 #include <QStringList>
 #include <QElapsedTimer>
+#include <QtCore/QMetaType>
+#include <QtCore/qobjectdefs.h>
 #include <iostream>
 #include <iomanip>
 #include <QMutex>
@@ -24,6 +26,8 @@
 
 namespace G
 {
+Q_NAMESPACE
+
     enum UserRoles {
         PathRole = Qt::UserRole + 1,    // path to image file
         IconRectRole,                   // used in IconView
@@ -166,6 +170,10 @@ namespace G
         QString path;
         QString args;
     };
+
+    // FolderOp used by MW, FSTree and DataModel
+    enum class FolderOp : quint8 { Add, Remove, Toggle };
+    Q_ENUM_NS(FolderOp)    // optional, enables nice string conversion via QMetaEnum
 
     // mutex
     extern QWaitCondition waitCondition;

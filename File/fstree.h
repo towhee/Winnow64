@@ -134,7 +134,8 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void indexExpanded();
     void selectionChange();
-    void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
+    void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
+    // void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
