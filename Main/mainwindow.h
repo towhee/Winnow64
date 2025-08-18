@@ -430,7 +430,7 @@ public slots:
     void currentFolderDeletedExternally(QString path);
     void refresh();
     void updateImageCount();
-    bool stop(QString src = "");
+    void stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
     void filterLastDay();

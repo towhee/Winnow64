@@ -1,22 +1,8 @@
 WHAT'S NEW
-- Fix Copy Drag to FSTree from IconView crashes
 
-- MetaRead2 - new architecture version 2.00
-- Fix filters (faster + bug fixes)
-- Find duplicates
-- CreateDate fixes
-- Copy / paste
-- Jump to row
-- Scroll to current
-- Pick audio
-- Tweak mouse wheel / trackpad sensitivity algorithm
-- Help for film strip and status bar symbols
-- Folder multi-select
-- Fixed latency issue in FSTree image count
-- Pan to camera focus point when zoomed with zoom box
-- Add tooltips for IconView symbols
 
 BUGS / TO DO
+- Try using std::atomic<bool> for flags used in threads
 - TableView showing all columns at start when some columns are being hidden in pref
 - Do not show ICCBuf column in tableView
 - Copy path(s) not always working

@@ -2522,7 +2522,7 @@ void MW::refresh()
     sel->select(dm->currentSfIdx);  // runs metaread if new images
 }
 
-bool MW::stop(QString src)
+void MW::stop(QString src)
 {
 /*
     Stops and clears all folder loading processes and data.
@@ -2573,8 +2573,6 @@ bool MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
         if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
     }
-
-    return true;
 }
 
 bool MW::reset(QString src)
@@ -2827,7 +2825,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     return chunkSizeChanged;
 }
 
-void MW::folderChanged(/*const QString folderPath, const QString op*/)
+void MW::folderChanged()
 {
 /*
     Signaled from DataModel::processNextFolder after all folders in the DataModel

@@ -786,7 +786,8 @@ void MetaRead::processReturningReader(int id, Reader *r)
             // if all readers finished but not all loaded, then redo
             if (redoCount < redoMax) {
                 // try to read again
-                metaReadThread.msleep(50);
+                QThread::msleep(50);
+                // metaReadThread.msleep(50);
                 if (!abort) {
                     redo();
                 }

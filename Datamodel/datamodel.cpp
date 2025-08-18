@@ -205,7 +205,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::FolderNameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Read ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
@@ -653,10 +653,8 @@ void DataModel::addFolder(const QString &folderPath)
     QString escapeClause = "Press \"Esc\" to stop.";
 
     // test if raw file to match jpg when same file names and one is a jpg
-    QString suffix;
     QString prevRawSuffix = "";
     QString prevRawBaseName = "";
-    QString baseName = "";
     QModelIndex prevRawIdx;
 
     // datamodel size
