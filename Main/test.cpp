@@ -392,29 +392,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fun = "MW::test";
-    qDebug() << fun;
-    // test if any null thumbnails
-    bool isNullIcon = false;
-    for (int i = 0; i < dm->rowCount(); ++i) {
-        QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
-        if (icon.isNull()) {
-            qWarning() << "Warning: row" << i << "icon is null"
-                       << "G::iconChunkLoaded =" << G::iconChunkLoaded;
-            // QString fPath = dm->index(i,0).data(G::PathRole).toString();
-            // G::issue("Warning", "Icon is null", fun, i, fPath);
-            // G::iconChunkLoaded = false;
-            // isNullIcon = true;
-
-            // QImage image;
-            // QPixmap pm;
-            // Thumb *thumb;
-            // QModelIndex dmIdx = dm->index(i,0);
-            // thumb->loadThumb(fPath, dmIdx, image, instance, fun);
-            // pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            // dm->setIcon(dmIdx, pm, instance, fun);
-        }
-    }
+    G::FolderOp op = G::FolderOp::Add;
+    QString opStr = G::enumClassToString(op);
+    qDebug() << opStr;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
