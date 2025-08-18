@@ -2163,16 +2163,12 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         G::log("","");
         {
-            const QMetaObject &mo = G::staticMetaObject;
-            int enumIndex = mo.indexOfEnumerator("FolderOp");
-            QMetaEnum metaEnum = mo.enumerator(enumIndex);
-            QString opStr = QString::fromLatin1(metaEnum.valueToKey(static_cast<int>(op)));
             // QString msg = "op = " + op +
-            QString msg = "op = " + opStr +
+            QString msg = "op = " + G::enumClassToString(op) +
                 " recurse = " + QVariant(recurse).toString() +
                 " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
                 " folderPath = " + folderPath;
@@ -2211,8 +2207,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     }
 
     // put folder in datamodel queue to add or remove
-    dm->enqueueFolderSelection(folderPath, "Add", recurse);
-    // dm->enqueueFolderSelection(folderPath, op, recurse);
+    dm->enqueueFolderSelection(folderPath, op, recurse);
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)

@@ -54,7 +54,7 @@ public:
     void newInstance();
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
     bool isQueueEmpty();
-    bool isQueueRemoveEmpty();
+    // bool isQueueRemoveEmpty();
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
@@ -166,7 +166,8 @@ public:
         QString op;
     };
 
-    QQueue<QPair<QString, bool>> folderQueue;
+    // QQueue<QPair<QString, G::FolderOp>> folderQueue;
+    // QQueue<QPair<QString, bool>> folderQueue;
 
     // locations of symbols on a thumbnail so can show tooltip
     QHash<QString, QRect>iconSymbolRects;
@@ -185,7 +186,8 @@ signals:
 
 public slots:
 //    void unfilteredItemSearchCount();
-    void enqueueFolderSelection(const QString &folderPath, QString op, bool recurse = false);
+    void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false);
+    // void enqueueFolderSelection(const QString &folderPath, QString op, bool recurse = false);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m, QString src);
@@ -210,7 +212,7 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    void processNextFolder();
+    // void processNextFolder();
     void imageCacheWaiting(int sfRow);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
@@ -230,8 +232,11 @@ private:
     static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 
     // Pair of folderPath and operation type (true=add, false=remove)
-    void enqueueOp(const QString folderPath, const QString op);
-    // QQueue<QPair<QString, bool>> folderQueue;
+    void enqueueOp(const QString& folderPath, G::FolderOp op);
+    void scheduleProcessing();
+    void processNextBatch(); // async pump
+    QQueue<QPair<QString, G::FolderOp>> folderQueue;
+    QSet<QString> pendingPaths;
     QMutex queueMutex;
 
     enum ErrorType {

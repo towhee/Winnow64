@@ -8,6 +8,8 @@
 #include <QStringList>
 #include <QElapsedTimer>
 #include <QtCore/QMetaType>
+#include <type_traits>
+#include <QMetaEnum>
 #include <QtCore/qobjectdefs.h>
 #include <iostream>
 #include <iomanip>
@@ -174,6 +176,18 @@ Q_NAMESPACE
     // FolderOp used by MW, FSTree and DataModel
     enum class FolderOp : quint8 { Add, Remove, Toggle };
     Q_ENUM_NS(FolderOp)    // optional, enables nice string conversion via QMetaEnum
+
+    // Generic stringify function
+    template <typename Enum>
+    inline QString enumClassToString(Enum value)
+    {
+        static_assert(std::is_enum_v<Enum>, "enumToString requires an enum type");
+        const QMetaEnum me = QMetaEnum::fromType<Enum>();
+        if (!me.isValid()) return {};
+        if (const char* key = me.valueToKey(static_cast<int>(value)))
+            return QString::fromLatin1(key);
+        return {};
+    }
 
     // mutex
     extern QWaitCondition waitCondition;
