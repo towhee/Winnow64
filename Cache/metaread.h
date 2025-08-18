@@ -76,9 +76,6 @@ public slots:
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
     void dispatchFinished(QString src);
 
-// protected:
-//     void run() Q_DECL_OVERRIDE;
-
 private:
     void read(int startRow = 0, QString src = "");// decoder
     void processReturningReader(int id, Reader *r);
@@ -91,10 +88,6 @@ private:
     bool nextB();
     bool nextRowToRead();
     void emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay);
-    // void emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx,
-    //                                       const QModelIndex &idx2 = QModelIndex(),
-    //                                       bool clearSelection = false,
-    //                                       const QString &src = "MetaRead::dispatch");
 
     QMutex mutex;
     QWaitCondition condition;
@@ -131,8 +124,6 @@ private:
     bool aIsDone;
     bool bIsDone;
     bool quitAfterTimeoutInitiated;
-
-    //QList<int> toRead;  // to be removed
 
     int startRow = 0;
     int prevStartRow = -1;

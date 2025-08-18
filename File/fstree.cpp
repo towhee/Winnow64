@@ -1098,7 +1098,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         foreach(QString path, foldersToAdd) {
             resetDataModel = false;
             emit folderSelectionChange(path, "Add", resetDataModel, recurse);
-            QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+            QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
+            // QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
         prevIdx = index;
