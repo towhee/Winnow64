@@ -2922,8 +2922,11 @@ void MW::folderChanged()
     // initialize imageCache
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    emit initializeImageCache(netCacheMBSize, cacheMinMB,
-                              isShowCacheProgressBar, cacheWtAhead);
+    // guard for BlockingQueued connection
+    if (imageCache->thread() != QThread::currentThread()) {
+        emit initializeImageCache(netCacheMBSize, cacheMinMB,
+                                  isShowCacheProgressBar, cacheWtAhead);
+    }
 
     // rev up metaRead
     if (G::useReadMeta) {

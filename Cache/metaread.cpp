@@ -69,7 +69,6 @@
 MetaRead::MetaRead(QObject *parent,
                    DataModel *dm,
                    Metadata *metadata,
-                   // FrameDecoder *frameDecoder,
                    ImageCache *imageCache)
     : QObject(nullptr),
       quitTimer(new QTimer(this))
@@ -81,9 +80,7 @@ MetaRead::MetaRead(QObject *parent,
 
     this->dm = dm;
     this->metadata = metadata;
-    this->frameDecoder = frameDecoder;
     this->imageCache = imageCache;
-    // thumb = new Thumb(dm, frameDecoder);
 
     readerCount = QThread::idealThreadCount();
     for (int id = 0; id < readerCount; ++id) {
@@ -104,6 +101,7 @@ MetaRead::MetaRead(QObject *parent,
         dispatchFinished("QuitAfterTimeout");
     });
 
+    isDispatching = false;
     instance = 0;
     abort = false;
     isDebug = false;

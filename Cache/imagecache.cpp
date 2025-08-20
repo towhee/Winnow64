@@ -1217,7 +1217,9 @@ void ImageCache::initialize(int cacheMaxMB,
             ;
     }
 
-    QMutexLocker locker(&gMutex);   // req'd 2025-02-19
+    QMutexLocker locker(&gMutex);
+
+    isInitializing = true;
 
     // reset the image cache
     icd->clear();

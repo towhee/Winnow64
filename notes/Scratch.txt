@@ -2533,3 +2533,11 @@ void ImageCache::dispatch()
 
     if (!abort) launchDecoders("ImageCache::dispatch");
 }
+
+
+<font color=\"red\"><b>  ▶  DONE</b></font>
+
+<!-- Load folders (FSTree, MW::folderSelectionChange, MW::stop, MW::reset -->
+<!-- Load folders (FSTree, MW::folderSelectionChange, MW::stop, MW::reset -->
+
+MW::folderChanged and MetaRead class

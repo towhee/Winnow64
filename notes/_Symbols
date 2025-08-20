@@ -17,6 +17,8 @@ https://www.w3.org/TR/xml-entity-names/025.html  = geometric shapes
 ⬜  White large square
 ⊡⛶🔲▢⬜⬛⌗🄰
 🌑
+→
+☞
 
 CONVERT SVG TO PIXMAP AND PUT ON QLABLE
 #include <QLabel>
