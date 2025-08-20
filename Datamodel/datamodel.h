@@ -197,7 +197,8 @@ public slots:
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
-    void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance, qint64 duration,
+    void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
+    void setIconFromVideoFrame(int dmRow, QImage im, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);
     void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft | Qt::AlignVCenter);

@@ -13,17 +13,17 @@ public:
     TiffThumbDecoder();
 
 signals:
-    void setIcon(QModelIndex dmIdx, QPixmap pm, int instance, QString src);
+    void setIcon(int dmRow, QImage im, int instance, QString src);
 
 public slots:
-    void addToQueue(QString fPath, QModelIndex dmIdx, int dmInstance, int offset);
+    void addToQueue(QString fPath, int dmRow, int dmInstance, int offset);
 
 private:
     void processQueue();
     enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
-        QModelIndex dmIdx;
+        int dmRow;
         int dmInstance;
         int offset;
     };

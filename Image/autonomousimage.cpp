@@ -75,8 +75,8 @@ void AutonomousImage::loadFromVideo(QString &fPath)
             ;
     }
 
-    QModelIndex idx = QModelIndex();  // dummy currently req'd by FrameDecoder
-    emit videoFrameDecode(fPath, longSide, source, idx, G::dmInstance);
+    int dmRow = -1;  // dummy currently req'd by FrameDecoder
+    emit videoFrameDecode(fPath, longSide, source, dmRow, G::dmInstance);
 }
 
 bool AutonomousImage::loadFromEntireFile(QString &fPath, QImage &image)
