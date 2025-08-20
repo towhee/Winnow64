@@ -10,6 +10,8 @@
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
 
+#include <QAbstractItemModelTester>
+
 class SortFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -85,6 +87,7 @@ public:
     QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
+    void clearIconsOutsideChunkRange();
     bool isAllIconsLoaded();
     // bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
@@ -200,6 +203,10 @@ public slots:
                   int role = Qt::EditRole, int align = Qt::AlignLeft | Qt::AlignVCenter);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);

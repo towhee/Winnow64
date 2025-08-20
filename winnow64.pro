@@ -58,6 +58,8 @@ Debug:MOC_DIR = debug/.moc
 Debug:RCC_DIR = debug/.rcc
 Debug:UI_DIR = debug/.ui
 
+QT += core testlib
+
 QT += widgets
 QT += multimedia
 QT += multimediawidgets

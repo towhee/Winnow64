@@ -34,7 +34,7 @@ public:
     void abortReaders();
     void syncInstance();
     QString reportMetaCache();
-    void cleanupIcons();
+    // void cleanupIcons();
     QString diagnostics();
 
     bool isDispatching;
@@ -57,10 +57,13 @@ signals:
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total);
 
+    void setValSf(int sfRow, int sfCol, QVariant value,
+                  int instance, QString src = "",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setMsToRead(QModelIndex dmIdx, QVariant value, int instance, QString src = "MetaRead::dispatch",
                      int role = Qt::EditRole, int align = Qt::AlignRight);
+    void cleanupIcons();
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),
                              bool clearSelection = false,
