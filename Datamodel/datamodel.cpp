@@ -2353,7 +2353,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
 }
 
 
-void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromInstance,
+void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
                                       qint64 duration, FrameDecoder *frameDecoder)
 {
 /*
@@ -2370,49 +2370,51 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap pm, int fromIns
     if (G::isLogger) G::log("DataModel::setIconFromVideoFrame");
     if (isDebug)
         qDebug() << "DataModel::setIconFromVideoFrame         "
-                 << "dmRow =" << dmIdx.row()
+                 << "dmRow =" << dmRow
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
-                 << "fPath =" << dmIdx.data(G::PathRole).toString()
+                 // << "fPath =" << dmIdx.data(G::PathRole).toString()
         ;
 
     if (G::stop) return;
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmIdx.row());
+        G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
         return;
     }
+
+    QModelIndex dmIdx = index(dmRow,0);
+
     if (!dmIdx.isValid()) {
         errMsg = "Invalid dmIdx.";
         G::issue("Warning", errMsg, "DataModel::setIconFromVideoFrame");
         return;
     }
 
-    int row = dmIdx.row();
 
     QMutexLocker locker(&mutex);
-    QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
+    QString modelDuration = index(dmRow, G::DurationColumn).data().toString();
     if (modelDuration == "") {
         duration /= 1000;
         QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
             duration % 60, (duration * 1000) % 1000);
         QString format = "mm:ss";
         if (duration > 3600) format = "hh:mm:ss";
-        setData(index(row, G::DurationColumn), durationTime.toString(format));
+        setData(index(dmRow, G::DurationColumn), durationTime.toString(format));
     }
 
     QStandardItem *item = itemFromIndex(dmIdx);
     if (itemFromIndex(dmIdx)->icon().isNull()) {
         if (item != nullptr) {
-            item->setIcon(pm);
+            item->setIcon(QPixmap::fromImage(im));
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataAttemptedColumn), true);
             setData(index(dmIdx.row(), G::MetadataLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             // set aspect ratio for video
-            if (pm.height() > 0) {
-                QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
-                setData(index(row, G::AspectRatioColumn), aspectRatio);
+            if (im.height() > 0) {
+                QString aspectRatio = QString::number(im.width() * 1.0 / im.height(), 'f', 2);
+                setData(index(dmRow, G::AspectRatioColumn), aspectRatio);
             }
         }
     }
@@ -2478,6 +2480,71 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
     setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+}
+
+void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
+{
+    /*
+    setIcon is a slot that can be signalled from another thread.  If the user is rapidly
+    changing folders it is possible to receive a delayed signal from the previous folder.
+    To prevent this, the datamodel instance is incremented every time a new folder is
+    loaded, and this is checked against the signal instance.
+
+    In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
+    lagging calls when the folder has been changed.  This probably makes the instance
+    checking, which was not totally reliable, to no longer be required.  Keeping it for
+    now.
+
+    This function is subject to potential race conditions, so it is critical that it only
+    be called via a connection with Qt::BlockingQueuedConnection.
+
+    Do not use QMutexLocker.
+*/
+    if (G::isLogger) G::log("DataModel::setIcon1");
+    if (fromInstance != instance) {
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
+        return;
+    }
+    // if (isDebug)
+    {
+        // must come after instance check
+        qDebug() << "DataModel::setIcon1"
+                 << "src =" << src
+                 << "instance =" << instance
+                 << "fromInstance =" << fromInstance
+                 << "row =" << dmRow
+                 ;
+    }
+    if (loadingModel) {
+        // errMsg = "Model is still loading..";
+        // G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
+        // return;
+    }
+
+    QModelIndex dmIdx = index(dmRow,0);
+
+    if (G::stop) {
+        qDebug() << "DataModel::setIcon G::stop = true";
+        return;
+    }
+    if (!dmIdx.isValid()) {
+        errMsg = "Invalid dmIdx.";
+        G::issue("Warning", errMsg, "DataModel::setIcon");
+        return;
+    }
+    if (dmIdx.row() >= rowCount()) {
+        QString r = QString::number(dmIdx.row());
+        QString c = QString::number(rowCount());
+        errMsg = "Model range exceeded.  Row " + r + " > rowCount " + c;
+        G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
+        return;
+    }
+
+    const QVariant vIcon = QVariant(QIcon(QPixmap::fromImage(im)));
+    setData(dmIdx, vIcon, Qt::DecorationRole);
+    setData(index(dmRow, G::IconLoadedColumn), true);
+    setData(index(dmRow, G::MetadataReadingColumn), false);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)

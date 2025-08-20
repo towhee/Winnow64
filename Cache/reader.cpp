@@ -10,7 +10,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     instance = 0;
 
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(this, &Reader::setIcon, dm, &DataModel::setIcon);
+    connect(this, &Reader::setIcon, dm, &DataModel::setIcon1);
 
     thumb = new Thumb(dm);
 
@@ -22,7 +22,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     frameDecoderthread->start();
 
     tiffThumbDecoder = new TiffThumbDecoder();
-    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
+    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
     connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
     tiffThumbDecoderThread = new QThread;
     tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
@@ -91,14 +91,13 @@ bool Reader::readMetadata()
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         // << "isGUI" << G::isGuiThread()
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
 
     // read metadata from file into metadata->m
-    int dmRow = dmIdx.row();
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = false;
     if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, dmRow, instance, true, true, false, true, "Reader::readMetadata");
@@ -135,7 +134,7 @@ bool Reader::readMetadata()
             qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
-            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             << msg
                 ;
         }
@@ -152,7 +151,7 @@ void Reader::readIcon()
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
@@ -161,20 +160,21 @@ void Reader::readIcon()
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         << "EMPTY PATH";
         status = Status::IconFailed;
         return;
     }
 
-    int dmRow = dmIdx.row();
     QString msg;
     QImage image;
 
+    // temp until change videoFrameDecode and thumb->loadThumb
+    QModelIndex dmIdx = dm->index(dmRow,0);
+
     // tiff missing embedded thumbnail
     if (m->ext == "tif" && m->isEmbeddedThumbMissing) {
-        // tiffThumbDecoder->addToQueue(fPath, dmIdx, instance, m->offsetFull);
-        emit tiffMissingThumbDecode(fPath, dmIdx, instance, m->offsetFull);
+        emit tiffMissingThumbDecode(fPath, dmRow, instance, m->offsetFull);
         return;
     }
 
@@ -187,7 +187,7 @@ void Reader::readIcon()
                      << " instance =" << instance
                      << "isReading =" << dm->index(dmRow, G::MetadataReadingColumn).data().toBool()
                 ; //*/
-            emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, instance);
+            emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmRow, instance);
         }
         return;
     }
@@ -206,7 +206,7 @@ void Reader::readIcon()
     qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         << "loadedIcon" << loadedIcon
         << "abort =" << abort
         ;
@@ -218,20 +218,22 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
-        pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        QImage im(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
-            << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
-        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
-        if (!pm.isNull()) return;
+        emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+        if (!im.isNull()) return;
     }
 
     // failed to load icon, load error icon
-    pm = QPixmap(":/images/error_image256.png");
-    emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
+    QImage im = QImage(":/images/error_image256.png");
+    // pm = QPixmap(":/images/error_image256.png");
+    emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+    // emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
@@ -241,13 +243,13 @@ void Reader::readIcon()
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         << msg
             ;
     }
 }
 
-void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
+void Reader::read(int dmRow, QString filePath, int instance,
                   bool needMeta, bool needIcon)
 {
     QString fun = "Reader::read";
@@ -256,10 +258,10 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }
     abort = false;
-    this->dmIdx = dmIdx;
+    this->dmRow = dmRow;
     fPath = filePath;
     this->instance = instance;
-    isVideo = dm->index(dmIdx.row(), G::VideoColumn).data().toBool();
+    isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
     status = Status::Success;
     pending = true;     // set to false when processed in MetaRead::dispatch
     loadedIcon = false;
@@ -271,7 +273,7 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
         << "okReadMeta =" << needMeta
         << "okReadIcon =" << needIcon
         // << "isGUI =" << G::isGuiThread()
@@ -298,7 +300,7 @@ void Reader::read(QModelIndex dmIdx, QString filePath, int instance,
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             ;
     }
 }

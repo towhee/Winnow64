@@ -24,7 +24,7 @@
 
 TiffThumbDecoder::TiffThumbDecoder() {}
 
-void TiffThumbDecoder::addToQueue(QString fPath, QModelIndex dmIdx, int dmInstance,
+void TiffThumbDecoder::addToQueue(QString fPath, int dmRow, int dmInstance,
                                   int offset)
 {
     if (G::isLogger) G::log("TiffThumbDecoder::addToQueue");
@@ -32,7 +32,7 @@ void TiffThumbDecoder::addToQueue(QString fPath, QModelIndex dmIdx, int dmInstan
     if (abort) return;
     Item item;
     item.fPath = fPath;
-    item.dmIdx = dmIdx;
+    item.dmRow = dmRow;
     item.dmInstance = dmInstance;
     item.offset = offset;
     queue.append(item);
@@ -56,14 +56,14 @@ void TiffThumbDecoder::processQueue()
     // process thumbnail
     QImage image;
     QString fPath = queue.at(0).fPath;
-    QModelIndex dmIdx = queue.at(0).dmIdx;
+    int dmRow = queue.at(0).dmRow;
     int offset = queue.at(0).offset;
     int instance = queue.at(0).dmInstance;
     QString src = "TiffThumbDecoder::processQueue";
     Tiff tiff(src);
     if (tiff.read(fPath, &image, offset)) {
-        QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmIdx, pm, instance, src);
+        QImage im(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        emit setIcon(dmRow, im, instance, src);
     }
 
     // recurse

@@ -105,7 +105,7 @@ bool FrameDecoder::queueContains(const QString &fPath)
 }
 
 void FrameDecoder::addToQueue(QString path, int longSide, QString source,
-                              QModelIndex dmIdx, int dmInstance)
+                              int dmRow, int dmInstance)
 {
     if (abort) return;
     // if (queueContains(path)) return;
@@ -114,7 +114,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
     item.fPath = path;
     item.longSide = longSide;
     item.source = source;
-    item.dmIdx = dmIdx;
+    item.dmRow = dmRow;
     item.dmInstance = dmInstance;
 
     queue.append(item);
@@ -233,11 +233,10 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
     }
 
     QImage scaledIm = (item.longSide > 0)
-                      ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
-                      : im;
+                ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
+                : im;
 
-    if (item.source == "dmThumb" && item.dmIdx.isValid()) {
-        QPixmap pm = QPixmap::fromImage(scaledIm);
+    if (item.source == "dmThumb" && item.dmRow >= 0) {
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
         /*
         qDebug() << "FrameDecoder::handleFrameChanged emit setFrameIcon"
@@ -248,7 +247,7 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
                  << "pm.height() =" << pm.height()
                  << "duration =" << duration
             ; //*/
-        emit setFrameIcon(item.dmIdx, pm, item.dmInstance, duration, this);
+        emit setFrameIcon(item.dmRow, scaledIm, item.dmInstance, duration, this);
     } else {
         // used in FindDuplicates
         // /*

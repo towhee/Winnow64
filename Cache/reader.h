@@ -26,7 +26,8 @@ public:
     qint64 msToRead;
     QString fPath = "";
     QString errMsg = "";
-    QModelIndex dmIdx = QModelIndex();
+    // QModelIndex dmIdx = QModelIndex();
+    int dmRow = -1;
     Metadata *metadata;
     QPixmap pm;
     bool pending = false;
@@ -51,15 +52,16 @@ public:
 
 signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
-                          QModelIndex dmIdx, int dmInstance);
-    void tiffMissingThumbDecode(QString fPath, QModelIndex dmIdx, int instance, int offset);
+                          int dmRow, int dmInstance);
+    void tiffMissingThumbDecode(QString fPath, int dmRow, int instance, int offset);
     void addToDatamodel(ImageMetadata m, QString src);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
+    void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
+    // void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     void done(int threadId, bool isReturning);
 
 public slots:
-    void read(QModelIndex dmIdx, QString filePath, int instance,
+    void read(int dmRow, QString filePath, int instance,
               bool needMeta, bool needIcon);
     void abortProcessing();
     void stop();

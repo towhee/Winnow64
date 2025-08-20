@@ -152,9 +152,8 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
             ;
     if (G::isLogger) G::log(fun, fPath);
 
-    QModelIndex dmIdx = dm->index(dmRow, 0);
     if (!abort)
-        emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmIdx, dm->instance);
+        emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmRow, dm->instance);
 }
 
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)

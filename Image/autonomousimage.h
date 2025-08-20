@@ -21,7 +21,7 @@ public:
 
 signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
-                          QModelIndex dmIdx, int dmInstance);
+                          int dmRow, int dmInstance);
     void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignCenter);
     void getFrame(QString fPath);

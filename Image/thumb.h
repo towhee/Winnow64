@@ -33,7 +33,7 @@ public:
 
 signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
-                          QModelIndex dmIdx, int dmInstance);
+                          int dmRow, int dmInstance);
     void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignCenter);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,

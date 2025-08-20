@@ -701,7 +701,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
 */
 
     QString fun = "MetaRead::processReturningReader";
-    int dmRow = r->dmIdx.row();
+    int dmRow = r->dmRow;
 
     // progress counter
     metaReadCount++;
@@ -735,7 +735,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
     {
         imageCacheTriggered = true;
         // model and proxy rows the same in metaRead
-        QModelIndex sfIdx = dm->sf->index(r->dmIdx.row(),0);
+        QModelIndex sfIdx = dm->sf->index(r->dmRow,0);
         bool clearSelection = true;
         QString src = "MetaRead::dispatch";
         // select the current index row in thumbView, gridView and tableView
@@ -870,7 +870,7 @@ void MetaRead::dispatch(int id, bool isReturning)
     if (isDebug)
     {
         QString  row;
-        r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
+        r->fPath == "" ? row = "-1" : row = QString::number(r->dmRow);
         QString fun1;
         if (isReturning) fun1 = fun + " reader returning";
         else fun1 = fun + " reader starting";
@@ -893,7 +893,7 @@ void MetaRead::dispatch(int id, bool isReturning)
     if (debugLog || (G::isLogger || G::isFlowLogger))
     {
         QString  row;
-        r->fPath == "" ? row = "-1" : row = QString::number(r->dmIdx.row());
+        r->fPath == "" ? row = "-1" : row = QString::number(r->dmRow);
         QString from;
         r->fPath == "" ? from = "start reader" : from = "return from reader";
         QString s = "id = " + QString::number(id).rightJustified(2, ' ');
@@ -934,6 +934,7 @@ void MetaRead::dispatch(int id, bool isReturning)
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
         QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
+        int dmRow = dmIdx.row();
         QString fPath = sfIdx.data(G::PathRole).toString();
 
         if (fPath.isEmpty())
@@ -969,7 +970,7 @@ void MetaRead::dispatch(int id, bool isReturning)
            on.  Must use invoke to prevent crash.  */
         if (!abort) {
             QMetaObject::invokeMethod(readers.at(id), "read", Qt::QueuedConnection,
-                                      Q_ARG(QModelIndex, dmIdx),
+                                      Q_ARG(int, dmRow),
                                       Q_ARG(QString, fPath),
                                       Q_ARG(int, dm->instance),
                                       Q_ARG(bool, needMeta),
