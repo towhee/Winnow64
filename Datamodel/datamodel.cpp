@@ -193,6 +193,17 @@ DataModel::DataModel(QObject *parent,
 
     // set true for debug output
     isDebug = false;
+
+#ifdef QT_DEBUG  // or !defined(NDEBUG)
+    // Warn on contract violations but keep running.
+    new QAbstractItemModelTester(sf,
+         QAbstractItemModelTester::FailureReportingMode::Warning,
+         sf);
+// or
+    // new QAbstractItemModelTester(sf,
+    //      QAbstractItemModelTester::FailureReportingMode::Fatal,
+    //      sf);
+#endif
 }
 
 void DataModel::setModelProperties()
@@ -2151,6 +2162,79 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
     setData(sfIdx, align, Qt::TextAlignmentRole);
 }
 
+void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
+                         QString src, int role, int align)
+{
+/*
+    Only call via connection.   Example: emit setValDm(args)
+*/
+    if (G::stop) return;
+    if (isDebug)
+    {
+    qDebug() << "DataModel::setValDm"
+             << "dmRow =" << dmRow
+             << "dmCol =" << dmCol
+             << "value =" << value
+             << "call Instance =" << instance
+             << "model Instance =" << this->instance
+             << "src =" << src
+             ;
+    }
+
+    if (instance != this->instance) {
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setValueDm", dmRow);
+        return ;
+    }
+
+    QModelIndex dmIdx = index(dmRow, dmCol);
+
+    if (!dmIdx.isValid()) {
+        errMsg = "Invalid dmIdx.  Src: " + src;
+        G::issue("Warning", errMsg, "DataModel::setValueDm", dmRow);
+        return;
+    }
+
+    setData(dmIdx, value, role);
+    setData(dmIdx, align, Qt::TextAlignmentRole);
+}
+void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
+                         QString src, int role, int align)
+{
+    /*
+    Only call via connection.   Example: emit setValSf(args)
+*/
+    if (G::stop) return;
+    if (isDebug)
+    {
+        qDebug() << "DataModel::setValSf"
+                 << "sfRow =" << sfRow
+                 << "sfCol =" << sfCol
+                 << "value =" << value
+                 << "call Instance =" << instance
+                 << "model Instance =" << this->instance
+                 << "src =" << src
+            ;
+    }
+
+    if (instance != this->instance) {
+        errMsg = "Instance clash from " + src;
+        G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
+        return ;
+    }
+
+    QModelIndex sfIdx = sf->index(sfRow, sfCol);
+
+    if (!sfIdx.isValid()) {
+        errMsg = "Invalid sfIdx.  Src: " + src;
+        G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
+        return;
+    }
+
+    sf->setData(sfIdx, value, role);
+    sf->setData(sfIdx, align, Qt::TextAlignmentRole);
+}
+
 void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
@@ -2533,6 +2617,34 @@ void DataModel::clearAllIcons() // not being used
     QMutexLocker locker(&mutex);
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
+    }
+}
+
+void DataModel::clearIconsOutsideChunkRange()
+{
+    if (isDebug)
+    qDebug() << "DataModel::clearIconsOutsideChunkRange" << "instance =" << instance;
+
+    // check if datamodel size is less than assigned icon cache chunk size
+    if (iconChunkSize >= sf->rowCount()) {
+        return;
+    }
+
+    QMutexLocker locker(&mutex);
+
+    for (int i = 0; i < startIconRange; i++) {
+        if (abort) return;
+        if (!sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            sf->setData(sf->index(i, 0), QVariant(), Qt::DecorationRole);
+            sf->setData(sf->index(i, G::IconLoadedColumn), false);
+        }
+    }
+    for (int i = endIconRange + 1; i < sf->rowCount(); i++) {
+        if (abort) return;
+        if (!sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+            sf->setData(sf->index(i, 0), QVariant(), Qt::DecorationRole);
+            sf->setData(sf->index(i, G::IconLoadedColumn), false);
+        }
     }
 }
 

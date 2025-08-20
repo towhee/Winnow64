@@ -455,44 +455,44 @@ QString MetaRead::reportMetaCache()
     return reportString;
 }
 
-void MetaRead::cleanupIcons()
-{
-/*
-    Remove icons not in icon range after start row change, iconChunkSize change or
-    MW::deleteFiles.
+// void MetaRead::cleanupIcons()
+// {
+// /*
+//     Remove icons not in icon range after start row change, iconChunkSize change or
+//     MW::deleteFiles.
 
-    The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
-    the current datamodel row dm->currentSfRow.
-*/
-    QString fun = "MetaRead::cleanupIcons";
-    if (G::isLogger) G::log(fun);
-    if (isDebug)
-        qDebug().noquote()
-            << fun.leftJustified(col0Width)
-            << "firstIconRow =" << firstIconRow
-            << "lastIconRow =" << lastIconRow
-            ;
+//     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
+//     the current datamodel row dm->currentSfRow.
+// */
+//     QString fun = "MetaRead::cleanupIcons";
+//     if (G::isLogger) G::log(fun);
+//     if (isDebug)
+//         qDebug().noquote()
+//             << fun.leftJustified(col0Width)
+//             << "firstIconRow =" << firstIconRow
+//             << "lastIconRow =" << lastIconRow
+//             ;
 
-    // check if datamodel size is less than assigned icon cache chunk size
-    if (dm->iconChunkSize >= sfRowCount) {
-        return;
-    }
+//     // check if datamodel size is less than assigned icon cache chunk size
+//     if (dm->iconChunkSize >= sfRowCount) {
+//         return;
+//     }
 
-    for (int i = 0; i < dm->startIconRange; i++) {
-        if (abort) return;
-        if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
-            dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
-        }
-    }
-    for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
-        if (abort) return;
-        if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
-            dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
-        }
-    }
-}
+//     for (int i = 0; i < dm->startIconRange; i++) {
+//         if (abort) return;
+//         if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+//             dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
+//             dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
+//         }
+//     }
+//     for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
+//         if (abort) return;
+//         if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
+//             dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
+//             dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
+//         }
+//     }
+// }
 
 inline bool MetaRead::needToRead(int sfRow)
 /*
@@ -1076,9 +1076,10 @@ void MetaRead::dispatchFinished(QString src)
     bool running = false;
     bool show = true;
     success = allMetaIconLoaded();
-    if (G::useUpdateStatus && !G::allMetadataLoaded)
+    if (G::useUpdateStatus && !G::allMetadataLoaded) {
         emit runStatus(running, show, success, fun);
-    cleanupIcons();
+    }
+    emit cleanupIcons();
     isDispatching = false;
 
     // do not emit done if only updated icon loading

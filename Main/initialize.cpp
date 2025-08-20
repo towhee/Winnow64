@@ -265,7 +265,6 @@ void MW::createDataModel()
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
-    connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters);
 
@@ -318,6 +317,12 @@ void MW::createMetaRead()
 
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);
+
+    // set a value in dm->sf proxy
+    connect(metaRead, &MetaRead::setValSf, dm, &DataModel::setValSf);
+
+    // cleanup icons outside icon chunk range
+    connect(metaRead, &MetaRead::cleanupIcons, dm, &DataModel::clearIconsOutsideChunkRange);
 
     // update thumbView in case scrolling has occurred
     connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,

@@ -2534,10 +2534,55 @@ void ImageCache::dispatch()
     if (!abort) launchDecoders("ImageCache::dispatch");
 }
 
+// in metaread.h signals
+void setValSf(int sfRow, int sfCol, QVariant value,
+              int instance, QString src = "",
+              int role = Qt::EditRole, int align = Qt::AlignLeft);
 
-<font color=\"red\"><b>  ▶  DONE</b></font>
+// in MetaRead::MetaRead
+connect(this, &MetaRead::setValueSf, dm, &DataModel::setValueSf);
 
-<!-- Load folders (FSTree, MW::folderSelectionChange, MW::stop, MW::reset -->
-<!-- Load folders (FSTree, MW::folderSelectionChange, MW::stop, MW::reset -->
+void DataModel::setValueSf(int sfRow, int sfCol, QVariant value, int instance,
+                           QString src, int role, int align)
+{
+    if (instance != this->instance) {
+        return ;
+    }
 
-MW::folderChanged and MetaRead class
+    QModelIndex sfIdx = sf->index(sfRow, sfCol);
+    if (!sfIdx.isValid()) {
+        return;
+    }
+
+    sf->setData(sfIdx, value, role);
+    setData(sfIdx, align, Qt::TextAlignmentRole);
+}
+
+inline bool MetaRead::needToRead(int sfRow)
+{
+    needIcon = false;
+    needMeta = false;
+
+    bool isReading = dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool();
+    bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
+    bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+
+    // already reading this item?
+    if (isReading || isIcon) {
+        return false;
+    }
+    else {
+        QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
+        dm->sf->setData(sfReadingIdx, true);
+    }
+
+    if (!isMeta) {
+        needMeta = true;
+    }
+    if (!isIcon) {
+        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
+            needIcon = true;
+        }
+    }
+    return needMeta || needIcon;
+}
