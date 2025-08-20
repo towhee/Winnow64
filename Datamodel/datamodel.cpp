@@ -844,6 +844,139 @@ void DataModel::addFolder(const QString &folderPath)
     }
 }
 
+/*
+void DataModel::addFolder(const QString& folderPath)
+{
+    // All model mutations must happen on GUI thread.
+    Q_ASSERT(thread() == QThread::currentThread());
+
+    abort = false;                 // consider std::atomic_bool if other threads can set it
+    loadingModel = true;
+
+    // Track that this folder is active
+    folderList.append(folderPath);
+
+    // 1) Build file list (no sorting by QDir; we’ll sort ourselves)
+    QDir dir(folderPath);
+    dir.setNameFilters(*fileFilters);                  // assumed already set
+    dir.setFilter(QDir::Files | QDir::Readable | QDir::Hidden);
+    dir.setSorting(QDir::NoSort);
+    QList<QFileInfo> files = dir.entryInfoList();
+
+    // 2) Sort as required
+    if (combineRawJpg) {
+        std::sort(files.begin(), files.end(), lessThanCombineRawJpg);
+    } else {
+        std::sort(files.begin(), files.end(), lessThan);
+    }
+
+    // 3) Filter out zero-size and already-present, and prepare pairing
+    QVector<QFileInfo> toInsert;
+    toInsert.reserve(files.size());
+
+    // O(1) presence check
+    auto hasPath = [&](const QString& p) {
+        // Prefer a QHash<QString,int> pathToRow; fall back to your current function.
+        return fPathRowContains(p);
+    };
+
+    for (const QFileInfo& fi : files) {
+        if (abort) { loadingModel = false; return; }   // clean abort
+        if (fi.size() == 0) continue;
+        if (hasPath(fi.filePath())) continue;
+        toInsert.push_back(fi);
+    }
+    if (toInsert.isEmpty()) {
+        // Nothing new; possibly finish overall load if queue empty
+        if (folderQueue.isEmpty()) endLoad(true);
+        return;
+    }
+
+    // 4) Batch insert rows
+    const int firstRow = rowCount();
+    const int lastRow  = firstRow + toInsert.size() - 1;
+
+    if (columnCount() == 0) setColumnCount(G::TotalColumns);
+    beginInsertRows(QModelIndex(), firstRow, lastRow);
+    // Ensure your internal storage grows here if you keep custom vectors
+    setRowCount(rowCount() + toInsert.size());
+    endInsertRows();
+
+    // 5) Fill data for inserted rows (no signals storming if your setData emits dataChanged;
+    //    consider a final dataChanged over the inserted block if needed)
+    //    Build a RAW index for pairing: baseName -> row index of RAW
+    QHash<QString, int> rawRowByBase;
+
+    const auto isJpg = [](const QString& s) {
+        const QString t = s.toLower();
+        return (t == "jpg" || t == "jpeg");
+    };
+
+    int row = firstRow;
+    int progressCounter = 0;
+    constexpr int kProgressInterval = 100;
+
+    for (const QFileInfo& fi : toInsert) {
+        if (abort) { loadingModel = false; return; }   // clean abort
+
+        addFileDataForRow(row, fi);                    // your existing filler
+        // Ensure PathRole, TypeColumn, etc. are set in addFileDataForRow
+
+        const QString suffix   = fi.suffix().toLower();
+        const QString baseName = fi.completeBaseName();
+
+        // Pair RAW/JPG regardless of order
+        if (!isJpg(suffix)) {
+            // Candidate RAW; remember it for a possible JPG
+            rawRowByBase.insert(baseName, row);
+        } else {
+            // JPG; see if we already saw a RAW with this base name
+            if (int rawRow = rawRowByBase.value(baseName, -1); rawRow >= 0) {
+                // Mark duplicate roles on both rows
+                const QModelIndex jpgIdx = index(row, 0);
+                const QModelIndex rawIdx = index(rawRow, 0);
+
+                setData(rawIdx, true,                     G::DupHideRawRole);
+                setData(rawIdx, jpgIdx,                   G::DupOtherIdxRole);
+                setData(jpgIdx, rawIdx,                   G::DupOtherIdxRole);
+                setData(jpgIdx, true,                     G::DupIsJpgRole);
+                setData(jpgIdx, fi.suffix().toUpper(),    G::DupRawTypeRole);
+
+                if (combineRawJpg)
+                    setData(index(row, G::TypeColumn),     "JPG+" + fi.suffix().toUpper());
+                else
+                    setData(index(row, G::TypeColumn),     "JPG");
+            } else {
+                // JPG appeared before RAW; remember JPG position to link later if you want
+                // (optional: keep a jpgRowByBase and reconcile when RAW shows up)
+            }
+        }
+
+        if (++progressCounter % kProgressInterval == 0) {
+            updateLoadStatus(row + 1); // show progress using current count
+        }
+
+        ++row;
+    }
+
+    // 6) Initialize selection on the first added folder if this is the first batch
+    if (firstRow == 0 && row > 0) {
+        firstFolderPathWithImages = folderPath;
+        setCurrent(index(0, 0), instance);
+    }
+
+    // 7) Adjust icon chunking policy
+    if (rowCount() > hugeIconThreshold) {
+        iconChunkSize = 100;
+    }
+
+    // 8) Finish a “load session” when folder queue is empty
+    if (folderQueue.isEmpty()) {
+        endLoad(true);
+    }
+}
+//*/
+
 void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
@@ -1081,6 +1214,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // string to hold aggregated text for searching
     QString search = fPath;
 
+    // block signals while stuffing cells
+    const QSignalBlocker b(this);
+
     // QMutexLocker locker(&mutex);
     setData(index(row, G::RowNumberColumn), row + 1);
     setData(index(row, G::RowNumberColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1098,8 +1234,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
     setData(index(row, G::FolderNameColumn), folderName);
-    setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
     QString s = fileInfo.suffix().toUpper();
+    setData(index(row, G::TypeColumn), s);
+    setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     uint p = static_cast<uint>(fileInfo.permissions());
@@ -1108,8 +1245,6 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     bool isReadWrite = (p & QFileDevice::ReadUser) && (p & QFileDevice::WriteUser);
     setData(index(row, G::ReadWriteColumn), isReadWrite);
     setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::TypeColumn), s);
-    setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     // size
     quint32 bytes = fileInfo.size();
     setData(index(row, G::SizeColumn), bytes);
@@ -1139,6 +1274,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
     setData(index(row, G::SearchTextColumn), search);
     setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
+
+    // emit one compact notification (only if you need the view to refresh now)
+    emit dataChanged(index(row, 0), index(row, columnCount()-1));
 }
 
 bool DataModel::updateFileData(QFileInfo fileInfo)
@@ -1573,6 +1711,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     QMutexLocker locker(&mutex);
     mLock = true;
+    // block signals while stuffing cells
+    const QSignalBlocker b(this);
+
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LabelColumn), m.label);
@@ -1721,6 +1862,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         else mb = static_cast<float>(w * h * 1.0 / 262144);
         setData(index(row, G::CacheSizeColumn), mb);
     }
+
+    // emit one compact notification (only if you need the view to refresh now)
+    emit dataChanged(index(row, 0), index(row, columnCount()-1));
 
     // check for missing thumbnail in jpg/tiif
     if (m.isReadWrite)
@@ -3294,7 +3438,8 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
 
 SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     QSortFilterProxyModel(parent),
-    combineRawJpg(combineRawJpg)
+    combineRawJpg(combineRawJpg),
+    finished(true), suspendFiltering(false)
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
     this->filters = filters;
@@ -3312,7 +3457,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) {
         // qDebug() << "SortFilter::filterAcceptsRow suspendFiltering = true" << sourceRow;
-        return true;
+        return false;
     }
 
     // still loading metadata
@@ -3344,6 +3489,11 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // cycle through the filters and identify matches
     QTreeWidgetItemIterator filter(filters);
     while (*filter) {
+        // guard against filters changing
+        if (!filters) {
+            finished = true;
+            return true;
+        }
         if ((*filter)->parent()) {
             /*
             There is a parent therefore not a top level item so this is one of the items
