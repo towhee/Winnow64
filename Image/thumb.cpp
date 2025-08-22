@@ -42,8 +42,20 @@ Thumb::~Thumb()
 
 void Thumb::abortProcessing()
 {
-    abort = true;
+    // if (isDebug)
+    {
+        qDebug() << "Thumb::abortProcessing";
+    }
     if (frameDecoder) frameDecoder->stop();
+    abort = true;
+}
+
+void Thumb::setIdle(bool v)
+{
+    QMutexLocker lock(&mutex);
+    if (idle == v) return;
+    idle = v;
+    if (!idle) idleCondition.wakeAll();  // notify waiters
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
@@ -423,7 +435,7 @@ void Thumb::presetOffset(uint offset, uint length)
     isPresetOffset = true;
 }
 
-bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int instance, QString src)
+bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw,
@@ -431,29 +443,30 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     smaller preview as that is faster than loading the entire full resolution image just
     to get a thumbnail. This thumbnail is used by the grid and filmstrip views.
 
-    Called by MW::fileSelectionChange when an icon has not been loaded and by
-    MW::refreshCurrentFolder.
+    Called by Reader::readIcon.
 */
     QString fun = "Thumb::loadThumb";
-    if (isDebug)
+    // if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "Instance =" << instance << src << fPath;
     if (G::isLogger) G::log(fun, fPath);
 
     abort = false;
-
-    dmRow = dmIdx.row();
+    idle = false;
+    this->dmRow = dmRow;
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
         G::issue("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
-        if (isDebug)
+        // if (isDebug)
+        {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "Instance Clash" << "row =" << dmRow
             << "G::instance =" << G::dmInstance << "instance =" << instance
             << fPath;
+        }
         return false;
     }
     this->instance = instance;
@@ -466,6 +479,7 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     if (isVideo) {
         if (G::renderVideoThumb) {
             if (!abort) loadFromVideo(fPath, dmRow);
+            idle = true;
             return true;
         }
     }
@@ -476,7 +490,9 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
         QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
         QFile(fPath).setPermissions(newPermissions);
     }
-
+    qDebug() << "loadThumb";
+    if (abort) return false;
+    qDebug() << "loadThumb1";
     // get offset and length (both zero if not embedded thumb)
     if (!isPresetOffset) {
         offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
@@ -484,7 +500,7 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     }
     isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
-    /*
+    // /*
     qDebug().noquote()
              << fun.leftJustified(col0Width)
              << "dmRow =" << dmRow
@@ -502,7 +518,6 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
     // try up to 10 times if file is open (probably ImageCaching)
     while ((status == Status::None || status == Status::Open) && attempts < maxAttempts) {
 
-        if (G::stop) return false;
         if (abort) return false;
 
         // try again after 100ms
@@ -510,6 +525,7 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
             attempts++;
             G::wait(100);
         }
+        if (abort) return false;
 
         // raw image file or tiff with embedded jpg thumbnail
         if (isEmbeddedThumb) {
@@ -548,6 +564,8 @@ bool Thumb::loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image, int inst
         if (status == Status::Success) break;
 
     }
+
+    if (abort) return false;
 
     QFile(fPath).setPermissions(oldPermissions);
 

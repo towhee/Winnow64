@@ -479,7 +479,7 @@ void MW::setCombineRawJpg()
 
     // prevent crash when there are videos (did not work)
     stop();
-    reset();
+    // reset();
 
     settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();

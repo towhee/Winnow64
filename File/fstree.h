@@ -152,6 +152,7 @@ signals:
     void status(bool keepBase, QString msg, QString src);
 
 private:
+    bool isItemVisible(const QModelIndex idx);
     void selectRecursively(QString folderPath, bool toggle = false);
     struct ViewState {
         QPointF scrollPosition;

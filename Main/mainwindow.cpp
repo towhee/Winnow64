@@ -2163,11 +2163,10 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         G::log("","");
         {
-            // QString msg = "op = " + op +
             QString msg = "op = " + G::enumClassToString(op) +
                 " recurse = " + QVariant(recurse).toString() +
                 " fsTree->selectionCount() = " + QVariant(fsTree->selectionCount()).toString() +
@@ -2568,8 +2567,7 @@ void MW::stop(QString src)
 
     buildFilters->abortIfRunning();
 
-    G::stop = false;
-    G::removingFolderFromDM = false;
+    reset(src);
 
     setCentralMessage("");
 
@@ -2577,6 +2575,9 @@ void MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
         if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
     }
+
+    G::stop = false;
+    G::removingFolderFromDM = false;
 }
 
 bool MW::reset(QString src)
@@ -3119,19 +3120,6 @@ void MW::folderChangeCompleted()
             // dm->setIcon(dmIdx, pm, instance, fun);
         }
     }
-    if (isNullIcon) {
-
-        // updateChange(0, true, "MW::folderChangeCompleted");
-
-        // updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        // // qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
-        // dm->setIconRange(0);
-        // QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
-        //                           Q_ARG(int, 0),
-        //                           Q_ARG(bool, true),
-        //                           Q_ARG(QString, fun)
-        //                           );
-    }
 }
 
 void MW::thumbHasScrolled()
@@ -3407,7 +3395,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     }
     else {
         stop("Bookmark clicked");
-        reset("Bookmark clicked");
+        // reset("Bookmark clicked");
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
         enableStatusBarBtns();
@@ -4979,7 +4967,7 @@ void MW::ejectUsb(QString path)
 
     if (ejectDriveIsCurrent) {
         stop("MW::ejectUSB");
-        reset("MW::ejectUSB");
+        // reset("MW::ejectUSB");
         fsTree->selectionModel()->clearSelection();
     }
 

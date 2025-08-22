@@ -106,8 +106,6 @@ MetaRead::MetaRead(QObject *parent,
     abort = false;
     isDebug = false;
     debugLog = false;
-
-    // metaReadThread.start();
 }
 
 MetaRead::~MetaRead()
@@ -151,16 +149,10 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     }
 
     QMutexLocker locker(&mutex);
+
+    // reset
     abort = false;
-
-    // prevent redundant calls
     startRow = sfRow;
-    // if (sfRow >= 0 && sfRow < sfRowCount) startRow = sfRow;
-    // else startRow = 0;
-    // if (instance == dm->instance && prevStartRow == startRow) return;
-    prevStartRow = startRow;
-
-    // load datamodel with metadata and icons
     this->src = src;
     sfRowCount = dm->sf->rowCount();
     lastRow = sfRowCount - 1;
@@ -171,7 +163,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     isDone = false;
     success = false;                        // used to update statusbar
     // set icon range. G::iconChunkLoaded is set in MW::updateChange
-    firstIconRow = dm->startIconRange;      // just use dm->startIconRange ?  RGH
+    firstIconRow = dm->startIconRange;
     lastIconRow = dm->endIconRange;
 
     if (isDebug)
@@ -194,7 +186,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     }
 
     if (G::useUpdateStatus && !G::allMetadataLoaded)
-        emit runStatus(true, true, true, fun); // isRunning, show, success, source
+        // runStatus: isRunning, show, success, source
+        emit runStatus(true, true, true, fun);
 
 
     if (instance == dm->instance) {
@@ -246,7 +239,7 @@ void MetaRead::stopReaders()
 */
 {
     QString fun = "MetaRead::stopReaders";
-    if (/*debugLog && */(G::isLogger || G::isFlowLogger)) G::log(fun);
+    if (G::isLogger || G::isFlowLogger) G::log(fun);
     if (isDebug)
     {
         qDebug().noquote()
@@ -256,7 +249,6 @@ void MetaRead::stopReaders()
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
-        // readers[id]->stop();
         QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
     }
 }
@@ -270,6 +262,7 @@ void MetaRead::abortReaders()
     // qDebug().noquote() << fun.leftJustified(col0Width);
 
     abort = true;
+
     // abort all readers
     for (int id = 0; id < readerCount; ++id) {
         readers[id]->abortProcessing();
@@ -304,13 +297,12 @@ void MetaRead::initialize(QString src)
             ;
     }
 
-    abort = true;
+    // abort = true;
     // for (Reader *r : readers) r->abortProcessing();
     // abortReaders();
     dmRowCount = dm->rowCount();
     metaReadCount = 0;
     metaReadItems = dmRowCount;
-    prevStartRow = -1;
     isAhead = true;
     aIsDone = false;
     bIsDone = false;

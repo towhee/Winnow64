@@ -517,7 +517,7 @@ void MW::deleteFolder()
 
     if (dm->folderList.contains(dirToDelete)) {
         stop("deleteFolder");
-        reset();
+        // reset();
         setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
     }
 
