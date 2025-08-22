@@ -42,12 +42,27 @@ Thumb::~Thumb()
 
 void Thumb::abortProcessing()
 {
-    // if (isDebug)
+    QString fun = "Thumb::abortProcessing";
+    if (isDebug)
     {
-        qDebug() << "Thumb::abortProcessing";
+        qDebug() << fun;
     }
     if (frameDecoder) frameDecoder->stop();
     abort = true;
+
+    // Now wait until pending == false (or timeout)
+    QDeadlineTimer deadline(500);
+    while (!idle) {
+        const qint64 remaining = deadline.remainingTime();
+        if (remaining <= 0) {
+            qDebug().noquote() << fun.leftJustified(col0Width)  << "timeout";
+            break;                 // timed out
+        }
+        if (idleCondition.wait(&mutex, int(remaining))) {     // spurious wakeups possible
+            abort = false;
+            break;                               // true if finished during wait
+        }
+    }
 }
 
 void Thumb::setIdle(bool v)
@@ -453,7 +468,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
     if (G::isLogger) G::log(fun, fPath);
 
     abort = false;
-    idle = false;
+    setIdle(false);
     this->dmRow = dmRow;
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
@@ -491,7 +506,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
         QFile(fPath).setPermissions(newPermissions);
     }
     qDebug() << "loadThumb";
-    if (abort) return false;
+    if (abort) {idle = true; return false;}
     qDebug() << "loadThumb1";
     // get offset and length (both zero if not embedded thumb)
     if (!isPresetOffset) {
@@ -518,14 +533,14 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
     // try up to 10 times if file is open (probably ImageCaching)
     while ((status == Status::None || status == Status::Open) && attempts < maxAttempts) {
 
-        if (abort) return false;
+        if (abort) {idle = true; return false;}
 
         // try again after 100ms
         if (status == Status::Open) {
             attempts++;
             G::wait(100);
         }
-        if (abort) return false;
+        if (abort) {idle = true; return false;}
 
         // raw image file or tiff with embedded jpg thumbnail
         if (isEmbeddedThumb) {
@@ -565,7 +580,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
 
     }
 
-    if (abort) return false;
+    if (abort) {idle = true; return false;}
 
     QFile(fPath).setPermissions(oldPermissions);
 
@@ -578,6 +593,8 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
         if (!abort)
             if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     }
+
+    idle = true;
 
     if (status == Status::Success) return true;
     else return false;
