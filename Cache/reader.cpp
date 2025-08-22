@@ -9,8 +9,10 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     threadId = id;
     instance = 0;
 
-    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    connect(this, &Reader::setIcon, dm, &DataModel::setIcon1);
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
+    connect(this, &Reader::setIcon, dm, &DataModel::setIcon1,
+            Qt::BlockingQueuedConnection);
 
     thumb = new Thumb(dm);
 
@@ -66,12 +68,36 @@ void Reader::abortProcessing()
     QString fun = "Reader::abortProcessing";
     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
 
-    mutex.lock();
-    abort = true;
     thumb->abortProcessing();
+
+    // Tell worker to stop accepting new work
+    QMutexLocker lock(&mutex);
+    abort  = true;
+
+    // Now wait until pending == false (or timeout)
+    QDeadlineTimer deadline(500);
+    while (pending) {
+        const qint64 remaining = deadline.remainingTime();
+        if (remaining <= 0) {
+            qDebug().noquote() << fun.leftJustified(col0Width)
+                               << "id =" << threadId << "timeout";
+            break;                 // timed out
+        }
+        if (!pendingCondition.wait(&mutex, int(remaining))) {     // spurious wakeups possible
+            abort = false;
+            break;                               // true if finished during wait
+        }
+    }
+
     status = Status::Aborted;
-    pending = false;
-    mutex.unlock();
+}
+
+void Reader::setPending(bool v)
+{
+    QMutexLocker lock(&mutex);
+    if (pending == v) return;
+    pending = v;
+    if (!pending) pendingCondition.wakeAll();  // notify waiters
 }
 
 inline bool Reader::instanceOk()
@@ -169,9 +195,6 @@ void Reader::readIcon()
     QString msg;
     QImage image;
 
-    // temp until change videoFrameDecode and thumb->loadThumb
-    QModelIndex dmIdx = dm->index(dmRow,0);
-
     // tiff missing embedded thumbnail
     if (m->ext == "tif" && m->isEmbeddedThumbMissing) {
         emit tiffMissingThumbDecode(fPath, dmRow, instance, m->offsetFull);
@@ -200,9 +223,10 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, dmIdx, image, instance, "MetaRead::readIcon");
+    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, "MetaRead::readIcon");
 
-    if (isDebug)
+    // if (isDebug)
+    {
     qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
@@ -210,6 +234,7 @@ void Reader::readIcon()
         << "loadedIcon" << loadedIcon
         << "abort =" << abort
         ;
+    }
 
     #ifdef TIMER
     t4 = t.restart();
@@ -231,9 +256,7 @@ void Reader::readIcon()
 
     // failed to load icon, load error icon
     QImage im = QImage(":/images/error_image256.png");
-    // pm = QPixmap(":/images/error_image256.png");
     emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
-    // emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
@@ -263,7 +286,7 @@ void Reader::read(int dmRow, QString filePath, int instance,
     this->instance = instance;
     isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
     status = Status::Success;
-    pending = true;     // set to false when processed in MetaRead::dispatch
+    setPending(true);
     loadedIcon = false;
     offsetThumb = 0;
     lengthThumb = 0;
@@ -291,7 +314,7 @@ void Reader::read(int dmRow, QString filePath, int instance,
     bool isReturning = true;
     if (!abort) emit done(threadId, isReturning);
 
-    pending = false;
+    setPending(false);
 
     if (G::isLogger) G::log("Reader::read", "Finished");
     fun = "Reader::read done and returning";

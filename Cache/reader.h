@@ -26,7 +26,6 @@ public:
     qint64 msToRead;
     QString fPath = "";
     QString errMsg = "";
-    // QModelIndex dmIdx = QModelIndex();
     int dmRow = -1;
     Metadata *metadata;
     QPixmap pm;
@@ -67,8 +66,9 @@ public slots:
     void stop();
 
 private:
-    QMutex mutex;
-    QWaitCondition condition;
+    mutable QMutex mutex;
+    QWaitCondition pendingCondition;
+    void setPending(bool v);
     bool abort = false;
     bool readMetadata();
     void readIcon();

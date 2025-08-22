@@ -2500,13 +2500,13 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
 
     Do not use QMutexLocker.
 */
-    if (G::isLogger) G::log("DataModel::setIcon1");
+    if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
         return;
     }
-    // if (isDebug)
+    if (isDebug)
     {
         // must come after instance check
         qDebug() << "DataModel::setIcon1"
@@ -2517,29 +2517,25 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
                  ;
     }
     if (loadingModel) {
-        // errMsg = "Model is still loading..";
-        // G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
-        // return;
+        errMsg = "Model is still loading..";
+        G::issue("Warning", errMsg, "DataModel::setIcon", dmRow);
+        return;
     }
-
-    QModelIndex dmIdx = index(dmRow,0);
 
     if (G::stop) {
         qDebug() << "DataModel::setIcon G::stop = true";
         return;
     }
+
+    QModelIndex dmIdx = index(dmRow,0);
+
     if (!dmIdx.isValid()) {
         errMsg = "Invalid dmIdx.";
         G::issue("Warning", errMsg, "DataModel::setIcon");
         return;
     }
-    if (dmIdx.row() >= rowCount()) {
-        QString r = QString::number(dmIdx.row());
-        QString c = QString::number(rowCount());
-        errMsg = "Model range exceeded.  Row " + r + " > rowCount " + c;
-        G::issue("Warning", errMsg, "DataModel::setIcon", dmIdx.row());
-        return;
-    }
+
+    if (G::isLogger) G::log("DataModel::setIcon1 updating", "src = " + src);
 
     const QVariant vIcon = QVariant(QIcon(QPixmap::fromImage(im)));
     setData(dmIdx, vIcon, Qt::DecorationRole);

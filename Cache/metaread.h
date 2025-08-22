@@ -129,7 +129,6 @@ private:
     bool quitAfterTimeoutInitiated;
 
     int startRow = 0;
-    int prevStartRow = -1;
     int lastRow;
     int nextRow = 0;
     int a = 0;

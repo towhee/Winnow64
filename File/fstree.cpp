@@ -485,6 +485,14 @@ void FSTree::setShowImageCount(bool showImageCount)
     fsModel->showImageCount = showImageCount;
 }
 
+bool FSTree::isItemVisible(const QModelIndex idx)
+{
+    QRect itemRect = visualRect(idx);
+    QRect viewRect = viewport()->rect();
+
+    return viewRect.intersects(itemRect) && itemRect.isValid();
+}
+
 void FSTree::scrollToCurrent()
 {
 /*
@@ -492,7 +500,11 @@ void FSTree::scrollToCurrent()
 */
     if (G::isLogger) G::log("FSTree::scrollToCurrent");
     QModelIndex idx = getCurrentIndex();
-    if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
+
+    if (!idx.isValid()) return;
+    if (isItemVisible(idx)) return;
+
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 bool FSTree::select(QString folderPath , QString modifier, QString src)
@@ -521,7 +533,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
         recurse = false;
         emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
         setCurrentIndex(index);
-        scrollToCurrent();
+        // scrollToCurrent();
         selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         return true;
     }
@@ -531,7 +543,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
         recurse = true;
         emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
         setCurrentIndex(index);
-        scrollToCurrent();
+        // scrollToCurrent();
         selectionModel()->clearSelection();
         selectRecursively(folderPath);
         return true;
@@ -542,7 +554,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
         recurse = true;
         emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
         setCurrentIndex(index);
-        scrollToCurrent();
+        // scrollToCurrent();
         selectionModel()->clearSelection();
         selectRecursively(folderPath);
         setExpanded(index, false);
@@ -940,9 +952,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     }
 
     // ignore rapid mouse press if still processing MW::stop
-    qint64 ms = rapidClick.elapsed();
+    qint64 ms = rapidClick.restart();
     if (ms < 500) {
         event->ignore();
+        G::popup->showPopup("Rapid clicks are verboten");
+        qDebug() << "FSTree::mousePressEvent rapidClick =" << ms;
         return;
     }
 

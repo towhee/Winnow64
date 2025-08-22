@@ -17,12 +17,11 @@ public:
     explicit Thumb(DataModel *dm);
     ~Thumb() override;
     void abortProcessing();
-    bool loadThumb(QString &fPath, QModelIndex dmIdx, QImage &image,
+    bool loadThumb(QString &fPath, int dmRow, QImage &image,
                    int instance, QString src);
     void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
-    bool abort = false;
 
     enum Status {
         None,
@@ -41,12 +40,16 @@ signals:
     void getFrame(QString fPath);
 
 private:
+    mutable QMutex mutex;
+    QWaitCondition idleCondition;
+    bool abort = false;
+    bool idle = true;
+    void setIdle(bool v);
+
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;
     QThread *frameDecoderthread;
-    // TiffThumbDecoder *tiffThumbDecoder;
-    // QThread *tiffThumbDecoderThread;
     int dmRow;
     QString err;
     QSize thumbMax;
