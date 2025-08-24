@@ -2189,11 +2189,12 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     // folder selection cleared and new folder selected
     if (resetDataModel) {
         // stop existing processes
-        stop(fun + " reset DataModel");
+        stop(fun);
+
         // should only reset here
-        reset(fun);
+        // reset(fun);
         // new instance: only done here and if sort/filter operation
-        dm->newInstance();
+        // dm->newInstance();
         // sync bookmarks if exists
         bookmarks->select(folderPath);
 
@@ -2202,7 +2203,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     }
     else {
         // stop building but do not clear filters
-        buildFilters->abortIfRunning();
+        buildFilters->abortProcessing();
     }
 
     // put folder in datamodel queue to add or remove
@@ -2525,6 +2526,48 @@ void MW::refresh()
     sel->select(dm->currentSfIdx);  // runs metaread if new images
 }
 
+void MW::aborted(const QString name)
+{
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MW::aborted", name);
+    /*
+    qDebug() << "MW::aborted" << name;
+    //*/
+
+    /*
+    if (stopped.contains(name)) {
+        stopped[name] = true;
+    }
+
+    for (auto it = stopped.constBegin(); it != stopped.constEnd(); ++it) {
+        // qDebug() << "MW::aborted" << it.key() << it.value();
+        QString msg = it.key() + " = " + QVariant(it.value()).toString();
+        G::log("MW::aborted", msg);
+    }
+
+    allIdle = true;
+    for (auto it = stopped.constBegin(); it != stopped.constEnd(); ++it) {
+        if (!it.value()) {
+            allIdle = false;
+            break;
+        }
+    }
+
+    G::log("MW::aborted", "allIdle = " + QVariant(allIdle).toString());
+    */
+}
+
+bool MW::allIdle() const {
+    for (const auto& v : stopped) {
+        if (!v) {
+        G::log("MW::allIdle", stopped.key(v) + " = " + QVariant(v).toString());
+        return false;
+        }
+    }
+    G::log("MW::allIdle", "allIdle = true");
+    return true;
+}
+
 void MW::stop(QString src)
 {
 /*
@@ -2544,10 +2587,9 @@ void MW::stop(QString src)
     image from a prior folder.  See ImageCache::fillCache.
 
 */
-    // rgh how refer to what we are stopping when multi folders may be in datamodel
-    // just use dm->currentPrimaryFolderPath ?
-    if (G::isLogger || G::isFlowLogger)
-        G::log("MW::stop", "intance = " + QString::number(dm->instance) +
+
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MW::stop", "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
     // ignore if already stopping
@@ -2559,13 +2601,73 @@ void MW::stop(QString src)
     G::stop = true;
     dm->abort = true;
 
-    metaRead->abortReaders();
-    imageCache->abortProcessing();
+    /*
+    // initialize stopped state for MetaRead, ImageCache, BuildFilters
+    for (auto it = stopped.begin(); it != stopped.end(); ++it) {
+        it.value() = false;
+    }
+    */
+    stopped["MetaRead"] = metaRead->isIdle();
+    stopped["ImageCache"] = imageCache->isIdle();
+    stopped["BuildFilters"] = buildFilters->isIdle();
 
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
-    buildFilters->abortIfRunning();
+    if (!stopped["MetaRead"]) emit abortMetaRead();
+    if (!stopped["ImageCache"]) emit abortImageCache();
+    if (!stopped["BuildFilters"]) emit abortBuildFilters();
+
+    // wait until abort done
+    QEventLoop loop;
+    QTimer to; to.setSingleShot(true); to.start(1000);
+
+    /*
+    connect(&to, &QTimer::timeout, &loop, [&]
+        {
+            qDebug() << "MW::stop timeout";
+            loop.quit();
+        });
+
+    // Every aborted(...) updates state and maybe quits:
+    auto maybeQuit = [&]{
+        if (allIdle) loop.quit();
+    };
+    */
+
+    // Update helper
+    auto markIdle = [&](const QString& name){
+        stopped[name] = true;
+        G::log("MW::stop  markIdle", name);
+        if (allIdle()) {
+            G::log("MW::stop  markIdle", "allIdle = true");
+            loop.quit();
+        }
+    };
+
+    // Connect subsystem idle/aborted signals (must be Queued across threads)
+    QList<QMetaObject::Connection> conns;
+    conns << connect(metaRead, &MetaRead::stopped,
+                     &loop, [=]{ markIdle("MetaRead"); }, Qt::QueuedConnection);
+    conns << connect(imageCache, &ImageCache::stopped,
+                     &loop, [=]{ markIdle("ImageCache"); }, Qt::QueuedConnection);
+    conns << connect(buildFilters, &BuildFilters::stopped,
+                     &loop, [=]{ markIdle("BuildFilters"); }, Qt::QueuedConnection);
+
+    // Timeout handler
+    connect(&to, &QTimer::timeout, &loop, [&]{
+        G::log("MW::stop", "timed out");
+        loop.quit();
+    });
+
+    // If everything was already idle, skip waiting
+    if (!allIdle()) {
+        G::log("MW::stop", "start loop");
+        loop.exec();                   // <-- this blocks until all idle or timeout
+    }
+
+    // 5) Clean up connections
+    for (const auto& c : conns) QObject::disconnect(c);
 
     reset(src);
 
@@ -2603,7 +2705,10 @@ bool MW::reset(QString src)
     // QSignalBlocker bookmarkBlocker(bookmarks);
     // QSignalBlocker fsTreeBlocker(fsTree);
 
-    buildFilters->stop();
+    // buildFilters->stop();
+
+    // new instance: only done here and if sort/filter operation
+    dm->newInstance();
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;

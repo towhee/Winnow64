@@ -20,8 +20,6 @@ void MW::initialize()
     #endif
     G::isSlideShow = false;
     stopped["MetaRead"] = true;
-    stopped["MDCache"] = true;
-    stopped["FrameDecoder"] = true;
     stopped["ImageCache"] = true;
     stopped["BuildFilters"] = true;
     workspaces = new QList<WorkspaceData>;
@@ -268,9 +266,11 @@ void MW::createDataModel()
 
     buildFilters = new BuildFilters(this, dm, metadata, filters);
 
-    connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
+    // connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
+    // connect(buildFilters, &BuildFilters::stopped, this, &MW::aborted);
     connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
+    connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
@@ -338,6 +338,12 @@ void MW::createMetaRead()
     // selectCurrentIndex from MetaRead
     connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex);
 
+    // MetaRead thread abort (when MW::stop)
+    connect(this, &MW::abortMetaRead, metaRead, &MetaRead::abortProcessing);
+
+    // message metadata thread stopped when close Winnow
+    // connect(metaRead, &MetaRead::stopped, this, &MW::aborted);
+
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
 
@@ -381,8 +387,10 @@ void MW::createImageCache()
             imageCache, &ImageCache::stop);
 
     // Signal to abort the ImageCache
-    connect(this, &MW::abortImageCache,
-            imageCache, &ImageCache::abortProcessing);
+    connect(this, &MW::abortImageCache, imageCache, &ImageCache::abortProcessing);
+
+    // message metadata thread stopped when close Winnow
+    // connect(imageCache, &ImageCache::stopped, this, &MW::aborted);
 
     // Signal to ImageCache filterChange
     connect(this, &MW::imageCacheFilterChange,

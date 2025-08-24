@@ -31,13 +31,15 @@ public:
 
     void stop();
     void stopReaders();
-    void abortReaders();
+    void abortProcessing();
     void syncInstance();
     QString reportMetaCache();
     // void cleanupIcons();
     QString diagnostics();
 
     bool isDispatching;
+    bool isIdle();
+    bool isBusy();
 
     int firstIconRow;
     int lastIconRow;
@@ -94,7 +96,10 @@ private:
 
     QMutex mutex;
     QWaitCondition condition;
-    bool abort;
+    bool abort = false;
+    bool idle = false;
+    void setIdle();
+    void setBusy();
 
     QEventLoop runloop;
 
@@ -102,6 +107,7 @@ private:
     QVector<QThread*> readerThreads;
     QVector<bool> cycling;                  // all the decoders activity
     bool allReadersCycling();
+    bool noReadersCycling();
 
     DataModel *dm;
     Metadata *metadata;

@@ -129,8 +129,13 @@ void BuildFilters::stop()
     if (!isReset) reset();
 }
 
-void BuildFilters::abortIfRunning()
+void BuildFilters::abortProcessing()
 {
+    // if (G::isLogger || G::isFlowLogger)
+    QString isGUI = QVariant(G::isGuiThread()).toString();
+    G::log("Buildfilters::abortProcessing",
+           "starting, isGUI thread = " + isGUI);
+
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -138,7 +143,37 @@ void BuildFilters::abortIfRunning()
         mutex.unlock();
         wait();
     }
-    abort = false;
+    // abort = false;
+
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("BuildFilters::abortProcessing", "emit stopped");
+
+    emit stopped("BuildFilters");
+}
+
+void BuildFilters::setIdle()
+{
+    QMutexLocker lock(&mutex);
+    idle = true;
+}
+
+void BuildFilters::setBusy()
+{
+    QMutexLocker lock(&mutex);
+    idle = false;
+}
+
+bool BuildFilters::isIdle()
+{
+    QMutexLocker lock(&mutex);
+    if (G::isGuiThread()) return true;
+    return idle;
+}
+
+bool BuildFilters::isBusy()
+{
+    QMutexLocker lock(&mutex);
+    return !idle;
 }
 
 void BuildFilters::rebuild()
@@ -213,7 +248,7 @@ void BuildFilters::build(AfterAction newAction)
 
     // define action for BuildFilters::run
     action = Action::Reset;
-    abortIfRunning();
+    abortProcessing();
     instance = dm->instance;
     filters->startBuildFilters(isReset);
     progress = 0;
@@ -235,7 +270,7 @@ void BuildFilters::update()
             << "BuildFilters::update"
             << "filters->filtersBuilt =" << filters->filtersBuilt
                ;
-    abortIfRunning();
+    abortProcessing();
     if (filters->filtersBuilt) {
         action = Action::Update;
         if (G::allMetadataLoaded) start(NormalPriority);
@@ -277,7 +312,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
                    ;
     }
     dm->sf->suspend(true, "BuildFilters::update");
-    abortIfRunning();
+    abortProcessing();
     afterAction = newAction;
     this->category = category;
     if (filters->filtersBuilt) {
@@ -956,6 +991,8 @@ void BuildFilters::time(QString msg)
 
 void BuildFilters::run()
 {
+    idle = false;
+    abort = false;
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::run", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
@@ -993,6 +1030,7 @@ void BuildFilters::run()
     if (!abort) filters->setEachCatTextColor();
 
     done();
+
 
     /* elapsed time
     qDebug() << "BuildFilters::run"

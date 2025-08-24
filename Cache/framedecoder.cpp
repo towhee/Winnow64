@@ -250,7 +250,7 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         emit setFrameIcon(item.dmRow, scaledIm, item.dmInstance, duration, this);
     } else {
         // used in FindDuplicates
-        // /*
+        /*
         qDebug() << "FrameDecoder::handleFrameChanged emit frameImage"
                  << "path =" << path
                  << "scaledIm.width() =" << scaledIm.width()

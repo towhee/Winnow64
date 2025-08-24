@@ -79,11 +79,10 @@ void Reader::abortProcessing()
     while (pending) {
         const qint64 remaining = deadline.remainingTime();
         if (remaining <= 0) {
-            qDebug().noquote() << fun.leftJustified(col0Width)
-                               << "id =" << threadId << "timeout";
-            break;                 // timed out
+            // timed out
+            break;
         }
-        if (!pendingCondition.wait(&mutex, int(remaining))) {     // spurious wakeups possible
+        if (!pendingCondition.wait(&mutex, int(remaining))) {
             abort = false;
             break;                               // true if finished during wait
         }
@@ -225,7 +224,7 @@ void Reader::readIcon()
     // get thumbnail or err.png or generic video
     loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, "MetaRead::readIcon");
 
-    // if (isDebug)
+    if (isDebug)
     {
     qDebug().noquote()
         << fun.leftJustified(col0Width)

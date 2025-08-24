@@ -407,8 +407,9 @@ signals:
     void aSyncGo(int);          // rgh req'd?
     void needToShow();          // not being used
     void abortMDCache();        // not being used
-    void abortImageCache();
     void stopImageCache();
+    void abortMetaRead();
+    void abortImageCache();
     void abortBuildFilters();   // not being used
     void abortFrameDecoder();   // not being used
     void abortEmbelExport();
@@ -433,6 +434,7 @@ public slots:
     void currentFolderDeletedExternally(QString path);
     void refresh();
     void updateImageCount();
+    void aborted(const QString subSystem);
     void stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
@@ -1143,6 +1145,7 @@ private:
     float pickClickvolume = 0.25;
 
     QHash<QString, bool> stopped;
+    bool allIdle() const;
 
     // pick history
     struct Pick {

@@ -120,6 +120,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     Must use QMetaObject::invokeMethod when calling this function.  Invoked by
     MW::updateChange().
 */
+    setBusy();
+
     QString fun = "MetaRead::setStartRow";
     if (G::isLogger || G::isFlowLogger)
     {
@@ -185,10 +187,10 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             ;
     }
 
-    if (G::useUpdateStatus && !G::allMetadataLoaded)
+    if (G::useUpdateStatus && !G::allMetadataLoaded) {
         // runStatus: isRunning, show, success, source
         emit runStatus(true, true, true, fun);
-
+    }
 
     if (instance == dm->instance) {
         isNewStartRowWhileDispatching = isDispatching;
@@ -218,6 +220,11 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     }
 
     dispatchReaders();
+
+    // check if nothing dispatched
+    if (noReadersCycling()) {
+        setIdle();
+    }
 }
 
 void MetaRead::stop()
@@ -253,26 +260,63 @@ void MetaRead::stopReaders()
     }
 }
 
-void MetaRead::abortReaders()
+void MetaRead::abortProcessing()
 {
 /*
     Set the abort flag to cancel the current read operation, before changing folders
 */
-    QString fun = "MetaRead::abortReaders";
-    // qDebug().noquote() << fun.leftJustified(col0Width);
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MetaRead::abortProcessing", "starting");
 
     abort = true;
 
     // abort all readers
     for (int id = 0; id < readerCount; ++id) {
-        readers[id]->abortProcessing();
+        if (readers[id]->pending) readers[id]->abortProcessing();
     }
+
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MetaRead::abortProcessing", "emit stopped");
+
+    emit stopped("MetaRead");
+}
+
+void MetaRead::setIdle()
+{
+    QMutexLocker lock(&mutex);
+    idle = true;
+}
+
+void MetaRead::setBusy()
+{
+    QMutexLocker lock(&mutex);
+    idle = false;
+}
+
+bool MetaRead::isIdle()
+{
+    QMutexLocker lock(&mutex);
+    return idle;
+}
+
+bool MetaRead::isBusy()
+{
+    QMutexLocker lock(&mutex);
+    return !idle;
 }
 
 bool MetaRead::allReadersCycling()
 {
     for (bool isCycling : cycling) {
         if (!isCycling) return false;
+    }
+    return true;
+}
+
+bool MetaRead::noReadersCycling()
+{
+    for (bool isCycling : cycling) {
+        if (isCycling) return false;
     }
     return true;
 }
@@ -1083,4 +1127,6 @@ void MetaRead::dispatchFinished(QString src)
         emit done();
     }
     G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
+
+    setIdle();
 }

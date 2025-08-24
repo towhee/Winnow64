@@ -42,9 +42,10 @@ signals:
 private:
     mutable QMutex mutex;
     QWaitCondition idleCondition;
+    void setIdle();
+    void setBusy();
     bool abort = false;
     bool idle = true;
-    void setIdle(bool v);
 
     DataModel *dm;
     Metadata *metadata;
