@@ -2,6 +2,9 @@ WHAT'S NEW
 
 
 BUGS / TO DO
+- abort ImageCache
+- set new instance sooner
+
 - Try using std::atomic<bool> for flags used in threads
 - TableView showing all columns at start when some columns are being hidden in pref
 - Do not show ICCBuf column in tableView

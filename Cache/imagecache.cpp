@@ -218,11 +218,31 @@ bool ImageCache::instanceClash(bool id)
 
 void ImageCache::abortProcessing()
 {
+    // if (G::isLogger || G::isFlowLogger)
+    QString isGUI = QVariant(G::isGuiThread()).toString();
+    G::log("ImageCache::abortProcessin",
+           "starting, isGUI thread = " + isGUI);
+
     abort = true;
     for (int id = 0; id < decoderCount; ++id) {
         cycling[id] = false;
-        QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::QueuedConnection);
+        decoders[id]->abortProcessing();
+        // QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::QueuedConnection);
+        // QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::BlockingQueuedConnection);
     }
+
+    // if (G::isLogger || G::isFlowLogger)
+    G::log("ImageCache::abortProcessing", "emit stopped");
+
+    emit stopped("ImageCache");
+}
+
+bool ImageCache::isIdle()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (decoders[id]->isBusy()) return false;
+    }
+    return true;
 }
 
 bool ImageCache::isRunning() const

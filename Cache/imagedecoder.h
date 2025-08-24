@@ -93,8 +93,11 @@ signals:
 private:
     QThread decoderThread;
     QAtomicInt running {0}; // 0 = not running, 1 = running
-    QMutex mutex;
-    QWaitCondition condition;
+
+    mutable QMutex mutex;
+    QWaitCondition idleCondition;
+    void setIdle(bool v);
+
     bool load();
     bool quit();
     void decodeUsingQt();

@@ -49,6 +49,9 @@ public:
     QString reportImCache();
     QString reportImCacheRows();
     QString reportToCacheRows();
+
+    bool isIdle();
+
     int col0Width = 50;
 
     int decoderCount = 1;
@@ -57,6 +60,7 @@ public:
     bool debugLog = false;
 
 signals:
+    void stopped(QString src);
     void waitingForRow(int sfRow);
     void setCached(int sfRow, bool isCached, int instance);
     void decode(int sfRow, int instance);

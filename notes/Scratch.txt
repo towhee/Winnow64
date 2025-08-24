@@ -9,6 +9,13 @@ slot MW::aborted(const QString subSystem)
     // iterate subsystemState and if all are true then set allIdle = true;
 }
 
+void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
+{
+    stop();
+
+    // do more stuff
+}
+
 MW::stop()
 {
     // iterate subsystemState and set to subsyster.isIdle()
@@ -17,10 +24,30 @@ MW::stop()
     dm->abort = true;
     allIdle = false;
 
-    // initiate abort
-    metaRead->abortReadersAsync();
-    imageCache->abortProcessingAsync();
-    buildFilters->abortIfRunningAsync();
+    // initialize stopped state for MetaRead, ImageCache, BuildFilters
+    for (auto it = stopped.begin(); it != stopped.end(); ++it) {
+        it.value() = false;
+    }
 
-    // wait for allIdle == true
+    emit abortMetaRead();
+    emit abortImageCache();
+    emit abortBuildFilters();
+
+    // wait until abort done
+    QEventLoop loop;
+    QTimer to; to.setSingleShot(true); to.start(10000);
+
+    connect(&to, &QTimer::timeout, &loop, [&]
+        {
+            qDebug() << "MW::stop timeout";
+            loop.quit();
+        });
+
+    // Every aborted(...) updates state and maybe quits:
+    auto maybeQuit = [&]{
+        // QMutexLocker l(&stateMtx);
+        if (allIdle) loop.quit();
+    };
+
+    reset(src);
 }

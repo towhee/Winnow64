@@ -48,29 +48,30 @@ void Thumb::abortProcessing()
         qDebug() << fun;
     }
     if (frameDecoder) frameDecoder->stop();
-    abort = true;
 
-    // Now wait until pending == false (or timeout)
+    // Now wait until idle or timeout
     QDeadlineTimer deadline(500);
+    QMutexLocker lock(&mutex);
+    abort = true;
     while (!idle) {
-        const qint64 remaining = deadline.remainingTime();
-        if (remaining <= 0) {
-            qDebug().noquote() << fun.leftJustified(col0Width)  << "timeout";
-            break;                 // timed out
-        }
-        if (idleCondition.wait(&mutex, int(remaining))) {     // spurious wakeups possible
-            abort = false;
-            break;                               // true if finished during wait
-        }
+        const int ms = int(deadline.remainingTime());
+        if (!idleCondition.wait(&mutex, ms)) break; // break on timeout
     }
+    // Don't reset abort here. Let the code that *restarts* work clear it.
 }
 
-void Thumb::setIdle(bool v)
+void Thumb::setIdle()
 {
     QMutexLocker lock(&mutex);
-    if (idle == v) return;
-    idle = v;
-    if (!idle) idleCondition.wakeAll();  // notify waiters
+    if (idle) return;
+    idle = true;
+    idleCondition.wakeAll();  // notify waiters
+}
+
+void Thumb::setBusy()
+{
+    QMutexLocker lock(&mutex);
+    idle = false;
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
@@ -461,20 +462,20 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
     Called by Reader::readIcon.
 */
     QString fun = "Thumb::loadThumb";
-    // if (isDebug)
+    if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "Instance =" << instance << src << fPath;
     if (G::isLogger) G::log(fun, fPath);
 
+    setBusy();
     abort = false;
-    setIdle(false);
     this->dmRow = dmRow;
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
         G::issue("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
-        // if (isDebug)
+        if (isDebug)
         {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -505,9 +506,9 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
         QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
         QFile(fPath).setPermissions(newPermissions);
     }
-    qDebug() << "loadThumb";
+
     if (abort) {idle = true; return false;}
-    qDebug() << "loadThumb1";
+
     // get offset and length (both zero if not embedded thumb)
     if (!isPresetOffset) {
         offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
@@ -515,7 +516,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
     }
     isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
-    // /*
+    /*
     qDebug().noquote()
              << fun.leftJustified(col0Width)
              << "dmRow =" << dmRow
@@ -594,7 +595,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
             if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     }
 
-    idle = true;
+    setIdle();
 
     if (status == Status::Success) return true;
     else return false;

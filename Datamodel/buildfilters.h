@@ -41,14 +41,16 @@ public:
     } category;
 
     void stop();
-    void abortIfRunning();
     void reset(bool collapse = true);
     void recount();
+    bool isIdle();
+    bool isBusy();
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
+    void stopped(QString src);
     void updateProgress(int progress);
     void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
@@ -58,6 +60,7 @@ signals:
     void filterChange(QString src);
 
 public slots:
+    void abortProcessing();
     void build(BuildFilters::AfterAction newAction = NoAfterAction);
     void rebuild();
     void update();
@@ -74,10 +77,13 @@ private:
     void updateFilteredCounts();
     void updateCategoryItems();
     void time(QString msg);
+    void setIdle();
+    void setBusy();
 
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
+    bool idle = true;
     DataModel *dm;
     Metadata *metadata;
     Filters *filters;
