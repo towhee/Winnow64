@@ -2191,10 +2191,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         // stop existing processes
         stop(fun);
 
-        // should only reset here
-        // reset(fun);
-        // new instance: only done here and if sort/filter operation
-        // dm->newInstance();
         // sync bookmarks if exists
         bookmarks->select(folderPath);
 
@@ -2588,7 +2584,7 @@ void MW::stop(QString src)
 
 */
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::stop", "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
@@ -2601,12 +2597,7 @@ void MW::stop(QString src)
     G::stop = true;
     dm->abort = true;
 
-    /*
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
-    for (auto it = stopped.begin(); it != stopped.end(); ++it) {
-        it.value() = false;
-    }
-    */
     stopped["MetaRead"] = metaRead->isIdle();
     stopped["ImageCache"] = imageCache->isIdle();
     stopped["BuildFilters"] = buildFilters->isIdle();
@@ -2622,25 +2613,12 @@ void MW::stop(QString src)
     QEventLoop loop;
     QTimer to; to.setSingleShot(true); to.start(1000);
 
-    /*
-    connect(&to, &QTimer::timeout, &loop, [&]
-        {
-            qDebug() << "MW::stop timeout";
-            loop.quit();
-        });
-
-    // Every aborted(...) updates state and maybe quits:
-    auto maybeQuit = [&]{
-        if (allIdle) loop.quit();
-    };
-    */
-
     // Update helper
-    auto markIdle = [&](const QString& name){
+    auto setStopped = [&](const QString& name){
         stopped[name] = true;
-        G::log("MW::stop  markIdle", name);
+        if (G::isFlowLogger) G::log("MW::stop  markIdle", name);
         if (allIdle()) {
-            G::log("MW::stop  markIdle", "allIdle = true");
+            if (G::isFlowLogger) G::log("MW::stop  markIdle", "allIdle = true");
             loop.quit();
         }
     };
@@ -2648,27 +2626,28 @@ void MW::stop(QString src)
     // Connect subsystem idle/aborted signals (must be Queued across threads)
     QList<QMetaObject::Connection> conns;
     conns << connect(metaRead, &MetaRead::stopped,
-                     &loop, [=]{ markIdle("MetaRead"); }, Qt::QueuedConnection);
+                     &loop, [=]{ setStopped("MetaRead"); }, Qt::QueuedConnection);
     conns << connect(imageCache, &ImageCache::stopped,
-                     &loop, [=]{ markIdle("ImageCache"); }, Qt::QueuedConnection);
+                     &loop, [=]{ setStopped("ImageCache"); }, Qt::QueuedConnection);
     conns << connect(buildFilters, &BuildFilters::stopped,
-                     &loop, [=]{ markIdle("BuildFilters"); }, Qt::QueuedConnection);
+                     &loop, [=]{ setStopped("BuildFilters"); }, Qt::QueuedConnection);
 
     // Timeout handler
     connect(&to, &QTimer::timeout, &loop, [&]{
-        G::log("MW::stop", "timed out");
+        if (G::isFlowLogger) G::log("MW::stop", "timed out");
         loop.quit();
     });
 
     // If everything was already idle, skip waiting
     if (!allIdle()) {
-        G::log("MW::stop", "start loop");
+        if (G::isFlowLogger) G::log("MW::stop", "start loop");
         loop.exec();                   // <-- this blocks until all idle or timeout
     }
 
-    // 5) Clean up connections
+    // Clean up connections
     for (const auto& c : conns) QObject::disconnect(c);
 
+    // reset all parameters
     reset(src);
 
     setCentralMessage("");
@@ -2685,28 +2664,16 @@ void MW::stop(QString src)
 bool MW::reset(QString src)
 {
 /*
-    Resets everything prior to an instance / new folder heirarchy change.  Should only
-    be called from folderSelectionChange if resetDataModel == true.
+    New instance and resets everything. Should only be called if
+    resetDataModel == true.
 */
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
 
-    // confirm folder exists and is readable, report if not and do not process
-    // rgh redo for multi-folders
-    // if (!isFolderValid(dm->currentPrimaryFolderPath, true /*report*/, false /*isRemembered*/)) {
-    //     stop("Invalid folder");
-    //     setWindowTitle(winnowWithVersion);
-    //     if (G::isLogger)
-    //         if (G::isFileLogger) Utilities::log("MW::reset", "Invalid folder " + dm->currentPrimaryFolderPath);
-    //     return false;
-    // }
-
-    // block repeated clicks to folders or bookmarks during reset.
-    // QSignalBlocker bookmarkBlocker(bookmarks);
-    // QSignalBlocker fsTreeBlocker(fsTree);
-
-    // buildFilters->stop();
-
+    // datamodel
+    dm->selectionModel->clear();
+    dm->currentSfRow = 0;
+    dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
     dm->newInstance();
 
@@ -2728,20 +2695,13 @@ bool MW::reset(QString src)
     gridView->setUpdatesEnabled(false);
     tableView->setUpdatesEnabled(false);
     tableView->setSortingEnabled(false);
-    // frameDecoder->clear();
     thumbView->setUpdatesEnabled(true);
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
-    // ImageView set zoom = fit for the first image of a new folder
     imageView->clear();
     imageView->isFirstImageNewInstance = true;
-    // imageView->isFit = true;                // req'd for initial zoom cursor condition
 
-    // datamodel
-    dm->selectionModel->clear();
-    dm->currentSfRow = 0;
-    dm->clearDataModel();
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // Image cache
@@ -5353,12 +5313,13 @@ void MW::infoViewChanged(QStandardItem* item)
 
     QString src = "MW::metadataChanged";
     for (int i = 0; i < selection.count(); ++i) {
-        int row = selection.at(i).row();
+        int sfRow = selection.at(i).row();
         // build list of files to send to Metadata::writeMetadata
-        paths << dm->sf->index(row, G::PathColumn).data().toString();
+        paths << dm->sf->index(sfRow, G::PathColumn).data().toString();
         // update data model
-        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
-        emit setValueDm(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
+        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, col[tagName]));
+        emit setValSf(sfRow, col[tagName], tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
+        // emit setValueDm(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
@@ -5366,7 +5327,8 @@ void MW::infoViewChanged(QStandardItem* item)
                 // set tag item for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
                 QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
-                emit setValueDm(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                emit setValDm(rawIdx.row(), col[tagName], tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                // emit setValueDm(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             }
         }
     }

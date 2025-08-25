@@ -394,6 +394,10 @@ signals:
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     // void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();

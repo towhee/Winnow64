@@ -263,7 +263,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
-    connect(this, &IconView::setValueSf, dm, &DataModel::setValueSf);
+    connect(this, &IconView::setValSf, dm, &DataModel::setValSf);
 }
 
 QString IconView::diagnostics()
@@ -768,10 +768,10 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     IconViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot.
 */
-    //qDebug() << "IconView::updateThumbRectRole" << index << iconRect;
+    // qDebug() << "IconView::updateThumbRectRole" << index << iconRect;
     QString src = "IconView::updateThumbRectRole";
     if (isDebug || G::isLogger) G::log(src, objectName());
-    emit setValueSf(index, iconRect, dm->instance, src, G::IconRectRole);
+    emit setValSf(index.row(), 0, iconRect, dm->instance, src, G::IconRectRole);
 }
 
 void IconView::resizeEvent(QResizeEvent *)

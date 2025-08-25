@@ -15,8 +15,8 @@ Thumb::Thumb(DataModel *dm)
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
 
-    connect(this, &Thumb::setValueDm, dm, &DataModel::setValueDm, Qt::QueuedConnection);
-    connect(this, &Thumb::setValueSf, dm, &DataModel::setValueSf, Qt::QueuedConnection);
+    connect(this, &Thumb::setValDm, dm, &DataModel::setValDm, Qt::QueuedConnection);
+    connect(this, &Thumb::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
 
     frameDecoder = new FrameDecoder();
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
@@ -156,12 +156,12 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
     QString d = QString::number(w) + "x" + QString::number(h);
     QString src = "Thumb::setImageDimensions";
 
-    emit setValueDm(dm->index(row, G::WidthColumn), w, instance, src);
-    emit setValueDm(dm->index(row, G::WidthPreviewColumn), w, instance, src);
-    emit setValueDm(dm->index(row, G::HeightColumn), h, instance, src);
-    emit setValueDm(dm->index(row, G::HeightPreviewColumn), h, instance, src);
-    emit setValueDm(dm->index(row, G::AspectRatioColumn), a, instance, src, Qt::EditRole, alignRight);
-    emit setValueDm(dm->index(row, G::DimensionsColumn), d, instance, src, Qt::EditRole, alignRight);
+    emit setValDm(row, G::WidthColumn, w, instance, src);
+    emit setValDm(row, G::WidthPreviewColumn, w, instance, src);
+    emit setValDm(row, G::HeightColumn, h, instance, src);
+    emit setValDm(row, G::HeightPreviewColumn, h, instance, src);
+    emit setValDm(row, G::AspectRatioColumn, a, instance, src, Qt::EditRole, alignRight);
+    emit setValDm(row, G::DimensionsColumn, d, instance, src, Qt::EditRole, alignRight);
 
 }
 
@@ -261,7 +261,7 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
     }
 }
 
-Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
+Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
                                   ImageMetadata &m)
 {
     QString fun = "Thumb::loadFromTiff";
@@ -269,7 +269,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
     if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
-            << "row =" << row
+            << "row =" << dmRow
             << fPath
             ;
 
@@ -291,7 +291,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
     if (abort) return Status::Fail;
     if (!tiff.read(fPath, &image, m.offsetThumb)) {
         QString errMsg = "Could not read because QtTiff read failed.";
-        G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
+        G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
         return Status::Fail;
     }
 
@@ -299,7 +299,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
     image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
 
     // fix missing embedded thumbnail
-    QModelIndex sfIdx = dm->sf->index(row, G::MissingThumbColumn);
+    QModelIndex sfIdx = dm->sf->index(dmRow, G::MissingThumbColumn);
     bool isMissingThumb = sfIdx.data().toBool();
     if (abort) return Status::Fail;
     if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
@@ -313,7 +313,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
         }
         if (abort) return Status::Fail;
         if (tiff.encodeThumbnail(fPath, image)) {
-            emit setValueSf(sfIdx, false, dm->instance, "Thumb::loadFromTiff");
+            emit setValDm(dmRow, G::MissingThumbColumn, false,
+                          dm->instance, "Thumb::loadFromTiff");
         }
     }
 
@@ -328,13 +329,13 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int row,
     }
     else {
         QString errMsg = "Could not read because QtTiff read failed.";
-        G::issue("Error", errMsg, "Thumb::loadFromTiff", row, fPath);
+        G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
         return Status::Fail;
     }
 
     // deprecated code...
 
-    int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
+    int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
     /*
     if (samplesPerPixel > 3) {
         QString msg = "Samples per pixel > 3.";

@@ -46,6 +46,7 @@ void MW::togglePickUnlessRejected()
         QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         if (pickStatus != "Rejected") {
+            // emit setValDm(dmRow, G::PickColumn, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
             emit setValueDm(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
         }
     }

@@ -1958,7 +1958,7 @@ void DataModel::processErr(Error e)
         errList << errMsg;
         QVariant v;
         v.setValue(errList);
-        setValueSf(sfIdx, v, instance, "DataModel::processErr");
+        setValSf(e.sfRow, G::ErrColumn, v, instance, "DataModel::processErr");
     }
     // qDebug() << errMsg;
     // qDebug() << "DataModel::err" << sfRow << msg << errList << sfIdx.data().toStringList();

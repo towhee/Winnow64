@@ -130,7 +130,7 @@ protected:
     bool viewportEvent(QEvent *event) override;
 
 signals:
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
+    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void thumbClick(float xPct, float yPct);          // used in ThumbView::mouseReleaseEvent
     void focusClick(QImage image, float x, float y);  // used in ThumbView::mouseReleaseEvent
