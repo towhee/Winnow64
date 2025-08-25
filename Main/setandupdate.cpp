@@ -437,13 +437,13 @@ void MW::setIngested()
 */
     if (G::isLogger) G::log("MW::setIngested");
     settings->beginGroup("PickLog");
-    for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QString sKey = dm->sf->index(row, 0).data(G::PathRole).toString();
-        if (dm->sf->index(row, G::PickColumn).data().toString() == "Picked") {
-            emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
-                            dm->instance, "MW::setIngested", Qt::EditRole);
-            emit setValueSf(dm->sf->index(row, G::PickColumn), "Ingested",
-                            dm->instance, "MW::setIngested", Qt::EditRole, Qt::AlignCenter);
+    for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
+        QString sKey = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        if (dm->sf->index(sfRow, G::PickColumn).data().toString() == "Picked") {
+            emit setValSf(sfRow, G::IngestedColumn, "true", dm->instance,
+                          "MW::setIngested", Qt::EditRole);
+            emit setValSf(sfRow, G::PickColumn, "Ingested", dm->instance,
+                          "MW::setIngested", Qt::EditRole, Qt::AlignCenter);
             // update pickLog
             sKey.replace("/", "🔸");
                               settings->setValue(sKey, "ingested");
@@ -495,13 +495,19 @@ void MW::setCombineRawJpg()
 
    // update the datamodel type column
    QString src = "setCombinedRawJpg";
-   for (int row = 0; row < dm->rowCount(); ++row) {
-       QModelIndex idx = dm->index(row, 0);
+   for (int dmRow = 0; dmRow < dm->rowCount(); ++dmRow) {
+       QModelIndex idx = dm->index(dmRow, 0);
        if (idx.data(G::DupIsJpgRole).toBool()) {
            QString rawType = idx.data(G::DupRawTypeRole).toString();
-           QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-           if (combineRawJpg) emit setValueDm(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-           else emit setValueDm(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+           QModelIndex typeIdx = dm->index(dmRow, G::TypeColumn);
+           if (combineRawJpg) {
+               emit setValDm(dmRow, G::TypeColumn, "JPG+" + rawType,
+                             dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+           }
+           else {
+               emit setValDm(dmRow, G::TypeColumn, "JPG",
+                             dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+           }
        }
    }
 

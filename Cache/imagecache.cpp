@@ -1636,12 +1636,12 @@ void ImageCache::decodeNextImage(int id, int sfRow)
         toCacheStatus[sfRow].decoderId = id;
         toCacheStatus[sfRow].instance = instance;
     }
-    emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
-    emit setValueSf(dm->sf->index(sfRow, G::DecoderIdColumn), id, instance, src);
+    emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
+    emit setValSf(sfRow, G::DecoderIdColumn, id, instance, src);
     int attempts = dm->sf->index(sfRow, G::AttemptsColumn).data().toInt();
     attempts++;
     // qDebug() << src << "row =" << sfRow << "attempts =" << attempts;
-    emit setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), attempts, instance, src);
+    emit setValSf(sfRow, G::AttemptsColumn, attempts, instance, src);
 
     if (debugLog)
     {
@@ -1750,12 +1750,12 @@ bool ImageCache::okToCache(int id, int sfRow)
     if (sfRow >= dm->sf->rowCount()) return false;
 
     // set isCaching to false
-    emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+    emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
     if (toCacheStatus.contains(sfRow))
         toCacheStatus[sfRow].isCaching = false;
 
     // save decoder status
-    emit setValueSf(dm->sf->index(sfRow, G::DecoderReturnStatusColumn),
+    emit setValSf(sfRow, G::DecoderReturnStatusColumn,
                     static_cast<int>(decoders[id]->status), instance, src);
 
     // no longer in target range to cache
@@ -1776,8 +1776,8 @@ bool ImageCache::okToCache(int id, int sfRow)
                 ;
         }
         if (decoders[id]->errMsg != "") {
-            emit setValueSf(dm->sf->index(sfRow, G::DecoderErrMsgColumn),
-                            decoders[id]->errMsg, instance, src);
+            emit setValSf(sfRow, G::DecoderErrMsgColumn,
+                          decoders[id]->errMsg, instance, src);
         }
         if (toCache.contains(sfRow)) toCacheRemove(sfRow);
         return false;
@@ -1818,7 +1818,7 @@ bool ImageCache::nullInImCache()
             // add back to toCache list
             toCacheAppend(sfRow);
             // set isCaching to true
-            emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), true, instance, src);
+            emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
             isEmptyImage = true;
             qDebug() << "XXXXXXXXXX" << src << "row =" << sfRow;
         }

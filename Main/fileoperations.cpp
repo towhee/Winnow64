@@ -238,13 +238,13 @@ void MW::dmInsert(QStringList pathList)
             dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
             if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
-                emit setValueSf(dm->sf->index(sfRow, G::IsCachedColumn), false, instance, src);
+                emit setValSf(sfRow, G::IsCachedColumn, false, instance, src);
             }
             if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
-                emit setValueSf(dm->sf->index(sfRow, G::IsCachingColumn), false, instance, src);
+                emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
             }
             if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt()) {
-                emit setValueSf(dm->sf->index(sfRow, G::AttemptsColumn), 0, instance, src);
+                emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
             }
             G::allMetadataLoaded = false;
             G::iconChunkLoaded = false;

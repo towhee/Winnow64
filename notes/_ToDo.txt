@@ -2,6 +2,7 @@ WHAT'S NEW
 
 
 BUGS / TO DO
+- When clear rating redo filters
 - Try using std::atomic<bool> for flags used in threads
 - TableView showing all columns at start when some columns are being hidden in pref
 - Do not show ICCBuf column in tableView
@@ -139,6 +140,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Replace DataModel setValue functions with row/col setVal versions
 - MW::stop redo using event loop and signals to MetaRead, ImageCache and BuildFilters
 - MetaRead and ImageView status lights are truncated (made container wider)
 - Sync ImageView with CompareView selection

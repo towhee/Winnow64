@@ -4527,10 +4527,10 @@ void MW::setRotation(int degrees)
     QModelIndexList selection = dm->selectionModel->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         // update rotation amount in the data model
-        int row = selection.at(i).row();
-        bool isVideo = dm->sf->index(row, G::VideoColumn).data().toBool();
+        int sfRow = selection.at(i).row();
+        bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
         if (isVideo) continue;
-        QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
+        QModelIndex orientationIdx = dm->sf->index(sfRow, G::OrientationColumn);
         int orientation = orientationIdx.data(Qt::EditRole).toInt();
         int prevRotation = 0;
         switch (orientation) {
@@ -4548,13 +4548,13 @@ void MW::setRotation(int degrees)
         case 270: newOrientation = 8; break;
         }
 
-        emit setValueSf(orientationIdx, newOrientation, dm->instance,
+        emit setValSf(sfRow, G::OrientationColumn, newOrientation, dm->instance,
                         "MW::setRotation", Qt::EditRole);
 
         // rotate thumbnail(s)
         QTransform trans;
         trans.rotate(degrees);
-        QModelIndex thumbIdx = dm->sf->index(row, G::PathColumn);
+        QModelIndex thumbIdx = dm->sf->index(sfRow, G::PathColumn);
         QStandardItem *item = new QStandardItem;
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
         QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
@@ -5242,8 +5242,8 @@ QString MW::embedThumbnails()
                 thumbEmbedded = jpeg.embedThumbnail(fPath);
             }
             if (thumbEmbedded) {
-                QModelIndex sfIdx = dm->sf->index(sfRow, G::MissingThumbColumn);
-                emit setValueSf(sfIdx, false, dm->instance, "MW::embedthumbnails");
+                emit setValSf(sfRow, G::MissingThumbColumn, false, dm->instance,
+                              "MW::embedthumbnails");
                 dm->sf->filterChange("MW::embedThumbnails");
             }
             embeddingHappened = true;

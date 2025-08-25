@@ -200,10 +200,6 @@ public slots:
     void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
     void setIconFromVideoFrame(int dmRow, QImage im, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);
-    void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft | Qt::AlignVCenter);
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,

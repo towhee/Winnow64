@@ -25,7 +25,7 @@ public:
     bool load(QString &fPath, QImage &image, QString src = "");
 
 signals:
-    void setValueDm(QModelIndex dmIdx, QVariant value,
+    void setValDm(int dmRow, int dmCol, QVariant value,
                   int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
 
