@@ -2,9 +2,6 @@ WHAT'S NEW
 
 
 BUGS / TO DO
-- abort ImageCache
-- set new instance sooner
-
 - Try using std::atomic<bool> for flags used in threads
 - TableView showing all columns at start when some columns are being hidden in pref
 - Do not show ICCBuf column in tableView
@@ -142,7 +139,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
-- MetaRead and ImageView status lights are truncated (make container wider)
+- MW::stop redo using event loop and signals to MetaRead, ImageCache and BuildFilters
+- MetaRead and ImageView status lights are truncated (made container wider)
 - Sync ImageView with CompareView selection
 - Return key behavior
 - TableView freeze columns

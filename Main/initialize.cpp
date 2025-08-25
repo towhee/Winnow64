@@ -263,6 +263,8 @@ void MW::createDataModel()
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
     connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
     connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
+    connect(this, &MW::setValDm, dm, &DataModel::setValDm);
+    connect(this, &MW::setValSf, dm, &DataModel::setValSf);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters);
 
