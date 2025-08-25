@@ -2088,80 +2088,6 @@ QVariant DataModel::valueSf(int row, int column, int role)
     return sf->index(row, column).data(role);
 }
 
-void DataModel::setValueDm(QModelIndex dmIdx, QVariant value, int instance,
-                         QString src, int role, int align)
-{
-/*
-    Only call via connection.  If calling from GUI thread use signal
-    MW::setValueDm   example: emit setValueDm(args)
-*/
-    if (G::stop) return;
-    if (isDebug) {
-        qDebug() << "DataModel::setValueDm"
-                 << "row =" << dmIdx.row()
-                     << "value =" << value
-                 << "src =" << src
-                 << "instance =" << instance
-                 << index(dmIdx.row(),0).data(G::PathRole).toString();
-    }
-    if (instance != this->instance) {
-        errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueDm", dmIdx.row());
-        return;
-    }
-
-    if (!dmIdx.isValid()) {
-        errMsg = "Invalid dmIdx.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setValueDm", dmIdx.row());
-        return;
-    }
-    setData(dmIdx, value, role);
-    setData(dmIdx, align, Qt::TextAlignmentRole);
-}
-
-void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
-                           QString src, int role, int align)
-{
-/*
-    Only call via connection.  If calling from GUI thread use signal
-    MW::setValueSf   example: emit setValueSf(args)
-*/
-    if (G::stop) return;
-    if (isDebug) qDebug() << "DataModel::setValueSf" << "instance =" << instance
-                          << "row =" << sfIdx.row()
-                          << folderPathFromProxyRow(sfIdx.row());
-    /*
-    qDebug() << "DataModel::setValueSf"
-             << "Instance =" << instance
-             << "this Instance =" << this->instance
-             << "G::stop =" << G::stop
-             << "src =" << src
-             << "sfIdx =" << sfIdx
-             << "rowCount() =" << rowCount()
-             << "value =" << value
-             << currentFolderPath;
-    //*/
-
-    if (instance != this->instance) {
-        errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueSF", sfIdx.row());
-        return ;
-    }
-    if (!sfIdx.isValid()) {
-        errMsg = "Invalid sfIdx.  Src: " + src;
-        G::issue("Warning", errMsg, "DataModel::setValueSF", sfIdx.row());
-        return;
-    }
-    if (sfIdx.row() > sf->rowCount() - 1) {
-        errMsg = "Index out of range " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueSF", sfIdx.row());
-        return ;
-    }
-
-    sf->setData(sfIdx, value, role);
-    setData(sfIdx, align, Qt::TextAlignmentRole);
-}
-
 void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
                          QString src, int role, int align)
 {
@@ -3632,7 +3558,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) {
         // qDebug() << "SortFilter::filterAcceptsRow suspendFiltering = true" << sourceRow;
-        return false;
+        return true;
     }
 
     // still loading metadata

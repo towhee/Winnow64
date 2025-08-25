@@ -8,7 +8,7 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
     #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     QImageReader::setAllocationLimit(1024);
     #endif
-    connect(this, &Pixmap::setValueDm, dm, &DataModel::setValueDm);
+    connect(this, &Pixmap::setValDm, dm, &DataModel::setValDm);
 }
 
 bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
@@ -304,22 +304,23 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     }
 
     // color manage if available
-//    ICCTime.start();
+    // ICCTime.start();
     if (G::colorManage && metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
         ICC::transform(ba, image);
     }
-//    tICC = ICCTime.elapsed();
+    // tICC = ICCTime.elapsed();
 
-//    tDecode = decodeTime.elapsed() ;
+    // tDecode = decodeTime.elapsed() ;
 
     // calc read/decode performance
     double mp = dm->index(dmRow, G::MegaPixelsColumn).data().toDouble();
-//    qint64 msec = tDecode;
+    // qint64 msec = tDecode;
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
     QString source = "Pixmap::load";
-    emit setValueDm(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
+    emit setValDm(dmRow, G::LoadMsecPerMpColumn, msecPerMp, 0, source,
+                  Qt::EditRole, Qt::AlignLeft);
     /*
     qDebug() << "Pixmap::load"
              << "Decode:" << tDecode << "ms"

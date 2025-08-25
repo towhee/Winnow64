@@ -261,8 +261,6 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
     connect(dm, &DataModel::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
-    connect(this, &MW::setValueDm, dm, &DataModel::setValueDm);
-    connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
     connect(this, &MW::setValDm, dm, &DataModel::setValDm);
     connect(this, &MW::setValSf, dm, &DataModel::setValSf);
 
@@ -365,9 +363,6 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetadataCacheProgress);
 
-    // save time to read image metadata and icon to the datamodel
-    connect(metaRead, &MetaRead::setMsToRead, dm, &DataModel::setValueDm);
-
     metaRead->metaReadThread.start();
 }
 
@@ -440,8 +435,7 @@ void MW::createImageCache()
             this, &MW::setCentralMessage);
 
     // set values in the datamodel
-    connect(imageCache, &ImageCache::setValueSf,
-            dm, &DataModel::setValueSf);
+    connect(imageCache, &ImageCache::setValSf, dm, &DataModel::setValSf);
 
     imageCache->start();
 }

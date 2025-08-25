@@ -390,10 +390,6 @@ protected:
 
 signals:
     void updateCurrent(QModelIndex sfIdx, int instance);
-    void setValueDm(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",

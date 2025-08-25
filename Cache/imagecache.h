@@ -64,7 +64,7 @@ signals:
     void waitingForRow(int sfRow);
     void setCached(int sfRow, bool isCached, int instance);
     void decode(int sfRow, int instance);
-    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
+    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
     void showCacheStatus(QString instruction,
                          float currMB, int maxMB, int targetFirst, int targetLast,

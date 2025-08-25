@@ -628,7 +628,8 @@ void MW::setRating()
         updateRatingLog(fPath, rating);
         // update datamodel
         QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
-        emit setValueDm(ratingIdx, rating, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+        emit setValDm(dmRow, G::RatingColumn, rating, dm->instance, src,
+                      Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
@@ -640,8 +641,8 @@ void MW::setRating()
                 QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
                 // set rating for raw file row as well
-                ratingIdx = dm->index(rowDup, G::RatingColumn);
-                emit setValueDm(ratingIdx, rating, dm->instance, src, Qt::EditRole);
+                // ratingIdx = dm->index(rowDup, G::RatingColumn);
+                emit setValDm(rowDup, G::RatingColumn, rating, dm->instance, src, Qt::EditRole);
             }
         }
         // write to sidecar
@@ -651,7 +652,7 @@ void MW::setRating()
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)
             QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
-            emit setValueDm(_ratingIdx, rating, dm->instance, src, Qt::EditRole);
+            emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
             G::popup->setProgress(i+1);
         }
     }
@@ -709,11 +710,12 @@ void MW::recoverRatingLog()
                             QString pickStatus = settings->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
-            QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
-            emit setValueSf(ratingIdx, pickStatus, dm->instance, src, Qt::EditRole);
+            int sfRow = idx.row();
+            emit setValSf(sfRow, G::RatingColumn, pickStatus, dm->instance,
+                          src, Qt::EditRole);
         }
         else {
-//            qDebug() << "MW::recoverRatingLog" << fPath << "not found";
+            // qDebug() << "MW::recoverRatingLog" << fPath << "not found";
         }
     }
     settings->endGroup();
@@ -821,7 +823,8 @@ void MW::setColorClass()
         updateColorClassLog(fPath, colorClass);
         // update datamodel
         QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
-        emit setValueDm(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+        emit setValDm(dmRow, G::LabelColumn, colorClass, dm->instance, src,
+                      Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->index(dmRow, 0);
@@ -833,9 +836,9 @@ void MW::setColorClass()
                 QString jpgPath = dm->sf->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
                 // set color class (label) for raw file row as well
-                labelIdx = dm->index(rowDup, G::LabelColumn);
                 QString src = "MW::setColorClass";
-                emit setValueDm(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                emit setValDm(rowDup, G::LabelColumn, colorClass, dm->instance, src,
+                              Qt::EditRole, Qt::AlignCenter);
             }
         }
         // write to sidecar
@@ -843,8 +846,8 @@ void MW::setColorClass()
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
             // update _Label (used to check what metadata has changed in metadata->writeXMP)
-            QModelIndex _labelIdx = dm->index(dmRow, G::_LabelColumn);
-            emit setValueDm(_labelIdx, colorClass, dm->instance, src, Qt::EditRole);
+            emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
+                          Qt::EditRole);
             G::popup->setProgress(i+1);
         }
     }
@@ -896,13 +899,14 @@ void MW::recoverColorClassLog()
         fPath.replace("🔸", "/");
                             QString colorClassStatus = settings->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        int sfRow = idx.row();
         QString src = "MW::recoverColorClassLog";
         if (idx.isValid()) {
-            QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
-            emit setValueSf(colorClassIdx, colorClassStatus, dm->instance, src, Qt::EditRole);
+            emit setValSf(sfRow, G::LabelColumn, colorClassStatus, dm->instance,
+                          src, Qt::EditRole);
         }
         else {
-//            qDebug() << "MW::recoverColorClassLog" << fPath << "not found";
+            // qDebug() << "MW::recoverColorClassLog" << fPath << "not found";
         }
     }
     settings->endGroup();
