@@ -408,7 +408,7 @@ bool Filters::isRatingChecked(QString rating)
             else return false;
         }
     }
-    // not found
+
     return false;
 }
 
