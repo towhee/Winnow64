@@ -2,7 +2,7 @@ WHAT'S NEW
 
 
 BUGS / TO DO
-- When clear rating redo filters
+- When clear rating/label that is filtered redo filters to show all if nothing left
 - Try using std::atomic<bool> for flags used in threads
 - TableView showing all columns at start when some columns are being hidden in pref
 - Do not show ICCBuf column in tableView

@@ -265,7 +265,7 @@ void MetaRead::abortProcessing()
 /*
     Set the abort flag to cancel the current read operation, before changing folders
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MetaRead::abortProcessing", "starting");
 
     abort = true;
@@ -275,7 +275,7 @@ void MetaRead::abortProcessing()
         if (readers[id]->pending) readers[id]->abortProcessing();
     }
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MetaRead::abortProcessing", "emit stopped");
 
     emit stopped("MetaRead");

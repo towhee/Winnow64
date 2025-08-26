@@ -131,10 +131,12 @@ void BuildFilters::stop()
 
 void BuildFilters::abortProcessing()
 {
-    // if (G::isLogger || G::isFlowLogger)
-    QString isGUI = QVariant(G::isGuiThread()).toString();
-    G::log("Buildfilters::abortProcessing",
-           "starting, isGUI thread = " + isGUI);
+    if (G::isLogger || G::isFlowLogger)
+    {
+        QString isGUI = QVariant(G::isGuiThread()).toString();
+        G::log("Buildfilters::abortProcessing",
+               "starting, isGUI thread = " + isGUI);
+    }
 
     if (isRunning()) {
         mutex.lock();
@@ -145,7 +147,7 @@ void BuildFilters::abortProcessing()
     }
     // abort = false;
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::abortProcessing", "emit stopped");
 
     emit stopped("BuildFilters");

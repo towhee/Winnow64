@@ -75,14 +75,11 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
+    int sfRowCountBeforeFilter = dm->sf->rowCount();
+
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead for the prior datamodel filter.
     dm->newInstance();
-
-    // stop ImageCache
-    // qDebug() << "MW::filterChange" << "emit abortImageCache()";
-    // emit abortImageCache();
-    // imageCache->abortProcessing();
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
@@ -127,15 +124,24 @@ void MW::filterChange(QString source)
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
     bool newSelectReqd = false;
-    // int oldRow = dm->currentDmIdx.row();
     int oldRow = dm->currentSfIdx.row();
     int sfRows = dm->sf->rowCount();
+
+    qDebug().noquote()
+        << "MW::filterChanged"
+        << "sfRows =" << sfRows
+        << "sfRowCountBeforeFilter =" << sfRowCountBeforeFilter
+        << "sel count =" << sel->count()
+        << "dm->currentDmIdx row =" << dm->currentDmIdx.row()
+        << "newSfIdx row =" << newSfIdx.row()
+        ;
+
     if (!newSfIdx.isValid()) {
         newSelectReqd = true;
         if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
         else newSfIdx = dm->sf->index(sfRows-1, 0);
     }
-    else if (imageView->isNullImage()) {
+    else if (imageView->isNullImage() || sfRowCountBeforeFilter == 0) {
         newSelectReqd = true;
     }
 
@@ -149,7 +155,6 @@ void MW::filterChange(QString source)
         sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
     else {
-        // dm->setCurrentSF(newSfIdx, dm->instance);
         emit updateCurrent(newSfIdx, G::dmInstance);
     }
 
@@ -160,7 +165,6 @@ void MW::filterChange(QString source)
     // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
-    // G::popUp->reset();
 }
 
 void MW::quickFilter()
@@ -561,6 +565,7 @@ void MW::setRating()
     for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
+    qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -641,7 +646,6 @@ void MW::setRating()
                 QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
                 // set rating for raw file row as well
-                // ratingIdx = dm->index(rowDup, G::RatingColumn);
                 emit setValDm(rowDup, G::RatingColumn, rating, dm->instance, src, Qt::EditRole);
             }
         }
@@ -670,20 +674,10 @@ void MW::setRating()
     // update category list in filters
     dm->sf->suspend(true, "MW::setRating");
     buildFilters->updateCategory(BuildFilters::RatingEdit);
-
-    // was this rating filtered
-    if (filters->isRatingChecked(rating)) {
-        sel->clear();
-        filterChange("MW::setRating");
-    }
+    filterChange("MW::setRating");
 
     // update ImageView classification badge
     updateClassification();
-
-    // if (G::useSidecar) {
-    //     G::popUp->setProgressVisible(false);
-    //     G::popUp->reset();
-    // }
 
     // auto advance
     if (G::autoAdvance) sel->next();
@@ -866,12 +860,13 @@ void MW::setColorClass()
     // update category list in filters
     dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
+    filterChange("MW::setColorClass");
 
-    // // was this rating filtered
-    if (filters->isLabelChecked(colorClass)) {
-        sel->clear();
-        filterChange("MW::setColorClass");
-    }
+    // // // was this rating filtered
+    // if (filters->isLabelChecked(colorClass)) {
+    //     sel->clear();
+    //     filterChange("MW::setColorClass");
+    // }
 
     // update ImageView classification badge
     updateClassification();

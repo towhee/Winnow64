@@ -392,9 +392,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    G::FolderOp op = G::FolderOp::Add;
-    QString opStr = G::enumClassToString(op);
-    qDebug() << opStr;
+    qDebug() << sel->count();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

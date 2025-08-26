@@ -2259,17 +2259,26 @@ void MW::createThumbViewContextMenu()
     separatorAction9->setSeparator(true);
     QAction *separatorAction0 = new QAction(this);
     separatorAction0->setSeparator(true);
+    QAction *separatorActionA = new QAction(this);
+    separatorActionA->setSeparator(true);
 
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
     openWithGroupAct->setMenu(openWithMenu);
     QAction *embelExportGroupAct = new QAction(tr("Embellish export..."), this);
     embelExportGroupAct->setMenu(embelExportMenu);
+    QAction *ratingGroupAct = new QAction(tr("Rating..."), this);
+    ratingGroupAct->setMenu(ratingsMenu);
+    QAction *labelGroupAct = new QAction(tr("Color label..."), this);
+    labelGroupAct->setMenu(labelsMenu);
 
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
     //    thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
     thumbViewActions->append(pickUnlessRejectedAction);
+    thumbViewActions->append(separatorActionA);
+    thumbViewActions->append(ratingGroupAct);
+    thumbViewActions->append(labelGroupAct);
     thumbViewActions->append(separatorAction8);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);

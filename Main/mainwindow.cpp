@@ -2556,11 +2556,11 @@ void MW::aborted(const QString name)
 bool MW::allIdle() const {
     for (const auto& v : stopped) {
         if (!v) {
-        G::log("MW::allIdle", stopped.key(v) + " = " + QVariant(v).toString());
+        // G::log("MW::allIdle", stopped.key(v) + " = " + QVariant(v).toString());
         return false;
         }
     }
-    G::log("MW::allIdle", "allIdle = true");
+    // G::log("MW::allIdle", "allIdle = true");
     return true;
 }
 
