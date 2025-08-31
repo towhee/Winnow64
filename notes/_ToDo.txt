@@ -140,6 +140,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Double mouse click in container causing dock to float
 - Replace DataModel setValue functions with row/col setVal versions
 - MW::stop redo using event loop and signals to MetaRead, ImageCache and BuildFilters
 - MetaRead and ImageView status lights are truncated (made container wider)

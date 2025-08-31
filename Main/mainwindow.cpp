@@ -2163,9 +2163,9 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
-        G::log("","");
+        // G::log("","");
         {
             QString msg = "op = " + G::enumClassToString(op) +
                 " recurse = " + QVariant(recurse).toString() +
@@ -2584,12 +2584,12 @@ void MW::stop(QString src)
 
 */
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
         G::log("MW::stop", "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
     // ignore if already stopping
-    if (G::stop && !G::removingFolderFromDM) return;
+    if (G::stop) return;
 
     // qDebug().noquote() << "MW::stop src =" << src;
 
@@ -2616,9 +2616,9 @@ void MW::stop(QString src)
     // Update helper
     auto setStopped = [&](const QString& name){
         stopped[name] = true;
-        if (G::isFlowLogger) G::log("MW::stop  markIdle", name);
+        // G::log("MW::stop  setStopped", name);
         if (allIdle()) {
-            if (G::isFlowLogger) G::log("MW::stop  markIdle", "allIdle = true");
+            // G::log("MW::stop  setStopped", "allIdle = true");
             loop.quit();
         }
     };
@@ -2634,13 +2634,14 @@ void MW::stop(QString src)
 
     // Timeout handler
     connect(&to, &QTimer::timeout, &loop, [&]{
-        if (G::isFlowLogger) G::log("MW::stop", "timed out");
+        // if (G::isFlowLogger)
+            G::log("MW::stop", "timed out");
         loop.quit();
     });
 
     // If everything was already idle, skip waiting
     if (!allIdle()) {
-        if (G::isFlowLogger) G::log("MW::stop", "start loop");
+        // G::log("MW::stop", "start loop");
         loop.exec();                   // <-- this blocks until all idle or timeout
     }
 
@@ -2650,15 +2651,19 @@ void MW::stop(QString src)
     // reset all parameters
     reset(src);
 
+    G::log(""); // force show prev G::log in reset()
+
     setCentralMessage("");
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted.");
-        if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
+        // if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
     }
 
+    qApp->processEvents();
     G::stop = false;
-    G::removingFolderFromDM = false;
+
+    return;
 }
 
 bool MW::reset(QString src)
@@ -2668,11 +2673,13 @@ bool MW::reset(QString src)
     resetDataModel == true.
 */
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::reset", "Source: " + src);
+    // if (G::isLogger || G::isFlowLogger)
+        G::log("MW::reset", "Source: " + src);
 
     // datamodel
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
+    G::log("MW::reset", "dm->clearDataModel()");
     dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
     dm->newInstance();
@@ -2680,6 +2687,7 @@ bool MW::reset(QString src)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
+    G::log("MW::reset", "infoView");
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
         infoView->clearInfo();
@@ -2687,6 +2695,7 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
+    G::log("MW::reset", "progress");
     cacheProgressBar->clearImageCacheProgress();
     progressLabel->setVisible(false);
     filterStatusLabel->setVisible(false);
@@ -2699,15 +2708,18 @@ bool MW::reset(QString src)
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
+    G::log("MW::reset", "imageView");
     imageView->clear();
     imageView->isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // Image cache
+    G::log("MW::reset", "icd");
     icd->clear();
 
     // used by updateStatus
+    G::log("MW::reset", "status");
     pickMemSize = "";
     updateStatus(false, "", "MW::reset");
 
@@ -2721,6 +2733,7 @@ bool MW::reset(QString src)
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
+    G::log("MW::reset", "state");
     if (asCompareAction->isChecked()) {
         asCompareAction->setChecked(false);
         asLoupeAction->setChecked(true);
@@ -2728,6 +2741,7 @@ bool MW::reset(QString src)
     }
 
     // if at welcome or message screen and then select a folder
+    G::log("MW::reset", "mode");
     if (centralLayout->currentIndex() == StartTab ||
         centralLayout->currentIndex() == MessageTab)
     {
@@ -2752,10 +2766,12 @@ bool MW::reset(QString src)
     setThreadRunStatusInactive();
 
     // do not embellish
+    G::log("MW::reset", "embellish");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
     // bookmarkBlocker.unblock();
     // fsTreeBlocker.unblock();
+
     return true;
 }
 
@@ -3165,26 +3181,16 @@ void MW::folderChangeCompleted()
     tableView->resizeColumns();
 
     // test if any null thumbnails
-    bool isNullIcon = false;
-    for (int i = 0; i < dm->rowCount(); ++i) {
-        QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
-        if (icon.isNull()) {
-            qWarning() << "Warning: row" << i << "icon is null"
-                      << "G::iconChunkLoaded =" << G::iconChunkLoaded;
-            QString fPath = dm->index(i,0).data(G::PathRole).toString();
-            G::issue("Warning", "Icon is null", fun, i, fPath);
-            // G::iconChunkLoaded = false;
-            // isNullIcon = true;
-
-            // QImage image;
-            // QPixmap pm;
-            // Thumb *thumb;
-            // QModelIndex dmIdx = dm->index(i,0);
-            // thumb->loadThumb(fPath, dmIdx, image, instance, fun);
-            // pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            // dm->setIcon(dmIdx, pm, instance, fun);
-        }
-    }
+    // bool isNullIcon = false;
+    // for (int i = 0; i < dm->rowCount(); ++i) {
+    //     QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
+    //     if (icon.isNull()) {
+    //         // qWarning() << "Warning: row" << i << "icon is null"
+    //         //            << "G::iconChunkLoaded =" << G::iconChunkLoaded;
+    //         QString fPath = dm->index(i,0).data(G::PathRole).toString();
+    //         G::issue("Warning", "Icon is null", fun, i, fPath);
+    //     }
+    // }
 }
 
 void MW::thumbHasScrolled()
