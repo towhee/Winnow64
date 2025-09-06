@@ -33,7 +33,6 @@ public:
     QImage image;
     QString fPath;
     QString errMsg;
-    double lastDecodeSec;
 
     enum Status {
         Undefined,

@@ -119,9 +119,6 @@ void ImageDecoder::decode(int row, int instance)
     // range check
     if (row >= dm->sf->rowCount()) return;
 
-    QElapsedTimer t;
-    t.start();
-
     setBusy();
     this->instance = instance;
 
@@ -163,6 +160,9 @@ void ImageDecoder::decode(int row, int instance)
         return;
     }
 
+    QElapsedTimer t;
+    t.start();
+
     // decode
     if (!abort && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
@@ -195,7 +195,6 @@ void ImageDecoder::decode(int row, int instance)
 
     setIdle();
     if (!abort) emit done(threadId);
-    double lastDecodeSec = static_cast<double>(t.nsecsElapsed()) / 1000000000.0;
 }
 
 bool ImageDecoder::load()
