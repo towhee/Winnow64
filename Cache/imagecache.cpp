@@ -160,17 +160,6 @@ ImageCache::ImageCache(QObject *parent,
         cycling.append(false);
     }
 
-    // >>> NEW (adaptive buffer timer)
-    adaptTimer.setInterval(200);        // light periodic recompute (ms)
-    adaptTimer.setSingleShot(false);
-    connect(&adaptTimer, &QTimer::timeout, this, [this]{
-        recomputeAdaptiveTargets();
-        // optional "smooth" tick: every ~2s without underruns, relax horizon
-        static int ticks=0;
-        if (++ticks % 10 == 0) noteSmoothTick();
-    });
-    adaptTimer.start();
-
     abort = false;
     debugCaching = false;        // turn on local qDebug
     debugLog = false;            // invoke log without G::isLogger or G::isFlowLogger
@@ -328,9 +317,6 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
 
     // signal DataModel::imageCacheWaiting
     emit waitingForRow(sfRow);
-    // NEW
-    noteUnderrun();
-    // end NEW
 
     while(!isLoaded) {
         if (!condition.wait(&gMutex, ms - t.elapsed())) break;
@@ -503,7 +489,7 @@ void ImageCache::trimOutsideTargetRange()
         qDebug().noquote()
             << src.leftJustified(col0Width, ' ')
             << "toCache:" << toCache
-            << "updateStatus(Update all rows, src)"
+
             ;
     }
 
@@ -547,386 +533,121 @@ void ImageCache::setTargetRange(int key)
     qDebug() << "setTargetRange"
              << "key =" << key
              << "threadId =" << QThread::currentThread();
-    }    // sprint detection
-    bool sprintActive = false;
-
-
-
-    if (G::isLogger) G::log("ImageCache::setTargetRange key=" + QString::number(key));
-
-    const int n = dm->sf->rowCount();
-    if (n <= 0) return;
-
-    // Current cache usage (MB) and limit (MB)
-    float sumMB = getImCacheSize();
-    const float limitMB = float(maxMB);
-
-    // Direction-relative quotas for this planning pass (defaults from adaptive controller)
-    int aheadNeeded  = std::max(1, targetAheadImgs);    // e.g. 2
-    int behindNeeded = std::max(1, targetBehindImgs);   // e.g. 1
-
-    // --- Sprint boost: when user holds arrow, bank a longer ahead runway, minimize behind ---
-    if (sprintActive) {
-        const double meanT = cacheStats.tMean.value(0.03);
-        const double Sthr  = (meanT > 1e-6) ? (1.0 / meanT) : 1e6;     // decode imgs/sec
-        const double vstar = std::max(cacheStats.vMean.value(0.0), cacheStats.vInst);
-        const double D     = 0.70;                                      // seconds to cover
-
-        int sprintAhead = std::max(aheadNeeded, int(std::ceil(vstar * D)));
-        if (Sthr < vstar) sprintAhead = std::max(sprintAhead, int(std::ceil((vstar - Sthr) * D)) + 2);
-        sprintAhead = std::clamp(sprintAhead, aheadNeeded, 24);         // soft cap; mem guard still applies
-
-        aheadNeeded  = sprintAhead;
-        behindNeeded = 1;                                               // don’t waste buffer behind in a sprint
     }
 
-    // --- Publish intended target window NOW so the status bar reflects the plan ---
+    // initialize
+    float sumMB = 0;
+    int n = dm->sf->rowCount();
+    bool aheadDone = false;
+    bool behindDone = false;
+    if (key == n - 1) {
+        isForward = false;
+        targetLast = n - 1;
+    }
+    if (key == 0) {
+        isForward = true;
+        targetFirst = 0;
+    }
+    int aheadPos = key;
+    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    if (behindPos >= n) behindDone = true;
+    if (behindPos < 0) behindDone = true;
+
+    // folders were added or removed from datamodel
+    if (instance != dm->instance) {
+        toCache.clear();
+        toCacheStatus.clear();
+    }
+
+    if (debugCaching)
     {
+        if (G::isGuiThread())
+        qDebug().noquote() << fun.leftJustified(col0Width, ' ')
+                           << "current position =" << key << "n =" << n
+                           << "RUNNING IN GUI THREAD"
+            ;
+    }
+
+    // Iterate while there is space in the cache or datamodel is exhausted
+    int pos = 0;
+    int i = 0;
+    while (sumMB < maxMB && !(aheadDone && behindDone)) {
+        if (abort) return;
+        // next target position (pos): 2 ahead, 1 behind sequence
+        i++;
+        bool isAhead = i % 3;
         if (isForward) {
-            targetFirst = std::clamp(key - behindNeeded, 0, n - 1);
-            targetLast  = std::clamp(key + aheadNeeded,  0, n - 1);
+            if (isAhead && !aheadDone) {
+                pos = aheadPos++;
+                if (aheadPos >= n) aheadDone = true;
+            }
+            else if (!behindDone) {
+                pos = behindPos--;
+                if (behindPos < 0) behindDone = true;
+            }
+            else continue;
         }
         else {
-            targetFirst = std::clamp(key - aheadNeeded,  0, n - 1);
-            targetLast  = std::clamp(key + behindNeeded, 0, n - 1);
+            if (isAhead && !aheadDone) {
+                pos = aheadPos--;
+                if (aheadPos < 0) aheadDone = true;
+            }
+            else if (!behindDone) {
+                pos = behindPos++;
+                if (behindPos >= n) behindDone = true;
+            }
+            else continue;
         }
-        updateStatus("Update all rows", "setTargetRange");
-    }
 
-    // Direction-aware cursors (ahead moves with travel; behind moves opposite)
-    int aheadPos  = isForward ? (key + 1) : (key - 1);
-    int behindPos = isForward ? (key - 1) : (key + 1);
+        /*
+        qDebug() << "setTargetRange"
+                 << "key =" << key
+                 << "i =" << i
+                 << "pos =" << pos
+                 << "n =" << n
+                 << "isForward =" << isForward
+                 << "isAhead =" << isAhead
+                 << "aheadDone =" << aheadDone
+                 << "behindDone =" << behindDone
+                 << "mb =" << dm->sf->index(pos, G::CacheSizeColumn).data().toFloat()
+                 << "sumMB =" << sumMB
+                 << "maxMB =" << maxMB
+                 << "targetFirst =" << targetFirst
+                 << "targetLast =" << targetLast
+                    ;//*/
 
-    // Conservative per-image decoded size estimate (MB)
-    const float perImgMB = std::max(
-        1.0f,
-        float(cacheStats.perImgP90(memCaps.defaultPerImageBytes)) / (1024.0f * 1024.0f)
-        );
-
-    // Minimal, robust eligibility (no path lookups):
-    auto isRowCached = [&](int row) -> bool {
-        if (row < 0 || row >= n) return true;
-        return dm->sf->index(row, G::IsCachedColumn).data().toBool();
-    };
-    auto isRowSkippable = [&](int row) -> bool {
-        Q_UNUSED(row);
-        // If you have a video/unsupported column, check it here and return true to skip.
-        return false;
-    };
-
-    // Iterators that walk strictly on each side, skipping ineligible rows
-    auto nextAhead = [&]() -> int {
-        while (aheadPos >= 0 && aheadPos < n) {
-            int r = aheadPos;
-            if (isForward) ++aheadPos; else --aheadPos;
-            if (isRowSkippable(r))  continue;
-            if (toCache.contains(r)) continue;
-            if (isRowCached(r))     continue;
-            return r;
+        // update toCache targets
+        if (dm->valueSf(pos, G::VideoColumn).toBool()) {
+            emit setCached(pos, true, instance);
+            pos < key ? targetFirst = pos : targetLast = pos;
         }
-        return -1;
-    };
-    auto nextBehind = [&]() -> int {
-        while (behindPos >= 0 && behindPos < n) {
-            int r = behindPos;
-            if (isForward) --behindPos; else ++behindPos;
-            if (isRowSkippable(r))  continue;
-            if (toCache.contains(r)) continue;
-            if (isRowCached(r))     continue;
-            return r;
-        }
-        return -1;
-    };
+        else {
+            /* see "Image size in cache" at top of imagecache.cpp
+            // this lowers performance
+            QVariant mb;
+            QMetaObject::invokeMethod(
+                dm,
+                "valueSf",
+                Qt::BlockingQueuedConnection,
+                Q_RETURN_ARG(QVariant, mb),
+                Q_ARG(int, pos),
+                Q_ARG(int, G::CacheSizeColumn)
+            );
+            sumMB += mb.toFloat();
+            //*/
 
-    // --- Fill AHEAD first to quota ---
-    while (aheadNeeded > 0 && sumMB < limitMB) {
-        const int pos = nextAhead();
-        if (pos < 0) break;                               // nothing left on ahead side
-        if (sumMB + perImgMB > limitMB) break;            // memory guard
+            // fast but risky, can crash when stress testing bounce folders
+            sumMB +=  dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
 
-        if (!toCache.contains(pos) && !isRowCached(pos)) {
-            toCacheAppend(pos);
-            sumMB += perImgMB;
-            if (pos < key) targetFirst = pos; else targetLast = pos;
-            --aheadNeeded;
+            QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+            if (sumMB < maxMB) {
+                if (!toCache.contains(pos) && !icd->contains(fPath)) {
+                    toCacheAppend(pos);
+                }
+                pos < key ? targetFirst = pos : targetLast = pos;
+            }
         }
     }
-
-    // --- Then fill BEHIND to quota ---
-    while (behindNeeded > 0 && sumMB < limitMB) {
-        const int pos = nextBehind();
-        if (pos < 0) break;
-        if (sumMB + perImgMB > limitMB) break;
-
-        if (!toCache.contains(pos) && !isRowCached(pos)) {
-            toCacheAppend(pos);
-            sumMB += perImgMB;
-            if (pos < key) targetFirst = pos; else targetLast = pos;
-            --behindNeeded;
-        }
-    }
-
-    updateStatus("Update all rows", "setTargetRange");
-
-    // ************************************************************
-
-    // // initialize
-    // float sumMB = 0;
-    // int n = dm->sf->rowCount();
-    // bool aheadDone = false;
-    // bool behindDone = false;
-    // if (key == n - 1) {
-    //     isForward = false;
-    //     targetLast = n - 1;
-    // }
-    // if (key == 0) {
-    //     isForward = true;
-    //     targetFirst = 0;
-    // }
-    // int aheadPos = key;
-    // int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
-    // if (behindPos >= n) behindDone = true;
-    // if (behindPos < 0) behindDone = true;
-
-    // // >>> NEW (per-direction quotas for this planning pass)
-    // int aheadCount  = 0;
-    // int behindCount = 0;
-
-    // // If the user is moving forward, “ahead” means key+1, else it’s key-1 (your existing isForward already handles this).
-    // // We’ll set done flags once the respective quotas are met.
-
-    // updateTargetWindowForStatus();
-    // // end NEW
-
-    // // folders were added or removed from datamodel
-    // if (instance != dm->instance) {
-    //     toCache.clear();
-    //     toCacheStatus.clear();
-    // }
-
-    // if (debugCaching)
-    // {
-    //     if (G::isGuiThread())
-    //     qDebug().noquote() << fun.leftJustified(col0Width, ' ')
-    //                        << "current position =" << key << "n =" << n
-    //                        << "RUNNING IN GUI THREAD"
-    //         ;
-    // }
-
-    // // Iterate while there is space in the cache or datamodel is exhausted
-    // int pos = 0;
-    // int i = 0;
-    // while (sumMB < maxMB && !(aheadDone && behindDone)) {
-    //     if (abort) return;
-    //     // next target position (pos): 2 ahead, 1 behind sequence
-    //     i++;
-    //     bool isAhead = i % 3;
-
-    //     // Rory version
-    //     // if (isForward) {
-    //     //     if (isAhead && !aheadDone) {
-    //     //         pos = aheadPos++;
-    //     //         if (aheadPos >= n) aheadDone = true;
-    //     //     }
-    //     //     else if (!behindDone) {
-    //     //         pos = behindPos--;
-    //     //         if (behindPos < 0) behindDone = true;
-    //     //     }
-    //     //     else continue;
-    //     // }
-    //     // else {
-    //     //     if (isAhead && !aheadDone) {
-    //     //         pos = aheadPos--;
-    //     //         if (aheadPos < 0) aheadDone = true;
-    //     //     }
-    //     //     else if (!behindDone) {
-    //     //         pos = behindPos++;
-    //     //         if (behindPos >= n) behindDone = true;
-    //     //     }
-    //     //     else continue;
-    //     // }
-
-    //     // NEW replace code block
-    //     // if (isForward) {
-    //     //     if (isAhead && !aheadDone) {
-    //     //         // Quota gate for AHEAD (relative to forward)
-    //     //         if (aheadCount >= targetAheadImgs) {
-    //     //             aheadDone = true;
-    //     //             continue;
-    //     //         }
-    //     //         pos = aheadPos++;
-    //     //         if (aheadPos >= n) aheadDone = true;
-    //     //     }
-    //     //     else if (!behindDone) {
-    //     //         // Quota gate for BEHIND (relative to forward)
-    //     //         if (behindCount >= targetBehindImgs) {
-    //     //             behindDone = true;
-    //     //             continue;
-    //     //         }
-    //     //         pos = behindPos--;
-    //     //         if (behindPos < 0) behindDone = true;
-    //     //     }
-    //     //     else continue;
-    //     // }
-    //     // else { // !isForward (backward travel)
-    //     //     if (isAhead && !aheadDone) {
-    //     //         // Quota gate for AHEAD (relative to backward → rows < key)
-    //     //         if (aheadCount >= targetAheadImgs) {
-    //     //             aheadDone = true;
-    //     //             continue;
-    //     //         }
-    //     //         pos = aheadPos--;
-    //     //         if (aheadPos < 0) aheadDone = true;
-    //     //     }
-    //     //     else if (!behindDone) {
-    //     //         // Quota gate for BEHIND (relative to backward → rows > key)
-    //     //         if (behindCount >= targetBehindImgs) {
-    //     //             behindDone = true;
-    //     //             continue;
-    //     //         }
-    //     //         pos = behindPos++;
-    //     //         if (behindPos >= n) behindDone = true;
-    //     //     }
-    //     //     else continue;
-    //     // }
-
-    //     // Step 1: try to pick AHEAD if we still need ahead quota
-    //     bool picked = false;
-    //     if (aheadCount < targetAheadImgs) {
-    //         if (isForward) {
-    //             if (!aheadDone) {
-    //                 pos = aheadPos++;
-    //                 if (aheadPos >= n) aheadDone = true;
-    //                 else picked = true;
-    //             }
-    //         }
-    //         else { // !isForward
-    //             if (!aheadDone) {
-    //                 pos = aheadPos--;
-    //                 if (aheadPos < 0) aheadDone = true;
-    //                 else picked = true;
-    //             }
-    //         }
-    //     }
-
-    //     // Step 2: if we didn't pick AHEAD (quota done or ran out), try BEHIND
-    //     if (!picked && (behindCount < targetBehindImgs)) {
-    //         if (isForward) {
-    //             if (!behindDone) {
-    //                 pos = behindPos--;
-    //                 if (behindPos < 0) behindDone = true;
-    //                 else picked = true;
-    //             }
-    //         }
-    //         else { // !isForward
-    //             if (!behindDone) {
-    //                 pos = behindPos++;
-    //                 if (behindPos >= n) behindDone = true;
-    //                 else picked = true;
-    //             }
-    //         }
-    //     }
-
-    //     if (!picked) {
-    //         // No more candidates in this pass
-    //         break;
-    //     }
-
-    //     /*
-    //     qDebug() << "setTargetRange"
-    //              << "key =" << key
-    //              << "i =" << i
-    //              << "pos =" << pos
-    //              << "n =" << n
-    //              << "isForward =" << isForward
-    //              << "isAhead =" << isAhead
-    //              << "aheadDone =" << aheadDone
-    //              << "behindDone =" << behindDone
-    //              << "mb =" << dm->sf->index(pos, G::CacheSizeColumn).data().toFloat()
-    //              << "sumMB =" << sumMB
-    //              << "maxMB =" << maxMB
-    //              << "targetFirst =" << targetFirst
-    //              << "targetLast =" << targetLast
-    //                 ;//*/
-
-    //     // update toCache targets
-    //     if (dm->valueSf(pos, G::VideoColumn).toBool()) {
-    //         emit setCached(pos, true, instance);
-    //         pos < key ? targetFirst = pos : targetLast = pos;
-    //     }
-    //     else {
-    //         /* see "Image size in cache" at top of imagecache.cpp
-    //         // this lowers performance
-    //         QVariant mb;
-    //         QMetaObject::invokeMethod(
-    //             dm,
-    //             "valueSf",
-    //             Qt::BlockingQueuedConnection,
-    //             Q_RETURN_ARG(QVariant, mb),
-    //             Q_ARG(int, pos),
-    //             Q_ARG(int, G::CacheSizeColumn)
-    //         );
-    //         sumMB += mb.toFloat();
-    //         //*/
-
-    //         // fast but risky, can crash when stress testing bounce folders
-    //         sumMB +=  dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
-
-    //         QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
-    //         // NEW
-    //         // replace commented block
-    //         // if (sumMB < maxMB) {
-    //         //     if (!toCache.contains(pos) && !icd->contains(fPath)) {
-    //         //         toCacheAppend(pos);
-    //         //     }
-    //         //     pos < key ? targetFirst = pos : targetLast = pos;
-    //         // }
-
-    //         // // 1st NEW
-    //         // if (sumMB < maxMB) {
-    //         //     if (!toCache.contains(pos) && !icd->contains(fPath)) {
-    //         //         toCacheAppend(pos);
-
-    //         //         // Count by BRANCH: isAhead == true means "ahead" relative to current direction
-    //         //         if (isAhead) ++aheadCount;
-    //         //         else         ++behindCount;
-    //         //     }
-
-    //         //     // Keep your existing endpoints logic based on absolute row order
-    //         //     if (pos < key) targetFirst = pos;
-    //         //     else           targetLast  = pos;
-
-    //         //     // Early-exit if both quotas are satisfied for this pass
-    //         //     if (aheadCount >= targetAheadImgs && behindCount >= targetBehindImgs) {
-    //         //         break;
-    //         //     }
-    //         // }
-
-    //         // 2nd NEW
-
-    //         if (sumMB < maxMB) {
-    //             if (!toCache.contains(pos) && !icd->contains(fPath)) {
-    //                 toCacheAppend(pos);
-
-    //                 // Count by BRANCH (we know whether we were filling AHEAD or BEHIND from the block above)
-    //                 // A simple way: recompute which side pos belongs to RELATIVE to isForward.
-    //                 const bool isAheadBranch = (isForward ? (pos > key) : (pos < key));
-    //                 if (isAheadBranch) ++aheadCount;
-    //                 else               ++behindCount;
-    //             }
-
-    //             if (pos < key) targetFirst = pos;
-    //             else           targetLast  = pos;
-
-    //             // Optional early-exit if both quotas satisfied
-    //             if (aheadCount >= targetAheadImgs && behindCount >= targetBehindImgs) {
-    //                 break;
-    //             }
-    //         }
-
-    //         // end NEW
-    //     }
-    // }
 
     if (debugCaching)
     {
@@ -1057,34 +778,6 @@ void ImageCache::memChk()
     if (maxMB < minMB) maxMB = minMB;
 }
 
-void ImageCache::updateTargetWindowForStatus()
-{
-    const int n = dm->sf->rowCount();
-    if (n <= 0) return;
-
-    // "Ahead" and "behind" are relative to travel direction.
-    int tf, tl;
-    if (isForward) {
-        tf = std::clamp(dm->currentSfRow - targetBehindImgs, 0, n-1);
-        tl = std::clamp(dm->currentSfRow + targetAheadImgs,  0, n-1);
-    }
-    else {
-        tf = std::clamp(dm->currentSfRow - targetAheadImgs,  0, n-1);
-        tl = std::clamp(dm->currentSfRow + targetBehindImgs, 0, n-1);
-    }
-
-    // Only update if it meaningfully changed to avoid excess repaints
-    static int lastTf = -1, lastTl = -1;
-    if (tf != lastTf || tl != lastTl) {
-        targetFirst = tf;
-        targetLast  = tl;
-        lastTf = tf; lastTl = tl;
-
-        // Let your status paint the new “target window” now
-        updateStatus("Update all rows", "updateTargetWindowForStatus");   // same instruction you already use
-    }
-}
-
 void ImageCache::updateStatus(QString instruction, QString source)
 /*
     Displays a statusbar showing the image cache status. Also shows the cache size in the info
@@ -1095,6 +788,8 @@ void ImageCache::updateStatus(QString instruction, QString source)
     (unless G::showProgress == G::ShowProgress::ImageCache)
 */
 {
+    // rgh get G::showProgress == G::ShowProgress::ImageCache working
+    // not all items req'd passed via showCacheStatus since icd->cache struct eliminated
     float currMB = getImCacheSize();
     /*
     qDebug() << "ImageCache::updateStatus"
@@ -1103,50 +798,6 @@ void ImageCache::updateStatus(QString instruction, QString source)
         ; //*/
     emit showCacheStatus(instruction, currMB, maxMB, targetFirst, targetLast, source);
 }
-
-// >>> NEW
-void ImageCache::recordDecodeSample(double sec, std::size_t bytes) {
-    cacheStats.addDecode(sec, bytes);
-    bootDecodeSamples++;
-}
-
-void ImageCache::recomputeAdaptiveTargets()
-{
-    if (isBootstrap) {
-        // Aggressive, human-sensible initial runway:
-        int ahead = std::max(bootMinAhead, int(std::ceil(vBootFPS * HBootSec)));
-        // Keep your 2:1 bias (ahead:behind). Clamp behind to at least 1.
-        int behind = std::max(bootMinBehind, std::max(1, ahead / 2));
-
-        // Respect memory soft cap with your per-image P90 if available
-        cacheCtl.update(cacheStats, cacheTargets, memCaps); // lets us discover per-image size and cap
-        // but then override counts aggressively:
-        targetAheadImgs  = std::max(1, std::min(ahead,  cacheTargets.ahead  + std::max(0, ahead  - cacheTargets.ahead )));
-        targetBehindImgs = std::max(1, std::min(behind, cacheTargets.behind + std::max(0, behind - cacheTargets.behind)));
-
-        // Publish target window now so the status bar shows the plan immediately (see helper below)
-        updateTargetWindowForStatus();
-        return;
-    }
-
-    // Normal adaptive mode (uses measured nav/decode stats + memory caps)
-    cacheCtl.update(cacheStats, cacheTargets, memCaps);
-    targetAheadImgs  = std::max(1, cacheTargets.ahead);
-    targetBehindImgs = std::max(1, cacheTargets.behind);
-
-    updateTargetWindowForStatus();            // >>> NEW
-}
-
-void ImageCache::noteUnderrun() {
-    cacheCtl.onUnderrun(cacheTargets);
-    recomputeAdaptiveTargets();
-}
-
-void ImageCache::noteSmoothTick() {
-    cacheCtl.onSmooth(cacheTargets);
-    recomputeAdaptiveTargets();
-}
-// end NEW
 
 void ImageCache::log(const QString function, const QString comment)
 {
@@ -1609,20 +1260,9 @@ void ImageCache::initialize(int cacheMaxMB,
     prevRow = -1;
     // the cache defaults to the first image and a forward selection direction
     isForward = true;
-
     // the amount of memory to allocate to the cache
     maxMB = cacheMaxMB;
     minMB = cacheMinMB;
-    // >>> CHANGED/NEW (reflect prefs into adaptive model)
-    memCaps.cacheLimitBytes = std::size_t(maxMB) << 20;
-    // Keep your existing headroom idea; 512MB is a sane default:
-    memCaps.headroomBytes = std::size_t(512ull << 20);
-    // For per-image fallback, seed with a realistic guess (50MB for ~50MP JPEG decode)
-    memCaps.defaultPerImageBytes = std::size_t(50ull << 20);
-    // initialize targets immediately
-    recomputeAdaptiveTargets();
-    // end NEW
-
     this->isShowCacheStatus = isShowCacheStatus;
     wtAhead = cacheWtAhead;
     targetFirst = 0;
@@ -1780,18 +1420,16 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         << "isRunning =" << imageCacheThread.isRunning();
     }
 
-    /*
     // prev check prevents update when add a folder to datamodel
-    static int prevRow = -1;
-    static int prevInstance = -1;
+    // static int prevRow = -1;
+    // static int prevInstance = -1;
 
-    if (prevRow == currRow && prevInstance == instance) {
-        qDebug() << fun << "prevRow == currRow && prevInstance == instance so return without caching";
-        return;
-    }
-    prevRow = currRow;
-    prevInstance = instance;
-    */
+    // if (prevRow == currRow && prevInstance == instance) {
+    //     qDebug() << fun << "prevRow == currRow && prevInstance == instance so return without caching";
+    //     return;
+    // }
+    // prevRow = currRow;
+    // prevInstance = instance;
 
     if (G::dmInstance != instance) {
         // if (debugCaching)
@@ -1819,31 +1457,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     }
 
     abort = false;
-
-    // >>> NEW (nav rate + reversal)
-    bootNavEvents++;
-    int dir = 0;
-    if (prevRow >= 0 && currRow != prevRow) dir = (currRow > prevRow) ? +1 : -1;
-    if (!navTimer.isValid()) { navTimer.start(); lastNavNs = navTimer.nsecsElapsed(); }
-    else {
-        qint64 now = navTimer.nsecsElapsed();
-        double dt = double(now - lastNavNs) / 1e9;
-        lastNavNs = now;
-        if (dt > 1e-4) {
-            double vInst = 1.0 / dt;                  // images / sec
-            cacheStats.addNavRate(vInst);
-        }
-        if (lastNavDir != 0 && dir != 0 && dir != lastNavDir) cacheStats.addReverse(true);
-        else cacheStats.addReverse(false);
-    }
-    if (dir != 0) lastNavDir = dir;
-    // end NEW (nav rate + reversal)
-
     dispatch();
-
-    // >>> NEW
-    recomputeAdaptiveTargets();
-    // end NEW
 }
 
 bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
@@ -2106,12 +1720,6 @@ void ImageCache::cacheImage(int id, int sfRow)
     // cache the image
     if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
 
-    // record decode seconds and image byte size
-    // >>> NEW (bytes only; time uses fallback)
-    double sec = std::max(0.0, decoders[id]->lastDecodeSec);
-    std::size_t bytes = std::size_t(decoders[id]->image.sizeInBytes()); // Qt6
-    recordDecodeSample(sec, bytes);    // end NEW
-
     /*
     qDebug().noquote()
         << src.leftJustified(col0Width, ' ')
@@ -2127,7 +1735,6 @@ void ImageCache::cacheImage(int id, int sfRow)
     if (!abort) emit setCached(sfRow, true, instance);
 
     // update cache status in cache progress bar
-
     if (!abort) updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 
