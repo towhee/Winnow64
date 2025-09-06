@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QObject>
 #include "Cache/cachedata.h"
+#include "Cache/cacheadapt.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
@@ -92,6 +93,9 @@ public slots:
     void reloadImageCache();
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
+    // --- Adaptive buffering public hooks (safe to call via QueuedConnection) ---  // >>> NEW
+    void noteUnderrun();          // call when UI asked for next image and it wasn't ready
+    void noteSmoothTick();        // call periodically (e.g., every 2s) when no underruns
 
 private slots:
     void dispatch();  // Main processing loop
@@ -145,6 +149,46 @@ private:
     int targetLast;             // end of the target range to cache
     bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
+
+    // --- Adaptive buffering state ----------------------------------------------
+    CacheStats cacheStats;
+    CacheTargets cacheTargets;
+    MemCaps memCaps;
+    CacheController cacheCtl;
+
+    // --- NEW Adaptive buffering state (you already added Cache* types earlier) ----
+    bool isBootstrap = true;             // >>> NEW
+    int bootNavEvents = 0;               // >>> NEW
+    int bootDecodeSamples = 0;           // >>> NEW
+
+    // Tunables for bootstrap; adjust if you wish
+    static constexpr double vBootFPS = 20.0;  // assume 20 images/sec initially
+    static constexpr double HBootSec = 0.60;  // aim to cover ~0.6 s burst
+    static constexpr int    bootMinAhead = 10;   // floor
+    static constexpr int    bootMinBehind = 5;   // floor; ~2:1 ratio
+    static constexpr int    warmNavEventsNeeded = 3;   // to exit bootstrap
+    static constexpr int    warmDecodeSamplesNeeded = 8; // to exit bootstrap
+
+    // target counts computed for current position/direction
+    int targetAheadImgs{2};
+    int targetBehindImgs{1};
+
+    // nav timing helpers
+    QElapsedTimer navTimer;
+    qint64 lastNavNs{0};
+    int lastNavDir{0}; // +1 next, -1 prev
+
+    // sprint detection
+    bool sprintActive = false;
+
+    QTimer adaptTimer; // periodic recompute & smooth tick
+
+    void recomputeAdaptiveTargets();             // compute targetAheadImgs/targetBehindImgs
+    void recordNavEvent(int dir);                // (+1/-1) updates cacheStats
+    void recordDecodeSample(double sec, std::size_t bytes); // updates cacheStats
+
+    void updateTargetWindowForStatus();
+    // end adaptive buffering state
 
     void launchDecoders(QString src);
     bool okToCache(int id, int sfRow);

@@ -1,112 +1,903 @@
-Winnow uses the DockWidget favDock to dock the bookmarks (QTreeWidget).  A double mouse click toggles
-the dock between docked and float state.  I want this to only occur when the double mouse click is
-in the dock title bar, not when it is propogated from bookmarks. Currently, a double mouse click in
-bookmarks is triggering the toggle between docked and floating.
+#include "Cache/imagecache.h"
+#include "Main/global.h"
 
-void MW::createFavDock()
+ImageCache::ImageCache(QObject *parent,
+                       ImageCacheData *icd,
+                       DataModel *dm)
+    : QObject(nullptr)
 {
-    if (G::isLogger) G::log("MW::createFavDock");
-    favDockTabText = "Bookmarks";
-    // favDockTabText = "  🔖  ";
-    dockTextNames << favDockTabText;
-    favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
-    // favDock->setObjectName("Bookmarks");
-    favDock->setWidget(bookmarks);
-    connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
+    moveToThread(&imageCacheThread);
 
-    // customize the favDock titlebar
-    QHBoxLayout *favTitleLayout = new QHBoxLayout();
-    favTitleLayout->setContentsMargins(0, 0, 0, 0);
-    favTitleLayout->setSpacing(0);
-    favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
-    favDock->setTitleBarWidget(favTitleBar);
+    connect(dm, &DataModel::rowLoaded, this, [&] { condition.wakeAll(); });
+
+    // data is kept in ImageCacheData icd, a hash table
+    this->icd = icd;
+    this->dm = dm;
+    // new metadata to avoid thread collisions?
+    metadata = new Metadata;
+
+    // create n decoder threads
+    decoderCount = QThread::idealThreadCount();
+    for (int id = 0; id < decoderCount; ++id) {
+        ImageDecoder *decoder = new ImageDecoder(id, dm, metadata);
+        QThread *thread = new QThread;
+
+        decoder->moveToThread(thread);
+        connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
+
+        thread->start();
+        decoders.append(decoder);
+        decoderThreads.append(thread);
+        cycling.append(false);
+    }
+
+    abort = false;
 }
 
-DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
+ImageCache::~ImageCache()
 {
-    setStyle();
-    setLayout(titleBarLayout);
-    titleLabel = new QLabel;
-    titleLabel->setTextFormat(Qt::RichText);
-    setTitle(title);
-    titleLabel->setText(title);
-    titleLabel->setStyleSheet("border:none;");
-    titleBarLayout->addWidget(titleLabel);
-    titleBarLayout->addStretch();
+    stop();
 }
 
-void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
+void ImageCache::start()
 {
-    QWidget::mouseDoubleClickEvent(event);
+    abort = false;
+    if (!imageCacheThread.isRunning()) {
+        imageCacheThread.start();
+    }
 }
 
-DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
-: QDockWidget(title, parent)
-{
-setObjectName(objName);
-isRestoring = false;
-}
-
-bool DockWidget::hasCustomTitleBar()
-{
-QWidget *titleBarWidget = this->titleBarWidget();
-if (titleBarWidget) return true;
-else return false;
-}
-
-bool DockWidget::event(QEvent *event)
+void ImageCache::stop()
 {
 /*
-QDockWidget title bar overrides MouseButtonDblClick and does not propogate the event
-so it cannot be captured in DockWidget.  Instead capture here.
-
-The QDockWidget topLevelChanged signal is not employed because it fires after the
-DockWidget floating status has changed, and we need to know before, so we can save
-the floating geometry.
+    Called when quitting Winnow.
 */
-if (event->type() == QEvent::NonClientAreaMouseButtonDblClick) {
+    QString fun = "ImageCache::stop";
+    abort = true;
 
-    /* This event is fired when the default (non-custom) floating DockWidget titlebar
-    is dblclick. If the DockWidget has a custom titlebar then this event is not
-    fired. So, only the thumbDock DockWidget when floating. */
-
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::NonClientAreaMouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event NonClientAreaMouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    save();
-    setFloating(false);
-    emit focus(this);
-    // do not propogate event
-    return true;
-}
-
-if (event->type() == QEvent::MouseButtonDblClick) {
-    /*  This event is fired for DockWidgets with a custom titlebar when they are both
-    floating and docked and non-custom titlebar DockWidgets when docked. */
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event MouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    if (isFloating() && hasCustomTitleBar()) {
-        save();
-        setFloating(false);
-        emit focus(this);
+    // Stop all decoder threads first
+    for (int id = 0; id < decoderCount; ++id) {
+        QMetaObject::invokeMethod(decoders[id], "stop", Qt::BlockingQueuedConnection);
+        // decoders[id]->stop();
     }
-    else {
-        doubleClickDocked = true;
-        setDefaultFloatingGeometry();
-        setFloating(true);  // must preceed calling restore()
-        restore();
+
+    if (imageCacheThread.isRunning()) {
+        imageCacheThread.quit();
+        imageCacheThread.wait();
     }
-    // do not propogate event
-    return true;
 }
 
-QDockWidget::event(event);
-return true;
-}
-
-void BookMarks::mouseDoubleClickEvent(QMouseEvent *event)
+bool ImageCache::instanceClash(bool id)
 {
-    event->ignore();
-    return;
+    return decoders[id]->instance != G::dmInstance;
+}
+
+void ImageCache::abortProcessing()
+{
+    // if (G::isLogger || G::isFlowLogger)
+    abort = true;
+    for (int id = 0; id < decoderCount; ++id) {
+        cycling[id] = false;
+        decoders[id]->abortProcessing();
+    }
+
+    emit stopped("ImageCache");
+}
+
+bool ImageCache::isIdle()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (decoders[id]->isBusy()) return false;
+    }
+    return true;
+}
+
+bool ImageCache::isRunning() const
+{
+    return imageCacheThread.isRunning();
+}
+
+bool ImageCache::anyDecoderCycling()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (cycling.at(id)) return true;
+    }
+    return false;
+}
+
+float ImageCache::getImCacheSize()
+{
+    // return the current size of the cache
+    float cacheMB = 0;
+
+    for (auto it = icd->imCache.constBegin(); it != icd->imCache.constEnd(); ++it) {
+        float mb = static_cast<float>(it.value().sizeInBytes()) / (1 << 20);
+        cacheMB += mb;
+    }
+
+    return cacheMB;
+}
+
+bool ImageCache::isValidKey(int key)
+{
+    if (key > -1 && key < dm->sf->rowCount()) return true;
+    else return false;
+}
+
+bool ImageCache::waitForMetaRead(int sfRow, int ms)
+{
+    if (G::allMetadataLoaded) {
+        return true;
+    }
+    if (dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
+        return true;
+    }
+
+    bool isLoaded = false;
+
+    QElapsedTimer t;
+    t.start();
+
+    // signal DataModel::imageCacheWaiting
+    emit waitingForRow(sfRow);
+
+    while(!isLoaded) {
+        if (!condition.wait(&gMutex, ms - t.elapsed())) break;
+        isLoaded = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+        if (isLoaded) break;
+    }
+
+    return isLoaded;
+}
+
+void ImageCache::updateToCache()
+{
+    QMutexLocker locker(&gMutex);  // req'd to prevent toCacheAppend() crash
+
+    if (!abort) setDirection();
+    // prevent additions or deletions to model
+    if (!abort) setTargetRange(currRow);
+    if (!abort) trimOutsideTargetRange();
+
+    // update datamodel cached status
+    for (int sfRow : removedFromCache) {
+        if (abort) break;
+        emit setCached(sfRow, false, instance);
+    }
+
+    if (instance != dm->instance) instance = dm->instance;
+}
+
+void ImageCache::setDirection()
+{
+/*
+    If the direction of travel changes then delay reversing the caching direction until a
+    directionChangeThreshold (ie 3rd) image is selected in the new direction of travel. This
+    prevents needless caching if the user justs reverses direction to check out the previous
+    image
+*/
+    int thisPrevKey = prevRow;
+    prevRow = currRow;
+    int thisStep = currRow - thisPrevKey;
+
+    // cache direction just changed, increment counter
+    if (sumStep == 0) {
+        sumStep += thisStep;
+    }
+    // cache direction not changed
+    else {
+        // immediate direction changed, reset counter
+        if (sumStep > 0 != thisStep > 0) sumStep = thisStep;
+        // increment counter
+        else sumStep += thisStep;
+    }
+
+    // immediate direction change exceeds threshold
+    if (qAbs(sumStep) > directionChangeThreshold) {
+        // immediate direction opposite to cache direction
+        if (isForward != sumStep > 0) {
+            isForward = sumStep > 0;
+            sumStep = 0;
+        }
+    }
+}
+
+void ImageCache::trimOutsideTargetRange()
+/*
+    Any images in imCache that are no longer in the target range are removed.
+*/
+{
+    removedFromCache.clear();
+
+    // trim imCache outside target range
+    auto it = icd->imCache.begin();
+    while (it != icd->imCache.end()) {
+        QString fPath = it.key();
+        int sfRow = dm->proxyRowFromPath(fPath, src);
+        // fPath not in datamodel if sfRow == -1
+        if (!isValidKey(sfRow)) {
+            // Erase and move iterator forward
+            it = icd->imCache.erase(it);
+            continue;
+        }
+        if (sfRow < targetFirst || sfRow > targetLast) {
+            // Erase and move iterator forward
+            it = icd->imCache.erase(it);
+            removedFromCache.append(sfRow);
+        }
+        else {
+            ++it; // move forward if no removal
+        }
+    }
+
+    // folders were added or removed from datamodel and toCache/toCacheStatus
+    // have already been cleared and repopulated in setTargetRange
+    if (instance != dm->instance) return;
+
+    // trim toCacheStatus outside target range
+    for (int sfRow : toCache) {
+        if (sfRow < targetFirst || sfRow > targetLast) {
+            toCacheStatus.remove(sfRow);
+            if (isValidKey(sfRow) && !removedFromCache.contains(sfRow)) {
+                 removedFromCache.append(sfRow);
+            }
+        }
+    }
+
+    // trim toCache outside target range
+    auto itt = toCache.begin();  // Ensures a mutable iterator
+    toCache.erase(std::remove_if(itt, toCache.end(), [&](int sfRow) {
+                      return sfRow < targetFirst || sfRow > targetLast;
+                  }), toCache.end());
+
+    updateStatus("Update all rows", src);
+}
+
+void ImageCache::setTargetRange(int key)
+{
+/*
+    The target range is the list of images being targeted to cache, based on the current
+    image, the direction of travel, the caching strategy and the maximum memory allotted
+    to the image cache.  The DataModel is iterated to populate the toCache list of images
+    to cache.
+
+    • The direction of travel (dot) isForward boolean is calculated to indicate whether
+      the caching should proceed forward or backward from the current position (key).
+
+    • The terms ahead and behind are relative to the direction of travel.  If the direction
+      of travel is forward, then ahead refers to rows greater than the key, while if the
+      direction of travel is not forward, then ahead refers to rows less than the key.
+
+    • aheadPos and behindPos specify positions ahead and behind the key, respectively.
+
+    • aheadAmount and behindAmount define how many items to cache in each direction
+      during each iteration.
+
+    • The function maintains flags (aheadDone and behindDone) to indicate when caching in
+      either direction is complete.
+
+    • The start and end of the target range (targetFirst and targetLast) are assigned when
+      the cache allocated memory (maxMB) has been reached or all items in the DataModel
+      have been iterated.  targetFirst and targetLast are used in trimOutsideTargetRange
+      and showCacheStatus.
+*/
+    // initialize
+    float sumMB = 0;
+    int n = dm->sf->rowCount();
+    bool aheadDone = false;
+    bool behindDone = false;
+    if (key == n - 1) {
+        isForward = false;
+        targetLast = n - 1;
+    }
+    if (key == 0) {
+        isForward = true;
+        targetFirst = 0;
+    }
+    int aheadPos = key;
+    int behindPos = isForward ? (aheadPos - 1) : (aheadPos + 1);
+    if (behindPos >= n) behindDone = true;
+    if (behindPos < 0) behindDone = true;
+
+    // folders were added or removed from datamodel
+    if (instance != dm->instance) {
+        toCache.clear();
+        toCacheStatus.clear();
+    }
+
+    // Iterate while there is space in the cache or datamodel is exhausted
+    int pos = 0;
+    int i = 0;
+    while (sumMB < maxMB && !(aheadDone && behindDone)) {
+        if (abort) return;
+        // next target position (pos): 2 ahead, 1 behind sequence
+        i++;
+        bool isAhead = i % 3;
+        if (isForward) {
+            if (isAhead && !aheadDone) {
+                pos = aheadPos++;
+                if (aheadPos >= n) aheadDone = true;
+            }
+            else if (!behindDone) {
+                pos = behindPos--;
+                if (behindPos < 0) behindDone = true;
+            }
+            else continue;
+        }
+        else {
+            if (isAhead && !aheadDone) {
+                pos = aheadPos--;
+                if (aheadPos < 0) aheadDone = true;
+            }
+            else if (!behindDone) {
+                pos = behindPos++;
+                if (behindPos >= n) behindDone = true;
+            }
+            else continue;
+        }
+
+        // update toCache targets
+        if (dm->valueSf(pos, G::VideoColumn).toBool()) {
+            emit setCached(pos, true, instance);
+            pos < key ? targetFirst = pos : targetLast = pos;
+        }
+        else {
+            sumMB +=  dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+
+            QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+            if (sumMB < maxMB) {
+                if (!toCache.contains(pos) && !icd->contains(fPath)) {
+                    toCacheAppend(pos);
+                }
+                pos < key ? targetFirst = pos : targetLast = pos;
+            }
+        }
+    }
+}
+
+void ImageCache::removeCachedImage(QString fPath)
+{
+    QMutexLocker locker(&gMutex);
+
+    icd->imCache.remove(fPath);
+    emit refreshViews(fPath, false, "ImageCache::setTargetRange");
+}
+
+void ImageCache::removeFromCache(QStringList &pathList)
+{
+    QMutexLocker locker(&gMutex);
+
+    for (int i = 0; i < pathList.count(); ++i) {
+        QString fPathToRemove = pathList.at(i);
+        if (icd->imCache.contains(fPathToRemove)) {
+            icd->imCache.remove(fPathToRemove);
+        }
+        int sfRow = dm->proxyRowFromPath(fPathToRemove, "ImageCache::removeFromCache");
+        if (toCache.contains(sfRow)) {
+            toCacheRemove(sfRow);
+        }
+    }
+}
+
+void ImageCache::rename(QString oldPath, QString newPath)
+{
+    if (icd->contains(oldPath)) {
+        QImage image = icd->imCache.take(oldPath);  // Remove the old key-value pair
+        icd->imCache.insert(newPath, image);
+    }
+}
+
+void ImageCache::toCacheAppend(int sfRow)
+{
+    if (abort) return;
+    toCache.append(sfRow);
+    toCacheStatus.insert(sfRow, {false, "", -1, instance});
+}
+
+void ImageCache::toCacheRemove(int sfRow)
+{
+    if (G::isLogger) G::log("toCacheRemove", "sfRow = " + QString::number(sfRow));
+    toCache.removeOne(sfRow);
+    toCacheStatus.remove(sfRow);
+}
+
+bool ImageCache::cacheUpToDate()
+{
+    if (toCache.isEmpty()) return true;
+
+    foreach (CacheItem cs, toCacheStatus) {
+        if (!cs.isCaching) return false;
+    }
+
+    return true;
+}
+
+void ImageCache::memChk()
+{
+/*
+    Check to make sure there is still room in system memory (heap) for the image cache. If
+    something else (another program) has used the system memory then reduce the size of the
+    cache so it still fits.
+*/
+    // get available memory
+    #ifdef Q_OS_WIN
+        Win::availableMemory();     // sets G::availableMemoryMB
+    #endif
+
+    #ifdef Q_OS_MAC
+        Mac::availableMemory();     // sets G::availableMemoryMB
+    #endif
+
+    // still fit cache?
+    float currMB = getImCacheSize();
+    float roomInCache = maxMB - currMB;
+    if (G::availableMemoryMB < roomInCache) {
+        maxMB = currMB + G::availableMemoryMB;
+    }
+    if (maxMB < minMB) maxMB = minMB;
+}
+
+void ImageCache::initialize(int cacheMaxMB,
+                            int cacheMinMB,
+                            bool isShowCacheStatus,
+                            int cacheWtAhead)
+{
+    QMutexLocker locker(&gMutex);
+
+    isInitializing = true;
+
+    // reset the image cache
+    icd->clear();
+    toCache.clear();
+    toCacheStatus.clear();
+
+    // cancel if no images to cache
+    if (!dm->sf->rowCount()) return;
+
+    // update folder change instance
+    instance = dm->instance;
+
+    // cache management parameters
+    currRow = 0;
+    prevRow = -1;
+    // the cache defaults to the first image and a forward selection direction
+    isForward = true;
+    // the amount of memory to allocate to the cache
+    maxMB = cacheMaxMB;
+    minMB = cacheMinMB;
+    this->isShowCacheStatus = isShowCacheStatus;
+    wtAhead = cacheWtAhead;
+    targetFirst = 0;
+    targetLast = 0;
+    directionChangeThreshold = 3;
+    firstDispatchNewDM = true;
+
+    isInitializing = false;
+    abort = false;
+}
+
+void ImageCache::updateInstance()
+{
+    instance = dm->instance;
+}
+
+void ImageCache::updateImageCacheParam(int cacheSizeMB,
+                                       int cacheMinMB,
+                                       bool isShowCacheStatus,
+                                       int cacheWtAhead)
+{
+/*
+    When various image cache parameters are changed in preferences they are updated here.
+*/
+    maxMB = cacheSizeMB;
+    minMB = cacheMinMB;
+    this->isShowCacheStatus = isShowCacheStatus;
+    wtAhead = cacheWtAhead;
+    reloadImageCache();
+}
+
+void ImageCache::filterChange(QString currentImageFullPath, QString src)
+{
+/*
+    When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
+    rebuilt for the filtered dataset and isCached updated, the current image is set, and any
+    surplus cached images (not in the filtered dataset) are removed from imCache.
+    The image cache is now ready to run by calling setCachePosition().
+*/
+    if (dm->sf->rowCount() == 0) return;
+    if (G::removingRowsFromDM) return;
+
+    instance = dm->instance;
+
+    icd->clear();
+    toCache.clear();
+    toCacheStatus.clear();
+    updateStatus("Clear", "filterChange");
+
+    setCurrentPosition(currentImageFullPath, fun);
+}
+
+void ImageCache::refreshImageCache()
+{
+    abort = false;
+    dispatch();
+}
+
+void ImageCache::reloadImageCache()
+{
+/*
+    Reload all images in the cache.  Used by colorManageChange.
+*/
+    abort = false;
+    // reset the image cache
+    icd->clear();
+    toCache.clear();
+    toCacheStatus.clear();
+    dispatch();
+}
+
+void ImageCache::colorManageChange()
+{
+/*
+    Called when color manage is toggled.  Reload all images in the cache.
+*/
+    reloadImageCache();
+}
+
+void ImageCache::cacheSizeChange()
+{
+/*
+    Called when changes are made to image cache parameters in preferences. The image cache
+    direction, priorities and target are reset and orphans fixed.
+*/
+    refreshImageCache();
+}
+
+void ImageCache::setCurrentPosition(QString fPath, QString src)
+{
+/*
+    Called from MW::fileSelectionChange to reset the position in the image cache. The image
+    cache direction, priorities and target are reset and the cache is updated in fillCache.
+*/
+    if (G::removingRowsFromDM) return;
+
+    currRow = dm->proxyRowFromPath(fPath, fun);
+
+    if (G::dmInstance != instance) {
+        return;
+    }
+
+    if (isInitializing) {
+        return;
+    }
+
+    // range check
+    if (currRow >= dm->sf->rowCount()) {
+       return;
+    }
+
+    abort = false;
+    dispatch();
+}
+
+bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
+{
+    // skip videos
+    if (dm->sf->index(sfRow,G::VideoColumn).data().toBool()) {
+        msg = "Video";
+        return false;
+    }
+
+    // already in imCache
+    QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    if (icd->contains(fPath)) {
+        msg = "Already in imCache";
+        return false;
+    }
+
+    // isCaching
+    if (toCacheStatus.contains(sfRow)) {
+        if (toCacheStatus[sfRow].isCaching) {
+            msg = "IsCaching";
+            return false;
+        }
+    }
+
+    // make sure metadata has been loaded
+    if (!dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
+        if (!waitForMetaRead(sfRow, 50)) {
+            msg = "Metadata not loaded";
+            return false;
+        }
+    }
+
+    // next item to cache
+    msg = "Success";
+    return true;
+
+}
+
+int ImageCache::nextToCache(int id)
+{
+/*
+    The next image to cache is determined by traversing the toCache list in ascending
+    order to find the first one not currently being cached:
+
+    • isCaching is false and attempts < maxAttemptsToCacheImage.
+
+    • decoderId matches item, isCaching is true and isCached = false. If this is the case
+      then we know the previous attempt failed, and we should try again if the failure was
+      because the file was already open, unless the attempts are greater than
+      maxAttemptsToCacheImage.
+
+*/
+    QMutexLocker locker(&gMutex);   // req'd 2025-02-03
+
+    if (toCache.isEmpty()) {
+        return -1;
+    }
+
+    // iterate toCache
+    for (int i = 0; i < toCache.count(); ++i) {
+        int sfRow = toCache.at(i);
+
+        QString sRow = QString::number(sfRow).leftJustified(5);
+
+        QString msg;
+
+        if (okToDecode(sfRow, id, msg)) {
+            // set here in case called from launchDecoders
+            toCacheStatus[sfRow].msg = msg;
+            return sfRow;
+        }
+        else {
+            continue;
+        }
+    }
+    return -1;
+}
+
+void ImageCache::decodeNextImage(int id, int sfRow)
+{
+    // set isCaching
+    if (toCacheStatus.contains(sfRow)) {
+        toCacheStatus[sfRow].isCaching = true;
+        toCacheStatus[sfRow].msg = "";
+        toCacheStatus[sfRow].decoderId = id;
+        toCacheStatus[sfRow].instance = instance;
+    }
+    emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
+    emit setValSf(sfRow, G::DecoderIdColumn, id, instance, src);
+    int attempts = dm->sf->index(sfRow, G::AttemptsColumn).data().toInt();
+    attempts++;
+    emit setValSf(sfRow, G::AttemptsColumn, attempts, instance, src);
+
+    if (!decoderThreads[id]->isRunning()) decoderThreads[id]->start();
+
+    bool success = false;
+    if (!abort)
+        success = QMetaObject::invokeMethod(decoders[id], "decode",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, sfRow), Q_ARG(int, instance));
+
+    if (!success) {
+       if (!abort) fillCache(id);
+    }
+}
+
+void ImageCache::cacheImage(int id, int sfRow)
+{
+/*
+    Called from fillCache to insert a QImage that has been decoded into icd->imCache.
+    Do not cache video files, but do show them as cached for the cache status display.
+*/
+    // cache the image
+    if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
+
+    // remove from toCache
+    if (!abort) if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+
+    // update datamodel cache status
+    if (!abort) emit setCached(sfRow, true, instance);
+
+    // update cache status in cache progress bar
+    if (!abort) updateStatus("Update all rows", "ImageCache::cacheImage");
+}
+
+bool ImageCache::okToCache(int id, int sfRow)
+{
+/*
+    Called by fillCache.  Returns true to add image to image cache.
+*/
+    QString src = "ImageCache::okToCache";
+
+    if (instanceClash(id)) return false;
+
+    if (sfRow >= dm->sf->rowCount()) return false;
+
+    // set isCaching to false
+    emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
+    if (toCacheStatus.contains(sfRow))
+        toCacheStatus[sfRow].isCaching = false;
+
+    // save decoder status
+    emit setValSf(sfRow, G::DecoderReturnStatusColumn,
+                    static_cast<int>(decoders[id]->status), instance, src);
+
+    // no longer in target range to cache
+    if (!toCache.contains(sfRow)) return false;
+
+    // if Imagedecoder failed then remove from toCache
+    if (decoders[id]->status != ImageDecoder::Status::Success) {
+        if (decoders[id]->errMsg != "") {
+            emit setValSf(sfRow, G::DecoderErrMsgColumn,
+                          decoders[id]->errMsg, instance, src);
+        }
+        if (toCache.contains(sfRow)) toCacheRemove(sfRow);
+        return false;
+    }
+
+    // image cache is full (prevent runaway caching)
+    float toCacheMB = decoders[id]->image.sizeInBytes() / (1 << 20);
+    float currCacheMB = getImCacheSize();
+    if ((currCacheMB + toCacheMB) > maxMB) {
+        toCache.clear();
+        toCacheStatus.clear();
+        return false;
+    }
+
+    return true;
+}
+
+bool ImageCache::nullInImCache()
+{
+    QString src = "ImageCache::nullInImCache";
+
+    bool isEmptyImage = false;
+    for (const QString &path : icd->imCache.keys()) {
+        // empty image in cache
+        if (icd->imCache.value(path).width() == 0) {
+            int sfRow = dm->proxyRowFromPath(path, "ImageCache::nullInImCache");
+            // add back to toCache list
+            toCacheAppend(sfRow);
+            // set isCaching to true
+            emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
+            isEmptyImage = true;
+        }
+    }
+    return isEmptyImage;
+}
+
+void ImageCache::fillCache(int id)
+{
+/*
+    Read all the image files from the target range and save the QImages in  the
+    concurrent image cache hash icd->imCache (see cachedata.h).
+
+    A number of ImageDecoders are created when ImageCache is created. Each ImageDecoder
+    runs in a separate thread. The decoders convert an image file into a QImage and then
+    signal this function (fillCache) with their id so the QImage can be inserted into the
+    image cache. The ImageDecoders are launched from ImageCache::launchDecoders.
+
+    The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the
+    decoder is created and when the QImage has been inserted into the image cache the
+    status is set to Ready. When the decoder is called from CacheImage the status is set
+    to Busy. Finally, when the decoder finishes the decoding in ImageDecoder::run the
+    status is set to Done. Each decoder signals ImageCache::fillCache when the image has
+    been converted into a QImage. Here the QImage is added to the imCache. If there are
+    more targeted images to be cached, the next one is assigned to the decoder, which is
+    run again. The decoders keep running until all the targeted images have been cached.
+
+    If there is a file selection change, cache size change, color manage change or
+    sort/filter change the image cache parameters are updated and this function is called
+    for each Ready decoder. The decoders not Ready are Busy and already in the fillCache
+    loop.
+
+    An image decoder can be running when a new folder is selected, returning an image
+    from the previous folder. When an image decoder is run it is seeded with the
+    datamodel instance (which is incremented every time a new folder is selected). When
+    the decoder signals back to ImageCache::fillCache the decoder instance is checked
+    against the current dm->instance to confirm the decoder image is from the current
+    datamodel instance.
+
+    Each decoder follows this basic pattern:
+    - launch
+      - fillCache
+        - starting
+          - nextToCache
+        - returning with QImage
+          - cacheImage
+          - nextToCache
+
+    nextToCache detail:
+    - nextToCache
+      - yes
+        - decodeNextImage
+        - fillCache
+        - cacheImage
+      - no
+        - cacheUpToDate (checks for orphans and item list completed)
+          - no
+            - restart
+          - yes
+            - done
+
+*/
+
+    QString src = "";
+
+    int cacheRow = decoders[id]->sfRow;
+
+    if (okToCache(id, cacheRow)) {
+        if (!abort) cacheImage(id, cacheRow);
+    }
+
+    // get next image to cache
+    int toCacheKey = nextToCache(id);
+    bool okDecodeNextImage = !abort && toCacheKey != -1 && isValidKey(toCacheKey);
+
+    // decode the next image in the target range
+    if (okDecodeNextImage) {
+        if (!abort) decodeNextImage(id, toCacheKey);
+    }
+
+    // else caching available targets completed
+    else {
+
+        cycling[id] = false;
+
+        // is this the last active decoder?
+        if (!anyDecoderCycling()) {
+
+            // if empty image in ImCache then relaunch decoders
+            if (nullInImCache()) {
+                launchDecoders(src);
+                return;
+            }
+
+            abort = false;
+        }
+    }
+}
+
+void ImageCache::launchDecoders(QString src)
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        if (abort) return;
+        if (toCache.isEmpty()) break;
+        if (id >= dm->sf->rowCount()) break;
+        if (cycling.at(id)) {
+            continue;
+        }
+        int sfRow = nextToCache(id);
+        if (sfRow == -1) break;
+
+        cycling[id] = true;
+        if (!abort) decodeNextImage(id, sfRow);
+    }
+}
+
+void ImageCache::dispatch()
+{
+/*
+    Called by a new file selection, cache size change, sort, filter or color manage change.
+    The cache status is updated (current key, direction of travel, priorities and the target
+    range) by calling fillCache with a decoder id = -1. Then each ready decoder is sent to
+    fillCache. Decoders are assigned image files, which they decode into QImages, and then
+    added to imCache. More details are available in the fillCache comments and at the top of
+    this class.
+*/
+    abort = false;
+
+    // check available memory (another app may have used or released some memory)
+    memChk();
+
+    updateToCache();
+
+    // if cache is up-to-date our work is done
+    if (cacheUpToDate()) {
+        return;
+    }
+
+    if (!abort) launchDecoders("ImageCache::dispatch");
 }
