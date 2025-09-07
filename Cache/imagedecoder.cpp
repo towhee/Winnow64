@@ -39,6 +39,8 @@ ImageDecoder::ImageDecoder(int id,
     this->metadata = metadata;
     isDebug = false;
     isLog = false;
+
+    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf);
 }
 
 ImageDecoder::~ImageDecoder()
@@ -119,6 +121,9 @@ void ImageDecoder::decode(int row, int instance)
     // range check
     if (row >= dm->sf->rowCount()) return;
 
+    QElapsedTimer t;
+    t.start();
+
     setBusy();
     this->instance = instance;
 
@@ -160,9 +165,6 @@ void ImageDecoder::decode(int row, int instance)
         return;
     }
 
-    QElapsedTimer t;
-    t.start();
-
     // decode
     if (!abort && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
@@ -194,6 +196,11 @@ void ImageDecoder::decode(int row, int instance)
     }
 
     setIdle();
+
+    msToDecode = t.elapsed();
+    emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
+                  "ImageDecoder::decode", Qt::EditRole);
+
     if (!abort) emit done(threadId);
 }
 

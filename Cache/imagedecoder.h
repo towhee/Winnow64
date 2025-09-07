@@ -33,6 +33,7 @@ public:
     QImage image;
     QString fPath;
     QString errMsg;
+    qint64 msToDecode;
 
     enum Status {
         Undefined,
@@ -88,6 +89,8 @@ public slots:
     void stop();
 
 signals:
+    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void done(int threadId, bool positionChange = false);
 
 private:

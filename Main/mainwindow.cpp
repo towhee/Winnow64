@@ -2243,7 +2243,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    /* debug
+    // /* debug
     {
     qDebug() << fun
              << "fun =" << fun
@@ -2252,6 +2252,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              // << "current =" << current
              // << current.data(G::PathRole).toString()
              << "row =" << current.row()
+             << "rate =" << G::t.restart()
              // << "dm->currentDmIdx =" << dm->currentDmIdx
              // << "G::isInitializing =" << G::isInitializing
              // << "isFilterChange =" << isFilterChange
@@ -2673,7 +2674,7 @@ bool MW::reset(QString src)
     resetDataModel == true.
 */
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::reset", "Source: " + src);
 
     // datamodel
@@ -2687,7 +2688,6 @@ bool MW::reset(QString src)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
-    G::log("MW::reset", "infoView");
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
         infoView->clearInfo();
@@ -2695,7 +2695,6 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    G::log("MW::reset", "progress");
     cacheProgressBar->clearImageCacheProgress();
     progressLabel->setVisible(false);
     filterStatusLabel->setVisible(false);
@@ -2708,18 +2707,15 @@ bool MW::reset(QString src)
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
-    G::log("MW::reset", "imageView");
     imageView->clear();
     imageView->isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // Image cache
-    G::log("MW::reset", "icd");
     icd->clear();
 
     // used by updateStatus
-    G::log("MW::reset", "status");
     pickMemSize = "";
     updateStatus(false, "", "MW::reset");
 
@@ -2733,7 +2729,6 @@ bool MW::reset(QString src)
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
-    G::log("MW::reset", "state");
     if (asCompareAction->isChecked()) {
         asCompareAction->setChecked(false);
         asLoupeAction->setChecked(true);
@@ -2741,7 +2736,6 @@ bool MW::reset(QString src)
     }
 
     // if at welcome or message screen and then select a folder
-    G::log("MW::reset", "mode");
     if (centralLayout->currentIndex() == StartTab ||
         centralLayout->currentIndex() == MessageTab)
     {
@@ -2766,7 +2760,6 @@ bool MW::reset(QString src)
     setThreadRunStatusInactive();
 
     // do not embellish
-    G::log("MW::reset", "embellish");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
     // bookmarkBlocker.unblock();
