@@ -1707,13 +1707,14 @@ void ImageCache::cacheImage(int id, int sfRow)
         if (debugCaching)
         {
             qDebug().noquote()
-                   << src.leftJustified(col0Width, ' ')
-                   << "decoder" << QString::number(id).leftJustified(3)
-                   << "row =" << QString::number(sfRow).leftJustified((4))
-                   << "G::mode =" << G::mode
-                   // << "errMsg =" << decoders[id]->errMsg
-                   // << "decoder[id]->fPath =" << decoders[id]->fPath
-                    ;
+                << src.leftJustified(col0Width, ' ')
+                << "decoder" << QString::number(id).leftJustified(3)
+                << "row =" << QString::number(sfRow).leftJustified((4))
+                << "G::mode =" << G::mode
+                // << "ms from last cache =" << G::t.restart()
+                // << "errMsg =" << decoders[id]->errMsg
+                // << "decoder[id]->fPath =" << decoders[id]->fPath
+                ;
         }
     }
 
