@@ -2243,7 +2243,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    // /* debug
+    /* debug
     {
     qDebug() << fun
              << "fun =" << fun
@@ -2585,7 +2585,7 @@ void MW::stop(QString src)
 
 */
 
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
         G::log("MW::stop", "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
@@ -2680,7 +2680,6 @@ bool MW::reset(QString src)
     // datamodel
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
-    G::log("MW::reset", "dm->clearDataModel()");
     dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
     dm->newInstance();

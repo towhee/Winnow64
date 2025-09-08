@@ -245,7 +245,7 @@ Q_NAMESPACE
 
 
     extern bool loadOnlyVisibleIcons;
-    extern int availableMemoryMB;
+    extern quint64 availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
 

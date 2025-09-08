@@ -36,7 +36,7 @@ public:
 
     bool isRunning() const;
 
-    float getImCacheSize();         // add up total MB cached
+    quint64 getImCacheSize();         // add up total MB cached
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
 
@@ -67,7 +67,7 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
     void showCacheStatus(QString instruction,
-                         float currMB, int maxMB, int targetFirst, int targetLast,
+                         quint64 currMB, quint64 maxMB, int targetFirst, int targetLast,
                          QString source = "");
     void centralMsg(QString msg);       // not being used
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
@@ -78,9 +78,9 @@ public slots:
     void stop();
     // void newInstance();
     void abortProcessing();
-    void initialize(int cacheSizeMB, int cacheMinMB,
+    void initialize(quint64 cacheSizeMB, quint64 cacheMinMB,
                     bool isShowCacheStatus, int cacheWtAhead);
-    void updateImageCacheParam(int cacheSizeMB, int cacheMinMB,
+    void updateImageCacheParam(quint64 cacheSizeMB, quint64 cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
     void updateInstance();
     void fillCache(int id);
@@ -139,10 +139,12 @@ private:
     int sumStep;                // sum of step until threshold
     int directionChangeThreshold;//number of steps before change direction of cache
     int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
-    int maxMB;                  // maximum MB available to cache
-    int minMB;                  // minimum MB available to cache
+    quint64 maxMB;              // maximum MB available to cache
+    quint64 minMB;              // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
+    int decodeImageCount;
+    quint64 decodeImageMsTot;
     bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
 
@@ -153,6 +155,7 @@ private:
     bool cacheUpToDate();           // target range all cached
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
+    void adjustCacheMem(quint64 ms);
     bool anyDecoderCycling();        // All decoder status is ready
     void setDirection();            // caching direction
     bool okToDecode(int sfRow, int id, QString &msg);
@@ -164,7 +167,7 @@ private:
     bool isValidKey(int key);
 
     void updateTargets(bool dotForward, bool isAhead, int &pos,
-                       int &amount, bool &isDone, float &sumMB);
+                       int &amount, bool &isDone, quint64 &sumMB);
     void setTargetRange(int key);
     bool waitForMetaRead(int sfRow, int ms);
     void log(const QString function, const QString comment = "");
