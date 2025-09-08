@@ -121,7 +121,7 @@ bool wheelSpinning = false;
 
 // caching
 bool loadOnlyVisibleIcons;          // not used
-int availableMemoryMB;
+quint64 availableMemoryMB;
 int winnowMemoryBeforeCacheMB;
 int metaCacheMB;
 
