@@ -210,7 +210,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->setImageCacheSize(v.toString());
         mw->setImageCacheParameters();
 
-        int memAvail = mw->imageCache->getImCacheSize() + G::availableMemoryMB;
+        int memAvail = mw->icd->sizeBytes() + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
@@ -228,7 +228,7 @@ void Preferences::itemChange(QModelIndex idx)
         Mac::availableMemory();     // sets G::availableMemoryMB
         #endif
 
-        int memAvail = mw->imageCache->getImCacheSize() + G::availableMemoryMB;
+        quint64 memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
@@ -1179,7 +1179,7 @@ void Preferences::addItems()
     #ifdef Q_OS_MAC
     Mac::availableMemory();     // sets G::availableMemoryMB
     #endif
-    int memAvail = mw->imageCache->getImCacheSize() + G::availableMemoryMB;
+    int memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
     i.value = QString::number(mw->cacheMaxMB) + " of " +
             QString::number(memAvail) + " available MB";
 

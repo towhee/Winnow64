@@ -145,6 +145,7 @@ private:
     int targetLast;             // end of the target range to cache
     int decodeImageCount;
     quint64 decodeImageMsTot;
+    quint64 decodeImageMBTot;
     bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
 
@@ -155,7 +156,7 @@ private:
     bool cacheUpToDate();           // target range all cached
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
-    void adjustCacheMem(quint64 ms);
+    void adjustCacheMem(quint64 ms, quint64 mb);
     bool anyDecoderCycling();        // All decoder status is ready
     void setDirection();            // caching direction
     bool okToDecode(int sfRow, int id, QString &msg);
