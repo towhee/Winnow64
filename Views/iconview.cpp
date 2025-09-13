@@ -562,7 +562,7 @@ void IconView::setThumbSize()
 
 */
     QString src = "IconView::setThumbSize";
-    if (isDebug || G::isLogger)
+    // if (isDebug || G::isLogger)
         G::log(src, objectName());
     if (isDebug)
         qDebug() << src << objectName();

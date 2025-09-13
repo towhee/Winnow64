@@ -283,11 +283,10 @@ void BookMarks::leaveEvent(QEvent *event)
     QTreeWidget::leaveEvent(event);
 }
 
-void BookMarks::mouseDoubleClickEvent(QMouseEvent *event)
+void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 {
     if (G::isLogger) G::log("BookMarks::mouseDoubleClickEvent");
-    // prevent double mouse clicks propogating to favDock
-    event->accept();
+    // ignore double mouse clicks (edit/expand)
     return;
 }
 

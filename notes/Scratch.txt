@@ -1,112 +1,53 @@
-Winnow uses the DockWidget favDock to dock the bookmarks (QTreeWidget).  A double mouse click toggles
-the dock between docked and float state.  I want this to only occur when the double mouse click is
-in the dock title bar, not when it is propogated from bookmarks. Currently, a double mouse click in
-bookmarks is triggering the toggle between docked and floating.
+In MW create
+QHash<QString,bool>subsystemState (isIdle)
+bool allIdle;
 
-void MW::createFavDock()
+slot MW::aborted(const QString subSystem)
 {
-    if (G::isLogger) G::log("MW::createFavDock");
-    favDockTabText = "Bookmarks";
-    // favDockTabText = "  🔖  ";
-    dockTextNames << favDockTabText;
-    favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
-    // favDock->setObjectName("Bookmarks");
-    favDock->setWidget(bookmarks);
-    connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
+    subsystemState[subSystem] = true;
 
-    // customize the favDock titlebar
-    QHBoxLayout *favTitleLayout = new QHBoxLayout();
-    favTitleLayout->setContentsMargins(0, 0, 0, 0);
-    favTitleLayout->setSpacing(0);
-    favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
-    favDock->setTitleBarWidget(favTitleBar);
+    // iterate subsystemState and if all are true then set allIdle = true;
 }
 
-DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
+void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
 {
-    setStyle();
-    setLayout(titleBarLayout);
-    titleLabel = new QLabel;
-    titleLabel->setTextFormat(Qt::RichText);
-    setTitle(title);
-    titleLabel->setText(title);
-    titleLabel->setStyleSheet("border:none;");
-    titleBarLayout->addWidget(titleLabel);
-    titleBarLayout->addStretch();
+    stop();
+
+    // do more stuff
 }
 
-void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
+MW::stop()
 {
-    QWidget::mouseDoubleClickEvent(event);
-}
+    // iterate subsystemState and set to subsyster.isIdle()
 
-DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
-: QDockWidget(title, parent)
-{
-setObjectName(objName);
-isRestoring = false;
-}
+    G::stop   = true;
+    dm->abort = true;
+    allIdle = false;
 
-bool DockWidget::hasCustomTitleBar()
-{
-QWidget *titleBarWidget = this->titleBarWidget();
-if (titleBarWidget) return true;
-else return false;
-}
-
-bool DockWidget::event(QEvent *event)
-{
-/*
-QDockWidget title bar overrides MouseButtonDblClick and does not propogate the event
-so it cannot be captured in DockWidget.  Instead capture here.
-
-The QDockWidget topLevelChanged signal is not employed because it fires after the
-DockWidget floating status has changed, and we need to know before, so we can save
-the floating geometry.
-*/
-if (event->type() == QEvent::NonClientAreaMouseButtonDblClick) {
-
-    /* This event is fired when the default (non-custom) floating DockWidget titlebar
-    is dblclick. If the DockWidget has a custom titlebar then this event is not
-    fired. So, only the thumbDock DockWidget when floating. */
-
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::NonClientAreaMouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event NonClientAreaMouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    save();
-    setFloating(false);
-    emit focus(this);
-    // do not propogate event
-    return true;
-}
-
-if (event->type() == QEvent::MouseButtonDblClick) {
-    /*  This event is fired for DockWidgets with a custom titlebar when they are both
-    floating and docked and non-custom titlebar DockWidgets when docked. */
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event MouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    if (isFloating() && hasCustomTitleBar()) {
-        save();
-        setFloating(false);
-        emit focus(this);
+    // initialize stopped state for MetaRead, ImageCache, BuildFilters
+    for (auto it = stopped.begin(); it != stopped.end(); ++it) {
+        it.value() = false;
     }
-    else {
-        doubleClickDocked = true;
-        setDefaultFloatingGeometry();
-        setFloating(true);  // must preceed calling restore()
-        restore();
-    }
-    // do not propogate event
-    return true;
-}
 
-QDockWidget::event(event);
-return true;
-}
+    emit abortMetaRead();
+    emit abortImageCache();
+    emit abortBuildFilters();
 
-void BookMarks::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    event->ignore();
-    return;
+    // wait until abort done
+    QEventLoop loop;
+    QTimer to; to.setSingleShot(true); to.start(10000);
+
+    connect(&to, &QTimer::timeout, &loop, [&]
+        {
+            qDebug() << "MW::stop timeout";
+            loop.quit();
+        });
+
+    // Every aborted(...) updates state and maybe quits:
+    auto maybeQuit = [&]{
+        // QMutexLocker l(&stateMtx);
+        if (allIdle) loop.quit();
+    };
+
+    reset(src);
 }
