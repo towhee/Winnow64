@@ -116,9 +116,8 @@ private slots:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;       // debugging
+    void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
     void mouseMoveEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void enterEvent(QEnterEvent *event) override;

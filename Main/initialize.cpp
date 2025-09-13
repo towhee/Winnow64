@@ -7,6 +7,7 @@ void MW::initialize()
 
     setWindowTitle(winnowWithVersion);
     G::stop = false;
+    G::removingFolderFromDM = false;
     G::isProcessingExportedImages = false;
     G::isInitializing = true;
     G::isModifyingDatamodel = false;

@@ -342,7 +342,7 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
-    isDebug = false;
+    isDebug = true;
 }
 
 void FSTree::createModel()
@@ -926,14 +926,6 @@ void FSTree::wheelStopped()
     //qDebug() << "ImageView::wheelStopped";
 }
 
-void FSTree::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    if (G::isLogger) G::log("FSTree::mouseDoubleClickEvent");
-    // prevent double mouse clicks propogating to favDock
-    event->accept();
-    return;
-}
-
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -951,28 +943,22 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 */
 
     // if (G::isLogger) G::log("FSTree::mousePressEvent");
-    QString path = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
-    QString msg = "G::stop = " + QVariant(G::stop).toString() + "  " + path;
-    G::log();
-    G::log("FSTree::mousePressEvent", msg);
+    // qDebug() << "FSTree::mousePressEvent" << event;
 
     if (G::stop || G::isModifyingDatamodel) {
         // G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
-        msg = "Ignore because G::stop == true";
-        G::log("FSTree::mousePressEvent", msg);
-        event->ignore();
+        qDebug() << "FSTree::mousePressEvent busy so ignore";
         return;
     }
 
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
-    // if (ms < 500) {
-    //     event->ignore();
-    //     G::popup->showPopup("Rapid clicks are verboten");
-    //     msg = "Ignore because rapidClick = " + QVariant(ms).toString() + " ms";
-    //     G::log("FSTree::mousePressEvent", msg);
-    //     return;
-    // }
+    if (ms < 500) {
+        event->ignore();
+        G::popup->showPopup("Rapid clicks are verboten");
+        qDebug() << "FSTree::mousePressEvent rapidClick =" << ms;
+        return;
+    }
 
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
